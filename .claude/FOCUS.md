@@ -37,6 +37,26 @@ whatever's physically sitting in the inbox.
   `cmd_idea()` itself (small, safe, lives in `~/.local/bin/scheduler` —
   outside this repo), or just keep it a manual step. Source note archived
   as `archive/look-into-scheduler-s-idea-log.idea`.
+  **Follow-up, same day: fixed on the scheduler side** — `cmd_idea()` now
+  auto-commits (never auto-pushes) for the realisateur path too, same as
+  every other project's idea-drop.
+
+- **2026-07-20 (Zach, via `scheduler -i realisateur`): realisateur is
+  meant to eventually own abstract visioning across projects, not just
+  scaffolding — see the inbox item this generated
+  (`look-at-Document-Project-Archi-*.idea`, chezz's `/ideate` command as
+  the reference model) for the concrete proposal.** Explicitly open,
+  parked per scheduler's own "hardening first" priority right now (see
+  scheduler's `.scheduler/FOCUS.md` backlog, 16:41 entry) — do not build
+  a `scheduler -i` hook or an `/ideate`-for-every-project mechanism
+  unprompted. What IS worth carrying forward regardless of that larger
+  design fork: the "vision debt" pattern named the same session (ideas
+  arrive faster than any implementation cadence can stabilize them) —
+  named explicitly in chezz's own `ideate.md` now. If realisateur ever
+  does take on abstract-visioning ownership, this pattern — making the
+  gap between ideation and stable implementation visible rather than
+  letting a queue grow silently — is a concrete design input for that
+  role, not just chezz's problem.
 
 ## Backlog (recovered 2026-07-20 — see note below)
 
