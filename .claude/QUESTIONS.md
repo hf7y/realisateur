@@ -81,7 +81,13 @@ Question format either tier appends:
   developed by hand instead of autonomously at all. If so, just disable
   it: delete `schedule/sequestria.conf` from the scheduler repo and
   re-run `bin/sync-crontab.sh --apply`.
-  > (answer inline here)
+  > [2026-07-20T14:59 zach, recovered from LATEST.md — see FOCUS.md
+  > Backlog note] Keep it registered and autonomous for now. Treat this as
+  > a deliberate experiment in how a real-world business idea can evolve
+  > out of this software-dev workflow — part of sequestria's own scope
+  > should be documenting that process itself: the tensions, and any
+  > reusable workflow patterns worth carrying to other business-shaped
+  > ideas later.
 
 - **2026-07-20 (nightly-batch): Scaffolded vim_arcade.** From
   `vim_arcade.idea` — a terminal platformer teaching vim keybindings (and
