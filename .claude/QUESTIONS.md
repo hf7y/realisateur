@@ -50,7 +50,13 @@ Question format either tier appends:
   auto-adds it to shopping; marking shopping bought moves it back to
   fridge. Registered as a Tier 2 scheduler paced participant (local bare
   remote, no fixed cron).
-  > (answer inline here)
+  > communicate with the home-assistant project to request information
+  > about grocery manager implementations there. make a note that Zach
+  > should dump several aborted "Grocery Manager" gas projects' code
+  > bases into grocery manager" to seed the workflows. Note that Zach
+  > currently uses a combination of lists tracked in google keep,
+  > a browser extension that saves amazon carts, and scrawled notes on
+  > a real whiteboard or directly on items to track purchases and stock.
 
 - **2026-07-20 (nightly-batch): Scaffolded nine-speakers.** From
   `nine-speakers.md` — a 9-node autonomous speaker/Pi/PIR art
@@ -63,7 +69,15 @@ Question format either tier appends:
   in-process `Bus` that models real inter-node signal delay explicitly.
   FOCUS.md asks a future run to prototype the CA alternative alongside it
   for comparison. Registered as a Tier 2 scheduler paced participant.
-  > (answer inline here)
+  > This is a good path. Speakers should have microphones and awareness
+  > of what one another is playing. Test cases for research: individuals
+  > on separate bicycles carry speakers to coordinate music on a group
+  > ride. speakers automatically separate instrument layers to avoid
+  > obvious mismatches, use microphones and delays to approximate
+  > distance to one another (spatial mapping from echolocation, essentially,
+  > plus blutooth, nfc, or other info. Physics aware so different
+  > frequencies are treated differently. Eventual hopes for phasing,
+  > array logic. Long term vision lands on Mardi Gras bike parades.
 
 - **2026-07-20 (nightly-batch): Scaffolded sequestria — judgment call on
   whether it should be autonomously iterated at all.** From
@@ -99,4 +113,9 @@ Question format either tier appends:
   (real tmux session vs. another grid-world metaphor) flagged in the
   project's own FOCUS.md rather than guessed at deep. Registered as a
   Tier 2 scheduler paced participant.
-  > (answer inline here)
+  > Investigate the .local/bin/scheduler app and its vim workflow with
+  > tags etc. Design this game to teach Zach how to be more efficient
+  > in his vim usage. He doesn't know tags for example, basic navigation.
+  > A macro to add a timestamp or "CLEARED" on a blocker. A macro do drop
+  > into a block quote. Generally principle should be maximum vim native,
+  > discouraging of custom vim rc. Eventually teach Zach tmux.
