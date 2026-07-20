@@ -50,6 +50,9 @@ Question format either tier appends:
   auto-adds it to shopping; marking shopping bought moves it back to
   fridge. Registered as a Tier 2 scheduler paced participant (local bare
   remote, no fixed cron).
+  > [2026-07-20T16:34 zach, retroactively stamped -- the auto-stamp hook
+  > had a bug matching only column-0 `>` lines, missing the real 2-space-
+  > indented convention this file uses; fixed same session]
   > communicate with the home-assistant project to request information
   > about grocery manager implementations there. make a note that Zach
   > should dump several aborted "Grocery Manager" gas projects' code
@@ -69,6 +72,8 @@ Question format either tier appends:
   in-process `Bus` that models real inter-node signal delay explicitly.
   FOCUS.md asks a future run to prototype the CA alternative alongside it
   for comparison. Registered as a Tier 2 scheduler paced participant.
+  > [2026-07-20T16:34 zach, retroactively stamped -- see the groc-mangr
+  > entry above for why]
   > This is a good path. Speakers should have microphones and awareness
   > of what one another is playing. Test cases for research: individuals
   > on separate bicycles carry speakers to coordinate music on a group
@@ -113,6 +118,8 @@ Question format either tier appends:
   (real tmux session vs. another grid-world metaphor) flagged in the
   project's own FOCUS.md rather than guessed at deep. Registered as a
   Tier 2 scheduler paced participant.
+  > [2026-07-20T16:34 zach, retroactively stamped -- see the groc-mangr
+  > entry above for why]
   > Investigate the .local/bin/scheduler app and its vim workflow with
   > tags etc. Design this game to teach Zach how to be more efficient
   > in his vim usage. He doesn't know tags for example, basic navigation.
