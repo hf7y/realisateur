@@ -1,7 +1,11 @@
 # Joining the scheduler ecosystem
 
-This project isn't registered with the scheduler yet. This file explains what
-that means and exactly how to do it when `realisateur` is ready.
+`realisateur` has been registered since 2026-07-19 — `schedule/realisateur.conf`
+in the scheduler repo, Tier 2 only, paced (no fixed cron slot), local bare
+remote at `~/git-remotes/realisateur.git`. This file is kept as the
+walkthrough a *new* project scaffolded out of the inbox follows to register
+itself the same way (`nightly-batch.md` step 3 points here) — read it as
+"how registration works," not "realisateur's own status."
 
 ## What the scheduler is
 

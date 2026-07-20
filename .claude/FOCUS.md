@@ -20,6 +20,24 @@ whatever's physically sitting in the inbox.
 - Flag what got built and why in `.claude/QUESTIONS.md` and in the report
   — the flag IS the review point, not a request to build.
 
+## Realisateur's own process (not inbox ideas — see nightly-batch.md step 3)
+
+- **2026-07-20: "Look into scheduler's idea logic, unite with the habit of
+  echoing ideas into text files here" — already solved, no project
+  needed.** `scheduler -i realisateur "idea text"` (`~/.local/bin/scheduler`,
+  `cmd_idea()`) already special-cases realisateur: instead of writing into
+  a FOCUS.md backlog section like every other registered project, it drops
+  a real `<slug>-<timestamp>.idea` file at this repo's root — the exact
+  same artifact shape as manually echoing a note here. The CLI is the
+  unification; nothing new to build. One real gap the CLI's own output
+  names: it does NOT `git add`/`commit`/`push` for you, so a dropped idea
+  sits invisible to the scheduler's dedicated clone until someone commits
+  it by hand (this bit the first three ideas — see `f8f244d`/`7886409`).
+  Worth raising with Zach directly: either fold the commit+push into
+  `cmd_idea()` itself (small, safe, lives in `~/.local/bin/scheduler` —
+  outside this repo), or just keep it a manual step. Source note archived
+  as `archive/look-into-scheduler-s-idea-log.idea`.
+
 ## Backlog (recovered 2026-07-20 — see note below)
 
 Zach's own reply, written directly into `~/reports/realisateur/LATEST.md`

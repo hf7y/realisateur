@@ -44,6 +44,16 @@ For each unarchived artifact:
   ambiguous word, an image with no clear direction), leave it in the
   inbox rather than guessing wildly -- but a genuine partial idea should
   still get a best-effort scaffold, not be skipped for being imperfect.
+- **First check whether the artifact is actually about realisateur's own
+  process/workflow, not a new sibling project** -- e.g. "look into how
+  the scheduler's idea logic could unite with my habit of dropping notes
+  here" is feedback about this repo, not raw material for a new
+  `~/Documents/Projects/<name>/`. Telltale: it names realisateur, the
+  scheduler, or "this folder/workflow" itself as the subject. For these,
+  don't scaffold a project -- research the answer, fold the finding/
+  decision into `.claude/FOCUS.md` (a dated bullet is enough) and/or
+  `README.md` if it changes the documented process, then archive the
+  source artifact same as any other processed idea.
 - Check whether a project for this idea already exists under
   `~/Documents/Projects/` before creating a new one -- an artifact might
   be an addition to something already scaffolded, not a brand-new project.
