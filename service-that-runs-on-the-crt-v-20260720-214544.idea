@@ -1,0 +1,1 @@
+service that runs on the crt-vm which will have a 1d barcode scanner attached. when the vm gets a barcode, it looks up what book it is, and gives a quote from it, or a summary, or something poetic and useful that can fit on one line
