@@ -1,1 +1,3 @@
 agent that observes my linux laptop environment and understands it as it evolves, records changes retrospectively. it should know the custom scripts in my bin, my dot file preferences, the keybindings and window manager I like. this is about making sure I can start from scratch and drop back into my routines and workflows as painlessly as possible. it's somewhat intimate; it needs to guard my secrets, even from other agents
+
+this should also be the keeper of names, and places. For example, my lilypond score projects should all live in one place with a shared library. For example, utilities I build in this process should follow the french naming convention, while utilities I build for vaporwave should have the roman naming convention. My github should be tidied up. 
