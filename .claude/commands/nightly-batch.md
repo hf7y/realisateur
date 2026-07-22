@@ -80,9 +80,11 @@ For each unarchived artifact:
   a local bare remote under `~/git-remotes/<name>.git` (no GitHub
   credentials needed unless one already clearly exists for this idea), a
   `.claude/FOCUS.md` + `.claude/QUESTIONS.md` +
-  `.claude/commands/nightly-batch.md` for the new project (adapt the
+  `.claude/commands/nightly-batch.md` + a root `CLAUDE.md` (adapt the
   templates in `~/Documents/Project Archive/scheduler/examples/` to what
-  the new project actually is), push to the bare remote, then drop
+  the new project actually is -- `CLAUDE.md.template` is the "suggest
+  `/ideate <project>` instead of implementing" guardrail, worth every new
+  project having from day one), push to the bare remote, then drop
   `schedule/<name>.conf` into the scheduler repo (copy
   `schedule-entry.conf.template`, `BATCH_CRON="auto"`, no `BATCH_SCRIPT`)
   and add it to `schedule/_paced.conf` as a new participant with a thin

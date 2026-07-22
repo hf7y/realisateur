@@ -71,6 +71,13 @@ pointer into them, not a replacement. In short, registering means:
    `crt`), the command should say so explicitly and scope purely off
    `FOCUS.md` instead of `../INTAKE.md`.
 
+5. **A root `CLAUDE.md`** (optional but recommended) — copy
+   `scheduler/examples/CLAUDE.md.template`: the "suggest `/ideate
+   <project>` instead of implementing" guardrail, so an ordinary
+   interactive session on the new project recognizes an open-ended/
+   vision-shaped ask and points at realisateur's `/ideate` rather than
+   quietly building against it inline.
+
 5. **One file dropped into the scheduler repo**:
    `schedule/realisateur.conf`, copied from
    `scheduler/examples/schedule-entry.conf.template`. This is the single
