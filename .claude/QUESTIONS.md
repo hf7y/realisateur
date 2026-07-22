@@ -42,3 +42,6 @@ Question format either tier appends:
 *(No open questions right now — the four groc-mangr/nine-speakers/
 sequestria/vim-arcade entries answered 2026-07-20 were folded into each
 project's own `.claude/FOCUS.md` and removed here on 2026-07-22.)*
+
+- **2026-07-22 (nightly-batch): bare-remote permission mismatch hit on TWO scheduler-registered projects tonight (nine-speakers, crt).** Both `~/git-remotes/nine-speakers.git` and `~/git-remotes/crt.git` have loose git objects owned by `svc-vaporwave:vaporwave-reports` (a group `zach` isn't in), blocking a `zach`-initiated push with "Permission denied"/"unable to migrate objects to permanent storage". Each project's own automated nightly runs clearly still push fine (both origins are current with recent automated work), so this only affects interactive `zach` sessions trying to push directly — but it happened on two independent repos the same night, suggesting it's systemic across `~/git-remotes/*.git` rather than isolated. Left both affected commits local (safe, rebased cleanly) rather than `chmod`/`chown` shared scheduler infrastructure without more context. Might be worth a scheduler-focused session checking group membership/ownership across all local bare remotes.
+  > (answer inline here)
