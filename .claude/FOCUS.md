@@ -44,6 +44,14 @@ whatever's physically sitting in the inbox.
 - Flag what got built and why in `.claude/QUESTIONS.md` and in the report
   — the flag IS the review point, not a request to build.
 
+- **2026-07-22 (from wtul questions-pane diagnosis):** `vkv-inventory`'s
+  `command-nightly-batch.md` never runs `collect-feedback.sh --consume`
+  against its own `.claude/QUESTIONS.md`, the same append-only-reply gap
+  just fixed in wtul's and the scheduler's own nightly-batch commands (see
+  scheduler's `.scheduler/FOCUS.md` backlog for the full writeup). Add the
+  same Orient-step fix to vkv-inventory's command file, or confirm it's
+  already covered elsewhere before skipping it.
+
 ## Realisateur's own process (not inbox ideas — see nightly-batch.md step 3)
 
 - **2026-07-20: "Look into scheduler's idea logic, unite with the habit of
