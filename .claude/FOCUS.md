@@ -1,3 +1,27 @@
+**2026-07-22: `/ideate` added — realisateur's interactive vision/triage
+counterpart to `/nightly-batch`, cross-project by design.** Refines the
+scheduler/realisateur relationship being worked out this session:
+scheduler stays a pure mechanism (timing, pacing via `_paced.conf`'s new
+`weight` field — see `docs/priority-weight.md` in the scheduler repo);
+realisateur owns interpreting vision — feature requests, cross-project
+synchronicities, and "stable build vs. bigger dream" pacing judgments
+(vision debt, named 2026-07-20 in `chezz/.claude/commands/ideate.md`
+4.5, from the user's own words: *"my ideas outpace implementation of
+stable versions so the target is always moving"*). `/ideate` is
+interactive-only (surface/ask/record/queue, never build/scaffold — that
+stays `/nightly-batch`'s job), works ecosystem-wide by default or scoped
+to one project via `$ARGUMENTS`, and is the vehicle for the cross-write
+relationship: realisateur writes tagged `(realisateur)` entries directly
+into another project's own FOCUS.md/QUESTIONS.md, distinct from that
+project's own `(nightly-batch)`/`(bug-sweep)` entries. `bin/ecosystem-
+survey.sh` (new, offline-first, no AI — reuses `scheduler status
+<project>` per registered project plus a "oldest open dated idea"
+ecosystem ranking) backs both this command's step 1 and
+`/nightly-batch`'s own orient step now. See `.claude/commands/ideate.md`
+for the full shape, including the explicit oldest-first-override
+principle (a newer idea CAN jump an older parked one when justified —
+state why, don't reorder silently).
+
 Current focus: process whatever's sitting in the inbox (repo root artifacts
 not yet archived — see `.claude/commands/nightly-batch.md` step 1 for how
 to tell) and turn each viable idea into a real, scaffolded project wired

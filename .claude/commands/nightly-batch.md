@@ -19,6 +19,19 @@ review step until the morning.
 previous nightly run left work in progress (check the last report under
 `~/reports/realisateur/`), pick up from there rather than starting over.
 
+**Run `bin/ecosystem-survey.sh`** (offline, no AI cost, ~2s) before
+reasoning about anything else. It's realisateur's own equivalent of
+`scheduler status <project>` but across every registered project at
+once: per-project git health/open-questions/last-run-outcome (via
+`scheduler status`), plus an ecosystem-wide ranking of the oldest still-
+open dated ideas across every project's `FOCUS.md` -- the concrete signal
+behind "vision debt" (see `chezz/.claude/commands/ideate.md` 4.5 for
+where that pattern was named). Treat its output as a starting map of
+real current state, not something to act on item-by-item unprompted --
+most of what it surfaces belongs to other projects' own nightly-batch
+runs, not this one. It exists so this session (and `/ideate`) starts
+from ground truth instead of a stale mental model of the ecosystem.
+
 **Read `.claude/QUESTIONS.md` and process any answers.** The user replies
 inline, on a line starting with `> ` directly under a question --
 QUESTIONS.md's own header documents the convention. Treat any `> `
