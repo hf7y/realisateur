@@ -58,6 +58,25 @@ whatever's physically sitting in the inbox.
   letting a queue grow silently — is a concrete design input for that
   role, not just chezz's problem.
 
+## Reusable pattern worth applying to scaffolded projects: offline-first checks
+
+**2026-07-22 (scheduler side):** `bin/scheduler status <project>` was
+built as the reference implementation of a pattern worth carrying into
+any project realisateur scaffolds — see the scheduler repo's
+`docs/offline-first-checks.md` for the full writeup. Short version: build
+a "how's this doing" check entirely out of deterministic scripts (git
+status/ahead-behind/diverged, `bin/collect-feedback.sh` against any
+report/blockers file, an awk pass over a QUESTIONS-style file, a log
+tail) with **zero AI cost by default**, then layer AI on top only as
+strictly optional extras — a one-shot read-only `claude -p` summary
+(`--claude`) or a live session preloaded with the same report
+(`--interactive`). If a new scaffolded project ends up with its own
+FOCUS.md/QUESTIONS.md/report convention (i.e. follows this repo's own
+shape), consider giving it the same three-mode status check rather than
+defaulting straight to "spin up claude to check in" — reuse
+`bin/collect-feedback.sh` directly (it's generic) and copy/source
+`report_divergence()` from `bin/scheduler` for the git-health part.
+
 ## Backlog (recovered 2026-07-20 — see note below)
 
 Zach's own reply, written directly into `~/reports/realisateur/LATEST.md`
