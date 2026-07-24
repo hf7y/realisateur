@@ -53,14 +53,26 @@ that checklist item stays unchecked, not falsely marked done.
   project's FOCUS.md/QUESTIONS.md while its own automation holds the
   lock. Scheduler's half (dispatch/push robustness) is routed, not
   hand-fixed — see below.
-- **Root cause reframed, then routed.** What looked like a dedicated-
-  clone-vs-working-checkout push race (chezz/wtul stranded commits) is
-  actually a credential gap: the dispatch environment has no SSH access
-  to GitHub-hosted remotes, only local bare ones. Pushed both projects'
-  stranded commits by hand tonight (working credentials exist in an
-  interactive session); routed the real fix — deploy keys/agent
-  forwarding, or at minimum a loud "needs a human push" signal instead of
-  silent `pushed: no` — to scheduler via `scheduler -i scheduler`.
+- **Root cause: CORRECTED 2026-07-24, was wrong the first time.** Original
+  claim (this same night, earlier): chezz/wtul's stranded commits were a
+  credential gap (dispatch environment lacking GitHub SSH access). That
+  was never actually tested against the real keys before being routed to
+  scheduler — a later pass caught it (zach: "don't they have deploy?"),
+  verified directly (`ssh -T`, a real test push), and found chezz/wtul
+  already have working, write-verified deploy keys. **No credential gap
+  exists.** The real explanation for the original stranded commits is the
+  already-documented account-wide spend-limit-cutoff pattern (2026-07-20):
+  a run's commit lands, the push doesn't happen because the run got cut
+  off by quota exhaustion mid-cycle, not because credentials were
+  missing. Real fix (already queued in scheduler's own FOCUS.md): make a
+  stale/incomplete push loud in `scheduler status`/`sweep.log`, not new
+  credentials. **Lesson for next time:** verify a diagnosis against real
+  state (an actual `ssh -T`/test push here) before routing it to another
+  project as fact or writing it into memory — a plausible-sounding
+  explanation that fits the symptom isn't the same as a tested one.
+  `bin/check-project-busy.sh` (below) is unaffected by this correction —
+  it solves a different, real problem (cross-writing into a live run's
+  files) regardless of what was actually wrong with the pushes.
 - **First real park-by-default triage pass.** gardien, senechal, and
   wtul (the three projects this sprint's design-fork decisions touched)
   each got their first `## Stability milestone` — the prerequisite the
