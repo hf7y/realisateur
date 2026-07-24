@@ -24,7 +24,42 @@ git-as-archive (Backlog), the `scheduler -i`→realisateur triage-routing hook, 
 
 ---
 
-**2026-07-24 (`/nightly-batch`, ~04:00 pass): inbox cleared (one artifact, already resolved), no new project scaffolded.**
+**2026-07-24 (`/nightly-batch`, ~10:08 pass): inbox cleared (two artifacts, both stale reference snapshots), no new project scaffolded.**
+
+Two artifacts at the repo root: `COMPUTE-STICK-MIGRATION.md` and
+`PI-MIGRATION-STATUS.md`, both explicitly self-described as "copied in
+from the `crt` project as reference context," not new ideas. Checked
+against crt's own current state before archiving, per park-by-default
+triage (an addition to an existing project, judged against its current
+milestone): crt already carries a near-identical
+`COMPUTE-STICK-MIGRATION.md` in its own repo (this inbox copy differs
+only in copyedits/a header line -- same content, same conclusion:
+abandoned, migrated to a Pi), and the compute-stick/bare-metal migration
+is already explicitly PARKED in crt's own `.claude/FOCUS.md` ("explicitly
+excluded from this bar by Zach 2026-07-24 -- a separate, later goal, not
+required for the core loop or Book Game to be reliable"). The Pi-status
+note (flashed Pi 3B, account split in progress, keyboard-layout snag) is
+an early-stage snapshot from 2026-07-22 that's since been superseded by
+crt's own `POTATO.md`, which documents potato (Pi 3B+) as the fully live,
+working console hardware today. Nothing left to build or decide -- both
+archived as `archive/COMPUTE-STICK-MIGRATION-20260722.md` and
+`archive/PI-MIGRATION-STATUS-20260722.md`. All three offline surveys came
+back unchanged from the last recorded pass (crt's 20 hygiene FLAGs are
+its own pre-existing exec-bit/silent-pipe issues, already flagged, not
+touched this pass; milestone-audit still 7 declared/6 missing/1 no-focus;
+vision-debt ranking still topped by the four 2026-07-18 home-assistant
+entries). **QUESTIONS.md housekeeping:** verified crt's own working tree
+directly (`git status` on `~/Documents/Projects/crt`) -- it's clean now,
+crt's own nightly runs already committed the WIP + stamped build-
+discipline (`d8fbe7b`, `a22ac77`, same night) since that question was
+flagged. Removed the stale crt-dirty-tree question from QUESTIONS.md as
+resolved (not acting on a `> ` answer -- there wasn't one -- just retiring a
+flag whose underlying condition no longer holds, verified against real
+state rather than assumed). The aedile/vkv-inventory recovery question
+remains open, untouched, genuinely waiting on the human svc-vaporwave
+access step. Park-by-default triage was exercised this pass (both
+artifacts judged against crt's current milestone/parked-status), even
+though the outcome was "nothing to build."
 
 Only inbox artifact was `Correction-to-the-chezz-wtul-c-20260724-032158.idea` -- its full content (chezz/wtul deploy keys verified working, no credential gap, real cause is the spend-limit-cutoff pattern) was already folded into this file's own credential-gap-correction entry below (commit `a09c5b1`, same night, ahead of this pass). Nothing left to do but archive it -- no new decision, no new build. All three offline surveys came back substantively unchanged from the last recorded pass (crt's 24 hygiene FLAGs still pre-existing/already-flagged there; milestone-audit still 5 declared/8 missing/1 no-focus, no reached triggers; vision-debt ranking still topped by the three 2026-07-18 home-assistant entries). QUESTIONS.md: both open blocks (crt dirty-tree, aedile/vkv-inventory recovery) still unanswered, left untouched. Park-by-default triage not exercised this pass -- no live new-project/new-addition candidate in tonight's inbox.
 
