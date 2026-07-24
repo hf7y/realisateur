@@ -24,6 +24,24 @@ git-as-archive (Backlog), the `scheduler -i`→realisateur triage-routing hook, 
 
 ---
 
+**2026-07-24 (`/nightly-batch`, ~13:12 pass): inbox empty, nothing to build.**
+
+Repo root held only realisateur's own scaffolding (`README.md`,
+`SCHEDULER.md`, `STABILITY-MILESTONES.md`, `BUILD-DISCIPLINE.md`,
+`FOCUS-FORMAT.md`, `CLAUDE.md`, `.gitignore`, `.claude/`, `archive/`,
+`bin/`, `schedule/`, `.git/`) -- no dropped artifact to infer or wire up.
+All three offline surveys came back unchanged from the last recorded
+pass: hygiene-lint's 20 FLAGs are still crt's own pre-existing exec-bit/
+silent-pipe issues (already flagged there, not touched); milestone-audit
+still 7 declared/6 missing/1 no-focus, no reached triggers; vision-debt
+ranking still topped by the four 2026-07-18 home-assistant entries and
+the 2026-07-19/20 scheduler entries, nothing new or older surfaced.
+QUESTIONS.md's one open block (aedile/vkv-inventory svc-vaporwave
+recovery) is still genuinely waiting on the human cross-account access
+step -- no `> ` reply, left untouched per the answer-only-acts-on-a-reply
+contract. Park-by-default triage not exercised this pass (no live
+new-project/new-addition candidate in tonight's empty inbox).
+
 **2026-07-24 (`/nightly-batch`, ~10:08 pass): inbox cleared (two artifacts, both stale reference snapshots), no new project scaffolded.**
 
 Two artifacts at the repo root: `COMPUTE-STICK-MIGRATION.md` and
