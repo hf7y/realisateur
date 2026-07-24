@@ -1,3 +1,35 @@
+**2026-07-23 (`/ideate` reform pass — three standing decisions):**
+
+- **Identity: realisateur is a steward with sensory organs, not a second
+  engine.** The doctrine is "scheduler runs things; realisateur
+  perceives → judges → records." Its three offline deterministic auditors
+  (`bin/hygiene-lint.sh`, `bin/ecosystem-survey.sh`, `bin/incubation-
+  audit.sh`) stay in this repo *deliberately*: they are realisateur's
+  senses, not scheduler mechanism misfiled here. The test for what belongs
+  in realisateur vs. what goes through scheduler's `-i` front door: does it
+  feed a *judgment* (perception/triage/prioritization → realisateur) or is
+  it *engine mechanism* the ecosystem runs regardless of judgment
+  (timing/dispatch/templates → scheduler)? The auditors inform judgment;
+  they don't act on their own. This resolves the "pure mechanism living in
+  the vision repo" tension by naming the seam rather than moving code.
+
+- **Weighting reframes around "near a stable core" vs. "bigger still-forming
+  dream" (supersedes the incubation-audit graduation framing).** `_paced.conf`
+  weight is higher for ideas close to a defined, near-term shape (safe to
+  iterate fast unattended) and lower for ideas likely to morph before
+  anything built survives (slower pace, NOT "don't build"). Applied
+  2026-07-23: **nine-speakers 2→1** — its physical-rig half is a forming
+  dream, so the 2026-07-22 "graduation candidate = clean build momentum"
+  call conflated momentum with nearness-to-stable. **groc-mangr stays 2**
+  (conventional app, no forming-dream flag; re-confirm at next audit). The
+  broader incubating/graduation weights the audit applied remain a separate
+  open question — see QUESTIONS.md.
+
+- **git-as-archive: consciously parked (see Backlog bullet below).** The
+  empty-root-when-idle aesthetic is a real "needs its own design pass," not
+  a near-term build. Recorded as deliberately deferred so it stops reading
+  as forgotten.
+
 **2026-07-22: `/ideate` added — realisateur's interactive vision/triage
 counterpart to `/nightly-batch`, cross-project by design.** Refines the
 scheduler/realisateur relationship being worked out this session:
@@ -140,6 +172,11 @@ before it was lost to the next overwrite:
   staying under a dot-prefixed folder (`.scheduler/` per the model
   scheduler itself uses) helps keep that clean look. Not designed
   further than this — a real "how" needs its own pass.
+  **2026-07-23 (`/ideate`): consciously PARKED, not dropped.** Decided
+  this is a genuine design pass of its own (idea-lifecycle in git history
+  vs. a visible folder, plus moving scheduler-owned files under
+  `.scheduler/`), not something to half-build inline. Revisit as a
+  dedicated pass; the aesthetic goal above stands as the target.
 - **The only real stop-and-wait bar: something that can't be reverted.** A
   commit, a branch, a new scheduler registration, a local bare git remote
   — none of these block you. What does: a real message to a person outside
