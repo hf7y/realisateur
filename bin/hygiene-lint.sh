@@ -121,7 +121,12 @@ for name in "${projects[@]}"; do
   # register as failed and silently drop output). Heuristic -- flags for review.
   for sh in $(echo "$tracked" | grep -E '\.sh$' | grep -vE '(^|/)tests?/'); do
     body="$(git -C "$repo" show ":$sh" 2>/dev/null)"
-    if echo "$body" | grep -q 'pipefail' && echo "$body" | grep -qE '\b(arecord|aplay|sox|ffmpeg|parec|pacat)\b'; then
+    # Skip this linter itself: it names the audio tools inside its own
+    # detection regex, which would otherwise self-flag. Any script that
+    # emits the FLAG marker is a silent-pipe *detector*, not a target.
+    if echo "$body" | grep -q 'pipefail' \
+       && echo "$body" | grep -qE '\b(arecord|aplay|sox|ffmpeg|parec|pacat)\b' \
+       && ! echo "$body" | grep -qF 'FLAG [silent-pipe]'; then
       echo "  FLAG [silent-pipe] pipefail + audio/stream pipe (SIGPIPE guard?): $sh"
       n=$((n+1))
     fi

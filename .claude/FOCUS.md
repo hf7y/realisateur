@@ -77,12 +77,17 @@ whatever's physically sitting in the inbox.
   meant to eventually own abstract visioning across projects, not just
   scaffolding — see the inbox item this generated
   (`look-at-Document-Project-Archi-*.idea`, chezz's `/ideate` command as
-  the reference model) for the concrete proposal.** Explicitly open,
-  parked per scheduler's own "hardening first" priority right now (see
-  scheduler's `.scheduler/FOCUS.md` backlog, 16:41 entry) — do not build
-  a `scheduler -i` hook or an `/ideate`-for-every-project mechanism
-  unprompted. What IS worth carrying forward regardless of that larger
-  design fork: the "vision debt" pattern named the same session (ideas
+  the reference model) for the concrete proposal.**
+  **PARTIALLY SHIPPED 2026-07-23 (reconciled):** the
+  `/ideate`-for-every-project half of this landed 2026-07-22 (built when
+  prompted, not unprompted) — see this file's top entry and
+  `.claude/commands/ideate.md`. What remains OPEN from the source idea:
+  whether `scheduler -i` should route through realisateur to triage
+  whether a dropped note is a next-action-item vs. a vision to incubate
+  (the "is scheduler's `-i` proper?" fork) — still unbuilt, still parked
+  per scheduler's "hardening first" priority; do not build that
+  `-i`→realisateur hook unprompted. What IS worth carrying forward
+  regardless of that larger design fork: the "vision debt" pattern named the same session (ideas
   arrive faster than any implementation cadence can stabilize them) —
   named explicitly in chezz's own `ideate.md` now. If realisateur ever
   does take on abstract-visioning ownership, this pattern — making the

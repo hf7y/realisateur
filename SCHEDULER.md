@@ -78,7 +78,7 @@ pointer into them, not a replacement. In short, registering means:
    vision-shaped ask and points at realisateur's `/ideate` rather than
    quietly building against it inline.
 
-5. **One file dropped into the scheduler repo**:
+6. **One file dropped into the scheduler repo**:
    `schedule/realisateur.conf`, copied from
    `scheduler/examples/schedule-entry.conf.template`. This is the single
    source of truth for both *when* the job fires and *how* it runs —
@@ -90,7 +90,7 @@ pointer into them, not a replacement. In short, registering means:
    projects like chezz still have legacy `*_SCRIPT` wrappers for
    backwards-compat reasons; don't copy that pattern for a new project).
 
-6. **Preview, then apply**: from the scheduler repo,
+7. **Preview, then apply**: from the scheduler repo,
    `bin/sync-crontab.sh` (no `--apply`) to check the generated config, then
    `bin/sync-crontab.sh --apply` to actually install the symlinks/crontab
    changes.
