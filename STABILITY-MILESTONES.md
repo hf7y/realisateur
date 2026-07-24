@@ -78,6 +78,12 @@ Ideas beyond this bar are PARKED by default (see realisateur/STABILITY-MILESTONE
 - The `**Current:**` line MUST end with `status: not-started`,
   `status: in-progress`, or `status: reached` — that token is what the
   audit reads.
+- **The whole bar + status must be on ONE physical line** — `bin/
+  milestone-audit.sh` finds it with `grep -m1`, so wrapping the bar text
+  across multiple Markdown lines (even though it reads fine rendered)
+  makes the line lack its own `status:` token and reports UNRECOGNIZED.
+  Long bar text is fine; line breaks in it are not (hit and fixed
+  2026-07-24 across gardien/senechal/wtul's first real milestones).
 - `Done when:` is a checklist of the concrete, checkable criteria. When
   every box is checked, the status is `reached`.
 

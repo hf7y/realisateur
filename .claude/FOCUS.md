@@ -4,7 +4,7 @@ Done when:
 - [x] inbox → infer → scaffold → scheduler-register loop runs unattended (proven: 6 projects scaffolded)
 - [x] `bin/milestone-audit.sh` exists and the convention is documented (`STABILITY-MILESTONES.md`)
 - [x] the offline surveys are wired into both command files (`milestone-audit` added to `/ideate` + `/nightly-batch`; nightly-batch already ran ecosystem-survey + hygiene-lint)
-- [ ] park-by-default triage APPLIED to real ideas for at least one full pass (wired 2026-07-24; not yet exercised on a live pass)
+- [x] park-by-default triage APPLIED to real ideas for at least one full pass (2026-07-24: gardien/senechal/wtul each got a real milestone + explicit active/parked tagging against it — git-history-on-RAID and keybinding-parsing parked, naming-registry an explicit named exception, wtul's five deeper-integration items parked)
 - [ ] build-discipline baseline stamped into every registered project (crt still pending its dirty-tree cleanup)
 
 Ideas beyond this bar are PARKED by default (see realisateur/STABILITY-MILESTONES.md):
@@ -44,6 +44,47 @@ by hand if that's wanted sooner. **Milestone checklist note:** this pass
 did NOT exercise park-by-default triage against a live idea (nothing in
 tonight's inbox was a genuine new-project or new-addition candidate) —
 that checklist item stays unchecked, not falsely marked done.
+
+**2026-07-24 (this sprint — vision + concurrency fix + first live triage pass, sequenced per plan):**
+
+- **Concurrency fix shipped (realisateur's half).** `bin/check-project-busy.sh`
+  (flock-probes a project's own scheduler job locks, zero AI cost) wired
+  into `/ideate` step 4's cross-write bullet — don't edit another
+  project's FOCUS.md/QUESTIONS.md while its own automation holds the
+  lock. Scheduler's half (dispatch/push robustness) is routed, not
+  hand-fixed — see below.
+- **Root cause reframed, then routed.** What looked like a dedicated-
+  clone-vs-working-checkout push race (chezz/wtul stranded commits) is
+  actually a credential gap: the dispatch environment has no SSH access
+  to GitHub-hosted remotes, only local bare ones. Pushed both projects'
+  stranded commits by hand tonight (working credentials exist in an
+  interactive session); routed the real fix — deploy keys/agent
+  forwarding, or at minimum a loud "needs a human push" signal instead of
+  silent `pushed: no` — to scheduler via `scheduler -i scheduler`.
+- **First real park-by-default triage pass.** gardien, senechal, and
+  wtul (the three projects this sprint's design-fork decisions touched)
+  each got their first `## Stability milestone` — the prerequisite the
+  checklist above was waiting on. Hit and fixed a real parser trap along
+  the way: the `**Current:**` bar+status must be one physical line, not
+  wrapped Markdown — documented in `STABILITY-MILESTONES.md` now so the
+  next 8 missing-milestone projects don't repeat it.
+- **Remaining sprint work, split per tonight's "both, sequenced" call:**
+  - *Triage-hardening:* the reweight decision this repo's own bootstrap
+    exit depends on (`scheduler`/`realisateur` weight 3 → 1) now has real
+    evidence — a live park-by-default pass ran and proved out. Flagging
+    for a deliberate decision, not silently dropping the weight.
+  - *Scaffold-hardening:* 8 more projects still show `missing` in
+    `milestone-audit.sh` (chezz, crt, home-assistant, nine-speakers,
+    sequestria, vim-arcade, vkv-inventory, groc-mangr). Per the standing
+    "not a bulk-invent" rule, populate incrementally during each
+    project's own `/ideate <name>` pass — crt specifically blocked until
+    its dirty-tree flag (still open in QUESTIONS.md) is cleared.
+- **Blockers only the user can clear:** crt's dirty tree (needs a human
+  or crt's own batch to commit-or-clean it — realisateur can't touch it
+  meanwhile); whether the dispatch environment actually gets GitHub
+  credentials is scheduler's design call but the credential material
+  itself (deploy key generation, `known_hosts`) needs a human step no
+  agent should do unattended.
 
 **2026-07-24 (`/ideate` ecosystem pass — decisions recorded, nothing built):**
 
