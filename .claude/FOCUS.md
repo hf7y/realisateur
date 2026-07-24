@@ -69,10 +69,11 @@ that checklist item stays unchecked, not falsely marked done.
   wrapped Markdown — documented in `STABILITY-MILESTONES.md` now so the
   next 8 missing-milestone projects don't repeat it.
 - **Remaining sprint work, split per tonight's "both, sequenced" call:**
-  - *Triage-hardening:* the reweight decision this repo's own bootstrap
-    exit depends on (`scheduler`/`realisateur` weight 3 → 1) now has real
-    evidence — a live park-by-default pass ran and proved out. Flagging
-    for a deliberate decision, not silently dropping the weight.
+  - *Triage-hardening:* **DONE, same session.** Both bootstrap exit
+    conditions were met (convention exists + a live pass proved park-by-
+    default out), so `schedule/_paced.conf`'s `scheduler`/`realisateur`
+    weight dropped 3→1 — stated explicitly in that file's own comment
+    and in the commit, not a silent reweight.
   - *Scaffold-hardening:* 8 more projects still show `missing` in
     `milestone-audit.sh` (chezz, crt, home-assistant, nine-speakers,
     sequestria, vim-arcade, vkv-inventory, groc-mangr). Per the standing
