@@ -25,10 +25,23 @@ set -uo pipefail
 project="${1:?usage: check-project-busy.sh <project>}"
 share_dir="$HOME/.local/share"
 
+# Shared scheduler INFRASTRUCTURE job dirs, not any one project's own
+# automation -- these happen to share the "scheduler-*" prefix with
+# scheduler's own real jobs (scheduler-nightly-batch, scheduler-paced-dev)
+# purely by naming coincidence, but being "busy" here means "the shared
+# dispatcher loop is currently taking its turn" (could be running ANY
+# paced participant), not "scheduler's own repo is being edited right
+# now." Hit for real 2026-07-24: `check-project-busy.sh scheduler`
+# false-positived on `scheduler-paced-runner` while it was dispatching
+# wtul's cycle, not scheduler's own. Excluded so the check answers the
+# question it's actually meant to.
+declare -A INFRA_EXCLUDE=( [scheduler-paced-runner]=1 [scheduler-registry]=1 [scheduler-glance]=1 )
+
 busy=0
 shopt -s nullglob
 for dir in "$share_dir/$project"-*/; do
   job="$(basename "$dir")"
+  [ -n "${INFRA_EXCLUDE[$job]:-}" ] && continue
   lock="$dir/sweep.lock"
   [ -f "$lock" ] || lock="$dir/run.lock"
   [ -f "$lock" ] || continue

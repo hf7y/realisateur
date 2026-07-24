@@ -46,13 +46,20 @@ declared=0; missing=0; nofocus=0; reached=0
 for name in $(printf '%s\n' "${projects[@]}" | sort); do
   conf="$SCHED_ROOT/schedule/$name.conf"
   repo="$(grep -oP '(?<=PROJECT_REPO_PATH=")[^"]*' "$conf")"
-  focus="$repo/.claude/FOCUS.md"
+  # Respect SCHEDULER_SUBDIR same as sync-crontab.sh/bin/scheduler already
+  # do (default ".claude" when unset) -- scheduler itself, and any future
+  # project migrated onto the self-contained-folder model, keeps FOCUS.md
+  # outside .claude/ deliberately (see .scheduler/FOCUS.md "Permission
+  # gate" note). Hardcoding .claude/ here misread scheduler as no-focus.
+  subdir="$(grep -v '^[[:space:]]*#' "$conf" | grep -m1 -oP '(?<=SCHEDULER_SUBDIR=")[^"]*' || true)"
+  [ -z "$subdir" ] && subdir=".claude"
+  focus="$repo/$subdir/FOCUS.md"
   echo
   echo "############################################################"
   echo "# $name  ($repo)"
 
   if [ ! -f "$focus" ]; then
-    echo "  FOCUS: none (no .claude/FOCUS.md) -- see FOCUS-md-formatting-compliance"
+    echo "  FOCUS: none (no $subdir/FOCUS.md) -- see FOCUS-md-formatting-compliance"
     nofocus=$((nofocus+1))
     continue
   fi
