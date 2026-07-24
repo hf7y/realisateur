@@ -1,11 +1,21 @@
 ## Stability milestone
-**Current:** realisateur reliably turns inbox drops into scaffolded, scheduler-registered projects AND triages every idea active/parked/waiting against each project's milestone (park-by-default), with all three offline surveys wired into every pass — status: in-progress
+
+**REACHED 2026-07-24** — see below. Original bar:
+**realisateur reliably turns inbox drops into scaffolded, scheduler-registered projects AND triages every idea active/parked/waiting against each project's milestone (park-by-default), with all three offline surveys wired into every pass** — status: reached
 Done when:
 - [x] inbox → infer → scaffold → scheduler-register loop runs unattended (proven: 6 projects scaffolded)
 - [x] `bin/milestone-audit.sh` exists and the convention is documented (`STABILITY-MILESTONES.md`)
 - [x] the offline surveys are wired into both command files (`milestone-audit` added to `/ideate` + `/nightly-batch`; nightly-batch already ran ecosystem-survey + hygiene-lint)
 - [x] park-by-default triage APPLIED to real ideas for at least one full pass (2026-07-24: gardien/senechal/wtul each got a real milestone + explicit active/parked tagging against it — git-history-on-RAID and keybinding-parsing parked, naming-registry an explicit named exception, wtul's five deeper-integration items parked)
-- [ ] build-discipline baseline stamped into every registered project (crt still pending its dirty-tree cleanup)
+- [x] build-discipline baseline stamped into every registered project (2026-07-24: crt's dirty tree cleared, then stamped — the last real target; `aedile` is an explicit edge case, not a gap: no git repo at its path, migrated/defunct)
+
+**New milestone, per STABILITY-MILESTONES.md's Lifecycle (a reached bar means set the next one, not stop):**
+**Current:** every scheduler-registered project with a real git repo has a declared `## Stability milestone` of its own, AND park-by-default triage has held across more than one live pass (not just its first exercise) — status: in-progress
+Done when:
+- [x] gardien, senechal, wtul, scheduler each have a declared milestone (2026-07-24)
+- [ ] the remaining 8 (chezz, crt, home-assistant, nine-speakers, sequestria, vim-arcade, vkv-inventory, groc-mangr) get theirs — incrementally, one per-project judgment call at a time (NOT a bulk-invent — crt specifically needs its own dedicated `/ideate crt` pass given its 1,368-line FOCUS.md, too large to draft safely alongside other work)
+- [ ] at least one more live `/ideate` pass exercises park-by-default triage on a DIFFERENT project than gardien/senechal/wtul, confirming the mechanism generalizes rather than being a one-off
+- [ ] scheduler's own milestone (2026-07-24, see its `.scheduler/FOCUS.md`) reaches `in-progress` → visibly progressing, not stalled — a live signal the engine side of tonight's split is actually working, not just designed
 
 Ideas beyond this bar are PARKED by default (see realisateur/STABILITY-MILESTONES.md):
 git-as-archive (Backlog), the `scheduler -i`→realisateur triage-routing hook, and the BLOCKERS.md taxonomy unification (routed to scheduler 2026-07-23) are all `(parked)` — real, past this milestone, revisit when it's reached.
