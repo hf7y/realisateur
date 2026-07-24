@@ -12,6 +12,40 @@ git-as-archive (Backlog), the `scheduler -i`→realisateur triage-routing hook, 
 
 ---
 
+**2026-07-24 (`/ideate` ecosystem pass — decisions recorded, nothing built):**
+
+- **scheduler-milestone open question: RESOLVED — engine participates.**
+  Decided the engine should get a stability milestone too, not be treated
+  as exempt mechanism. Routed via `scheduler -i scheduler` (front door,
+  per step 5) rather than hand-edited — scheduler itself now owns whether
+  that lands as a `.scheduler/FOCUS.md` `## Stability milestone` section
+  or a `milestone-audit.sh` fix to also read `.scheduler/`.
+- **gardien's git-history-on-RAID fork: DECIDED — git remote + partial
+  clone.** Folded into gardien's own FOCUS.md/QUESTIONS.md
+  (`(realisateur)`-tagged). Real synchronicity worth naming here too:
+  this is the same underlying shape as this repo's own parked
+  "git-as-archive" idea below (empty working root, full history lives in
+  git) — if gardien builds the remote/partial-clone mechanism first,
+  revisit git-as-archive against it rather than designing from scratch.
+- **senechal's "keeper of names and places" fork: SCOPED, not just
+  decided.** Naming-convention registry only (new file in senechal's own
+  repo, senechal's to name); canonical-shared-location half (lilypond
+  library, GitHub tidy-up) explicitly split out as a separate later idea.
+  Folded into senechal's own FOCUS.md/QUESTIONS.md.
+- **wtul's metadata-API either/or: DECIDED — Discogs, token already in
+  hand.** Only part (a) of that 2026-07-18 bundle; (b)/(c)/(d) (catalog
+  spreadsheet, printer model, web-photo/OCR) remain genuinely open.
+- **Flagging, not fixing:** chezz and crt both show stranded local
+  commits from FAILED nightly runs (not pushed to origin, per `scheduler
+  status`) — separate from crt's already-flagged dirty-tree stop.
+  home-assistant's last run divergence check also printed an empty
+  remote-hash field, possibly a reporting glitch rather than a real
+  issue. None acted on this pass.
+- **Vision-debt state, unchanged:** oldest open dated items are still the
+  three 2026-07-18 home-assistant entries — same as last check, not
+  drained, not obviously grown either (no new dated items older than
+  those surfaced this pass).
+
 **2026-07-24: stability-milestone convention BUILT + wired — active follow-ups (queued, not done):**
 
 - **Milestone population is standing per-project triage work, NOT a
