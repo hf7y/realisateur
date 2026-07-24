@@ -12,6 +12,28 @@ git-as-archive (Backlog), the `scheduler -i`→realisateur triage-routing hook, 
 
 ---
 
+**2026-07-24: stability-milestone convention BUILT + wired — active follow-ups (queued, not done):**
+
+- **Milestone population is standing per-project triage work, NOT a
+  bulk-invent.** `milestone-audit.sh` shows **11 projects `missing`** a
+  `## Stability milestone` section. Populate each incrementally during that
+  project's own `/ideate <name>` or nightly triage pass — the bar is a
+  per-project judgment call, not something to invent in one sweep. Do the
+  projects realisateur is about to build against first, and the
+  stable-vs-dream-flagged ones (nine-speakers/sequestria/senechal) early,
+  since their `_paced.conf` weight already depends on that judgment.
+- **The 2 `no-focus` cases are edge cases, not population targets:**
+  `aedile` (no git repo — migrated/defunct) and `scheduler` (keeps its
+  FOCUS under `.scheduler/`, not `.claude/`, because it's the *engine*, not
+  a scaffolded project). `milestone-audit.sh` assumes `.claude/FOCUS.md`, so
+  it reads scheduler as no-focus — a known limitation. **Open question:**
+  does the engine participate in the milestone convention at all, or is it
+  exempt? Decide before treating scheduler's no-focus as a gap to fix.
+- **Reweight decision (the one open pacing call):** scheduler + realisateur
+  stay at weight 3 until park-by-default triage runs on **≥1 live pass and
+  proves out**, then drop toward 1 per `_paced.conf`'s exit note. Waiting on
+  evidence, not on a decision.
+
 **2026-07-23 (`/ideate` — vision-debt strategy, standing doctrine):**
 The honest number (scheduler DESIGN-NOTES 2026-07-23): intake is zero-cost
 and unbounded (`scheduler -i`), clearing is quota-gated and shared 12 ways,
