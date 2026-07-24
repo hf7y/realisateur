@@ -91,7 +91,19 @@ oldest-first override in §4.5 -- never a silent reorder.
 For each decision:
 - **About realisateur's own scope** -- write into this repo's own
   `.claude/FOCUS.md` (decision + rationale) same as any other project.
-- **About another project** -- write directly into THAT project's own
+- **About another project** -- first run `bin/check-project-busy.sh
+  <project>` (offline, ~instant -- flock-probes that project's own
+  scheduler job locks). If it reports `BUSY: <job-name>`, that project's
+  own automation is mid-run against the same files RIGHT NOW -- **defer
+  the cross-write** (note the decision in this session's chat/report
+  instead, cross-write next session) rather than risk editing FOCUS.md/
+  QUESTIONS.md out from under a live nightly-batch/bug-sweep pass. This is
+  realisateur's own half of the 2026-07-24 concurrency finding (see
+  FOCUS.md) -- scheduler owns making dispatch/push itself robust;
+  detecting "don't step on a live run" before cross-writing is
+  realisateur's job specifically because it's the one thing reaching into
+  other projects' files from outside their own automation.
+  If free, write directly into THAT project's own
   `.claude/FOCUS.md`/`.claude/QUESTIONS.md` (realisateur owns this
   cross-write relationship, unlike chezz's `/ideate`, which must go
   through scheduler's `-i` front door for anything outside itself).
