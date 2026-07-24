@@ -16,7 +16,8 @@ thing to say; silently building anyway is not.
 **Per-session tuning via `$ARGUMENTS`:** if invoked with a project name
 (`/ideate crt`, `/ideate senechal`), scope this session to that one
 project's vision/backlog -- read only its own FOCUS.md/QUESTIONS.md plus
-its `scheduler status` output, skip the ecosystem-wide survey. If
+its `scheduler status` output plus `bin/milestone-audit.sh <project>`,
+skip the ecosystem-wide survey. If
 invoked with no argument, run the full ecosystem sweep below. Either way
 this is the same command, same file, same conventions -- only the scope
 of step 1 changes.
@@ -26,7 +27,12 @@ of step 1 changes.
 **Ecosystem-wide (no argument):** run `bin/ecosystem-survey.sh` (offline,
 no AI, ~2s) -- per-project git health/open-questions/last-run outcome,
 plus the ranked "oldest still-open dated idea per project" vision-debt
-signal. Also read this repo's own `.claude/FOCUS.md`/`QUESTIONS.md`.
+signal. **Then run `bin/milestone-audit.sh`** (offline) -- each project's
+current stability milestone + status + reservoir signal; this is what
+makes step 4's park-by-default triage decidable (you can't judge `active`
+vs `parked` without the current bar in front of you). See
+`STABILITY-MILESTONES.md`. Also read this repo's own
+`.claude/FOCUS.md`/`QUESTIONS.md`.
 
 **Single-project (`$ARGUMENTS` given):** run
 `"/home/zach/Documents/Project Archive/scheduler/bin/scheduler" status <project>`
@@ -69,6 +75,18 @@ to 4 per call, options with real tradeoffs grounded in what was actually
 found). Don't scaffold or implement speculatively while waiting.
 
 ## 4. Record and queue, don't build
+
+**Park-by-default triage (do this for every idea before recording it).**
+Against the target project's *current* stability milestone (from
+`milestone-audit.sh`), judge each idea: is it required to reach that
+milestone? If **yes** it's `active`; if **no**, tag it `(parked)` (or
+`(waiting: <dep>)` if it's blocked externally, not by choice) and record
+one line of why it's past the bar. Parking is the default for anything
+beyond the current milestone -- see `STABILITY-MILESTONES.md`. The metric
+that matters is the *active*-set draining, not the parked reservoir
+shrinking (a free-fed reservoir is supposed to grow). Promoting a parked
+idea into the active set is a deliberate, stated decision, same as the
+oldest-first override in §4.5 -- never a silent reorder.
 
 For each decision:
 - **About realisateur's own scope** -- write into this repo's own

@@ -43,6 +43,18 @@ other projects' own nightly runs, not this one. Note any FLAG against a
 project *this* run touches and fix it before committing; don't go fix the
 whole ecosystem unprompted.
 
+**Then run `bin/milestone-audit.sh`** (offline, no AI cost). The third
+survey: per registered project it reports whether a `## Stability
+milestone` is declared, its current bar + status
+(`not-started`/`in-progress`/`reached`), and a rough parked/waiting
+reservoir signal. Convention: `STABILITY-MILESTONES.md`. This is what makes
+the park-by-default triage in step 3 decidable — you need each project's
+current milestone in front of you before judging whether an idea is
+`active` (required to reach it) or `parked` (beyond it). A project whose
+status is `reached` is a signal to set a new milestone or graduate it
+(drop its `_paced.conf` weight) — same signals-not-verdicts stance as the
+other two surveys.
+
 **Read `.claude/QUESTIONS.md` and process any answers.** The user replies
 inline, on a line starting with `> ` directly under a question --
 QUESTIONS.md's own header documents the convention. Treat any `> `
@@ -81,10 +93,26 @@ For each unarchived artifact:
 - Check whether a project for this idea already exists under
   `~/Documents/Projects/` before creating a new one -- an artifact might
   be an addition to something already scaffolded, not a brand-new project.
+- **If it's an addition to an existing project, apply park-by-default
+  triage** (see `STABILITY-MILESTONES.md`): is this idea required to reach
+  that project's *current* stability milestone (from `milestone-audit.sh` /
+  its FOCUS.md)? If **yes**, it's `active` -- build/queue it normally. If
+  **no**, **park it**: append it to that project's FOCUS.md tagged
+  `(parked)` with one line of why it's past the milestone, and do NOT build
+  it tonight. Parking is the default for anything beyond the current bar --
+  building past the milestone unprompted is the failure mode this convention
+  exists to prevent. A brand-new project is exempt: the inbox idea *is* its
+  v1, so scaffold it and set its first `## Stability milestone` as part of
+  the scaffold (below).
 - For a genuinely new idea: create `~/Documents/Projects/<name>/`, `git
   init` it, write a minimal README describing the inferred idea and
   initial scaffolding (actual code/structure appropriate to what was
-  inferred -- don't leave it as just a README).
+  inferred -- don't leave it as just a README). When you write its
+  `.claude/FOCUS.md` (below), open it with a `## Stability milestone`
+  section (canonical shape in `STABILITY-MILESTONES.md`) whose bar is the
+  inferred **v1 core** of the idea, `status: not-started`. That milestone
+  is what every later idea against the project gets park-by-default-triaged
+  against.
 - **Stamp the build-discipline baseline into every new project** so the
   lessons in `BUILD-DISCIPLINE.md` are inherited from day one, not
   rediscovered per project the hard way (see that file for why -- it

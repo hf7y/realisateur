@@ -1,3 +1,17 @@
+## Stability milestone
+**Current:** realisateur reliably turns inbox drops into scaffolded, scheduler-registered projects AND triages every idea active/parked/waiting against each project's milestone (park-by-default), with all three offline surveys wired into every pass — status: in-progress
+Done when:
+- [x] inbox → infer → scaffold → scheduler-register loop runs unattended (proven: 6 projects scaffolded)
+- [x] `bin/milestone-audit.sh` exists and the convention is documented (`STABILITY-MILESTONES.md`)
+- [x] the offline surveys are wired into both command files (`milestone-audit` added to `/ideate` + `/nightly-batch`; nightly-batch already ran ecosystem-survey + hygiene-lint)
+- [ ] park-by-default triage APPLIED to real ideas for at least one full pass (wired 2026-07-24; not yet exercised on a live pass)
+- [ ] build-discipline baseline stamped into every registered project (crt still pending its dirty-tree cleanup)
+
+Ideas beyond this bar are PARKED by default (see realisateur/STABILITY-MILESTONES.md):
+git-as-archive (Backlog), the `scheduler -i`→realisateur triage-routing hook, and the BLOCKERS.md taxonomy unification (routed to scheduler 2026-07-23) are all `(parked)` — real, past this milestone, revisit when it's reached.
+
+---
+
 **2026-07-23 (`/ideate` — vision-debt strategy, standing doctrine):**
 The honest number (scheduler DESIGN-NOTES 2026-07-23): intake is zero-cost
 and unbounded (`scheduler -i`), clearing is quota-gated and shared 12 ways,
