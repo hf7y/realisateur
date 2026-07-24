@@ -94,6 +94,16 @@ access step. Park-by-default triage was exercised this pass (both
 artifacts judged against crt's current milestone/parked-status), even
 though the outcome was "nothing to build."
 
+---
+
+**2026-07-24 (`/ideate`, interactive, Zach-directed): new BUILD-DISCIPLINE.md rule — "declare your host footprint" — plus senechal's mission widened to own it.** Zach asked directly ("senechal should take some ownership... nobody owns this right?") about `dexter` accumulating unattributable dev cruft (scripts/autostart entries) from `crt`'s work, with no ecosystem mechanism naming or tracking it. Two decisions, asserted together per Zach's own framing ("both... give the build discipline rule... but have senechal own knowledge of the script world of all of Zach's shared hosts"):
+- **BUILD-DISCIPLINE.md**: added failure pattern #6 (cruft on shared hosts) and a new mechanical discipline — any project installing onto a shared host (`dexter`, `mandark`, future hosts) must declare it in its own FOCUS.md, remove it when retired — plus a new checklist row. A real `hygiene-lint.sh` check (cross-referencing declared footprints against senechal's actual host journals) is queued, not built, this pass.
+- **senechal's mission widened** (recorded in senechal's own FOCUS.md/QUESTIONS.md, cross-committed there): from mandark-only journaling to owning knowledge of the script/autostart world across *all* of Zach's shared hosts, with cleanup itself as "a mix" — direct action where senechal owns it, delegation to project-specific batch jobs via scheduler where a project (like crt) should clean up its own mess. This is explicitly a **named exception** past senechal's current stability milestone (mandark watch-list breadth + redaction coverage), same shape as the naming-registry exception — approved directly by Zach, not milestone-widening by drift. Implementation (how senechal reaches a Windows host like dexter, the actual cleanup-vs-delegate split per case) is genuinely open design, not decided or built this pass — record and queue, not build, per `/ideate`'s own contract.
+
+---
+
+**2026-07-24 (`/nightly-batch`, ~04:00 pass): inbox cleared (one artifact, already resolved), no new project scaffolded.**
+
 Only inbox artifact was `Correction-to-the-chezz-wtul-c-20260724-032158.idea` -- its full content (chezz/wtul deploy keys verified working, no credential gap, real cause is the spend-limit-cutoff pattern) was already folded into this file's own credential-gap-correction entry below (commit `a09c5b1`, same night, ahead of this pass). Nothing left to do but archive it -- no new decision, no new build. All three offline surveys came back substantively unchanged from the last recorded pass (crt's 24 hygiene FLAGs still pre-existing/already-flagged there; milestone-audit still 5 declared/8 missing/1 no-focus, no reached triggers; vision-debt ranking still topped by the three 2026-07-18 home-assistant entries). QUESTIONS.md: both open blocks (crt dirty-tree, aedile/vkv-inventory recovery) still unanswered, left untouched. Park-by-default triage not exercised this pass -- no live new-project/new-addition candidate in tonight's inbox.
 
 **2026-07-24 (`/nightly-batch`): inbox cleared, no new project scaffolded, chezz/wtul FOCUS.md formatting fixed.**

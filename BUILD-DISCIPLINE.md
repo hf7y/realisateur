@@ -30,6 +30,15 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
 5. **Secrets in the open.** Passwords/keys committed to tracked files
    (permanent, in history) or left loose one `git add -A` away from it;
    build debris (disk images, firmware) tracked as if it were source.
+6. **Cruft on shared hosts.** A project drops a script, autostart entry,
+   or systemd unit onto a host it doesn't exclusively own (`dexter`,
+   `mandark`) during fast dev iteration, then the project moves on or its
+   architecture shifts — the leftover is now unattributable: nobody
+   scanning that host later can tell which project it came from or
+   whether it's still needed (found live, 2026-07-24: `dexter`
+   accumulated exactly this from `crt`'s dev work, see its own FOCUS.md's
+   parked `dexter-npu-tools` entry and the 2026-07-23 bridge-cleanup
+   flags — prose notes, not a mechanism).
 
 ## The disciplines (stated as mechanical rules)
 
@@ -54,6 +63,17 @@ boot-path line) over a reminder. Reminders decay; guards fail loud.
 - **No secret in a tracked file.** Real secrets live in an untracked
   `.env`/`secrets/`; the `.gitignore` blocks creds and build debris from
   day one.
+- **Declare your host footprint.** Any project that installs a script,
+  autostart entry, or systemd unit onto a *shared* host (one this project
+  doesn't exclusively own — `dexter`, `mandark`, any future shared box)
+  must name it in that project's own `FOCUS.md` (what, where, why) so
+  it's attributable later, and remove/say-so when it's retired rather
+  than leaving it live and unowned. `senechal` is the ecosystem's registry
+  for this (2026-07-24 decision, senechal's own FOCUS.md/QUESTIONS.md —
+  its mission widened past mandark-only to own the script/autostart world
+  across all of Zach's shared hosts); a project's own `FOCUS.md`
+  declaration is the source senechal reconciles against, not a
+  replacement for it.
 
 ## The checklist (stamped into every new project's CLAUDE.md)
 
@@ -67,9 +87,16 @@ Before marking anything done:
 - [ ] Config read from **one source**, not retyped per file?
 - [ ] Deploy verified against a **git ref**; drift fails loud?
 - [ ] **No secret** in a tracked file; tree clean of build debris?
+- [ ] **Shared-host footprint declared** (script/autostart/systemd unit on
+      `dexter`/`mandark`/etc named in this project's own FOCUS.md), and
+      retired entries actually removed, not left live?
 ```
 
 `bin/hygiene-lint.sh` mechanically checks the last two rows (secrets,
 debris, uncommitted work, missing exec bits, silent-pipeline smells,
 config duplication) across every registered project — offline, no AI. Run
 it at the top of every nightly-batch pass, same as `ecosystem-survey.sh`.
+A mechanical check for the new shared-host-footprint row (cross-
+referencing each project's declared footprint against senechal's actual
+host journals) is a real follow-on `hygiene-lint.sh` addition, not yet
+built — queued, not done, as of this entry.
