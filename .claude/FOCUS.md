@@ -12,6 +12,39 @@ git-as-archive (Backlog), the `scheduler -i`→realisateur triage-routing hook, 
 
 ---
 
+**2026-07-24 (`/nightly-batch`): inbox cleared, no new project scaffolded, chezz/wtul FOCUS.md formatting fixed.**
+
+Ran the three offline surveys first (clean: crt's 27 FLAGs are its own
+pre-existing dirty-tree/exec-bit/silent-pipe issues, already flagged,
+not touched). QUESTIONS.md: two already-answered/already-folded blocks
+(bare-remote chown, incubation-audit reweight) removed as processed; the
+crt-dirty-tree block is still unanswered, left in place. Five inbox
+artifacts at the repo root, all already-decided or realisateur's-own-
+process notes rather than new ideas needing a fresh project:
+`Build-the-stability-milestone-*.idea` (already built, see the section
+above), `look-at-Document-Project-Archi-*.idea` (already reconciled,
+`/ideate` shipped 2026-07-22, remainder stays parked), `Spec-out-a-more-
+principled-eco-*.idea` (already routed to scheduler 2026-07-23),
+`incubation-decisions-2026-07-22.conf` (applied then superseded
+2026-07-23) — all archived. `FOCUS-md-formatting-compliance-*.idea`
+(flagged by scheduler 2026-07-22: chezz's FOCUS.md was prose/HTML-
+comment-only, wtul had no real FOCUS.md) was genuinely actionable:
+wrote `FOCUS-FORMAT.md` (canonical spec, matches what
+`extract_next_items()` in `bin/scheduler` actually parses), added a
+real `## Priority queue` section to chezz's FOCUS.md (existing comment
+content untouched), fleshed out wtul's FOCUS.md into a thin pointer
+into `ROADMAP.md` (kept as the real detail doc, to avoid drift).
+Committed in both projects' own repos, tagged `(realisateur)`; **could
+not push either** — both use real GitHub remotes (`git@github.com:hf7y/
+{chezz,wtul}.git`) this environment has no publickey credentials for
+(same "prefer local bare remote, GitHub needs real credentials" bar
+`SCHEDULER.md`/this file's Backlog section already names) — commits sit
+local, will push on each project's own next scheduled dispatch, or push
+by hand if that's wanted sooner. **Milestone checklist note:** this pass
+did NOT exercise park-by-default triage against a live idea (nothing in
+tonight's inbox was a genuine new-project or new-addition candidate) —
+that checklist item stays unchecked, not falsely marked done.
+
 **2026-07-24 (`/ideate` ecosystem pass — decisions recorded, nothing built):**
 
 - **scheduler-milestone open question: RESOLVED — engine participates.**
