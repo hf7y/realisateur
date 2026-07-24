@@ -1,3 +1,39 @@
+**2026-07-23 (`/ideate` — vision-debt strategy, standing doctrine):**
+The honest number (scheduler DESIGN-NOTES 2026-07-23): intake is zero-cost
+and unbounded (`scheduler -i`), clearing is quota-gated and shared 12 ways,
+so the backlog diverges at **−6 to −10 items/week regardless of build
+speed**. Conclusion, decided this session:
+
+- **This is a queue-stability problem, not a throughput one.** You cannot
+  out-build a free, unbounded idea faucet. Weight bumps slow divergence;
+  they never reverse its sign. **Pruning (admission control) is the only
+  lever that changes the sign** — it moves arrivals *out of the active set*
+  at near-zero cost instead of building them down.
+- **Backlog count is the WRONG health metric.** A reservoir fed for free
+  *should* grow (already settled: chezz 2026-07-20, a growing backlog is
+  the expected shape). Vision debt is only debt when parked ideas
+  masquerade as active commitments. Track instead: **(1) active/build-now
+  set size per project (cap it), (2) is the oldest *build-now* item
+  draining.** Parked-reservoir size is not tracked as debt.
+- **Primary discipline = milestone-gated parking.** Each project gets **one
+  current stability milestone** (its "stable v1 core" bar — this is the
+  recovered "ready to go on its own"/VSM status). Realisateur's triage
+  default becomes: *is this idea within the current milestone? If not →
+  PARK it* (visible, zero dev cost). Parking is the load-bearing act, not
+  building. QUEUED next build (nightly-batch, not this pass): a per-project
+  stability-milestone convention + the park-by-default triage step.
+- **The weight-3 bump is a BOOTSTRAP, not steady-state.** scheduler +
+  realisateur at weight 3 only buys time to stand the pruner up. **EXIT:
+  drop both toward 1 once the milestone convention exists AND triage parks
+  by default** (mirrored in `_paced.conf`'s comment so it can't silently
+  become permanent skim on operational slack).
+- **Synchronicity to unify, not build twice:** this "active vs. parked vs.
+  waiting" status need is the *same* as the parked `Spec-out-a-more-
+  principled-eco` idea (BLOCKERS.md blocking/waiting/fyi taxonomy). One
+  status vocabulary should serve vision items and blockers alike — routed
+  to scheduler via `scheduler -i scheduler` this session (it's a
+  scheduler-convention proposal, front-door per ideate.md §5).
+
 **2026-07-23 (`/ideate` reform pass — three standing decisions):**
 
 - **Identity: realisateur is a steward with sensory organs, not a second
