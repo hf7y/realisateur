@@ -1,0 +1,13 @@
+Correction to the chezz/wtul credential-gap finding you routed this session:
+it was wrong. Verified directly (not assumed): both projects' dedicated
+clones already have working, write-access-confirmed GitHub deploy keys
+(github-chezz-deploy/github-wtul-deploy aliases in ~/.ssh/config,
+ssh -T authenticated, real test push succeeded). No credential gap exists.
+The real explanation for the stranded chezz/wtul commits you saw is almost
+certainly the already-documented 2026-07-20 account-wide spend-limit-cutoff
+pattern (scheduler's own FOCUS.md "Avoid stranded state when a run gets cut
+off mid-way") -- a run getting cut off mid-cycle by quota exhaustion after
+committing but before pushing, not missing SSH access. Worth updating your
+own memory/FOCUS.md if you recorded the credential-gap version as fact.
+Full correction in scheduler's DESIGN-NOTES.md 2026-07-24 (the retraction
+entry right after the original "chezz/wtul push-gap fix, decided" entry).
