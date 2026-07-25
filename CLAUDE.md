@@ -40,3 +40,6 @@ Before marking anything done:
       clones — not just committed locally)?
 - [ ] No privileged probe **silencing stderr** (`2>/dev/null` turns
       "denied" into "clean")?
+- [ ] Multi-line or shell-quoting commit message written with
+      **`git commit -F <file>`**, not `-m` (backticks inside double
+      quotes execute)?

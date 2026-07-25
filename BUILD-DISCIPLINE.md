@@ -72,6 +72,18 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     feature branch when dispatch reads `main`. Everything "succeeds" and
     nothing arrives.
 
+12. **Prose that gets evaluated instead of stored.** Text meant as a
+    *record* is handed to something that interprets it, and part of it
+    runs. Found live 2026-07-25: a commit message written inline as
+    `git commit -m "... \`set -uo pipefail\` ..."` — backticks inside
+    double quotes are command substitution, so the shell executed the
+    snippet the message was quoting. The near misses hid it: quoting shell
+    fragments in `-m` messages had been habitual all session and stayed
+    harmless only because no earlier fragment happened to be a runnable
+    command. The general shape: the safety of a text-through-an-evaluator
+    path depends on the *content* of the text, so it tests clean until the
+    day the content changes.
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a
@@ -140,6 +152,16 @@ boot-path line) over a reminder. Reminders decay; guards fail loud.
   state (remote sha, exit status, file present) — never from the actor's
   own summary. A run claiming "pushed" while the remote disagrees is a
   failed run, and must exit non-zero so the layer above records it.
+- **Commit messages go through a file, never through the shell.** Any
+  message beyond a single plain line — anything multi-paragraph, and
+  anything quoting shell, code, backticks, `$`, `!`, or newlines — is
+  written to a file and committed with `git commit -F <file>` (or
+  `-F -` from a heredoc). `-F` takes the bytes literally; there is no
+  shell in the path at all. Reserve `-m` for short messages containing
+  no shell metacharacters. Same rule for any other command being handed
+  prose to *store* (`gh pr create --body-file`, `gh issue create -F`):
+  if the text is a record, pass it as a file, because a quoting path
+  that is safe today is only safe until the text changes.
 - **Subagents work on branches.** An agent doing unattended work commits
   to a branch, never pushes to `main`, and reports every file it touched.
   A dirty tree at exit is a failed run, not a handoff — an uncommitted
@@ -167,6 +189,9 @@ Before marking anything done:
       clones — not just committed locally)?
 - [ ] No privileged probe **silencing stderr** (`2>/dev/null` turns
       "denied" into "clean")?
+- [ ] Multi-line or shell-quoting commit message written with
+      **`git commit -F <file>`**, not `-m` (backticks inside double
+      quotes execute)?
 ```
 
 `bin/hygiene-lint.sh` mechanically checks the last two rows (secrets,
