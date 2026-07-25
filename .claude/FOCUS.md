@@ -1,3 +1,16 @@
+**2026-07-25 (interactive, Zach-directed): cross-project research agent — proposed, RECORDED NOT BUILT, per `/ideate`'s own record-and-queue contract for a genuinely new mechanism.** Same session as the dexter blockers correction below and the `wtul`-on-dexter controlled test (see scheduler `_paced.dexter.conf` commit `0366936`). Zach asked for "a research tool during batch" and confirmed the intent directly: a **cross-project research agent** — something that investigates a specific open question and writes findings back into a project's own FOCUS/QUESTIONS, not a general web-search grant to every nightly-batch run.
+
+**Vision:** an on-demand, realisateur-owned research pass — given one specific open question (tagged in a project's `QUESTIONS.md`, e.g. a `RESEARCH:` prefix), spin up a **read/web-only** one-shot agent (Read/Grep/WebSearch/WebFetch — explicitly no Bash/Write/Edit outside its own scratch dir) that investigates only that question and appends its findings as a `>` reply, reusing the existing `collect-feedback.sh`/`>` convention rather than inventing a new one. It never decides — same posture as everything else here (realisateur perceives → judges → records; the human still decides). This is a natural extension of the already-proven offline-first-checks pattern (`docs/offline-first-checks.md`: build the deterministic version first, layer `claude` on top only for the part that needs judgment) — here the "judgment" is synthesizing external info a local codebase read can't supply.
+
+**Milestone chain, working backward:**
+1. *(next, not started)* Prove the shape by hand on ONE real open question that genuinely needs outside info (not something answerable by reading this repo) — a natural candidate once one exists is whichever dexter/wtul quota-race observation ends up needing an external comparison point.
+2. *(after that)* If useful, wire it as a real invocation (`scheduler -i <project> --research "<question>"` or a dedicated command) with the tool-scope restriction enforced structurally, not just by prompt — same rigor as `home-assistant.conf`'s existing `BATCH_ALLOWED_TOOLS` restriction pattern.
+3. *(explicitly not queued yet)* Any automatic wiring into nightly-batch's own Orient step for every `RESEARCH:`-tagged question — only after step 2 is proven on real cases, not designed ahead of it.
+
+**Blockers:** none technical — this is a "do we want this, and what's the tool-scope guardrail" design decision, not a build blocker. Revisit as a dedicated pass, same as the git-as-archive and file-structure-normalization items already parked this way in this file.
+
+---
+
 ## Stability milestone
 
 **REACHED 2026-07-24** — see below. Original bar:
