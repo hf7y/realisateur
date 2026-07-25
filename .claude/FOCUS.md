@@ -24,6 +24,35 @@ git-as-archive (Backlog), the `scheduler -i`→realisateur triage-routing hook, 
 
 ---
 
+**2026-07-24 (`/nightly-batch`, ~23:10 pass): `/ideate` workflow revised — inbox note was about realisateur's own process, not a new project.**
+
+Inbox held one artifact, `revise-the-ideate-workflow-or-20260724-221900.idea`,
+naming `ideate` itself as the subject (per step 3's own telltale) — routed
+as process feedback, not scaffolded as a sibling project. Full research
+and reasoning written to a new root doc, `IDEATE-WORKFLOW-REVISION.md`,
+per Zach's own explicit ask ("give me a .md summary... somewhere I can
+see it"). Three complaints, three outcomes:
+1. **"Vision → milestones → blockers should be ideate boilerplate"** —
+   fixed. `ideate.md` §4 now has a named "Standard entry shape" section
+   making that structure the default template for any real-direction
+   FOCUS.md entry, modeled on this file's own 2026-07-24 dexter entry
+   (the example that prompted the ask in the first place).
+2. **"ideate seems to only run once"** — partially fixed at the prose
+   level (`ideate.md`'s intro now says the surface/ask/record/queue
+   posture holds for the rest of that conversation, not just the first
+   response), but this is a real Claude-Code-slash-command limitation, not
+   fully solvable with markdown — a harder fix would need a
+   `UserPromptSubmit` hook re-asserting ideate-mode each turn. Not built
+   this pass — infra-scoped, Zach's call, see the new QUESTIONS.md entry.
+3. **"drift from ideate over long sessions, hard to enforce with prose"**
+   — same root cause and same partial fix as #2; no separate mechanism
+   exists to build here beyond what's already queued in the question
+   below.
+
+Source artifact archived as `archive/revise-the-ideate-workflow-or-20260724-221900.idea`.
+
+---
+
 **2026-07-24 (`/ideate`, interactive, Zach-directed): dexter parallelism vision/milestone/blockers pass — triggered by Zach running a scheduler self-build session ON dexter itself, live, during this pass.**
 
 **Vision (partial promotion, asked directly — see scheduler's own `.scheduler/FOCUS.md` "vision promoted... partial" entry same date for full text, mirrored short here):** "dexter becomes the primary host where unattended jobs run" is now a real active direction, not just gardien's 2026-07-24 parked dream — that QUESTIONS.md item is answered, see gardien's own `.claude/QUESTIONS.md`. Explicitly NOT decided yet: cloud VMs, remote GitHub-agent triggers, or a hard mandark-sunset date — those stay open, separate, later. Explicitly declined: naming "many parallel jobs on dexter via VMs/WSL" as the next-next milestone — too far ahead per Zach, revisit once the current single-peer MVP is proven.

@@ -13,6 +13,18 @@ asked to do something this command is designed to defer -- "that's a
 nightly-batch job, want me to queue it or just do it now?" is a fine
 thing to say; silently building anyway is not.
 
+**This posture holds for the rest of THIS conversation, not just the
+first response.** `/ideate` is a one-shot slash command with no harness-
+enforced "mode" -- nothing stops drift into build-mode on a later prompt
+in the same session unless the model itself keeps holding the line. If a
+follow-up prompt later in this same conversation asks for something
+build-shaped, treat it the same as if it arrived in the first message:
+name it explicitly ("that's a nightly-batch job...") rather than quietly
+switching into building because enough turns have passed that the
+original `/ideate` framing feels distant. This is a real limitation, not
+fully solved by prose alone -- see `IDEATE-WORKFLOW-REVISION.md` at the
+repo root for the open question about a harder, hook-based guarantee.
+
 **Per-session tuning via `$ARGUMENTS`:** if invoked with a project name
 (`/ideate crt`, `/ideate senechal`), scope this session to that one
 project's vision/backlog -- read only its own FOCUS.md/QUESTIONS.md plus
@@ -87,6 +99,28 @@ that matters is the *active*-set draining, not the parked reservoir
 shrinking (a free-fed reservoir is supposed to grow). Promoting a parked
 idea into the active set is a deliberate, stated decision, same as the
 oldest-first override in §4.5 -- never a silent reorder.
+
+**Standard entry shape -- vision, then milestones, then blockers.**
+Zach's repeated ask (2026-07-24, `revise-the-ideate-workflow-*.idea` --
+see `IDEATE-WORKFLOW-REVISION.md` at the repo root for the full context)
+is that this structure should be `/ideate`'s own default, not something
+restated by hand each session. When a session records a real direction
+(not just a one-line decision), shape the FOCUS.md entry as:
+1. **Vision** -- the actual goal in plain terms, and how much of it is
+   decided vs. still explicitly open (name what's NOT decided yet, don't
+   let silence imply it is).
+2. **Milestone chain** -- numbered, working backward from the vision:
+   current step (in-progress), next step (not yet started), later steps
+   (undecided), and anything explicitly not queued yet. Each step should
+   be concrete enough that "is this idea required for the current step"
+   is answerable -- that's what park-by-default triage above actually
+   needs.
+3. **Blockers** -- anything blocking the CURRENT milestone step
+   specifically, tagged by who can clear it (human-only step vs.
+   buildable-now), not a generic backlog dump.
+The 2026-07-24 dexter parallelism entry in this repo's own `FOCUS.md` is
+the reference example this shape is modeled on -- reread it if the
+structure above is unclear in the abstract.
 
 For each decision:
 - **About realisateur's own scope** -- write into this repo's own
