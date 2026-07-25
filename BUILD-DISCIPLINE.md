@@ -39,6 +39,38 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
    accumulated exactly this from `crt`'s dev work, see its own FOCUS.md's
    parked `dexter-npu-tools` entry and the 2026-07-23 bridge-cleanup
    flags — prose notes, not a mechanism).
+7. **A claim outlives its verification.** Someone checks a thing once,
+   writes the result as prose, and the prose is then believed long after
+   it stopped being true — by people *and* by later audits that quote it.
+   Found live 2026-07-25: one unverified sentence ("confirmed 2026-07-24:
+   no crontab exists there") propagated into two `_paced.conf` lines,
+   DESIGN-NOTES, and became a whole ecosystem audit's #1 ranked finding
+   ("silently orphaned, zero dispatch for four days"). Both projects had
+   been dispatching nightly the entire time; one `crontab -l` — which
+   nobody was ever blocked from running — would have overturned it. The
+   tell: *"I looked and saw nothing"* was never distinguished from *"I
+   did not look."*
+8. **Warn-then-continue.** A check detects the bad condition, prints it,
+   and proceeds anyway — so the signal exists but only in a log nobody
+   reads at 3am. Distinct from silent failure: the code *knew*. Live
+   examples the same day: a freshness check that says "N commits behind —
+   committing anyway" and then fails its push; `checkout`/`reset --hard`
+   failing unchecked while the run continues on an unknown base; a failed
+   push reported as prose while the job exits 0.
+9. **The actor grades its own homework.** A run's summary claims success
+   ("everything committed, pushed, and in sync") while the machine-checkable
+   truth says otherwise. Whoever performs the work must not be the source
+   of truth for whether it worked.
+10. **A rename breaks a silent consumer.** Moving a file updates the thing
+    that moved it, not the unrelated tool that hardcoded the old path.
+    Both consumers of chezz's `.claude/`→`.scheduler/` move broke this way
+    (a pre-commit fast path, an injection script), each degrading quietly
+    rather than erroring.
+11. **Writer and reader disagree about location.** Work is saved somewhere
+    the consumer never looks: committed but unpushed when the consumer
+    clones from origin; on `main` when the job reads `master`; on a
+    feature branch when dispatch reads `main`. Everything "succeeds" and
+    nothing arrives.
 
 ## The disciplines (stated as mechanical rules)
 
@@ -84,6 +116,36 @@ boot-path line) over a reminder. Reminders decay; guards fail loud.
   install time, instead of only catching it later during its own scan (or
   never, on a host it doesn't yet watch).
 
+- **Probe, don't quote.** Before repeating a written claim about system
+  state (what's installed, enabled, running, reachable), re-derive it from
+  the system. Where the claim must be written down, it carries the date
+  and the command that produced it — `# verified 2026-07-25 via
+  sudo -u svc-vaporwave crontab -l` — so the next reader can re-run it
+  instead of trusting it. Better still, don't store it: a command that
+  *derives* current state (`scheduler dispatchers`) can't rot the way a
+  comment describing it can.
+- **Never `2>/dev/null` a privileged probe.** Discarding stderr turns
+  "permission denied" into "clean result" — the check reports all-clear
+  precisely when it failed to look. Found this way 2026-07-25: a
+  `sudo -n find` that needed a password printed a confident "0
+  world-writable" for a tree that had 2,637. If a probe can fail for
+  access reasons, its failure must be distinguishable from its negative.
+- **Verify at the consumer's location, not the producer's.** "Done" means
+  the thing that reads it can see it. For anything a scheduled job
+  consumes, the closing check runs against the exact ref that job reads:
+  `git show origin/<branch>:<path>`. A commit in a working copy the
+  consumer never clones is not delivered work.
+- **The runner writes the verdict, not the actor.** The harness that
+  invoked the work decides whether it succeeded, from machine-checkable
+  state (remote sha, exit status, file present) — never from the actor's
+  own summary. A run claiming "pushed" while the remote disagrees is a
+  failed run, and must exit non-zero so the layer above records it.
+- **Subagents work on branches.** An agent doing unattended work commits
+  to a branch, never pushes to `main`, and reports every file it touched.
+  A dirty tree at exit is a failed run, not a handoff — an uncommitted
+  change to a live script is indistinguishable from an abandoned one, and
+  the next autocommit may adopt it under someone else's name.
+
 ## The checklist (stamped into every new project's CLAUDE.md)
 
 ```
@@ -99,6 +161,12 @@ Before marking anything done:
 - [ ] **Shared-host footprint declared** (script/autostart/systemd unit on
       `dexter`/`mandark`/etc named in this project's own FOCUS.md), and
       retired entries actually removed, not left live?
+- [ ] Claims about system state **re-probed, not quoted** — and if written
+      down, stamped `# verified <date> via <command>`?
+- [ ] Verified **where the consumer reads it** (pushed to the ref the job
+      clones — not just committed locally)?
+- [ ] No privileged probe **silencing stderr** (`2>/dev/null` turns
+      "denied" into "clean")?
 ```
 
 `bin/hygiene-lint.sh` mechanically checks the last two rows (secrets,

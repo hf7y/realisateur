@@ -19,3 +19,9 @@ Before marking anything done:
 - [ ] Config read from **one source**, not retyped per file?
 - [ ] Deploy verified against a **git ref**; drift fails loud?
 - [ ] **No secret** in a tracked file; tree clean of build debris?
+- [ ] Claims about system state **re-probed, not quoted** — and if written
+      down, stamped `# verified <date> via <command>`?
+- [ ] Verified **where the consumer reads it** (pushed to the ref the job
+      clones — not just committed locally)?
+- [ ] No privileged probe **silencing stderr** (`2>/dev/null` turns
+      "denied" into "clean")?
