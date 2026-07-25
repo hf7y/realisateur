@@ -35,7 +35,7 @@ TARGETS=$(cat <<'EOF'
 scheduler|Project Archive/scheduler/.scheduler/FOCUS.md
 realisateur|Projects/realisateur/.claude/FOCUS.md
 crt|Projects/crt/.claude/FOCUS.md
-chezz|Project Archive/chezz/.claude/FOCUS.md
+chezz|Project Archive/chezz/.scheduler/FOCUS.md
 home-assistant|Project Archive/home_assistant/.claude/FOCUS.md
 wtul|wtul/.claude/FOCUS.md
 gardien|Projects/gardien/.claude/FOCUS.md
@@ -125,7 +125,7 @@ S
   esac
 }
 
-changed=0 skipped=0 busy=0 missing=0
+changed=0 skipped=0 busy=0 missing=0 committed=0 pushed=0 pushfail=0
 
 while IFS='|' read -r project relpath; do
   [ -n "$project" ] || continue
@@ -137,10 +137,21 @@ while IFS='|' read -r project relpath; do
     continue
   fi
 
+  # Marker present = the TEXT is already there. That does NOT mean the work is
+  # done: in --commit mode the edit may still be sitting uncommitted from an
+  # earlier --apply (the original bug — the commit step lived inside the write
+  # branch, so `--commit` after `--apply` skipped all 14 repos and committed
+  # nothing, while telling you to "rerun with --commit"). Writing and
+  # committing are now independent: skip only the write, then fall through.
+  needs_write=1
   if grep -qF "$MARKER" "$focus"; then
-    echo "skip     $project  (already carries the marker)"
-    skipped=$((skipped + 1))
-    continue
+    if [ "$MODE" = "commit" ]; then
+      needs_write=0
+    else
+      echo "skip     $project  (already carries the marker)"
+      skipped=$((skipped + 1))
+      continue
+    fi
   fi
 
   if [ -x "$BUSY_CHECK" ] && ! "$BUSY_CHECK" "$project" >/dev/null 2>&1; then
@@ -161,24 +172,61 @@ while IFS='|' read -r project relpath; do
       printf '%s\n' "$block" | sed 's/^/    | /'
       ;;
     apply|commit)
-      printf '%s' "$block" >> "$focus"
-      echo "wrote    $project  -> $focus"
-      changed=$((changed + 1))
-      if [ "$MODE" = "commit" ]; then
-        repo_dir=$(git -C "$(dirname "$focus")" rev-parse --show-toplevel)
-        git -C "$repo_dir" add -- "$focus"
-        git -C "$repo_dir" commit -q -m "FOCUS.md: fable-review 2026-07-25 suggestions (via realisateur/fable-like)" -- "$focus"
-        echo "commit   $project  ($repo_dir)"
+      if [ "$needs_write" -eq 1 ]; then
+        printf '%s' "$block" >> "$focus"
+        echo "wrote    $project  -> $focus"
+        changed=$((changed + 1))
       fi
+      [ "$MODE" = "commit" ] || continue
+
+      repo_dir=$(git -C "$(dirname "$focus")" rev-parse --show-toplevel)
+      if [ -z "$(git -C "$repo_dir" status --porcelain -- "$focus")" ]; then
+        echo "clean    $project  (marker present and already committed — nothing to do)"
+        skipped=$((skipped + 1))
+        continue
+      fi
+      git -C "$repo_dir" add -- "$focus"
+      git -C "$repo_dir" commit -q -m "FOCUS.md: fable-review 2026-07-25 suggestions (via realisateur/fable-like)" -- "$focus"
+      committed=$((committed + 1))
+
+      # A commit alone is NOT enough to make these items visible to the work
+      # that acts on them: every batch wrapper dispatches against a dedicated
+      # clone of REPO_URL that `git reset --hard`s to origin
+      # (scheduler/lib/sweep-loop-common.sh), so an unpushed commit is exactly
+      # as invisible as an uncommitted edit. Push is part of the propagation.
+      origin=$(git -C "$repo_dir" remote get-url origin 2>/dev/null || echo "")
+      case "$origin" in
+        *media-arts-collective*)
+          echo "commit   $project  ($repo_dir) — NOT pushed: shared org remote, push by hand"
+          ;;
+        "")
+          echo "commit   $project  ($repo_dir) — no origin, nothing to push"
+          ;;
+        *)
+          if git -C "$repo_dir" push --quiet 2>/dev/null; then
+            echo "commit   $project  ($repo_dir) + pushed"
+            pushed=$((pushed + 1))
+          else
+            echo "commit   $project  ($repo_dir) — PUSH FAILED, push by hand (dispatch reads origin, so the items stay invisible until you do)" >&2
+            pushfail=$((pushfail + 1))
+          fi
+          ;;
+      esac
       ;;
   esac
 done <<< "$TARGETS"
 
 echo
-echo "mode=$MODE  written=$changed  skipped=$skipped  busy=$busy  missing=$missing"
+echo "mode=$MODE  written=$changed  skipped=$skipped  busy=$busy  missing=$missing  committed=$committed  pushed=$pushed  push-failed=$pushfail"
 if [ "$MODE" = "apply" ] && [ "$changed" -gt 0 ]; then
-  echo "NOTE: repos now carry uncommitted FOCUS.md changes — commit per-repo soon;"
-  echo "      'a dirty tree is a stop, not a thing to edit around'. Or rerun with --commit."
+  echo "NOTE: repos now carry uncommitted FOCUS.md changes — rerun with --commit to"
+  echo "      commit + push them (it picks up already-written edits). Until they are"
+  echo "      PUSHED, no dispatch can see them: batch wrappers run against a fresh"
+  echo "      clone reset to origin. 'a dirty tree is a stop, not a thing to edit around'."
+fi
+if [ "$pushfail" -gt 0 ]; then
+  echo "NOTE: $pushfail repo(s) committed but NOT pushed — those items remain invisible to dispatch."
+  exit 1
 fi
 if [ "$busy" -gt 0 ]; then
   echo "NOTE: $busy project(s) were mid-dispatch and untouched — rerun to pick them up."
