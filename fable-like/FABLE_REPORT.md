@@ -236,3 +236,18 @@ as a dated `(fable-review)` section into its real FOCUS.md, honoring your own
 protocol: busy-check first, append-only, small, one commit per repo, dry-run by
 default. Review with `--diff`, apply with `--apply`, commit with `--commit`.
 Nothing runs against a repo mid-dispatch; nothing is left dirty.
+
+---
+
+## Postscript — a finding that happened while writing this report
+
+At 2026-07-25 02:00, while this folder was being written, the scheduler's sweep
+autocommitted every in-progress `.md` file here as ~38 separate commits labeled
+**"Human edit via scheduler"**. Two problems, live-demonstrated: (1) the label
+is wrong — these were agent writes in an interactive session, so the provenance
+record now lies; (2) the sweep commits *mid-session, half-written* working
+files, which is exactly the "dirty tree is a stop" hazard pointed the other
+direction — the engine edited history out from under a live session. Suggested
+fix: the autocommit should skip a repo whose session lock / recent-mtime says
+someone is actively working, and its label should say what it actually knows
+("sweep autocommit: uncommitted changes found"), not guess "Human edit".
