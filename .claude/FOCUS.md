@@ -32,6 +32,26 @@ git-as-archive (Backlog), the `scheduler -i`→realisateur triage-routing hook, 
 
 ---
 
+**2026-07-24 (`/nightly-batch`, ~21:10 pass): inbox empty, nothing to build.**
+
+Repo root held only realisateur's own scaffolding again -- no dropped
+artifact to infer or wire up. All three offline surveys re-run fresh:
+`bin/hygiene-lint.sh` still 21 total FLAGs, same composition as the last
+recorded pass (20 pre-existing crt exec-bit/silent-pipe issues + the one
+senechal `base64` test-fixture false positive) -- not this run's project
+to fix. `bin/milestone-audit.sh` now shows **8 declared/6 missing/0
+no-focus**, up from the last-recorded 7/6/1 -- aedile now carries a real
+DECLARED milestone (scenario-library-as-PR-gate replacement) and
+scheduler's own no-focus edge case has resolved too, both from other
+sessions' work since the last nightly pass, not this one -- observed,
+not acted on. `bin/ecosystem-survey.sh`'s vision-debt ranking unchanged,
+still topped by the four 2026-07-18 home-assistant entries.
+QUESTIONS.md's one open block (aedile/vkv-inventory svc-vaporwave
+recovery) still carries no `> ` reply -- left untouched, genuinely
+waiting on the human cross-account access step. Park-by-default triage
+not exercised this pass (no live new-project/new-addition candidate in
+tonight's empty inbox).
+
 **2026-07-24 (`/nightly-batch`, ~20:00 pass): inbox empty, nothing to build.**
 
 Repo root held only realisateur's own scaffolding again -- no dropped
