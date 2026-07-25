@@ -24,6 +24,10 @@ git-as-archive (Backlog), the `scheduler -i`→realisateur triage-routing hook, 
 
 ---
 
+**2026-07-24 (`/ideate`, interactive, Zach-directed): aedile/vkv-inventory carved out of realisateur's direct cross-write privilege — front-door only, going forward.** Zach asked directly how realisateur's ideation reaches these two vaporwave projects, given zach@mandark's existing local copies (`schedule/aedile.conf`/`vkv-inventory.conf`'s `PROJECT_REPO_PATH`, `/home/zach/Documents/vkv/{wavebucks/aedile,inv/inventory-app}`) are scheduled to be sunset/closed. Both projects' actual unattended dispatch already migrated off mandark to `svc-vaporwave`'s own fresh-clone-and-push checkout (2026-07-20) — the mandark copy has been a read/write target for realisateur's own ideation only, not load-bearing for the automation itself. Presented three options (fresh-clone-and-push like svc-vaporwave, a dedicated persistent vision-mirror clone, or route through scheduler's `-i` front door like an external project) — **Zach chose the front door.** Decided: once mandark's copies close, realisateur stops direct `FOCUS.md`/`QUESTIONS.md` cross-writes into aedile/vkv-inventory and queues ideation for them via `scheduler -i <project> "<text>"` instead, same as chezz's own `/ideate` must for anything outside itself. Every other registered project keeps the direct-cross-write privilege — this carve-out is scoped to just these two, because of their specific account/remote topology (svc-vaporwave-owned, not zach's own working copy). Recorded as an explicit exception in `.claude/commands/ideate.md`'s step 4 (not silently applied) so future `/ideate` passes read it as a standing rule, not something to re-derive. No code changed; `PROJECT_REPO_PATH` in `schedule/*.conf` is unchanged for now (still points at mandark, since those copies haven't actually closed yet) — this is a heads-up decision for when they do, not an immediate migration.
+
+---
+
 **2026-07-24 (`/nightly-batch`, ~20:00 pass): inbox empty, nothing to build.**
 
 Repo root held only realisateur's own scaffolding again -- no dropped
