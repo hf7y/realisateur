@@ -429,6 +429,28 @@ whatever's physically sitting in the inbox.
   letting a queue grow silently — is a concrete design input for that
   role, not just chezz's problem.
 
+- **2026-07-24 (`/ideate`): BLOCKERS.md sweep-ownership made explicit; two
+  orphaned vim swaps investigated, no data lost.** Zach hit two issues
+  doing a manual clear of scheduler's `BLOCKERS.md`: (1) what looked like
+  a simultaneous-edit conflict, fixed by hand via git; (2) many entries
+  reading as stale despite being answered days ago. Root cause of both:
+  two vim sessions (pids 437104, 472803, both dead by the time this
+  session checked) had `BLOCKERS.md` open around the same time and
+  neither exited cleanly, leaving `.BLOCKERS.md.swo`/`.swp` behind —
+  recovered both non-destructively (`vim -r ... -c 'w! <scratch>'`),
+  diffed against the committed file, confirmed no real unsaved content in
+  either (one was a duplicate-header recovery artifact, the other an
+  older pre-edit snapshot); both deleted. Separately: `BLOCKERS.md`'s own
+  header already said resolved entries are cleared by hand, but never
+  said whose hand — nothing in `collect-feedback.sh`/the auto-commit vim
+  hook aggregates INTO the file or prunes a RESOLVED/RETRACTED marker
+  automatically, so entries just accumulate until someone sweeps them.
+  Made that explicit in `BLOCKERS.md`'s own header (scheduler commit
+  `5041986`): the sweep is `/ideate`'s own triage job. Pruned this
+  session's stale set (aedile crontab, chezz/wtul deploy-key retraction,
+  crt OctoPrint/VM-hardware-check/barrel-diameter) into
+  `## Recently resolved` as a worked example.
+
 ## Reusable pattern worth applying to scaffolded projects: offline-first checks
 
 **2026-07-22 (scheduler side):** `bin/scheduler status <project>` was
