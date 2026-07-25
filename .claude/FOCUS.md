@@ -24,6 +24,25 @@ git-as-archive (Backlog), the `scheduler -i`→realisateur triage-routing hook, 
 
 ---
 
+**2026-07-24 (`/nightly-batch`, ~20:00 pass): inbox empty, nothing to build.**
+
+Repo root held only realisateur's own scaffolding again -- no dropped
+artifact to infer or wire up. All three offline surveys re-run fresh:
+`bin/hygiene-lint.sh` now shows 21 total FLAGs (up from 20) -- 20 still
+crt's own pre-existing exec-bit/silent-pipe issues (already flagged, not
+touched), plus one new FLAG in senechal (`test_senechal.py:296`, a
+`base64`-encoded test fixture literal tripping the secret-value
+heuristic) -- not this run's project to fix, noted here per the
+signals-not-verdicts stance so it doesn't go unrecorded.
+`bin/milestone-audit.sh` unchanged at 7 declared/6 missing/1 no-focus, no
+reached triggers. `bin/ecosystem-survey.sh`'s vision-debt ranking
+unchanged, still topped by the four 2026-07-18 home-assistant entries.
+QUESTIONS.md's one open block (aedile/vkv-inventory svc-vaporwave
+recovery) still carries no `> ` reply -- left untouched, genuinely
+waiting on the human cross-account access step. Park-by-default triage
+not exercised this pass (no live new-project/new-addition candidate in
+tonight's empty inbox).
+
 **2026-07-24 (`/nightly-batch`, ~16:12 pass): inbox empty, nothing to build.**
 
 Repo root held only realisateur's own scaffolding again -- no dropped
