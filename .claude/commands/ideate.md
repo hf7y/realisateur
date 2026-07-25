@@ -116,6 +116,21 @@ For each decision:
   view doesn't require opening every project), add a short cross-link
   there pointing at the real entry -- don't duplicate the full text in
   both places.
+  - **Exception: `aedile` and `vkv-inventory` (decided 2026-07-24, via
+    `/ideate`).** Both run under `svc-vaporwave`, a separate account,
+    pulling from their shared GitHub remote -- `PROJECT_REPO_PATH` in
+    their own `schedule/*.conf` currently points at a zach@mandark
+    interactive working copy that is being sunset/closed. Once that
+    happens there's no local checkout for a direct cross-write to land
+    in. Rather than replace it with a fresh-clone-and-push pattern or a
+    dedicated vision-mirror clone, Zach chose to treat these two like
+    genuinely external projects: **no direct FOCUS.md/QUESTIONS.md
+    cross-write** -- queue ideation for them via `scheduler -i <project>
+    "<text>"` instead, the same front door chezz's own `/ideate` must use
+    for anything outside itself. Every other registered project keeps the
+    direct-cross-write privilege above; this carve-out is scoped to just
+    these two, and only because of their specific account/remote
+    topology.
 - **Priority weight** -- if this session's findings justify it, edit
   `schedule/_paced.conf`'s weight field for the affected project(s)
   directly (see `docs/priority-weight.md` in the scheduler repo). This
