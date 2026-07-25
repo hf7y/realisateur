@@ -116,21 +116,26 @@ For each decision:
   view doesn't require opening every project), add a short cross-link
   there pointing at the real entry -- don't duplicate the full text in
   both places.
-  - **Exception: `aedile` and `vkv-inventory` (decided 2026-07-24, via
-    `/ideate`).** Both run under `svc-vaporwave`, a separate account,
-    pulling from their shared GitHub remote -- `PROJECT_REPO_PATH` in
-    their own `schedule/*.conf` currently points at a zach@mandark
-    interactive working copy that is being sunset/closed. Once that
-    happens there's no local checkout for a direct cross-write to land
-    in. Rather than replace it with a fresh-clone-and-push pattern or a
-    dedicated vision-mirror clone, Zach chose to treat these two like
-    genuinely external projects: **no direct FOCUS.md/QUESTIONS.md
-    cross-write** -- queue ideation for them via `scheduler -i <project>
-    "<text>"` instead, the same front door chezz's own `/ideate` must use
-    for anything outside itself. Every other registered project keeps the
-    direct-cross-write privilege above; this carve-out is scoped to just
-    these two, and only because of their specific account/remote
-    topology.
+  - **`aedile`/`vkv-inventory` note (revised 2026-07-24, via `/ideate`;
+    supersedes the same-day front-door-only carve-out).** Both run under
+    `svc-vaporwave` for dispatch, but their real vision docs are
+    git-tracked in each project's own GitHub remote regardless of
+    whether zach@mandark's interactive working copy exists --
+    confirmed for aedile: `aedile/.scheduler/FOCUS.md`/`QUESTIONS.md`
+    (not `.claude/`, deliberately gitignored in the shared `wavebucks`
+    monorepo since it's co-owned with Tyler's unrelated projects -- see
+    [[wavebucks_org_structure]]) are tracked and pushed normally. So the
+    mandark-copy-closing concern doesn't actually block a direct
+    cross-write: clone `git@github.com:media-arts-collective/wavebucks.git`
+    (or `inventory-app.git` for vkv-inventory, which just uses plain
+    `.claude/` -- it's its own dedicated repo, no shared-collaborator
+    concern at all) fresh with zach's own existing GitHub access if
+    mandark's copy is gone, write/commit/push the same as any other
+    registered project's direct-cross-write privilege above. **The
+    `scheduler -i <project>` front door stays available as a documented
+    fallback** (e.g. if you'd rather realisateur never hold push access
+    to a shared repo at all) -- but it's an option, not the default, for
+    these two.
 - **Priority weight** -- if this session's findings justify it, edit
   `schedule/_paced.conf`'s weight field for the affected project(s)
   directly (see `docs/priority-weight.md` in the scheduler repo). This
