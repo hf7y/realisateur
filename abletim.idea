@@ -1,0 +1,91 @@
+abletim — programmatic manipulation of Ableton Live sets through scripting.
+(Developed interactively via realisateur /ideate, 2026-07-25 — vision below
+is decided-vs-open-tagged, not just a raw drop.)
+
+Vision: script-level access to Ableton Live projects, serving my own
+production workflow and batch/catalog processing across many sets for now.
+Scope is expected to grow into all of it eventually (generative/algorithmic
+composition, session-clip live workflows) — those are explicitly NOT
+decided yet, don't build toward them.
+
+Entry paths (decided): two, in parallel for the first milestone —
+(a) offline .als parsing: .als is gzipped XML; parse/rewrite with Live
+    closed. Undocumented schema, shifts between Live versions — this half
+    is reverse-engineering-flavored.
+(b) Max for Live / Live Object Model: runtime access from inside a device
+    (js/v8 or patching), reads live_set locators, can create/manipulate
+    clips while Live runs.
+External OSC/Python bridges (AbletonOSC/pylive style): considered, not
+chosen for now.
+
+Flagship use case: slice audio at arrangement location markers (locators).
+Chosen outputs: (1) each marker-to-marker region cut to its own audio file
+on disk (sample-library/batch half), (2) a new derived .als whose clips
+are the slices (set-as-source-material half). Session clips in the
+original set: offered, not chosen for v1.
+
+Milestone chain (hybrid probe-then-commit):
+1. (current) One bounded spike per entry path against the slicing use
+   case. Offline spike: gunzip a real .als, find locators + audio clip
+   references in the XML, map locator beat-positions to audio-file sample
+   offsets, cut regions with ffmpeg/sox. M4L spike: a minimal device that
+   reads live_set locators and proves clip creation. Each spike ends in a
+   short findings note, not a polished tool.
+2. Commit to the winning path; working marker-slicer end-to-end, audio
+   files on disk first.
+3. Derived-.als generation from the slices.
+4. (not queued) generative direction, session-clip workflows,
+   catalog-wide batch operations over many sets.
+
+Host / deployment (decided 2026-07-25, same session): abletim is a
+dexter-pinned project. Ableton itself (Windows app) and the media library
+live on dexter — this meets `_paced.dexter.conf`'s stated pinning bar
+(hardware/network-evidenced, like crt; unlike wtul's named exception)
+cleanly. Bootstrap shape, following the crt precedent exactly:
+- Scaffold on mandark as usual (repo at ~/Documents/Projects/abletim,
+  bare remote at ~/git-remotes/abletim.git), but REPO_URL in
+  schedule/abletim.conf should be
+  ssh://mandark-lan/home/zach/git-remotes/abletim.git so dexter's
+  scheduler can clone it (the git-shell-only dexter_mandark_deploy path,
+  live-verified for crt 2026-07-24).
+- Rotation line goes in _paced.dexter.conf ONLY (never also _paced.conf —
+  no double dispatch), with the hardware evidence stated in the comment.
+- Cross-host mechanics (decided 2026-07-25, Zach-directed — full entry in
+  realisateur .claude/FOCUS.md same date): mandark→dexter batch SSH is
+  live-verified (lands in Windows PowerShell; `wsl -d Ubuntu -u zach`
+  reaches /home/zach/scheduler and /mnt/c/Users/Zach) and Zach licensed
+  it NARROWLY — a dedicated restricted key + forced-command gateway
+  (reverse analog of dexter_mandark_deploy), not the existing full zach
+  shell. Until that restricted channel is provisioned AND live-verified
+  (does what it should, refuses what it shouldn't), the dexter rotation
+  line + sync happens in a human dexter-side session, crt/wtul style.
+  Either way the edit executes ON dexter, keeping the "dexter writes
+  _paced.dexter.conf" concurrency rule intact.
+- Hold the crt bar, learned again the hard way with wtul: enabled=1 only
+  after a live `git ls-remote` of the abletim remote FROM dexter itself
+  succeeds — don't land the line on the strength of mandark-side setup.
+- What unattended dexter runs can do: the offline .als spike (WSL2
+  reaches the Windows media via /mnt/c/...; treat real sets/media as
+  READ-ONLY, work on copies/fixtures — same spirit as wtul's
+  don't-touch-the-real-drive rule). What they can't: the M4L/LOM spike
+  needs Ableton open with a human present — that half is
+  interactive-session work, not batchable.
+
+Blockers / open questions for milestone 1:
+- Provision + live-verify the narrow mandark→dexter channel (dedicated
+  keypair on mandark, forced command= in dexter's Windows-side
+  authorized_keys wrapping a small-verb gateway) — human-present
+  interactive session, never unattended; key material + another host's
+  authorized_keys is exactly what nightly runs must not touch. Fallback
+  until then: human dexter-side session for the registration half.
+- Confirm the Windows-side path to the Ableton projects/media on dexter
+  (the /mnt/c/... equivalent) — human-only, needed before the offline
+  spike can point at anything real.
+- Which Live version(s) to target — schema and LOM both vary. Human-only:
+  Zach to confirm his Live version and whether he has Max for Live
+  (Suite or M4L license) before the M4L spike is buildable.
+- Warp/tempo mapping risk (offline path): locators live in beat time,
+  audio files in sample time; warp markers mediate. If this mapping turns
+  out hairy, it's the likeliest reason the offline spike loses.
+- Needs a sample .als (with locators + audio) as a test fixture — human
+  drop, can't be synthesized credibly.
