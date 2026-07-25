@@ -63,17 +63,26 @@ boot-path line) over a reminder. Reminders decay; guards fail loud.
 - **No secret in a tracked file.** Real secrets live in an untracked
   `.env`/`secrets/`; the `.gitignore` blocks creds and build debris from
   day one.
-- **Declare your host footprint.** Any project that installs a script,
-  autostart entry, or systemd unit onto a *shared* host (one this project
-  doesn't exclusively own — `dexter`, `mandark`, any future shared box)
-  must name it in that project's own `FOCUS.md` (what, where, why) so
-  it's attributable later, and remove/say-so when it's retired rather
-  than leaving it live and unowned. `senechal` is the ecosystem's registry
-  for this (2026-07-24 decision, senechal's own FOCUS.md/QUESTIONS.md —
-  its mission widened past mandark-only to own the script/autostart world
-  across all of Zach's shared hosts); a project's own `FOCUS.md`
-  declaration is the source senechal reconciles against, not a
-  replacement for it.
+- **Declare your host footprint — and report it, don't just log it.** Any
+  project that installs a script, autostart entry, or systemd unit onto a
+  *shared* host (one this project doesn't exclusively own — `dexter`,
+  `mandark`, any future shared box) must (1) name it in that project's own
+  `FOCUS.md` (what, where, why) so it's attributable later, remove/say-so
+  when retired rather than leaving it live and unowned, **and** (2) at the
+  same time it lands, cross-write a dated note into senechal's own
+  `.claude/FOCUS.md` saying so (tagged `(<project> cross-write, ...)`,
+  same discipline realisateur itself already follows per its own
+  `feedback_notify_senechal` policy) — check `senechal`'s tree isn't
+  mid-run first (`bin/check-project-busy.sh` pattern), keep the write
+  small, commit immediately. `senechal` is the ecosystem's registry for
+  this (2026-07-24 decision, widened again 2026-07-25 from passive
+  reconciliation to active reporting — see its own FOCUS.md/QUESTIONS.md,
+  mission widened past mandark-only to own the script/autostart world
+  across all of Zach's shared hosts). A project's own `FOCUS.md`
+  declaration is still the source of truth senechal reconciles against —
+  the cross-write is what makes sure senechal actually *sees* it at
+  install time, instead of only catching it later during its own scan (or
+  never, on a host it doesn't yet watch).
 
 ## The checklist (stamped into every new project's CLAUDE.md)
 
@@ -99,4 +108,7 @@ it at the top of every nightly-batch pass, same as `ecosystem-survey.sh`.
 A mechanical check for the new shared-host-footprint row (cross-
 referencing each project's declared footprint against senechal's actual
 host journals) is a real follow-on `hygiene-lint.sh` addition, not yet
-built — queued, not done, as of this entry.
+built — queued, not done, as of this entry. The reconciliation itself
+(declared vs. actually-present, on both `mandark` and `dexter`) is
+senechal's own build to do proactively, not just react to reports — see
+its FOCUS.md 2026-07-25 entry.
