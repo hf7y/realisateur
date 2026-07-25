@@ -91,12 +91,38 @@ PACED_CONF="$SCHED_ROOT/schedule/_paced.conf"
 
 STATE_DIR="$HOME/.local/share/weight-audit"
 STREAK_DIR="$STATE_DIR/park-streak"
+LOG="$STATE_DIR/run.log"
+LOCK="$STATE_DIR/run.lock"
 mkdir -p "$STREAK_DIR"
+
+# Cron-safety: one global flock so an overlapping fire (manual test run
+# racing the cron tick, or a stuck prior run) skips instead of racing two
+# writers against the same _paced.conf/git state. Cheap and fast, so
+# skipping rather than queuing is fine -- the next scheduled tick picks
+# back up with fresh numbers anyway.
+exec 200>"$LOCK"
+if ! flock -n 200; then
+  echo "weight-audit: another run already in progress, skipping ($(date -Is))" >&2
+  exit 0
+fi
+
+# Durable log, same rotation shape as usage-paced-runner.sh (trim before
+# each run rather than growing unbounded) -- cron's own stdout capture is
+# not something to depend on for a job meant to run unattended.
+[ -f "$LOG" ] && { tail -n 4000 "$LOG" > "$LOG.tmp" 2>/dev/null && mv "$LOG.tmp" "$LOG"; }
+exec > >(tee -a "$LOG") 2>&1
 
 # Env knobs:
 DRY_RUN="${WEIGHT_AUDIT_DRY_RUN:-0}"       # 1 = compute + print, touch nothing
 APPLY="${WEIGHT_AUDIT_APPLY:-1}"           # 0 = skip _paced.conf rewrite/commit entirely
-PUSH="${WEIGHT_AUDIT_PUSH:-0}"             # 1 = push the commit too (default: leave for a reviewed pass)
+# PUSH default is 1: scheduler's own repo already auto-pushes ITS OWN commits
+# under the same safe-by-construction rule (bin/scheduler, "push only when
+# NOT behind origin -- a real fast-forward, and a push failure here never
+# forces or blocks", per that script's own comments) -- this mirrors that
+# existing precedent rather than introducing a stricter one. A rejected
+# (non-fast-forward) push is logged and left local, never forced; the next
+# run (or a human/AI session touching this repo) picks it up.
+PUSH="${WEIGHT_AUDIT_PUSH:-1}"
 SKIP_PROJECTS="${WEIGHT_AUDIT_SKIP:-realisateur}"   # space-separated, see caveats above
 TIER2_MIN="${WEIGHT_AUDIT_TIER2_MIN:-35}"  # commits/7d at/above this -> target weight 2
 TIER3_MIN="${WEIGHT_AUDIT_TIER3_MIN:-120}" # commits/7d at/above this -> target weight 3
@@ -110,6 +136,19 @@ is_skipped() {
   for s in $SKIP_PROJECTS; do [ "$s" = "$name" ] && return 0; done
   return 1
 }
+
+# Dirty tree is a STOP, not a thing to edit around (STABILITY-MILESTONES.md
+# "Rolling this out while the ecosystem runs concurrently" -- a half-written
+# file racing a concurrent job is the exact failure mode that convention
+# exists to avoid). If something else (an interactive session, another
+# automated job) is mid-edit here, skip this run cleanly rather than layer
+# our own change on top of unknown in-flight state.
+if [ "$APPLY" != "0" ] && [ "$DRY_RUN" != "1" ]; then
+  if ! git -C "$SCHED_ROOT" diff --quiet || ! git -C "$SCHED_ROOT" diff --cached --quiet; then
+    echo "weight-audit: $SCHED_ROOT has uncommitted changes already -- skipping this run" >&2
+    exit 0
+  fi
+fi
 
 echo "weight-audit -- $(date '+%Y-%m-%d %H:%M') (dry_run=$DRY_RUN apply=$APPLY push=$PUSH)"
 echo "(offline-first: no claude calls -- WEIGHT changes are bounded+auto-applied,"
@@ -290,8 +329,27 @@ EOF
 )" >/dev/null
   echo "Committed: $(git log -1 --format=%H)"
   if [ "$PUSH" = "1" ]; then
-    git push origin main && echo "Pushed."
+    if git push origin main 2>&1; then
+      echo "Pushed."
+    else
+      # Same shape as bin/scheduler's own commit+push helper: a rejected
+      # (non-fast-forward) push is common here -- other automated jobs
+      # touch this same repo concurrently (scheduler-dev-cycle.sh's own
+      # commits, its vim-autocmd auto-push). Fetch + rebase our one small
+      # commit on top and retry ONCE; never force-push. If that still
+      # fails (real conflict, network, auth), leave it local and loud --
+      # the next run or a human/AI session picks it up, same as any other
+      # stranded-commit case this repo already knows how to surface
+      # (bin/scheduler's own unpushed-commit detection).
+      echo "push rejected -- fetching + rebasing once and retrying"
+      if git fetch origin main 2>&1 && git rebase origin/main 2>&1 && git push origin main 2>&1; then
+        echo "Pushed after rebase."
+      else
+        git rebase --abort 2>/dev/null || true
+        echo "WARNING: push still failed after one rebase retry -- commit is local-only, needs a human/AI session to resolve and push."
+      fi
+    fi
   else
-    echo "Not pushed (WEIGHT_AUDIT_PUSH=0 by default) -- left for the next reviewed pass."
+    echo "Not pushed (WEIGHT_AUDIT_PUSH=0) -- left for the next reviewed pass."
   fi
 fi
