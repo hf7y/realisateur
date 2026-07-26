@@ -1,3 +1,25 @@
+**2026-07-25 (interactive, Zach-directed, `/ideate` scheduler front-door session): three-view front door promoted to scheduler's NEXT milestone, ecosystem doctrine written (`UNIVERSE.md`), weights raised with a stated exit. RECORDED AND QUEUED, no feature code.**
+
+**Vision:** `bin/scheduler`'s entire human surface becomes three stable, printable views mapped to the organism's three timescales — `scheduler` noargs (operations: now/next + a one-line gate/dials footer), `scheduler blockers` (obligation: the one blocked-on-you place), `scheduler <project>` (identity: detail, inline reply, reorder/reweight from there) — each view's footer printing its own mutation one-liners. Decided by Zach this session (four explicit calls): **hard fold + retire** (the ~20-verb surface collapses; superseded views become one-line redirect stubs; `usage()` ≤ ~20 lines), **static + verbs, no TUI** (printable doctrine from 2026-07-20 holds; tweaks are pasteable one-liners, not arrow keys), **dials = one-line noargs footer** (full pacing/drift/deploy detail stays under `pacing`). NOT decided: the redesign's internal implementation order, and whether `scheduler <project>` also absorbs the item-0 merged report+questions file in the same milestone or a later one — scheduler's own design call.
+
+**Parking override, stated per §4.5:** this promotes scheduler FOCUS.md item 0 (parked 2026-07-20 under the hardening-first SEQUENCING decision) ahead of nothing older — it IS the oldest parked scheduler design — but it does jump the queue relative to the standing "only after 1-2 are genuinely solid" gate, before the current milestone's last checkbox closes. Justification: **re-derivation convergence** — Zach independently re-derived the 2026-07-20 target UX near line-for-line on 2026-07-25, the strongest crystallization signal this ecosystem produces. The principle itself (plus the anatomy, three laws, three-timescale channel rule, and the Daoist/cybernetic reading of the moving target) is now durable doctrine in **`UNIVERSE.md`** at this repo's root — written this session per Zach's "plan this from a universe perspective."
+
+**Milestone chain:**
+1. *(current, scheduler's, in-progress — unchanged)* scheduler's zero-silent-failure bar, 4/5 checked; last box (vkv-inventory `--consume` gap) is routed to realisateur and is now weight-supported work.
+2. *(next, filed this session via `scheduler -i scheduler`, adopt when 1 closes)* the three-view front-door consolidation above, with an **accretion freeze effective immediately**: no view gains a legend line or new verb before the redesign; new needs go into the spec.
+3. *(later, undecided)* whether the merged report+questions file (item 0's other half) and the printable-document refinement ride the same milestone.
+4. *(explicitly not queued)* any TUI.
+
+**Weights (realisateur's knob, edited directly in scheduler's `schedule/_paced.conf` this session):** scheduler 3→4 (it builds the redesign), realisateur 1→3 (owns the doctrine, the convergence-test triage change, and milestone-1's last checkbox). **Exit condition, stated in the file so it can't become permanent skim: both drop back (4→3, 3→1) when the front-door milestone is reached.**
+
+**Queued, not built (two new mechanisms, shapes open — `UNIVERSE.md` names both as its own gaps):**
+- **Re-arrival sensor** — on intake/triage, check the reservoir for a prior same-shape entry; a convergence hit is a stated promotion trigger stronger than oldest-first. Candidate: an offline `bin/` sense like the existing surveys.
+- **Catabolic pass** — recurring retirement discipline (e.g. every Nth `/ideate` names one surface to shrink), generalizing BUILD-DISCIPLINE's "names what it retires" from mechanisms to text/verbs.
+
+**Blockers:** none human-only for the recording itself. The redesign build is scheduler's paced work under the new weights; nothing here needs Zach before scheduler's next cycles pick it up.
+
+---
+
 **2026-07-25 (interactive, Zach-directed, `/ideate` abletim session): mandark→dexter SSH channel — verified live, licensed NARROWLY, provisioning QUEUED not built.** Context: developing the `abletim.idea` drop (Ableton + its media live on dexter; the project is a clean `_paced.dexter.conf` hardware-evidenced pin, second after crt). Zach asked whether realisateur's nightly can write into dexter. Probed rather than assumed:
 
 - Batch-mode SSH from mandark works unattended TODAY: mandark's `~/.ssh/config` already carries a `Host dexter` block (dexter.local, user zach), key auth succeeds with no prompt, and the session lands in **Windows PowerShell** (Windows OpenSSH server), not WSL. `# verified 2026-07-25 via ssh -o BatchMode=yes dexter 'echo OK: $(hostname)'`
