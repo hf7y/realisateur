@@ -1,0 +1,50 @@
+bibliothecaire — the ecosystem's librarian. Zach-directed /ideate session
+2026-07-26; full vision + milestone chain in .claude/FOCUS.md same date
+(read that entry before acting — it records five explicit decisions).
+
+STEP 0, SEQUENCED FIRST (Zach's explicit call, asked directly): the name
+is currently occupied. The 2026-07-26 nightly scaffolded the "page 92"
+idea as a live registered project named bibliothecaire. Before
+scaffolding anything, RENAME that registration to quatre-vingt-douze:
+  - mv /home/zach/Documents/Projects/bibliothecaire
+       /home/zach/Documents/Projects/quatre-vingt-douze
+  - mv /home/zach/git-remotes/bibliothecaire.git
+       /home/zach/git-remotes/quatre-vingt-douze.git   (fix the clone's
+       origin URL + the conf's REPO_URL to match)
+  - schedule/bibliothecaire.conf -> quatre-vingt-douze.conf (PROJECT,
+    PROJECT_KEY, PROJECT_REPO_PATH, REPO_URL, job names updated inside)
+  - _paced.conf line + ~/.local/bin/bibliothecaire-nightly-batch-loop.sh
+    renamed to match; disable the line during the rename, re-enable after
+    (weight stays 1 — page-92's pacing is unchanged by the rename)
+  - fold the name-collision question in that project's own
+    .scheduler/QUESTIONS.md (2026-07-26 scaffold entry): answered by this
+    drop — it becomes quatre-vingt-douze; leave its other two questions
+    untouched (they're genuinely Zach's)
+  - verify: bin/milestone-audit.sh resolves quatre-vingt-douze, no file
+    anywhere still says bibliothecaire except THIS project's own scaffold
+Only after step 0 verifies clean, scaffold the librarian below under the
+freed name.
+
+Two wings, one project:
+(a) operations/cybernetics knowledge base seeded from realisateur's
+    UNIVERSE.md — research the principles it leans on and extend to the
+    named themes: what makes closed loops work, stigmergy (Grassé),
+    theories of the firm (Coase), holons (Koestler), plus the already-cited
+    Ashby (An Introduction to Cybernetics), Beer/VSM, Laozi. Deliverable of
+    the FIRST research pass: sourced quotes with real attribution,
+    published as a consumable quotes file (format open — design it so
+    crt's idle-bait rotation can read it; see crt FOCUS.md 2026-07-26
+    (realisateur) entry for the consumer's side). This KB is intended to
+    become a core philosophical resource for realisateur.
+(b) crt's book-catalog knowledge wing (contents/relationships/citations/
+    further-reading) — merged in from crt's formerly-parked catalog split.
+    LATER milestone, not the first pass: greenfield, never forks crt's
+    scan/grade/STT code, shares at most books.db's data.
+
+Scaffolding instructions:
+- Register in _paced.conf at LOW weight — still-forming dream per /ideate
+  §4.6 and UNIVERSE.md's convergence test (three arrivals in three
+  shapes). The first case (quote extraction) is concrete; the whole is not.
+- Consumers read the published quotes file; they never import code.
+- The archived drop archive/bibliothecaire.idea is page-92's consumed
+  record, NOT this project's — do not re-read it as intake.
