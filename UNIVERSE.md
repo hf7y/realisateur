@@ -160,5 +160,11 @@ everything to find what actually needs them.
   existing surveys. Shape open. Tracked in the same FOCUS.md entry.
 - **Multi-writer FOCUS-file regulator** — the other interface Ashby's
   reading flags as unregulated (the 2026-07-25 mega-burn test's one real
-  collision was exactly this). Named here so it stops reading as a
-  series of one-off incidents; no design proposed yet.
+  collision was exactly this). Second exhibit 2026-07-26: the scheduler
+  autocommit watcher adopted a live session's uncommitted FOCUS.md edits
+  under a human's name while origin moved twice underneath the same
+  session. Regulator now queued (realisateur `.claude/FOCUS.md`
+  2026-07-26 race entry): honest attribution + live-session probe on
+  scheduler's watcher half (via the front door), an atomic
+  `focus-commit.sh` edit-commit-push helper with post-rebase content
+  verification on realisateur's half.
