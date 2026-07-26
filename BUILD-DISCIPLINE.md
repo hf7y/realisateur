@@ -84,6 +84,23 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     path depends on the *content* of the text, so it tests clean until the
     day the content changes.
 
+13. **A decision without a dispatch path.** A real decision gets recorded
+    somewhere no executor ever reads, so it's never implemented — and later
+    sessions re-derive it from scratch, blind to the original. Found live
+    2026-07-26: the 2026-07-24 call to migrate FOCUS/QUESTIONS off the
+    gated `.claude/` paths ("same design as every other project,
+    long-term") was filed in scheduler's BLOCKERS.md under `## wtul` —
+    a file that is by standing rule *not a work queue*, in a section no
+    other project's runs read. The wtul migration never executed; the
+    "every project" clause reached no template and no backlog; chezz and
+    realisateur each rediscovered the wall independently over the next two
+    days and realisateur re-queued the already-made decision as an open
+    question. This is pattern 2 (build-but-don't-wire) for decisions:
+    *recorded* is not *wired*. A decision is wired only when it sits in a
+    file some run actually dispatches from (a project FOCUS backlog, a
+    template, a queued job) — and if it changes a convention, the
+    template/doc that teaches the convention changes in the same commit.
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a
