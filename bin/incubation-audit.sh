@@ -79,8 +79,15 @@ PYEOF
     fi
 
     # -- prepend a dated STATUS line to the project's own FOCUS.md --
-    if [ -n "$repo_path" ] && [ -f "$repo_path/.claude/FOCUS.md" ]; then
+    # (.scheduler/ preferred since the 2026-07-26 migration; .claude/ is
+    # the legacy location for not-yet-migrated projects)
+    focus=""
+    if [ -n "$repo_path" ] && [ -f "$repo_path/.scheduler/FOCUS.md" ]; then
+      focus="$repo_path/.scheduler/FOCUS.md"
+    elif [ -n "$repo_path" ] && [ -f "$repo_path/.claude/FOCUS.md" ]; then
       focus="$repo_path/.claude/FOCUS.md"
+    fi
+    if [ -n "$focus" ]; then
       tmp="$(mktemp)"
       {
         echo "**INCUBATION STATUS ($today, via realisateur's incubation-audit.sh): $status (weight=$weight).**"
