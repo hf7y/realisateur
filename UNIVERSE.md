@@ -151,7 +151,7 @@ everything to find what actually needs them.
 - **Catabolic pass** (Law 3's recurring enforcement) — a retirement
   discipline, e.g. every Nth `/ideate` names one surface to shrink,
   generalizing "names what it retires" from mechanisms to text and
-  verbs. Shape open. Tracked in realisateur `.claude/FOCUS.md`
+  verbs. Shape open. Tracked in realisateur `.scheduler/FOCUS.md`
   2026-07-25.
 - **Re-arrival sensor** (the convergence test's enforcement) — on
   intake/triage, check the reservoir for a prior same-shape entry; a
@@ -163,7 +163,7 @@ everything to find what actually needs them.
   collision was exactly this). Second exhibit 2026-07-26: the scheduler
   autocommit watcher adopted a live session's uncommitted FOCUS.md edits
   under a human's name while origin moved twice underneath the same
-  session. Regulator now queued (realisateur `.claude/FOCUS.md`
+  session. Regulator now queued (realisateur `.scheduler/FOCUS.md`
   2026-07-26 race entry): honest attribution + live-session probe on
   scheduler's watcher half (via the front door), an atomic
   `focus-commit.sh` edit-commit-push helper with post-rebase content

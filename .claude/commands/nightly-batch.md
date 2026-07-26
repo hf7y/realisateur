@@ -2,10 +2,10 @@
 description: Nightly pass -- infer ideas from dropped inbox artifacts and wire them into scaffolded, scheduler-registered projects
 ---
 
-Read `.claude/FOCUS.md` first -- including its "build maximally
+Read `.scheduler/FOCUS.md` first -- including its "build maximally
 autonomously" policy. Build first, don't just analyze: pick the most
 reasonable interpretation of an inbox artifact and scaffold a real project
-for it, flagged in `.claude/QUESTIONS.md` and the report. Only actually
+for it, flagged in `.scheduler/QUESTIONS.md` and the report. Only actually
 stop and wait for the user when the action itself can't be reverted -- an
 ordinary commit, branch, or new local scheduler registration never
 qualifies.
@@ -15,7 +15,7 @@ review step until the morning.
 
 ## 1. Orient
 
-`git log --oneline -10`, `README.md`, and `.claude/FOCUS.md`. If a
+`git log --oneline -10`, `README.md`, and `.scheduler/FOCUS.md`. If a
 previous nightly run left work in progress (check the last report under
 `~/reports/realisateur/`), pick up from there rather than starting over.
 
@@ -55,7 +55,7 @@ status is `reached` is a signal to set a new milestone or graduate it
 (drop its `_paced.conf` weight) — same signals-not-verdicts stance as the
 other two surveys.
 
-**Read `.claude/QUESTIONS.md` and process any answers.** The user replies
+**Read `.scheduler/QUESTIONS.md` and process any answers.** The user replies
 inline, on a line starting with `> ` directly under a question --
 QUESTIONS.md's own header documents the convention. Treat any `> `
 answer as authoritative (same standing as FOCUS.md): act on it, fold a
@@ -67,7 +67,7 @@ untouched.
 
 The inbox is whatever's sitting at the repo root (or under an `inbox/`
 subdirectory if one exists by now) that isn't part of realisateur's own
-scaffolding (`README.md`, `SCHEDULER.md`, `.claude/`, `.git/`, an
+scaffolding (`README.md`, `SCHEDULER.md`, `.claude/` (commands only), `.scheduler/`, `.git/`, an
 `archive/` directory). It could be a text file, a PNG, anything -- there
 is no fixed naming convention, per `README.md`. Read every text artifact;
 view every image artifact.
@@ -87,7 +87,7 @@ For each unarchived artifact:
   `~/Documents/Projects/<name>/`. Telltale: it names realisateur, the
   scheduler, or "this folder/workflow" itself as the subject. For these,
   don't scaffold a project -- research the answer, fold the finding/
-  decision into `.claude/FOCUS.md` (a dated bullet is enough) and/or
+  decision into `.scheduler/FOCUS.md` (a dated bullet is enough) and/or
   `README.md` if it changes the documented process, then archive the
   source artifact same as any other processed idea.
 - Check whether a project for this idea already exists under
@@ -108,7 +108,7 @@ For each unarchived artifact:
   init` it, write a minimal README describing the inferred idea and
   initial scaffolding (actual code/structure appropriate to what was
   inferred -- don't leave it as just a README). When you write its
-  `.claude/FOCUS.md` (below), open it with a `## Stability milestone`
+  `.scheduler/FOCUS.md` (below), open it with a `## Stability milestone`
   section (canonical shape in `STABILITY-MILESTONES.md`) whose bar is the
   inferred **v1 core** of the idea, `status: not-started`. That milestone
   is what every later idea against the project gets park-by-default-triaged
@@ -133,8 +133,8 @@ For each unarchived artifact:
   scheduler exactly as `SCHEDULER.md` documents for realisateur itself:
   a local bare remote under `~/git-remotes/<name>.git` (no GitHub
   credentials needed unless one already clearly exists for this idea), a
-  `.claude/FOCUS.md` + `.claude/QUESTIONS.md` +
-  `.claude/commands/nightly-batch.md` + a root `CLAUDE.md` (adapt the
+  `.scheduler/FOCUS.md` + `.scheduler/QUESTIONS.md` (NOT `.claude/` -- the
+  sensitive-file gate blocks unattended writes there; set `SCHEDULER_SUBDIR=".scheduler"` in the conf) + `.claude/commands/nightly-batch.md` + a root `CLAUDE.md` (adapt the
   templates in `~/Documents/Project Archive/scheduler/examples/` to what
   the new project actually is -- `CLAUDE.md.template` is the "suggest
   `/ideate <project>` instead of implementing" guardrail, worth every new
@@ -159,7 +159,7 @@ end. Each new project gets its own first commit(s) in its own repo.
 ## 5. Flag what you built, and anything needing the user's own judgment
 
 Append-only, format `- **YYYY-MM-DD (nightly-batch):** <text>`, in
-`.claude/QUESTIONS.md`:
+`.scheduler/QUESTIONS.md`:
 
 - **Every new project scaffolded tonight** -- what artifact it came from,
   what was inferred, where it lives, whether it got a scheduler
@@ -177,7 +177,7 @@ Append-only, format `- **YYYY-MM-DD (nightly-batch):** <text>`, in
 were processed and what was inferred from each, which new projects were
 scaffolded (and whether scheduler-registered), what was archived, what
 was deliberately left unprocessed and why, and whether anything got
-appended to `.claude/QUESTIONS.md`.
+appended to `.scheduler/QUESTIONS.md`.
 
 ## 7. Before finishing
 

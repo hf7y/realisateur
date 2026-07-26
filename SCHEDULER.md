@@ -17,7 +17,7 @@ daemon**. Two job tiers a project can opt into, independently:
   fixed daytime window. Mechanical fixes only, against a live web tracker's
   open-report queue. Skip this tier if the project has no such tracker.
 - **Tier 2 — Overnight Batch**: slow, thorough, broad. One long unattended
-  run per night, scoped entirely by the project's own `.claude/FOCUS.md`.
+  run per night, scoped entirely by the project's own `.scheduler/FOCUS.md`.
   Builds features too, not just fixes — see the autonomy policy below.
 
 Every registered project's Tier 2 batch currently runs through a shared
@@ -47,7 +47,12 @@ pointer into them, not a replacement. In short, registering means:
      no GitHub presence) uses exactly this, and a GitHub mirror can be added
      later without disrupting anything by swapping `REPO_URL`.
 
-2. **A `.claude/FOCUS.md`** — the single file that scopes every Tier 2 run.
+2. **A `.scheduler/FOCUS.md`** — the single file that scopes every Tier 2
+   run. (`.scheduler/`, NOT `.claude/`: the harness's sensitive-file gate
+   blocks unattended writes to any `.claude/` path, so a FOCUS.md there is
+   unwritable by the very nightly runs it scopes — the 2026-07-26
+   migration decision. Set `SCHEDULER_SUBDIR=".scheduler"` in the
+   project's `schedule/<name>.conf` so the audits and symlinks follow.)
    Copy the shape from `scheduler/examples/FOCUS.md.template`, or read a real
    one (`crt`'s or `chezz`'s) for a fuller example. Key convention worth
    knowing before writing it: the **"build maximally autonomously" policy**
@@ -57,7 +62,7 @@ pointer into them, not a replacement. In short, registering means:
    message to a person, spending real money, deleting something with no
    backup — not an ordinary commit or branch).
 
-3. **A `.claude/QUESTIONS.md`** — the two-way channel for anything needing a
+3. **A `.scheduler/QUESTIONS.md`** — the two-way channel for anything needing a
    human decision. Either tier appends a question; you reply inline with a
    `> ` blockquote under it; the next nightly run reads and acts on answered
    questions, then removes them (git history + that run's report keep the
@@ -110,5 +115,5 @@ first run's report/log rather than assuming it worked.
 ## Who to ask
 
 Zach owns all policy/scope decisions here — the scheduler's own
-`.claude/scheduler/FOCUS.md` backlog and `QUESTIONS.md` are where open
+`.scheduler/FOCUS.md` backlog and `QUESTIONS.md` are where open
 questions about the ecosystem itself (not this project) get tracked.

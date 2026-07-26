@@ -1,6 +1,6 @@
 # Stability milestones — realisateur's admission-control convention
 
-This is realisateur's answer to **vision debt** (see `.claude/FOCUS.md`,
+This is realisateur's answer to **vision debt** (see `.scheduler/FOCUS.md`,
 2026-07-23 vision-debt strategy entry). The honest number: idea intake via
 `scheduler -i` is zero-cost and unbounded; clearing is quota-gated and
 shared across ~12 projects. The backlog therefore diverges at −6 to −10
@@ -63,7 +63,9 @@ tag.
 ## Where a milestone lives — the canonical format
 
 A `## Stability milestone` section near the top of each project's
-`.claude/FOCUS.md`. Required shape (so `bin/milestone-audit.sh` can parse
+FOCUS.md (`.scheduler/FOCUS.md` standard, legacy `.claude/` until
+migrated -- the audit follows the conf's `SCHEDULER_SUBDIR`). Required
+shape (so `bin/milestone-audit.sh` can parse
 it offline):
 
 ```

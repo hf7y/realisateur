@@ -44,15 +44,17 @@ current stability milestone + status + reservoir signal; this is what
 makes step 4's park-by-default triage decidable (you can't judge `active`
 vs `parked` without the current bar in front of you). See
 `STABILITY-MILESTONES.md`. Also read this repo's own
-`.claude/FOCUS.md`/`QUESTIONS.md`.
+`.scheduler/FOCUS.md`/`QUESTIONS.md`.
 
 **Single-project (`$ARGUMENTS` given):** run
 `"/home/zach/Documents/Project Archive/scheduler/bin/scheduler" status <project>`
 directly instead of the full survey -- same offline-first data, scoped
-to just that project. Read that project's own `.claude/FOCUS.md` and
-`.claude/QUESTIONS.md` in full (via the scheduler's `focus/<project>.md`
-and `questions/<project>.md` symlinks, or the real path from
-`schedule/<project>.conf`'s `PROJECT_REPO_PATH`).
+to just that project. Read that project's own FOCUS.md and
+QUESTIONS.md in full -- `.scheduler/` for migrated projects, legacy
+`.claude/` otherwise; the scheduler's `focus/<project>.md`
+and `questions/<project>.md` symlinks resolve this, or derive the real
+path from `schedule/<project>.conf`'s `PROJECT_REPO_PATH` +
+`SCHEDULER_SUBDIR`).
 
 Either way: don't trust a prior session's own claims about status --
 this step's whole point is starting from what the survey/status actually
@@ -124,7 +126,7 @@ structure above is unclear in the abstract.
 
 For each decision:
 - **About realisateur's own scope** -- write into this repo's own
-  `.claude/FOCUS.md` (decision + rationale) same as any other project.
+  `.scheduler/FOCUS.md` (decision + rationale) same as any other project.
 - **About another project** -- first run `bin/check-project-busy.sh
   <project>` (offline, ~instant -- flock-probes that project's own
   scheduler job locks). If it reports `BUSY: <job-name>`, that project's
@@ -138,7 +140,8 @@ For each decision:
   realisateur's job specifically because it's the one thing reaching into
   other projects' files from outside their own automation.
   If free, write directly into THAT project's own
-  `.claude/FOCUS.md`/`.claude/QUESTIONS.md` (realisateur owns this
+  FOCUS.md/QUESTIONS.md (`.scheduler/` if migrated, legacy `.claude/`
+  otherwise -- check `SCHEDULER_SUBDIR` in its conf) (realisateur owns this
   cross-write relationship, unlike chezz's `/ideate`, which must go
   through scheduler's `-i` front door for anything outside itself).
   Tag the entry so it reads as ecosystem-informed rather than the
@@ -239,7 +242,7 @@ directly.
 
 ## 6. Commit, push, and stop
 
-Commit realisateur's own `.claude/FOCUS.md`/`QUESTIONS.md` changes here;
+Commit realisateur's own `.scheduler/FOCUS.md`/`QUESTIONS.md` changes here;
 commit each touched project's own FOCUS.md/QUESTIONS.md changes in THAT
 project's repo (separate commits, separate repos -- don't bundle). Push
 everything pushable; note anything that couldn't push (e.g. the

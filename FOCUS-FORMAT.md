@@ -1,7 +1,8 @@
 # FOCUS.md formatting spec
 
-Canonical shape for `.claude/FOCUS.md` (or `.scheduler/FOCUS.md` for
-projects that migrated, per chezz's queued fix) so `scheduler status
+Canonical shape for `.scheduler/FOCUS.md` (the standard location since
+the 2026-07-26 migration decision; legacy `.claude/FOCUS.md` only for
+projects not yet migrated) so `scheduler status
 <project>`'s `extract_next_items()` (`bin/scheduler` in the scheduler
 repo) can actually parse a "next up" list out of it, and so
 `bin/milestone-audit.sh`/`bin/ecosystem-survey.sh` here can too. Written

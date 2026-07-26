@@ -17,7 +17,7 @@ developing itself unattended, the same way realisateur itself now does.
    or shape is guaranteed.
 2. **Inference**: read/view each artifact and figure out what idea it's
    pointing at. When it's ambiguous, pick the most reasonable
-   interpretation and act — see `.claude/FOCUS.md`'s autonomy policy.
+   interpretation and act — see `.scheduler/FOCUS.md`'s autonomy policy.
 3. **Wiring**: turn a viable idea into its own project — a real directory
    (usually a sibling under `~/Documents/Projects/`), a git repo, and a
    scheduler registration of its own if it's the kind of thing that

@@ -23,7 +23,7 @@ Three distinct problems bundled together. Taking each in turn.
 ## 1. Vision → milestones → blockers should be boilerplate, not restated per-prompt
 
 **Real and fixable with prose.** Looking back at actual `/ideate`
-entries in `.claude/FOCUS.md`, the shape Zach keeps asking for by hand
+entries in `.scheduler/FOCUS.md`, the shape Zach keeps asking for by hand
 already exists as an ad hoc pattern — the 2026-07-24 dexter pass
 (vision → milestone chain → blockers-clearable-now, three clean
 subsections) is the best example, but it happened because Zach's own
@@ -62,7 +62,7 @@ buildable (project-local `.claude/settings.json`, scoped to this repo)
 but it's an infrastructure change to how *every* prompt in a realisateur
 session behaves, not a markdown edit — worth Zach's own sign-off before
 building rather than shipping unprompted. Raised as a real question in
-`.claude/QUESTIONS.md`.
+`.scheduler/QUESTIONS.md`.
 
 ## 3. Drift over long sessions — "hard to enforce with prose I guess"
 
@@ -85,4 +85,4 @@ solution to build here beyond what's already queued.
 - **Queued, needs Zach's own call:** whether to build a
   `UserPromptSubmit` hook (or equivalent) that actively re-enforces
   ideate-mode across a long conversation, rather than relying on prose
-  holding. See the dated question in `.claude/QUESTIONS.md`.
+  holding. See the dated question in `.scheduler/QUESTIONS.md`.
