@@ -23,6 +23,8 @@
 
 **Blockers:** none for steps 3–4 (queued in their owners' own dispatch paths). Step 2 is blocked only on a human being present — that's its nature, not a missing decision; the dispatch line exists so it can't rot silently the way the 2026-07-24 original did. wtul's FOCUS-note cross-write was DEFERRED this session per ideate.md §4 (its batch was live-dispatched 13:05 mid-session, `check-project-busy.sh` said BUSY) — carry it into the wtul migration itself.
 
+**Postscript, same session — THIRD live occurrence of the watcher misattribution:** the ~13:15 sweep tick adopted this very session's in-progress `QUESTIONS.md` and `BUILD-DISCIPLINE.md` edits as `Human edit via scheduler` under Zach's name (`47892d0`, `62507d2` — content verified intact and exactly as authored, attribution published and unrecoverable, same as `93ad456`). Adds a same-day second data point to the write-race entry below; the scheduler-half fix (honest attribution + live-session probe) is already routed via `scheduler -i` there — this recurrence is evidence for its priority, not a new decision.
+
 ---
 
 **2026-07-26 (interactive, Zach-directed, same session as the strategy audit below): `/cloture` — the session-closing rite — DESIGNED AND QUEUED, not built. Name chosen by Zach (asked directly, with options); build scope "record and queue only" also his explicit call.** Stated park-by-default override: not required for realisateur's current milestone, promoted by the decider himself.
