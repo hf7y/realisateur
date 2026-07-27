@@ -1300,6 +1300,63 @@ Mirror recorded in bibliothecaire's own `.scheduler/FOCUS.md`, same
 date — the narrow-widen decision affecting bibliothecaire's own scope
 is written there directly, not just referenced from here.
 
+## 2026-07-27 (`/ideate`, interactive, Zach-directed): catabolic pass + multi-writer-FOCUS regulator promoted from PARKED to active
+
+**Stated override of park-by-default (§4/§4.5), same shape as the
+2026-07-25 guard-set promotion above (line ~155).** Prompted by Zach
+asking directly whether the ecosystem's cross-project friction ("get
+these organs to properly synergize") constitutes its own milestone.
+Checked against the mechanism that already answers this
+(`PRECIPITATION.md`'s five-signal ladder) rather than declaring a new
+ad-hoc "synergy sprint" — a blanket sprint milestone would itself be the
+silent-reorder/hub pattern the ladder exists to prevent (the same
+session's `precipitation-scan.sh` run suppressed an omnibus HUB entry
+for joining >10% of the corpus, for exactly this reason).
+
+Two concrete signals fired, not a vibe:
+1. **Re-arrival, same shape** — this concern was named 2026-07-25 (Law
+   3), given an ownership decision 2026-07-27 (this file, entry above),
+   and raised again today in the same shape (cross-project coherence
+   under concurrent ticking work).
+2. **Interface cluster** — `precipitation-scan.sh` report C surfaced a
+   live 8-entry/5-project cluster (realisateur, aedile, gardien,
+   scheduler, senechal) converging on one unregulated interface this
+   session, independent of the question being asked.
+
+**What this promotes** (both previously `(parked)` in the entry above):
+- Design + build the catabolic-pass self-retirement mechanism
+  (trigger, output shape, bibliothecaire handoff format).
+- Design + build the multi-writer-FOCUS-file regulator (honest
+  attribution + live-session probe on scheduler's autocommit-watcher
+  half; `focus-commit.sh` already covers realisateur's half).
+
+**What this passes over:** the 5 projects still missing a declared
+milestone (groc-mangr, nine-speakers, sequestria, vim-arcade,
+vkv-inventory) remain the actual blocker on realisateur's own current
+bar ("every project has a declared milestone..."). This promotion does
+NOT unblock that bar — it's a stated exception, same as the
+2026-07-25 guard set was.
+
+**Delta of promotion, explicit (asked directly this session):** this is
+a prose/status change, not a mechanism change — park-by-default and its
+promotion clause already cover this case by design. No new script, no
+`_paced.conf` weight change. Concretely: two status tags move from
+`(parked)` to active with this rationale; consequence is these become
+eligible for the next `/ideate`/nightly-batch pass to actually spec,
+instead of being skipped by park-by-default triage. Under the prior
+(parked) status, re-admission had no target date — it would have waited
+for realisateur's current milestone to be *reached* (all 18 projects
+declared + triage proven across >1 pass), which is unscheduled and
+plausibly weeks out given the 5 missing-milestone projects above.
+
+**The cluster itself, separately** — per PRECIPITATION.md, its members
+are NOT individually promoted; it is filed as its own regulator-naming
+question, open: `[iface: cross-project agent/dispatch coordination]`
+(windows/agent/dedicated/direction — spans DIRECTOR_LOOP_OVERRIDE,
+gardien backup scheduling, lid-close power settings, scheduler stranded-
+commit fixes). What the missing regulator actually is stays undecided —
+flagged for a future `/ideate` pass, not resolved here.
+
 ## 2026-07-27 (Zach-directed, /cloture session): every registered project needs an uncommitted-file intake path, not just realisateur
 
 Found via `bin/closeout-lint.sh`: `wtul` had `CD-500_500B_Manual_RevG.pdf`
