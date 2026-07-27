@@ -39,7 +39,50 @@ declare -A INFRA_EXCLUDE=( [scheduler-paced-runner]=1 [scheduler-registry]=1 [sc
 
 busy=0
 shopt -s nullglob
+
+# -- 1. THE CANONICAL PER-PROJECT LOCK ---------------------------------------
+# scheduler's lib/sweep-loop-common.sh already keys a lock by PROJECT_KEY
+# rather than job name -- its own comment: that is "what makes every tier/job
+# for one project contend for the same slot." Every registered project's every
+# job takes it automatically through that one shared library, so this is the
+# authoritative answer; the per-job-dir scan below is a derived, name-guessing
+# fallback kept for jobs that predate the registry.
+#
+# 2026-07-26: this file used to scan ONLY the per-job dirs and explicitly
+# skipped scheduler-registry as "infrastructure" -- so it re-derived by
+# directory-name heuristics what the registry already states canonically.
+registry_dir="$share_dir/scheduler-registry"
+reg_lock="$registry_dir/$project.lock"
+if [ -f "$reg_lock" ] && ! flock -n "$reg_lock" -c true 2>/dev/null; then
+  holder="$(cat "$registry_dir/$project.active" 2>/dev/null || echo 'unknown job')"
+  echo "BUSY: $holder"
+  busy=1
+fi
+
+# -- 2. A LIVE INTERACTIVE SESSION -------------------------------------------
+# The other half of the same question, added 2026-07-26: a job lock says
+# "automation is writing here"; this says "a human is". Written by
+# bin/session-marker.sh from a Claude SessionStart hook.
+#
+# Liveness is a PID probe, NOT the marker's existence: SessionEnd is not
+# guaranteed to fire on crash or SIGKILL, so a marker can outlive its session.
+# Trusting the file alone would wedge a project's batch permanently and
+# silently -- a silent-failure path introduced to fix a race.
+marker="$registry_dir/$project.interactive"
+if [ -f "$marker" ]; then
+  mpid="$(awk -F= '$1=="pid"{print $2}' "$marker" 2>/dev/null)"
+  if [ -n "$mpid" ] && kill -0 "$mpid" 2>/dev/null; then
+    echo "BUSY: interactive session (pid $mpid, since $(awk -F= '$1=="started_at"{print $2}' "$marker" 2>/dev/null))"
+    busy=1
+  fi
+fi
+
+# -- 3. per-job-dir fallback (pre-registry jobs) ------------------------------
+# Skipped when the registry already answered: both sources describe the same
+# job, and reporting it twice makes one busy job read like two.
+reg_answered="$busy"
 for dir in "$share_dir/$project"-*/; do
+  [ "$reg_answered" -eq 1 ] && break
   job="$(basename "$dir")"
   [ -n "${INFRA_EXCLUDE[$job]:-}" ] && continue
   lock="$dir/sweep.lock"
