@@ -125,8 +125,12 @@ water keeps returning. For interfaces specifically, Laozi 11: thirty
 spokes share one hub — it is the emptiness that makes the wheel useful.
 A glance screen's value is in what it omits.
 
-**Enforced by (today):** nothing — this session applied the test by
-hand. **Queued, not built:** the re-arrival sensor (below).
+**Enforced by:** `bin/precipitation-scan.sh` report B (re-arrival
+candidates) plus the `(re-arrival: <dates>)` stamp, per
+`PRECIPITATION.md` (2026-07-26). The scan surfaces candidate pairs and
+their shared vocabulary; the shape-stability judgment stays human — and
+the counter-case is now doctrine too: an idea returning in a *different*
+shape each time gets its weight LOWERED, not raised.
 
 ## The three timescales (a universe-wide channel rule)
 
@@ -153,11 +157,14 @@ everything to find what actually needs them.
   generalizing "names what it retires" from mechanisms to text and
   verbs. Shape open. Tracked in realisateur `.scheduler/FOCUS.md`
   2026-07-25.
-- **Re-arrival sensor** (the convergence test's enforcement) — on
-  intake/triage, check the reservoir for a prior same-shape entry; a
-  convergence hit is a stated promotion trigger, stronger than
-  oldest-first. Candidate shape: an offline `bin/` sense like the
-  existing surveys. Shape open. Tracked in the same FOCUS.md entry.
+- ~~**Re-arrival sensor**~~ — **BUILT 2026-07-26** as
+  `bin/precipitation-scan.sh`, wired into `ecosystem-survey.sh`, doctrine
+  in `PRECIPITATION.md`. It landed larger than queued: alongside
+  re-arrival it senses **interface clusters** (distinct asks across
+  projects converging on one unregulated interface — the mechanized form
+  of the Ashby reading above), and it demotes age to the weakest of five
+  ranked signals. Deliberately NOT a composite score: a computed
+  reordering is the silent reorder §4.5 forbids.
 - **Multi-writer FOCUS-file regulator** — the other interface Ashby's
   reading flags as unregulated (the 2026-07-25 mega-burn test's one real
   collision was exactly this). Second exhibit 2026-07-26: the scheduler
