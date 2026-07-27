@@ -124,7 +124,7 @@ awk -v min_score="$MIN_SCORE" -v min_shared="$MIN_SHARED" \
     -v ubiquity="$UBIQUITY" -v min_termlen="$MIN_TERMLEN" \
     -v include_logs="$INCLUDE_LOGS" -v hubfrac="$HUBFRAC" -v max_clusters="$MAX_CLUSTERS" '
   function flush(   t, i, w, seen) {
-    if (!started) return
+    if (!pending) return
     n++
     eproj[n] = cur_proj; edate[n] = cur_date; ehead[n] = cur_head
     # normalized headline -- identical across projects means a BROADCAST
@@ -147,12 +147,12 @@ awk -v min_score="$MIN_SCORE" -v min_shared="$MIN_SHARED" \
       tlist[n] = tlist[n] " " w[i]
       df[w[i]]++
     }
-    started = 0; cur_text = ""
+    pending = 0; started = 0; cur_text = ""
   }
   FNR == 1 { flush(); nf++; fproj = FILENAME; sub(/.*\//, "", fproj); sub(/\.md$/, "", fproj) }
   /^[ \t]*[-*]?[ \t]*\*\*[0-9]{4}-[0-9]{2}-[0-9]{2}/ {
     flush()
-    started = 1; cur_proj = fproj
+    pending = 1; started = 1; cur_proj = fproj
     match($0, /[0-9]{4}-[0-9]{2}-[0-9]{2}/)
     cur_date = substr($0, RSTART, RLENGTH)
     cur_head = $0
@@ -162,6 +162,16 @@ awk -v min_score="$MIN_SCORE" -v min_shared="$MIN_SHARED" \
     cur_text = $0
     next
   }
+  # An entry body ends at the next dated header OR at trailing non-entry
+  # content -- an injected HTML-comment footer (inject-suggestions.sh appends
+  # one to every focus file) or a new `## ` section. Without this the LAST
+  # entry in each file absorbs that footer, and every file`s last entry then
+  # shares its vocabulary: on 2026-07-26 that manufactured a 5-project
+  # "cluster" whose members were a tmux title tweak and a ROADMAP migration.
+  # stop ACCUMULATING here, but keep `pending` set so the entry itself is
+  # still recorded -- clearing `pending` too would silently DROP every
+  # footer-terminated entry (30 of 212 on first attempt).
+  /^[ \t]*<!--/ || /^## / { started = 0 }
   started { cur_text = cur_text " " $0 }
   END {
     flush()
