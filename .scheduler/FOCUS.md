@@ -1299,3 +1299,35 @@ applies cleanly: this doesn't unblock the current bar, it's beyond it.
 Mirror recorded in bibliothecaire's own `.scheduler/FOCUS.md`, same
 date — the narrow-widen decision affecting bibliothecaire's own scope
 is written there directly, not just referenced from here.
+
+## 2026-07-27 (Zach-directed, /cloture session): every registered project needs an uncommitted-file intake path, not just realisateur
+
+Found via `bin/closeout-lint.sh`: `wtul` had `CD-500_500B_Manual_RevG.pdf`
+sitting uncommitted at its repo root, effectively invisible to that
+project's own batch (`wtul-batch` is backlog-driven off FOCUS.md only,
+no repo-root artifact scan). Resolved for this one file directly
+(`.scheduler/QUESTIONS.md` filed in wtul, `4bbf097`, pushed) — but Zach's
+own stated intent is broader: **dropping an uncommitted file into a
+project's working tree is a normal, expected part of his workflow**
+(`git commit` is not part of his ritual), and every project should have
+*some* mechanism that folds those in, at minimum by getting them
+committed rather than left as permanent dirty-tree residue.
+
+Only realisateur currently has an inbox-scan step
+(`nightly-batch.md` §2 — repo-root artifact -> infer -> archive ->
+commit). It was never propagated as a standing pattern to sibling
+projects. This is cross-project batch-process work (either realisateur's
+own nightly-batch extends to audit/propose this for other projects, or
+scheduler's steward pass tracks it) — not something to build inside this
+closing session per cloture's report/route/don't-build posture.
+
+**Proposed for a batch pass to pick up (not decided here):** survey
+every registered project's `.scheduler/commands or .claude/commands`
+batch script for whether it has *any* path that would notice/commit a
+stray uncommitted file at its own repo root, and for the ones that
+don't, either (a) adopt a minimal version of realisateur's inbox-scan
+step, or (b) at minimum have `closeout-lint.sh`-style dirty-tree
+detection trigger an auto-commit-with-a-question rather than just a
+silent FLAG nobody routes anywhere. Which shape is right per-project is
+a judgment call, not a blanket copy of nightly-batch.md — flag for
+`/ideate` or a scheduler steward pass, not a straight build.
