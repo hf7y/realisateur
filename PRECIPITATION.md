@@ -177,6 +177,22 @@ scoring it fills report B with the system detecting its own heartbeat.
 - **Vocabulary overlap is a proxy for aboutness, and a crude one.** Two
   entries can share terms and mean different things. Every finding in B
   and C is a candidate to read, never a verdict.
+
+  **Worked example, 2026-07-26, one report after this shipped.** Report C
+  surfaced a 5-project cluster sharing *"freely appended suggestions
+  inject delete dated context"*. It read as the multi-writer FOCUS-file
+  interface again. It was an artifact: entry bodies ran to the next dated
+  header, so each file's LAST entry absorbed the footer
+  `inject-suggestions.sh` appends to every focus file. Five trailing
+  entries, one shared footer. The actual members were a tmux
+  `set-titles` tweak and a ROADMAP→FOCUS migration — nothing in common.
+  Fixed (bodies now stop at a footer or `## ` heading), but the lesson
+  outlives the fix: **the false cluster was the most plausible-looking
+  output the tool produced.** It named a real interface, cited five
+  projects, and agreed with a conclusion already in UNIVERSE.md — which
+  is exactly what made it convincing. Confirmation-shaped output is the
+  failure mode to expect here. Open the members before believing a
+  cluster; the shared-terms line is printed so that check costs seconds.
 - **Long omnibus session records are excluded as hubs** (`HUBFRAC`) —
   they touch everything, so they join every cluster to every other. The
   excluded list is printed rather than silently dropped. A real signal
