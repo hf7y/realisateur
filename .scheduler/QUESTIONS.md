@@ -123,3 +123,51 @@ session died, not that anything is wrong).
   (`/home/zach/Documents/vkv/wavebucks/aedile`) no longer exists at all —
   that one is probably a stale registration rather than a decision.
   > (answer inline here)
+  >
+  > **WITHDRAWN 2026-07-27 (`/ideate`) — THE QUESTION WAS BUILT ON A
+  > SENSOR ARTIFACT. Do not answer it; nothing here needs deciding.**
+  > Zach *did* answer it in the 2026-07-27 session (option b, "drop the
+  > weight to 1 and leave it dark") and the change was deliberately NOT
+  > applied — `schedule/_paced.conf` is untouched and crt keeps weight 3,
+  > which is correct. Re-probed, not quoted:
+  > - **crt is not dark.** `schedule/_paced.dexter.conf:105` is
+  >   `crt|1|3|...`, enabled, and crt has **289 commits in the last 7
+  >   days** (most recent nightly authored `Dexter Pine`, 2026-07-25). It
+  >   is the single most active project in the ecosystem. The 32 "stranded"
+  >   ideas are draining nightly, from dexter.
+  > - **aedile is not a stale registration.** Its path is a *subdirectory*
+  >   of the shared `wavebucks` monorepo, which is why `git -C` reported
+  >   both "no repo" (to some sensors) and "clean, up to date" (to
+  >   `ecosystem-survey.sh`, which was reading the monorepo). It dispatches
+  >   from `svc-vaporwave`'s crontab at 03:00 — verified with
+  >   `sudo -n -u svc-vaporwave crontab -l`, stderr not silenced.
+  > - **vkv-inventory** likewise, 04:00, 26 commits/7d including one
+  >   authored by `svc-vaporwave` itself.
+  > `groc-mangr` (weight 2, dark) is the one part of the original question
+  > that survives, and it is quiet enough not to need a decision tonight.
+  > Root cause: `bin/steward-survey.sh` reads one of **three** dispatch
+  > surfaces. 42 of the 52 reported "stranded" ideas were artifact. Fix
+  > queued as `bin/sensor-agree.sh`; new BUILD-DISCIPLINE.md pattern 14.
+
+- **2026-07-27 (`/ideate`): realisateur's own stability milestone is gated
+  on five projects that nothing dispatches against. Restate the bar, or
+  clear the five by hand?**
+  The current bar is *"every scheduler-registered project with a real git
+  repo has a declared `## Stability milestone` of its own, AND
+  park-by-default triage has held across more than one live pass."*
+  `milestone-audit.sh` reports 5 still missing: `groc-mangr`,
+  `nine-speakers`, `sequestria`, `vim-arcade`, `vkv-inventory`. Four of
+  those five are `enabled=0` in every rotation file, so no nightly run
+  will ever declare them — and the fifth (`vkv-inventory`) dispatches
+  under `svc-vaporwave`, whose runs have not taken up milestone-setting.
+  **The bar as written is not reachable by waiting**, which makes it a
+  milestone that cannot be reached rather than one that has not been. Not
+  touched — restating a milestone is a stated decision, not a batch one.
+  (a) **declare the five by hand** from an interactive pass (realisateur
+  has direct cross-write privilege; ~5 short entries, one session);
+  (b) **restate the bar** to cover only projects with a live dispatch
+  path, and say so — the honest version if the five are deliberately
+  dormant;
+  (c) **re-enable some of the five** so their own runs can do it — the
+  most expensive option, and only right if you actually want them moving.
+  > (answer inline here)

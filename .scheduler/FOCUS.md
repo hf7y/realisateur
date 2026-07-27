@@ -73,6 +73,16 @@ Re-probed, not quoted:
 
 **Surveys, all re-run fresh at 00:18:** `ecosystem-survey.sh` 18 projects; `milestone-audit.sh` 13 declared / 5 missing / 0 reached; `steward-survey.sh` 9 live / 9 dark (**now known to be 12 live / 6 dark**); `hygiene-lint.sh` 31 FLAGs, composition unchanged. Precipitation B/C read read-only. **Nothing stamped, reordered, or reweighted this pass; no project was scaffolded and no feature code was written.**
 
+**Commits (added at `/cloture`, resolving `closeout-lint.sh`'s `[record-no-sha]` FLAG against this very entry — the record now names what it can be checked against):**
+- `f0673c4` — this entry, as originally written.
+- `d8af7e1` — **not this session's commit; delivered by it.** A stranded `Human edit via scheduler: QUESTIONS.md (2026-07-26T23:30)` sitting unpushed in `wtul` since the previous night: Zach's own answer (1 insertion, 9 deletions) which wtul's nightly, cloning from origin, would never have seen — so wtul would have gone on re-asking a question already answered. `closeout-lint.sh` check A caught it; `check-project-busy.sh wtul` reported free; pushed as a fast-forward with no content change. **Revert:** `git -C /home/zach/Documents/wtul push origin d8af7e1^:main` (force-free only if nothing has landed since).
+- Doctrine commit for BUILD-DISCIPLINE.md pattern 14 + the UNIVERSE.md third-interface paragraph — see the `/cloture` philosophy delta below.
+
+**Philosophy delta, `/cloture` step 2 — NOT none.** This session added a fourteenth recurring failure pattern and a third unregulated interface, and both landed in the doctrine files rather than only here:
+- **`BUILD-DISCIPLINE.md` pattern 14 — "a sensor reports a negative it never checked for."** Pattern 7's tell moved from prose into a script, where it is worse: prose gets doubted, a script's output is read as measurement. Carries the rule (*a probe may only report a negative over the domain it actually read, and must name it; an unreadable surface is `UNKNOWN`, never folded into the negative*) and honestly states that its mechanical guard does not exist yet.
+- **`UNIVERSE.md` — the third interface.** Ashby assumes a regulator can act *and* can tell which state it is in; this organism has spent its whole effort on the first half. Stated there in one line: **the ecosystem's doctrine is almost entirely about whether work gets done and recorded, and almost none of it about whether what the system believes about itself is true** — and the second silently corrupts every judgment built on it, including the triage this file exists to justify.
+- **Deliberately NOT touched:** the fenced baseline block in `BUILD-DISCIPLINE.md`. Adding a checklist row there restamps 18 repos, which is not a closing-session action. If pattern 14 deserves a checklist row, that is a `restamp-discipline.sh --apply` pass of its own.
+
 ---
 
 **2026-07-26 (`/nightly-batch`, ~23:0x pass): inbox empty for the SIXTH consecutive pass — so the queued `/cloture` rite was BUILT: `bin/closeout-lint.sh` + `bin/tests/closeout-lint.test.sh` (`3913d7c`). Layer 2 is written but STAGED, blocked by the `.claude/**` gate, not by a decision.**
