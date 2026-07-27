@@ -1236,3 +1236,66 @@ declared bar.
 
 Nothing built this session — vision/milestone/blockers recorded only,
 per `/ideate`'s own posture.
+
+## 2026-07-27 (`/ideate`): Law 3's catabolic pass gets an ownership model — hybrid, per-project self-retirement + realisateur supervision + bibliothecaire as archive, PARKED
+
+**Vision.** `UNIVERSE.md` Law 3 named the gap 2026-07-25 ("Queued, not
+built: Catabolic pass") but assigned no owner, and the steward-survey
+shows the cost compounding: 91 stranded items in scheduler, 41 in
+senechal, 24 here, 9 in bibliothecaire, all growing, none shrinking.
+Zach's own framing, asked directly this session: prose is getting huge
+and agents will struggle to stay coherent across repeated writes/
+rewrites to the same FOCUS.md/QUESTIONS.md files — who moves prose into
+mechanism, who retires it, does bibliothecaire have a role. Decided
+model, Zach's own words: **"per project responsibility using
+realisateur based tools, realisateur has the job of supervising,
+ensuring compliance across repos, bibliothecaire only narrowly expands
+to include archiving prose retirements i.e. projects and realisateur
+global delegate to bibliothecaire as they clean themselves up."**
+
+Three roles, explicitly split:
+1. **Each project self-retires its own FOCUS.md/QUESTIONS.md** — using
+   realisateur-authored tooling (not a service call to another repo),
+   the same shape as `focus-commit.sh`/`check-project-busy.sh` today:
+   mechanism lives in realisateur's `bin/`, promoted to `~/.local/bin`,
+   invoked *by* each project's own `/cloture`/nightly-batch pass.
+2. **realisateur supervises/audits compliance across repos** — an
+   extension of what `hygiene-lint.sh`/`ecosystem-survey.sh` already do
+   (advisory scan, not enforcement), not a new authority. Realisateur
+   doesn't do the retiring itself project-by-project; it senses whether
+   retiring is happening and flags when it isn't (a `[stale-prose]` or
+   similar signal, same family as `[dispatch-parity]`/`[exec-bit]`).
+3. **bibliothecaire narrowly widens to be the archive destination** —
+   when a project retires prose (compress/summarize an old FOCUS.md
+   section), the retired material is *handed to* bibliothecaire rather
+   than deleted outright, so retirement is move-and-compress, not
+   destroy. This is a third wing alongside (a) the cybernetics quotes KB
+   and (b) crt's book catalog — narrower than "bibliothecaire manages
+   all ecosystem prose," which was NOT decided; bibliothecaire is a
+   receiving archive, not an active summarizer running against other
+   projects' live files.
+
+**Milestone chain** (all not-yet-started — this whole line is parked,
+see below):
+1. Design the self-retirement mechanism's shape: what triggers it (age?
+   size threshold? explicit `/cloture` step?), what "retired" produces
+   (a dated archive file? a one-line summary replacing N lines of
+   resolved detail?), and the handoff format to bibliothecaire.
+2. Build it in realisateur's `bin/`, promote to `~/.local/bin` per the
+   existing cross-write pattern (`notify-senechal.sh` etc.).
+3. Wire the compliance-audit signal into `hygiene-lint.sh` or a sibling
+   script.
+4. Wire bibliothecaire's receiving side (where retired archives land,
+   what if anything it does with them beyond storage).
+
+**Blockers.** None active — **explicitly parked this session** (Zach's
+own call: real but not blocking anything active right now, revisit once
+a concrete pain point — e.g. an agent losing coherence across a huge
+FOCUS.md — actually happens). Not required for realisateur's current
+declared milestone (every project has a stability milestone + park-by-
+default triage holding across passes), so park-by-default triage
+applies cleanly: this doesn't unblock the current bar, it's beyond it.
+
+Mirror recorded in bibliothecaire's own `.scheduler/FOCUS.md`, same
+date — the narrow-widen decision affecting bibliothecaire's own scope
+is written there directly, not just referenced from here.
