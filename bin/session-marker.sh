@@ -81,11 +81,38 @@ case "$action" in
     mkdir -p "$REGISTRY_DIR" 2>/dev/null || exit 0
     marker="$REGISTRY_DIR/$project.interactive"
     if [ "$action" = "acquire" ]; then
-      # PPID, not $$: this script exits immediately: its own pid would be dead
-      # instantly and every liveness probe would read the marker as stale. The
-      # parent is the session process that actually persists.
+      # RETIRES the bare `pid=${PPID}` this used to write. That comment said
+      # "the parent is the session process that actually persists" -- measured
+      # 2026-07-27, it is not. The hook runs under a short-lived intermediate
+      # shell, so PPID dies seconds after acquire while the session runs on.
+      # Observed live: marker held pid=429191 (dead) while the session process
+      # was 429162 (alive), and `check-project-busy scheduler` therefore said
+      # "free" with a human actively editing the repo.
+      #
+      # That direction of failure is the dangerous one. This marker exists so
+      # unattended jobs DEFER to a person; reading "free" while someone is
+      # working is the exact race it was built to prevent, and it was silent
+      # -- the probe's own "stale marker ... SessionEnd never fired" wording
+      # made a structural bug look like an ordinary crashed session.
+      #
+      # $$ is still wrong (this script exits immediately). Walk up instead and
+      # record the nearest ancestor that IS the session. Bounded depth, and
+      # falls back to PPID rather than writing nothing: a marker with a
+      # short-lived pid is still strictly better than no marker at all.
+      session_pid() {
+        local p="${PPID}" d=0 comm
+        while [ -n "$p" ] && [ "$p" -gt 1 ] 2>/dev/null && [ "$d" -lt 12 ]; do
+          comm="$(ps -p "$p" -o comm= 2>/dev/null | tr -d ' ')"
+          case "$comm" in
+            claude|claude.exe) printf '%s\n' "$p"; return 0 ;;
+          esac
+          p="$(ps -p "$p" -o ppid= 2>/dev/null | tr -d ' ')"
+          d=$((d + 1))
+        done
+        printf '%s\n' "${PPID}"
+      }
       {
-        echo "pid=${PPID}"
+        echo "pid=$(session_pid)"
         echo "started_at=$(date -Is)"
         echo "cwd=$cwd"
         echo "owner=realisateur/bin/session-marker.sh"
