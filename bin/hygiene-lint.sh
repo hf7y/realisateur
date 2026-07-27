@@ -12,11 +12,23 @@
 # realisateur's BUILD-DISCIPLINE.md (itself generalized from
 # crt/DEV-DISCIPLINE-RETROSPECTIVE-2026-07-23.md): secrets in tracked files,
 # build debris tracked as source, finished-but-uncommitted work, missing exec
-# bits, silent-pipeline smells, and single-value config duplication.
+# bits, silent-pipeline smells, single-value config duplication, stamped-
+# checklist drift, stale `verified <date>` claims, and (once, ecosystem-wide)
+# task-shaped entries rotting in scheduler's BLOCKERS.md.
 #
 # Usage:
 #   hygiene-lint.sh            scan every registered project, print findings
 #   hygiene-lint.sh <name>...  scan only the named project(s)
+#                              (skips the ecosystem-wide BLOCKERS.md check)
+#
+# Env overrides (used by the tests/fixtures, not normally set):
+#   STALE_DAYS=7    age at which a `verified <date>` stamp is flagged
+#   BLOCKERS_MD=... path to the BLOCKERS.md to scan
+#
+# Known false-positive class, left in deliberately: BUILD-DISCIPLINE.md's own
+# prose DEFINES the `# verified <date> via <cmd>` format, so its example line
+# ages like a real claim. Same stance as senechal's base64 test fixture --
+# a documented recurring FLAG beats a special case that could hide a real one.
 #
 # Exit status is always 0 -- findings are signals, not build failures (same
 # stance as ecosystem-survey.sh). Grep for "FLAG" in the output to gate on it.
@@ -47,6 +59,15 @@ echo
 echo "== scanning ${#projects[@]} project(s): $(printf '%s,' "${projects[@]}" | sed 's/,$//') =="
 
 total_flags=0
+
+# Baseline checklist row count, read from the ONE source (BUILD-DISCIPLINE.md's
+# own "## Build discipline (realisateur baseline" block) rather than retyped
+# here -- check 7b compares each project's stamped copy against it.
+BD_MD="$(cd "$(dirname "$0")/.." && pwd)/BUILD-DISCIPLINE.md"
+BASELINE_ROWS=0
+if [ -f "$BD_MD" ]; then
+  BASELINE_ROWS="$(awk '/^## Build discipline \(realisateur baseline/{f=1} f&&/^- \[ \]/{c++} END{print c+0}' "$BD_MD")"
+fi
 
 for name in "${projects[@]}"; do
   conf="$SCHED_ROOT/schedule/$name.conf"
@@ -186,6 +207,48 @@ for name in "${projects[@]}"; do
     echo "  NOTE [no-claude-md] no root CLAUDE.md tracked"
   fi
 
+  # 7b. STAMPED-CHECKLIST DRIFT ------------------------------------------------
+  # BUILD-DISCIPLINE.md's baseline checklist is COPIED into each project's
+  # CLAUDE.md at scaffold time; when the baseline gains a row, every stamped
+  # copy silently lags and nothing detects it (incident: three rows added
+  # 2026-07-25, nothing noticed). Compare row counts, not text -- a project
+  # may legitimately append its OWN rows, so only a SHORTFALL is reported.
+  if [ "${BASELINE_ROWS:-0}" -gt 0 ] && echo "$tracked" | grep -qx 'CLAUDE.md'; then
+    have="$(git -C "$repo" show ":CLAUDE.md" 2>/dev/null \
+            | awk '/^## Build discipline/{f=1} f&&/^- \[ \]/{c++} END{print c+0}')"
+    if [ "$have" -gt 0 ] && [ "$have" -lt "$BASELINE_ROWS" ]; then
+      echo "  NOTE [checklist-drift] CLAUDE.md checklist has $have row(s), baseline has $BASELINE_ROWS -- restamp from BUILD-DISCIPLINE.md"
+    fi
+  fi
+
+  # 8. STALE VERIFIED-CLAIMS ---------------------------------------------------
+  # BUILD-DISCIPLINE requires a written claim about system state to carry a
+  # `# verified <date> via <command>` stamp. A stamp doesn't expire on its own:
+  # the incident was an assertion about another host's crontab that outlived
+  # its truth by a day and became an audit's #1 finding. Flag stamps older
+  # than STALE_DAYS so the claim gets re-probed rather than re-quoted.
+  # Excludes this linter (it names the stamp format in its own prose).
+  STALE_DAYS="${STALE_DAYS:-7}"
+  now_s=$(date +%s)
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    d="$(echo "$line" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)"
+    [ -z "$d" ] && continue
+    then_s="$(date -d "$d" +%s 2>/dev/null)" || continue
+    age=$(( (now_s - then_s) / 86400 ))
+    [ "$age" -le "$STALE_DAYS" ] && continue
+    flag "stale-claim" "$age days old, re-probe: $(echo "$line" | cut -c1-140)"
+  done < <(git -C "$repo" grep -InE 'verified[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}' \
+             -- . ':(exclude)bin/hygiene-lint.sh' 2>/dev/null | head -8)
+
+  # 8b. UNSTAMPED STATE ASSERTIONS in config comments (advisory) ---------------
+  # Heuristic half of the same rule: a .conf comment asserting a fact about
+  # the live system with NO stamp at all. Noisier than 8 (prose varies), so
+  # NOTE not FLAG -- it points at a line to stamp, it doesn't claim it's wrong.
+  git -C "$repo" grep -InE '^[[:space:]]*#.*\b(confirmed|no crontab|does not exist|already (exists|installed|running)|is (running|enabled|empty))\b' \
+      -- '*.conf' 2>/dev/null | grep -viE 'verified[[:space:]]+[0-9]{4}' | head -4 \
+    | while IFS= read -r l; do [ -n "$l" ] && echo "  NOTE [unstamped-claim] $(echo "$l" | cut -c1-140)"; done
+
   if [ "$n" -eq 0 ]; then
     echo "  clean -- no mechanical flags (NOTEs above, if any, are advisory)"
   else
@@ -193,6 +256,48 @@ for name in "${projects[@]}"; do
   fi
   total_flags=$((total_flags+n))
 done
+
+# 9. TASK-SHAPED ENTRIES IN scheduler's BLOCKERS.md --------------------------
+# Mechanical half of BUILD-DISCIPLINE failure pattern 13 ("a decision without
+# a dispatch path"). BLOCKERS.md is by standing rule NOT a work queue -- it is
+# where things blocked ON THE HUMAN are surfaced. A task-shaped entry parked
+# there is rot by definition: nothing dispatches from that file, so the work
+# is invisible to every project's own runs. Incident: the 2026-07-24
+# `.scheduler/` migration decision sat there 2 days while three projects
+# independently re-derived it.
+#
+# Ecosystem-scoped (one shared file), so it runs ONCE after the per-project
+# loop rather than per project. An entry is exempt if it carries a `> ` answer
+# (the human replied) or names a dispatch path (OBLIGATION / dispatch / queued
+# / routed / filed in <project>'s FOCUS) -- that's the difference between rot
+# and a deliberate pointer.
+BLOCKERS_MD="${BLOCKERS_MD:-$SCHED_ROOT/BLOCKERS.md}"
+if [ "${#want[@]}" -eq 0 ] && [ -f "$BLOCKERS_MD" ]; then
+  echo
+  echo "############################################################"
+  echo "# scheduler BLOCKERS.md  ($BLOCKERS_MD)"
+  bl_out="$(awk '
+    function emit(   i) {
+      if (!inentry) return
+      if (body ~ /(filed for an async pass|NOT DONE|not done|not completed|TODO|next step:)/ &&
+          body !~ /(^|\n)[[:space:]]*> / &&
+          body !~ /(OBLIGATION|dispatch|queued|routed)/)
+        printf "  FLAG [blockers-task] %s:%d (## %s) %s\n", "BLOCKERS.md", start, sect, first
+      inentry = 0; body = ""
+    }
+    /^## /   { emit(); sect = substr($0, 4) }
+    /^- /    { emit(); inentry = 1; start = NR; first = substr($0, 1, 100); body = $0; next }
+    inentry  { body = body "\n" $0 }
+    END      { emit() }
+  ' "$BLOCKERS_MD")"
+  if [ -n "$bl_out" ]; then
+    echo "$bl_out"
+    bl_n="$(echo "$bl_out" | grep -c .)"
+    total_flags=$((total_flags + bl_n))
+  else
+    echo "  clean -- no task-shaped entries without a dispatch path"
+  fi
+fi
 
 echo
 echo "############################################################"
