@@ -126,6 +126,55 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     (Distinct from the queued BLOCKERS.md task-shaped-language row, which
     is 13 proper: a decision in a file nothing dispatches from at all.)
 
+14. **A sensor reports a negative it never checked for.** A probe reads one
+    of the places a thing can live and reports "not present" as if it had
+    read all of them — so the tool is confidently wrong, and wrong in the
+    direction of alarm. This is pattern 7's tell (*"I looked and saw
+    nothing" was never distinguished from "I did not look"*) moved from
+    prose into a script, where it is worse: prose is quoted by people who
+    might doubt it, a script's output is read as measurement.
+
+    Found live 2026-07-27, in realisateur's own surveys, twice:
+    `steward-survey.sh` equated *enabled in `schedule/_paced.conf`* with
+    *dispatches at all* and so reported 9 of 18 projects DARK — but the
+    ecosystem has **three** dispatch surfaces (mandark's `_paced.conf`,
+    dexter's `_paced.dexter.conf`, `svc-vaporwave`'s crontab). crt, the
+    single most active project in the ecosystem (289 commits/7d, dispatching
+    from dexter), was its loudest "dark, high-weight, 32 ideas stranded"
+    row. 42 of the 52 reported stranded ideas were artifact. Separately,
+    `ecosystem-survey.sh` reported a *subdirectory* of a shared monorepo as
+    a clean repo, because `git -C <subdir>` silently walks up to the parent
+    — so a co-owned monorepo's health had been printing as one project's.
+
+    Two properties make this the most expensive sensor bug shape:
+    - **It fails toward alarm, and alarm is routed to the human.** The
+      false row was the tool's self-declared "loudest signal," which
+      `/ideate` §1 instructs be raised as an `AskUserQuestion`. It was,
+      and it consumed a real decision on a premise that did not exist.
+      A survey that spends the scarcest organ's attention on an artifact
+      is worse than one that stays quiet.
+    - **The most confident output is the likeliest to be wrong.**
+      Second instance in two days (`PRECIPITATION.md`'s false cluster was
+      the first): plausible, well-framed, agreeing with something already
+      in the doctrine. Confirmation-shaped output is the expected failure
+      mode of every inference-over-partial-reads tool here.
+
+    **Rule:** a probe may only report a negative over the domain it
+    actually read, and must name that domain. "Not enabled in
+    `_paced.conf`" is a fact; "DARK" is a claim about every dispatch
+    surface and requires reading every one. Where a probe *cannot* read a
+    surface (no access, host unreachable), that is a third result —
+    `UNKNOWN` — never folded into the negative. Corollary for consumers:
+    before a survey row becomes a question to a human or an edit to real
+    config, **re-derive it from the system**, and cite the probe rather
+    than the survey.
+
+    **Mechanical guard:** none today — `bin/sensor-agree.sh` is queued
+    (realisateur `.scheduler/FOCUS.md` 2026-07-27) to cross-check every
+    sensor that answers the same question and FLAG disagreement. Until it
+    lands, this row is prose, and prose decays; that is stated here rather
+    than left implied.
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a

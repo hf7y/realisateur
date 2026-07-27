@@ -93,6 +93,28 @@ still lack their regulator: **multi-writer FOCUS/QUESTIONS files**
 regulator now queued). When new friction recurs somewhere, ask "what
 regulator is missing at this interface," not "who slipped."
 
+**A third interface, found 2026-07-27: realisateur's own senses.** Ashby
+assumes a regulator can act *and* can tell which state it is in. This
+organism has spent its effort entirely on the first half. Every survey is
+an independent partial read with no reconciliation between them, and on
+2026-07-27 three of them disagreed about the same projects while a fourth
+reported the ecosystem's most active organ (crt, 289 commits/7d) as its
+deadest — because it read one of three dispatch surfaces. See
+BUILD-DISCIPLINE.md pattern 14. **The organism has been growing its
+effectors and its doctrine while leaving its proprioception unregulated,
+and a body that cannot feel where its limbs are will act confidently into
+furniture.** The failure is asymmetric in the expensive direction: these
+tools fail toward *alarm*, and alarm is routed to the scarcest organ, so a
+sensor defect is spent directly out of Zach's attention. Regulator queued
+(`bin/sensor-agree.sh`, realisateur `.scheduler/FOCUS.md` 2026-07-27).
+
+**The general form, worth stating once:** this ecosystem's doctrine has
+been overwhelmingly about *whether work gets done and recorded* — wiring,
+retiring, verifying, stamping. Almost none of it is about *whether what
+the system believes about itself is true*. Those are different problems,
+and the second one silently corrupts every judgment built on it,
+including the triage decisions this file exists to justify.
+
 ## The moving target: instrument it, don't fight it
 
 Zach's standing condition (2026-07-20, his own words): *"my ideas
