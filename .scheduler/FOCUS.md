@@ -1211,3 +1211,28 @@ This is real build work (promote scripts, verify no hidden cwd
 assumptions, place two files), not a design fork — filing it as a
 `(batch)`-shaped task rather than building it in this interactive
 session, per Zach's own framing ("file as batch work").
+
+## 2026-07-27 (`/ideate`): gardien's scope widens to cross-host git hygiene — recorded in gardien's own FOCUS.md, not duplicated here
+
+Zach named a real recurring-failure class (dirty trees, merge conflicts,
+missing lock-outs) as lacking a proper owner and proposed gardien —
+scope widen, not a new project. Confirmed against what already exists:
+`check-project-busy.sh`/`focus-commit.sh`/`hygiene-lint.sh`/
+`closeout-lint.sh`/`session-marker.sh`/BUILD-DISCIPLINE.md already cover
+this ecosystem-wide from realisateur's side, advisory-only — the actual
+gap, per Zach: (1) enforcement not just scanning, (2) no single rollup
+of current dirty/stranded/locked state, (3) no cross-*host* git-state
+awareness the way gardien already has cross-host *file*-state awareness
+for backup. Answer: widen gardien for the cross-host sensing half;
+enforcement-gate ownership (gardien vs. realisateur vs. scheduler) stays
+an explicitly open follow-on question, not decided this session.
+
+Full vision/milestone-chain/blockers written into gardien's own
+`.claude/FOCUS.md` (pushed `5088f3b`) — read there, not mirrored here.
+Deliberate park-by-default override, stated in that entry: gardien's
+current RAID milestone is hardware-blocked (Pegasus 2 R4), this new
+track isn't, so it's active rather than parked despite being beyond the
+declared bar.
+
+Nothing built this session — vision/milestone/blockers recorded only,
+per `/ideate`'s own posture.
