@@ -1140,3 +1140,46 @@ knowing it exists.
 **Open for the next pass, NOT decided here:** `crt` dark at weight 3 is
 the loudest row in the new survey. It was switched off deliberately, so
 re-enabling is a stated decision, not a batch one — see QUESTIONS.md.
+
+**2026-07-27 (via /ideate): promote `/ideate` and `/cloture` to callable from
+any project's own interactive session, not just realisateur's.** Zach's
+ask, from inside a senechal session wanting `/ideate`/`/cloture` there
+directly instead of switching to a realisateur session and scoping with
+`/ideate senechal`.
+
+Diagnosis: `ideate.md`/`cloture.md` are already written project-
+agnostically (take a `[project-name]` arg, speak of "this repo" not
+"realisateur"). The actual blocker is narrower — five survey scripts
+they shell out to (`ecosystem-survey.sh`, `milestone-audit.sh`,
+`steward-survey.sh`, `hygiene-lint.sh`, `precipitation-scan.sh`) still
+live only as `bin/*.sh` inside realisateur's own repo, called with
+repo-relative paths. Run with cwd = another project, those paths
+resolve to nothing. `notify-senechal`/`check-project-busy`/
+`focus-commit` already went through this exact promotion (now on
+`PATH` via `~/.local/bin`) — this is the same move, just for the
+remaining five.
+
+Milestone chain:
+1. (buildable now) Promote the five survey scripts to `~/.local/bin`
+   as thin wrappers (mirror how the three cross-write utilities were
+   done), confirming none of them assume cwd == realisateur internally
+   (they iterate `schedule/*.conf` already, so likely fine, but verify
+   — e.g. do any of them read a relative `../` path back into
+   realisateur's own `.scheduler/` for their own bookkeeping?).
+2. (buildable now, depends on 1) Copy `ideate.md`/`cloture.md` into
+   `~/.claude/commands/` (global) so any project session gets them.
+   Confirm they don't need realisateur-specific env (e.g. do they
+   ever assume "this session's own FOCUS.md" means realisateur's,
+   when invoked with no project arg from inside a different repo's
+   session? `/ideate` with no arg means "full ecosystem sweep" —
+   that reading holds regardless of which repo the session's cwd is
+   in, so should be fine, but re-check before shipping).
+3. (not yet started) Decide whether realisateur's own repo-local
+   `.claude/commands/ideate.md`/`cloture.md` should then be deleted
+   (single source of truth, global) or left as a repo-local override
+   — a stated decision, not implied by doing 1–2.
+
+This is real build work (promote scripts, verify no hidden cwd
+assumptions, place two files), not a design fork — filing it as a
+`(batch)`-shaped task rather than building it in this interactive
+session, per Zach's own framing ("file as batch work").
