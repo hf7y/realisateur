@@ -174,3 +174,6 @@ session died, not that anything is wrong).
   (c) **re-enable some of the five** so their own runs can do it — the
   most expensive option, and only right if you actually want them moving.
   > (answer inline here)
+
+- **2026-07-27 (nightly-batch): home-assistant is DIVERGED from origin/master — 1 local-only, 5 remote-only commit(s) — and its last scheduled run FAILED (2026-07-27 17:48:44, 212s, nothing pushed).** `ecosystem-survey.sh`'s own git-health check refuses to auto-resolve this ("Needs a real merge decision -- NOT auto-resolved, ever"), and this pass agrees — it's home-assistant's repo/automation, not realisateur's to touch. Genuine judgment call for Zach: which side is correct (the 1 local-only commit, or the 5 remote-only ones), and should the merge happen by hand or should home-assistant's own next run be trusted to reconcile it? Until resolved, home-assistant's nightly automation is likely to keep failing or skipping pushes.
+  > (answer inline here)
