@@ -1,3 +1,22 @@
+**2026-07-26 (`/nightly-batch`, ~19:40 pass): inbox empty, nothing to build.**
+
+Repo root held only realisateur's own scaffolding (`fable-like/` + doctrine
+files) -- no dropped artifact to infer or wire up. All three offline
+surveys re-run fresh, no findings changing this pass's scope:
+`hygiene-lint.sh` still 30 total FLAGs across 18 projects, same senechal
+`base64` test-fixture false positive as the last recorded composition;
+`milestone-audit.sh` unchanged at 13 declared/5 missing/0 no-focus
+(sequestria, vim-arcade, vkv-inventory, + 2 others still missing --
+milestone-setting candidates, not this run's project);
+`ecosystem-survey.sh`'s vision-debt ranking unchanged, still topped by
+the four 2026-07-18 home-assistant entries. `.scheduler/QUESTIONS.md`'s
+open blocks (aedile/vkv-inventory svc-vaporwave recovery, ideate-mode
+`UserPromptSubmit` hook, secretaire lane) all still carry only the
+placeholder `> (answer inline here)` slot -- no real `> ` reply landed,
+left untouched, genuinely waiting on the human.
+
+---
+
 **2026-07-26 (`/nightly-batch`, ~15:30 pass): the librarian drop executed end-to-end — quatre-vingt-douze rename (step 0) + bibliothecaire scaffolded/registered; plus a real feedback-pipeline bug found at dispatch and fixed in scheduler.**
 
 **The dispatch-time bug first (acted on before the batch, per the wrapper's own act-on-feedback-FIRST rule):** this run was handed five "REPLY" blocks from BLOCKERS.md `## realisateur` — all EMPTY. Root cause verified in scheduler's working diff: `collect-feedback.sh --consume` treated the five bare `>` answer slots under the strategy-audit questions as replies (its guard only knew the `> (answer inline here)` placeholder form), emitted five empty REPLY blocks, and deleted the slots from the file. **Nothing was treated as approved — all five strategy-audit calls still await Zach.** Fixed: bare `>` not continuing a reply is now kept as an un-answered slot (scheduler `bb5c762`, regression-tested both directions: restored realisateur section → exit 1/file unchanged; synthetic real reply with interior blank `>` → collected as one block, sibling slot preserved); slots restored from HEAD; dated machine-append note under the entry (`5731804`). Both pushed to scheduler `main` (revert: `git revert 5731804 bb5c762`).
