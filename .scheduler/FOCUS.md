@@ -1,3 +1,8 @@
+**2026-07-27 (nightly-batch, steward pass): inbox empty — no artifacts to process. Surfacing one striking signal from `bin/steward-survey.sh` for the next human decision.**
+
+The sensor-artifact withdrawal from tonight's `/ideate` (crt false-DARK, aedile/vkv misdispatch, false-LIVE bibliothecaire) leaves the ecosystem's real signals clean. Most striking row: **home-assistant at weight 1, oldest-open 2026-07-18 (9 days), 13 stranded ideas.** That's approaching "weeks old at a low weight" — the reweight-conversation threshold. No action taken; flagged for the next `/ideate` to judge whether home-assistant should move to weight 2 or higher, or whether the oldest items should be parked. Everything else reads as intended: dark projects are deliberately off; live projects have growing backlogs (Law 2: a growing reservoir is HEALTH, not debt). The five milestone-missing projects (groc-mangr, nine-speakers, sequestria, vim-arcade, vkv-inventory) are parked by construction, nothing should dispatch against them, and realisateur's own milestone is gated on whether they ever get milestones (a human decision that deserves one dedicated pass, not three scattered sessions).
+
+---
 
 **2026-07-27 (/cloture, naming the failure pattern from this session's
 earlier `/ideate` finding): confirmed instance of BUILD-DISCIPLINE.md
