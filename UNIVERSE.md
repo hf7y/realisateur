@@ -78,8 +78,12 @@ checklist afterthought.
 
 **Enforced by (today):** only BUILD-DISCIPLINE's "new mechanism names
 what it retires" row — which has never been applied to output text or
-command surface. **Queued, not built:** the catabolic pass (below), and
-the scheduler front-door consolidation as this law's first real proof.
+command surface. **In progress, ownership assigned 2026-07-27:** the
+catabolic pass (below) — self-retirement + realisateur audit +
+bibliothecaire archive, still shape-open, parked — and the scheduler
+front-door consolidation as this law's first real proof, still
+unstarted. *(status verified 2026-07-27 via realisateur `.scheduler/FOCUS.md`
+— re-derive from there, not from this line, once it ages.)*
 
 ## The cybernetic reading (Ashby)
 
@@ -177,8 +181,15 @@ everything to find what actually needs them.
 - **Catabolic pass** (Law 3's recurring enforcement) — a retirement
   discipline, e.g. every Nth `/ideate` names one surface to shrink,
   generalizing "names what it retires" from mechanisms to text and
-  verbs. Shape open. Tracked in realisateur `.scheduler/FOCUS.md`
-  2026-07-25.
+  verbs. **Ownership decided 2026-07-27** (hybrid: each project
+  self-retires its own FOCUS/QUESTIONS prose with realisateur-authored
+  tooling; realisateur audits compliance, doesn't do the retiring;
+  bibliothecaire narrowly widens to be the receiving archive) — but the
+  mechanism's actual shape (trigger, output format, handoff) is still
+  open, and the decision itself is parked, not active. Tracked in
+  realisateur `.scheduler/FOCUS.md` 2026-07-25 and 2026-07-27.
+  *(status verified 2026-07-27 via realisateur `.scheduler/FOCUS.md` —
+  re-derive from there, not from this line, once it ages.)*
 - ~~**Re-arrival sensor**~~ — **BUILT 2026-07-26** as
   `bin/precipitation-scan.sh`, wired into `ecosystem-survey.sh`, doctrine
   in `PRECIPITATION.md`. It landed larger than queued: alongside

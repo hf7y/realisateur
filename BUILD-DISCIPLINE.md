@@ -49,7 +49,15 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
    been dispatching nightly the entire time; one `crontab -l` — which
    nobody was ever blocked from running — would have overturned it. The
    tell: *"I looked and saw nothing"* was never distinguished from *"I
-   did not look."*
+   did not look."* Same pattern, different surface, named 2026-07-27:
+   doctrine files describing their own open work in status words
+   ("queued", "shape open", "not yet started") decay exactly like a
+   system-state comment does — see `UNIVERSE.md` Law 3's own "Queued,
+   not built" section, which had gone stale about itself. The existing
+   `verified <date>` stamp + `hygiene-lint.sh` check 8 already cover
+   this for free (it scans the whole repo, not just `.conf` comments) —
+   the gap was never mechanical, only that nobody had stamped a status
+   claim before.
 8. **Warn-then-continue.** A check detects the bad condition, prints it,
    and proceeds anyway — so the signal exists but only in a log nobody
    reads at 3am. Distinct from silent failure: the code *knew*. Live
