@@ -32,6 +32,22 @@ most of what it surfaces belongs to other projects' own nightly-batch
 runs, not this one. It exists so this session (and `/ideate`) starts
 from ground truth instead of a stale mental model of the ecosystem.
 
+`ecosystem-survey.sh` also runs **`bin/precipitation-scan.sh`** at its end
+(promotion signals: re-arrival candidates and interface clusters --
+doctrine in `PRECIPITATION.md`). Oldest-first, above, is the WEAKEST of
+the five ranked signals. **In an unattended pass, treat reports B and C
+as READ-ONLY.** They are inference over prose, and their most convincing
+output is the most likely to be wrong -- a 5-project "cluster" on
+2026-07-26 turned out to be a shared boilerplate footer (worked example
+in `PRECIPITATION.md`). Confirming a candidate means opening its members
+and judging shape stability, which is a `/ideate` job with a human
+present, not a batch one. What this pass MAY do: note a striking
+candidate in `.scheduler/FOCUS.md` or `QUESTIONS.md` for the next
+interactive pass to judge. What it must NOT do: stamp
+`(re-arrival: …)`/`[iface: …]`, reorder anything, or change a weight on
+the strength of the scan alone. A promotion nobody stated is the silent
+reorder `/ideate` 4.5 forbids.
+
 **Then run `bin/hygiene-lint.sh`** (offline, no AI cost). It's the third
 mechanical survey alongside `ecosystem-survey.sh`: it scans every
 registered project for the recurring build/deploy failure signatures in
