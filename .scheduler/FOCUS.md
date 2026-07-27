@@ -76,7 +76,8 @@ Re-probed, not quoted:
 **Commits (added at `/cloture`, resolving `closeout-lint.sh`'s `[record-no-sha]` FLAG against this very entry — the record now names what it can be checked against):**
 - `f0673c4` — this entry, as originally written.
 - `d8af7e1` — **not this session's commit; delivered by it.** A stranded `Human edit via scheduler: QUESTIONS.md (2026-07-26T23:30)` sitting unpushed in `wtul` since the previous night: Zach's own answer (1 insertion, 9 deletions) which wtul's nightly, cloning from origin, would never have seen — so wtul would have gone on re-asking a question already answered. `closeout-lint.sh` check A caught it; `check-project-busy.sh wtul` reported free; pushed as a fast-forward with no content change. **Revert:** `git -C /home/zach/Documents/wtul push origin d8af7e1^:main` (force-free only if nothing has landed since).
-- Doctrine commit for BUILD-DISCIPLINE.md pattern 14 + the UNIVERSE.md third-interface paragraph — see the `/cloture` philosophy delta below.
+- `809372e` — BUILD-DISCIPLINE.md pattern 14 + the UNIVERSE.md third-interface paragraph. See the `/cloture` philosophy delta below.
+- `9802cb1` — the `/cloture` pass on this entry and on QUESTIONS.md (sha citations, the withdrawn artifact question, the new milestone-gating question).
 
 **Philosophy delta, `/cloture` step 2 — NOT none.** This session added a fourteenth recurring failure pattern and a third unregulated interface, and both landed in the doctrine files rather than only here:
 - **`BUILD-DISCIPLINE.md` pattern 14 — "a sensor reports a negative it never checked for."** Pattern 7's tell moved from prose into a script, where it is worse: prose gets doubted, a script's output is read as measurement. Carries the rule (*a probe may only report a negative over the domain it actually read, and must name it; an unreadable surface is `UNKNOWN`, never folded into the negative*) and honestly states that its mechanical guard does not exist yet.
