@@ -53,6 +53,18 @@ The four-guard chain from this morning's pass stands. These slot in rather than 
 
 **Blockers on the current step:** none for either queued guard — both offline, zero-AI, write nothing, buildable unattended here. The Tulane access wiring is Zach's, in progress, and is the session's stated pivot *after* this `/ideate` closes — named as an inline exception, separate from the queue above.
 
+**Commits (added at `/cloture`):**
+- `bbaab27` — this entry as originally written; `adae791` — BUILD-DISCIPLINE pattern 15 (see philosophy delta below).
+- Cross-repo: scheduler `1a6bc0a` (BLOCKERS.md repair + `## bibliothecaire`), scheduler `48af067` (the wtul-orphan decision entry), bibliothecaire `550af93` (unpark), bibliothecaire `358c34c` (the LCP-loan questions). Three engine proposals filed through `scheduler -i scheduler`, each committed+pushed by the front door itself.
+
+**Philosophy delta, `/cloture` step 2 — NOT none.** `BUILD-DISCIPLINE.md` gains **pattern 15, "a file's prose about its own structure gets parsed as its structure"** (`adae791`), asked for by name by Zach. A document explaining its own format has to write the format down, and a prefix matcher cannot tell the explanation from an instance; BLOCKERS.md's header named `` `## Recently resolved` `` in prose and both a writer (chezz's machine-append) and a reader (`blockers-freshness-check.sh`) matched the sentence as structure, 24h apart, neither aware of the other. Kept out of the fenced baseline block deliberately, same call pattern 14 got — a checklist row restamps 18 repos and is a pass of its own.
+
+**The measurement that earned the row, recorded because it is the session's strongest single fact:** `blockers-freshness-check.sh`, same script, only the file differing — corrupt file prints `== summary: 0/0 active project section(s) flagged ==`, repaired file prints `4/9` (crt, realisateur, senechal, vkv-inventory, all STALE-BY-DRIFT). **Zero out of zero, in the standard format, for two days.** The corruption's first casualty was the only script watching for it. This is the same shape as this morning's false-DARK and tonight's false-LIVE, in a third direction — and it is now three instances in one day of *a green reading that means the sensor stopped seeing*, which is the strongest argument in the file for `sensor-agree.sh` being step 1 of the guard chain.
+
+**`/cloture` findings, neither of them this session's work, both filed not fixed:**
+- `wtul`'s run (pid 222252) left realisateur's live `bin/notify-senechal.sh` dirty at exit — good content, wrong delivery, and the ~:30 watcher will adopt it under Zach's name. Filed as a `> `-answerable decision in scheduler `BLOCKERS.md` `## realisateur` (`48af067`) with three options and a dispatch pointer. **Deliberately not committed:** adopting another run's orphan under a third party's name is the failure being reported.
+- A 5.3MB Readium-LCP loan (Beer, *Decision and Control*) appeared untracked in bibliothecaire at 01:40 — the Tulane wiring already producing the `vsm` theme's primary text. Filed in that project's QUESTIONS.md (`358c34c`): it is not gitignored, and more importantly **LCP encryption means an unattended run still cannot read it**, so it does not clear this milestone's own "proven from an unattended run" bar. What it unblocks is a human page number, which is a different and much faster thing.
+
 ---
 
 **2026-07-27 (`/ideate`, interactive, Zach-directed): the failure-pattern sweep — and its headline finding is that REALISATEUR'S OWN SENSORS ARE THE ECOSYSTEM'S LARGEST UNCLOSED LOOP. Three sensors report the ecosystem's most active project as dead. Four guards queued ACTIVE, hook-level enforcement authorized.**
