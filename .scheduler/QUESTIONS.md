@@ -103,3 +103,23 @@ marker file it may observe at
 `~/.local/share/scheduler-registry/<project>.interactive` is
 realisateur's, is expected, and is self-healing (a stale one means a
 session died, not that anything is wrong).
+
+- **2026-07-26 (interactive): `crt` is dark at weight 3, with 32 open ideas stranded behind it. Intended?**
+  The new `bin/steward-survey.sh` surfaced this on its first run and it is
+  the loudest row in the ecosystem: weight 3 is the highest stated intent
+  anywhere, `enabled=0` is the actual dispatch, and the two have disagreed
+  long enough for 32 dated ideas to pile up with nothing draining them.
+  Not touched — re-enabling a project is a stated decision, not a batch
+  one. Three honest options, and any of them is fine:
+  (a) **re-enable** — the intent was real and the valve was shut by
+  accident or for a reason that has passed;
+  (b) **drop the weight to 1 and leave it dark** — so the stated intent
+  stops contradicting the dispatch, and re-enabling later is a small step;
+  (c) **leave it exactly as is and park the 32 ideas honestly** — crt is
+  deliberately off, and the reservoir behind it should say so rather than
+  reading as live backlog.
+  Same question applies more quietly to `groc-mangr` (weight 2, dark) and
+  to `aedile`, whose registered repo path
+  (`/home/zach/Documents/vkv/wavebucks/aedile`) no longer exists at all —
+  that one is probably a stale registration rather than a decision.
+  > (answer inline here)
