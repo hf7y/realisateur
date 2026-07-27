@@ -71,6 +71,22 @@ for name in $(printf '%s\n' "${projects[@]}" | sort); do
 done | sort | head -20
 
 echo
+echo
+echo "############################################################"
+echo "== promotion signals stronger than age =="
+echo "(oldest-first, above, is the WEAKEST signal in the ladder -- see"
+echo " realisateur/PRECIPITATION.md. Re-arrival and interface clusters"
+echo " outrank it; both are sensed by precipitation-scan.sh, run below.)"
+echo
+_pscan="$(dirname "$0")/precipitation-scan.sh"
+if [ -x "$_pscan" ]; then
+  bash "$_pscan"
+else
+  echo "WARNING: $_pscan missing or not executable -- the re-arrival and" >&2
+  echo "cluster signals are NOT being sensed this run (age-only ranking)." >&2
+fi
+
+echo
 echo "(oldest-first is a SIGNAL, not a rule -- realisateur may deliberately"
 echo " promote a newer idea ahead of an older parked one when it's judged"
 echo " more useful right now (e.g. it unblocks something active, or"
