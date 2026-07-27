@@ -925,3 +925,61 @@ before it was lost to the next overwrite:
 - **2026-07-25 [batch] hygiene-lint: stale verified-claims row** — BUILD-DISCIPLINE.md now requires that a written claim about system state carry `# verified <date> via <command>` (`3be6629`). Make it mechanical rather than a reminder: `bin/hygiene-lint.sh` flags any `verified <date>` stamp older than ~7 days, and flags config comments that assert system state with no stamp at all. The incident: an unstamped "confirmed 2026-07-24: no crontab exists there" in `schedule/_paced.conf` outlived its truth by a day and became an ecosystem audit's #1 finding. **DONE 2026-07-26 (`/nightly-batch`, `cc8a14e`)** — built; see this file's 2026-07-26 ~21:25 entry.
 - **2026-07-25 [batch] hygiene-lint: stamped-checklist drift** — the BUILD-DISCIPLINE checklist gained three rows on 2026-07-25; copies already stamped into each project's CLAUDE.md now lag the baseline and nothing detects the divergence. **DONE 2026-07-26 (`/nightly-batch`, `cc8a14e`)** — built; see this file's 2026-07-26 ~21:25 entry.
 - **2026-07-26 [batch] hygiene-lint: task-shaped entries in BLOCKERS.md** — mechanical half of BUILD-DISCIPLINE pattern 13. Flag lines in scheduler's `BLOCKERS.md` matching task-shaped language (`filed for an async pass`, `not done`, `not completed`, `TODO`, `next step:` without a `> ` answer or an OBLIGATION/dispatch pointer) — BLOCKERS.md is not a work queue, so anything task-shaped sitting there is pattern-13 rot by definition. Signals-not-verdicts like every other row. Incident: the 2026-07-24 `.scheduler/` migration decision sat undispatched there for 2 days while three projects re-derived it. **DONE 2026-07-26 (`/nightly-batch`, `cc8a14e`)** — built; see this file's 2026-07-26 ~21:25 entry.
+
+## 2026-07-26 (interactive, Zach-directed): the steward gap, and the treadmill
+
+**The audit that prompted it.** Zach asked whether the batch work was
+real progress or a loop. Both, and the split matters: every commit was
+genuine tested code, but on 2026-07-26 seven `/nightly-batch` runs with
+an empty inbox produced five new scripts *for realisateur's own workflow*
+and **zero** commits into any of the twelve scaffolded projects. Last
+downstream commit was `d7e8196`, 2026-07-25. The organ that exists to
+perceive the ecosystem spent the night perceiving itself.
+
+**Named cause:** `/nightly-batch` is inbox-driven, and an empty inbox is
+now the normal state. With no artifact, the pass looked for work in the
+only place left. Fixed mechanically as step 2a of the command: empty
+inbox now means a **steward pass** whose output is routing, not building,
+and authoring new realisateur tooling is explicitly out of scope on those
+nights. The sixth survey needs a stated reason from outside the loop.
+
+**The steward gap Zach named** (realisateur should be watching other
+projects' progress, weight-0 incubated projects, big vision backlogs):
+none of the four surveys read `_paced.conf`'s `enabled` flag. They all
+iterate `schedule/*.conf` and report as though every project were
+running. So a project could sit off indefinitely while `milestone-audit`
+called its milestone `in-progress`. **Exhibit: 9 of 18 paced participants
+are `enabled=0`, including `crt` at weight 3** — the highest-weight
+project in the ecosystem, dark, with 32 open ideas stranded behind it,
+and no survey saying so. Built `bin/steward-survey.sh` (`78f6c33`).
+52 open ideas total sit behind a closed valve.
+
+**Two orphans wired, both built and never called.** `focus-commit.sh`
+(`7e49b0e`) and `closeout-lint.sh`/`/cloture` (`3913d7c`) were textbook
+build-but-don't-wire against this project's own checklist. `/cloture` is
+now installed (`c33db10`); `focus-commit.sh` is now the mandatory
+FOCUS/QUESTIONS write path in both commands.
+
+**Correction to `c33db10`'s commit message, recorded because it is
+wrong in the record.** It claims the sensitive-file gate keys purely on
+path, so "no future session of any kind can finish this." False: the
+gate is context-sensitive. After Zach stated permission in-session, the
+same `sed -i` that had been refused went through. The staged banner's
+"needs a human session" was closer to right than my correction of it.
+The durable lesson is narrower: an *unattended* pass cannot author or
+install a command file, so staging in `.scheduler/` plus a named install
+step remains the right convention — and the still-open question from
+`3913d7c` (standing convention, or should nightly-batch never author
+command files?) is still worth answering.
+
+**Machine-config notification is a script now, not a promise.**
+`bin/notify-senechal.sh` files through `scheduler -i senechal` and
+verifies the note reached the remote. Prompted by this session paying
+off a cross-write that had been deferred, recorded as owed, and left for
+a later session — prose decaying exactly as UNIVERSE.md says it does.
+Ownership restated: realisateur owns what it generates, senechal owns
+knowing it exists.
+
+**Open for the next pass, NOT decided here:** `crt` dark at weight 3 is
+the loudest row in the new survey. It was switched off deliberately, so
+re-enabling is a stated decision, not a batch one — see QUESTIONS.md.
