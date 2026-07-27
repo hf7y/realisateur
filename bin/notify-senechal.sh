@@ -63,8 +63,22 @@ upstream="$(git rev-parse --abbrev-ref '@{u}' 2>&1)" \
 
 git fetch -q origin || die "git fetch failed -- cannot verify the note landed"
 
+# The question is NOT "are we ahead" -- `scheduler -i` pushes for itself when
+# the repo is in sync, in which case ahead==0 means SUCCESS, not failure.
+# (Found 2026-07-26 by this script's first real use, which reported a
+# perfectly-landed note as a failure.) The only question worth asking is the
+# one BUILD-DISCIPLINE actually names: is it there, on the ref the consumer
+# reads? Everything else is a proxy.
+focus_rel="$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -m1 'FOCUS.md' || echo '.claude/FOCUS.md')"
+probe="$(printf '%s' "$text" | head -c 60)"
+landed() { git show "@{u}:$focus_rel" 2>/dev/null | grep -qF "$probe"; }
+
 ahead="$(git rev-list --count '@{u}'..HEAD)"
-[ "$ahead" -gt 0 ] || die "nothing to push after 'scheduler -i' -- the note was not committed, and this script will not report success for a write that did not happen"
+if [ "$ahead" -eq 0 ]; then
+  landed || die "'scheduler -i' reported success but the note is not in $focus_rel on senechal's remote -- refusing to report success for a write that did not land"
+  echo "notify-senechal: OK -- already on senechal's remote (scheduler -i pushed it), verified present in $focus_rel"
+  exit 0
+fi
 
 behind="$(git rev-list --count HEAD..'@{u}')"
 if [ "$behind" -gt 0 ]; then
@@ -95,4 +109,7 @@ fi
 
 git push -q origin "$branch" || die "push rejected -- note is committed locally in $SENECHAL but senechal's nightly run will not see it"
 
-echo "notify-senechal: OK -- on senechal's remote as $(git rev-parse --short HEAD)"
+git fetch -q origin || die "pushed, but cannot re-fetch to confirm -- treat as unverified"
+landed || die "push reported success but the note is NOT in $focus_rel on the remote -- do not treat this as delivered"
+
+echo "notify-senechal: OK -- on senechal's remote as $(git rev-parse --short HEAD), verified present in $focus_rel"
