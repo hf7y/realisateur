@@ -56,3 +56,10 @@ project's own `.claude/FOCUS.md` and removed here on 2026-07-22.)*
 
 - **2026-07-26 (nightly-batch): secretaire is registered but parked (`enabled=0`) — flip it on when you've answered its lane question.** Its remaining milestone items are human steps: fill `ACCOUNTS.md`'s inventory, and decide the access lane (grant-access vs utilities vs thunderbird — the fork is laid out in `secretaire/.scheduler/QUESTIONS.md`). Once a `> ` answer lands there, set `secretaire|1|...` in scheduler's `schedule/_paced.conf`.
   > (answer inline here)
+
+- **2026-07-26 (nightly-batch, ~21:25 pass): three queued `[batch]` hygiene-lint rows BUILT — one judgment call in the new BLOCKERS.md row, and one large finding worth your eye.**
+  Built (`cc8a14e`, pushed): `[checklist-drift]`, `[stale-claim]`/`[unstamped-claim]`, `[blockers-task]`. Full writeup in `.scheduler/FOCUS.md`'s entry of the same date. Two things for you rather than for the next batch:
+  **(a) The `[blockers-task]` rule's exemption scope.** It flags `BLOCKERS.md:129` — the 2026-07-24 wtul `.scheduler/` migration, the entry pattern 13 is named after. That entry *did* get a status note (`ba1757a`), but its OBLIGATION line was filed under `## realisateur`, a different section, so the entry itself carries no dispatch pointer. Under the rule as written that's a true positive. If you meant "a dispatch pointer anywhere in the file exempts the entry," say so and the check widens to file scope.
+  > (answer inline here)
+  **(b) 13 of 18 projects' stamped build-discipline checklists lag the baseline** — most at 7 rows vs. 12, realisateur's own at 11. That's now mechanically visible every run. Restamping 13 CLAUDE.md files is a real cross-project sweep (each is a separate repo + commit), not something this pass did unprompted. Worth one dedicated pass, or one project per nightly?
+  > (answer inline here)
