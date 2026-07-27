@@ -175,6 +175,69 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     lands, this row is prose, and prose decays; that is stated here rather
     than left implied.
 
+15. **A file's prose about its own structure gets parsed as its structure.**
+    A document that explains its own format has to *write the format down*,
+    and a parser that matches on a prefix cannot tell the explanation from
+    an instance. The document becomes an example of itself, in the one place
+    it was trying to be a description of itself.
+
+    Found live 2026-07-27, in `scheduler/BLOCKERS.md`, having stood for two
+    days. That file's header explains where resolved entries go, in prose,
+    by naming the heading: *"…until a human (or an `/ideate` pass) actually
+    moves it down into `` `## Recently resolved` `` or deletes it."* Two
+    independent mechanisms then matched that sentence as structure, 24 hours
+    apart and without knowing about each other:
+
+    - **The writer.** `ec89b84`, chezz's nightly machine-append, inserted
+      its `## chezz` section at the *first* `## ` it found — which was
+      inside that sentence. The header was cut mid-clause, and its tail was
+      left wearing a heading it never had: a second `## Recently resolved`,
+      standing 372 lines ahead of the real one.
+    - **The reader.** `blockers-freshness-check.sh` scopes itself to "the
+      active section" as *everything before the first `## Recently
+      resolved`*. From `ec89b84` onward that was **line 91**. Every
+      project's real blockers sat below it, in what the script now
+      understood to be already-resolved history.
+
+    **Measured, not inferred** (both runs, same script, only the file
+    differs): against the corrupt file it printed
+    `== summary: 0/0 active project section(s) flagged ==`; against the
+    repaired file, `4/9`. Zero out of zero. Not an error, not an empty
+    result — a clean bill of health, in the standard format, from a check
+    that had been blinded. **The corruption's first casualty was the only
+    script watching for it.**
+
+    That is the property that makes this shape worth its own row rather
+    than folding into 14: this is not a probe that read too few surfaces,
+    it is a probe whose *surface was redefined underneath it* by a
+    conforming edit to the file it watches. Pattern 14 asks a probe to name
+    its domain. Here the probe named its domain correctly and the domain
+    moved.
+
+    **Rule, three parts:**
+    - **A structural marker must be matched by a rule its own
+      documentation cannot satisfy.** Anchor both ends (`^## Recently
+      resolved$`), not a prefix; never match inside a fenced block or a
+      backticked span. If the parser would accept the sentence explaining
+      the format, the parser is wrong.
+    - **A document must be able to name its own format without becoming an
+      instance of it.** If it cannot, the format is wrong — not the prose.
+      Fix the matcher, do not ask writers to avoid mentioning the file's
+      own headings.
+    - **A section-scoped reader that finds zero sections reports `UNKNOWN`,
+      never zero findings.** A file known to have sections and suddenly
+      having none is a parse failure wearing a passing summary. `0/0` must
+      be as loud as a FLAG. (This is 14's rule applied to a reader's *own*
+      scoping, which is where 14 did not reach.)
+
+    **Mechanical guard:** filed with `scheduler` 2026-07-27 through the
+    front door (`scheduler -i scheduler`) — exact-match headings for
+    machine-append, and a watcher that refuses to autocommit a file
+    carrying conflict markers or duplicate `## ` headings. The `0/0`
+    half is filed separately against `blockers-freshness-check.sh`. Until
+    all three land this row is prose, and prose decays; stated here rather
+    than left implied.
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a
