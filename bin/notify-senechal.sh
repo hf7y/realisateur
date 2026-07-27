@@ -32,6 +32,31 @@
 # script resolves the divergence itself and verifies the rebase did not
 # change what the commit means, the same check focus-commit.sh makes.
 #
+# WHO OWNS WHAT IN THIS FILE (Zach's call, 2026-07-27) -- read before editing:
+#
+#   realisateur owns the PROTOCOL. That this guard exists at all, that it is
+#   one of a family of three (with check-project-busy, focus-commit), that
+#   the family is propagated as a baseline and shimmed onto PATH, and that
+#   calling it is mandatory when machine-wide config changes. Structure,
+#   existence, distribution.
+#
+#   senechal owns the CONTRACT -- everything below the `--- 2.` line: which
+#   file is senechal's inbox (focus_rel), what "landed" means, which ref the
+#   consumer actually reads, and the probe semantics. Facts about senechal's
+#   own read-path.
+#
+# Why split it rather than leave it all here: this script encodes senechal's
+# read-path in realisateur's repo, so if senechal ever moves its FOCUS.md its
+# own front door breaks and it is structurally unable to fix it. Not
+# hypothetical -- realisateur made exactly that .claude/ -> .scheduler/ move
+# on 2026-07-26. The 2026-07-27 SIGPIPE bug was the same seam: a defect in
+# senechal's verification logic that only senechal noticed, requiring an edit
+# to another project's repo to fix.
+#
+# Practical rule: a change to step 2 is senechal's to make, unannounced. A
+# change to step 1, to the guard family, or to how this is installed is
+# realisateur's. Cross-write to the other when you touch its half.
+#
 # Usage:
 #   bin/notify-senechal.sh 'realisateur added <what> at <where>; ownership: ...'
 #
@@ -54,7 +79,10 @@ text="${1:-}"
 echo "notify-senechal: filing via 'scheduler -i senechal'..."
 "$SCHED_ROOT/bin/scheduler" -i senechal "$text" || die "scheduler -i senechal rejected the note"
 
-# --- 2. make sure it landed on the remote ----------------------------------
+# --- 2. make sure it landed on the remote -----------------------------------
+# SENECHAL-OWNED from here down -- see "WHO OWNS WHAT IN THIS FILE" above.
+# This block asserts facts about senechal's read-path; senechal may change it
+# without asking realisateur, and should cross-write when it does.
 cd "$SENECHAL" || die "cannot cd to $SENECHAL"
 
 branch="$(git rev-parse --abbrev-ref HEAD)" || die "cannot read current branch"
