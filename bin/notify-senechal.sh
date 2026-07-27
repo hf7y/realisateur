@@ -97,7 +97,7 @@ git fetch -q origin || die "git fetch failed -- cannot verify the note landed"
 # perfectly-landed note as a failure.) The only question worth asking is the
 # one BUILD-DISCIPLINE actually names: is it there, on the ref the consumer
 # reads? Everything else is a proxy.
-focus_rel="$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -m1 'FOCUS.md' || echo '.claude/FOCUS.md')"
+focus_rel="$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -m1 'FOCUS.md' || echo '.scheduler/FOCUS.md')"
 probe="${text:0:60}"
 
 # NO PIPELINES IN HERE, DELIBERATELY -- this is the fix for the false
