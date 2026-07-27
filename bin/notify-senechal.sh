@@ -70,8 +70,33 @@ git fetch -q origin || die "git fetch failed -- cannot verify the note landed"
 # one BUILD-DISCIPLINE actually names: is it there, on the ref the consumer
 # reads? Everything else is a proxy.
 focus_rel="$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -m1 'FOCUS.md' || echo '.claude/FOCUS.md')"
-probe="$(printf '%s' "$text" | head -c 60)"
-landed() { git show "@{u}:$focus_rel" 2>/dev/null | grep -qF "$probe"; }
+probe="${text:0:60}"
+
+# NO PIPELINES IN HERE, DELIBERATELY -- this is the fix for the false
+# negative recorded on 2026-07-27 01:33, when this check failed a note that
+# HAD landed (present verbatim in .claude/FOCUS.md on senechal's remote).
+#
+# The old body was `git show "@{u}:$focus_rel" | grep -qF "$probe"`. Under
+# the `set -o pipefail` at the top of this script that is a trap: `grep -q`
+# exits the instant it matches, closing the pipe, so `git show` -- still
+# writing the rest of a ~100KB FOCUS.md -- dies of SIGPIPE (141), and
+# pipefail propagates 141 as the pipeline's status. A SUCCESSFUL match on a
+# large file therefore reported failure. It read as "transient" because it
+# is a race between grep's exit and git show's remaining writes, and because
+# re-running it by hand in an interactive shell (where pipefail is NOT set)
+# always passed. The suspected `git fetch` race was never the cause.
+#
+# Reproduced: `set -uo pipefail; git show 5b17f43:.claude/FOCUS.md | grep -qF
+# "<probe>"` -> status 141, while `grep -cF` on the same input -> 1 match.
+#
+# So: read the blob into a variable, match with a here-string. `probe` is
+# likewise sliced with bash parameter expansion rather than `| head -c 60`,
+# which had the same printf-SIGPIPE hazard.
+landed() {
+  local content
+  content="$(git show "@{u}:$focus_rel" 2>/dev/null)" || return 1
+  grep -qF -- "$probe" <<<"$content"
+}
 
 ahead="$(git rev-list --count '@{u}'..HEAD)"
 if [ "$ahead" -eq 0 ]; then
