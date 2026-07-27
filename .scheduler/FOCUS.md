@@ -1,3 +1,80 @@
+**2026-07-27 (`/ideate`, interactive, Zach-directed): the failure-pattern sweep — and its headline finding is that REALISATEUR'S OWN SENSORS ARE THE ECOSYSTEM'S LARGEST UNCLOSED LOOP. Three sensors report the ecosystem's most active project as dead. Four guards queued ACTIVE, hook-level enforcement authorized.**
+
+**Why this one:** Zach asked for a sweep of the two named failure patterns — *build-but-don't-wire* (BUILD-DISCIPLINE #2/#13/#13b) and *prose-over-mechanism* (UNIVERSE.md's own "prose decays; enforcement doesn't") — across the whole universe, then scripted counter-mechanisms auto-called at real call sites. The sweep found instances of both. It also found a third pattern neither doctrine file names, which turned out to be the live one, and which nearly consumed a human decision on a false premise inside this very session.
+
+## The reading: three ways a control loop stays open
+
+A regulator only regulates if it is *in* the loop. Ashby's requisite variety assumes the regulator can act AND can tell which state it is in. Both named patterns, and the new one, are the same defect at different depths:
+
+1. **Dangling effector** (= build-but-don't-wire). Muscle without a nerve. The mechanism exists; nothing reaches it.
+2. **Unmechanized law** (= prose-over-mechanism). Intention without a muscle. The rule exists; no mechanism carries it.
+3. **Unreconciled sensor** (NEW, named here). Nerve without agreement. The loop *is* closed and the effector *does* fire — on a reading that is wrong, or that two organs report differently with nothing to arbitrate. **Worst of the three**, because 1 and 2 fail by inaction and are visible as absence; 3 fails by *confident action*.
+
+Its sibling, also new: **write-only reflex** — an effector wired to a real trigger whose output no reader is wired to. It acts; nobody senses that it acted.
+
+**The diagnosis this pass converges on: realisateur has excellent sensors and almost no reflexes, and the one place it has a reflex is the one place it has no perception.** All 13 `bin/*.sh` exit 0, write nothing, decide nothing — correct per standing doctrine ("realisateur senses, never decides"). The unintended consequence is that **the entire dispatch layer of the ecosystem is a language model's compliance with 602 lines of prose** in `ideate.md` + `nightly-batch.md`. Meanwhile the single script with a real machine trigger — `weight-audit.sh`, cron 06:30, auto-applies and git-commits weight changes to `_paced.conf` — is named by *no* command file, so its PARK suggestions and streak counters, written explicitly for "a human/realisateur pass" to read, have no reader wired.
+
+## PATTERN 3, LIVE — the false-DARK finding (this pass's most consequential result)
+
+`bin/steward-survey.sh` reported **9 of 18 projects DARK** and summarized "52 open ideas stranded behind a closed valve," with crt as its loudest row (weight 3, 32 stranded). Its own header calls a high-weight DARK row "the loudest signal here," and `.claude/commands/ideate.md` §1 instructs that such a row be routed to `AskUserQuestion`. It was, in this session. **Zach answered "drop weight to match." The change was NOT applied, because re-probing the premise falsified it.**
+
+Re-probed, not quoted:
+
+- **crt** — `schedule/_paced.dexter.conf:105` is `crt|1|3|...`, enabled. `git log --since='7 days ago'` in crt: **289 commits**, most recent nightly authored `Dexter Pine` 2026-07-25. crt is the *most active project in the ecosystem*, reported as its deadest.
+- **aedile** — `sudo -n -u svc-vaporwave crontab -l` (stderr NOT silenced): `0 3 * * * aedile-nightly-batch-loop.sh`. `origin/aedile-nightly/2026-07-25` exists on the remote.
+- **vkv-inventory** — same crontab, `0 4 * * *`. 26 commits/7d, one authored by `svc-vaporwave` itself — direct proof of dispatch.
+
+**Root cause, one sentence:** `steward-survey.sh` equates *"enabled=1 in `schedule/_paced.conf`"* with *"dispatches at all,"* but the ecosystem has **three dispatch surfaces** — mandark's `_paced.conf`, dexter's `_paced.dexter.conf`, and svc-vaporwave's crontab — and it reads one. BUILD-DISCIPLINE #1's exact tell: *"I looked and saw nothing" was never distinguished from "I did not look."*
+
+**Blast radius:** 3 of 9 DARK rows are false. crt's 32 + aedile's 6 + vkv's 4 = **42 of the 52 "stranded" ideas (81%) are a sensor artifact.** The number is not merely imprecise, it is dominated by error.
+
+**Second live instance, same class, different script:** `ecosystem-survey.sh` reports aedile as "clean, up to date with origin" while `steward-survey.sh` and `restamp-discipline.sh` both report "no git repo at /home/zach/Documents/vkv/wavebucks/aedile." All three are right by their own logic: the path is a *subdirectory* of the `wavebucks` monorepo, so `git -C` silently walks up and ecosystem-survey has been reporting **Tyler's monorepo health as aedile's**. Three sensors, one path, two verdicts, no reconciler.
+
+**Third instance, transient but consequential:** `weight-audit.sh` reimplements milestone detection inline rather than calling `milestone-audit.sh` — its own header names the hazard ("if the two drift, milestone-audit.sh is canonical") and then ships no drift guard. On 2026-07-26 06:30 they drifted: weight-audit read chezz as `milestone=missing` and gardien as `unrecognized`, both failing the in-progress eligibility gate, **silently withholding a weight bump from two projects**. Re-probed 2026-07-27: they agree today, and today's dry run would grant both `1 -> 2`. So the defect is not present now; the *absence of any mechanism that would have noticed* is.
+
+**This is PRECIPITATION.md's stated failure mode proven a second time, on a different script:** *"Confirmation-shaped output is the failure mode to expect here."* The false cluster of 2026-07-26 and the false-DARK of 2026-07-27 share a shape — the tool's most plausible, most confidently-framed, most doctrine-agreeing output was its wrongest.
+
+## PATTERN 1, LIVE — dangling effectors
+
+- **`bin/restamp-discipline.sh`** — the propagator that makes BUILD-DISCIPLINE's fenced block a single source across 18 repos. Named by **no** command file, present in **no** cron, called by **no** script. The one-source guarantee runs only when a human remembers. (It is being remembered — dry run 2026-07-27: 17 in sync / 0 drifted / 1 skipped.)
+- **`bin/incubation-audit.sh`** — named by no dispatcher, and `milestone-audit.sh`'s own header states it "supersedes incubation-audit.sh's graduation-candidate framing as the canonical project-status signal." Superseded in substance, never retired. **Layer-not-replace (#3), live, in realisateur's own `bin/`** — the repo that lints other projects for it.
+- **`bin/weight-audit.sh`** — the write-only reflex described above.
+- **7 unstamped `[dispatch-parity]` NOTEs** in this repo (`closeout-lint.sh` in `cloture.md` only; the six surveys in `ideate.md`/`nightly-batch.md` only). Most are probably deliberate — a closing rite need not re-run the orient surveys — but none is *stamped* as deliberate, so per PRECIPITATION.md's stamping doctrine each will be re-inferred from scratch on every run forever.
+- **Zero git hooks** in realisateur, scheduler, senechal, or crt. Every "before you commit" rule in the baseline is model-executed prose.
+
+## PATTERN 2, LIVE — unmechanized laws
+
+- **UNIVERSE.md Law 3 (retirement pressure) has no mechanism at all.** Laws 1 and 2 each cite two scripts. Law 3's own text: *"Enforced by (today): only BUILD-DISCIPLINE's 'new mechanism names what it retires' row — which has never been applied to output text or command surface."* **And its exhibit is now this repo:** `ideate.md` is 303 lines, `nightly-batch.md` 299, against `cloture.md`'s 99. The same accretion signature that produced scheduler's 1,968-line front door, in the file that diagnoses it.
+- **PRECIPITATION.md signal 3 (active-set unblock): "Sensed by: no mechanism."** Stated in the doctrine, unbuilt.
+- **BUILD-DISCIPLINE.md's shared-host-footprint row** — "a real follow-on `hygiene-lint.sh` addition, not yet built."
+- **`IDEATE-WORKFLOW-REVISION.md:57`** — the `/ideate` posture guarantee, *"genuinely open, not built this pass."* The command file opens by admitting prose alone cannot hold its own posture across turns. **The mechanism is already available and proven unused:** `session-marker.sh` runs on `SessionStart`/`SessionEnd` via `~/.claude/settings.json`, so hook infrastructure works in this harness today.
+
+## Decisions taken (Zach, this session)
+
+1. **crt weight 3 -> 1: ASKED, ANSWERED, DELIBERATELY NOT APPLIED.** Zach chose "drop weight to match" on steward-survey's DARK claim. The claim is false (above). `schedule/_paced.conf` is **unchanged**; crt keeps weight 3 and dispatches from dexter, which is correct. Recorded here so a future session does not read the answered question and apply it retroactively. **This is the finding, not a footnote: the ecosystem's triage tool consumed a scarce human decision on a sensor artifact, and only a re-probe stopped it from landing.**
+2. **All four guards recorded ACTIVE** (below), by Zach's direct call.
+3. **Enforcement posture: HOOK-LEVEL.** Advisory-only was rejected. Authorized: a real `pre-commit` hook in realisateur (the ecosystem's first) gating on mechanical rows only, PLUS the `PreToolUse` posture hook `IDEATE-WORKFLOW-REVISION.md` leaves open. This is a deliberate, stated narrowing of the "signals, not verdicts" doctrine — that doctrine governs realisateur's judgments *about other projects*, and continues to; it does not require realisateur to be defenceless about its own mechanical invariants.
+
+**Stated override of park-by-default (§4/§4.5).** This repo's current milestone is *"every scheduler-registered project with a real git repo has a declared `## Stability milestone`, AND park-by-default triage has held across more than one live pass."* None of the four guards is required to reach it, so park-by-default would tag all four `(parked)`. Zach promoted them to active explicitly. **What they pass over:** the 5 projects still missing a milestone (groc-mangr, nine-speakers, sequestria, vim-arcade, vkv-inventory), which are the actual blocker on the current bar. **Why now:** three of the four have a *proven live failure*, not a hypothesized one, and one of those failures spent a human decision inside this session.
+
+**A structural note on that milestone, found in passing and worth recording:** all 5 projects missing a milestone are also `enabled=0` in every rotation file. **Realisateur's current milestone is gated on five organs with no metabolism** — nothing dispatches against them, so nothing will ever declare their milestones except a human or an interactive pass reaching in from outside. The bar as written is not reachable by waiting. Not resolved here; flagged for the next pass that touches milestone scope.
+
+## Milestone chain for the guard set
+
+1. **NOW — `bin/sensor-agree.sh`** (promoted to first of the four, ahead of `loop-closure-lint.sh` which was listed first when asked). Run the same questions — repo-exists, repo-toplevel-matches-configured-path, git-clean, milestone-status, weight, **enabled-on-ANY-dispatch-surface** — through every sensor that answers them, FLAG disagreement. Must enumerate all three dispatch surfaces, and must distinguish *"I looked and saw nothing"* from *"I could not look."* Auto-called from `ecosystem-survey.sh`'s tail — the slot `precipitation-scan.sh` already occupies, so no new call site to remember. Ships with the two known-wrong sensors fixed in the same commit: steward-survey's single-file DARK test, and ecosystem-survey's `git -C` walk-up (compare `rev-parse --show-toplevel` against the configured path). **Witness:** the aedile, crt, and vkv rows must each go from FLAG to clean, and the 2026-07-26 chezz/gardien milestone drift must be reproducible as a fixture.
+2. **NEXT — `bin/loop-closure-lint.sh`.** For every `bin/*.sh`, resolve real call sites across four surfaces (`.claude/commands/*.md`, crontab, `~/.claude/settings.json` hooks, actual invocation from another script — not mere mention). FLAG zero-call-site scripts; FLAG separately the *write-only reflex* shape (wired to a trigger, read by no dispatcher). A `# dispatch: <surface>` or `# dispatch: none -- <reason>` header stamp clears a flag, turning a deliberate exclusion into a fact instead of a permanent re-inference. **Subsumes and retires** hygiene-lint check 9 `[dispatch-parity]`, generalizing it from "some commands but not all" to "any dispatch surface at all." Rides `hygiene-lint.sh`.
+3. **NEXT — `bin/doctrine-debt.sh`.** Grep the doctrine `.md` files for their own self-declared gaps (`queued, not built`, `no mechanism`, `not yet built`, `prose today`, `Enforced by (today): only`) and age each line via `git log -L`. Turns honest self-naming into a tracked, aging ledger instead of prose that scrolls past. Cheap; rides `hygiene-lint.sh`. Seeded by the 5 gaps enumerated above.
+4. **LATER — `bin/surface-budget.sh`** — Law 3's first real mechanism. A line budget per human-facing surface in one tracked file; FLAG when a surface grows without the same commit shrinking another. This is "names what it retires" generalized from mechanisms to text and verbs, which UNIVERSE.md says has never been done. First budgets to set: `ideate.md` 303, `nightly-batch.md` 299.
+5. **LATER — the two hooks.** `pre-commit` in realisateur gating the mechanical rows; `PreToolUse` matching `Edit|Write` for `/ideate` posture. Sequenced last deliberately: a hook enforcing lints that do not exist yet is wiring without a path — the same error as the 2026-07-26 Stop-hook deferral.
+
+**Blockers on step 1 (the current step), tagged by who can clear them:** none. `sensor-agree.sh` is offline, zero-AI, writes nothing, and is buildable unattended in this repo. Steps 2–4 likewise. **Step 5 is human-gated twice over:** `~/.claude/settings.json` is machine-wide config, so installing the `PreToolUse` hook owes `notify-senechal` a note at install time; and writes under `.claude/**` hit the harness's sensitive-file gate, the same wall that forced `cloture.command.md` to sit one `git mv` from live.
+
+**Correction owed to `.claude/commands/ideate.md`, filed as part of step 1's scope:** §1 currently instructs that a high-weight DARK row be treated as an `AskUserQuestion` candidate. Until `sensor-agree.sh` lands, that instruction routes the tool's highest-false-positive output straight to the scarcest organ as its loudest signal — which is precisely what happened in this session. The wording should require a re-probe of the dispatch surfaces *before* the question is asked.
+
+**Surveys, all re-run fresh at 00:18:** `ecosystem-survey.sh` 18 projects; `milestone-audit.sh` 13 declared / 5 missing / 0 reached; `steward-survey.sh` 9 live / 9 dark (**now known to be 12 live / 6 dark**); `hygiene-lint.sh` 31 FLAGs, composition unchanged. Precipitation B/C read read-only. **Nothing stamped, reordered, or reweighted this pass; no project was scaffolded and no feature code was written.**
+
+---
+
 **2026-07-26 (`/nightly-batch`, ~23:0x pass): inbox empty for the SIXTH consecutive pass — so the queued `/cloture` rite was BUILT: `bin/closeout-lint.sh` + `bin/tests/closeout-lint.test.sh` (`3913d7c`). Layer 2 is written but STAGED, blocked by the `.claude/**` gate, not by a decision.**
 
 **Why this one:** the inbox again held no artifact (repo root is realisateur's own scaffolding only), and the bottom of this file carries no unconsumed `[batch]` row — all three were consumed by the ~21:25 pass and the write-race helper by the ~22:1x pass. The next queued item that is explicitly *this repo's own* and explicitly unattended-buildable is `/cloture`: its 2026-07-26 design entry says it in those words — "**Blockers:** none — unattended-buildable here; layers 1+2 first, layer 3 only after both exist." So layers 1 and 2, in that order, and no layer 3.
