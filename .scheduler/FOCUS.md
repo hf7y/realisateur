@@ -1,3 +1,60 @@
+**2026-07-27 (`/ideate bibliothecaire`, interactive, Zach-directed, SECOND pass tonight): FALSE-LIVE — the exact mirror of this morning's false-DARK, found in the same night. Every sensor reported bibliothecaire healthy while its milestone was unreachable. bibliothecaire unparked (`550af93`), scheduler's `BLOCKERS.md` repaired (`1a6bc0a`), two guards queued INTO the existing chain, one filed through scheduler's front door.**
+
+**Why this one:** Zach asked to unpark `bibliothecaire`, with "scripts not prose to prevent that from happening again," and to find his blockers. The first ask was built on a false premise, and re-probing it produced the finding.
+
+## The finding: false-LIVE, the mirror of false-DARK
+
+`bibliothecaire` was **not parked.** Re-probed, not quoted: `_paced.conf` line 
+`bibliothecaire|1|1` — enabled, weight 1, slot 17 of 17 in the rotation signature; last run 2026-07-26 22:27, 1118s, pushed `d4dfeba`; `weight-audit.sh` 00:21 saw `commits_7d=6, milestone=in-progress`, no park suggestion; `hygiene-lint.sh` clean, 0 FLAGs; `milestone-audit.sh` DECLARED / in-progress. **Six sensors, all green.**
+
+And the project could not finish. Its milestone required ≥2 verified quotes on each of seven themes; three of the seven (`holons`, `stigmergy`, `vsm`) need Koestler, Grassé and Beer, and its own 2026-07-26 run had already turned "probably paywalled" into checked fact — six lending-restricted Internet Archive copies, one closed-access paper, no open Beer *Kybernetes* text, a Cloudflare 403 on Coase 1937. The runner had one job left and that job was impossible. What *was* parked sat in the project's own FOCUS.md reservoir: "doctrine integration" and "any essay/synthesis writing" — the research direction Zach actually wanted.
+
+**Named here as the sibling of this morning's pattern 14 entry, and it is the more dangerous of the two:**
+
+> **False-DARK** — a sensor reports a negative it never checked for. Loud, and it *summons* attention (a DARK row routes to `AskUserQuestion`).
+> **False-LIVE** — every sensor reports a positive that is true of the configuration and false of the work. Silent, and it *repels* attention. Nothing in this ecosystem escalates a green row.
+
+The missing question is one line and no sensor asks it: **is the current milestone's remaining work reachable by the runner at all?** A milestone whose open checkboxes are all `(waiting:)` or all blocked on a resource the unattended path cannot obtain is a parked project wearing a live project's readings. Six months of green surveys would never say so.
+
+**Second-order finding, worth more than the first:** `weight-audit.sh` is the one script here with a real machine trigger, and its park suggestion is a *velocity* test (`commits_7d ≤ 15`). bibliothecaire scored 6 — park-eligible on velocity — and was *not* flagged, because the eligibility gate exempts anything with an `in-progress` milestone. That gate is correct as designed and it is exactly what made this case invisible: **"declared a bar and still building toward it" cannot distinguish building from grinding.** The gate needs the reachability question, not a different threshold.
+
+## Decisions recorded (Zach, four `AskUserQuestion` calls this session)
+
+1. **bibliothecaire unparked; research is the milestone, not the reservoir.** Previous milestone closed as *reached-as-far-as-reachable*, explicitly not as met (12 verified quotes published, `--export` green, crt unblocked, 4 of 7 themes at the bar). New milestone: a **sourced concept brief** per concept in a named starting set — Claim, Sources (≥1 `verified` quote id), **Maps onto** (a named file/mechanism in this ecosystem, a path not a gesture), **Where it breaks** (≥1 named disanalogy). Guard: `bin/validate-quotes.py --require-briefs`, fails loud, negative-tested. The starting set is **ordered so the milestone cannot stall on a library**: eight concepts reachable with no institutional access (Ashby, Simon 1962, Conway 1968, Hayek 1945, Ostrom's 2009 Nobel lecture — the free-lecture precedent already approved for Coase — plus the three verified themes), six gated behind Tulane access. `550af93` in bibliothecaire, and `nightly-batch.md` changed in the **same commit** so the dispatch instructions cannot disagree with the milestone — pattern 13 avoided deliberately, in the session that is about pattern 13's cousin.
+   - **"Where it breaks" is load-bearing.** It is the honesty policy's form for synthesis. A brief with no named disanalogy is a flattering just-so story about the machinery, and those are worse than no brief: they make the ecosystem *feel* understood. Written into both FOCUS.md and the nightly's hard rules.
+2. **The three library-walled themes are NOT closed and the honesty policy is NOT relaxed.** Zach has Tulane access and is wiring it up (session pivot, same date). No secondary-source fallback authorized. `(waiting: institutional full-text access)` until proven live from an *unattended* run.
+3. **`BLOCKERS.md` repaired** rather than append-only — Zach's explicit call, taken over the standing no-delete rule because the file was structurally damaged and the damage was hiding his own answers. See below.
+4. **Three guard shapes to mechanize** — all three selected. Routed below.
+
+## The blockers found (the third ask), and the repair
+
+`scheduler/BLOCKERS.md` was corrupt, from two causes a day apart, and it was **swallowing Zach's answers**:
+
+- **`ec89b84` (2026-07-25, chezz nightly machine-append)** inserted its `## chezz` section *inside the header's own prose*. It anchored on a `## ` occurrence that was a **literal inside the sentence** "…moves it down into `` `## Recently resolved` ``". Since then the header sentence has been truncated at line 12 and its tail has worn a fake `## Recently resolved` heading — a second heading with that exact name, ahead of the real one. Two days, unnoticed.
+- **`0e9b6a6` (2026-07-27 01:15, "Human edit via scheduler")** — the ~:30 autocommit watcher caught a live `vimdiff` mid-merge and committed it: 106 insertions, **zero deletions**. Result: two unresolved conflict blocks wrapping Zach's chezz-Gemini approval and his `.scheduler`-migration answer; the entire `## gardien`/`## senechal`/`## realisateur` tail **duplicated** as an answered copy plus a blank-slot copy; a duplicated wtul entry; an orphan `  in fewer lines.` fragment.
+
+**The duplicate mattered specifically.** It put a second `## realisateur` heading in the file, and `collect-feedback.sh --section` matches on that heading — the same shape as the 2026-07-26 empty-consume bug whose recovery note is recorded *inside that very section*. Zach's five strategy-audit answers (PLAYBOOK "Blessed be", the user-level hook confirm, import swaps a/b/c, the catabolic worklist, and the re-admission-policy "Yes.") live only in the first copy.
+
+**Repaired in `1a6bc0a`** (via `focus-commit.sh`): 618 → 523 lines plus one new section. Every line of human prose and every `> ` answer preserved — verified by set-difference before/after, which returned only the six marker lines, the bare `>` slots from the deleted blank copy, the orphan fragment, and the two header lines repaired in place. Also adds a **`## bibliothecaire`** section: that project's library blocker had no cross-project surface at all, living only in its own QUESTIONS.md. Revert: `git revert 1a6bc0a`.
+
+## Guards — routed into the existing chain, not alongside it
+
+The four-guard chain from this morning's pass stands. These slot in rather than forking a parallel set:
+
+- **[batch] Extend `bin/doctrine-debt.sh` (chain step 3) to reservoir lines.** It already greps doctrine files for self-declared gaps and ages them via `git log -L`. A `**(parked)**` or `(waiting: …)` line in any project's FOCUS.md is the identical shape: a self-declared deferral that should age and be re-examined. Extend the pattern set and the scan surface; do **not** add a fifth script. FLAG a parked line whose stated reason is falsifiable and now false, and any `(waiting: …)` older than N days. **Witness:** bibliothecaire's own 2026-07-26 parked lines must be reproducible as a fixture that FLAGs.
+- **[batch] `bin/reachability-lint.sh` — new, and it is the false-LIVE guard.** Two checks, one script: **(a)** for every project, if *every* unchecked box in its current milestone is tagged `(waiting:)` or names a blocker the unattended path cannot clear, FLAG it — a green project with no reachable work. **(b)** every project carrying a `(waiting:)` or human-only item must have a matching `## <PROJECT_KEY>` section in scheduler's `BLOCKERS.md`; a decision with no cross-project surface is pattern 13 in its quiet form, and bibliothecaire is the live exhibit. Rides `hygiene-lint.sh`. **Witness:** bibliothecaire pre-`550af93` must FLAG on both checks; post-`550af93` must clear (b) and — because the new starting set is deliberately ordered reachable-first — clear (a) too.
+- **Filed through scheduler's front door (§5 — this is scheduler's engine, not realisateur's to edit):** the watcher-side guard. Two proposals in one drop: refuse to autocommit a file containing conflict markers or duplicate `## ` headings, and fix the machine-append anchor so it can never match a `## ` inside prose. See QUESTIONS.md cross-link.
+
+**Stated override of park-by-default, continuing this morning's:** neither guard above is required for this repo's current milestone (every registered project with a declared milestone). Both are promoted active by the same reasoning Zach applied at 00:xx — each has a proven live failure, and one of them cost this session a false premise before a single command ran. **What they pass over:** unchanged, the 5 projects still missing a milestone.
+
+**Oldest-first override, stated:** bibliothecaire's reservoir was promoted ahead of the four 2026-07-18 home-assistant entries that still top the vision-debt ranking. Reason: the home-assistant items are backlog; bibliothecaire's park was **blocking a live project from doing anything at all**, which is a different failure from an idea waiting its turn.
+
+**Not done, deliberately:** no script was built, no brief written, no validator flag implemented, no weight changed. `bibliothecaire` stays at weight 1 — the unpark gives it reachable work, and whether that work earns more turns is `weight-audit.sh`'s call once it has velocity to measure. No project scaffolded, no feature code written.
+
+**Blockers on the current step:** none for either queued guard — both offline, zero-AI, write nothing, buildable unattended here. The Tulane access wiring is Zach's, in progress, and is the session's stated pivot *after* this `/ideate` closes — named as an inline exception, separate from the queue above.
+
+---
+
 **2026-07-27 (`/ideate`, interactive, Zach-directed): the failure-pattern sweep — and its headline finding is that REALISATEUR'S OWN SENSORS ARE THE ECOSYSTEM'S LARGEST UNCLOSED LOOP. Three sensors report the ecosystem's most active project as dead. Four guards queued ACTIVE, hook-level enforcement authorized.**
 
 **Why this one:** Zach asked for a sweep of the two named failure patterns — *build-but-don't-wire* (BUILD-DISCIPLINE #2/#13/#13b) and *prose-over-mechanism* (UNIVERSE.md's own "prose decays; enforcement doesn't") — across the whole universe, then scripted counter-mechanisms auto-called at real call sites. The sweep found instances of both. It also found a third pattern neither doctrine file names, which turned out to be the live one, and which nearly consumed a human decision on a false premise inside this very session.
