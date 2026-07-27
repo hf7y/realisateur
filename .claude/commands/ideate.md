@@ -43,7 +43,15 @@ signal. **Then run `bin/milestone-audit.sh`** (offline) -- each project's
 current stability milestone + status + reservoir signal; this is what
 makes step 4's park-by-default triage decidable (you can't judge `active`
 vs `parked` without the current bar in front of you). See
-`STABILITY-MILESTONES.md`. Also read this repo's own
+`STABILITY-MILESTONES.md`. **Then run `bin/hygiene-lint.sh`** (offline) --
+the build-hygiene scan for `BUILD-DISCIPLINE.md`'s recurring failure
+signatures. `/nightly-batch` has always run it; `/ideate` should too, and
+for a reason specific to this command: an interactive pass is where
+weights get raised and ideas get promoted, and it is worth knowing that a
+project you are about to accelerate is carrying a dirty tree, a stranded
+commit, or a `[dispatch-parity]` gap. Same stance as the others -- FLAGs
+are signals, most belong to other projects' own runs, and this pass fixes
+only what it touches. Also read this repo's own
 `.scheduler/FOCUS.md`/`QUESTIONS.md`.
 
 **Single-project (`$ARGUMENTS` given):** run

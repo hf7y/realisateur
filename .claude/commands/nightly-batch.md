@@ -90,6 +90,22 @@ view every image artifact.
 
 ## 3. Infer and wire up, one artifact at a time
 
+**Before writing into ANY repo other than realisateur's own, run
+`bin/check-project-busy.sh <project>`** (offline, ~instant -- flock-probes
+that project's own scheduler job locks). If it reports `BUSY: <job-name>`,
+that project's automation is mid-run against the same files RIGHT NOW:
+**defer the write**, note it in the report and `.scheduler/QUESTIONS.md`
+for the next pass, and carry on with the rest of this run. This is the
+same guard `/ideate` has used since the 2026-07-24 concurrency finding,
+and it belongs here at least as much: an unattended pass has no human
+watching to notice it just edited a file out from under a live job.
+
+Applies to the **scheduler repo too** (`check-project-busy.sh scheduler`)
+-- registering a new project edits `schedule/*.conf` and `_paced.conf`
+while scheduler is itself a paced participant with runs of its own.
+Scaffolding a genuinely new project is the one exempt case: nothing is
+dispatching against a repo that did not exist a minute ago.
+
 For each unarchived artifact:
 
 - Infer the idea it's pointing at. If it's too vague to act on (a single

@@ -120,7 +120,7 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     commit — or state which are deliberately excluded. "I updated the
     docs" is not a list.
 
-    **Mechanical guard:** `hygiene-lint.sh` check 8, `[dispatch-parity]`
+    **Mechanical guard:** `hygiene-lint.sh` check 9, `[dispatch-parity]`
     — flags a `bin/*.sh` named by some of a project's `.claude/commands/`
     files but not all. Advisory, since asymmetry is sometimes deliberate.
     (Distinct from the queued BLOCKERS.md task-shaped-language row, which

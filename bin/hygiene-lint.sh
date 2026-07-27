@@ -163,7 +163,7 @@ for name in "${projects[@]}"; do
       [ "${files:-0}" -ge 3 ] && echo "  NOTE [config-dup] port $port appears in $files tracked files (single-source it?)"
     done
 
-  # 8. DISPATCH PARITY: a mechanism wired into SOME command files, not all ----
+  # 9. DISPATCH PARITY: a mechanism wired into SOME command files, not all ----
   # BUILD-DISCIPLINE pattern 13's partial-wiring case. Pattern 13 proper is a
   # decision recorded where NOTHING dispatches from; this is the sibling that
   # looks done and isn't -- recorded on the dispatch path you happened to be
