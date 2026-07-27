@@ -75,3 +75,31 @@ project's own `.claude/FOCUS.md` and removed here on 2026-07-22.)*
   `git mv .scheduler/cloture.command.md .claude/commands/cloture.md` (then strip its leading HTML comment).
   Worth deciding at the same time: is a staged-in-`.scheduler/`-then-`git mv` path the standing convention for *any* command file an unattended pass writes, or should nightly-batch simply never author command files and queue them for `/ideate` instead? Layer 3 (the Stop hook) is deliberately not built — its own design says "only after both exist," and layer 2 isn't a command until the `mv` runs.
   > (answer inline here)
+
+## DEFERRED CROSS-WRITE -> senechal (2026-07-26, interactive session)
+
+**Owed:** a dated note in senechal's own FOCUS.md recording that
+realisateur added a **global** `~/.claude/settings.json` hook entry
+(`SessionStart`/`SessionEnd` -> `realisateur/bin/session-marker.sh`)
+— machine-wide config, so it falls under the standing notify-senechal
+policy AND under senechal's own 2026-07-24 mission widening
+("shared-host script/autostart ownership": no unattributable leftovers).
+
+**Ownership decided this session (Zach asked directly):** realisateur
+owns the hook entry and its behavior; senechal owns *knowing it exists*.
+Precedent is the existing `# >>> realisateur-owned ... # <<< ` block in
+Zach's crontab — realisateur owns its own entry inside a shared
+machine-config surface. JSON has no comments, so attribution rides on
+the command path itself being unmistakably realisateur's.
+
+**Why not done inline:** `bin/check-project-busy.sh senechal` reported
+BUSY (`senechal-nightly-batch`, pid 96695, started 21:55:03) at the
+moment of writing, so the cross-write was deferred per `/ideate` step 4
+rather than edit FOCUS.md out from under a live run. Re-checked at the
+end of the session, still busy.
+
+**Next pass: re-probe and write it.** Also worth telling senechal: the
+marker file it may observe at
+`~/.local/share/scheduler-registry/<project>.interactive` is
+realisateur's, is expected, and is self-healing (a stale one means a
+session died, not that anything is wrong).
