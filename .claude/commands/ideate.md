@@ -183,6 +183,17 @@ For each decision:
 
 ## 4.5. Vision debt -- watch it, and know when to override oldest-first
 
+**The signal ladder is now formalized in `PRECIPITATION.md` and sensed by
+`bin/precipitation-scan.sh` (runs inside `ecosystem-survey.sh`).** Read
+its three reports during orient, before triaging. In short: age is the
+WEAKEST of five signals; re-arrival-in-the-same-shape is the strongest;
+an idea that re-arrives in a DIFFERENT shape each time gets its weight
+lowered, not raised; and a cross-project cluster is answered by naming
+the missing regulator, not by promoting the cluster's members. Confirming
+a candidate means stamping it (`(re-arrival: <dates>)` / `[iface: <x>]`)
+so the judgment becomes durable fact instead of being re-inferred next
+run. The rest of this section is the standing rule that ladder serves.
+
 Same pattern chezz's `/ideate` named originally (2026-07-20, your own
 words: *"my ideas outpace implementation of stable versions so the
 target is always moving"*): a backlog that only grows is not this
