@@ -1,3 +1,19 @@
+**2026-07-26 (`/nightly-batch`, ~19:42 pass): inbox empty, surveys re-run, nothing to build.**
+
+Repo root again held only realisateur's own scaffolding -- no dropped
+artifact to infer or wire up. All three offline surveys re-run fresh,
+unchanged from the ~19:40 pass two minutes prior: `hygiene-lint.sh` still
+30 total FLAGs across 18 projects (same senechal `base64` test-fixture
+false positive); `milestone-audit.sh` unchanged at 13 declared/5 missing/0
+no-focus; `ecosystem-survey.sh`'s vision-debt ranking unchanged, still
+topped by the four 2026-07-18 home-assistant entries. `.scheduler/QUESTIONS.md`'s
+open blocks (aedile/vkv-inventory svc-vaporwave recovery, ideate-mode
+`UserPromptSubmit` hook, secretaire lane) all still carry only the
+placeholder `> (answer inline here)` slot -- no real `> ` reply landed,
+left untouched, genuinely waiting on the human.
+
+---
+
 **2026-07-26 (`/nightly-batch`, ~19:40 pass): inbox empty, nothing to build.**
 
 Repo root held only realisateur's own scaffolding (`fable-like/` + doctrine
