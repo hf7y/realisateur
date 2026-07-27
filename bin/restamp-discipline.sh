@@ -49,6 +49,21 @@ END_MARK='<!-- <<< realisateur-baseline -->'
 
 die() { printf 'restamp-discipline: FAIL: %s\n' "$*" >&2; exit 1; }
 
+# Never let a push block on an interactive credential prompt. This script is
+# wired into /ideate AND /nightly-batch, and the unattended case has nobody to
+# answer a passphrase prompt: it would hang until the job's timeout and read
+# like a network error. BatchMode turns that hang into an immediate, stated
+# failure, which the per-repo push handling below already reports loudly.
+#
+# Incident 2026-07-26: the first --apply run pushed to 17 repos and spammed
+# Zach with password prompts, because four repos' origins were bare
+# `git@github.com:` URLs falling through to a passphrase-protected default
+# identity while their own deploy-key aliases sat unused in ~/.ssh/config.
+# Those four are rewired now, and hygiene-lint's [ssh-remote] row catches a
+# recurrence -- this line is the belt to that suspenders: a repo added later
+# with a prompting remote fails fast instead of hanging a nightly run.
+export GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -o BatchMode=yes}"
+
 apply=0
 want=()
 for a in "$@"; do

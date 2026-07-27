@@ -221,6 +221,41 @@ for name in "${projects[@]}"; do
     fi
   fi
 
+  # 7c. UNWIRED DEPLOY KEY ------------------------------------------------------
+  # A repo whose origin is a bare `git@github.com:` URL while a matching
+  # deploy key + ssh alias ALREADY EXIST for it. The key was built and never
+  # wired, so every push falls through to the passphrase-protected default
+  # identity: interactive sessions get prompted, and an UNATTENDED run blocks
+  # on a passphrase prompt nobody is there to answer -- a hang that reads
+  # like a network error.
+  #
+  # Incident (2026-07-26): restamp-discipline.sh --apply pushed to 17 repos
+  # and spammed Zach with password prompts. Four of the five SSH repos had a
+  # deploy-key alias sitting unused in ~/.ssh/config; `scheduler`, the one
+  # that DID use its alias, was silent. This is the build-but-don't-wire
+  # pattern applied to credentials.
+  #
+  # Deliberately checks only for an alias that exists -- it never proposes
+  # creating a key, which is a credential decision, not a lint's call.
+  origin_url="$(git -C "$repo" remote get-url origin 2>/dev/null || true)"
+  case "$origin_url" in
+    git@github.com:*)
+      alias_hit=""
+      while read -r h; do
+        case "$h" in
+          *"$name"*) alias_hit="$h" ;;
+        esac
+      done < <(grep -oP '(?<=^Host )github-\S+' "$HOME/.ssh/config" 2>/dev/null || true)
+      if [ -n "$alias_hit" ]; then
+        echo "  FLAG [ssh-remote] origin is bare github.com but alias '$alias_hit' exists -- unused deploy key, pushes will prompt for a passphrase (unattended runs BLOCK)"
+        echo "                    fix: git -C \"$repo\" remote set-url origin git@$alias_hit:<path>"
+        n=$((n+1))
+      else
+        echo "  NOTE [ssh-remote] origin is bare github.com with no deploy-key alias -- pushes use the default identity and will prompt"
+      fi
+      ;;
+  esac
+
   # 8. STALE VERIFIED-CLAIMS ---------------------------------------------------
   # BUILD-DISCIPLINE requires a written claim about system state to carry a
   # `# verified <date> via <command>` stamp. A stamp doesn't expire on its own:
