@@ -71,6 +71,25 @@ status is `reached` is a signal to set a new milestone or graduate it
 (drop its `_paced.conf` weight) — same signals-not-verdicts stance as the
 other two surveys.
 
+**Then run `bin/steward-survey.sh`** (offline, no AI cost). The fifth
+survey, and the only one that reads `_paced.conf`'s `enabled` flag — the
+other four report on every registered project as though it were running.
+It answers the steward question none of them can: **which organs are dark,
+and how much undrained vision is stranded behind each one.** Columns:
+paced weight, days since the repo's last commit, count of open dated ideas
+in its FOCUS.md, milestone status.
+
+Read it in the order its own summary states. The loudest signal is a
+**DARK row with a high weight** — weight is stated intent, `enabled=0` is
+actual dispatch, and the two disagreeing means an intention stopped being
+acted on without anyone deciding to stop. Second is a DARK row with a
+large stranded count: a reservoir filling behind a shut valve. Same
+signals-not-verdicts stance as its four siblings — **a dark project is
+very often deliberate** (`gardien` is blocked on hardware, `crt` was
+switched off on purpose), so this pass NEVER re-enables a project or
+changes a weight on the strength of the scan. Note a striking row in
+`.scheduler/FOCUS.md` for the next interactive pass to judge.
+
 **Read `.scheduler/QUESTIONS.md` and process any answers.** The user replies
 inline, on a line starting with `> ` directly under a question --
 QUESTIONS.md's own header documents the convention. Treat any `> `
@@ -87,6 +106,44 @@ scaffolding (`README.md`, `SCHEDULER.md`, `.claude/` (commands only), `.schedule
 `archive/` directory). It could be a text file, a PNG, anything -- there
 is no fixed naming convention, per `README.md`. Read every text artifact;
 view every image artifact.
+
+### 2a. If the inbox is empty — do a STEWARD pass, not meta-work
+
+An empty inbox is now the **normal** state, not an exception. Intake is
+bursty; most nights there is nothing dropped.
+
+**The failure mode this section exists to prevent** (observed 2026-07-26,
+seven batch runs in one day): with no inbox artifact to work on, the pass
+goes looking for work in the only place left — realisateur itself — and
+builds another lint, guard, or record *about its own batch process*. Each
+one is real, tested, committed code, which is what makes it hard to see.
+But that day produced five new scripts for realisateur's own workflow and
+**zero** commits into any of the twelve scaffolded projects. That is a
+productive treadmill: the organ that exists to perceive the ecosystem
+spent the night perceiving itself.
+
+So when there is no artifact to process, the job is **stewardship of the
+other projects**, and the output is *routing*, not building:
+
+- Re-read `bin/steward-survey.sh`'s section A and B from step 1.
+- Pick the **one** most striking row — a dark high-weight project, a
+  reservoir stranded behind a closed valve, a live weight-1 project whose
+  oldest open idea is weeks old.
+- Write it up as a dated entry in `.scheduler/FOCUS.md`, and if it needs a
+  human decision (re-enable? reweight? park the stranded ideas?), put a
+  `> `-answerable question in `.scheduler/QUESTIONS.md`. **Re-enabling a
+  project or changing a weight is not this pass's call** — those are
+  stated decisions, and a batch run making them silently is the reorder
+  `/ideate` §4.5 forbids.
+- Then **stop**. A steward pass that surfaces one thing clearly and
+  builds nothing is a complete, successful run. Say so in the report.
+
+**Explicitly out of scope on an empty-inbox night:** authoring a new lint,
+survey, guard, or command for realisateur itself. If the pass believes one
+is needed, that belief is the output — file it as a `[batch]` row in
+`.scheduler/FOCUS.md` for a pass with a human present, and do not build it
+tonight. Realisateur already has five surveys; the sixth needs a stated
+reason from outside this loop.
 
 ## 3. Infer and wire up, one artifact at a time
 
@@ -181,6 +238,30 @@ For each unarchived artifact:
 - Move the source artifact into `archive/` (create it if missing) once
   acted on, or once a real decision was made not to (note why in the
   report either way).
+
+### 3a. Two mandatory write paths
+
+**Every `.scheduler/FOCUS.md` / `.scheduler/QUESTIONS.md` commit goes
+through `bin/focus-commit.sh <repo> <msgfile> <file>...`** — never a bare
+`git add` + `git commit` + `git push`. It commits exactly the named files
+(anything else already staged is a loud abort, so an unrelated
+working-tree edit can never ride along inside a FOCUS commit), does the
+fetch/rebase/retry itself on a rejected push, and verifies the rebase did
+not change what the commit means. That last check is the one that would
+have caught the 2026-07-26 rename-following rebase that silently rewrote
+an archived artifact's content. The bare sequence is prose discipline
+carried in session memory; this is the guard.
+
+**Every machine-wide config change goes through
+`bin/notify-senechal.sh '<what, where, who owns it>'`** — crontab entries,
+`~/.claude` settings hooks, systemd units, autostart, WM config, marker
+files under `~/.local/share`. Standing rule: realisateur *owns* the thing
+it generates; senechal *owns knowing it exists*. The script files through
+`scheduler -i senechal` (the front door — a staleness-checked commit path
+that is safe against a live senechal run, unlike a hand edit of its
+FOCUS.md) and then confirms the note actually reached senechal's remote,
+because `scheduler -i` skips the push when the repo is behind origin and
+an unpushed note is invisible to senechal's own nightly clone.
 
 ## 4. Commit as you go
 

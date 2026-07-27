@@ -1,18 +1,3 @@
-<!--
-STAGED, NOT INSTALLED. This is layer 2 of `/cloture`, written by the
-2026-07-26 unattended nightly-batch pass. It belongs at
-`.claude/commands/cloture.md`, but the harness's sensitive-file gate
-hard-refuses Edit/Write under `.claude/**` in an unattended run -- the
-same gate that forced the `.scheduler/` FOCUS-file migration. So it sits
-here, fully written, one command from live:
-
-    git mv .scheduler/cloture.command.md .claude/commands/cloture.md
-    # then strip this comment block
-
-That install step needs a human session, not a decision. Until it runs,
-`/cloture` is not a slash command and layer 1 (`bin/closeout-lint.sh`)
-is usable on its own.
--->
 ---
 description: Session-closing rite -- run the closeout lint, name the philosophy delta, report cross-project writes, make insights durable, surface decisions. Does not build.
 ---

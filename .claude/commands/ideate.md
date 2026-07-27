@@ -43,7 +43,20 @@ signal. **Then run `bin/milestone-audit.sh`** (offline) -- each project's
 current stability milestone + status + reservoir signal; this is what
 makes step 4's park-by-default triage decidable (you can't judge `active`
 vs `parked` without the current bar in front of you). See
-`STABILITY-MILESTONES.md`. **Then run `bin/hygiene-lint.sh`** (offline) --
+`STABILITY-MILESTONES.md`. **Then run `bin/steward-survey.sh`** (offline) --
+the only survey that reads `_paced.conf`'s `enabled` flag, so it is the
+only one that can tell you a project is DARK. The others report on every
+registered project as if it were running: on 2026-07-26, `crt` sat at
+`enabled=0` with the highest weight in the ecosystem (3) and 32 open
+ideas behind it, and no survey said so. This command is where that
+belongs, because re-enabling a project, reweighting one, or honestly
+parking a stranded reservoir are all **stated decisions** — exactly what
+an interactive pass with Zach present is for, and exactly what
+`/nightly-batch` is forbidden from doing on its own. Treat a
+high-weight DARK row as an `AskUserQuestion` candidate (step 3), not
+something to fix silently: many are deliberate.
+
+**Then run `bin/hygiene-lint.sh`** (offline) --
 the build-hygiene scan for `BUILD-DISCIPLINE.md`'s recurring failure
 signatures. `/nightly-batch` has always run it; `/ideate` should too, and
 for a reason specific to this command: an interactive pass is where
@@ -134,7 +147,23 @@ structure above is unclear in the abstract.
 
 For each decision:
 - **About realisateur's own scope** -- write into this repo's own
-  `.scheduler/FOCUS.md` (decision + rationale) same as any other project.
+  `.scheduler/FOCUS.md` (decision + rationale) same as any other project,
+  committed via **`bin/focus-commit.sh <repo> <msgfile> <file>...`**, never
+  a bare `git add`/`commit`/`push`. It stages exactly the named files
+  (a loud abort if anything else is staged, so an unrelated edit cannot
+  ride along inside a FOCUS commit), handles a rejected push itself, and
+  verifies the rebase did not change what the commit means -- the check
+  that would have caught the 2026-07-26 rebase that silently rewrote an
+  archived file's content.
+- **About machine-wide config** (crontab, `~/.claude` settings hooks,
+  systemd, autostart, WM config, markers under `~/.local/share`) -- run
+  **`bin/notify-senechal.sh '<what, where, who owns it>'`**. Standing rule:
+  realisateur owns what it generates, senechal owns knowing it exists. The
+  script files through `scheduler -i senechal` -- senechal's front door,
+  whose staleness-checked commit path is safe against a live senechal run,
+  so this case does NOT need the busy-deferral below -- and then confirms
+  the note reached senechal's remote, since an unpushed note is invisible
+  to senechal's own nightly clone.
 - **About another project** -- first run `bin/check-project-busy.sh
   <project>` (offline, ~instant -- flock-probes that project's own
   scheduler job locks). If it reports `BUSY: <job-name>`, that project's
