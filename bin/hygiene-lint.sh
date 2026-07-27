@@ -142,6 +142,41 @@ for name in "${projects[@]}"; do
       [ "${files:-0}" -ge 3 ] && echo "  NOTE [config-dup] port $port appears in $files tracked files (single-source it?)"
     done
 
+  # 8. DISPATCH PARITY: a mechanism wired into SOME command files, not all ----
+  # BUILD-DISCIPLINE pattern 13's partial-wiring case. Pattern 13 proper is a
+  # decision recorded where NOTHING dispatches from; this is the sibling that
+  # looks done and isn't -- recorded on the dispatch path you happened to be
+  # editing, missing from the one that actually runs unattended.
+  #
+  # Live case 2026-07-26: precipitation-scan.sh was wired into
+  # ecosystem-survey.sh and documented in .claude/commands/ideate.md, but NOT
+  # in nightly-batch.md -- so every unattended pass printed promotion-signal
+  # reports with no doctrine attached, which is exactly the run with no human
+  # present to catch a false positive. Same shape as the .claude/->.scheduler/
+  # trace two days earlier.
+  #
+  # Rule: a script under the project's own bin/ that some command file names
+  # should be named by ALL of them. Advisory (NOTE) -- asymmetry is sometimes
+  # deliberate (an interactive-only tool), and this script never decides.
+  cmd_dir="$repo/.claude/commands"
+  if [ -d "$cmd_dir" ]; then
+    cmd_files=(); while IFS= read -r c; do cmd_files+=("$c"); done < <(find "$cmd_dir" -maxdepth 1 -name '*.md' | sort)
+    if [ "${#cmd_files[@]}" -ge 2 ]; then
+      while IFS= read -r script; do
+        [ -n "$script" ] || continue
+        base="$(basename "$script")"
+        naming=(); missing=()
+        for c in "${cmd_files[@]}"; do
+          if grep -q -- "$base" "$c"; then naming+=("$(basename "$c")"); else missing+=("$(basename "$c")"); fi
+        done
+        # only interesting if SOME name it and SOME don't
+        if [ "${#naming[@]}" -gt 0 ] && [ "${#missing[@]}" -gt 0 ]; then
+          echo "  NOTE [dispatch-parity] $base named in $(printf '%s,' "${naming[@]}" | sed 's/,$//') but NOT in $(printf '%s,' "${missing[@]}" | sed 's/,$//')"
+        fi
+      done < <(git -C "$repo" ls-files 'bin/*.sh' 2>/dev/null)
+    fi
+  fi
+
   # 7. BUILD-DISCIPLINE checklist present in CLAUDE.md? ------------------------
   if echo "$tracked" | grep -qx 'CLAUDE.md'; then
     if ! git -C "$repo" grep -qi 'Build discipline' -- CLAUDE.md 2>/dev/null; then

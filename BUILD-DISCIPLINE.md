@@ -101,6 +101,31 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     template, a queued job) — and if it changes a convention, the
     template/doc that teaches the convention changes in the same commit.
 
+    **13b — the partial-wiring case: wired on the path you were looking
+    at.** More dangerous than 13 proper, because it looks done. The
+    decision *is* in a file some run dispatches from — just not all of
+    them. Found live 2026-07-26, one day after 13 was written, by the
+    same session that wrote it: `precipitation-scan.sh` was wired into
+    `ecosystem-survey.sh` and documented in `.claude/commands/ideate.md`,
+    but not in `nightly-batch.md`. So every *unattended* pass printed
+    promotion-signal reports with no doctrine attached — the run with no
+    human present to catch a false positive, which the same scan produced
+    within the hour. The tell is that the author edits the path they are
+    reading and never enumerates the others: a mechanism usually has more
+    consumers than the one in hand (interactive vs. unattended, template
+    vs. instance, doc vs. dispatcher).
+
+    **Rule:** when wiring a mechanism or recording a convention,
+    enumerate *every* executor that reads it and name them in the same
+    commit — or state which are deliberately excluded. "I updated the
+    docs" is not a list.
+
+    **Mechanical guard:** `hygiene-lint.sh` check 8, `[dispatch-parity]`
+    — flags a `bin/*.sh` named by some of a project's `.claude/commands/`
+    files but not all. Advisory, since asymmetry is sometimes deliberate.
+    (Distinct from the queued BLOCKERS.md task-shaped-language row, which
+    is 13 proper: a decision in a file nothing dispatches from at all.)
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a
