@@ -1,3 +1,31 @@
+
+**2026-07-27 (/cloture, naming the failure pattern from this session's
+earlier `/ideate` finding): confirmed instance of BUILD-DISCIPLINE.md
+pattern 13b, cross-repo variant not covered by existing guard.**
+
+`notify-senechal`/`check-project-busy`/`focus-commit` were promoted from
+`realisateur/bin/*.sh` to `~/.local/bin` (on `PATH`); their five siblings
+in the same command files (`ecosystem-survey.sh`, `milestone-audit.sh`,
+`steward-survey.sh`, `hygiene-lint.sh`, `precipitation-scan.sh`) were
+not. `ideate.md`/`cloture.md` read as project-agnostic but silently
+weren't runnable from another project's own session — exactly 13b's
+tell ("the author edits the path they are reading and never enumerates
+the others"), this time across a promotion boundary (repo-local →
+`PATH`) rather than across sibling command files in one project.
+
+`hygiene-lint.sh` check 9 (`[dispatch-parity]`) already guards this
+shape, but only *within* one project's `.claude/commands/` (a script
+named by some commands, not all). It has no check for: a script named
+in a command file that some of its siblings already got promoted to
+global `PATH` while it didn't. **Filed as residue, not built**: extend
+check 9 (or add check 9b) to flag scripts referenced by a command file
+where a sibling reference in the *same file* already resolves via
+`PATH` — that's the concrete, mechanical version of "enumerate every
+executor," scoped to promotion drift specifically.
+
+Also filed as residue (queued above, `8ca8f42`): the concrete 3-step
+plan to actually finish the promotion for `/ideate`/`/cloture` to be
+callable from any project's own session.
 **2026-07-27 (`/ideate bibliothecaire`, interactive, Zach-directed, SECOND pass tonight): FALSE-LIVE — the exact mirror of this morning's false-DARK, found in the same night. Every sensor reported bibliothecaire healthy while its milestone was unreachable. bibliothecaire unparked (`550af93`), scheduler's `BLOCKERS.md` repaired (`1a6bc0a`), two guards queued INTO the existing chain, one filed through scheduler's front door.**
 
 **Why this one:** Zach asked to unpark `bibliothecaire`, with "scripts not prose to prevent that from happening again," and to find his blockers. The first ask was built on a false premise, and re-probing it produced the finding.
