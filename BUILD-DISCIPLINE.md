@@ -332,6 +332,65 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     day. Until one of them lands, this row is prose, and prose decays —
     stated here rather than left implied, per pattern 15's own closing.
 
+17. **The reader that destroys what it read.** A mechanism consumes human
+    input as a *side effect of reading it*, before anything has decided
+    whether to act. The read succeeds, the caller declines to act, and
+    the input is gone — not lost to a crash, but deleted by the component
+    whose only job was to report it. Every step exits 0. Nothing fails
+    loud, because nothing fails.
+
+    Distinct from its neighbours: pattern 1 (silent failure) is a step
+    that *didn't work* and said nothing — here every step worked exactly
+    as written; pattern 16 is a refusal with no retrier — here there is
+    no refusal at all, just a read; pattern 8 warns then continues — here
+    there is nothing to warn about at the moment of loss, because the
+    loss looks identical to success.
+
+    **Found live, 2026-07-28 (wtul):** `collect-feedback.sh --consume`
+    stripped the `> ` marker off a reply as part of collecting it. wtul
+    run 28 (`0baabb6`) collected 28 of Zach's replies, judged them
+    "mostly not actionable", and deleted zero question entries. The
+    answers survived only as unattributed prose wedged inside still-open
+    questions: invisible to every later `--consume` (nothing left to
+    collect) and indistinguishable from the question's own body text.
+    **A question had been answered and by every mechanical measure never
+    had been.** The verdict did not survive re-reading: among the "not
+    actionable" replies were a stream URL answering an entry that called
+    itself undesigned, three Apps Script URLs followed by "build it", and
+    a hardware question already resolved by purchase. Recovered
+    (wtul `cbe597d`) *only because the markers survived in git* — the
+    `%%TAG` half of the same script has no such luck, since there the
+    keyword IS the marker, and a destroyed one leaves a bare sentence
+    with nothing identifying it as feedback at all (filed with scheduler
+    2026-07-28, `a69ff05`).
+
+    **Why it hides:** the damage is invisible at both ends. The producer
+    (a human) sees their reply accepted. The consumer (the next run) sees
+    a file with no pending feedback, which is indistinguishable from a
+    file whose feedback was handled. Only a git archaeologist comparing
+    two revisions can tell the difference — and there is no alarm that
+    would send anyone looking.
+
+    **Rule:** *a mechanism may not destroy evidence on behalf of a
+    decision it does not make.* Reading and consuming are separate acts
+    and must be separately triggered. Where they cannot be — where the
+    reader must mark what it read to stay idempotent — it **marks rather
+    than deletes**, in a form that stays legible to the human who wrote
+    it and inert to the next reader.
+
+    **Mechanical guard (the part that makes this row not-prose):**
+    landed the same day, not proposed. `--consume` now rewrites a matched
+    reply as `>> reply` under a dated `>> _[consumed ...]_` header
+    (scheduler `3170b81`) — still visible, still attributed, still in
+    position, simply not collectable twice; `>>` lines are skipped
+    outright, so the operation is idempotent. Deleting the entry is the
+    caller's job and always was. Negative-tested: pass 2 over a consumed
+    file returns nothing, exits 1, and leaves the file byte-identical.
+    The complementary hazard — a human's own formatting drift silently
+    truncating what the reader can see — is netted by `bin/lint-replies.sh`,
+    run automatically when a human quits the editor from the scheduler
+    front door (scheduler `6c95fab`).
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a
