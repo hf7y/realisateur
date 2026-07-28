@@ -334,6 +334,30 @@ if [ "${#want[@]}" -eq 0 ] && [ -f "$BLOCKERS_MD" ]; then
   fi
 fi
 
+# 10. INSTALLED-SHIM DRIFT ---------------------------------------------------
+# The user-level /ideate and /cloture in ~/.claude/commands and the PATH
+# shims in ~/.local/bin are RENDERED from this repo. Editing the source
+# without rerunning the installer leaves every other repo running the old
+# text -- silently, since the stale copy still works. This is the wiring
+# that makes bin/install-shims.sh a real path rather than a one-shot deploy.
+echo
+echo "== 10. INSTALLED SHIM / USER-COMMAND DRIFT =="
+SHIM_INSTALLER="$(dirname "${BASH_SOURCE[0]}")/install-shims.sh"
+if [ ! -x "$SHIM_INSTALLER" ]; then
+  echo "  FLAG [shim-drift] install-shims.sh missing or not executable -- cannot verify"
+  total_flags=$((total_flags + 1))
+else
+  shim_out="$("$SHIM_INSTALLER" --check 2>&1)"
+  if [ $? -eq 0 ]; then
+    echo "  clean -- ~/.local/bin shims and ~/.claude/commands match this repo"
+  else
+    echo "$shim_out" |  grep '^FLAG:' | sed 's|^FLAG: |  FLAG [shim-drift] |'
+    shim_n="$(echo "$shim_out" | grep -c '^FLAG:')"
+    total_flags=$((total_flags + shim_n))
+    echo "  -> rerun: bin/install-shims.sh"
+  fi
+fi
+
 echo
 echo "############################################################"
 echo "== $total_flags total FLAG(s) across ${#projects[@]} project(s) =="
