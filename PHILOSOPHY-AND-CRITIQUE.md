@@ -92,7 +92,10 @@ addresses the wrong invariant.
 interactively complex, tightly coupled system makes it worse — *does*
 transfer here, **contradicting bibliothecaire's own `normal-accidents.md`
 brief**, which argues it does not because the guards sit outside the
-control path.
+control path. *(Registered as written. §IV corrects the "contradicting"
+framing — the brief is narrower than I characterised it, and I had not
+re-read it when I registered this. The hypothesis stands unedited because
+`prereg.py` refuses; the correction lives downstream where it belongs.)*
 
 **H4 (Perrow).** Perrow's actual prescription is a coupling intervention.
 Loosening coupling should beat instrumenting, using no new sensors at all.
@@ -131,13 +134,30 @@ hostile version (`blind_cure_p=0.2`) still beats A by ~83%. The remedy
 survives its own worst parameterisation, which is the only reason I would
 report H1 at all.
 
-**H3 held — Perrow's corollary transfers, and bibliothecaire's brief is
-wrong on this point.** `P_devices` is worse than baseline on wasted
-attention in every regime (0.54 vs 0.29 at baseline; trust 0.46 vs 0.82).
-The brief argued the guards sit outside the control path and therefore
-cannot participate in the accident. In this ecosystem they do not sit
-outside it: a misfiring sensor consumes Zach, and Zach *is* the control
-path. This should go back to bibliothecaire as a correction.
+**H3 held — Perrow's corollary transfers.** `P_devices` is worse than
+baseline on wasted attention in every regime (0.54 vs 0.29 at baseline;
+trust 0.46 vs 0.82).
+
+I registered H3 as *contradicting* bibliothecaire's `normal-accidents.md`
+brief. Having since read the brief carefully rather than from memory, that
+framing was too strong and I am correcting it here. The brief argues the
+corollary doesn't transfer because its guards — `focus-commit`,
+`--require-sources`, `--require-briefs` — "sit at commit and validation
+boundaries, outside the thing they watch." That is right, and its test —
+*does this guard sit inline in the control path?* — is the correct test.
+
+The brief simply didn't have a second class of guard in view, and for that
+class its own test returns the opposite answer. A misfiring **monitor**
+emits an alarm, the alarm consumes Zach, and Zach is the thing that decides
+what happens next. **Zach is the control path.** So a guard whose output
+lands in his attention is inline in exactly the brief's sense, and fails at
+the worst moment — when he is already saturated. `focus-commit` fails
+closed with a red exit code and consumes nobody; a sensor does not.
+
+So the usable distinction is not "commit-boundary vs runtime" but **"does
+this guard's output consume the scarce regulator?"** Filed to
+bibliothecaire 2026-07-28 (`506ca1d`) as a suggested edit, not an applied
+one — it is that project's artifact and its author makes the call.
 
 **H4 was falsified almost everywhere** — 19 of 20 cells. `P_slack` is
 *worse* than baseline on undetected ticks (1154 vs 889), better on `mttd`
