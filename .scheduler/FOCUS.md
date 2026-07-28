@@ -1,6 +1,21 @@
 
 ---
 
+**2026-07-28 18:30 (`/ideate`, LIVE WITNESS — the sweep-watcher defect reproduced ON the session that filed it, unprompted, with both failure modes at once).** Recording this as evidence rather than as a new finding: it is the same defect already filed, but it is now *observed* rather than *inferred*, which is the difference between a hypothesis and a witness.
+
+**What happened.** Mid-session, while this pass was editing `sequestria`'s `.claude/FOCUS.md` and `QUESTIONS.md` (the hard-fence revision Zach had directed minutes earlier), the scheduler sweep watcher fired on its ~:30 tick and adopted both files as commits `441111e` and `ced42ac`, authored `hf7y <dangerpine@gmail.com>` — Zach — with the message *"scheduler sweep: adopted dirty .claude/FOCUS.md (reactive backstop — author unknown, possibly a live session not yet auto-committed)"*. It was right that a live session had not yet committed. It was wrong that the author was unknown, and it attributed the work to Zach. **Then it did not push**: `focus-commit` refused the subsequent commit with *"nothing to commit — the named files are identical to HEAD"*, and `git status -sb` read `ahead 2`.
+
+**Why this is the good kind of evidence.** Both halves of tonight's five-project cluster fired in one event, on the session that named the cluster:
+- **Adoption**: this is decision (1) in this repo's own `QUESTIONS.md` (2026-07-28), where realisateur recommended **(a) quiescence** — adopt only a file unchanged two ticks running — precisely because the watcher's human-presence guard is keyed to the project the *editor* opened, so every cross-project write is unguarded. This session was a cross-project write into sequestria from realisateur. The guard did not apply. **That question is still unanswered**, and this is now the second recorded instance (the first swallowed a 116-line in-progress restoration the same way).
+- **Silent non-push**: the commits sat local. Nothing failed, nothing warned. Had this session ended thirty seconds earlier, sequestria's fence revision would have existed only on mandark's disk — and sequestria's own nightly resets its clone to origin, which is exactly how chezz lost three of Zach's answers for two nights running.
+
+**What was NOT lost, and why to say so precisely:** nothing. The content was verified intact in `HEAD` after the fact (all four new blocks present, plus the QUESTIONS entry) and pushed by hand from this session — `origin/main` is current. The damage was entirely to *attribution and durability*, not to content. That distinction matters because it is what makes the defect survivable-and-therefore-invisible: it has probably fired many times and left no trace anyone would notice.
+
+**What this changes about the recommendation:** nothing — (a) quiescence still looks right — but it moves the decision from "a risk worth guarding against" to "a thing that demonstrably happens on ordinary work, roughly twice in 36 hours of observation." The 15→30min backstop latency that option (a) costs should be weighed against that rate, not against a theoretical one. **Deliberately not acted on**: changing the watcher is scheduler's engine, not realisateur's, and the decision is Zach's — this entry is the evidence, not the fix.
+
+**One consequence worth carrying into the absence-surface work** (the milestone filed to scheduler this session, `e05016e`): a commit that exists locally and not on origin is exactly an "expected-but-absent" state — the sweep predicted a push and no push happened. If the new `scheduler` noargs view cannot see this case, it does not meet the bar as written.
+
+
 **2026-07-28 (`/ideate`, interactive, Zach-directed and Zach-answered live): the ecosystem's five-project failure cluster is named and given an owner. Seven decisions recorded, one edit applied, nothing scaffolded.**
 
 ## Vision
