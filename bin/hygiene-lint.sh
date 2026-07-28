@@ -358,6 +358,29 @@ else
   fi
 fi
 
+# 11. COMMAND SCOPE + REACH -------------------------------------------------
+# Pattern 13c: an instruction file whose named commands the reading executor
+# cannot resolve. Check 10 above catches an installed copy drifting from
+# source; this catches the question that was never asked in the first place
+# (should this command be user-level?) and the case where a user-level file
+# names something that only resolves inside realisateur.
+echo
+echo "== 11. COMMAND SCOPE / REACH =="
+REACH_LINT="$(dirname "${BASH_SOURCE[0]}")/reach-lint.sh"
+if [ ! -x "$REACH_LINT" ]; then
+  echo "  FLAG [reach] reach-lint.sh missing or not executable -- cannot verify"
+  total_flags=$((total_flags + 1))
+else
+  reach_out="$("$REACH_LINT" 2>&1 | grep '^  FLAG ')"
+  if [ -z "$reach_out" ]; then
+    echo "  clean -- every command file declares a scope; all user-level names resolve"
+  else
+    echo "$reach_out"
+    total_flags=$((total_flags + $(echo "$reach_out" | grep -c .) ))
+    echo "  -> full report: bin/reach-lint.sh"
+  fi
+fi
+
 echo
 echo "############################################################"
 echo "== $total_flags total FLAG(s) across ${#projects[@]} project(s) =="

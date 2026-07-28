@@ -23,22 +23,33 @@ BIN_DEST="$HOME/.local/bin"
 CMD_SRC="$REPO/.claude/commands"
 CMD_DEST="$HOME/.claude/commands"
 
-# Commands promoted to user level (available in every repo).
-GLOBAL_COMMANDS=(ideate cloture)
+# Both lists below are DERIVED, not typed. A hand-maintained list is what
+# produced the 2026-07-27 gap: three shims existed because three were typed,
+# and the six survey scripts the command files also name were never noticed.
+#
+# GLOBAL_COMMANDS = every command file declaring `scope: user` in frontmatter
+# (see bin/reach-lint.sh check A). Adding that line is the whole opt-in.
+mapfile -t GLOBAL_COMMANDS < <(
+  for f in "$CMD_SRC"/*.md; do
+    [ -f "$f" ] || continue
+    awk 'NR==1 && $0!="---"{exit} NR==1{fm=1;next} fm && $0=="---"{exit}
+         fm && /^scope:[[:space:]]*user[[:space:]]*$/{print "y";exit}' "$f" \
+      | grep -q y && basename "$f" .md
+  done
+)
 
-# Scripts shimmed onto PATH. The ecosystem-protocol guards named in the
-# propagated CLAUDE.md baseline, plus every offline survey the command
-# files above tell a session to run before it reasons about anything.
-SHIMMED=(
-  check-project-busy
-  closeout-lint
-  ecosystem-survey
-  focus-commit
-  hygiene-lint
-  milestone-audit
-  notify-senechal
-  precipitation-scan
-  steward-survey
+# SHIMMED = every bin/<name>.sh those files name, plus every bare token in
+# CLAUDE.md's propagated "Ecosystem protocols" block that matches one of our
+# own bin scripts. Anything a global command tells a session to run must be
+# reachable from a repo that has no realisateur checkout.
+mapfile -t SHIMMED < <(
+  {
+    for n in "${GLOBAL_COMMANDS[@]:-}"; do
+      [ -n "${n:-}" ] && grep -o 'bin/[a-z0-9-]*\.sh' "$CMD_SRC/$n.md" 2>/dev/null
+    done | sed 's|bin/||; s|\.sh||'
+    grep -o '`[a-z][a-z0-9-]*`' "$REPO/CLAUDE.md" 2>/dev/null | tr -d '`' \
+      | while read -r t; do [ -f "$REPO/bin/$t.sh" ] && echo "$t"; done
+  } | sort -u
 )
 
 CHECK_ONLY=0
@@ -142,17 +153,23 @@ for name in "${GLOBAL_COMMANDS[@]}"; do
   install_file "$CMD_DEST/$name.md" "$(render_command "$name")" 644 "/$name"
 done
 
-# Every bin/*.sh a global command names must be shimmed, or the command
-# tells a session in some other repo to run something that isn't there.
-note "coverage check"
-for name in "${GLOBAL_COMMANDS[@]}"; do
-  [ -f "$CMD_SRC/$name.md" ] || continue
-  while read -r want; do
-    [ -n "$want" ] || continue
-    printf '%s\n' "${SHIMMED[@]}" | grep -qx "$want" \
-      || flag "/$name calls bin/$want.sh but it is not in SHIMMED -- add it"
-  done < <(grep -o 'bin/[a-z0-9-]*\.sh' "$CMD_SRC/$name.md" | sed 's|bin/||; s|\.sh||' | sort -u)
-done
+# The lists above are derived from the command files, so a coverage check
+# against those same files would only confirm the derivation. The check that
+# means something is the independent one: does every command the INSTALLED
+# files name actually resolve from a neutral cwd? That is reach-lint check B,
+# and it reads ~/.claude/commands rather than this repo's sources.
+note "reach check (bin/reach-lint.sh)"
+if [ -x "$REPO/bin/reach-lint.sh" ]; then
+  reach_out="$("$REPO/bin/reach-lint.sh" --strict-reach 2>&1)"
+  if [ $? -eq 0 ]; then
+    note "  ok      every command named by an installed file resolves from cwd /"
+  else
+    printf '%s\n' "$reach_out" | grep '^  FLAG \[unreachable\]'
+    flag "reach-lint reported FLAGs (run bin/reach-lint.sh for the full report)"
+  fi
+else
+  flag "bin/reach-lint.sh missing or not executable -- reach unverified"
+fi
 
 if [ "$fail" = 0 ]; then
   note "OK -- all shims and user-level commands in sync with $REPO"

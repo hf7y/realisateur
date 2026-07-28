@@ -134,6 +134,35 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     (Distinct from the queued BLOCKERS.md task-shaped-language row, which
     is 13 proper: a decision in a file nothing dispatches from at all.)
 
+    **13c — the unasked-scope case: the executor cannot reach what the
+    instruction names.** 13b assumes you know the set of executors and
+    forgot one. 13c is worse: the set was never enumerated, because the
+    thing works perfectly in the one place anyone looked. Found live
+    2026-07-27 — `/ideate` and `/cloture` existed only in
+    `realisateur/.claude/commands/`, so they were invocable in exactly
+    one repo, and six of the nine scripts they instruct a session to run
+    had no PATH shim. Both facts were invisible for the same reason: a
+    project-scoped command that resolves everything from its own repo
+    emits no failure signal at all. `[dispatch-parity]` could not see it,
+    because it compares command files *to each other* and every command
+    file had the same blind spot. The tell is an instruction file with no
+    stated audience: nobody decided these should be repo-local, the
+    question was never posed.
+
+    **Rule:** every command/instruction file states its **scope** —
+    `scope: project` or `scope: user` in frontmatter — and every command
+    a `scope: user` file names must resolve from a neutral cwd, since it
+    will be read inside repos with no realisateur checkout and no
+    relative `bin/`. Silence is not an answer; a file with no declared
+    scope is the defect.
+
+    **Mechanical guard:** `reach-lint.sh` (check A `[scope-undeclared]`,
+    check B `[unreachable]`), surfaced as `hygiene-lint.sh` check 11 and
+    gated in `install-shims.sh`, which derives BOTH its install list and
+    its shim list from `scope:` rather than a typed list — the typed list
+    is what produced the gap. Adding `scope: user` to a command file is
+    the entire opt-in; nothing else needs editing.
+
 14. **A sensor reports a negative it never checked for.** A probe reads one
     of the places a thing can live and reports "not present" as if it had
     read all of them — so the tool is confidently wrong, and wrong in the

@@ -1,4 +1,5 @@
 ---
+scope: user
 description: Interactive cross-project vision/triage pass -- surface state across the whole ecosystem (or one project), ask direct design questions, record decisions, queue priority. Does not scaffold or build.
 argument-hint: "[project-name]"
 ---

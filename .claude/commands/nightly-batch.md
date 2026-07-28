@@ -1,4 +1,5 @@
 ---
+scope: project
 description: Nightly pass -- infer ideas from dropped inbox artifacts and wire them into scaffolded, scheduler-registered projects
 ---
 

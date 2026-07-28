@@ -1,4 +1,5 @@
 ---
+scope: user
 description: Session-closing rite -- run the closeout lint, name the philosophy delta, report cross-project writes, make insights durable, surface decisions. Does not build.
 ---
 
