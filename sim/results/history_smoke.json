@@ -1,0 +1,582 @@
+[
+ {
+  "gen": 900,
+  "tag": "smoke:baseline",
+  "round": 0,
+  "stamp": 1785220808.633434,
+  "seeds": 8,
+  "ticks": 120,
+  "mutation": {},
+  "elapsed": 6.4,
+  "paradigm_of": {
+   "A_baseline": "control",
+   "B_more_sensors": "P1_ashby",
+   "B2_decorrelated": "P1_ashby",
+   "C_blind_symbol": "P1_ashby",
+   "D_both": "P1_ashby",
+   "C_hostile": "P1_ashby",
+   "P_devices": "P2_perrow",
+   "P_slack": "P2_perrow",
+   "P_slack_devices": "P2_perrow",
+   "H_local": "P3_hayek",
+   "H_local_blind": "P3_hayek"
+  },
+  "summary": {
+   "A_baseline": {
+    "undetected_ticks": 315.375,
+    "mttd": 0.0,
+    "attention_artifact": 11.375,
+    "attention_real": 32.125,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.276,
+    "drain_ratio": 0.224,
+    "trust": 0.886,
+    "false_clean": 0.0,
+    "false_alarm": 473.5,
+    "local_fixes": 0.0
+   },
+   "B_more_sensors": {
+    "undetected_ticks": 315.375,
+    "mttd": 0.0,
+    "attention_artifact": 11.375,
+    "attention_real": 32.125,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.276,
+    "drain_ratio": 0.224,
+    "trust": 0.886,
+    "false_clean": 0.0,
+    "false_alarm": 473.5,
+    "local_fixes": 0.0
+   },
+   "B2_decorrelated": {
+    "undetected_ticks": 84.625,
+    "mttd": 0.0,
+    "attention_artifact": 37.625,
+    "attention_real": 38.375,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.495,
+    "drain_ratio": 0.225,
+    "trust": 0.624,
+    "false_clean": 0.0,
+    "false_alarm": 2037.0,
+    "local_fixes": 0.0
+   },
+   "C_blind_symbol": {
+    "undetected_ticks": 10.875,
+    "mttd": 0.0,
+    "attention_artifact": 0.0,
+    "attention_real": 41.5,
+    "attention_blind": 1.5,
+    "attention_wasted_frac": 0.0,
+    "drain_ratio": 0.222,
+    "trust": 1.0,
+    "false_clean": 0.0,
+    "false_alarm": 0.0,
+    "local_fixes": 0.0
+   },
+   "D_both": {
+    "undetected_ticks": 10.875,
+    "mttd": 0.0,
+    "attention_artifact": 0.0,
+    "attention_real": 41.5,
+    "attention_blind": 1.5,
+    "attention_wasted_frac": 0.0,
+    "drain_ratio": 0.222,
+    "trust": 1.0,
+    "false_clean": 0.0,
+    "false_alarm": 0.0,
+    "local_fixes": 0.0
+   },
+   "C_hostile": {
+    "undetected_ticks": 73.125,
+    "mttd": 0.518,
+    "attention_artifact": 0.0,
+    "attention_real": 40.875,
+    "attention_blind": 4.125,
+    "attention_wasted_frac": 0.0,
+    "drain_ratio": 0.228,
+    "trust": 1.0,
+    "false_clean": 0.0,
+    "false_alarm": 0.0,
+    "local_fixes": 0.0
+   },
+   "P_devices": {
+    "undetected_ticks": 369.75,
+    "mttd": 0.0,
+    "attention_artifact": 37.75,
+    "attention_real": 30.375,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.552,
+    "drain_ratio": 0.204,
+    "trust": 0.623,
+    "false_clean": 0.0,
+    "false_alarm": 556.0,
+    "local_fixes": 0.0
+   },
+   "P_slack": {
+    "undetected_ticks": 504.75,
+    "mttd": 0.968,
+    "attention_artifact": 14.25,
+    "attention_real": 29.0,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.329,
+    "drain_ratio": 0.173,
+    "trust": 0.857,
+    "false_clean": 0.0,
+    "false_alarm": 605.375,
+    "local_fixes": 0.0
+   },
+   "P_slack_devices": {
+    "undetected_ticks": 426.25,
+    "mttd": 0.953,
+    "attention_artifact": 33.625,
+    "attention_real": 24.375,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.574,
+    "drain_ratio": 0.193,
+    "trust": 0.664,
+    "false_clean": 0.0,
+    "false_alarm": 593.625,
+    "local_fixes": 0.0
+   },
+   "H_local": {
+    "undetected_ticks": 84.375,
+    "mttd": 1.919,
+    "attention_artifact": 16.75,
+    "attention_real": 29.875,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.356,
+    "drain_ratio": 0.229,
+    "trust": 0.833,
+    "false_clean": 0.0,
+    "false_alarm": 559.625,
+    "local_fixes": 8.5
+   },
+   "H_local_blind": {
+    "undetected_ticks": 1.125,
+    "mttd": 0.024,
+    "attention_artifact": 0.0,
+    "attention_real": 42.0,
+    "attention_blind": 1.5,
+    "attention_wasted_frac": 0.0,
+    "drain_ratio": 0.22,
+    "trust": 1.0,
+    "false_clean": 0.0,
+    "false_alarm": 0.0,
+    "local_fixes": 0.25
+   }
+  },
+  "judgments": [
+   {
+    "hid": "H1",
+    "verdict": "SUPPORTED",
+    "why": "effect 0.966 >= min_effect 0.3, CI [-1.000,-0.916].",
+    "paradigm": "P1_ashby",
+    "claim": "Ashby's Law binds at the SENSOR, not only the effector. Adding sensor OUTPUT SYMBOLS (a BLIND state meaning 'I could not read this domain') reduces unregulated disturbance more than adding more SENSORS does, because sensors in this ecosystem share a correlated blind spot ($HOME-scoping) and reconciling N co-blind sensors yields the variety of one.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 10.875,
+     "ctrl_mean": 315.375,
+     "treat_sd": 19.114,
+     "ctrl_sd": 120.116,
+     "effect": -0.9655,
+     "ci_low": -1.0,
+     "ci_high": -0.9158
+    }
+   },
+   {
+    "hid": "H1b",
+    "verdict": "SUPPORTED",
+    "why": "effect 0.768 >= min_effect 0.15, CI [-0.990,-0.455].",
+    "paradigm": "P1_ashby",
+    "claim": "The BLIND advantage is not an artifact of assuming a BLIND report always fixes the blind spot. It survives a hostile parameterisation where BLIND only leads to a structural fix 20% of the time.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 73.125,
+     "ctrl_mean": 315.375,
+     "treat_sd": 120.029,
+     "ctrl_sd": 120.116,
+     "effect": -0.7681,
+     "ci_low": -0.9901,
+     "ci_high": -0.4548
+    }
+   },
+   {
+    "hid": "H2",
+    "verdict": "INCONCLUSIVE",
+    "why": "95% CI [-0.312, 0.466] spans zero -- no reliable effect.",
+    "paradigm": "P1_ashby",
+    "claim": "More sensors, reconciled, does NOT help when blind spots are correlated -- the queued sensor-agree.sh remedy addresses the wrong invariant.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 315.375,
+     "ctrl_mean": 315.375,
+     "treat_sd": 120.116,
+     "ctrl_sd": 120.116,
+     "effect": 0.0,
+     "ci_low": -0.3116,
+     "ci_high": 0.4659
+    }
+   },
+   {
+    "hid": "H3",
+    "verdict": "SUPPORTED",
+    "why": "effect 1.000 >= min_effect 0.1, CI [0.487,1.767].",
+    "paradigm": "P2_perrow",
+    "claim": "Perrow's corollary -- that adding safety devices to an interactively complex, tightly coupled system makes it worse -- DOES transfer to this ecosystem, contradicting bibliothecaire's normal-accidents brief, which argues it does not because the guards sit outside the control path.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 0.552,
+     "ctrl_mean": 0.276,
+     "treat_sd": 0.082,
+     "ctrl_sd": 0.123,
+     "effect": 1.0005,
+     "ci_low": 0.4868,
+     "ci_high": 1.7673
+    }
+   },
+   {
+    "hid": "H4",
+    "verdict": "FALSIFIED",
+    "why": "effect -0.601 < min_effect 0.1 (CI [0.215,1.195]) -- the falsifier fired.",
+    "paradigm": "P2_perrow",
+    "claim": "Perrow's actual prescription is a COUPLING intervention, not a complexity one: insert slack. Loosening coupling should beat instrumenting, using no new sensors at all.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 504.75,
+     "ctrl_mean": 315.375,
+     "treat_sd": 98.853,
+     "ctrl_sd": 120.116,
+     "effect": 0.6005,
+     "ci_low": 0.2152,
+     "ci_high": 1.1953
+    }
+   },
+   {
+    "hid": "H5",
+    "verdict": "FALSIFIED",
+    "why": "effect -6.759 < min_effect 0.1 (CI [1.978,95.375]) -- the falsifier fired.",
+    "paradigm": "P3_hayek",
+    "claim": "Hayek's structural claim -- the centre is missing an input that cannot be sent to it -- means NO improvement to central sensing can be the primary remedy. Local self-repair by the organ that holds circumstance-of-time-and-place knowledge should beat the best central-sensing arm.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 84.375,
+     "ctrl_mean": 10.875,
+     "treat_sd": 49.754,
+     "ctrl_sd": 19.114,
+     "effect": 6.7586,
+     "ci_low": 1.9781,
+     "ci_high": 95.375
+    }
+   },
+   {
+    "hid": "H6",
+    "verdict": "SUPPORTED",
+    "why": "effect 0.987 >= min_effect 0.05, CI [-1.000,-0.954].",
+    "paradigm": "P3_hayek",
+    "claim": "Decentralisation and null-discrimination are COMPLEMENTS, not substitutes: local repair handles what the centre cannot see, BLIND handles what local organs cannot know is systemic.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 1.125,
+     "ctrl_mean": 84.375,
+     "treat_sd": 2.976,
+     "ctrl_sd": 49.754,
+     "effect": -0.9867,
+     "ci_low": -1.0,
+     "ci_high": -0.9537
+    }
+   }
+  ]
+ },
+ {
+  "gen": 901,
+  "tag": "smoke:high_break",
+  "round": 0,
+  "stamp": 1785220815.2699826,
+  "seeds": 8,
+  "ticks": 120,
+  "mutation": {
+   "break_rate": 0.06
+  },
+  "elapsed": 5.9,
+  "paradigm_of": {
+   "A_baseline": "control",
+   "B_more_sensors": "P1_ashby",
+   "B2_decorrelated": "P1_ashby",
+   "C_blind_symbol": "P1_ashby",
+   "D_both": "P1_ashby",
+   "C_hostile": "P1_ashby",
+   "P_devices": "P2_perrow",
+   "P_slack": "P2_perrow",
+   "P_slack_devices": "P2_perrow",
+   "H_local": "P3_hayek",
+   "H_local_blind": "P3_hayek"
+  },
+  "summary": {
+   "A_baseline": {
+    "undetected_ticks": 822.25,
+    "mttd": 0.0,
+    "attention_artifact": 11.375,
+    "attention_real": 73.5,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.14,
+    "drain_ratio": 0.193,
+    "trust": 0.886,
+    "false_clean": 0.0,
+    "false_alarm": 528.75,
+    "local_fixes": 0.0
+   },
+   "B_more_sensors": {
+    "undetected_ticks": 822.25,
+    "mttd": 0.0,
+    "attention_artifact": 11.375,
+    "attention_real": 73.5,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.14,
+    "drain_ratio": 0.193,
+    "trust": 0.886,
+    "false_clean": 0.0,
+    "false_alarm": 528.75,
+    "local_fixes": 0.0
+   },
+   "B2_decorrelated": {
+    "undetected_ticks": 897.5,
+    "mttd": 0.0,
+    "attention_artifact": 57.125,
+    "attention_real": 65.0,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.469,
+    "drain_ratio": 0.215,
+    "trust": 0.429,
+    "false_clean": 0.0,
+    "false_alarm": 1197.5,
+    "local_fixes": 0.0
+   },
+   "C_blind_symbol": {
+    "undetected_ticks": 536.25,
+    "mttd": 0.001,
+    "attention_artifact": 0.0,
+    "attention_real": 92.125,
+    "attention_blind": 1.375,
+    "attention_wasted_frac": 0.0,
+    "drain_ratio": 0.213,
+    "trust": 1.0,
+    "false_clean": 0.0,
+    "false_alarm": 0.0,
+    "local_fixes": 0.0
+   },
+   "D_both": {
+    "undetected_ticks": 536.25,
+    "mttd": 0.001,
+    "attention_artifact": 0.0,
+    "attention_real": 92.125,
+    "attention_blind": 1.375,
+    "attention_wasted_frac": 0.0,
+    "drain_ratio": 0.213,
+    "trust": 1.0,
+    "false_clean": 0.0,
+    "false_alarm": 0.0,
+    "local_fixes": 0.0
+   },
+   "C_hostile": {
+    "undetected_ticks": 581.75,
+    "mttd": 0.376,
+    "attention_artifact": 0.0,
+    "attention_real": 90.875,
+    "attention_blind": 3.25,
+    "attention_wasted_frac": 0.0,
+    "drain_ratio": 0.216,
+    "trust": 1.0,
+    "false_clean": 0.0,
+    "false_alarm": 0.0,
+    "local_fixes": 0.0
+   },
+   "P_devices": {
+    "undetected_ticks": 824.125,
+    "mttd": 0.0,
+    "attention_artifact": 28.25,
+    "attention_real": 67.875,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.296,
+    "drain_ratio": 0.183,
+    "trust": 0.718,
+    "false_clean": 0.0,
+    "false_alarm": 610.25,
+    "local_fixes": 0.0
+   },
+   "P_slack": {
+    "undetected_ticks": 1087.75,
+    "mttd": 1.07,
+    "attention_artifact": 13.875,
+    "attention_real": 55.25,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.207,
+    "drain_ratio": 0.138,
+    "trust": 0.861,
+    "false_clean": 0.0,
+    "false_alarm": 672.75,
+    "local_fixes": 0.0
+   },
+   "P_slack_devices": {
+    "undetected_ticks": 1001.25,
+    "mttd": 0.617,
+    "attention_artifact": 31.625,
+    "attention_real": 58.875,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.351,
+    "drain_ratio": 0.138,
+    "trust": 0.684,
+    "false_clean": 0.0,
+    "false_alarm": 563.25,
+    "local_fixes": 0.0
+   },
+   "H_local": {
+    "undetected_ticks": 249.375,
+    "mttd": 1.959,
+    "attention_artifact": 27.75,
+    "attention_real": 90.75,
+    "attention_blind": 0.0,
+    "attention_wasted_frac": 0.239,
+    "drain_ratio": 0.215,
+    "trust": 0.723,
+    "false_clean": 0.0,
+    "false_alarm": 571.75,
+    "local_fixes": 30.5
+   },
+   "H_local_blind": {
+    "undetected_ticks": 97.5,
+    "mttd": 0.716,
+    "attention_artifact": 0.0,
+    "attention_real": 110.625,
+    "attention_blind": 1.375,
+    "attention_wasted_frac": 0.0,
+    "drain_ratio": 0.223,
+    "trust": 1.0,
+    "false_clean": 0.0,
+    "false_alarm": 0.0,
+    "local_fixes": 11.125
+   }
+  },
+  "judgments": [
+   {
+    "hid": "H1",
+    "verdict": "SUPPORTED",
+    "why": "effect 0.348 >= min_effect 0.3, CI [-0.478,-0.173].",
+    "paradigm": "P1_ashby",
+    "claim": "Ashby's Law binds at the SENSOR, not only the effector. Adding sensor OUTPUT SYMBOLS (a BLIND state meaning 'I could not read this domain') reduces unregulated disturbance more than adding more SENSORS does, because sensors in this ecosystem share a correlated blind spot ($HOME-scoping) and reconciling N co-blind sensors yields the variety of one.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 536.25,
+     "ctrl_mean": 822.25,
+     "treat_sd": 121.856,
+     "ctrl_sd": 203.625,
+     "effect": -0.3478,
+     "ci_low": -0.4783,
+     "ci_high": -0.1726
+    }
+   },
+   {
+    "hid": "H1b",
+    "verdict": "SUPPORTED",
+    "why": "effect 0.292 >= min_effect 0.15, CI [-0.454,-0.069].",
+    "paradigm": "P1_ashby",
+    "claim": "The BLIND advantage is not an artifact of assuming a BLIND report always fixes the blind spot. It survives a hostile parameterisation where BLIND only leads to a structural fix 20% of the time.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 581.75,
+     "ctrl_mean": 822.25,
+     "treat_sd": 170.759,
+     "ctrl_sd": 203.625,
+     "effect": -0.2925,
+     "ci_low": -0.4541,
+     "ci_high": -0.069
+    }
+   },
+   {
+    "hid": "H2",
+    "verdict": "INCONCLUSIVE",
+    "why": "95% CI [-0.228, 0.277] spans zero -- no reliable effect.",
+    "paradigm": "P1_ashby",
+    "claim": "More sensors, reconciled, does NOT help when blind spots are correlated -- the queued sensor-agree.sh remedy addresses the wrong invariant.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 822.25,
+     "ctrl_mean": 822.25,
+     "treat_sd": 203.625,
+     "ctrl_sd": 203.625,
+     "effect": 0.0,
+     "ci_low": -0.2284,
+     "ci_high": 0.2767
+    }
+   },
+   {
+    "hid": "H3",
+    "verdict": "SUPPORTED",
+    "why": "effect 1.121 >= min_effect 0.1, CI [0.558,1.883].",
+    "paradigm": "P2_perrow",
+    "claim": "Perrow's corollary -- that adding safety devices to an interactively complex, tightly coupled system makes it worse -- DOES transfer to this ecosystem, contradicting bibliothecaire's normal-accidents brief, which argues it does not because the guards sit outside the control path.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 0.296,
+     "ctrl_mean": 0.14,
+     "treat_sd": 0.076,
+     "ctrl_sd": 0.051,
+     "effect": 1.1208,
+     "ci_low": 0.5585,
+     "ci_high": 1.8825
+    }
+   },
+   {
+    "hid": "H4",
+    "verdict": "FALSIFIED",
+    "why": "effect -0.323 < min_effect 0.1 (CI [0.098,0.649]) -- the falsifier fired.",
+    "paradigm": "P2_perrow",
+    "claim": "Perrow's actual prescription is a COUPLING intervention, not a complexity one: insert slack. Loosening coupling should beat instrumenting, using no new sensors at all.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 1087.75,
+     "ctrl_mean": 822.25,
+     "treat_sd": 166.684,
+     "ctrl_sd": 203.625,
+     "effect": 0.3229,
+     "ci_low": 0.0975,
+     "ci_high": 0.6493
+    }
+   },
+   {
+    "hid": "H5",
+    "verdict": "SUPPORTED",
+    "why": "effect 0.535 >= min_effect 0.1, CI [-0.623,-0.420].",
+    "paradigm": "P3_hayek",
+    "claim": "Hayek's structural claim -- the centre is missing an input that cannot be sent to it -- means NO improvement to central sensing can be the primary remedy. Local self-repair by the organ that holds circumstance-of-time-and-place knowledge should beat the best central-sensing arm.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 249.375,
+     "ctrl_mean": 536.25,
+     "treat_sd": 57.771,
+     "ctrl_sd": 121.856,
+     "effect": -0.535,
+     "ci_low": -0.623,
+     "ci_high": -0.42
+    }
+   },
+   {
+    "hid": "H6",
+    "verdict": "SUPPORTED",
+    "why": "effect 0.609 >= min_effect 0.05, CI [-0.730,-0.466].",
+    "paradigm": "P3_hayek",
+    "claim": "Decentralisation and null-discrimination are COMPLEMENTS, not substitutes: local repair handles what the centre cannot see, BLIND handles what local organs cannot know is systemic.",
+    "stats": {
+     "n": 8,
+     "treat_mean": 97.5,
+     "ctrl_mean": 249.375,
+     "treat_sd": 40.884,
+     "ctrl_sd": 57.771,
+     "effect": -0.609,
+     "ci_low": -0.7298,
+     "ci_high": -0.466
+    }
+   }
+  ]
+ }
+]

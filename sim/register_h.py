@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""Pre-registration of the confirmatory hypotheses. Run ONCE, before any
+generation. prereg.register() refuses to overwrite, so a second run is a
+loud no-op rather than a silent edit."""
+from prereg import Hypothesis, register
+
+H = [
+    # ================= PARADIGM 1 -- ASHBY (requisite variety) =============
+    Hypothesis(
+        hid="H1", paradigm="P1_ashby",
+        claim=("Ashby's Law binds at the SENSOR, not only the effector. Adding "
+               "sensor OUTPUT SYMBOLS (a BLIND state meaning 'I could not read "
+               "this domain') reduces unregulated disturbance more than adding "
+               "more SENSORS does, because sensors in this ecosystem share a "
+               "correlated blind spot ($HOME-scoping) and reconciling N "
+               "co-blind sensors yields the variety of one."),
+        prediction=("C_blind_symbol shows a large reduction in undetected_ticks "
+                    "vs A_baseline, while B_more_sensors shows essentially none."),
+        falsifier=("FALSIFIED if C_blind_symbol reduces undetected_ticks by less "
+                   "than 30% vs A_baseline, or if the 95% bootstrap CI spans zero."),
+        metric="undetected_ticks", arms=["C_blind_symbol", "A_baseline"],
+        direction="lower_better", min_effect=0.30,
+        confound=("BLIND cures the blind spot with probability blind_cure_p "
+                  "(default 1.0), which hands C a trivial win. C_hostile sets "
+                  "blind_cure_p=0.2 and H1b tests whether the effect survives."),
+    ),
+    Hypothesis(
+        hid="H1b", paradigm="P1_ashby",
+        claim=("The BLIND advantage is not an artifact of assuming a BLIND "
+               "report always fixes the blind spot. It survives a hostile "
+               "parameterisation where BLIND only leads to a structural fix "
+               "20% of the time."),
+        prediction="C_hostile still beats A_baseline on undetected_ticks.",
+        falsifier=("FALSIFIED if C_hostile reduces undetected_ticks by less than "
+                   "15% vs A_baseline, or the CI spans zero. That would mean the "
+                   "H1 result was an artifact of the cure assumption."),
+        metric="undetected_ticks", arms=["C_hostile", "A_baseline"],
+        direction="lower_better", min_effect=0.15,
+    ),
+    Hypothesis(
+        hid="H2", paradigm="P1_ashby",
+        claim=("More sensors, reconciled, does NOT help when blind spots are "
+               "correlated -- the queued sensor-agree.sh remedy addresses the "
+               "wrong invariant."),
+        prediction="B_more_sensors is statistically indistinguishable from A_baseline.",
+        falsifier=("FALSIFIED if B_more_sensors reduces undetected_ticks by 10% "
+                   "or more vs A_baseline with a CI excluding zero. Note this "
+                   "hypothesis predicts a NULL, so it is confirmed by the CI "
+                   "spanning zero -- recorded as INCONCLUSIVE by the judge, "
+                   "which for H2 specifically is the predicted outcome."),
+        metric="undetected_ticks", arms=["B_more_sensors", "A_baseline"],
+        direction="lower_better", min_effect=0.10,
+    ),
+
+    # ================= PARADIGM 2 -- PERROW (normal accidents) =============
+    Hypothesis(
+        hid="H3", paradigm="P2_perrow",
+        claim=("Perrow's corollary -- that adding safety devices to an "
+               "interactively complex, tightly coupled system makes it worse -- "
+               "DOES transfer to this ecosystem, contradicting bibliothecaire's "
+               "normal-accidents brief, which argues it does not because the "
+               "guards sit outside the control path."),
+        prediction=("P_devices (4 sensors that can themselves misfire) is WORSE "
+                    "than A_baseline on attention_wasted_frac."),
+        falsifier=("FALSIFIED if P_devices does not INCREASE attention_wasted_frac "
+                   "by at least 10% vs A_baseline. If falsified, bibliothecaire's "
+                   "brief is vindicated and the disanalogy it claims is real."),
+        metric="attention_wasted_frac", arms=["P_devices", "A_baseline"],
+        direction="higher_better", min_effect=0.10,
+    ),
+    Hypothesis(
+        hid="H4", paradigm="P2_perrow",
+        claim=("Perrow's actual prescription is a COUPLING intervention, not a "
+               "complexity one: insert slack. Loosening coupling should beat "
+               "instrumenting, using no new sensors at all."),
+        prediction="P_slack reduces undetected_ticks vs A_baseline.",
+        falsifier=("FALSIFIED if P_slack reduces undetected_ticks by less than "
+                   "10% vs A_baseline or the CI spans zero. That would mean "
+                   "slack is not a substitute for sensing here."),
+        metric="undetected_ticks", arms=["P_slack", "A_baseline"],
+        direction="lower_better", min_effect=0.10,
+    ),
+
+    # ================= PARADIGM 3 -- HAYEK (knowledge problem) =============
+    Hypothesis(
+        hid="H5", paradigm="P3_hayek",
+        claim=("Hayek's structural claim -- the centre is missing an input that "
+               "cannot be sent to it -- means NO improvement to central sensing "
+               "can be the primary remedy. Local self-repair by the organ that "
+               "holds circumstance-of-time-and-place knowledge should beat the "
+               "best central-sensing arm."),
+        prediction="H_local beats C_blind_symbol on undetected_ticks.",
+        falsifier=("FALSIFIED if H_local does not reduce undetected_ticks by at "
+                   "least 10% vs C_blind_symbol. If falsified, central sensing "
+                   "improvement is vindicated over decentralisation AT THIS "
+                   "disturbance regime, which is the honest scope of the claim."),
+        metric="undetected_ticks", arms=["H_local", "C_blind_symbol"],
+        direction="lower_better", min_effect=0.10,
+    ),
+    Hypothesis(
+        hid="H6", paradigm="P3_hayek",
+        claim=("Decentralisation and null-discrimination are COMPLEMENTS, not "
+               "substitutes: local repair handles what the centre cannot see, "
+               "BLIND handles what local organs cannot know is systemic."),
+        prediction="H_local_blind beats BOTH H_local and C_blind_symbol.",
+        falsifier=("FALSIFIED if H_local_blind fails to reduce undetected_ticks "
+                   "by at least 5% vs H_local -- i.e. if adding BLIND on top of "
+                   "local repair buys nothing, they are substitutes and the "
+                   "complementarity claim is wrong."),
+        metric="undetected_ticks", arms=["H_local_blind", "H_local"],
+        direction="lower_better", min_effect=0.05,
+    ),
+]
+
+if __name__ == "__main__":
+    for h in H:
+        try:
+            register(h)
+            print(f"registered {h.hid} [{h.paradigm}]")
+        except SystemExit as e:
+            print(f"skip {h.hid}: {str(e).splitlines()[0]}")

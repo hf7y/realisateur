@@ -1,0 +1,4 @@
+results/*.json
+results/*.out
+results/*.log
+!results/prereg.jsonl
