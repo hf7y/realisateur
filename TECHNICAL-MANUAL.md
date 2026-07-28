@@ -1,5 +1,8 @@
 # TECHNICAL MANUAL — ecosim overnight run, 2026-07-27/28
 
+> **New here? Read [`ELI5.md`](ELI5.md) first** — the whole study in small
+> words, including the four things it got wrong.
+
 Audience: another agent picking this up cold. This file tells you what
 exists, how to run it, what actually ran, and where the traps are. It is
 deliberately factual; the interpretation lives in

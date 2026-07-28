@@ -1,5 +1,8 @@
 # PHILOSOPHY AND CRITIQUE — what I claimed, what the data did to it
 
+> **New here? Read [`ELI5.md`](ELI5.md) first** — this argument in small
+> words, no jargon, same conclusions and same confessions.
+
 Companion to `TECHNICAL-MANUAL.md`. That document says what ran; this one
 says what I believed before it ran, what the numbers did to those beliefs,
 and where I think the beliefs were badly formed regardless of whether the
