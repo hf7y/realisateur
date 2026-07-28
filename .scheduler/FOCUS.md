@@ -1530,6 +1530,120 @@ findings about looking, not about building.
 **2026-07-28 (interactive `/cloture`, from wtul): wtul's 49-question backlog was a structural defect, not a decision queue — pattern 17 filed as doctrine (`1497bc0`); cross-writes in scheduler (`68432cf`, `3170b81`, `6c95fab`, `a69ff05`), wtul (`5a92fb5`, `cbe597d`, `12aaf83`), senechal (`f4f45ab`, `b83cbb5`).** Zach asked why wtul had so many open questions and said he could not burn down 49. Three compounding causes, none of which was "too many decisions to make." **(1) Rate:** `wtul.conf` declares `BATCH_CRON="14 3 * * 3,6"` — "confirmed with Zach", and inert. There is no wtul crontab line; the paced rotation dispatches it at weight 2 on a 5-minute tick, so it ran **31 times in 4 days**, twice re-firing within 2 seconds of the prior run finishing, against a 2/week design intent. Weight cut to 1 (`68432cf`); the cadence lie itself is left standing on purpose, since fixing it flips the dispatch path too. **(2) Inlet:** `wtul-batch.md` step 5 *required* every run to append every feature built to QUESTIONS.md, while the outlet drained only on a human `> ` reply — an unconditional inlet against a human-only outlet. Step 5 now routes by kind (`5a92fb5`). **(3) The real defect, found only by reading the entries:** Zach had answered 28 of them on 2026-07-27, and `--consume` had destroyed the replies as a side effect of reading while run 28 closed zero entries — **pattern 17, "the reader that destroys what it read"** (`1497bc0`), guard landed same-day (`3170b81`), mirror-image human-drift hazard netted at the editor exit (`6c95fab`), `%%TAG` twin filed with scheduler (`a69ff05`). **The lesson worth carrying past wtul: the loudest count was the least informative number in the room.** "49 open questions" measured the inlet's rate, not the decision backlog — roughly 6 were questions. Reading six of them was worth more than any aggregate over all 51, and the aggregate is what nearly got the pile bulk-archived with 28 live unacted answers inside it. This is the fourth time this ecosystem's loudest survey output has been its wrongest (see the false-cluster, false-DARK, and false-LIVE rows), and the first where the misleading number was a **count of a queue this ecosystem writes to itself**.
 
 
+## 2026-07-28 (interactive `/ideate` → build, Zach-directed): scheduler's roadmap given one telling, and four failures from one audit turned into four checks
+
+Began as `/ideate` on scheduler (single-project scope), became build work
+at Zach's explicit direction partway through. Named as such rather than
+drifting: the posture change was stated, not assumed.
+
+**Scheduler's vision was not missing, it was sixfold.** It lived in six
+FOCUS.md sections plus DESIGN-NOTES.md, with three re-sequencings to
+reconcile, so "is this idea on the path" cost a full read every time.
+Written as one prose section, `## The long arc` (`670f48b`), in the
+vision → milestone-chain → blockers shape `/ideate` step 4 prescribes.
+The six sections stay as detail and receipts; nothing was deleted.
+
+**The morning's four corrections, all the same shape — a claim held
+without a probe:**
+1. `decide.sh` option 3 (cron logging) billed itself "the deepest silence
+   in the ecosystem" on the premise that nothing witnesses a cron
+   dispatch. `journalctl -t CRON` returns 3812 lines and `/var/log/syslog`
+   1624, including six `svc-vaporwave` entries, because line 9 of
+   `50-default.conf` already matches `cron.*`. Retracted with witnesses
+   (`87fc41c`); the machine was not touched. **Third instance of the
+   probe-survey-headline pattern** — the audit's loudest finding was its
+   wrong one.
+2. I warned that the `*/15` sweep would launder 19 CLAUDE.md edits under
+   Zach's name, quoting the backlog entry that describes that bug rather
+   than reading the code. The honest-attribution fix had already landed;
+   the 11:00 sweep committed as `hf7y` saying "author unknown". The
+   warning was wrong in the same way the thing it warned about was wrong.
+3. I recommended aedile's wrapper be moved onto `lib/sweep-loop-common.sh`.
+   Reading it showed the bespoke design is deliberate and documented
+   (shared org monorepo, dedicated clone, PR flow). The duplication worth
+   fixing was ten lines, not the wrapper.
+4. I reported the shared engine as hanging on `notify-send`; vkv's
+   04:00 expiry had in fact recorded cleanly in 0s. Left unexplained
+   rather than smoothed over (`q-756f82`).
+
+**The prose trap, and why nothing caught it.** This session wrote a
+100-line vision section and then, two messages later, described
+bibliothecaire's `--require-briefs` as the guard against prose that
+"makes the machinery feel understood" — without applying it to its own
+output. Zach caught it. The structural reason, probed: `/ideate` step 4's
+prescribed shape has no slot for a falsifier (`grep -E
+'break|disanalogy|falsif|counter'` over `ideate.md` returns zero hits),
+so producing an unfalsifiable vision entry *conforms to the spec*.
+`--require-briefs` enforces exactly that slot but is scoped to
+`briefs/`; `hygiene-lint` checks stamp drift; `closeout-lint` checks
+durability. **A vision entry is the least-checked prose in the ecosystem
+while being the most load-bearing — everything downstream triages against
+it.** Queued as `PROSE-TRAP-GUARD-*.idea`, lint first and prose second,
+deliberately: fixing prose decay with more prose is the recursion the
+finding is about.
+
+**Four checks for the four failures** (ecosim `2129a13`): `[dirty-writer]`
+(a script that edits other repos with no commit path — caught
+`install-silence-audit.sh`, which left 19 dirty trees and exited 0),
+`[worktree-backed]` (a `~/.local/bin` entry resolving into a git
+worktree — caught the live one), `[twin]` (the same file in two
+projects), `[subrepo-invisible]` (aedile's monorepo path, which every
+`[ -d $repo/.git ]` test skips — known since 2026-07-24, still live).
+Added to the existing script rather than a sibling: writing a second
+audit tool while fixing a duplicate-mechanism bug would have been the
+same failure in the same commit. **`[twin]` failed its own founding case
+first** — it scanned registered projects only and so missed the duplicate
+that motivated it, which lives in a worktree; then over-fired once
+worktrees were included, because a repo and its worktree share files by
+definition. Both the miss and the over-fire are recorded in the file.
+
+**Layer-don't-replace, made concrete** (`4281936`). The dead-man switch
+hand-pasted into aedile that morning had drifted from the shared
+implementation within hours: no `notify-send`, no renewal warning, no
+opening delimiter, and — worst — it sat above the wrapper's own `LOG=`,
+so a tripped switch wrote to cron mail instead of `run.log`, and
+`scheduler status` reads `run.log`. Verified against the old version
+before replacing it: `rc=3`, nothing in the log. An expired aedile read
+as a job that had simply not run. Extracted to `lib/deadman-switch.sh`;
+the wrapper sources it and **refuses to run** if unreadable rather than
+running unprotected. **A bespoke wrapper can share a FUNCTION without
+adopting an ENGINE** — that distinction is why this is a small standalone
+file and not a migration.
+
+**A live hang was caused and fixed mid-session.** The first install hung
+(`rc=124`): aedile's wrapper exports `DBUS_SESSION_BUS_ADDRESS` at
+svc-vaporwave's own bus, where the socket exists but nothing listens, so
+`notify-send` blocks forever. **`|| true` guards against failing, not
+against never returning**, and the ecosystem uses that idiom in ~10 more
+places. Restored from backup, guarded with `timeout 5`, reinstalled,
+retested end to end. Unexplained residue filed as `q-756f82`.
+
+**Closing found 12 answered questions inside a merge conflict**
+(bibliothecaire `17fa399`). `closeout-lint` reported it as a plain
+`[dirty-tree]` FLAG; the file held live conflict markers and 62 lines of
+Zach's replies, uncommitted, minutes from being swept in as-is. Resolved
+by union, because neither side was a superset and the editor copy was
+demonstrably not stale — so a deliberate dismissal could not be told from
+a divergence artifact, and the two errors are not symmetric. **This is
+the strongest live exhibit yet for the multi-writer QUESTIONS interface
+being the least-regulated in the ecosystem**, and it was found by a
+durability lint that has no idea what a reply is.
+
+**Zach's standing ask, from those replies, filed here as work:**
+- [batch] **Name the trigger that warrants spinning up a NEW project, and
+  make it loud** — Zach's words, answering the OCR/heavy-jobs question:
+  heavy non-AI jobs should run on always-on dexter under usage guardrails,
+  owned by scheduler/senechal "until a new project becomes warranted."
+  He asked realisateur to identify that trigger and make it a mechanism,
+  not prose. Reader: realisateur's own next `/nightly-batch`. Related to
+  the incubation/graduation signals `bin/incubation-audit.sh` already
+  computes — start there rather than inventing a second notion.
+
+**Philosophy delta: none.** No doctrine file was edited by this session
+(`1497bc0`/`13ba119` are earlier sessions the same day). The prose-trap
+finding is a *candidate* for `BUILD-DISCIPLINE.md` and is queued as an
+inbox idea, not written into doctrine on this session's own authority.
+
 ## 2026-07-28 (interactive `/ideate`, Zach-directed): policy propagation has three channels and the one that carries the actual run instructions does not exist
 
 **Zach's question, verbatim: "how does policy spread out to all the
