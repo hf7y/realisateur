@@ -1476,3 +1476,51 @@ a judgment call, not a blanket copy of nightly-batch.md — flag for
 **Blockers:** none on this pass's scope (all three queued guards are offline/deterministic). The SCHEDULER_SUBDIR lint depends on scheduler's `_focus-path` export, which is filed to scheduler not blocked here.
 
 **2026-07-27 (interactive, `/ideate` — "what are my blockers, what's the vision, what's the potato dream after a week of autonomous grinding?"): potato's live-verify pass unblocked; cross-write filed in crt (`fe40cc6`).** crt has been grinding for real — 274 commits/7d, dispatching live from `_paced.dexter.conf` (not DARK; that reading was this morning's already-diagnosed false-DARK, see the entry above — steward-survey only reads mandark's `_paced.conf`). Tonight's own crt session (`da45280`) reconciled the ecosystem after a router change: potato is unchanged at `192.168.0.45` (no static-IP change actually landed — that premise carried into this session from earlier chat was wrong), reachable via `vkv_deploy_key`, and its `~/crt` was fixed from an orphan tar-deploy history to a real clone of `origin`. Net effect: the 4 stability-milestone checkboxes in crt's own FOCUS.md (wake-arm, handset-duck, capture-by-name, Book Game funnel — all "code done, needs live-confirm since 07-24") are now actually reachable, not just theoretically. Asked Zach directly: proceed with the live-verify pass now (confirmed) — recorded in crt's own FOCUS.md, not repeated here. Also cleared six stale 2026-07-24 QUESTIONS.md entries in crt about default-key ssh-auth rejection (superseded by the working `vkv_deploy_key` path) per Zach's answer. No new vision, no milestone change — this is the milestone's existing next step becoming actionable. Nothing scaffolded, no feature code written this session.
+
+## 2026-07-28 (filed from bibliothecaire, Zach-approved 2026-07-27, deferred once for BUSY): the three-way disanalogy, and a fourth finding
+
+Filed by bibliothecaire per its own FOCUS.md standing decision ("very
+deep... deserves filing into realisateur for a vision pass, even a stamp
+in UNIVERSE.md if realisateur agrees"). `check-project-busy realisateur`
+reported BUSY on 2026-07-27 and the write was deferred, not skipped;
+this run found it free.
+
+**The finding.** Three of the concept briefs — `requisite-variety`,
+`closed-loops` and `wu-wei` — independently land on the *same* missing
+failure mode, each stated in its own concept's terms in that brief's
+"Where it breaks" section. The three briefs and their quote ids:
+
+- `briefs/requisite-variety.md` — `ashby-requisite-variety-1`, `-2`
+- `briefs/closed-loops.md` — `ashby-closed-loops-1`, `-2`, `-3`
+- `briefs/wu-wei.md` — `laozi-wu-wei-1`, `-2`, `-3`
+
+Three unrelated primary texts, read separately, converging on one gap is
+the kind of result that earns a doctrine pass rather than a brief.
+
+**A fourth, found 2026-07-28 while closing the brief milestone, and it
+generalises beyond bibliothecaire.** A run reported `sources/` as
+"checked for un-used primary material: empty." It held twelve files,
+including the primary text for the very concept the same milestone had
+just declared unreachable. The probe had asked **git**, and
+`sources/.gitignore` is `*` — so `git ls-files` and `git status` answer
+"nothing here" truthfully and forever.
+
+Named: **a probe answered by the index instead of the disk.** Its
+signature is the one BUILD-DISCIPLINE already cares about — it fails
+toward *silence* rather than toward an error, exactly as `2>/dev/null`
+turns "denied" into "clean" — but the mechanism is new: the blind spot
+was manufactured by the very rule the probe was inventorying. Any
+project that inventories a gitignored directory, or asks a VCS what is
+on a filesystem, has this bug available to it.
+
+bibliothecaire's own answer is a guard, not a lesson:
+`bin/validate-quotes.py --sources` / `--require-sources` reads the
+directory with `iterdir()`, prints what it saw, and reconciles its
+ledger AGAINST the disk rather than the reverse. On first run it found
+three broken intakes that had been passing as held sources for a day,
+including a **0-byte file** standing in for `stigmergy`'s primary text —
+whose absence had been recorded as a paywall.
+
+Filed with senechal the same session. Worth a UNIVERSE.md stamp
+alongside the three-way disanalogy if realisateur agrees; both are
+findings about looking, not about building.
