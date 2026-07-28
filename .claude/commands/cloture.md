@@ -60,9 +60,51 @@ One line each: `<repo> <sha> <what>`. Includes writes that were
 subagent rule, applied to yourself. A cross-write nobody listed is how a
 project acquires an entry its own nightly can't explain.
 
+### Deferred cross-writes — file them HERE, not by pointer
+
 If a cross-write was **deferred** because `bin/check-project-busy.sh`
-said BUSY, list it as deferred and file it, per step 5 — a deferral that
-isn't written down is a dropped write.
+said BUSY, it is BUILD-DISCIPLINE pattern 16 (*a correct refusal that
+nothing retries*) until it is written down. The refusal was right. The
+refusal is not the end of your obligation.
+
+This step used to say "file it, per step 5." That routing is what
+failed — twice, on 2026-07-27 and again on 2026-07-28, the second time
+by a session that had read the convention minutes earlier and still lost
+the writes until Zach asked. Step 5 is for **decisions**; a deferred
+write is **work**, so step 5 correctly declined it and named no
+destination. So the destination is named here instead, and it is not
+optional:
+
+```
+focus-commit <THIS repo> <msgfile> .scheduler/FOCUS.md
+```
+
+appending a row that begins literally:
+
+```
+  [batch] DEFERRED CROSS-WRITE, <target> was BUSY: <payload>
+```
+
+Three requirements, because a stub that omits any of them is a second
+dropped write wearing a filed one's clothes:
+
+- **Carry the payload, not a pointer to it.** The row must be usable by
+  a run that cannot see this conversation. Findings, shas, and what the
+  target repo is supposed to do — not "see the summary above."
+- **Re-check before you assume it's still blocked.** Locks are short.
+  Re-run `check-project-busy <target>` at close; if it now reports
+  `free`, do the real write and skip the stub. Verify *whose* lock it is
+  — an interactive session's own pid looks identical to a foreign one in
+  the output, so compare against your own before deferring to yourself.
+- **A deferral with no named reader is not filed.** Say which run picks
+  it up. If nothing does, that is the finding, and it goes to step 5 as
+  a decision.
+
+**Retire check, run it every time:** grep the session for the words
+"deferred", "BUSY", "left undone", and "next session should" — every hit
+must correspond to a sha from this step or a sha from step 5. Any hit
+that corresponds to neither exists only in the chat, and the chat is
+about to end.
 
 ## 4. Route the insights out of the chat
 
@@ -85,7 +127,9 @@ saying it in the summary is not one of them:
 `BLOCKERS.md` is **not a work queue** — a task-shaped entry filed there
 with no dispatch pointer is BUILD-DISCIPLINE failure pattern 13, and
 `hygiene-lint.sh`'s `[blockers-task]` row will find it. If the residue is
-work rather than a decision, file it where its owner dispatches from.
+work rather than a decision, file it where its owner dispatches from —
+and if it is work deferred by a BUSY lock, step 3 names the exact
+destination; do not leave it here.
 
 This is why lint check C never FLAGs: only this session knows whether it
 had any decision-shaped residue at all. Answer that question deliberately
@@ -95,6 +139,13 @@ here rather than letting the empty check read as "nothing to file."
 
 State plainly: what was pushed and where (with revert shas, per
 `CLAUDE.md`'s push permission), what was deliberately left undone and
-why, and what the next session should pick up. If `closeout-lint.sh` is
+why, and what the next session should pick up.
+
+**Every item in the "left undone" and "next session" lists carries a
+sha** — the commit that filed it, from step 3 or step 5. An item with no
+sha is not left undone, it is dropped, and saying it here is what a
+dropped write looks like from the inside. If you cannot produce a sha,
+go back and file it before writing the close. Zach should never have to
+ask whether a deferral landed; the answer is in the sentence. If `closeout-lint.sh` is
 still reporting FLAGs you chose not to resolve, name them and say why —
 an unmentioned FLAG at close reads as an unseen one.

@@ -275,6 +275,63 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     all three land this row is prose, and prose decays; stated here rather
     than left implied.
 
+16. **A correct refusal that nothing retries.** A guard detects a real
+    hazard and correctly declines to act. The decline is right, logged,
+    and loud. And then nothing ever picks the work back up, so a *safety
+    mechanism working exactly as designed* is where the work dies.
+
+    Distinct from its neighbours, which is why it is its own row:
+    pattern 8 (warn-then-continue) *proceeds* after warning — here the
+    stopping is correct and the stopping is the loss; pattern 13 is a
+    **decision** with no dispatch path — here it is finished **work**
+    with none; pattern 2 is built-and-unwired — here the work is not
+    even parked, it is announced and dropped.
+
+    **The reason it deserves doctrine rather than a lint:** every
+    instance so far failed *loud*. It logged, it printed, it was said out
+    loud in a summary — and was lost anyway. "It failed loud" is the
+    usual remedy in this file and here it is not sufficient, because
+    loudness reaches a human at the moment of refusal and the retry is
+    needed later, when nobody is looking.
+
+    **Found live, three times, escalating:**
+
+    - 2026-07-27: a dirty-tree merge fallback and a failed-push path both
+      declined correctly, logged, and were lost.
+    - 2026-07-27: two cross-writes deferred because `check-project-busy`
+      said BUSY; filed as `[batch]` rows in scheduler's own
+      `.scheduler/FOCUS.md` — the correct move, and the row itself noted
+      that realisateur's `.scheduler/FOCUS.md` still had no record of
+      `c49c70d`.
+    - **2026-07-28, and this is the one that settles it:** a `/cloture`
+      pass deferred two writes to realisateur (BUSY, pid 1937642 —
+      verified against the session's own pid, not assumed), announced
+      both in a closing summary, and filed neither. The session had read
+      the `[batch]` convention *in the same file* minutes earlier. The
+      loss was corrected only because Zach asked whether deferrals were
+      filed anywhere pickup-able. **The prediction was already written
+      down, one screen above where the work was lost, and it did not
+      prevent the loss.** A pattern that can be read and then immediately
+      re-committed by its reader is not adequately guarded by prose.
+
+    **Rule:** *a fallback that declines to act must name what retries it,
+    or it is a dead end wearing a safe fallback's clothes.* Concretely, a
+    refusal is complete only when it has (a) written the deferred payload
+    somewhere a run dispatches from — not a chat summary, not a log line
+    — and (b) named the reader that will pick it up. A refusal that
+    cannot name its retrier is an unfinished refusal, and should say so
+    at the moment it declines.
+
+    **Mechanical guard (the part that makes this row not-prose):**
+    `check-project-busy` currently reports BUSY and its job ends there —
+    it is a sensor with no effector. Proposed: on BUSY it emits the
+    `[batch]` deferral stub itself, into the calling project's FOCUS
+    backlog, pre-filled with the target repo and the caller's identity,
+    so declining to write *is* the act of filing. Filed with `scheduler`
+    2026-07-28 (`13c0b8e`), and the `/cloture` half filed here the same
+    day. Until one of them lands, this row is prose, and prose decays —
+    stated here rather than left implied, per pattern 15's own closing.
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a
