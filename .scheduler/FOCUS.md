@@ -1530,6 +1530,87 @@ findings about looking, not about building.
 **2026-07-28 (interactive `/cloture`, from wtul): wtul's 49-question backlog was a structural defect, not a decision queue — pattern 17 filed as doctrine (`1497bc0`); cross-writes in scheduler (`68432cf`, `3170b81`, `6c95fab`, `a69ff05`), wtul (`5a92fb5`, `cbe597d`, `12aaf83`), senechal (`f4f45ab`, `b83cbb5`).** Zach asked why wtul had so many open questions and said he could not burn down 49. Three compounding causes, none of which was "too many decisions to make." **(1) Rate:** `wtul.conf` declares `BATCH_CRON="14 3 * * 3,6"` — "confirmed with Zach", and inert. There is no wtul crontab line; the paced rotation dispatches it at weight 2 on a 5-minute tick, so it ran **31 times in 4 days**, twice re-firing within 2 seconds of the prior run finishing, against a 2/week design intent. Weight cut to 1 (`68432cf`); the cadence lie itself is left standing on purpose, since fixing it flips the dispatch path too. **(2) Inlet:** `wtul-batch.md` step 5 *required* every run to append every feature built to QUESTIONS.md, while the outlet drained only on a human `> ` reply — an unconditional inlet against a human-only outlet. Step 5 now routes by kind (`5a92fb5`). **(3) The real defect, found only by reading the entries:** Zach had answered 28 of them on 2026-07-27, and `--consume` had destroyed the replies as a side effect of reading while run 28 closed zero entries — **pattern 17, "the reader that destroys what it read"** (`1497bc0`), guard landed same-day (`3170b81`), mirror-image human-drift hazard netted at the editor exit (`6c95fab`), `%%TAG` twin filed with scheduler (`a69ff05`). **The lesson worth carrying past wtul: the loudest count was the least informative number in the room.** "49 open questions" measured the inlet's rate, not the decision backlog — roughly 6 were questions. Reading six of them was worth more than any aggregate over all 51, and the aggregate is what nearly got the pile bulk-archived with 28 live unacted answers inside it. This is the fourth time this ecosystem's loudest survey output has been its wrongest (see the false-cluster, false-DARK, and false-LIVE rows), and the first where the misleading number was a **count of a queue this ecosystem writes to itself**.
 
 
+## 2026-07-28 (interactive `/ideate`, Zach-directed): policy propagation has three channels and the one that carries the actual run instructions does not exist
+
+**Zach's question, verbatim: "how does policy spread out to all the
+projects right now anyway?"** Asked while deciding whether the wtul
+question-routing fix (`5a92fb5`) should be propagated. Answer, probed
+rather than recalled:
+
+### Vision
+
+Every project should learn a policy change once, mechanically, from one
+source — the same standard `restamp-discipline.sh` already meets for the
+CLAUDE.md baseline. **Decided:** that is the bar. **Explicitly still open:**
+which of the three channels below gets extended to carry run instructions,
+and whether doctrine *rationale* (the numbered patterns) should travel at
+all or stay a realisateur-only reference.
+
+### What actually exists today
+
+| channel | carries | state |
+| --- | --- | --- |
+| `bin/restamp-discipline.sh` | CLAUDE.md baseline: 12-row checklist + ecosystem protocols | Works. 18/18 in sync. **Nothing runs it** — no cron, no command file, no PATH shim. It is in sync only because sessions ran it by hand, which is the definition of prose discipline. |
+| `bin/install-shims.sh` | PATH shims + user-level slash commands | Works, lists derived not typed |
+| per-project `.claude/commands/*.md` | **the actual per-run instructions** | **No propagation channel at all.** |
+
+### The finding that made this urgent
+
+The wtul defect was never wtul-specific. Its step 5 told every run to
+append every feature built to QUESTIONS.md, against an outlet only a human
+could open. **The identical instruction is live in six more projects** —
+`gardien`, `groc-mangr`, `nine-speakers`, `senechal`, `sequestria`,
+`vkv-inventory` — because they all descend from the same nightly-batch
+template and nothing has propagated a correction since. wtul was not
+worse-designed; it ran 31 times in 4 days and hit the rule hardest. Fixing
+wtul fixed one instance of an ecosystem-wide rule.
+
+**Second, mirror-image finding.** Only `wtul` and `scheduler` call
+`collect-feedback.sh --consume`. The other ten projects instruct reading
+`> ` replies **in prose** ("treat any `> ` answer as authoritative") with
+no mechanism behind it. Zach has written real `> ` replies into **12
+projects**; ~50 reply lines across 11 of them have never been collected by
+anything. wtul destroyed his answers by reading them (pattern 17); everyone
+else never mechanically reads them. Same ending, opposite mechanism — and
+the second kind is invisible, because an uncollected reply looks exactly
+like a file with nothing pending.
+
+**Third:** `BUILD-DISCIPLINE.md`'s 17 numbered patterns do not propagate at
+all — only the checklist does. Pattern 17, filed today, exists in exactly
+one file. Whether that is correct (the checklist is the *what*, the
+patterns are the *why*, and a project arguably needs only the what) is a
+real question, not an oversight to fix reflexively.
+
+### Milestone chain
+
+1. **Current (not started):** decide which channel carries run
+   instructions. Leading proposal — give `restamp-discipline.sh` a second
+   managed region, inside each project's `nightly-batch.md`, marked the way
+   it already marks CLAUDE.md. Then the question-routing rule is fixed once
+   and reaches all seven affected projects, and project #8 gets it on
+   creation rather than inheriting the 2026-07-22 text.
+2. **Next (not started):** wire `restamp-discipline.sh` to something that
+   runs. Proposed: shim it, and have `/ideate` and `/cloture` run it **dry**
+   during orient, so an interactive pass always sees drift. `--apply` stays
+   a deliberate human act — an unattended rewrite of 18 CLAUDE.md files is
+   a large blast radius to hand to a cron job.
+3. **Later (undecided):** the ~50 orphaned replies. Inventory for Zach
+   first, or give every project the (now non-destructive) consume step.
+4. **Not queued:** propagating the pattern list itself.
+
+### Blockers
+
+- **Human-only:** all four decisions above were put to Zach this session
+  via `AskUserQuestion` and he stepped away before answering. Re-filed as
+  answerable entries in this repo's `QUESTIONS.md` — that is the blocker,
+  and it is a decision blocker, not a build one.
+- **Buildable now, once decided:** every item in the chain. Nothing here
+  is gated on hardware, credentials, or another project.
+
+**Nothing was built this session** — no channel extended, no project's
+command file edited, no shim installed. `/ideate` posture held.
+
+
 ## 2026-07-28 (interactive `/cloture`, from scheduler): overnight cybernetics study, and pattern 16 filed as doctrine
 
 Deferred once for BUSY (pid 1937642) and filed as `[batch]` stubs in
