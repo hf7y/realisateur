@@ -1526,3 +1526,89 @@ alongside the three-way disanalogy if realisateur agrees; both are
 findings about looking, not about building.
 
 **2026-07-28 (interactive, from bibliothecaire; `/cloture`): bibliothecaire's brief milestone MET, and a new named failure pattern filed for a doctrine pass — cross-writes in realisateur (`e68f06a`) and senechal (`312e028`).** bibliothecaire closed its concept-brief milestone (`65091c2`, `062a021`): 14/14 briefs, `--require-briefs` exits 0, 36 publishable quotes on `origin/main`. The last two concepts — `garbage-can` and `normal-accidents` — were built from the **primary** texts (Cohen/March/Olsen 1972; Perrow 1984), not the `verified-secondary` route the milestone had budgeted for them, because both PDFs had been sitting in that repo's `sources/` all along. **The pattern, and the reason this is filed here rather than left in one project's log: a probe answered by the index instead of the disk.** A run had inventoried `sources/` by asking git; `sources/.gitignore` is `*`, so `git ls-files` and `git status` answer "nothing here" truthfully and forever, and the answer was written into FOCUS.md as fact while the primary text for a concept the same milestone had just declared unreachable sat in the directory. Signature: it fails toward *silence*, not toward an error — the same shape BUILD-DISCIPLINE already names for `2>/dev/null` turning "denied" into "clean" — but the mechanism is new, in that the blind spot was manufactured by the very rule the probe was inventorying. Any project that inventories a gitignored directory, or asks a VCS what is on a filesystem, has this bug available to it. bibliothecaire's answer is a guard rather than a lesson (`bin/validate-quotes.py --require-sources`: reads with `iterdir()`, prints what it saw, reconciles its ledger AGAINST the disk, negative-tested four ways), and on first run it found three broken intakes that had passed as held sources for a day — including a **0-byte file** standing in for `stigmergy`'s primary text, whose absence had been recorded as a paywall. **No doctrine file was edited this session** — whether this earns a BUILD-DISCIPLINE checklist line or a UNIVERSE.md stamp, alongside the three-way disanalogy finding in the section above, is realisateur's own call and is left for a vision pass.
+
+## 2026-07-28 (interactive `/cloture`, from scheduler): overnight cybernetics study, and pattern 16 filed as doctrine
+
+Deferred once for BUSY (pid 1937642) and filed as `[batch]` stubs in
+scheduler's `.scheduler/FOCUS.md` (`13c0b8e`); the lock cleared during the
+same session, so this is the real write and those stubs are **retired by
+this entry**.
+
+**The study.** Branch `research/ecosystem-cybernetics` (pushed): a
+discrete-tick simulation of this ecosystem, 100 generations overnight —
+11 arms x 10 disturbance regimes x 30 seeds x 200 ticks, no AI, no
+network, `nice 19`, zero tokens, so it did not starve the paced jobs it
+was studying. Three mutually hostile paradigms were given arms on purpose
+(Ashby: instrument the sensor; Perrow: instrumentation is itself an
+accident participant, loosen coupling instead; Hayek: the centre cannot
+receive this input at all). Seven hypotheses were registered *before any
+data existed* by `sim/prereg.py`, which refuses to overwrite a hypothesis
+and refuses one with an empty falsifier, and which judges falsifiers
+mechanically rather than by model judgment.
+
+Findings that bear on this repo's own decisions:
+
+- **Reconciling co-blind sensors adds ZERO variety.** `A_baseline` (one
+  sensor) and `B_more_sensors` (four) are identical to the digit in all
+  20 cells. **This is a direct result about `bin/sensor-agree.sh`, queued
+  in `UNIVERSE.md` as the proprioception remedy: it is a reconciliation
+  mechanism for a disagreement problem, aimed at an agreement problem.**
+  Four `$HOME`-scoped sensors that all say OK about `svc-vaporwave` agree
+  perfectly and are all wrong. Recommend it be re-scoped or retired
+  before it is built.
+- **A third symbol (`BLIND`) cuts undetected disturbance ~92%**, and
+  ~83% under a hostile parameterisation where a BLIND report leads to a
+  fix only 20% of the time.
+- **Slack buys latency tolerance, not detection** — Perrow's coupling
+  prescription was falsified in 19 of 20 cells. It is not a substitute
+  for the symbol.
+- **Adding fallible monitors is worse than adding none** (wasted
+  attention 0.54 vs 0.29; trust 0.46 vs 0.82). Sent to bibliothecaire as
+  a scoped correction to `briefs/normal-accidents.md` (`506ca1d`): that
+  brief's test is right, and it returns the opposite answer for guards
+  whose output consumes Zach — because Zach is the control path.
+- **Central vs local sensing is decided by whether the disturbance is
+  drift or volume.** Unpredicted, emergent, and the most interesting
+  thing here.
+
+**Honest limits, stated because the numbers will outlive the caveats:**
+the 5 rounds per regime are byte-identical replicas, so the real n is 10
+regimes x 30 seeds, not 50; and the arm labelled `A_baseline` fails
+toward ALARM while the real `scheduler status` fails toward OK, so the
+"clone" run is the faithful model and the main run is the
+counterfactual. Under the faithful mode the Ashby result holds in 8 of 10
+regimes, not 10. Four self-inflicted defects are ranked in the manual's
+§8, including a metric that read `0.0` for 50 generations because it was
+structurally unable to fire — the study's own subject matter, committed
+by the study's own instrument, in its own output.
+
+Write-ups at `29c90ab`: `ELI5.md` (front door), `TECHNICAL-MANUAL.md`
+(handoff), `PHILOSOPHY-AND-CRITIQUE.md` (hypotheses + first-order
+critique). `0563b1d` corrects an overstatement in the last of these.
+
+**Not a finding, and must not become one by citation.** The study's
+sharpest observation was never registered: a sensor that fails toward OK
+scores *perfectly* on every dashboard metric — 0.00 wasted attention,
+1.00 trust, zero false alarms — while carrying 688 undetected ticks and
+1062 false cleans. Generalised: **a silent sensor optimises every
+observable metric, so any regime that rewards a dashboard selects for
+silence.** That is doctrine-shaped and belongs alongside pattern 14, but
+it has to be guessed first and tested second. `prereg.py` will not
+backdate it and neither should a reader of this entry.
+
+**Doctrine edited this session** (unlike the two entries above, which
+deliberately left the call open): `BUILD-DISCIPLINE.md` pattern 16, *a
+correct refusal that nothing retries*, and the matching `/cloture` step-3
+change, both at `13ba119`. Provoked by this session committing the
+pattern itself — two deferrals announced in a summary and filed nowhere,
+by a session that had read the `[batch]` convention minutes earlier.
+`/cloture` is user-scoped, so `bin/install-shims.sh` was rerun and
+senechal notified (`f2463a2`).
+
+**Also unfiled until now:** `bin/silence-audit.sh` and
+`bin/install-silence-audit.sh` remain staged-only on
+`staging/silence-audit` (`39d64e0`, pushed), uninstalled and unwired by
+design — the install script is dry-run by default, names what it retires,
+and gates on three tests. Nothing dispatches from that branch. That is
+intentional and it is also pattern 2 with a longer fuse; it needs either
+a decision to install or a decision to retire.
