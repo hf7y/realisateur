@@ -1,3 +1,55 @@
+---
+
+**2026-07-28 (scheduler sprint, step 1 of 3): `q-756f82` CLOSED by fixing it — every `notify-send` in the scheduler engine is now bounded, and a dropped notification is no longer silent.**
+
+Zach's sprint sequence (`e05016e`) put this first and explicitly refused
+the cheap closure: *not closed by observing it hasn't hung.* It is fixed,
+not observed.
+
+**The defect, restated as it turned out to be.** `notify-send ... 2>/dev/null || true`
+guards a `notify-send` that FAILS. It does nothing about one that NEVER
+RETURNS. The hang is already on the record as a live event, not a theory:
+`lib/deadman-switch.sh:82` documents it firing on 2026-07-28 under
+`svc-vaporwave`, where `$XDG_RUNTIME_DIR/bus` exists but nothing answers,
+and `notify-send` blocked until a test's timeout killed the run.
+
+**Why the cron path is not immune** — the alternative closure the question
+allowed, and it does not hold. `lib/sweep-loop-common.sh` exports
+`DBUS_SESSION_BUS_ADDRESS` **unconditionally, for every job it runs**, so
+any account without a live desktop session points at exactly the socket
+that hung under svc-vaporwave. The cron path has the same exposure; it has
+only not drawn the short straw yet. And a hang there is *worse* than in
+deadman-switch, because the caller holds `$LOCK` and the registry marker —
+one wedged decoration blocks the project's other tier too.
+
+**What was done** (`f670281`, pushed to `origin/main` — revert with
+`git revert f670281`):
+- `lib/sweep-loop-common.sh`: one `notify()` helper wrapping `timeout 5`,
+  and all 11 call sites routed through it. The timeout case (rc 124) logs
+  `notification DROPPED: <which one>` — a lost notification must not
+  itself be silent, which is the whole shape of this week's cluster.
+- The same class, fixed where it also lived unguarded: `lib/autonomy-merge.sh`
+  (2 sites), `bin/scheduler-dev-cycle.sh` (6), `bin/overnight-dev.sh` (2).
+  Nothing in `bin/` or `lib/` now calls `notify-send` unbounded.
+- `tests/notify-timeout-witness.sh`: 8 assertions against a `notify-send`
+  that sleeps 300s — returns in 5s, rc 0, logs the drop, names *which*
+  notification was lost, and stays quiet on both success and fast failure.
+- `tests/run-all.sh`: **three witnesses existed and nothing ran them.**
+  Each was a test only someone who already knew its filename would
+  execute — the same failure the sprint is about, one level up. One entry
+  point now picks up any `tests/*-witness.sh`; all 3 pass.
+
+**Concurrency note, declared rather than glossed:** `check-project-busy scheduler`
+reported **BUSY** — a live `scheduler -b` front-door session (pid 2381968)
+with `BLOCKERS.md` open in an editor (`.BLOCKERS.md.swp` untracked in the
+tree). The commit staged exactly the six files above and touched neither
+`BLOCKERS.md` nor the swap file, so no live edit was written out from
+under. Flagging it because a disjoint-files judgement call is still a call.
+
+**Steps 2 and 3 of the sprint are untouched** — the inventory of facts no
+view prints, and the absence-surface built against its evidence. Step 1's
+own work is a small piece of evidence for step 2: a `timeout`-dropped
+notification is now a fact the engine knows and no view prints.
 
 ---
 
@@ -55,7 +107,7 @@ Filed independently, same week, without cross-reference:
 
 | project | the finding |
 |---|---|
-| scheduler | `q-756f82`: ~10 unguarded `notify-send` calls in `lib/sweep-loop-common.sh` can **block forever**; `2>/dev/null \|\| true` guards FAILING, not NEVER RETURNING |
+| scheduler | `q-756f82` (CLOSED 2026-07-28, `f670281`): ~10 unguarded `notify-send` calls in `lib/sweep-loop-common.sh` can **block forever**; `2>/dev/null \|\| true` guards FAILING, not NEVER RETURNING |
 | scheduler | dexter's paced runner: **338 identical `http_code=401` HOLDs over 3 days**, zero dispatches, unnoticed |
 | chezz | Zach's 3 answers committed by the sweep, **unpushed**; nightly `reset --hard`s to origin — a third night of re-triage averted only because a human looked |
 | gardien | dexter timer failed 3 consecutive nights; 3 mandark units `exit 1` **daily since 2026-07-24**; found by reading a journal by hand |
