@@ -180,3 +180,44 @@ session died, not that anything is wrong).
 
 - **2026-07-27 (nightly-batch): home-assistant is DIVERGED from origin/master — 1 local-only, 5 remote-only commit(s) — and its last scheduled run FAILED (2026-07-27 17:48:44, 212s, nothing pushed).** `ecosystem-survey.sh`'s own git-health check refuses to auto-resolve this ("Needs a real merge decision -- NOT auto-resolved, ever"), and this pass agrees — it's home-assistant's repo/automation, not realisateur's to touch. Genuine judgment call for Zach: which side is correct (the 1 local-only commit, or the 5 remote-only ones), and should the merge happen by hand or should home-assistant's own next run be trusted to reconcile it? Until resolved, home-assistant's nightly automation is likely to keep failing or skipping pushes.
   > (answer inline here)
+
+- **2026-07-28 (`/ideate`, Zach-directed): four decisions on policy propagation.**
+  Asked live this session; Zach stepped away before answering, so they are
+  filed here rather than lost with the conversation. Full findings and the
+  milestone chain are in `.scheduler/FOCUS.md` same date (`a301147`); the
+  watcher proposal is filed with scheduler (`afcfba9`). Nothing was built.
+
+  **(1) The sweep watcher.** Its human-presence guard is keyed to the
+  project the *editor* opened, so every cross-project write is unguarded —
+  and `cmd_commit_file` pushes, so a half-finished file reaches the ref the
+  nightlies clone. 7 adoptions in 36h; one swallowed your own reply-writing
+  burst (wtul `4b02419`), one took this session's 116-line in-progress
+  restoration and committed it as "author unknown". Options: **(a)
+  quiescence** — adopt only a file unchanged two ticks running; needs no
+  marker so it covers cross-writes, GUI editors and agents for free, costs
+  15min→30min backstop latency (**realisateur's recommendation**); (b)
+  defer if ANY session marker is live; (c) both; (d) sweep stops pushing.
+  > (answer inline here)
+
+  **(2) Propagating the question-routing fix.** The bad instruction is live
+  in `gardien`, `groc-mangr`, `nine-speakers`, `senechal`, `sequestria`,
+  `vkv-inventory`. Options: **(a)** give `restamp-discipline.sh` a second
+  managed region inside each project's `nightly-batch.md`, so the rule is
+  fixed once and project #8 gets it on creation (**recommended**); (b)
+  hand-fix the six now — faster, but it is the hand-copy this ecosystem
+  keeps naming as failure pattern 4; (c) fix only the high-cadence ones.
+  > (answer inline here)
+
+  **(3) The ~50 orphaned `> ` replies across 11 projects.** Options: **(a)**
+  inventory them for you first — project, question, your reply, git-blame
+  date — and you decide what is still live (**recommended**); (b) give every
+  project the now-non-destructive consume step and let their next runs pick
+  them up; (c) leave them, deliberately, as archaeology.
+  > (answer inline here)
+
+  **(4) `restamp-discipline.sh` runs on nothing.** Options: **(a)** shim it
+  and have `/ideate` + `/cloture` run it **dry** during orient, keeping
+  `--apply` a deliberate human act (**recommended** — an unattended rewrite
+  of 18 CLAUDE.md files is a large blast radius for a cron job); (b) cron it
+  with `--apply`; (c) shim only.
+  > (answer inline here)
