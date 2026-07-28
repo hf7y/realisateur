@@ -1,6 +1,179 @@
 
 ---
 
+**2026-07-28 (`/ideate`, interactive, Zach-directed and Zach-answered live): the ecosystem's five-project failure cluster is named and given an owner. Seven decisions recorded, one edit applied, nothing scaffolded.**
+
+## Vision
+
+The ecosystem crossed a threshold in the last ten days that nobody
+declared. It stopped being *a set of projects with automation* and became
+*a set of organs with sensors* — ten offline, no-AI, cheap sensors built
+since ~2026-07-19 (`ecosystem-survey`, `milestone-audit`, `steward-survey`,
+`hygiene-lint`, `precipitation-scan`, `silence-audit`, `sensor-agree`,
+`weight-audit`, `closeout-lint`, `check-project-busy`). That is why an
+`/ideate` pass can now say things no single project's nightly can.
+
+The vision, stated plainly and now decided rather than implied: **build an
+ecology that can tell the difference between "quiet because healthy" and
+"quiet because dead."** `silence-audit`'s BLIND path, `closeout-lint`'s
+worktree-blindness decision, precipitation's "age is the weakest signal"
+doctrine, and bibliothecaire's primary-source work are all the same
+project — the last of these is why the ecosystem now asks the *literature*
+for the name of a failure mode (2026-07-28: a research request for a term
+meaning "a proxy that stays green while the outcome fails") instead of
+inventing folk terms that decay.
+
+**What is NOT decided**, and should not be read as decided: whether
+`gardien`'s narrowed candidate milestone survives now that scheduler owns
+the general case (left open, in gardien's own file); chezz's Q2/Q3/Q4
+(move scope, branch model, Gemini key on dexter — asked, not answered);
+whether the second-order sensor problem has a general fix (two sensors
+disagreed with reality this week — `steward-survey` reported 52 stranded
+of which 42 were artifact, from reading one of *three* dispatch surfaces;
+`silence-audit` read 84/25 and 82/26 hours apart. `sensor-agree` is queued
+as the fix for the first. There is no general answer yet, and pretending
+otherwise would be the exact failure this vision exists to name).
+
+## The finding: five projects, one shape
+
+Filed independently, same week, without cross-reference:
+
+| project | the finding |
+|---|---|
+| scheduler | `q-756f82`: ~10 unguarded `notify-send` calls in `lib/sweep-loop-common.sh` can **block forever**; `2>/dev/null \|\| true` guards FAILING, not NEVER RETURNING |
+| scheduler | dexter's paced runner: **338 identical `http_code=401` HOLDs over 3 days**, zero dispatches, unnoticed |
+| chezz | Zach's 3 answers committed by the sweep, **unpushed**; nightly `reset --hard`s to origin — a third night of re-triage averted only because a human looked |
+| gardien | dexter timer failed 3 consecutive nights; 3 mandark units `exit 1` **daily since 2026-07-24**; found by reading a journal by hand |
+| ecosim / realisateur | `silence-audit` mechanizes exactly this and prints its own **NOT WIRED** banner |
+
+Every one failed *loud at the point of failure and silent everywhere else.*
+Per `PRECIPITATION.md` a cross-project cluster is answered by **naming the
+missing regulator**, not promoting its members. The regulator: **nothing
+witnesses whether the witnesses ran.**
+
+**Zach's answer: `scheduler` owns it**, because scheduler is the only
+component that knows what was *supposed* to happen. Everything else can
+observe only what did happen — a watcher without the schedule sees
+corpses; scheduler sees **absences**. Three alternatives were offered and
+declined: widen ecosim (has the sensor, lacks the schedule), gardien (has
+the charter, is itself failing unnoticed), and a new dedicated organ
+(declined — the ecosystem already carries 9 dark projects).
+
+**This does not violate scheduler's ACCRETION FREEZE, and that is the
+crux.** Zach separately answered that the three-printable-views fold **IS**
+the failure fix rather than a competing priority. So the absence-surface is
+not a fourth view — it is a *property of the first one*. `scheduler`
+noargs already prints now/next; "next" is a claim about the future, and
+the 338 HOLDs were a **falsified** "next" that no view was obligated to
+report. Making the first view accountable to its own prediction is not
+accretion; it is the fold finally meaning something.
+
+## Milestone chain
+
+1. **(current, in-progress — realisateur's own bar, unchanged)** every
+   scheduler-registered project with a real git repo has a declared
+   `## Stability milestone`, AND park-by-default triage has held across
+   more than one live pass. *Still gated on the same 5 milestone-missing
+   projects, and the 2026-07-27 question about that (declare by hand /
+   restate the bar / re-enable the five) is STILL UNANSWERED — it was not
+   re-asked this session, deliberately, since four other decisions were
+   already on the table.*
+2. **(next, not started)** the ecosystem's own sensors agree with each
+   other. `sensor-agree` is queued in scheduler; two sensors demonstrably
+   disagreed with reality this week. Realisateur is the only place with
+   the cross-project view to adjudicate a sensor disagreement.
+3. **(later, undecided)** whether `/ideate`'s park-by-default triage
+   should itself be mechanized rather than modelled by prose — see
+   `IDEATE-WORKFLOW-REVISION.md`'s open question about a hook-based
+   guarantee.
+4. **(explicitly not queued)** anything about the GitHub-issues answer
+   channel. That is gardien's, and it is credential-blocked.
+
+## Decisions recorded this session
+
+- **crt: RE-ENABLE, on dexter, as part of the move** (`0dd069e` in crt).
+  The largest intent/dispatch disagreement in the ecosystem — `enabled=0`
+  at weight 3 with 34 stranded. Three alternatives declined, incl. the
+  tempting one of dropping the weight to 1 (that resolves the
+  disagreement by lowering *intent* to match inertia). **The dexter-side
+  participant change was NOT made from here**: that file is dexter-owned
+  and no mandark key reaches dexter. `crt|0|3|` in `_paced.conf` is
+  untouched. Prerequisites carried forward: potato push access, the
+  mandark-local bare repo, and the dexter whisper failover peer — that
+  last matters most, since moving execution to dexter while STT still
+  points at mandark reproduces the dependency the move is meant to relax.
+- **The FOCUS/QUESTIONS symlink layer is retired in favour of GitHub
+  issues — no transitional replacement gets built.** chezz had
+  recommended keeping a mandark checkout as a human-only answer surface;
+  Zach declined it and accepted a gap in the channel instead. Answered
+  into chezz (`b76872d`), design ownership filed to gardien (`fd7e311`).
+  Two findings forwarded so the replacement does not re-learn them:
+  `sync-crontab.sh:419` already tolerates an unset `PROJECT_REPO_PATH`,
+  and the symlink-*bridge* is proven broken (`cmd_idea`'s
+  `mv "$f.tmp" "$f"` replaces a symlink with a regular file, silently
+  splitting the copies).
+- **The gap has a defined end and it is one credential, not a design.**
+  `gh auth status` on mandark returns an **invalid token** (account
+  `sidopera`), `gh` itself installed. Verified, not inferred — and nothing
+  in the ecosystem was sensing it, which is itself an instance of tonight's
+  cluster. Zach: **fix the credential first, it is a prerequisite rather
+  than a gap to route around.** Human-only; see Blockers.
+- **Scheduler sprint sequence, all three steps, Zach's explicit choice
+  over any single first step** (filed via the front door, `e05016e`):
+  (1) close `q-756f82` — wrap with `timeout 5` or establish why the cron
+  path is immune and write it down, *not* closed by observing it hasn't
+  hung; (2) inventory every fact scheduler knows but no view prints —
+  the measurement that says whether three views can carry everything or
+  whether the fold is lossy; (3) build the absence-surface into
+  `scheduler` noargs, designed against step 2's evidence. Zach's stated
+  reason for the whole sequence: it is the only ordering where step 3 is
+  designed against evidence. Proposed bar, for scheduler to accept or
+  decline: ***`scheduler` noargs is a complete and falsifiable account of
+  the system — if a dispatch was predicted and did not happen, it says so;
+  if it cannot know, it says BLIND, never silence.*** The `BLIND`
+  vocabulary already exists (`731e7b0`, and closeout-lint's worktree
+  decision) so it generalizes rather than being invented.
+- **APPLIED, the session's one edit: `_paced.dexter.conf`'s host policy**
+  (`bccf9ce`, pushed). Its header still asserted "only
+  hardware/network-evidenced projects belong here" nine hours after Zach
+  reversed the policy to "dexter is the DEFAULT, move everything
+  possible". Zach: fix it once, and **delete rather than amend** — so the
+  old rule cannot be reconstructed. Two consequences retired with it: crt
+  is no longer "the ONE hardware-evidenced case" and wtul is no longer a
+  "named exception". Comment text only, no participant line touched, so
+  the "dexter writes ONLY this file" two-writers hazard is not engaged.
+  This is exactly the decay chezz flagged the same day: *the most
+  authoritative-looking statement of a rule is the wrong one, nothing
+  fails, and the next reader trusts a rationale describing nothing real.*
+- **Philosophical frame, now stated rather than implicit.** Three frames
+  were put side by side: scheduler as **engine** (a dispatcher; success is
+  throughput — this is what it was built as, and why nine views
+  accumulated, since every knob was locally justified); as **ecology** (a
+  regulator holding homeostasis — weights, pacing, burn-rate,
+  park-by-default and precipitation are population control, not
+  scheduling, and only this frame can express Law 2's "a growing reservoir
+  is health"); and as **witness** (its irreducible job is knowing what was
+  supposed to happen). Zach's two answers land on **witness**, stated
+  completely — and under that frame *if the system knows something and no
+  view shows it, the system does not know it*, which is what makes the
+  views fold a correctness property rather than UI cleanup.
+
+## Blockers on the current step
+
+- **Human-only: `gh auth login -h github.com` on mandark.** Blocks the
+  entire GitHub-issues answer channel, which is now the *only* planned
+  channel. Interactive browser/device auth — no agent can do it.
+- **Human-only, and unprobed from here: is dexter's `gh` authenticated?**
+  No mandark key reaches dexter. Now the more important of the two, since
+  dexter is the default host. gardien's to check.
+- **Human session on dexter: crt's participant line.** The decision is
+  recorded; the write is dexter-owned.
+- **Still unanswered from 2026-07-27** (buildable-now, not human-gated
+  once answered): realisateur's own milestone is gated on five projects
+  nothing dispatches against — declare by hand, restate the bar, or
+  re-enable the five.
+
+
 **2026-07-27 (interactive, human-directed override — "I need /ideate and /cloture in every repo"): both commands are now user-level, and the failure class that hid them is mechanized as BUILD-DISCIPLINE pattern 13c (`895fb08`, `7c3d45c`, `70af907`, all pushed).** The instance: `/ideate` and `/cloture` existed only in `realisateur/.claude/commands/`, so they were invocable in exactly one repo, and six of the nine scripts they instruct a session to run had no PATH shim — only the three ecosystem-protocol *write guards* named in the propagated CLAUDE.md block had ever been shimmed, each by hand. Nothing flagged either fact, and the reason is the finding: a project-scoped command that resolves everything from its own repo emits no failure signal at all, so `[dispatch-parity]` could not see it — it compares command files *to each other*, and every command file shared the blind spot. This was an **unasked question**, not drift: nobody decided these should be repo-local. The fix is three-layered and only the first two shipped. (1) `bin/install-shims.sh` generates nine PATH shims plus the user-level command files from this repo as single source of truth, rendering `bin/foo.sh` -> `foo` and appending a header saying which repo "this repo" means now that the text is read from arbitrary cwds. (2) `bin/reach-lint.sh` requires every command file to declare `scope: project|user` (check A) and asserts every command a `scope: user` file names resolves from cwd `/` (check B) — and `install-shims.sh` now DERIVES both its install list and its shim list from `scope:`, because a typed list is precisely what produced the gap. Wired as `hygiene-lint.sh` check 11, so both `/ideate` and `/cloture` see it. Verified by breaking it, not by exit code: removing the `ecosystem-survey` shim makes check B FLAG all four user-level files; restoring clears them; a tampered installed `ideate.md` is caught by check 10 and repaired by a rerun. (3) Making the installed copy the ONLY copy is queued `[batch]` above — the surviving repo-local copy is the exact property that let the gap hide, and a fallback that silently prefers it would reinstate the masking. Also queued: `scope:` adoption across the 16 undeclared command files in 13 other repos, which check A now FLAGs ecosystem-wide (real signal, deliberately not mass-cross-written at 23:40 without `check-project-busy` per target; the propagated CLAUDE.md baseline must change in the same pass, or the convention is enforced in 13 repos and taught in one).
 
 
