@@ -103,6 +103,26 @@ has   "A5 stale repo not even scanned"         "$out" "no registered repo has a 
 out="$(run "$T/focus-ok.md" "$T/blockers-today.md" ghostrepo)"
 has   "A6 missing repo path flagged"           "$out" "FLAG [missing-repo] ghostrepo"
 
+# A7/A8: linked worktrees are a domain section A does not read. It must say
+# so (BLIND) rather than stay quiet -- and it must say so even when the
+# registered repo's own HEAD is too old to be scanned, since that gate is
+# precisely what hid two unpushed commits on 2026-07-28.
+hasnt "A7 no worktrees means no BLIND line"    "$out" "BLIND [worktrees]"
+out="$(run "$T/focus-ok.md" "$T/blockers-today.md" clean)"
+hasnt "A7 clean repo likewise silent"          "$out" "BLIND [worktrees]"
+
+git -C "$T/clean" worktree add -q -b side "$T/clean-side" >/dev/null 2>&1
+out="$(run "$T/focus-ok.md" "$T/blockers-today.md" clean)"
+has   "A8 linked worktree reported BLIND"      "$out" "BLIND [worktrees] clean: 1 linked worktree(s)"
+has   "A8 names the worktree branch"           "$out" "[side]"
+has   "A8 BLIND counted in the summary"        "$out" "1 BLIND"
+hasnt "A8 BLIND is not a FLAG"                 "$out" "FLAG ["
+
+git -C "$T/oldrepo" worktree add -q -b oldside "$T/oldrepo-side" >/dev/null 2>&1
+out="$(run "$T/focus-ok.md" "$T/blockers-today.md" oldrepo)"
+has   "A9 BLIND survives the stale-HEAD gate"  "$out" "BLIND [worktrees] oldrepo"
+has   "A9 stale repo still not scanned"        "$out" "no registered repo has a commit younger"
+
 echo "-- B. today's session record"
 out="$(run "$T/focus-ok.md" "$T/blockers-today.md" clean)"
 has   "B1 dated entry with a sha passes"       "$out" "ok -- entry dated $DAY cites"

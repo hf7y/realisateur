@@ -16,6 +16,9 @@
 #      or no upstream at all. Complements hygiene-lint.sh's untracked-script-
 #      in-bin/ check rather than repeating it; run that one too (this script
 #      does not shell out to it, so each stays independently readable).
+#      Linked worktrees are reported BLIND, not audited: section A reads the
+#      registered path's HEAD only, and saying so is cheaper and more honest
+#      than growing it to audit branches it was never scoped to.
 #   B. TODAY'S SESSION RECORD -- realisateur's own .scheduler/FOCUS.md has an
 #      entry dated today, and that entry cites at least one commit sha in
 #      backticks. Mechanizes the standing "confirm every meaningful change
@@ -72,6 +75,7 @@ echo
 echo "== A. RECENTLY TOUCHED REPOS =="
 
 flags=0
+blind=0
 touched=0
 now="$(date +%s)"
 cutoff=$(( HOURS * 3600 ))
@@ -81,6 +85,28 @@ while [ "$i" -lt "${#projects[@]}" ]; do
   name="${projects[$i]}"; repo="${paths[$i]}"; i=$((i+1))
   [ -d "$repo" ] || { echo "  FLAG [missing-repo] $name: $repo does not exist"; flags=$((flags+1)); continue; }
   git -C "$repo" rev-parse --git-dir >/dev/null 2>&1 || continue
+
+  # Linked worktrees are checked BEFORE the age gate, deliberately. This
+  # section reads the registered path's own HEAD only, so a branch checked
+  # out in a linked worktree is invisible to every check below -- and the
+  # registered repo's HEAD can be old while that branch is minutes fresh,
+  # which would let the gate hide exactly the case this exists to surface.
+  # Decided 2026-07-28 (Zach, option b, scheduler/BLOCKERS.md "realisateur"):
+  # emit a symbol saying the domain was not read, rather than grow section A
+  # to audit each worktree. A sensor that cannot represent "did not look"
+  # reports it as "nothing there" -- see bin/silence-audit.sh.
+  wt="$(git -C "$repo" worktree list --porcelain 2>/dev/null \
+        | awk -v m="$repo" '/^worktree /{p=substr($0,10); if (p != m) print p}')"
+  if [ -n "$wt" ]; then
+    n_wt="$(printf '%s\n' "$wt" | grep -c .)"
+    blind=$((blind+1))
+    echo "  BLIND [worktrees] $name: $n_wt linked worktree(s) NOT examined below"
+    printf '%s\n' "$wt" | while IFS= read -r w; do
+      printf '      %s [%s]\n' "$w" "$(git -C "$w" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+    done
+    echo "      (their dirty/unpushed state is outside this check's domain --"
+    echo "       run closeout-lint against them by hand, or push them)"
+  fi
 
   ct="$(git -C "$repo" log -1 --format=%ct 2>/dev/null)"
   [ -n "$ct" ] || continue
@@ -162,7 +188,8 @@ else
 fi
 
 echo
-echo "== $flags FLAG(s) across $touched recently-touched repo(s) =="
+echo "== $flags FLAG(s) across $touched recently-touched repo(s); $blind BLIND =="
+[ "$blind" -gt 0 ] && echo "BLIND means a domain existed and was NOT read -- not a clean result."
 echo "FLAGs are candidates for the closing session to resolve before it ends;"
 echo "this script never edits, commits, or pushes anything."
 exit 0
