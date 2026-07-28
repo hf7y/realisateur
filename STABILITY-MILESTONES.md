@@ -12,6 +12,77 @@ move most arriving ideas *out of the active build set* at near-zero cost
 (park them), instead of trying to build them all down. A stability
 milestone is the criterion that makes "park by default" decidable.
 
+## What a bar IS — the canonical definition (Zach, 2026-07-28)
+
+Stated directly by Zach during a realisateur `/ideate` pass, and adopted
+here as **the** definition rather than as one heuristic among several:
+
+> **Real life output gathers real life input; the next milestone is
+> recommended based on deep vision integrated with that input.**
+
+Read it as three claims, each of which rules something out.
+
+**1. The bar's output must reach real life.** Not a passing suite, not a
+merged branch, not a deployed artifact nobody used. Something must happen
+*outside the repo* — a purchase made earlier than it would have been,
+nine speakers audible in a room, a stranger's order, a paste that didn't
+mangle. A bar satisfiable entirely from inside the project is not a bar;
+it is a proxy, and a proxy is precisely what stays green while the thing
+it stands for fails. This is the same failure the ecosystem's whole
+sensor layer exists to catch (see `PRECIPITATION.md`, and
+`silence-audit`'s BLIND path) — a milestone is the *product-side*
+instance of it.
+
+**2. The purpose of real output is to GATHER REAL INPUT.** This is the
+part that is easy to skip and is load-bearing. Shipping into the world is
+not the end of the loop; it is the only way to acquire information that
+did not previously exist anywhere in the project — how Zach actually
+shops, how the room actually sounds, what a real customer actually wants,
+which vim command he actually reaches for. No amount of unattended
+iteration generates that input. It has to be *collected*, and only a
+real-world output collects it. **A milestone is therefore an instrument,
+not a finish line:** its job is to make the project learn something it
+could not otherwise have known.
+
+**3. The NEXT milestone is derived from that input, integrated with the
+deep vision — not from either alone.** Two failure modes are being ruled
+out at once. Setting the next bar from the vision alone reproduces the
+moving-target problem (Zach, 2026-07-20: *"my ideas outpace
+implementation of stable versions so the target is always moving"*) — the
+project chases an idea that keeps reshaping because nothing real ever
+constrains it. Setting it from the input alone is drift: pure
+responsiveness, a project that becomes whatever its last data point
+suggested. The recommendation comes from holding both — what was learned,
+read against what this is ultimately for.
+
+### What this implies in practice
+
+- **Reaching a milestone should CHANGE the project's beliefs**, not merely
+  complete a task list. If a bar could be reached without anyone learning
+  anything, it was the wrong bar.
+- **A human-witness criterion is not a concession to unmeasurability** —
+  it is usually where the real input enters. Write it as a `(waiting:
+  <human>)` checkbox deliberately, not apologetically.
+- **A bar reachable entirely by unattended nightly work is suspect.** It
+  probably measures the project's inside, not its outside.
+- **Setting the next milestone is an `/ideate`-shaped act, not a
+  nightly-batch one** — it needs the integration step in claim 3, which
+  requires the human and the cross-project view.
+- Where a bar is genuinely blocked from reaching real life (fences,
+  hardware, credentials), say so and tag the blocked steps — do NOT
+  substitute a proxy bar that can be reached. A blocked real bar is
+  honest; a reachable fake one is the failure this definition names.
+
+The four bars declared 2026-07-28 (`groc-mangr`, `nine-speakers`,
+`sequestria`, `vim-arcade`) are the reference examples — each replaced a
+researched, internally-satisfiable candidate with a real-world one. Read
+them together if the definition above is unclear in the abstract.
+
+**A citation request for the underlying idea has been filed with
+`bibliothecaire`** (2026-07-28) — this definition is currently stated in
+Zach's own words and grounded only in this ecosystem's own experience,
+and it deserves primary-source footing.
+
 ## The core idea
 
 Every project has exactly **one current stability milestone**: the
