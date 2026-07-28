@@ -381,6 +381,41 @@ else
   fi
 fi
 
+# Pattern 2 (build-but-don't-wire): silence-audit asks whether a mechanism
+# can tell "nothing there" apart from "could not look" and "did not look".
+# It is dispatched HERE because its own self-wiring banner tests exactly
+# three things -- a crontab line, a systemd unit, or a hygiene-lint check --
+# and a PATH shim satisfies none of them. An auditor of unwired mechanisms
+# that is itself unwired is the joke writing itself, in its own words.
+#
+# The exit code is READ, not discarded. The staging draft of this block ended
+# in `|| true`, which would have made a null-discriminator incapable of
+# reporting a null -- exit 3 is BLIND ("parsed zero mechanisms"), and that is
+# the one result that must never render as clean.
+echo
+echo "== 12. NULL-DISCRIMINATION (silence-audit) =="
+SILENCE_AUDIT="$(dirname "${BASH_SOURCE[0]}")/silence-audit.sh"
+if [ ! -x "$SILENCE_AUDIT" ]; then
+  echo "  FLAG [silence] silence-audit.sh missing or not executable -- cannot verify"
+  total_flags=$((total_flags + 1))
+else
+  sa_out="$("$SILENCE_AUDIT" 2>&1)"; sa_rc=$?
+  sa_flags="$(printf '%s\n' "$sa_out" | grep '^  FLAG ')"
+  sa_n="$(printf '%s\n' "$sa_flags" | grep -c . )"
+  if [ "$sa_rc" -eq 3 ]; then
+    echo "  FLAG [silence-blind] silence-audit parsed ZERO mechanisms -- domain unreadable."
+    echo "    This is NOT a clean result; it is the defect silence-audit detects."
+    total_flags=$((total_flags + 1))
+  elif [ "$sa_n" -eq 0 ]; then
+    echo "  clean -- every audited mechanism can distinguish empty from unreadable"
+  else
+    printf '%s\n' "$sa_flags" | head -8
+    [ "$sa_n" -gt 8 ] && echo "    ... $(( sa_n - 8 )) more"
+    total_flags=$((total_flags + sa_n))
+    echo "  -> full report: bin/silence-audit.sh"
+  fi
+fi
+
 echo
 echo "############################################################"
 echo "== $total_flags total FLAG(s) across ${#projects[@]} project(s) =="

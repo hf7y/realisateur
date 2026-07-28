@@ -42,10 +42,10 @@ Before marking anything done:
 - [ ] Verified **where the consumer reads it** (pushed to the ref the job
       clones — not just committed locally)?
 - [ ] Multi-line or shell-quoting commit message written with
-- [ ] `silence-audit --strict` clean? (mechanizes the retired
-      stderr-silencing / wired-to-a-real-path / names-what-it-retires rows)
       **`git commit -F <file>`**, not `-m` (backticks inside double
       quotes execute)?
+- [ ] `silence-audit --strict` clean? (mechanizes the retired
+      stderr-silencing / wired-to-a-real-path / names-what-it-retires rows)
 
 ## Ecosystem protocols (realisateur baseline)
 The checklist above governs work inside this repo. These govern anything

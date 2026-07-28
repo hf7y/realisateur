@@ -47,7 +47,19 @@ mapfile -t SHIMMED < <(
     for n in "${GLOBAL_COMMANDS[@]:-}"; do
       [ -n "${n:-}" ] && grep -o 'bin/[a-z0-9-]*\.sh' "$CMD_SRC/$n.md" 2>/dev/null
     done | sed 's|bin/||; s|\.sh||'
-    grep -o '`[a-z][a-z0-9-]*`' "$REPO/CLAUDE.md" 2>/dev/null | tr -d '`' \
+    # FIRST TOKEN of each backticked span, not the whole span. Every command
+    # in the propagated block is written with its arguments -- `focus-commit
+    # <repo> ...`, `notify-senechal '<what>'`, `silence-audit --strict` --
+    # so a pattern anchored to a closing backtick matched NOTHING, and this
+    # entire half of the derivation had been dead since it was written. It
+    # looked like coverage: the three shims it was supposed to produce
+    # existed anyway because ideate.md/cloture.md name them, so the silence
+    # was indistinguishable from success. silence-audit is the first command
+    # named ONLY here, and it is what exposed this -- it had to be
+    # hand-copied to ~/.local/bin, which is the failure install-shims exists
+    # to retire. Existence of bin/<token>.sh is still the filter, so a prose
+    # word can never become a shim.
+    grep -oP '`\K[a-z][a-z0-9-]*(?=[`[:space:]])' "$REPO/CLAUDE.md" 2>/dev/null \
       | while read -r t; do [ -f "$REPO/bin/$t.sh" ] && echo "$t"; done
   } | sort -u
 )
