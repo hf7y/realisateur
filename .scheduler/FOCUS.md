@@ -2301,3 +2301,52 @@ Zach's framing supersedes THE PLAY (scheduler FOCUS.md 2026-07-28 23:26) in thre
 
 === NOT BUILT ===
 No project scaffolded, no feature code written, no host touched. Dexter was read only. All four decisions above are recorded as reversible and awaiting Zach's confirmation.
+
+**2026-07-29 (`/ideate`, Zach-directed): THE PLAY, RUN AS A SELF-EXTENDING ROTATION — scheduler dogfoods the migration by writing its own next participant.** Zach: *"dogfood scheduler to pull this off. each job's milestone becomes to bootstrap itself. each job's timing is wired in by hand. scheduler runs itself. then that call adds another project to the rotation. that project runs. then scheduler runs again, adds another project to the rotation. non-scheduler turns should be slim using the realisateur milestoning system."* Four forks answered by Zach this session via `AskUserQuestion`. Nothing was wired; ecosim's sensor lane was the one build (see below).
+
+=== 1. VISION ===
+
+The migration performs itself, one alternating turn at a time, and the performance IS the dataset. Scheduler's turn is a WRITE — it appends the next participant's line to the rotation — so the rotation file extends itself and no agent holds the plan. Each project's turn is a single slim proof: bootstrap yourself on dexter, commit, push, done. ecosim watches and records but cannot intervene.
+
+What makes this different from a migration runbook: a runbook is a proxy for the migration, and (per the unsourced claim now filed as `bibliothecaire/briefs/proxy-variety-REQUEST.md` `d3bb504`) a proxy cannot have more output variety than the event. Running it turn by turn under instrumentation is the maximum-variety observation available. Zach's stated purpose stands unchanged: *"very important data for a more intelligent scheduler philosophy that's not simply about fair round robin turns."*
+
+DECIDED THIS SESSION (Zach, 2026-07-29, four answered forks):
+- **ecosim files observations onto its OWN repo, one issue per migration unit** — not onto the observed project's repo. Zero new permissions; ecosim never needs write on 14 repos. Explicitly accepted cost: NO feedback loop. The observed project never sees the observation. This is a lab notebook, not a control channel. Rejected: cross-repo filing, and the hybrid "own repo for routine, cross-repo on failure".
+- **A project's stability milestone is TEMPORARILY OVERRIDDEN with "bootstrap yourself on dexter", and the original is RESTORED afterward.** Rejected: tracking bootstrap outside the milestone system entirely, and replacing the 19 declared milestones permanently. This is the choice that keeps `milestone-audit` honest (one `Current` line per project) but it REQUIRES A STASH MECHANISM THAT DOES NOT YET EXIST — see BLOCKERS.
+- **Scheduler's turn WRITES the next rotation line.** Rejected: hand-edited slots, and hand-edit-then-self-write-after-wave-1. Zach chose the highest-data-value option and it makes the two-writer hazard LIVE rather than theoretical.
+- **Scope this session: brief + design + the ecosim onboarding build. No rotation wiring.**
+
+=== 2. THE COUPLING NOBODY HAS STATED YET, AND IT IS THE MOST IMPORTANT LINE IN THIS ENTRY ===
+
+"Scheduler's turn writes the next rotation line" is only safe because of the OTHER decision taken last session: **mandark's scheduler self-dev goes DARK, leaving dexter the only host that auto-commits scheduler's own history** (`dd11360`, awaiting Zach's confirmation at `63cf3b4`). Those two decisions are now load-bearing on each other. If Zach reverses the dark-mandark decision, the self-writing rotation becomes two hosts auto-committing to one scheduler history — precisely the divergence that already bit that repo, now on the file that governs dispatch. **The confirmation at `63cf3b4` is therefore a precondition of this design, not an independent question.** Do not wire the self-writing rotation before it is answered.
+
+=== 3. MILESTONE CHAIN ===
+
+M1 — THE FREEZE EXISTS AND FAILS LOUD. [current, not started]
+Unchanged from `eb94ba0` and still the only surviving M1 mechanism after M1(b)'s retirement. Checked at DISPATCH time by each consumer, not merely honored by the runner. Must STATE what it does not cover. Its scope question (`7fccdc1` q2, svc-vaporwave's fixed-cron jobs) is unanswered and now gates M1's definition of done.
+
+M1.5 — THE MILESTONE OVERRIDE MECHANISM EXISTS. [current, not started, REALISATEUR'S OWN]
+New, created by tonight's decision. A project's real stability milestone must be stashed and restored around its bootstrap turn. Done when: a project can be put into bootstrap-milestone and returned to its real one with the original recoverable from a git-tracked location, and `milestone-audit` reads correctly in both states. This is realisateur's system (`STABILITY-MILESTONES.md`) and realisateur's to build — it is the only piece of the play this repo owns outright.
+
+M2 — THE FIRST ALTERNATION RUNS. [next, not started]
+scheduler's turn on dexter writes ONE new participant line; that project's turn bootstraps and proves it with a real run that commits and pushes FROM dexter. Done when: two turns have happened in order, ecosim holds one `observation` issue with the complete state-transition record, and the rotation file's new line was written by scheduler rather than by hand.
+
+M3 — THE LOOP SUSTAINS. [later, undecided in scope]
+The alternation continues unattended for N units. The dispatch-order-by-readiness change is justified from the M2/M3 data or it is not made.
+
+M4 — HOST ASSIGNMENT IS DECLARED. [not queued] Unchanged.
+
+=== 4. BLOCKERS ON THE CURRENT STEP ===
+- **HUMAN-ONLY:** confirm `63cf3b4` — specifically decision (1), mandark self-dev going dark. §2 above makes it a precondition, not a standalone question.
+- **HUMAN-ONLY:** `7fccdc1` q2 — does the freeze reach svc-vaporwave's fixed-cron jobs (aedile 03:00, vkv-inventory 04:00) or declare them out of scope loudly?
+- **BUILDABLE NOW (realisateur):** the M1.5 stash mechanism. Nothing blocks it.
+- **BUILDABLE NOW (scheduler):** the freeze file. Blocked only on its scope question above for "done", not for "started".
+
+=== 5. BUILT THIS SESSION (the one exception to /ideate posture, Zach-approved) ===
+ecosim's sensor lane, `scheduler 40d7c3d`: `ANSWER_CHANNEL="issues"` (second project after the chezz pilot), four labels on `hf7y/ecosim` (`question`/`answered`/`observation`/`hypothesis`), and `REPO_URL` repointed. **That last one was a real defect, not tidying:** the local bare `/home/zach/git-remotes/ecosim.git` sat at `2129a13` while GitHub was at `db3f660` — five commits behind and MISSING ecosim's own `BRIEF-dexter-migration.md`. ecosim's dispatch was cloning a ref that did not contain its own work. Ancestor, not diverged. Verified via `git ls-remote` from both mandark and dexter, `merge-base --is-ancestor`, and `scheduler questions ecosim` → `channel: GitHub issues, hf7y/ecosim`.
+
+**Generalisation worth checking against every project, and NOT checked this session:** ecosim's conf drift is the same class its own brief §5 catalogued for `gardien` (`REPO_URL` still a mandark path). Two of 19 confs have now been found pointing dispatch at a local bare while the real work lives on GitHub. Nobody has audited the other 17. A project whose dispatch clones a stale ref looks perfectly healthy in every survey — `steward-survey` has no symbol for it. Queued below.
+
+=== 6. QUEUED, NOT BUILT ===
+- [batch] Audit all 19 confs for `REPO_URL` pointing at a local bare that is behind its GitHub counterpart. Two found by accident (ecosim, gardien); 17 unaudited. Compare `git ls-remote <bare>` against `git ls-remote <github>` per project and report ancestor/diverged/equal. This is a sensor the ecosystem does not have.
+- [batch] The M1.5 milestone stash/restore mechanism (see chain above).
