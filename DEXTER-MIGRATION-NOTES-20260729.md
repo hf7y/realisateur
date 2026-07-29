@@ -101,6 +101,98 @@ session is not an unattended call. Both directories are in the snapshot.
 
 Next action: Zach decides — kill the sessions, or let them close out first.
 
+---
+
+# Step 1 — full teardown, then bootstrap (Zach: "kill it all. this is bootstrap.sh and go")
+
+## Teardown completed
+
+Killed both live sessions (tmux `potato-claude`/PID `55298`, and PID `242127`);
+`pgrep claude` now returns nothing. Pane history captured first to
+`~/dexter-snapshots/session-captures-2026-07-29/`.
+
+Gardien torn down for a uniform starting line: `gardien.timer` disabled and
+stopped, both unit files removed, `daemon-reload` run. **The nightly backup no
+longer runs** — `~/.config/systemd/user/` is now empty.
+
+Removed `scheduler` (20M), `crt-brain` (12M), `gardien` (96K),
+`gardien-repo` (996K); then the orphans they left in machine config:
+`.local/bin/{usage-gate.sh,usage-paced-runner.sh}` (both dangling symlinks
+into the deleted `~/scheduler`), `.local/bin/crt-brain-shell`, and all six
+`.local/share/scheduler-*` state dirs.
+
+Home is now: dotfiles, `.ssh`, `.claude`+`.claude.json`, `.cache`, `.npm`,
+`.nvm`, `.local/{bin,share}` holding only node/npm/npx/claude. Verified after:
+`node v24.18.0`, `claude 2.1.220`, crontab `PATH=` line intact, deploy key
+authenticates (`Hi hf7y/scheduler!`).
+
+## FINDING (the headline): scheduler cannot bootstrap itself onto a bare host
+
+Re-cloned scheduler from `git@github-scheduler-deploy:hf7y/scheduler.git` at
+`5f72845`. Ran `bin/sync-crontab.sh` **without** `--apply`. It refused to
+install the runner tick:
+
+```
+ERROR [runner]: RUNNER_CMD -- /home/zach/.local/bin/usage-paced-runner.sh
+  does not exist or isn't executable -- runner tick omitted
+-- 1 error(s) above; the affected tier(s) were left OUT of the generated
+   crontab, everything else proceeded --
+```
+
+The mechanism, confirmed by reading rather than inferred:
+
+- `schedule/_runner.conf:25` hardcodes
+  `RUNNER_CMD="/home/zach/.local/bin/usage-paced-runner.sh"` — a path
+  **outside the repo**.
+- The repo *does* ship `bin/usage-paced-runner.sh`, executable.
+- **Nothing in the repo creates that symlink.** No `install.sh`, no
+  `bin/install*`; `grep -rn "local/bin" bin/*.sh` turns up only *consumers*
+  (`deploy-drift-check.sh` treats `~/.local/bin` as a pre-existing
+  `DEPLOY_DIR`) and prohibitions (`overnight-dev.sh:100`, "NEVER edit the
+  installed wrapper scripts under `~/.local/bin`").
+
+So the link was hand-installed once, on 2026-07-24, and every later run
+inherited it. Deleting it — which the clear-out did as routine orphan cleanup,
+not as a probe — removed the last copy, and the host lost the ability to
+dispatch anything at all.
+
+**This is run 3's own thesis reproduced one layer down.** Run 3 emptied the
+crontab because the `*/30` tick "had been HAND-INSTALLED and never generated
+by `bin/sync-crontab.sh`". The generator turns out to have the same defect it
+was being tested for: it can generate the *cron line*, but the *thing the line
+executes* is still hand-installed and ungenerated. `sync-crontab.sh:420`
+already documents this exact gap class for `~/.local/bin/scheduler` — so the
+pattern was known and filed, just not swept for.
+
+**The loud failure is the good news, and worth crediting.** `meta_cmd_unrunnable`
+checked the target, named it, and **omitted the tier** rather than emitting a
+cron line that would fail silently every 30 minutes. That is the
+BUILD-DISCIPLINE "fails loud / no exit-0 no-op" row doing real work on a real
+regression.
+
+### Second-order: the generated crontab would be empty anyway
+
+With the runner tick omitted, `_sweep.dexter.conf` blanking `SWEEP_TICK_CRON`
+(host opts out), and every project's fixed BATCH line suppressed as a paced
+participant, the managed block generates as:
+
+```
+# >>> scheduler-managed >>>
+# <<< scheduler-managed <<<
+```
+
+Empty. Nothing on dexter dispatches. The runner tick is not *a* job here — it
+is the *only* job, so that single missing symlink is a total-dispatch outage,
+not a degraded tier.
+
+### Third: the clone assumes mandark's directory layout
+
+`focus/` and `questions/` symlinks are generated pointing at
+`/home/zach/Documents/Projects/<proj>/.scheduler/…`, which is mandark's tree.
+On dexter every one reports `target does not exist yet`. Not fatal (they skip),
+but a dexter-resident scheduler has no FOCUS/QUESTIONS to read — a second
+unstated host assumption in the same bootstrap.
+
 ## Open question for the experimental record
 
 Does gardien count as already-migrated (leave it running) or as a service to
