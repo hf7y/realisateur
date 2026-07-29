@@ -1,5 +1,71 @@
 ---
 
+**2026-07-28 (scheduler sprint, step 3 of 3 — the sequence is complete): the absence-surface exists, and it is a run ledger in `scheduler` noargs (`fab5c8d`, pushed; live immediately — `~/.local/bin/scheduler` is a symlink into the repo).**
+
+Designed against step 2's measurement rather than against memory, which
+was Zach's stated reason for insisting on this ordering.
+
+**Against the proposed bar, clause by clause.** The bar: *`scheduler`
+noargs is a complete and falsifiable account of the system — if a dispatch
+was predicted and did not happen, it says so; if it cannot know, it says
+BLIND, never silence.*
+
+- *An account of what happened.* `last_run_verdict()` is now the single
+  place that answers "what actually happened on this job's last run",
+  read from the job's **own run log**. The `LAST RUN` column is left
+  exactly as it was — a `LATEST.md` mtime, i.e. a proxy for the last
+  *success* — and the ledger is what makes a failure recoverable rather
+  than invisible. Verdicts: `ok` `FAILED` `skipped` `running` `nolog`
+  `nojob`.
+- *Never silence.* It prints on **every** run, including when everything
+  is clean, and always prints the count of clean jobs. "Nothing listed"
+  and "nothing checked" must not look alike — that equivalence is the
+  whole cluster this sprint came out of.
+- *BLIND rather than a guess.* A `CRON_ACCOUNT` job whose state this
+  account cannot read renders `BLIND` and names the account and path,
+  never falling back to `$HOME`'s path — `state_account()`'s own
+  non-negotiable rule, now honoured in the glance and not only in
+  `status`.
+- *Predicted-and-absent.* This is the clause the system genuinely cannot
+  satisfy today, so it is printed as a **standing `BLIND:` line** instead
+  of being left out: nothing records expected-vs-actual dispatch, so a job
+  that silently stopped being dispatched looks identical to one with
+  nothing to do. Plus a concrete `last actual dispatch: <age>` from the
+  paced runner's log, or `BLIND` if that log is missing.
+
+**One deliberate softening, and the reason for it.** A record older than
+five days renders as `stale-<verdict>` with a note that it may be an
+orphaned job. scheduler's own row is why: its conf still names
+`scheduler-nightly-batch`, whose log ends at a `FAILED` on 2026-07-19,
+while the project is in fact dispatched by the paced runner and
+`sync-crontab` emits no line for that job at all. Rendering that as nine
+days of silence would be **asserting an outage that did not happen** —
+which is how a sensor earns being ignored, and this week already has two
+sensors that did exactly that.
+
+**Found on its first run, printed nowhere before:** `aedile` and
+`vkv-inventory` **both have tripped dead-man switches** and have been
+no-opping (aedile since 2026-07-27, vkv since 2026-07-27 20:51). The
+existing "expired jobs" footer missed both because it globs `$HOME` only
+and both jobs run as `svc-vaporwave` — the same home-scoping
+`silence-audit` flags across eight scheduler scripts. **Filed, not fixed
+here**: renewing someone else's dead-man switch is a decision, not a
+cleanup. Renew with `rm ~<acct>/.local/share/<job>/expires_at`.
+
+**Also filed, not fixed** (from step 2): the deployed paced runner stops
+pulling new commits whenever its repo has *any* dirty file, untracked
+included — a vim swap file from `scheduler -b` is enough, and was, for
+~15 minutes tonight. Narrowing it to tracked changes is a real policy
+change to the dispatcher (an untracked path can still block a
+fast-forward), so it is Zach's call.
+
+**Verification.** `tests/run-ledger-witness.sh` — 12 assertions, including
+the two that matter most: a `FAILED` run after an earlier success must not
+render as `ok`, and an unreadable cross-account job must render `BLIND`.
+`tests/run-all.sh` (new this session) runs all four witnesses; all pass.
+`silence-audit --strict` unchanged at 46 flags with one more mechanism
+audited.
+
 **2026-07-28 (scheduler sprint, step 2 of 3): the fold IS lossy, and it is lossy in the cheap direction — `bin/unprinted-facts.sh` (`1ee8fca`) measures it instead of asserting it.**
 
 Step 2 was Zach's stated reason for the whole sequence: step 3 is only
