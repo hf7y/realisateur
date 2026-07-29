@@ -1,13 +1,43 @@
 # DEFERRED CROSS-WRITE -- brief for ecosim: metabolism, dead-man switches, in-universe only
 
-**Status:** NOT DELIVERED. `check-project-busy ecosim` reported
-`BUSY: interactive session (pid 2614858, since 2026-07-29T00:05:11-05:00)`
-at 2026-07-29 14:40, so this was deferred per realisateur/CLAUDE.md rather
-than written into ecosim's FOCUS.md under a live run.
+**Status: DELIVERED 2026-07-29, same session.** ecosim `d6fb6f7`, in
+`.scheduler/FOCUS.md`, verified present on `origin/main` (the ref ecosim's
+own run clones) via `git merge-base --is-ancestor` plus a grep of
+`git show origin/main:.scheduler/FOCUS.md`. This file is kept only as the
+source text and as the record of the reasoning error below.
 
-**To deliver, once ecosim is free** (re-probe, do not quote this):
+**THE DEFERRAL WAS WRONG, and this is the correction.** It was first held
+back because `check-project-busy ecosim` reported `BUSY: interactive session
+(pid 2614858, since 00:05)`. That BUSY was accurate -- `check-project-busy`
+does a live `kill -0` probe precisely because markers outlive crashed
+sessions -- but it was **the wrong guard for this write**.
 
-    check-project-busy ecosim && scheduler -i ecosim "<the brief below>"
+`bin/notify-senechal.sh` already states why, in its own header (lines 20-25):
+`scheduler -i` routes through `cmd_commit_file`, the staleness-checked
+single-file commit path, and **that IS the multi-writer regulator for this
+interface** -- safe against a live run in a way a hand edit is not. The
+check-project-busy deferral is explicitly called "belt-and-braces on top of
+it."
+
+So the rule is narrower than it was applied: `check-project-busy` gates
+**direct writes into another project's files**. It does not gate a
+**front-door** write, which has its own regulator. Deferring a front-door
+note on a BUSY reading buys nothing and costs delivery -- the exact failure
+notify-senechal.sh was built to remove ("deferred ... recorded as owed ...
+only paid a session later by hand. That is exactly the failure mode a script
+removes.").
+
+Caught by Zach in the same session, who asked "or front door it?" The
+inconsistency was already visible: `notify-senechal` had front-doored a note
+into senechal minutes earlier with no busy check at all.
+
+**The delivery command, for reuse:**
+
+    scheduler -i ecosim "$(cat <this file, from '## The brief' down>)"
+
+Passed via `"$(cat ...)"` rather than inlined: the brief contains backticks,
+which execute inside double quotes. Command substitution yields them as a
+value instead.
 
 ---
 
