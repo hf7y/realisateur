@@ -357,6 +357,8 @@ if ! git diff --quiet -- "${touched_confs[@]}"; then
   git commit -m "$(cat <<EOF
 ${touched_confs[*]}: weight-audit.sh auto-reweight ($(date +%Y-%m-%d))
 
+Host: $(hostname -s)
+
 $changed project(s) reweighted from commit velocity (7d trailing) against
 an in-progress stability milestone -- see this script's own header for
 the eligibility gate, cap, and caveats. Mechanical pass, no AI/judgment
