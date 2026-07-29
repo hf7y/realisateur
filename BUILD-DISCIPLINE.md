@@ -445,6 +445,67 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     has no name is one nobody can argue for at the moment it is removed.
 
 
+19. **The operator reaches around the system instead of through it, and
+    the bypass is invisible to the system.** A system owns some domain —
+    dispatch, deploys, releases. Something needs stopping or changing in
+    that domain *right now*. The system has no verb for it, or its verb
+    is too slow, so a human reaches past it: edits the crontab the system
+    generates, kills the process the system started, moves the file the
+    system manages. It works. Nothing fails loud, because the bypass
+    genuinely did the job.
+
+    Three costs, none of which appear at the time:
+    - **The system's own state is now a lie.** It still believes it is
+      dispatching, or that a job is running, because nothing told it
+      otherwise. Every consumer of that state inherits the lie.
+    - **The missing verb stays missing.** The hand-fix removes the
+      pressure that would have built it, so the same emergency finds the
+      same gap next time — and the fix is now folklore in one person's
+      shell history rather than a mechanism.
+    - **If the run was an experiment, the data is contaminated and does
+      not say so.** An out-of-band intervention is invisible to
+      instrumentation that watches the system's own channels. The
+      observer records an uninterrupted run.
+
+    Distinct from its neighbours: pattern 3 (layer-not-replace) adds a
+    mechanism alongside an old one — here no mechanism is added at all;
+    pattern 6 (cruft on shared hosts) is about what a bypass *leaves
+    behind* — this is about what it *fails to record*; pattern 18 is a
+    control removed because its name misled — here the control was never
+    consulted.
+
+    **Found live, 2026-07-29 (the dexter migration).** The stated purpose
+    was Zach's: *"we need to run the play, via scheduler, for science."*
+    Stopping dexter was then done entirely outside scheduler — its
+    crontab hand-edited, mandark's sweep backstop hand-commented, and
+    finally the paced runner and a running job killed by pid. Each step
+    worked. None went through scheduler, so:
+    - scheduler's `run.log` shows `DISPATCH [0/4] crt` and no
+      termination — from its own records the job simply stops existing.
+    - The freeze, which IS scheduler's native stop, was engaged and
+      **never reached dexter at all**; the actual stop was three hand
+      operations it knows nothing about.
+    - ecosim is instrumenting this migration. Every control action taken
+      tonight is invisible to its sensors, which read rotation files and
+      FOCUS entries. Its record of the night will show a migration nobody
+      interrupted.
+    Zach named it: *"the failure here is that we should have used
+    scheduler itself to stop the work."*
+
+    The tell that it had already gone wrong: the in-flight runner
+    survived the crontab edit by 52 minutes, because removing a schedule
+    never stops what the schedule already started. Reaching around the
+    system got a *partial* stop that looked complete — the strongest
+    argument for the verb, discovered by not having it.
+
+    **The rule:** when you are operating a system deliberately (and
+    always when dogfooding it), control actions go THROUGH it. If it has
+    no verb for what you need, **building the verb is the work** — a
+    hand-fix is a decision to leave the gap. If you must bypass in an
+    emergency, the bypass is not finished until it is recorded where the
+    system and its observers will see it.
+
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a

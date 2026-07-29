@@ -2460,3 +2460,22 @@ This is the session's own thesis landing on us rather than on a script: a label 
 **What this does NOT retract.** Removing the 7d hold was still right, and Zach directed it with credits in hand: it un-stalled a system that had dispatched nothing for 17 hours on mandark and never on dexter, and it produced the night's best evidence — `DONE crt rc=0 (943s)`, dexter's first end-to-end proof as an execution host. The failure is ordering and naming, not the decision.
 
   [batch] Rename or re-document `usage-gate.sh` so its name states what it protects, not what it reads. The mechanism is correct and should not change; the label is what has too few symbols. Candidate framing from Zach: it slows the ecosystem's metabolism. Cross-reference BUILD-DISCIPLINE pattern 18.
+
+**2026-07-29 (`/ideate`, Zach-directed): THIRD FAILURE, AND IT IS THE ROOT ONE — "we should have used scheduler itself to stop the work." Filed as BUILD-DISCIPLINE pattern 19.** Failures 1 and 2 (pattern 18) were about the gate and the freeze. This one is about the fact that we bypassed the system we were supposed to be running the migration *through*.
+
+**What actually happened.** The stated purpose was Zach's own: *"we need to run the play, via scheduler, for science."* Stopping dexter was then done entirely outside scheduler — dexter's crontab hand-edited, mandark's sweep backstop hand-commented, and finally the paced runner and a live job killed by pid. Every step worked. None went through scheduler.
+
+**Three costs, none visible at the time:**
+1. **Scheduler's own state is now a lie.** Its `run.log` records `DISPATCH [0/4] crt` and no termination. From scheduler's records the job simply stopped existing. Anything reading that log — including `scheduler status` — inherits it.
+2. **The missing verb stays missing.** There is no `scheduler stop`. The hand-fix removed the pressure that would have built one, so the next emergency finds the same gap, and tonight's fix survives only as folklore in a shell history.
+3. **THE EXPERIMENT IS CONTAMINATED AND DOES NOT SAY SO.** ecosim is instrumenting this migration by reading rotation files and FOCUS entries. **Every control action taken tonight is invisible to those sensors.** Its record will show a migration nobody interrupted. This is the most serious of the three, because the whole point of running the play via scheduler was to generate trustworthy data about dispatch — and the night's largest interventions happened off-channel.
+
+**The tell that it had already gone wrong, and it is the best argument for the verb:** the in-flight runner survived the crontab edit by **52 minutes**, because removing a schedule never stops what the schedule already started. Reaching around the system produced a *partial* stop that looked complete — and it looked complete for nearly an hour, during which I twice reported dexter as stopped when it was still dispatching. That error is downstream of this failure, not separate from it.
+
+**The rule (pattern 19):** when operating a system deliberately, and always when dogfooding it, control actions go THROUGH it. If it has no verb for what you need, **building the verb is the work** — a hand-fix is a decision to leave the gap. An emergency bypass is not finished until it is recorded where the system and its observers can see it.
+
+**Immediate consequences, both queued not built:**
+- A `scheduler stop` proposal goes to scheduler's front door: engage the freeze, signal in-flight runners and jobs, and record the stop in `run.log` so the system's own history shows an interruption rather than an absence.
+- ecosim must be told its dataset has an unrecorded out-of-band intervention spanning roughly 01:30–01:55, or its first real observation is of a night that did not happen the way its sensors say.
+
+**What this does NOT excuse:** the freeze could not have done this job tonight even if we had used it. It gates dispatch, never reaching in-flight work, and it never arrived on dexter at all. Pattern 19 is about reaching around scheduler; the fact that scheduler's own stop was insufficient is pattern 18's half. Both are true, and fixing only one leaves the ecosystem unable to stop itself.
