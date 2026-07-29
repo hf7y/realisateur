@@ -1,0 +1,73 @@
+# scheduler-dev-cycle.sh reuses a stale same-day branch — worked around 3x, never fixed
+
+**Type:** work (not a decision). Belongs in scheduler's own backlog; filed here
+as an inbox drop because run 3 stripped scheduler's `.scheduler/FOCUS.md` to a
+bootstrap brief whose stamp forbids appending, and `scheduler -i` would append
+to a backlog section that no longer exists. realisateur's next pass should route
+it through scheduler's front door once the bootstrap brief is retired.
+
+**Reader:** realisateur's next `/ideate` or nightly pass.
+
+## The defect
+
+`bin/scheduler-dev-cycle.sh` accumulates a day's cycles onto one
+`paced/<date>` branch, creating it with:
+
+    git worktree add -b paced/<date> ... main
+
+It forks from `main` **only when that branch does not already exist.** When it
+does exist, the cycle checks it out *at whatever tip it already had* — which is
+stale the moment `main` advances.
+
+## Observed live, 2026-07-29
+
+The 15:18 cycle logged:
+
+    Preparing worktree (checking out 'paced/2026-07-29')
+    HEAD is now at 8389129 questions-lint: a farm entry pointing at nothing is BLIND
+
+`8389129` predated that day's run-3 stamp, the cutover commit, AND
+`bin/verdict.sh` entirely — so the agent would have run from the previous run's
+brief with no verdict mechanism present. It never got that far only because the
+cycle died on an unrelated API 529.
+
+I then hit the same trap twice more and cleared the branch by hand **three
+times** across the session (`git branch -D paced/2026-07-29`, after verifying
+`git rev-list --count main..paced/2026-07-29` was 0 each time). Twice it was
+harmless purely because `main` had not advanced yet. That is luck, not safety.
+
+## Why it matters more than it looks
+
+This is adjacent to the orphaning the script's own header already documents —
+7 unmerged commits on each of `paced/2026-07-25/26/27`, confirmed absent from
+`main` file-by-file. That header explains the *tail* being orphaned when the
+day rolls over. This is the *head* being stale when the day does not.
+
+It bites hardest exactly when someone is iterating: any same-day re-run after a
+push silently gets an old base, and nothing in the log says "this base is
+behind main" — the `HEAD is now at <sha>` line is the only clue, and it looks
+identical to a correct run.
+
+## Two candidate fixes
+
+1. **Fork from `main` unconditionally**, and name the day-branch
+   `paced/<date>-<n>` when it already exists. Simplest; costs the
+   one-branch-per-day property the reconcile logic leans on.
+2. **Fast-forward the day-branch to `main` when it is strictly behind**
+   (`git merge-base --is-ancestor <branch> main`), refuse loudly when it has
+   diverged. Preserves one-branch-per-day and is the smaller change. Preferred.
+
+Either way the cycle should **log the base's relationship to `main`**, not just
+its sha — "base <sha> (N commits behind main)" would have made this visible on
+the first occurrence instead of the third.
+
+## Do not fix this blind
+
+`bin/scheduler-dev-cycle.sh`'s branch model has orphaned real commits three
+times and its own header is a monument to how its fallback paths interact. Any
+change here wants a witness that drives the real script against a synthetic
+repo — the shape `tests/runner-conf-host-witness.sh` case 7+ now uses — rather
+than a re-implementation of the rule.
+
+Related: scheduler `e37ef8c` (per-cycle transcripts) makes the diagnosis of any
+future occurrence far cheaper than it was here.
