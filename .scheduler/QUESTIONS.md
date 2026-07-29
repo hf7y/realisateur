@@ -114,76 +114,8 @@ marker file it may observe at
 realisateur's, is expected, and is self-healing (a stale one means a
 session died, not that anything is wrong).
 
-- **2026-07-26 (interactive): `crt` is dark at weight 3, with 32 open ideas stranded behind it. Intended?**
-  The new `bin/steward-survey.sh` surfaced this on its first run and it is
-  the loudest row in the ecosystem: weight 3 is the highest stated intent
-  anywhere, `enabled=0` is the actual dispatch, and the two have disagreed
-  long enough for 32 dated ideas to pile up with nothing draining them.
-  Not touched — re-enabling a project is a stated decision, not a batch
-  one. Three honest options, and any of them is fine:
-  (a) **re-enable** — the intent was real and the valve was shut by
-  accident or for a reason that has passed;
-  (b) **drop the weight to 1 and leave it dark** — so the stated intent
-  stops contradicting the dispatch, and re-enabling later is a small step;
-  (c) **leave it exactly as is and park the 32 ideas honestly** — crt is
-  deliberately off, and the reservoir behind it should say so rather than
-  reading as live backlog.
-  Same question applies more quietly to `groc-mangr` (weight 2, dark) and
-  to `aedile`, whose registered repo path
-  (`/home/zach/Documents/vkv/wavebucks/aedile`) no longer exists at all —
-  that one is probably a stale registration rather than a decision.
-  > (answer inline here)
-  >
-  > **WITHDRAWN 2026-07-27 (`/ideate`) — THE QUESTION WAS BUILT ON A
-  > SENSOR ARTIFACT. Do not answer it; nothing here needs deciding.**
-  > Zach *did* answer it in the 2026-07-27 session (option b, "drop the
-  > weight to 1 and leave it dark") and the change was deliberately NOT
-  > applied — `schedule/_paced.conf` is untouched and crt keeps weight 3,
-  > which is correct. Re-probed, not quoted:
-  > - **crt is not dark.** `schedule/_paced.dexter.conf:105` is
-  >   `crt|1|3|...`, enabled, and crt has **289 commits in the last 7
-  >   days** (most recent nightly authored `Dexter Pine`, 2026-07-25). It
-  >   is the single most active project in the ecosystem. The 32 "stranded"
-  >   ideas are draining nightly, from dexter.
-  > - **aedile is not a stale registration.** Its path is a *subdirectory*
-  >   of the shared `wavebucks` monorepo, which is why `git -C` reported
-  >   both "no repo" (to some sensors) and "clean, up to date" (to
-  >   `ecosystem-survey.sh`, which was reading the monorepo). It dispatches
-  >   from `svc-vaporwave`'s crontab at 03:00 — verified with
-  >   `sudo -n -u svc-vaporwave crontab -l`, stderr not silenced.
-  > - **vkv-inventory** likewise, 04:00, 26 commits/7d including one
-  >   authored by `svc-vaporwave` itself.
-  > `groc-mangr` (weight 2, dark) is the one part of the original question
-  > that survives, and it is quiet enough not to need a decision tonight.
-  > Root cause: `bin/steward-survey.sh` reads one of **three** dispatch
-  > surfaces. 42 of the 52 reported "stranded" ideas were artifact. Fix
-  > queued as `bin/sensor-agree.sh`; new BUILD-DISCIPLINE.md pattern 14.
-
-- **2026-07-27 (`/ideate`): realisateur's own stability milestone is gated
-  on five projects that nothing dispatches against. Restate the bar, or
-  clear the five by hand?**
-  The current bar is *"every scheduler-registered project with a real git
-  repo has a declared `## Stability milestone` of its own, AND
-  park-by-default triage has held across more than one live pass."*
-  `milestone-audit.sh` reports 5 still missing: `groc-mangr`,
-  `nine-speakers`, `sequestria`, `vim-arcade`, `vkv-inventory`. Four of
-  those five are `enabled=0` in every rotation file, so no nightly run
-  will ever declare them — and the fifth (`vkv-inventory`) dispatches
-  under `svc-vaporwave`, whose runs have not taken up milestone-setting.
-  **The bar as written is not reachable by waiting**, which makes it a
-  milestone that cannot be reached rather than one that has not been. Not
-  touched — restating a milestone is a stated decision, not a batch one.
-  (a) **declare the five by hand** from an interactive pass (realisateur
-  has direct cross-write privilege; ~5 short entries, one session);
-  (b) **restate the bar** to cover only projects with a live dispatch
-  path, and say so — the honest version if the five are deliberately
-  dormant;
-  (c) **re-enable some of the five** so their own runs can do it — the
-  most expensive option, and only right if you actually want them moving.
-  > (answer inline here)
-
 - **2026-07-27 (nightly-batch): home-assistant is DIVERGED from origin/master — 1 local-only, 5 remote-only commit(s) — and its last scheduled run FAILED (2026-07-27 17:48:44, 212s, nothing pushed).** `ecosystem-survey.sh`'s own git-health check refuses to auto-resolve this ("Needs a real merge decision -- NOT auto-resolved, ever"), and this pass agrees — it's home-assistant's repo/automation, not realisateur's to touch. Genuine judgment call for Zach: which side is correct (the 1 local-only commit, or the 5 remote-only ones), and should the merge happen by hand or should home-assistant's own next run be trusted to reconcile it? Until resolved, home-assistant's nightly automation is likely to keep failing or skipping pushes.
-  > (answer inline here)
+> home assistant trusted to reconcile it
 
 - **2026-07-28 (`/ideate`, Zach-directed): four decisions on policy propagation.**
   Asked live this session; Zach stepped away before answering, so they are
@@ -201,7 +133,7 @@ session died, not that anything is wrong).
   marker so it covers cross-writes, GUI editors and agents for free, costs
   15min→30min backstop latency (**realisateur's recommendation**); (b)
   defer if ANY session marker is live; (c) both; (d) sweep stops pushing.
-  > (answer inline here)
+> (a) yes but also use a front door so cross writes do not happen.
 
   **(2) Propagating the question-routing fix.** The bad instruction is live
   in `gardien`, `groc-mangr`, `nine-speakers`, `senechal`, `sequestria`,
@@ -210,18 +142,19 @@ session died, not that anything is wrong).
   fixed once and project #8 gets it on creation (**recommended**); (b)
   hand-fix the six now — faster, but it is the hand-copy this ecosystem
   keeps naming as failure pattern 4; (c) fix only the high-cadence ones.
-  > (answer inline here)
+  > yes restamp
 
   **(3) The ~50 orphaned `> ` replies across 11 projects.** Options: **(a)**
   inventory them for you first — project, question, your reply, git-blame
   date — and you decide what is still live (**recommended**); (b) give every
   project the now-non-destructive consume step and let their next runs pick
   them up; (c) leave them, deliberately, as archaeology.
-  > (answer inline here)
+  > let them consume them with instruction to send archaeology to bibliothecaire
 
   **(4) `restamp-discipline.sh` runs on nothing.** Options: **(a)** shim it
   and have `/ideate` + `/cloture` run it **dry** during orient, keeping
   `--apply` a deliberate human act (**recommended** — an unattended rewrite
   of 18 CLAUDE.md files is a large blast radius for a cron job); (b) cron it
   with `--apply`; (c) shim only.
-  > (answer inline here)
+> new claude command restamp that interactive sessions tell me to call. move
+> to cron triggered when 3 restamps happen manually in one day.
