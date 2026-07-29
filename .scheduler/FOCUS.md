@@ -1,5 +1,74 @@
 ---
 
+**2026-07-28 (scheduler sprint, step 2 of 3): the fold IS lossy, and it is lossy in the cheap direction — `bin/unprinted-facts.sh` (`1ee8fca`) measures it instead of asserting it.**
+
+Step 2 was Zach's stated reason for the whole sequence: step 3 is only
+worth building if it is designed against evidence. The inventory is a
+**script, not a list in this file** — a one-night inventory decays into a
+claim, and this repo's own doctrine is that the most authoritative-looking
+statement of a fact is the one nobody re-derives. It re-probes every run
+and exits 0 whatever it finds (a measurement, not a gate).
+
+**Tonight's reading: 21 facts — 6 PRINTED, 12 UNPRINTED, 3 BLIND.** The
+distinction that matters for the bar: `UNPRINTED` is already on this disk
+and costs nothing but a reader; `BLIND` is not recorded anywhere and is
+the only category that needs new plumbing.
+
+**The five findings that bear directly on the proposed bar:**
+
+1. **`LAST RUN` in the glance is not a run record.** It is
+   `reports/<p>/LATEST.md`'s mtime. **Five projects' report mtime
+   currently disagrees with their own run log by more than an hour** —
+   chezz by 2h, crt by 20h, vim-arcade by 17h, vkv-inventory by 9 days. A
+   run that FAILS writes no report, so the column shows the last
+   *success* wearing the last *run*'s clothes. This is the exact shape
+   `silence-audit` was built to name: a proxy that stays green while the
+   outcome fails.
+2. **The last run's OUTCOME is printed nowhere.** 33 `FAILED` run records
+   across 8 jobs; 84 `skipped (…)` records (precheck, expiry, deferral).
+   A dispatch that did nothing is indistinguishable from one that worked.
+3. **A state dir orphaned by a runner that MOVED accounts is unflagged.**
+   vkv-inventory is the live case, and it is worth stating precisely
+   because it nearly became a false headline in this session: its local
+   `sweep.log`'s last record is a `FAILED` from 07-20, which reads like an
+   8-day outage. It is not one — the job now runs as `svc-vaporwave` and
+   has filed reports through 07-27. `scheduler status` is CRON_ACCOUNT-aware
+   and prints `BLIND` (`bin/scheduler:2590`); **the glance is not, and
+   reads `$HOME` regardless.** The gap is the view, not the account.
+4. **The dispatcher's own `run.log` is read by no view.** Two facts sit in
+   it: a **HOLD streak** with no surface saying how long since a real
+   dispatch (last one 07-28 07:46), and **33 `PULL skip`s** — the deployed
+   code stops pulling new commits whenever the repo has *any* dirty file,
+   `git status --porcelain` counting untracked ones. **A vim swap file
+   from the project's own front door (`scheduler -b`) is enough**, and one
+   was, for ~15 minutes during this session. *Not fixed here* — narrowing
+   it to tracked changes is a real policy change to the deployed
+   dispatcher (an untracked path can still block a fast-forward), so it is
+   filed for Zach rather than taken unilaterally.
+5. **Stale registry markers: 4 of 6 `.interactive` markers belonged to
+   dead pids.** The probe liveness-checks rather than counting files, on
+   purpose — counting files would have been the same stale-sensor mistake
+   one level up. (`check-project-busy` does check liveness; nothing
+   *prints* the stale ones.)
+
+**What is genuinely BLIND, and therefore what step 3 cannot fold:** was a
+dispatch DUE and did not happen; did a given cron line fire at all; runs
+on other *hosts*. **Nothing on disk answers these**, so the bar's "if it
+cannot know, it says BLIND, never silence" clause is not decoration — it
+is 3 of 21 facts.
+
+**Verdict on the question step 2 was asked to settle** — can three views
+carry everything? **No, and they do not need to.** Twelve of the fourteen
+non-blind gaps are a reader away; only the three BLIND rows need new
+recording. Step 3 should be a fourth surface over existing state plus one
+new record (expected-vs-actual dispatch), not a redesign of the views.
+
+**Live instance of the adoption defect, third in 36 hours:** the sweep
+watcher adopted this session's dirty `README.md` at 19:00 as `6b61863`,
+authored `hf7y <dangerpine@gmail.com>`. It did push this time, so nothing
+stranded — but the attribution was wrong again, and this is now evidence
+for the same unanswered question, not a new one.
+
 **2026-07-28 (scheduler sprint, step 1 of 3): `q-756f82` CLOSED by fixing it — every `notify-send` in the scheduler engine is now bounded, and a dropped notification is no longer silent.**
 
 Zach's sprint sequence (`e05016e`) put this first and explicitly refused
@@ -46,8 +115,9 @@ tree). The commit staged exactly the six files above and touched neither
 `BLOCKERS.md` nor the swap file, so no live edit was written out from
 under. Flagging it because a disjoint-files judgement call is still a call.
 
-**Steps 2 and 3 of the sprint are untouched** — the inventory of facts no
-view prints, and the absence-surface built against its evidence. Step 1's
+**Steps 2 and 3 of the sprint are untouched at the time of writing** —
+step 2 was then done in the same session, see the entry above; **step 3
+remains open.** Step 1's
 own work is a small piece of evidence for step 2: a `timeout`-dropped
 notification is now a fact the engine knows and no view prints.
 
