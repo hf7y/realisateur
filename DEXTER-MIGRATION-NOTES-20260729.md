@@ -193,6 +193,92 @@ On dexter every one reports `target does not exist yet`. Not fatal (they skip),
 but a dexter-resident scheduler has no FOCUS/QUESTIONS to read — a second
 unstated host assumption in the same bootstrap.
 
+---
+
+# Step 2 — dexter goes bare, and the office replaces scheduler on it
+
+Zach: *"dexter's working directory should be bare, not even scheduler."*
+
+## Teardown completed
+
+Removed the re-cloned `~/scheduler` (3.4M, at `5f72845`). Checked before
+deleting, not after: no `claude` process running, tree clean, `0` commits ahead
+of upstream — nothing on the host that the remote didn't already hold.
+
+dexter's home is now exactly: `.bashrc`, `.bash_history`, `.bash_logout`,
+`.profile`, `.gitconfig`, `.viminfo`, `.motd_shown`, `.landscape`, `.ssh`,
+`.claude` + `.claude.json`, `.cache`, `.npm`, `.nvm`, `.config`, `.local`.
+No project directory of any kind.
+
+Re-probed after (2026-07-29, via `ssh -p 2223 dexter`): `~/.local/bin` holds
+only `claude`, `node`, `npm`, `npx`; `claude --version` → `2.1.220`;
+`~/.config/systemd/user/` is empty; crontab is the `PATH=` line plus the
+comment block. **Nothing on dexter dispatches, and nothing on dexter is
+scheduled to.**
+
+Note the PATH trap reappearing as expected: bare `node -v` over
+non-interactive ssh fails (`command not found`) while `~/.local/bin/node`
+exists — `.bashrc` returns early before its nvm block. Absence of `node` on
+that shell's PATH is not absence of node.
+
+## What replaces scheduler there
+
+A new repo — **`media-arts-collective/office`**, local clone
+`~/Documents/vkv/office`, first commit `f63ce49`, pushed. It is the "office
+parallel to the front door" from the 2026-07-29 `/ideate` capture, built for
+nomac (nomac is the performance; the office is the company behind it). Directors
+Zach and Tyler; Roman-named agents as employees; Claude capacity in the
+vaporwave account denominated as **wavebucks**, so an agent is paid for
+completed work orders and charged for its own thinking.
+
+Filed to senechal via `notify-senechal` (senechal `719dd0f`): dexter is bare,
+and the office — not scheduler — is the declared owner of its machine config
+going forward.
+
+**The office has installed nothing on dexter yet.** `bootstrap.sh` was run
+preflight-only, from mandark. Arming it is a separate, deliberate step.
+
+## Finding: the bootstrap defect from step 1 became a design rule
+
+Step 1's headline was that `scheduler` could not bootstrap onto a bare host: its
+generator emitted a cron line pointing at `~/.local/bin/usage-paced-runner.sh`,
+a path **nothing in its repo ever created**, hand-installed once on 2026-07-24
+and silently depended on forever.
+
+`office` is built so that failure is structurally unavailable:
+
+- every out-of-tree path is declared in **`office.conf`** (one source) and
+  created by **`bootstrap.sh`**, which re-derives its symlinks from the repo on
+  *every* run rather than trusting a link a human made once;
+- `bootstrap.sh` **refuses to clobber a non-symlink** at a target path — if a
+  human put a real file there, that is a finding, not something to overwrite;
+- it **preflights by default** and arms nothing without `--apply`;
+- it prints six **declared-but-unbuilt** items out loud (mail transport,
+  Workspace accounts, `commissio`, the token meter, `office-worm`, an empty
+  archive) so the presence of well-written protocol documents cannot be mistaken
+  for a working office.
+
+## Finding: an economy is a mechanism, so it can be tested — and the first test found a real bug
+
+The reverse-bid market is the load-bearing idea (an agent is paid its own bid and
+keeps the margin, so the only way to get rich is to stop thinking about a
+repeated job and build the utility instead). That is an incentive claim, but the
+bookkeeping under it is ordinary software and was exercised as such.
+
+`bin/office-ledger` — hash-chained, append-only — was tested for: chain tamper
+detection, seq-gap detection, pipe/newline injection, and refusal to pay beyond
+what was appropriated. **The first run exposed a real defect:** `APPROP` and
+`HIRE` credited the *appending* director, giving `zach@nomac.org` a balance of
+550 wavebucks. A director holding a balance in a closed economy would have made
+every solvency check meaningless.
+
+Fixed by separating **authority from subject**: `--as <director>` authorizes and
+is recorded in the note, the subject is the employee (or the literal `TREASURY`
+for an appropriation), and any row whose subject is a director is now refused
+outright. Recorded here because the bug was only visible because a balance was
+*printed and read* — the human-sense witness, not the exit code. `office-ledger
+verify` exited 0 on the ledger that contained it.
+
 ## Open question for the experimental record
 
 Does gardien count as already-migrated (leave it running) or as a service to
