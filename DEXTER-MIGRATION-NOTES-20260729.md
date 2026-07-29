@@ -258,6 +258,58 @@ and silently depended on forever.
   archive) so the presence of well-written protocol documents cannot be mistaken
   for a working office.
 
+## Correction to step 1, which sharpens the rule above
+
+Step 1 and the design rule both say the runner symlink was "a path **nothing
+in its repo ever created**." That is what the evidence supported at the time
+and it is not quite right. `bin/scheduler` *did* create it, via a
+`pacing deploy` subcommand, until 2026-07-27 — commit `a5fb620`,
+*"pacing: retire `deploy` + copy-drift, check the symlink precondition
+instead."* What remains is a loud stub:
+
+> retired 2026-07-27: installed scripts are symlinks into the repo, so there
+> is no copy to re-deploy.
+
+**The rationale is true and still produced the outage.** Once the link exists,
+the repo really is what runs and there is no copy to refresh — a correct
+statement about a *development checkout*. "No copy to re-deploy" was then read
+as "nothing to install," and creating the link in the first place went out
+along with the `cp`-era habit it belonged to. Invisible on every host that
+already had the link; fatal on a bare one.
+
+**And the replacement guard does not cover it.** `deploy-drift-check.sh:28`
+checks "per file in this repo's `bin/` **that also exists in `$DEPLOY_DIR`**"
+— the intersection. Line 205 prints `nothing in $DEPLOY_DIR shares a name with
+this repo's bin/ -- nothing to check` and exits `0`. A link that *should*
+exist but does not is never iterated over. Only a *dangling* link is caught
+(line 144), never an *absent* one. So on a bare host the deploy checker
+reports clean — an exit-0 no-op inside the guard meant to catch deploy
+problems. Of the three mechanisms, only `sync-crontab.sh` fired.
+
+So the lesson for `office` is stronger than "build an installer." It is:
+**an installer looks vestigial from inside the development loop, and deleting
+it is a rational-seeming act right up until a host has to receive the
+product.** `bootstrap.sh` re-deriving its symlinks on *every* run is the right
+shape precisely because it makes that deletion unattractive — there is no
+moment at which it reads as a no-op. The matching guard rule: **check the
+declared set, never the intersection**, or absence reports clean.
+
+## Filed onward
+
+Zach's framing of the underlying question, filed to bibliothecaire via
+`scheduler -i` (bibliothecaire `e812f9b`): *the agents are not the actions.*
+`scheduler` is a bin utility with a non-agentic mode — bash on PATH, run by
+cron, no model in the loop — and the agent **develops** scheduler rather than
+being it. We ran one self-development metaphor across both, and here it
+produced a bug rather than described one: "the repo IS what runs" is the
+sentence a thing with a self says about itself, true inside the development
+loop and false from the position of a host that must receive a product. A self
+does not install itself somewhere else; a product does. Open question recorded
+there: whether to exit the metaphor for scheduler specifically, and whether the
+agentic and non-agentic modes need different vocabulary **and** different
+guards. Cheap test of whether it has actually been exited: can a bare host go
+`clone → install → run` with no human hands.
+
 ## Finding: an economy is a mechanism, so it can be tested — and the first test found a real bug
 
 The reverse-bid market is the load-bearing idea (an agent is paid its own bid and
