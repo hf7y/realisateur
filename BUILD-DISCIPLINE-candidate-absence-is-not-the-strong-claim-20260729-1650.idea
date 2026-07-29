@@ -1,0 +1,71 @@
+# BUILD-DISCIPLINE candidate: absence of a signal must never be read as the strong claim
+
+**Status:** candidate, NOT written into `BUILD-DISCIPLINE.md`. Filed for
+`/ideate` to accept or reject — promoting a pattern is a doctrine edit and
+this session did not make one.
+
+**Reader:** realisateur's next `/ideate` pass.
+
+## The pattern
+
+When a mechanism distinguishes two states and one of them is signalled by a
+file, a flag, or a report that a component is *asked* to produce, decide
+deliberately which state **silence** maps to — and map it to the *weaker*
+claim, the one whose false positive is cheap.
+
+Stated as a rule: **an absent signal is evidence of nothing. It must never be
+read as the assertion that would be expensive if wrong.**
+
+## Where it came from (2026-07-29, `bin/verdict.sh`, scheduler `3b8e481`)
+
+The runner needed to tell "this agent ran out of turns with work left"
+(re-dispatch it) from "this agent concluded the bar cannot be met" (stop
+dispatching, reduce metabolism). Both had presented as `rc=1` forever.
+
+The mechanism is an agent-written verdict — `CONTINUE` / `DONE` /
+`IMPOSSIBLE`. The load-bearing design choice was not the vocabulary; it was
+that **absence of a verdict classifies as NOT-DONE, never as GAVE-UP.**
+Killed, truncated, crashed and silent all re-dispatch with metabolism
+untouched. Only an explicit `IMPOSSIBLE` — refused unless it carries a stated
+reason — brakes.
+
+## Why it is worth a pattern rather than a one-off
+
+It was validated by the same day's data, not by argument. Six failures on
+2026-07-29, every one `rc=1`: three max-turns, two API 529s, one partial
+progress. **Not one was a reason to back off.** Any brake keyed on failure
+count — the obvious design — would have shut scheduler down five times over
+while it was doing real work, including the cycle that produced `d3a4944`.
+
+And the mechanism's own first live exercise landed exactly on the silent path:
+the agent never wrote a verdict at all, despite its brief asking. Under the
+inverse default that single omission would have braked scheduler on turn one.
+The asymmetry was doing load-bearing work within hours of existing.
+
+## The corollary, which is the part that generalises further
+
+Silence being *safe* is not the same as silence being *invisible*. Because
+absence cannot brake, the only way a never-reporting component becomes known
+is by being **named**: the runner now logs `NO-VERDICT` distinctly from
+`CONTINUE`. Both still re-dispatch — control flow is untouched — but the two
+stop being indistinguishable in the record.
+
+So the pattern has two halves, and a mechanism with only the first is
+incomplete:
+1. map silence to the cheap claim;
+2. say out loud that it was silent.
+
+## Adjacent existing patterns
+
+Related to but distinct from the dead-man switch (`lib/deadman-switch.sh`),
+which is the opposite direction — there, *absence of renewal* is deliberately
+the strong claim, and correctly so, because the thing it protects against is a
+job nobody is watching. The distinction worth capturing: absence means
+"expired" only when something is *contractually obliged to refresh it on a
+known cadence*. A verdict has no cadence, so its absence means nothing.
+
+Also adjacent to the 2026-07-29 witness lesson from `d3a4944`: a test that
+asserts an outcome (the sweep line is missing) without asserting the manner
+(missing because opted out, not because refused) passes while the code is
+broken. Same family — reading a *lack* of something as proof of a specific
+cause.
