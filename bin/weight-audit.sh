@@ -86,8 +86,27 @@
 set -uo pipefail
 
 SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
-PACED_CONF="$SCHED_ROOT/schedule/_paced.conf"
-[ -f "$PACED_CONF" ] || { echo "FATAL: $PACED_CONF not found" >&2; exit 2; }
+# EVERY host's rotation file, not just mandark's. Until 2026-07-29 this was
+# hardcoded to schedule/_paced.conf, which is mandark's file -- so a project
+# migrating to dexter left the domain of the ecosystem's only negative
+# feedback mechanically, at the moment it moved (ecosim finding #11). Weight
+# is a property of the PROJECT, not of the host that happens to dispatch it.
+#
+# Resolution mirrors bin/usage-paced-runner.sh's own "which participants
+# file" rule: _paced.conf is the default rotation, _paced.<short-hostname>.conf
+# is a host that owns its own. List them: ls schedule/_paced*.conf
+#
+# This job still runs on ONE host (mandark's crontab) and reads every file
+# from the shared git checkout -- it does not need to run where the project
+# runs, because commit velocity is measured from PROJECT_REPO_PATH, which is
+# a mandark path in every conf. If a project's working copy ever stops
+# existing on mandark, the per-project SKIP below says so out loud rather
+# than silently scoring it zero.
+declare -a PACED_CONFS=()
+for _pc in "$SCHED_ROOT"/schedule/_paced.conf "$SCHED_ROOT"/schedule/_paced.*.conf; do
+  [ -f "$_pc" ] && PACED_CONFS+=("$_pc")
+done
+[ "${#PACED_CONFS[@]}" -gt 0 ] || { echo "FATAL: no $SCHED_ROOT/schedule/_paced*.conf found" >&2; exit 2; }
 
 STATE_DIR="$HOME/.local/share/weight-audit"
 STREAK_DIR="$STATE_DIR/park-streak"
@@ -156,10 +175,17 @@ echo " PARK suggestions are signals only. See this script's own header for the"
 echo " full eligibility/caveat writeup.)"
 echo
 
-WORK="$(mktemp)"
-cp "$PACED_CONF" "$WORK"
 changed=0
 declare -a park_lines=()
+declare -a touched_confs=()
+
+for PACED_CONF in "${PACED_CONFS[@]}"; do
+echo "============================================================"
+echo "ROTATION FILE: ${PACED_CONF#"$SCHED_ROOT"/}"
+echo "============================================================"
+conf_changed_before="$changed"
+WORK="$(mktemp)"
+cp "$PACED_CONF" "$WORK"
 
 while IFS= read -r line; do
   case "$line" in ''|'#'*) continue ;; esac
@@ -279,6 +305,26 @@ while IFS= read -r line; do
   echo
 done < <(grep -v '^[[:space:]]*#' "$PACED_CONF" | grep -v '^[[:space:]]*$')
 
+# Per-file apply. Done inside the loop so each rotation file is rewritten
+# from its OWN computed copy; the single commit at the end stages whichever
+# of them actually changed.
+if [ "$changed" -eq "$conf_changed_before" ]; then
+  echo "No weight changes in ${PACED_CONF#"$SCHED_ROOT"/}."
+  rm -f "$WORK"
+elif [ "$DRY_RUN" = "1" ] || [ "$APPLY" = "0" ]; then
+  echo "$((changed - conf_changed_before)) change(s) computed but NOT applied to ${PACED_CONF#"$SCHED_ROOT"/} (dry_run=$DRY_RUN apply=$APPLY)."
+  echo "--- diff ---"
+  diff -u "$PACED_CONF" "$WORK" || true
+  rm -f "$WORK"
+else
+  cp "$WORK" "$PACED_CONF"
+  rm -f "$WORK"
+  touched_confs+=("${PACED_CONF#"$SCHED_ROOT"/}")
+  echo "$((changed - conf_changed_before)) weight change(s) applied to $PACED_CONF."
+fi
+echo
+done
+
 echo "############################################################"
 if [ "${#park_lines[@]}" -gt "$RUNAWAY_MAX" ]; then
   echo "SUSPICIOUSLY MANY PARK SUGGESTIONS (${#park_lines[@]}, > RUNAWAY_MAX=$RUNAWAY_MAX)."
@@ -296,28 +342,20 @@ fi
 
 echo
 if [ "$changed" -eq 0 ]; then
-  echo "No weight changes this run."
-  rm -f "$WORK"
+  echo "No weight changes this run (across ${#PACED_CONFS[@]} rotation file(s))."
   exit 0
 fi
 
-if [ "$DRY_RUN" = "1" ] || [ "$APPLY" = "0" ]; then
+if [ "${#touched_confs[@]}" -eq 0 ]; then
   echo "$changed weight change(s) computed but NOT applied (dry_run=$DRY_RUN apply=$APPLY)."
-  echo "--- diff ---"
-  diff -u "$PACED_CONF" "$WORK" || true
-  rm -f "$WORK"
   exit 0
 fi
-
-cp "$WORK" "$PACED_CONF"
-rm -f "$WORK"
-echo "$changed weight change(s) applied to $PACED_CONF."
 
 cd "$SCHED_ROOT" || exit 1
-if ! git diff --quiet -- schedule/_paced.conf; then
-  git add schedule/_paced.conf
+if ! git diff --quiet -- "${touched_confs[@]}"; then
+  git add -- "${touched_confs[@]}"
   git commit -m "$(cat <<EOF
-_paced.conf: weight-audit.sh auto-reweight ($(date +%Y-%m-%d))
+${touched_confs[*]}: weight-audit.sh auto-reweight ($(date +%Y-%m-%d))
 
 $changed project(s) reweighted from commit velocity (7d trailing) against
 an in-progress stability milestone -- see this script's own header for
