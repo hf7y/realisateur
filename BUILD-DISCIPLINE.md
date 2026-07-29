@@ -391,6 +391,60 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     run automatically when a human quits the editor from the scheduler
     front door (scheduler `6c95fab`).
 
+18. **A safeguard named for its mechanism gets removed by someone
+    reasoning about its function.** A control is named after *what it
+    reads* rather than *what it protects*. Later, someone reasons about
+    the thing being protected, does not recognise the control as
+    relevant, and removes or bypasses it — correctly, by the name. The
+    name had fewer distinctions than the job, so a true statement about
+    the name ("this limits usage, and we have usage headroom") licensed
+    a false conclusion about the system ("so this can go").
+
+    Distinct from its neighbours: pattern 3 (layer-not-replace) leaves
+    the old mechanism running underneath — here it is deliberately
+    removed; pattern 10 (a rename breaks a silent consumer) is about a
+    name *changing* — here the name never changed and was wrong from the
+    start; pattern 14 is a sensor that cannot report a state — here the
+    sensor works perfectly and the *label on it* is what lacks variety.
+
+    **Found live, 2026-07-29 (scheduler, the dexter migration).**
+    `usage-gate.sh` was read as a quota guard, because it is called a
+    usage gate. Both hosts had stalled — mandark's last dispatch 17h
+    earlier, dexter's log showing zero dispatches ever — and the gate was
+    holding on `29% used vs burn-line 27% (on-pace)`. With credits
+    available, removing the 7-day even-burn hold was a correct reading of
+    a quota guard, and it worked: both hosts dispatched within five
+    minutes.
+
+    It was not only a quota guard. It was the ecosystem's **metabolic
+    rate limiter** — the one thing bounding how fast the whole system
+    could consume itself — and it was doing that job well. Zach named the
+    defect exactly: *"the usage gate was actually helpful and we missed
+    it because it's called usage gate, not slow down metabolism."*
+
+    The cost was ordering. **The throttle came off before the abort
+    handle went on**, and the causal chain is short and entirely
+    mechanical: gate removed → dexter dispatched immediately and looped
+    on `crt` → a busy host skips `PULL` → the freeze, which propagates by
+    git pull, **could not reach the host it most needed to reach** →
+    dexter had to be stopped by hand-editing its crontab. The abort
+    handle existed, was correct, was tested in both directions, and was
+    irrelevant, because the window in which it could have been installed
+    quietly had already been spent.
+
+    **The rule:** install and *verify arrival of* the replacement control
+    before removing the existing one — arrival on every host, not merely
+    a commit. A control you have not yet seen refuse something is not
+    installed; and one that reaches a host only when that host is idle is
+    not a control over a busy host, which is the only case that matters.
+
+    **The tell, generalised:** when a component's name describes its
+    *input* (usage, disk, tokens, rate) rather than what breaks in its
+    absence, assume the name understates it, and ask what it is the last
+    line of defence for before touching it. A control whose real function
+    has no name is one nobody can argue for at the moment it is removed.
+
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a
