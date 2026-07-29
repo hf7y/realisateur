@@ -331,6 +331,82 @@ outright. Recorded here because the bug was only visible because a balance was
 *printed and read* — the human-sense witness, not the exit code. `office-ledger
 verify` exited 0 on the ledger that contained it.
 
+---
+
+# Step 3 — the office's first real mechanism runs on dexter
+
+Zach: *"can we run this on a mailserver sandbox?"* Yes, and it is running.
+
+## What dexter now hosts
+
+Clone `~/office` at `f9198dc`, plus state tree `~/office-state`. Live and
+verified 2026-07-29 22:59Z on the host itself:
+
+- `office-smtpd.service` (systemd `--user`, **rendered by the repo's bootstrap**,
+  not hand-installed) — `active`, `enabled`, listening on `127.0.0.1:2525`.
+- `loginctl enable-linger zach` → `Linger=yes`, so the user manager and the
+  transport survive logout. Enabled without a polkit prompt.
+- five symlinks in `~/.local/bin`: `office-{smtpd,mail,account,ledger,worm}`.
+- crontab **untouched** — still only the `PATH=` line. Nothing is scheduled;
+  this is a daemon, not a tick.
+
+End-to-end on the real tree (not the test sandbox): `zach@nomac.org` →
+`faber@nomac.org` delivered, archived, `office-worm verify` → *1 message, chain
+intact*, and the first two ledger rows written (`APPROP` 1000 to `TREASURY`,
+`HIRE` 50 to faber). Filed to senechal via `notify-senechal` (senechal
+`0bf6ad7`), including the full teardown sequence.
+
+## Finding: the host's real constraints forced a better design
+
+Probed rather than assumed: dexter has **no passwordless sudo** (`zach` is in
+the `sudo` group but authentication is interactive), **no pip**
+(`python3 -m pip` → no module), and **no MTA** — postfix, exim, sendmail all
+absent. Python is 3.14.4, and `smtpd` was removed from the stdlib in 3.12.
+
+So every conventional option (postfix, dovecot, aiosmtpd) needed a human to type
+a password once. That is precisely the shape of step 1's outage: *a dependency
+only a human can install, that nothing in the repo creates.* The transport was
+therefore written against `asyncio` alone — a minimal RFC 5321 subset server with
+**nothing to install**, which `bootstrap.sh` can stand up unattended on a bare
+host. The constraint produced the property the whole experiment is about.
+
+Worth recording as the general form: **an environment that refuses you the
+convenient dependency is testing your bootstrap, not obstructing you.**
+
+## Finding: the WSL boundary is not a boundary (relevant to the sudo question)
+
+Zach asked whether sudo on dexter would be "bounded to the WSL". Probed on the
+host — it would not be:
+
+| Probe | Result |
+|---|---|
+| `mount \| grep drvfs` | `C:\` **and** `D:\` mounted **rw** at `/mnt/c`, `/mnt/d` (uid=1000) |
+| `/proc/sys/fs/binfmt_misc/WSLInterop` | `enabled` — Linux processes can exec Windows binaries via `/init` |
+| `id` | `zach` already in group `sudo`; only the password is missing |
+
+So root inside the distro reaches the whole Windows user profile and can launch
+Windows programs as that user. It is not Windows *administrator*, but it is not
+contained either. Recorded because "it's just the VM" is the intuition that makes
+a standing `NOPASSWD` feel cheap on a host that runs unattended agents.
+
+Containment, if it is ever wanted, is `/etc/wsl.conf`
+(`[interop] enabled=false`, `[automount] enabled=false`) — an actual boundary,
+at the cost of `/mnt/c` and Windows interop.
+
+## Finding (third): a single config source is not enough if the reader drops assignments
+
+`office.conf` declared `GROUPS="staff commissio payroll worm"`. **`GROUPS` is a
+bash special readonly array** (the caller's gid list), so sourcing it assigned
+nothing, raised nothing under `set -euo pipefail`, and `$GROUPS` expanded to
+`1000` — bootstrap created a mailbox named after a group id and printed success.
+
+Renamed to `MAIL_GROUPS`; `bootstrap.sh` now probes **every** key in
+`office.conf` for that collision class and fails loud. This is a new failure mode
+against the BUILD-DISCIPLINE "config read from one source" row: the row assumes a
+single source is sufficient, and here the single source was correct while the
+*reader* silently discarded it. Candidate phrasing: *one source, and prove the
+read took.*
+
 ## Open question for the experimental record
 
 Does gardien count as already-migrated (leave it running) or as a service to
