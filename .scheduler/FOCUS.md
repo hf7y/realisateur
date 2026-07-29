@@ -2267,3 +2267,37 @@ a decision to install or a decision to retire.
 **Ecosystem:** Autocommit watcher has unpushed QUESTIONS.md adoptions in 4 projects (noted in earlier sessions); worth `git ahead N` check before running cron. chezz pre-commit hook performance (2.5 min hangs on ~:30) noted for future optimization, not blocking rollout.
 
 **Commits this session:** scheduler branch gh-issues-answer-channel `3a45bf3` (REPO_URL update).
+
+**2026-07-28 (`/ideate`, Zach-directed, "this is the moving target in action"): THE PLAY REVISED — scheduler bootstraps itself onto dexter; the first schedule IS the readiness test.** Zach's framing, near-verbatim: the ecosystem moves to dexter, scheduler moves FIRST and bootstraps the rest, creds are already set up, "the agents are neurotically overthinking it." Drop scheduler in, run it, it installs itself; the first schedule runs each agent, which takes turns verifying its credentials and proving it's wired up. ecosim monitors for data and names hypotheses from bibliothecaire quotes. Nothing was built this session.
+
+=== WHAT THE PROBE FOUND (re-probed, not quoted) ===
+
+`ecosim/BRIEF-dexter-migration.md` is STALE in both of its loudest findings, and this matters because THE PLAY's caution is built on them:
+- §3 "dexter's scheduler is stalled right now, and silently" — FALSE as of 2026-07-28 23:35. `ssh dexter` shows `~/scheduler` at `## main...origin/main` clean, and `run.log` logs `23:30:02 PULL fast-forwarded to 6e8636a`. Verified 2026-07-28 via `ssh dexter 'git -C ~/scheduler status -sb; tail -4 ~/.local/share/scheduler-paced-runner/run.log'`.
+- §2 "the fix — one host-local line" — ALREADY APPLIED and persisted. `git config --global --get url.https://github.com/.insteadOf` → `git@github.com:`. Verified same command.
+This is the fourth instance this week of a headline quantity needing re-derivation before action (cf. the 07-26/07-27/07-28 survey cases). The brief is 40 minutes old and two of its three findings expired. Filing this here, not in ecosim's repo, per ecosim's own rule.
+
+=== THE DISAGREEMENT, NAMED ===
+
+Zach's framing supersedes THE PLAY (scheduler FOCUS.md 2026-07-28 23:26) in three places, two of them recorded as DECIDED earlier the same night:
+1. **Order.** PLAY: "scheduler's OWN move is deferred until the others land and there is evidence" (M4). ZACH: scheduler first, it is the bootstrap mechanism.
+2. **Readiness.** PLAY M1(b): a central probe writes a readiness store; agents select from it, cannot assert readiness. ZACH: each agent proves its own wiring on its own first turn.
+3. **Gate.** PLAY M1: freeze + probe must both exist before anything moves. ZACH: drop it in, run it, the first schedule is the test.
+
+**Why Zach's version is not the reckless one, stated because the recorded plan implies it is.** The failure that motivated M1(b) was a central probe reporting 19/19 READY when the true answer was 2/19 — a probe asserting readiness on behalf of 19 projects it could not see execute. Replacing it with "each agent runs on dexter and proves it" is STRICTLY HIGHER SENSOR VARIETY by ecosim's own thesis: a real run has more output symbols than any probe of a run. The neurosis is building a predictor for an outcome that is cheaper to observe directly. M1(b) is a sensor built to avoid running the experiment.
+
+=== DECISIONS (Zach unavailable at ask time — asked via AskUserQuestion, 60s no-response; each taken on best judgment from something ALREADY WRITTEN DOWN, each reversible, each to be re-confirmed) ===
+
+- **Scheduler moves first; mandark's scheduler self-dev goes DARK.** Supersedes the defer. The two-writer hazard (two hosts auto-committing one scheduler history) is resolved by decree rather than by ordering: dexter becomes the only host that auto-commits scheduler's own history; mandark keeps the human checkout, interactive and read-only. Derived from THE PLAY's own already-DECIDED vision line — "mandark becomes a workstation ... and stops being an execution host." PASSED OVER: the defer's evidence-first rationale. Stated reason for the override: the bootstrap IS the evidence-generating run, and deferring the bootstrap defers the data the whole experiment exists to collect.
+- **M1(b), the readiness probe, is RETIRED before being built.** Superseded by self-verification-on-first-turn, per the sensor-variety argument above.
+- **M1(a), the freeze file, SURVIVES.** It is not a predictor; it is the abort handle — the only thing that stops a bad first schedule already in flight. `git revert` handles a landed bad commit; it does not stop a running tick.
+- **Proof bar = a real run that commits and pushes FROM dexter.** The crt bar, already M2's recorded standard. NOT ls-remote-plus-a-witness-line (proves reachability, not that the job works). Agent-authored prose self-report is explicitly REJECTED and recorded as rejected — it is tonight's already-found failure mode.
+- **ecosim is an OBSERVER with no stop bit.** It records everything, names failure classes, cannot halt a move. Its own CLAUDE.md forbids writing findings into other projects' repos; giving it a stop bit would make it a regulator rather than a sensor, which is a change to that project's remit and needs its own stated decision.
+
+=== WHAT IS STILL OPEN (unchanged, and this revision does not close them) ===
+- Do `_paced.*.conf` become GENERATED artifacts with `HOST=` on each project's conf, or stay hand-maintained? (scheduler 7fccdc1 q1, unanswered.)
+- Must the freeze reach svc-vaporwave's fixed-cron jobs (aedile 03:00, vkv-inventory 04:00), or may it declare them out of scope loudly? (7fccdc1 q2.) This gates the freeze's definition of done, and the freeze is now the ONLY surviving M1 mechanism — so this question got MORE load-bearing tonight, not less.
+- Sequencing detail Zach's framing does not settle: "it installs itself on the machine" — does the self-install write dexter's crontab, or does it assume the `*/5` paced-runner tick already there is the whole install surface? Dexter already runs `usage-paced-runner.sh */5`; the sweep backstop and weight-audit ticks are mandark-only and unreplicated (ecosim brief §6.6, still current).
+
+=== NOT BUILT ===
+No project scaffolded, no feature code written, no host touched. Dexter was read only. All four decisions above are recorded as reversible and awaiting Zach's confirmation.
