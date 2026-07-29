@@ -2412,3 +2412,36 @@ Same shape as the 19/19-READY probe: the detail was right and the *aggregate cou
 **Ranking, stated because "any last blockers" deserves an order and not a list.** B1 is the only one that cannot be cleared by deciding or building — it is a resource constraint on a shared meter, and every other blocker's fix is dispatched *through* it. B3 is next because it is one word from Zach and gates B4. B2 is the largest build. B5 and B6 do not block starting.
 
   [batch] Re-probe B1 before any migration turn is wired: count `DISPATCH` lines per host per day. If dexter is still at zero, the rotation cannot advance there regardless of what the confs say.
+
+**2026-07-29 (`/ideate`, Zach-directed — "the play, freeze the jobs. amend the milestones. tell scheduler what to do. drop scheduler into the repo and trigger it manually. then the remaining jobs migrate"): THE PLAY IS RUNNING. Freeze engaged, scheduler instructed, bootstrap deliberately NOT started — and the freeze has a propagation gap that the play itself exposed.**
+
+=== 1. WHAT IS NOW TRUE (probed, not quoted) ===
+- **Dispatch resumed on both hosts.** The 7d even-burn hold is gone (`e502555`). mandark `01:00:04 RUN rush=True -> DISPATCH [3/19] chezz`; dexter `01:00:03 -> DISPATCH [1/4] crt` — **the first dispatch in dexter's entire run.log.**
+- **Dexter is a proven execution host as of tonight, and the old evidence was stale.** `DONE crt rc=0 (943s)` at 01:15:46 — a real 16-minute job, completed, on dexter. Until now the only evidence was a crt clone last touched 2026-07-25.
+- **The freeze is engaged** (`983ed3d`) with `EXEMPT: scheduler` (`807f926`, `769cdcc`). Verified against the real file: ecosim REFUSED, crt REFUSED, scheduler ALLOWED, no-project-name REFUSED. 13 negative-test assertions.
+- **Scheduler has its instructions** (`f2511e8`, via the front door).
+
+=== 2. THE FINDING: A FREEZE CANNOT REACH A HOST THAT IS BUSY ===
+**The abort handle propagates by `git pull`, and the runner skips `PULL` while a job is running.** Dexter took `DISPATCH [1/4] crt` at 01:00, ran 943s, and dispatched crt *again* at 01:15:47 — so it has never had a pull window and **is still at `e502555` with no `schedule/FREEZE` and no `freeze-check.sh`.** With crt at weight 3 in a 4-slot rotation (`crt crt crt wtul`), that window may not arrive for ~45 minutes.
+
+Stated plainly: **the busier a host is, the longer it takes to freeze it — and a host in a tight dispatch loop is the exact case an abort handle exists for.** The mechanism is inverted with respect to its own purpose. This is not a bug in the freeze's logic (which is proven in both directions) but in its *delivery*, and it was invisible until a real host was actually busy.
+
+The pull-skip guard is CORRECT and must not simply be removed: it exists so code does not change underneath a running job. Forcing a pull mid-run would swap `~/scheduler/bin` out from under an executing `scheduler-run`. So the fix is not "pull anyway" — it is a delivery channel for the freeze that does not require a code pull, or a pre-dispatch freeze fetch narrow enough to be safe. **Not designed here; filed as the finding.**
+
+=== 3. WHAT I DID NOT DO, AND WHY ===
+**The manual bootstrap on dexter was NOT started, deliberately.** Two reasons, both about the in-flight crt run: (a) `scheduler-dev-cycle.sh` on dexter would be a second concurrent job on a host already running one, and (b) the dev-cycle touches `~/scheduler`, which is the very tree crt's `scheduler-run` is executing out of. Starting it now risks corrupting a run that is currently the *only* end-to-end proof dexter works. It waits for crt to yield.
+Also found while proving the exemption, and it changes step 1: **`scheduler-run scheduler batch` exits 2** — "BATCH_SCRIPT is set ... that legacy wrapper is authoritative." Scheduler does not run through the shared engine; its bootstrap path is its own wrapper. Filed to scheduler with an explicit instruction NOT to "fix" that as part of the bootstrap, since migrating scheduler onto `scheduler-run` is a separate decision and would change what the bootstrap proves.
+
+=== 4. MILESTONES — AMENDED SEMANTICS, NOT YET APPLIED ===
+Zach's bar, verbatim: *"the milestone is to wire up, then fail loudly enough to be taken off rotation."* Applied **per participant as it is queued** (Zach's call), not to all 19 at once — the declared milestones stay intact and each is restored after its turn. Nothing is queued yet, so nothing is amended yet.
+**Read what it actually says:** success is the project *removing itself* from the rotation; the failure that matters is **staying in the rotation silently** — a unit that neither wires up nor fails loudly is the only outcome nothing detects. And it supplies what ecosim's T2 says the rotation lacks: stigmergy needs negative feedback or it "merely accumulates," and nothing removed participant lines. **"Fail loudly enough to be taken off rotation" IS that evaporation**, arriving as a milestone definition rather than a mechanism. ecosim told to re-check T2's falsifier before building S2 (issue #13).
+
+=== 5. CONF DRIFT RECLASSIFIED: PAYLOAD, NOT BLOCKER ===
+Zach 2026-07-29: *"confs pointing at mandark and not github is fine. we can use scheduler itself to dispatch the jobs needed to do it."* ecosim's S5 found 11 of 19 confs still on `/home/zach/git-remotes/` (`356ecb0` reverted `3a45bf3`), unreachable from dexter. Independently confirmed: `grep -l 'REPO_URL="/home/zach/git-remotes' schedule/*.conf | wc -l` → **11**, against 5 on GitHub. This is no longer B0 — a project's bootstrap turn includes repointing its own `REPO_URL`. The migration dispatches its own prerequisite.
+
+=== 6. BLOCKERS ON THE CURRENT STEP ===
+- **HUMAN-ONLY, unchanged and now more urgent:** `63cf3b4` — confirm the four decisions, especially (1) mandark's scheduler self-dev going DARK. It is the precondition making the self-writing rotation single-writer. Both slots still read `> (answer inline here)`.
+- **BUILDABLE:** freeze delivery to a busy host (§2).
+- **WAITING:** the manual bootstrap, on crt yielding dexter (§3).
+
+  [batch] Design a freeze delivery path that does not depend on a code pull. The current handle cannot reach a host in a tight dispatch loop — the case it exists for. Do NOT fix by removing the pull-skip guard; that guard prevents swapping code under a running job.
