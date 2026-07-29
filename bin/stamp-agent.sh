@@ -33,6 +33,13 @@
 # Default is DRY RUN: prints the file it would write and exits. --apply
 # writes it. Never commits -- committing is the caller's, so a stamp lands
 # in the same reviewed change as whatever else that agent's arrival needs.
+#
+# STAMP_DATE (env, YYYY-MM-DD) overrides the date written into the stamp
+# comment. Set it and this script becomes a PURE FUNCTION of its arguments:
+# same args, byte-identical file, any day. That is what lets
+# bin/make-bootstrap-branch.sh rebuild an identical bootstrap branch from a
+# future repo state -- without it, "recreate the branch" silently produces a
+# one-line diff every day and the reproducibility claim is untestable.
 set -uo pipefail
 
 SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Project Archive/scheduler}"
@@ -158,7 +165,7 @@ OUT="$(mktemp)"
 {
   echo "# FOCUS — $PROJECT"
   echo
-  echo "<!-- $STAMP_MARK. Written by realisateur bin/stamp-agent.sh on $(date +%Y-%m-%d)."
+  echo "<!-- $STAMP_MARK. Written by realisateur bin/stamp-agent.sh on ${STAMP_DATE:-$(date +%Y-%m-%d)}."
   echo "     This file is this agent's WHOLE brief. Anything that was here before"
   echo "     is recoverable from git (\`git log -p -- ${FOCUS#"$REPO"/}\`) and was"
   echo "     stripped deliberately, not lost. Do not restore it. Do not append"
