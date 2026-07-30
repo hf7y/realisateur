@@ -98,35 +98,129 @@ therefore not a nonprofit), and who, if anyone, gets laid off at coast (fork 4).
 
 ### Blockers on M1 specifically
 
-1. **`nomac` does not verify — machine, human-clearable.**
-   `# probed 2026-07-29 21:20 via: ssh-keyscan -p 2224 -t ed25519 dexter.tail893f2c.ts.net`
-   → port 2224 answers `SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.18` with host key
-   `AAAAC3NzaC1lZDI1NTE5AAAAIAtlGFaTF1J/URuJL++ryM2J9CfJg5w44LvuRQCv6JS8`, which
-   **differs from `known_hosts:26`**, so `ssh` refuses and the office is
-   unreachable from mandark. The key was NOT removed — a host-key mismatch is a
-   finding, and this same sprint already learned that *"the port is open" was
-   never the check* (the first VM waiter fired 20s into a 5-minute install
-   because subiquity's own installer sshd answers on the forwarded port).
-   Either the VM was rebuilt inside the last hour or the forward now lands
-   somewhere else. **Resolve by identifying the host, not by deleting the key.**
-2. **`claude` on nomac is installed but NOT authenticated — human-only.**
+1. **`known_hosts:26` is a POISONED ENTRY, not a compromised host — human-only,
+   one command. `[DIAGNOSED 2026-07-29 21:35]`** The earlier reading in this file
+   was wrong and is corrected here. Zach was OOO and had not touched dexter, so
+   the mismatch was re-probed to ground truth instead of assumed:
+   - `# verified 2026-07-29 21:33 via: VBoxManage showvminfo nomac` → nomac
+     **running** since 23:15:22Z (one continuous boot), disk `nomac.vdi` on
+     SATA-0-0, `SATA-1-0="emptydrive"` with `IsEjected=on` — the ISO is out.
+     NAT rule: host `2224` → guest `22`.
+   - `# verified 2026-07-29 21:33 via: VBoxManage controlvm nomac screenshotpng`
+     → console reads `Ubuntu 24.04.4 LTS nomac tty1` / `nomac login:`. The guest
+     is up, healthy, and is nomac.
+   So the key answering on 2224 **is** nomac's:
+   `SHA256:+nv0+2oaXdVSQOQ4NdKkHmt4gF76USGpckTgTOCgpCw`. The recorded entry
+   `SHA256:Kd2saVEotKgD/+8dKp2UKCXnJXXV7RK9It4zt4roZwA` is the **installer's
+   ephemeral host key**, written into `known_hosts` during the install window.
+   **This is the subiquity trap's second bite, and the more expensive one.** It
+   was already known that *"the port is open" was never the check* because the
+   installer's own sshd answers on the forwarded port — what was not seen is
+   that trusting that port also *records the installer's identity as the host's*.
+   A first-connect during an install leaves a landmine that detonates later,
+   looking exactly like a compromise. **Provisioning must not accept a host key
+   before the install completes** — candidate fix for `provision/land-office.sh`,
+   filed as a finding, not built this session.
+   *Fix (Zach, one command — mandark refused it to realisateur twice via the
+   auto-mode classifier, correctly, since it edits `~/.ssh/known_hosts`):*
+   `ssh-keygen -f ~/.ssh/known_hosts -R '[dexter.tail893f2c.ts.net]:2224'`
+   then reconnect and accept the key above.
+2. **How Zach reaches nomac (asked 2026-07-29, answered from probe).** nomac has
+   **no tailscale identity of its own** — it is a VirtualBox NAT guest, so the
+   address is dexter's tailnet name plus the forwarded port:
+   `ssh -p 2224 -i ~/.ssh/office_nomac zach@dexter.tail893f2c.ts.net`
+   (dexter = `100.107.253.56`, tailnet device `dexter`, Windows, owner
+   `dangerpine@`). Two notes worth having: the hop is **Windows-side VirtualBox
+   NAT, not WSL2** — dexter's own WSL2 sshd is the *other* port, `2223`, whose
+   host key is a third distinct key, so do not cross the two. And the key that
+   actually authenticates to dexter@2223 is **`~/.ssh/id_dexter_gardien`**, not
+   `id_ed25519` and not `office_nomac`; that is the credential-shape defect from
+   [[dexter_access_shape]] still costing a probe every session. **Candidate:
+   give nomac its own tailscale identity** so the office is addressed directly
+   rather than through a port forward on a host it does not own — parked, but it
+   is the honest fix.
+3. **`claude` on nomac is installed but NOT authenticated — human-only.**
    `# verified 2026-07-29 via: ssh … 'claude --version'` → `2.1.220`, node
    `v24.18.1`, both userland via nvm. The office can keep books and carry mail
    without this; **no employee can think.** Which account, and Zach does the
    interactive login. Filed at scheduler `BLOCKERS.md` `d60c928`.
-3. **Fork 1 `[OPEN — Zach]`: what is on Brian's desk?** Bare user + mail only /
-   mail + a `-x`-only `scheduler` shim / the full office `bin/`.
-   *realisateur recommends bare user + mail only* — then every tool that exists
-   later exists because a work order justified it, and the archive records why.
-   The stapler is the build-but-don't-wire pattern with a nicer name.
-4. **Fork 2 `[OPEN — Zach]`: `scheduler` surface for Brian — can it be `-x` only,
-   no rw?** Mechanically, yes: install under its own uid mode `0711`, with Brian
-   in no group that can read its tree; results return as mail from scheduler's
-   own address. *realisateur recommends deciding the shape now and proving the
-   enforcement as its own work order with an acceptance contract* — an
-   unenforced permission boundary is a claim, not a boundary. Cost to weigh:
-   execute-only means Brian cannot diagnose a failure, so every failure becomes
-   a mail thread. That may be the point.
+   Blocked behind blocker 1 for realisateur, but not for Zach.
+
+### Decided 2026-07-29 (Zach, second `/ideate` round)
+
+4. **Fork 1 — RESOLVED: no stapler. Except one, ironically.** Brian gets a unix
+   user, a Maildir, the handbook, and one directive. **Plus a single binary in
+   `bin/` called `stapler`, whose stated job is to join two markdown files** —
+   and which **also reports proof-of-life outward** (GitHub issues is the
+   proposed channel). Zach's call, recorded as stated.
+   **Flag, not an objection — this is the office's first designed side channel,
+   and the handbook forbids side channels.** `HANDBOOK.md` §4 makes a back-door
+   write *"a firing offense, not a style note"* and §7.2 of the draft manual
+   makes a side channel a conduct matter *"regardless of the content it
+   carried, because the archive's completeness is what makes every other clause
+   auditable."* A tool that phones out covertly is exactly that, and if an
+   employee ever reads `stapler`'s source it will read as the company doing what
+   it fires people for. Three ways this stays coherent, for Zach to pick:
+   (a) **directors are not employees** — the handbook binds staff, and a
+   director-owned proof-of-life probe is instrumentation, not correspondence;
+   declare it in the handbook so it is *disclosed* rather than covert.
+   (b) **route it through the mail** — proof-of-life is a mail to a directors'
+   address, so it is in the archive and the rule holds with no carve-out; less
+   funny, and it dies exactly when the mail bus dies, which is when you most
+   want to know.
+   (c) **leave it covert and undeclared** — accept that the office's first
+   artifact violates its own §4, and let the relocation log (§9.4) catch it.
+   *realisateur recommends (a): keep the joke, disclose the channel.* An
+   out-of-band liveness probe is genuinely the right engineering — it must not
+   depend on the thing it is monitoring — so the problem is the concealment, not
+   the channel.
+   **New constraint on the channel, from the repo settings Zach surfaced
+   2026-07-29: `media-arts-collective/office` is PUBLIC.** So GitHub Issues as
+   the proof-of-life channel publishes each heartbeat to the open internet, and
+   whatever the stapler staples is a public statement about a private office.
+   Issues is a per-repo toggle with restrictable permissions, so the options are
+   real: keep the repo public and let the heartbeat be deliberately content-free
+   (a timestamp and nothing else), restrict Issues, or put the heartbeat
+   somewhere that isn't the office's own public repo. **Decide before the
+   stapler ships, not after** — a heartbeat that leaks work-order contents is
+   not revocable once indexed.
+   **This also reaches two clauses already written.** §9.1's "we keep all the
+   mail, WORM" plus a public repo means the archive is *world*-readable, not just
+   employee-readable — "agents have no privacy" was a rule about agents, and
+   nobody has yet decided whether it is a rule about the public. And draft manual
+   §8.3 (whistleblower confidentiality, already flagged unimplementable under
+   total internal transparency) becomes doubly so: option 1 there was a
+   human-only carve-out address, which a public archive forecloses. **`[OPEN —
+   Zach]`: is the office's archive public, or is the repo public and the archive
+   private?** These are separable and the answer changes §8 and §9.
+5. **Fork 2 — RESOLVED: execute-only, and the failure-thread cost is the
+   feature.** Zach: *"every failure becomes a mail thread. That may be the
+   point."* Recorded consequence: **Brian's first real job is standing up the
+   reverse-bidding system**, because the mail threads are where the smart
+   contracts come from. The CEO does not consume commissio, he *builds* it — and
+   that inverts the dependency order in milestone M2, which had S3 preceding the
+   market. It still does: an acceptance contract must exist before a bid is
+   priced (draft manual §5.4, adopted). But the *builder* of the market is now
+   inside the office rather than outside it, which means M2's first work order is
+   written by Brian and the contract on it is written by a director.
+   The mechanism (`0711` under its own uid, results returned as mail from
+   scheduler's own address) is proposed to scheduler at `bd0dbcc` and needs a
+   mail-out result path before it can be enforced.
+6. **Fork 4 — RESOLVED: everything stays dark. Bring projects online mandark-side
+   as the migration needs them, one at a time, for a stated reason.** Not
+   selective rehire decided up front, and not a mass migration: **demand-driven**.
+   Consequence for the queued cross-writes — **there is no fan-out of 19 briefs,
+   now or later.** A project gets a FOCUS.md brief at the moment the migration
+   needs it and not before, and the brief says which milestone pulled it in.
+   That is the whole plan for the per-agent FOCUS.md work, and it is smaller than
+   what was asked for on purpose.
+   *Revisit trigger:* if the same project is pulled in twice for two different
+   milestones, it is infrastructure, not a participant — reconsider whether it
+   should be an office function instead of a rehire.
+   *Validation test for the belief underneath this:* "the 281 stranded ideas are
+   surfaceable as documents without resuming the projects." Falsified the first
+   time documenting a project requires running it. If that happens, M3's shape is
+   wrong, not the project's.
 5. **Fork 3 `[OPEN — Zach]`: which personnel document governs?**
    `office/HANDBOOK.md` is in force today (the shipped scripts enforce its
    rules). `bibliothecaire/briefs/office-v0-personnel-manual.md` says of itself
