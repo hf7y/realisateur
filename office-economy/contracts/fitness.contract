@@ -1,0 +1,34 @@
+name: fitness
+summary: score a worker from the office's real append-only ledger — pure computation, the selection signal evolve reads
+usage: fitness <login> [--ledger PATH] [--json] | fitness --all [--ledger PATH]
+output: one `login score=N balance=… credited=… debited=… activity=… tenure=…` line per worker on stdout, nothing else; `--all` emits every worker account ranked highest-fitness-first. Exit 0 scored; 2 usage; 3 worker never appears in ledger; 6 BLIND (ledger unreadable — never reported as score 0).
+verify: test/verify-fitness.sh
+
+---notes
+Reads the real format (`id|ts|account|type|amount|_|hash|note`, pegged 10000
+tokens/wavebuck). The sign convention has ONE home in the impl: CREDIT =
+{HIRE,EARN,APPROP,BONUS}, DEBIT = {RENT,SPEND,FEE,POST}. A new transaction type
+is added there and nowhere else.
+
+`fitness = balance + activity`, where activity counts non-RENT debits (things
+the worker DID, not just metabolism it paid). A worker that only pays RENT and
+earns nothing trends negative — which is precisely the selection pressure
+`evolve` reads. The number is deliberately legible, not tuned; the point of v1
+is a defensible signal, not a calibrated one.
+
+**[OPEN — needs Zach, personnel manual §2.3]:** whether a balance is *savings*
+or *expiring spend authority* changes whether a large hoard should read as high
+fitness (a thrifty survivor) or as capital idled (unspent authority is waste).
+v1 treats balance as savings — more is fitter. If Zach settles §2.3 the other
+way, the `balance` term flips sign for the hoarded portion, and that is a
+one-line change here, flagged so it is not silently baked in.
+
+BLIND vs score-0 is the load-bearing distinction: "I could not read the ledger"
+(exit 6) must never collapse into "this worker did nothing" (a real score),
+because evolve would then retire a worker for the tool's blindness.
+---
+
+---residue
+Already bash — pure awk over the ledger. No agent was ever needed for scoring;
+what stays agentic is DOING the work that earns the credits, not counting them.
+---

@@ -1,0 +1,40 @@
+name: commissio
+summary: the bounty board, and the office's decision-economizer — match posted work to a worker's personality with no model in the loop
+usage: commissio post <title> <reward> <acceptance> [--as WHO] | list [--open] | match <login> | settle <id> <login>
+output: line-oriented, quiet by default. `post`/`settle` emit the id on stdout (commentary to stderr). `list`/`match` emit tab-separated rows on stdout. `match` emits exactly the open commissiones this worker's traits would accept, ranked by reward. Exit 0 ok; 2 usage; 4 no such commissio/worker; 6 BLIND (board unreadable).
+verify: test/verify-commissio.sh
+
+---notes
+**`match` is the load-bearing verb and the whole reason this is a contract.**
+An agent asking "what should I work on?" is an open-ended, token-priced
+deliberation. `commissio match <login>` replaces it with a deterministic filter
+of the worker's personality against the open board:
+
+- reward bar rises with `frugality` (a frugal worker demands more pay) and falls
+  with `industriousness` (a busy worker takes cheaper work);
+- an underspecified acceptance test (short) is taken only by the
+  `risk_tolerance`-high.
+
+No model runs this. The traits ARE the decision procedure, which is exactly the
+"pre-built means of economizing agent decision-making" the office needs: choice
+and pricing are mechanized; only *doing* the work stays agentic.
+
+**What this tool honestly does NOT do:** move wavebucks. Posting escrows a
+reward and settling pays it out — both are ledger actions, and hiding a debit
+inside a board tool would be the kind of silent cross-write the office forbids.
+`post` and `settle` say on stderr that the ledger step is separate and undone.
+The office's real `office-ledger` owns the money; this owns the matching.
+
+The match constants (0.4, 0.2, the 24-char vagueness threshold) are knobs with
+one home in the impl, tunable by diff. They are a first defensible guess, not a
+calibration — calibrating them against real settled/abandoned commissiones is a
+later, measurable pass.
+---
+
+---residue
+Already bash. The one design decision worth carrying forward: `match` reads the
+worker record `persona` writes and the board `post` writes, and nothing else —
+so the three verbs compose through files on disk, not through a shared process.
+That is what lets a woken worker run `commissio match $(whoami)` as its entire
+"what now?" step, with no office daemon and no model.
+---

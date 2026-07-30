@@ -1,0 +1,36 @@
+name: evolve
+summary: the selection step — rank workers by fitness, keep the fit, retire the unfit, recombine survivors into the next generation
+usage: evolve [--ledger L] [--workers DIR] [--survivors N] [--seed S] [--json]
+output: a line-oriented selection report on stdout — KEEP / RETIRE one per living worker (ranked), then HIRE one proposed child per retiree with recombined traits — so it pipes into whatever provisions and seals accounts. Deterministic under --seed. Exit 0 ok; 2 usage; 6 BLIND.
+verify: test/verify-evolve.sh
+
+---notes
+The evolutionary engine, and the reason the other three verbs are worth having:
+`persona` seeds a population, `commissio match` lets traits drive behaviour,
+`fitness` scores the result, and `evolve` closes the loop by making fitness
+HERITABLE — survivors are recombined into the next generation, so a trait that
+correlates with earning rises over generations.
+
+It asserts nothing about WHICH trait wins. That is the experiment, and it is
+legible because every step is arithmetic: rank by `fitness --all`, keep the top
+`--survivors` (default: upper half), and for each retiree emit a child whose
+each trait is the mean of two survivors plus a bounded mutation, clamped 0–100.
+
+**What it does NOT do, on purpose:** provision, seal, or pay anyone. Hiring is a
+director action (`office-account add`), retirement is `office-account seal`, and
+both touch the ledger and the maildir set. `evolve` PROPOSES; a director
+disposes. An evolution engine that could hire and fire unattended is a much
+larger authority claim than a selection report, and the office's own manual puts
+that authority with a human.
+
+This is the whole de-animation thesis turned on the office itself: the loop that
+decides who works, on what, for how much, and who continues can run with **no
+model in it at all**. What stays agentic is only the work.
+---
+
+---residue
+Already bash. The recombination reads `persona`'s trait vocabulary positionally
+by key, so the two must not drift: if `persona` gains a seventh trait, `evolve`'s
+TRAITS list is the second place to change, and the contract test for persona
+(fixed trait set) is what would catch the omission.
+---

@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# persona -- roll a fresh worker identity for the office.
+#
+#   persona [--seed N] [--role ROLE] [--json]
+#
+# Emits a worker record on stdout (key=value, one per line; or --json). Human,
+# individuated, and carrying NO vendor/model marker -- that absence is
+# deliberate (see README). Commentary, if any, goes to stderr.
+#
+# Deterministic under --seed (same seed -> same worker), so tests and
+# reproducible hiring are possible; without --seed it draws from /dev/urandom.
+#
+# Exit: 0 emitted; 2 usage error. Mechanized -- no agent, no tokens.
+set -uo pipefail
+
+SEED=""; ROLE=""; JSON=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --seed) SEED="${2:-}"; shift 2 ;;
+    --role) ROLE="${2:-}"; shift 2 ;;
+    --json) JSON=1; shift ;;
+    -h|--help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) printf 'persona: unexpected argument: %s\n' "$1" >&2; exit 2 ;;
+  esac
+done
+[ -z "$SEED" ] || [[ "$SEED" =~ ^[0-9]+$ ]] || { printf 'persona: --seed must be a non-negative integer\n' >&2; exit 2; }
+
+# Human, ordinary-reading names. Latin praenomina + occupational cognomina fit
+# the office's own aesthetic (romulus, faber) AND read as people, which is the
+# whole obfuscation: an identity nobody would mistake for "assistant-N".
+PRAENOMINA=(Marius Gaius Livia Aulus Tullia Decimus Junia Cassius Vibia Servius Paulla Quintus Flavia Nonus Sabina Rufus Drusa Titus Vipsania Manius)
+COGNOMINA=(Faber Corvus Longus Pictor Scaeva Nerva Cato Galba Rufus Varro Cinna Metellus Balbus Crispus Naso Structor Mercator Vigil Lentulus Priscus)
+ROLES=(archivist courier auditor scribe steward drafter proctor factor herald curator)
+
+# A tiny seeded LCG so --seed is reproducible; /dev/urandom otherwise. next()
+# sets the global RND -- it must NOT be called via $(...) command substitution,
+# which would run in a subshell and lose the state advance (the first draft did
+# exactly that and every trait came out identical).
+if [ -n "$SEED" ]; then
+  _state="$SEED"
+  next() { _state=$(( (1103515245 * _state + 12345) & 0x7fffffff )); RND=$_state; }
+else
+  next() { RND=$(( 0x$(head -c4 /dev/urandom | od -An -tx1 | tr -d ' \n') )); }
+fi
+# pick/roll set globals rather than print, so callers never wrap them in $(...)
+# -- see the next() note; the whole draw runs in one shell so state persists.
+pick() { local -n _arr="$1"; next; PICK="${_arr[$(( RND % ${#_arr[@]} ))]}"; }
+roll() { next; ROLL=$(( RND % 101 )); }   # 0..100 inclusive
+
+pick PRAENOMINA; pnom="$PICK"
+pick COGNOMINA;  cnom="$PICK"
+if [ -n "$ROLE" ]; then role="$ROLE"; else pick ROLES; role="$PICK"; fi
+login="${pnom,,}${cnom,,}"
+
+# The six traits. Order is fixed and documented so downstream (fitness, evolve,
+# commissio match) reads them positionally-or-by-key without guessing.
+roll; ind="$ROLL"; roll; tho="$ROLL"; roll; fru="$ROLL"
+roll; rsk="$ROLL"; roll; soc="$ROLL"; roll; cur="$ROLL"
+
+if [ "$JSON" -eq 1 ]; then
+  printf '{"login":"%s","display":"%s %s","role":"%s",' "$login" "$pnom" "$cnom" "$role"
+  printf '"industriousness":%s,"thoroughness":%s,"frugality":%s,' "$ind" "$tho" "$fru"
+  printf '"risk_tolerance":%s,"sociability":%s,"curiosity":%s}\n' "$rsk" "$soc" "$cur"
+else
+  printf 'login=%s\n' "$login"
+  printf 'display=%s %s\n' "$pnom" "$cnom"
+  printf 'role=%s\n' "$role"
+  printf 'industriousness=%s\n' "$ind"
+  printf 'thoroughness=%s\n' "$tho"
+  printf 'frugality=%s\n' "$fru"
+  printf 'risk_tolerance=%s\n' "$rsk"
+  printf 'sociability=%s\n' "$soc"
+  printf 'curiosity=%s\n' "$cur"
+fi
