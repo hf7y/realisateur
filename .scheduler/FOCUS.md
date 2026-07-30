@@ -11,6 +11,81 @@
 
 **realisateur is perception and judgment.** It senses (offline surveys), triages (park-by-default), and records. It is the brain: it decides WHAT gets built and WHO comes online next. **It never decides alone and it never executes.** Zach is the only decider; realisateur puts the choice in front of him. It does not dispatch work itself — it asks scheduler through scheduler's own front door. Reaching around that door into another project's files is the failure this role exists to prevent.
 
+## THE UNWIRING — vision, then milestones, then blockers
+
+*Recorded 2026-07-30 by `/ideate`, Zach-directed. This does NOT supersede the
+office/nomac chain below — the two run in parallel and §4 of
+`THE-UNWIRING.md` says why. Full theory brief: `THE-UNWIRING.md` at repo root
+(realisateur's own assigned brief for this move).*
+
+### Vision (decided)
+
+Every **self-developing** agent comes off `mandark`. Their material parks on
+GitHub **as-is, no restructuring** (Zach, this session), with an onsite backup
+of all of `~zach` alongside it. The wiring that made them run is removed.
+One self-dev agent stays live — **basheur** — and its job is converting what
+were agents into **inanimate bash utilities**.
+
+**Self-dev parks. Work does not.** That is the line the whole move rests on.
+The office on `nomac` survives untouched: it was never on mandark, and its
+employees execute work orders rather than developing themselves. Honest cost,
+stated so no later session "fixes" it: **two live agents, not one.**
+
+**Not decided:** where self-dev is re-hosted and how (deliberately — "clean
+slate, revisit later" is why the material is held inert rather than moved
+somewhere provisional); whether the 17 come back as agents, as basheur's
+utilities, or not at all.
+
+### Milestone chain (backward from the vision)
+
+**U3 — Self-dev is off mandark and inert. `[the vision]`**
+- *Test:* mandark runs no self-dev dispatch of any kind; every one of the 19
+  repos has a pushed GitHub remote whose HEAD matches local; the onsite
+  backup restores.
+- *Action at arrival:* the re-hosting question opens, with basheur's measured
+  cost as evidence.
+
+**U2 — Unwiring executed. `[not started — senechal owns]`**
+- Crontab, dispatch, `PATH` shims, autostart, systemd units, `~/.local/share`
+  markers: retired, and **declared** retired, not merely stopped.
+- *Blocked on U1.* Nothing is torn down before it is described, and nothing is
+  described before it is copied.
+
+**U1 — Backed up and briefed. `[in progress]`**
+- gardien: all of `~zach` onsite **and** each repo pushed as-is to GitHub.
+  Acceptance bar is **restorable**, not "rsync exited 0."
+- Briefs: realisateur's is **DONE** (`THE-UNWIRING.md`, this session).
+  gardien / senechal / basheur write their own about their own halves.
+- *Test:* a restore is exercised, not asserted.
+
+**U0 — basheur is developed enough. `[CURRENT — tonight's whole goal]`**
+- Zach, this session: *"first, I need basheur to be developed enough."* Tonight
+  is basheur and nothing else; the parking happens once the one live agent can
+  actually do its job.
+- *Test:* basheur's own declared milestone — a contract it did **not** author,
+  routed in from realisateur; served by `--summon`; re-runnable residue;
+  `impl/` + passing `verify` with a tested failing path; **token cost measured
+  on both sides, not estimated.**
+- *Why this is the gate and not a parallel track:* the thesis that agent calls
+  can be made unnecessary is **untested**. Parking 17 projects in favour of an
+  unproven instrument is the failure mode. `DOCTRINE.md`'s third falsifier is
+  exactly this, and if it fails the correct response is to **un-park**, not to
+  keep mechanizing.
+
+### Blockers on U0 specifically
+
+1. **realisateur must author the first real contract.** basheur's milestone
+   explicitly disqualifies its own three self-describing contracts. This is
+   realisateur's to produce and it does not exist yet. Buildable now — but it
+   is a **build** job, not an `/ideate` one.
+2. **Cross-writes to gardien and senechal deferred — both BUSY.**
+   `check-project-busy` 2026-07-30: gardien `pid 3340183` since 00:29,
+   senechal `pid 3345251` since 00:40, both live interactive sessions. Their
+   commissions (U1/U2 above) were **not** written into their FOCUS.md this
+   session. Carry forward.
+
+---
+
 ## The migration sprint — vision, then milestones, then blockers
 
 *Recorded 2026-07-29 by `/ideate`, Zach-directed, working backward from the
