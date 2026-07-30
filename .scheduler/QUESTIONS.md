@@ -284,3 +284,56 @@ with Zach's live session when this was filed.*
 > call, so the saving from mechanizing is *unmeasured, not zero and not
 > assumed*. basheur's `cost-of` contract (2026-07-30) is realisateur's half of
 > the same instrument: it prices a call before it is made, without spending.
+
+## Contract shapes moving forward (2026-07-30, realisateur — filed for Zach)
+
+*Grounded in `RESEARCH-VERB-ECOSYSTEM-20260730.md`. None blocking; each
+changes how the remaining contracts get derived, so worth answering before
+the big-four are done.*
+
+- **Q1 — Adopt "one noun, many verbs"?** The naming rule (noun = animate
+  project, verb = inanimate tool) implies a project has *several* verbs, and
+  the data agrees: crt/sonne wires 98 subcommands, scheduler/dose 52,
+  realisateur/juge 44, senechal/veille 40 — each spanning multiple domains.
+  Options: **(a)** split the big four along domain seams (crt → voice /
+  book-game / deploy; scheduler → dispatch / report / lint / usage;
+  realisateur → sense / audit / lint / commit-plumbing; senechal → watch /
+  remedy), single verbs for the coherent small projects (**recommended**);
+  (b) keep 1:1, treat subcommands as the composition unit; (c) split only
+  where a verb exceeds N subcommands, mechanically.
+  > (answer inline here — and if (a), do the proposed seams look right?)
+
+- **Q2 — Make pipeability real, which forces reimplement-don't-wrap?**
+  `lib/verb.sh` parses `--json`/`--quiet` but nothing honors them; verbs
+  pass through to legacy scripts that ignore the flags. For "unix-like,
+  pipe-able" to be true a verb must own its output (quiet-by-default,
+  commentary→stderr, `--json` actually emitted), which means it must
+  *reimplement* rather than *wrap*. Options: **(a)** make pipeability a
+  contract requirement — a verb claiming `--json` must honor it, enforced by
+  contract-test, which pulls the self-contained milestone forward
+  (**recommended**); (b) drop `--json`/`--quiet` from the runtime until a
+  verb can honor them, so the flag stops lying; (c) leave as-is, treat the
+  flags as reserved-for-later.
+  > (answer inline here)
+
+- **Q3 — Should a contract declare a REMOTE backing (a fourth HOW)?** The
+  office-secrecy design (verb on nomac, implementation on dexter romulus
+  can't see) means some obligations are kept by a call across a trust
+  boundary, not by local bash. Today the HOW column is bash / summon /
+  refused. Options: **(a)** add `remote` as a fourth HOW — mechanized, free
+  of tokens, but its implementation lives off-box by design (**recommended**
+  for the office verbs); (b) treat remote as `bash` (it IS mechanized) and
+  note the boundary in prose; (c) keep it out of the contract vocabulary
+  entirely — the boundary is deployment, not contract.
+  > (answer inline here)
+
+- **Q4 — Per-target residue.** `project-contract`'s residue is different for
+  every project it runs against, but basheur keys the residue path and its
+  concurrency lock on the *contract name*, so a batch of derivations
+  serializes and piles all targets' residue into one file. Options: **(a)**
+  residue path includes the first argument for arg-taking contracts
+  (`residue/project-contract.<project>.sh`), so runs against different
+  targets parallelize and each leaves its own trace (**recommended**); (b)
+  leave it — serial is fine, the pile is a cumulative log; (c) a contract
+  declares whether its residue is per-contract or per-invocation.
+  > (answer inline here)
