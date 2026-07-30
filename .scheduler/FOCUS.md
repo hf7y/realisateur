@@ -72,12 +72,48 @@ utilities, or not at all.
   exactly this, and if it fails the correct response is to **un-park**, not to
   keep mechanizing.
 
+### U0's first contract is `mete` — decided 2026-07-30, second `/ideate` pass
+
+Zach: *"scheduler bashified to become simply a utility"* — a coherent bash
+repo with **no traces of claude, no traces of agent**, taking arguments and
+flags and enforcing a contract. The verb is **`mete`** (to apportion
+something scarce — what the thing actually does; unclaimed on `PATH`,
+verified this session). Full detail lives in basheur's own FOCUS.md; the
+parts that are realisateur's:
+
+**The naming rule is now general, not one-off:** **proper noun = animate,
+bare verb = inanimate.** Agents keep French household names; anything
+basheur mechanizes gets a short bare English verb; the existing hyphenated
+`<noun>-<verb>` tools are a third, unaffected class. This is a **sensor**,
+not a style preference — the part of speech tells a caller whether the
+invocation spends tokens, which is the same shape as ecosim's thesis that
+you must be able to read a system's state off its surface.
+
+**Contract authorship is realisateur's organ (basheur DOCTRINE Law 3), so
+`contracts/mete.contract` is realisateur's to write, and it does not exist
+yet.** That is now U0's blocker 1 below.
+
+**The design test `mete` must pass:** *in a universe with no Claude, does
+it still make sense?* Probed 2026-07-30: only 5 of 11,449 shell LOC
+actually execute `claude`, `_paced.conf`'s dispatch payload is already a
+generic command field — but `usage-gate.sh`'s Anthropic quota probe is
+irreducible unless the resource oracle becomes pluggable. Three forks
+(meter, location, purge depth) were asked and are `[OPEN — Zach]`;
+recommendations recorded in basheur's FOCUS, not adopted.
+
+**Flagged, unresolved: `mete` probably does NOT close U0.** It is a
+subtraction from working code, so there is no summon and no before-cost,
+and U0's load-bearing box is *token cost measured on both sides*. `mete` is
+the best available **format proof** (Law 1 against a mature 15-subcommand
+tool, zero tokens) but it is not the **experiment**. Recommend a second,
+genuinely agent-backed contract as the milestone contract. `[OPEN — Zach]`
+
 ### Blockers on U0 specifically
 
-1. **realisateur must author the first real contract.** basheur's milestone
-   explicitly disqualifies its own three self-describing contracts. This is
-   realisateur's to produce and it does not exist yet. Buildable now — but it
-   is a **build** job, not an `/ideate` one.
+1. **realisateur must author `contracts/mete.contract`.** basheur's
+   milestone explicitly disqualifies its own three self-describing
+   contracts, and Law 3 puts authorship here, not there. Does not exist
+   yet. Buildable now — but it is a **build** job, not an `/ideate` one.
 2. **Cross-writes to gardien and senechal deferred — both BUSY.**
    `check-project-busy` 2026-07-30: gardien `pid 3340183` since 00:29,
    senechal `pid 3345251` since 00:40, both live interactive sessions. Their
