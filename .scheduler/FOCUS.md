@@ -97,9 +97,29 @@ yet.** That is now U0's blocker 1 below.
 it still make sense?* Probed 2026-07-30: only 5 of 11,449 shell LOC
 actually execute `claude`, `_paced.conf`'s dispatch payload is already a
 generic command field — but `usage-gate.sh`'s Anthropic quota probe is
-irreducible unless the resource oracle becomes pluggable. Three forks
-(meter, location, purge depth) were asked and are `[OPEN — Zach]`;
-recommendations recorded in basheur's FOCUS, not adopted.
+irreducible unless the resource oracle becomes pluggable.
+
+**All three forks answered by Zach the same session — settled.** Detail in
+basheur's FOCUS; the ecosystem-level consequence is the first one:
+
+**`-$` / `--summon` is now a GENERAL naming convention, the second half of
+the animate/inanimate rule.** Zach: *"some kind of user flag should be our
+symbol that it costs real tokens."* The part of speech says whether a thing
+is an agent; **the flag says whether the call spends.** A bare-verb utility
+that can spend takes `--summon` (already basheur's own doctrine verb) with
+short form `-$`; one that never can does not carry the flag at all — so
+`--help` alone answers "can this cost me money." That is a **sensor**, and
+it belongs to every future mechanization, not to `mete`.
+`# verified 2026-07-30 via: printf/getopts/case probe` — `-$` survives the
+shell unquoted, but **must never bundle** (`-$f` expands to `-`), which is
+a constraint the parser has to enforce loudly.
+
+Also settled: `mete` lives on a **`bashified` branch** of the scheduler
+repo, and the purge is **total, no `ORIGINS` file** — realisateur's
+objection is withdrawn, because branch-not-new-repo keeps every purged
+cause in `git log main` of the same repo. **The two answers are only safe
+together**; extracting `bashified` into a standalone repo later would
+silently destroy the archive that justified the purge.
 
 **Flagged, unresolved: `mete` probably does NOT close U0.** It is a
 subtraction from working code, so there is no summon and no before-cost,
