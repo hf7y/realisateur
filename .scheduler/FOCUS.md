@@ -960,3 +960,33 @@ is exactly the premature work Q1 (one-noun-many-verbs) exists to prevent. crt
 (`sonne`, 98) and scheduler (`dose`, 52) already carry derived contracts but
 are the same case — candidates to re-split if Q1 adopts many-verbs. The two
 stubs stay stubs until Zach answers Q1.
+
+### 2026-07-30 (build, cont.) — office-economy adopted, first verb splits landed
+
+**office-economy adopted onto nomac (basics)** — persona/fitness/commissio/
+evolve installed to `/usr/local/bin` (root:root 0755, on all PATHs, transparent
+not secret) via push-from-mandark, no credential on the VM. Verified against the
+REAL ledger: `fitness --all` reports **romulus score=-24** (50 credited, 74 RENT
+debited over 75 rows) — the metabolism depleting a non-earner, the selection
+pressure made real, not simulated. Seeded a starter `romulus.worker`; the
+commissio→match→evolve loop runs live. senechal notified (`3bf6bee`).
+
+**First multi-verb splits landed** (Q1 starter, Zach-directed "part off 2 verbs
+each"):
+- realisateur `02e6136`: `arpente` (survey — ecosystem-survey, steward-survey,
+  milestone-audit, incubation-audit, precipitation-scan, liveness-audit) and
+  `epluche` (hygiene lint — hygiene-lint, closeout-lint, reach-lint,
+  silence-audit) parted off `juge`, which shrank 21→11.
+- senechal `e8f85cb`: `ausculte` (health — dead-config, estate-health,
+  no-self-dev, project-unwired, smart-health, verify-all) and `lance` (spawn —
+  browse, spawn-here, window-spawn-desktop) parted off `veille`, 19→10.
+
+Both share `lib/verb.sh` and exec the same legacy scripts; the carve is which
+verb owns which door, nothing reimplemented. Names unclaimed on PATH, pure
+ASCII. A STARTER — each monolith has a further cut left (juge's plumbing;
+veille's `repare`-shaped machine-remedy subset). The bashified CONTRACT.md for
+both remains the held stub; the split verbs need their own contracts next.
+
+Busy-guard note: realisateur read BUSY on this session's OWN interactive marker
+(pid 3539364); the branch edit uses a detached worktree + separate ref with no
+other writer, so the self-marker did not apply — stated, not silently overridden.
