@@ -853,3 +853,56 @@ fourth option; the other three were tested and eliminated.
 No GitHub credential is needed on nomac at all under decision (2) — B-list
 item removed rather than solved. Nothing machine-wide changed this session, so
 no `notify-senechal` was due; M0 and M1 both will need one.
+
+#### 2026-07-30 (`/ideate`, cont.) — the exec-only blocker DISSOLVED: remote-backed verbs
+
+Zach: *"can we treat this as an external api call to dexter or something he
+can't see? ... secrecy is part of the experiment."* This replaces the M1
+account-topology decision entirely rather than answering it.
+
+**Why it works where obfuscation could not.** Every file-mode / packed-binary
+route tries to hide a secret ON THE BOX ROMULUS ROOTS, and root beats all of
+them (verified today: 0111 fails for scripts, setuid ignored on scripts,
+`sudo cat` defeats any mode, and against root even a compiled blob yields to
+strace/gdb/`/proc`). **Root-on-guest is not root-on-host.** nomac is a
+VirtualBox guest on dexter; `zach@dexter` is outside romulus's reach. Move the
+implementation to dexter and let romulus only CALL it: he sees request and
+response, never the code, because it was never on a disk he controls. A real
+boundary, not theater.
+
+**Probed, not assumed (2026-07-30, from romulus@nomac):** nomac's default
+route is the NAT gateway `10.0.2.2` (pings, answers TCP, an sshd responds);
+romulus holds NO dexter/office keys in `~/.ssh`, so the boundary is real now.
+
+**The shape, and it fits Law 1 exactly.** A verb is a contract, `argv →
+output`; a remote call is just another backing behind it, indistinguishable to
+the caller. The verb on nomac becomes a **thin, fully-readable client stub**
+with nothing secret in it; secrecy lives entirely in the dexter-side behavior,
+reached by an **SSH forced-command** under `zach@dexter` — romulus holds a key
+that can only trigger `command="…/verb-server"`. Exact pattern crt used for
+`potato-brain-shell`. Generalizes what `think` reached for and could not finish
+(its credential secrecy failed *because think runs where romulus is root*).
+
+**Tension recorded, not hidden:** this re-introduces a network + service
+boundary — the opposite of "runs free, local, unattended, reaches no paid
+service," which is what bashified verbs are FOR. So the remote shape is for the
+verbs where **secrecy-from-the-agent is the goal**, not the default. The
+dexter-side impl can be plain bash (compute-elsewhere, not an agent call), so
+it costs zero tokens — a service boundary, not a paid one.
+
+**Milestone chain, revised:**
+- M0 (install pipe, empty payload) — unchanged, BUILDABLE NOW.
+- ~~M1 (revoke root / second account)~~ — **DELETED.** Dissolved by the remote
+  boundary; no root change on nomac.
+- M1' (NEW) — the remote-backed verb: forced-command listener on `zach@dexter`,
+  a scoped key for romulus, a thin client stub as the nomac-side verb. Machine
+  config on dexter → will need `notify-senechal`.
+- M2/M3 (subcommands, self-containment) — unchanged, but note M3 ("verbs carry
+  their own impl") now has a SECOND legitimate shape for secret verbs: the impl
+  is remote by design, not absent.
+
+**Still Zach's to name (not blocking M0): what the secret dexter-side behavior
+actually IS.** "Secrecy is part of the experiment" says the boundary matters;
+it does not yet say what sits behind it for these three specific verbs, which
+today wire zero subcommands. The client/boundary is buildable without that
+answer; a USEFUL secret verb is not.
