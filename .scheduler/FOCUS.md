@@ -72,6 +72,52 @@ self-dev indefinitely suspended). Left side is Zach's answer, right side is the
 human-owned and append-only for machines — but the ~:30 autocommit watcher may
 adopt the markers under Zach's name. Snapshot preserved at
 `~/BLOCKERS.md.conflicted-snapshot-20260730`.
+**RESOLVED same session, scheduler `25208bd`,** on Zach's explicit override
+("override the human-owned and fix my mistakes"). Rule applied mechanically:
+keep the LEFT side (his answer) in every hunk; where LEFT was EMPTY keep RIGHT
+instead, because an empty side means the conflict was a DELETION. That rule
+alone saved the **PRIVATE KEY at rest in OCF `authorized_keys`** blocker, which
+the left side would have removed. Verified against the pre-merge file: 0 markers,
+all 9 answers present once, `consumed` markers unchanged at 8, and the only
+lines dropped are the 9 placeholders each answer replaced plus one duplicated
+entry.
+
+### 2026-07-30 (interactive) — four decisions, and what they cost
+
+- **basheur's refused flag is `--retain`.** `--summon` = summon only if the
+  contract cannot be met mechanically (zero tokens on MECHANIZED). `--retain`
+  (an agent kept animate to watch/wait, no contract to discharge) is refused
+  with exit 2. basheur `e0a7304`, DOCTRINE Law 5.
+- **dexter isolation boundary: DEFERRED until the universe-wide redesign.**
+  Consistent with his own merged answers ("self-dev indefinitely suspended
+  pending new agent to project topology insights. See basheur"). Revisit
+  trigger: *the redesign names its unit of isolation.* Nothing provisioned.
+- **Root on dexter: DEFERRED with it.** Nothing to provision, so no root shape
+  to decide. `sudo -n` on dexter still returns "interactive authentication is
+  required" and that is now fine.
+- **gardien's nightly backup: HELD until the boundary is decided.** **Stated
+  consequence, since the two decisions compose into something neither says
+  alone: the boundary decision has no date, so dexter and mandark have NO
+  BACKUPS for an open-ended period.** Nothing has reached the WD 2TB drive
+  since 2026-07-29 03:04. Recorded so this is a chosen cost, not a forgotten one.
+- **`office-wake` PARKED until after the bashify step**, Zach-directed. The
+  script is written and staged on nomac and is NOT installed; romulus has mail,
+  money, orders and a brain, and still no heartbeat. He will not act until woken.
+
+### 2026-07-30 (interactive) — basheur dogfood closed U0's open box
+
+basheur `e0a7304`, `e2cf574`. The bashify report stated plainly that the pass
+**could not** close `U0` because "no cost baseline exists — every one of these
+utilities is a subtraction from code that already ran, so there is no summon and
+no before-number." The dogfood supplies one: a real summon (2m02s, real tokens)
+authored `contracts/cost-of.contract` and left residue; the residue was
+mechanized (verify written **before** impl, Law 4); `basheur run cost-of cost-of`
+now returns `MECHANIZED 0 cost-of` instantly with **no `--summon` and no `claude`
+reachable on PATH at all**, byte-identical across five runs and asserted in the
+suite. **Honest limit: `idea-to-contract` is still AGENT-backed** — the dogfood
+mechanized the contract the summon *produced*, not the one that did the
+producing, and `basheur status` correctly shows its residue UNWIRED. That is the
+falsifier DOCTRINE told us to watch, surfacing on schedule rather than a bug.
 
 ---
 
