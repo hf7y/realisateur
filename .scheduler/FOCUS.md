@@ -11,6 +11,41 @@
 
 **realisateur is perception and judgment.** It senses (offline surveys), triages (park-by-default), and records. It is the brain: it decides WHAT gets built and WHO comes online next. **It never decides alone and it never executes.** Zach is the only decider; realisateur puts the choice in front of him. It does not dispatch work itself — it asks scheduler through scheduler's own front door. Reaching around that door into another project's files is the failure this role exists to prevent.
 
+**2026-07-30 — the bashify pass, and the two `/ideate` rounds that decided it.**
+Session record in the shape `closeout-lint` can actually read (the earlier
+`###` headings this same session were invisible to it, and cited no shas —
+that FLAG was correct and this entry is the fix).
+
+- realisateur `81e7899` — `THE-UNWIRING.md` (the brief) + the U0–U3 chain.
+- realisateur `69846a6` — first contract named; naming rule generalised.
+- realisateur `a9c99fe` — cost-sigil / branch / total-purge forks answered.
+- realisateur `1d24b4a` — `bashify/` generator, shared verb runtime, and
+  `BASHIFY-REPORT-20260730.md`.
+- realisateur `04580fb` — the pass recorded; five measured findings.
+- realisateur `65e6e25` — `mete` stamped superseded by `dose` (French turn).
+- basheur `991e6a5`, `aadf558`, `e3cb436` — role change, first contract, forks.
+- scheduler `81786f1` — fork proposal filed through its own front door.
+- bibliothecaire `37a1061` — report of this pass, per Zach's `/cloture` arg.
+- **19 `bashified` branches pushed**, one per registered project, heads:
+  `1a28c82` scheduler/dose, `e7d9cb3` realisateur/juge, `d3aeeb4`
+  senechal/veille, `47ef553` crt/sonne, `a44a73d` ecosim/sonde, `ec1aebb`
+  gardien/garde, `c18dd01` wtul/grave, `1557cb7` vkv-inventory/compte,
+  `7bf0bc2` bibliothecaire/range, `22c5f5d` aedile/annonce, `c78b8dd`
+  abletim/cadence, `2cb961f` chezz/joue, `fde8738` groc-mangr/mange,
+  `58f1ab0` home-assistant/loge, `1c29bf9` nine-speakers/chante, `0ce148e`
+  quatre-vingt-douze/cueille, `de8fb68` secretaire/trie, `0af9bd9`
+  sequestria/capte, `2ff74d0` vim-arcade/entraine.
+
+**Philosophy delta: YES, and it is realisateur's own to answer.** The pass
+measured this repo's sensors against the contract every other project was
+held to, and they failed: `bin/ecosystem-survey.sh --not-a-real-flag` and
+`bin/check-project-busy.sh` both **exit 0** and run anyway. That is the
+exit-0 no-op `BUILD-DISCIPLINE.md` forbids, living in the tools that audit
+everyone else. Not fixed this session — filed as a DECISION, scheduler `6e7d4dd` `BLOCKERS.md`.
+`BLOCKERS.md`.
+
+---
+
 ## THE UNWIRING — vision, then milestones, then blockers
 
 *Recorded 2026-07-30 by `/ideate`, Zach-directed. This does NOT supersede the
