@@ -407,6 +407,93 @@ single source is sufficient, and here the single source was correct while the
 *reader* silently discarded it. Candidate phrasing: *one source, and prove the
 read took.*
 
+---
+
+# Step 4 — the office leaves dexter for a VM called `nomac`
+
+Zach: *"we're going to set this up on a vm with a host called nomac"* — and the
+VM host is the Oracle VirtualBox already installed on dexter's Windows box.
+
+## What exists now
+
+`nomac`: Ubuntu 24.04.4 LTS guest (VirtualBox 7.2.12, 4 GB / 2 vCPU / 40 GB), NAT
+with hostfwd `2224 → 22`, created by `provision/nomac-vm.sh` from a
+checksum-verified ISO. Reached from mandark as
+`ssh -p 2224 -i ~/.ssh/office_nomac zach@dexter.tail893f2c.ts.net`.
+
+The office landed via `provision/land-office.sh --land`: clone → bootstrap
+`--apply` → transport enabled → **acceptance contract 17/17 on the new host**.
+node 24.18.1 and `claude` 2.1.220 installed in userland via nvm (no sudo). The
+ledger holds **only a genesis row** — the first hire was deliberately not made by
+a provisioning script.
+
+**dexter's office footprint is fully retired**, verified after: unit disabled and
+removed (`~/.config/systemd/user` is empty again), all five `~/.local/bin/office-*`
+symlinks gone, `~/office` and `~/office-state` deleted, linger back to `no`,
+nothing on 2525. Filed to senechal (`350a311`) with teardown for both hosts.
+
+## Finding: the move is what found the portability bugs
+
+The office ran fine on dexter. Landing it on a second host in one command surfaced
+three defects in ~20 minutes that hand-installation would have hidden
+indefinitely:
+
+1. **`218/CAPABILITIES`** — the systemd unit set `ProtectKernelTunables`,
+   `ProtectKernelModules` and `ProtectControlGroups`, which require
+   `CAP_SYS_ADMIN` and are **not available to `--user` units**. dexter's newer
+   systemd tolerated them; Ubuntu 24.04's systemd 255 refused, and the transport
+   died at start. A latent bug that was invisible while there was one host.
+2. **A version check that read `3.12 < 3.9`** — my own preflight compared version
+   strings as floats and refused a perfectly good Python 3.12 against a 3.9 floor.
+   Worth noting *which half worked*: it failed loud and installed nothing. The
+   same bug in the other direction (a 3.10 floor "passing" on 3.9) would have been
+   a false positive costing a debugging session at the wrong layer.
+3. **node/claude miscategorised as errors** — they are the *employees'* runtime,
+   not the office's; the 17-assertion mail contract passes on a host with no node
+   at all. Treating their absence as fatal refused a good host with "nothing was
+   installed". Now a loud MISSING that states the actual consequence: no work
+   order can be *executed* here.
+
+The general form, and it is the strongest argument in this whole migration for
+scripted deploys: **a deploy script's value is not saving keystrokes, it is that
+the second host disagrees with the first.** A hand-typed sequence on dexter would
+have carried all three defects silently into every future host.
+
+## Finding: "the port is open" was never the check
+
+The first waiter for the new VM polled TCP 2224 and fired **20 seconds** into a
+five-minute install — because **subiquity's own installer sshd** answers on the
+forwarded port. Port-open was evidence the *installer* was running, and would have
+been read as evidence the host was ready.
+
+Replaced with the real condition: key-auth login returning `hostname == nomac`.
+Same shape as everything else recorded today — the cheap check and the real check
+disagree, and the cheap one reports success first. Related: the probe that
+confirmed the install was actually progressing was a **console screenshot**
+(`VBoxManage controlvm nomac screenshotpng`), read as an image. A human-sense
+witness, not an exit code.
+
+## Finding: the boundary is now real, and that was the point
+
+| Probe | dexter (WSL2) | nomac (VM) |
+|---|---|---|
+| Windows filesystem | `C:`+`D:` mounted **rw** | **not visible** |
+| WSL interop (`/proc/.../WSLInterop`) | `enabled` | **absent** |
+| passwordless sudo | no | no |
+
+Both probed on the hosts themselves. This is the answer to Zach's *"bounded to
+the wsl?"*: on dexter, no — root there reaches the whole Windows user profile and
+can exec Windows binaries. On nomac, the boundary is a hypervisor.
+
+## The gap that matters most now
+
+`claude` is installed on nomac but **not authenticated**. So the office can keep
+books, carry mail, and archive it immutably — and cannot execute a single work
+order, because an employee is a Claude session. Authentication is interactive and
+therefore Zach's. Recorded as the load-bearing gap rather than left implicit: an
+office that cannot spend a token cannot have an economy, and the wavebuck peg is
+denominated in exactly that.
+
 ## Open question for the experimental record
 
 Does gardien count as already-migrated (leave it running) or as a service to
