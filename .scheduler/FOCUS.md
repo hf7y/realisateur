@@ -44,6 +44,35 @@ exit-0 no-op `BUILD-DISCIPLINE.md` forbids, living in the tools that audit
 everyone else. Not fixed this session — filed as a DECISION, scheduler `6e7d4dd` `BLOCKERS.md`.
 `BLOCKERS.md`.
 
+**2026-07-30 (paced) — FIXED, and the blocker undercounted it.** realisateur
+`5151b42`. The blocker named 2 scripts; the real number was **11 of 20** exiting
+0 on `--not-a-real-flag`. Now **0 of 20**, with all 20 answering `--help` (exit
+0) and rejecting `-s`/`-S`/`--summon` (exit 2) — the bashify contract's own
+assertions, run against every script rather than asserted. One source:
+`bin/lib/cli-guard.sh`, not eleven pasted preambles. Findings beyond the fix:
+- **`weight-audit.sh --dry-run` was a live apply-and-push.** It rewrites and
+  pushes `_paced.conf`, takes no flags, and is env-configured — so the flag a
+  careful operator would reach for silently did the real thing.
+- **`check-project-busy.sh` failed OPEN.** It answered `free` for any string,
+  including unregistered names and typos. The cross-write guard's permissive
+  answer was its default for input it could not check.
+- **A typo'd project name scanned nothing and exited 0** in hygiene-lint /
+  closeout-lint / milestone-audit — indistinguishable from "checked, it's fine".
+- **Self-inflicted, reported in full:** the probe sweep ran
+  `notify-senechal.sh --not-a-real-flag`, which filed that string into
+  senechal's FOCUS.md and pushed it (senechal `6f9f6f7`, retracted in place
+  `0786227`). The bug demonstrating itself.
+
+**2026-07-30 (paced) — NOT MINE TO FIX, needs Zach: scheduler's `BLOCKERS.md`
+has 9 unresolved merge-conflict hunks sitting UNCOMMITTED**, wrapping ~9 of
+Zach's substantive typed answers (freeze disposition, senechal owning hermes/
+obsidian gaps, GitHub Actions vs claude.ai, `mete -pA 0` as the proper freeze,
+self-dev indefinitely suspended). Left side is Zach's answer, right side is the
+`> (answer inline here)` placeholder. Not resolved here because `BLOCKERS.md` is
+human-owned and append-only for machines — but the ~:30 autocommit watcher may
+adopt the markers under Zach's name. Snapshot preserved at
+`~/BLOCKERS.md.conflicted-snapshot-20260730`.
+
 ---
 
 ## THE UNWIRING — vision, then milestones, then blockers
