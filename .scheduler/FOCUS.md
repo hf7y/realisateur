@@ -773,3 +773,83 @@ the exact error behind the withdrawn headline — and `verify:` pins it.
 **NOT done, deliberately:** nothing cross-written into any noun repo; `garde`'s
 `lib/verb.sh` unchanged (exit 7 across all 19 verbs is Zach's call, not
 realisateur's); `office-wake` still parked.
+
+### 2026-07-30 (`/ideate` — plan, not exec) — installing bashified verbs on nomac
+
+**Landed first:** the three derived CONTRACT.mds are on `origin/bashified` —
+quatre-vingt-douze `5b1a11a`, groc-mangr `7a51ce3`, vim-arcade `1dd7636`.
+De-vendored to keep the branches' total-purge guarantee (`.claude/FOCUS.md` →
+"the project's own FOCUS file", assistant named → "an assistant chat");
+obligations unchanged. Flagged, not silent.
+
+#### Vision
+
+`romulus@nomac` runs bashified verbs from his PATH, **able to execute them and
+not to read them**. Decided this session (Zach, `/ideate`): (1) execute-only
+means *real secrecy from the agent*, not tidiness; (2) code reaches nomac by
+**push from mandark — no GitHub credential on the VM at all**; (3) only verbs
+that **wrap nothing** get installed; (4) prove the install mechanism **now**,
+on an empty verb.
+
+**Explicitly NOT decided: the account topology that makes (1) possible.** That
+is the whole of M1 below and it is Zach's alone.
+
+#### The mechanism facts, probed not assumed (2026-07-30, on nomac itself)
+
+- **Mode `0111` does not work for shell scripts.** `Permission denied`, exit
+  126, on mandark and on nomac. The kernel execs the *interpreter*, which must
+  then open and **read** the file. `0111` works for ELF binaries only.
+- **Linux ignores the setuid bit on scripts** (`4755` → euid unchanged).
+  Deliberate, longstanding. So a setuid wrapper is not a route either.
+- **`romulus ALL=(ALL) NOPASSWD:ALL`.** A root-owned `0111` file that romulus
+  can neither read nor execute, he reads instantly with `sudo cat`. **Any file
+  mode is decoration while that account holds blanket root.**
+
+Therefore the ONLY shape that delivers "executes but cannot read" is: verbs
+owned by a second uid at `0500`, plus a scoped `sudo -u <owner> <verb>`
+NOPASSWD rule per verb — **and romulus losing `NOPASSWD:ALL`.** There is no
+fourth option; the other three were tested and eliminated.
+
+#### Milestone chain (working backward from the vision)
+
+1. **M0 — the install mechanism, proven on an empty payload. BUILDABLE NOW.**
+   `git archive origin/bashified | ssh -p 2224 …` from mandark. Verified by:
+   artifact lands; correct owner/mode; **resolves on PATH for BOTH login and
+   non-interactive shells** (see blocker B3); re-install is idempotent;
+   uninstall actually removes. **Stated plainly: M0 is NOT execute-only.**
+   Mode will be `0555` because nothing else works until M1. Proving the pipe
+   with a safe payload is the point; calling it the goal would be a lie.
+2. **M1 — the account topology. HUMAN-ONLY, and it is the deferred isolation
+   question arriving through the back door.** See blocker B1.
+3. **M2 — verbs gain real subcommands.** All three currently wire **zero**.
+4. **M3 — self-contained verbs.** `LEGACY_ROOT` is hardcoded to a mandark path
+   and the implementation lives on `main`, which the purge removed. The
+   bashify report already records that the verbs "mostly wrap rather than
+   reimplement".
+
+#### Blockers on the CURRENT step
+
+- **B1 (HUMAN-ONLY, and it has a real cost): "real secrecy" requires revoking
+  romulus's blanket root.** That directly contradicts the office's own stated
+  design — *"an office whose CEO needs a human to type a password is not
+  unattended"* — and `think`'s source already concedes it cannot hide a
+  credential from romulus "because romulus is root and nothing can". So this
+  is not a chmod; it is a decision about whether the CEO is still root. It is
+  the same isolation-boundary question deferred earlier today, reached from
+  the other direction.
+- **B2 (NAMING TRAP, buildable-now to avoid): "only install verbs that wrap
+  nothing" is self-limiting as stated.** These three qualify **only because
+  they are empty**. The moment M2 wires a subcommand, each verb execs
+  `page92.py`/`server.js` and stops qualifying. So the rule admits exactly the
+  verbs that do nothing, and excludes every verb the moment it becomes useful.
+  Worth restating before M2, not after.
+- **B3 (BUILDABLE NOW): `~/.local/bin` is not on the non-interactive PATH.**
+  Login shells get it via `~/.profile`; `ssh host 'cmd'`, cron and systemd do
+  not. romulus's own `office-mail`/`office-ledger` symlinks are already
+  installed-and-invisible this way — the same trap already recorded for dexter.
+
+#### Not blocking, but true
+
+No GitHub credential is needed on nomac at all under decision (2) — B-list
+item removed rather than solved. Nothing machine-wide changed this session, so
+no `notify-senechal` was due; M0 and M1 both will need one.
