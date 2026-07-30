@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# juge -- perceive this system's state and judge what matters
+#
+# A plain shell utility. It costs nothing to run and reaches no paid service
+# except where a subcommand explicitly declares a summon.
+#
+# The subcommand table below was DISCOVERED from tooling that actually exists
+# in this tree, not invented. A subcommand backed by a script execs it. One
+# the contract names but has nothing behind it reports GAP (exit 4) rather
+# than pretending, because an exit-0 no-op is the worst failure available.
+
+SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+
+VERB_NAME=juge
+VERB_SUMMARY="perceive this system's state and judge what matters"
+VERB_USAGE="juge <subcommand> [args...]"
+VERB_CAN_SUMMON=0
+# shellcheck source=../lib/verb.sh
+. "$SELF/lib/verb.sh"
+
+# Where the legacy implementation lives, for subcommands that exec it. Read
+# from ONE place; never retyped per subcommand.
+LEGACY_ROOT="${JUGE_LEGACY_ROOT:-/home/zach/Documents/Projects/realisateur}"
+
+verb_subcommands() {
+  printf '%s\n' \
+    'check-project-busy           run bin/check-project-busy.sh' \
+    'closeout-lint                run bin/closeout-lint.sh' \
+    'ecosim-sensor-tick           run bin/ecosim-sensor-tick.sh' \
+    'ecosystem-survey             run bin/ecosystem-survey.sh' \
+    'focus-commit                 run bin/focus-commit.sh' \
+    'hygiene-lint                 run bin/hygiene-lint.sh' \
+    'incubation-audit             run bin/incubation-audit.sh' \
+    'install-shims                run bin/install-shims.sh' \
+    'install-silence-audit        run bin/install-silence-audit.sh' \
+    'make-bootstrap-branch        run bin/make-bootstrap-branch.sh' \
+    'milestone-audit              run bin/milestone-audit.sh' \
+    'notify-senechal              run bin/notify-senechal.sh' \
+    'precipitation-scan           run bin/precipitation-scan.sh' \
+    'reach-lint                   run bin/reach-lint.sh' \
+    'restamp-discipline           run bin/restamp-discipline.sh' \
+    'session-marker               run bin/session-marker.sh' \
+    'silence-audit                run bin/silence-audit.sh' \
+    'steward-survey               run bin/steward-survey.sh' \
+    'weight-audit                 run bin/weight-audit.sh' \
+    'inject-suggestions           run fable-like/inject-suggestions.sh' \
+    'liveness-audit               run fable-like/projects/scheduler/bin/liveness-audit.sh' \
+    ''
+}
+
+cmd="${1:-}"; [ $# -gt 0 ] && shift
+verb_parse "$@"
+set -- "${VERB_ARGS[@]+"${VERB_ARGS[@]}"}"
+
+case "$cmd" in
+  ''|list)
+    printf '%s -- %s\n\n' "$VERB_NAME" "$VERB_SUMMARY"
+    printf 'subcommands (discovered from real tooling):\n'
+    verb_subcommands | sed '/^$/d' | sed 's/^/  /'
+    printf '\n(`%s --help` for flags, `man %s` for the contract)\n' "$VERB_NAME" "$VERB_NAME"
+    ;;
+  help|--help|-h) verb_usage ;;
+  check-project-busy)
+    [ -x "$LEGACY_ROOT/bin/check-project-busy.sh" ] || verb_gap 'check-project-busy: bin/check-project-busy.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/check-project-busy.sh" "$@" ;;
+  closeout-lint)
+    [ -x "$LEGACY_ROOT/bin/closeout-lint.sh" ] || verb_gap 'closeout-lint: bin/closeout-lint.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/closeout-lint.sh" "$@" ;;
+  ecosim-sensor-tick)
+    [ -x "$LEGACY_ROOT/bin/ecosim-sensor-tick.sh" ] || verb_gap 'ecosim-sensor-tick: bin/ecosim-sensor-tick.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/ecosim-sensor-tick.sh" "$@" ;;
+  ecosystem-survey)
+    [ -x "$LEGACY_ROOT/bin/ecosystem-survey.sh" ] || verb_gap 'ecosystem-survey: bin/ecosystem-survey.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/ecosystem-survey.sh" "$@" ;;
+  focus-commit)
+    [ -x "$LEGACY_ROOT/bin/focus-commit.sh" ] || verb_gap 'focus-commit: bin/focus-commit.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/focus-commit.sh" "$@" ;;
+  hygiene-lint)
+    [ -x "$LEGACY_ROOT/bin/hygiene-lint.sh" ] || verb_gap 'hygiene-lint: bin/hygiene-lint.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/hygiene-lint.sh" "$@" ;;
+  incubation-audit)
+    [ -x "$LEGACY_ROOT/bin/incubation-audit.sh" ] || verb_gap 'incubation-audit: bin/incubation-audit.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/incubation-audit.sh" "$@" ;;
+  install-shims)
+    [ -x "$LEGACY_ROOT/bin/install-shims.sh" ] || verb_gap 'install-shims: bin/install-shims.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/install-shims.sh" "$@" ;;
+  install-silence-audit)
+    [ -x "$LEGACY_ROOT/bin/install-silence-audit.sh" ] || verb_gap 'install-silence-audit: bin/install-silence-audit.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/install-silence-audit.sh" "$@" ;;
+  make-bootstrap-branch)
+    [ -x "$LEGACY_ROOT/bin/make-bootstrap-branch.sh" ] || verb_gap 'make-bootstrap-branch: bin/make-bootstrap-branch.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/make-bootstrap-branch.sh" "$@" ;;
+  milestone-audit)
+    [ -x "$LEGACY_ROOT/bin/milestone-audit.sh" ] || verb_gap 'milestone-audit: bin/milestone-audit.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/milestone-audit.sh" "$@" ;;
+  notify-senechal)
+    [ -x "$LEGACY_ROOT/bin/notify-senechal.sh" ] || verb_gap 'notify-senechal: bin/notify-senechal.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/notify-senechal.sh" "$@" ;;
+  precipitation-scan)
+    [ -x "$LEGACY_ROOT/bin/precipitation-scan.sh" ] || verb_gap 'precipitation-scan: bin/precipitation-scan.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/precipitation-scan.sh" "$@" ;;
+  reach-lint)
+    [ -x "$LEGACY_ROOT/bin/reach-lint.sh" ] || verb_gap 'reach-lint: bin/reach-lint.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/reach-lint.sh" "$@" ;;
+  restamp-discipline)
+    [ -x "$LEGACY_ROOT/bin/restamp-discipline.sh" ] || verb_gap 'restamp-discipline: bin/restamp-discipline.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/restamp-discipline.sh" "$@" ;;
+  session-marker)
+    [ -x "$LEGACY_ROOT/bin/session-marker.sh" ] || verb_gap 'session-marker: bin/session-marker.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/session-marker.sh" "$@" ;;
+  silence-audit)
+    [ -x "$LEGACY_ROOT/bin/silence-audit.sh" ] || verb_gap 'silence-audit: bin/silence-audit.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/silence-audit.sh" "$@" ;;
+  steward-survey)
+    [ -x "$LEGACY_ROOT/bin/steward-survey.sh" ] || verb_gap 'steward-survey: bin/steward-survey.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/steward-survey.sh" "$@" ;;
+  weight-audit)
+    [ -x "$LEGACY_ROOT/bin/weight-audit.sh" ] || verb_gap 'weight-audit: bin/weight-audit.sh is not executable or not present'
+    exec "$LEGACY_ROOT/bin/weight-audit.sh" "$@" ;;
+  inject-suggestions)
+    [ -x "$LEGACY_ROOT/fable-like/inject-suggestions.sh" ] || verb_gap 'inject-suggestions: fable-like/inject-suggestions.sh is not executable or not present'
+    exec "$LEGACY_ROOT/fable-like/inject-suggestions.sh" "$@" ;;
+  liveness-audit)
+    [ -x "$LEGACY_ROOT/fable-like/projects/scheduler/bin/liveness-audit.sh" ] || verb_gap 'liveness-audit: fable-like/projects/scheduler/bin/liveness-audit.sh is not executable or not present'
+    exec "$LEGACY_ROOT/fable-like/projects/scheduler/bin/liveness-audit.sh" "$@" ;;
+  *) verb_die "unknown subcommand: $cmd  (try: $VERB_NAME list)" ;;
+esac

@@ -1,36 +1,32 @@
-# realisateur
+# juge
 
-Zach drops ideas into this folder in a chaotic, unstructured way — a quick
-echoed note, a screenshot, a half-formed thought in a text file. No fixed
-format, no naming convention.
+*perceive this system's state and judge what matters*
 
-realisateur's job is to notice what's been dropped, infer the idea behind
-it, and turn it into a real, scaffolded project wired into the rest of the
-development ecosystem — most importantly, registered with
-`~/Documents/Project Archive/scheduler` (see `SCHEDULER.md`) so it can keep
-developing itself unattended, the same way realisateur itself now does.
+This is the **bashified** branch of `realisateur`. It contains a plain shell
+utility and nothing else.
 
-## How it works
+```
+bin/juge          the utility
+man/juge.1        how to use it
+CONTRACT.md   the promise it must keep
+GAPS.md        what it cannot do yet
+test/          the contract test, runnable against any implementation
+```
 
-1. **Inbox**: raw dropped artifacts land at the repo root (or wherever
-   Zach puts them) — text files, PNGs, whatever. Nothing about their name
-   or shape is guaranteed.
-2. **Inference**: read/view each artifact and figure out what idea it's
-   pointing at. When it's ambiguous, pick the most reasonable
-   interpretation and act — see `.scheduler/FOCUS.md`'s autonomy policy.
-3. **Wiring**: turn a viable idea into its own project — a real directory
-   (usually a sibling under `~/Documents/Projects/`), a git repo, and a
-   scheduler registration of its own if it's the kind of thing that
-   benefits from an unattended nightly loop (most agent/codebase projects
-   are).
-4. **Archive**: once an artifact has been acted on (a project scaffolded,
-   or a decision made not to), move it out of the inbox so the next run
-   doesn't re-process it — see `.claude/commands/nightly-batch.md` for the
-   exact convention.
+## Why this is a branch and not a repository
 
-## This project's own scheduler registration
+The purge here is **total**. Everything this tree used to carry beyond
+the tool itself is gone from these files. It is not lost: it is on `main`
+branch of this same repository, one `git log main` away.
 
-realisateur is itself registered as a Tier 2 (nightly batch) participant
-— see `schedule/realisateur.conf` in the scheduler repo. Its nightly run
-is what actually processes the inbox and wires up new projects; there is
-no separate daemon or watcher.
+**That is the only reason a total purge is safe.** Extracting this
+branch into a standalone repository would destroy the archive that
+justifies the purge, and leave defensive code standing with no visible
+cause -- which is how hard-won guards get deleted by the next reader.
+Do not do it.
+
+## Verify
+
+```
+./test/contract-test.sh bin/juge
+```
