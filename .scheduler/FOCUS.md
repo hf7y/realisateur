@@ -128,6 +128,51 @@ the best available **format proof** (Law 1 against a mature 15-subcommand
 tool, zero tokens) but it is not the **experiment**. Recommend a second,
 genuinely agent-backed contract as the milestone contract. `[OPEN — Zach]`
 
+### The bashify pass — DONE 2026-07-30, all 19 projects
+
+Zach-directed unattended session. **Noun → verb, worldwide, in one night.**
+Full record: `BASHIFY-REPORT-20260730.md`; tooling in `bashify/`.
+
+**Delivered:** every registered project has a `bashified` branch **pushed to
+GitHub**, each holding a verb-named shell utility, a man page, a contract, a
+contract test, and a `GAPS.md`. **19/19 pass the contract (7/7 assertions).**
+Names are French imperatives, ASCII-only, all confirmed unclaimed on `PATH`:
+`dose` `juge` `veille` `sonne` `sonde` `garde` `grave` `compte` `range`
+`annonce` `cadence` `joue` `mange` `loge` `chante` `cueille` `trie` `capte`
+`entraine`.
+
+**Naming rule, now applied worldwide:** French **noun** = animate, French
+**imperative verb** = inanimate. One language, no seam. Cost boundary is
+`--summon`, **long form only** — `-s` collides and `-S` differs from it by
+one shift key, unacceptable for the only flag that spends money.
+
+**The measured findings (probed, not quoted):**
+1. **10 of 19 projects had NO callable entry point at all.** Not a bad one —
+   none. That is the honest measure of how much of this was ever mechanised.
+2. **realisateur's own sensors fail worst.** `ecosystem-survey.sh
+   --not-a-real-flag` **exits 0** and runs the full survey;
+   `check-project-busy.sh` likewise. Scored **0/8**. The exit-0 no-op
+   `BUILD-DISCIPLINE.md` forbids is sitting in the tools that audit everyone
+   else. **This is realisateur's own defect and its own to fix.**
+3. **Legacy `scheduler` hangs on a bad flag** (`-s` = sweep, blocks on an
+   editor). `dose` rejects it immediately. Clearest before/after in the pass.
+4. **The purge guard caught a real leak that had already shipped** — the
+   first `aedile` build exposed a vendor-named subcommand on a branch that
+   promises no such name. Fixed by *mechanising* the guarantee (grep the tree,
+   refuse to commit a branch that lies about itself), not by hand-editing.
+5. **A too-narrow discovery glob found 3 of senechal's 23 scripts** and would
+   have shipped a utility silently missing most of the project.
+
+**Safety properties worth keeping:** the generator uses `git worktree`
+throughout, so no project's working tree is touched — `gardien` and `senechal`
+were bashified while Zach had **live interactive sessions open in both**, and
+neither was disturbed. Worktrees were pruned afterward; branches survive.
+
+**Explicitly NOT done:** no cost baseline (token spend was authorised but
+unused — a subtraction from working code has no summon and no before-number),
+so **this pass does not close `U0`**. Nothing installed on `PATH`. The verbs
+wrap legacy scripts rather than reimplementing them.
+
 ### Blockers on U0 specifically
 
 1. **realisateur must author `contracts/mete.contract`.** basheur's
