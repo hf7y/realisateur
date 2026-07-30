@@ -721,3 +721,55 @@ is written and staged. **Consequence: romulus has mail, money, orders and a brai
 briefs are NOT achievable without a steward change Zach has not made — gap named,
 not hidden): ecosim `ab716b7` to instrument the metabolism, bibliothecaire
 `3a85419` for short briefs incl. Coase and the `vkv/librarius` corpus.
+
+### 2026-07-30 (unattended, Zach AFK) — basheur became the interface
+
+*Brief: "use basheur itself, the utility, to bashify these noun repositories,
+monitor the behavior, and adjust accordingly... watch out for gardien and the
+media migration... look into gardien's repo for inspiration."*
+
+**gardien supplied the missing state, and it was a metric bug.** Its deferred
+cross-write (filed verbatim + answered, realisateur `7b8a45f`) proposed exit 7
+REFUSED — "won't" as distinct from "not yet". basheur had MECHANIZED/AGENT/
+BROKEN and no way to say it, so every out-of-scope obligation was filed AGENT:
+**the mechanized fraction could never reach 1.0, because its denominator held
+things nobody would ever build.** Adopted in basheur `00d4013`; refusals are now
+excluded from the ratio. gardien's load-bearing rule kept verbatim: **`--summon`
+is available on a GAP and forbidden on a refusal** — the only way past a refusal
+is a diff.
+
+**Two CONTRACT.mds derived through basheur** (`64ecd14`): `quatre-vingt-douze`
+(cueille) and `groc-mangr` (mange), in garde's shape. **Held in basheur, not
+cross-written into the target repos** — Law 3, and gardien/dexter are live.
+
+**A headline of mine was withdrawn** (`8b0c62b`). BASHIFY-REPORT finding 1
+("ten of nineteen had no callable entry point at all") measured **shell**. Of
+the 8 with zero shell tooling, **6 have argv-capable Python/JS entry points**;
+only chezz and groc-mangr genuinely have none. The HOW column asks whether a
+*model* is in the loop, not what language it is written in — so most are already
+mechanized and what they lack is a **verb surface**, a much smaller job. Caught
+by two independent summons objecting unprompted, not by re-reading the report.
+That is the fourth time a headline quantity has needed re-deriving.
+
+**Three defects found by watching it run, not by reasoning about it:**
+- **A Law 2 race** (`64ecd14`): concurrent summons of one contract share one
+  residue path, so the loser silently leaves none. It did not bite only because
+  the second agent chose to append. `run --summon` now flocks the residue slot.
+- **A summon refused to deliver, correctly** (`068b05b`): the vim-arcade run read
+  `verify-project-contract.sh` first, found two checks that would reject correct
+  documents, and reported instead of reshaping its output to please them. An
+  agent that bends its deliverable to satisfy a broken test converts a bug into
+  a convention.
+- **A checker that could not fail** (`c9aefa8`): the HOW-vocabulary filter ended
+  in an empty regex alternative, which this host's grep rejects; `|| true`
+  swallowed it and the check reported clean on every input. The exit-0 no-op,
+  in a test.
+
+**The free half is now free** (`068b05b`): `project-evidence` mechanizes steps
+1–6 of the summon's own residue, so every future `project-contract` call pays
+for judgment only. Inventory is by **mode bit and shebang, never extension** —
+the exact error behind the withdrawn headline — and `verify:` pins it.
+
+**NOT done, deliberately:** nothing cross-written into any noun repo; `garde`'s
+`lib/verb.sh` unchanged (exit 7 across all 19 verbs is Zach's call, not
+realisateur's); `office-wake` still parked.
