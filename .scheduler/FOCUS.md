@@ -944,3 +944,19 @@ to keep the total-purge guarantee.
 nine-speakers, secretaire, sequestria — will land on completion. The big four
 (crt/scheduler/realisateur/senechal) are HELD pending Q1, deliberately not
 derived as single-verb.
+
+### 2026-07-30 (build, cont.) — contract coverage complete but the two monoliths
+
+All batches landed. Derived contracts now on `bashified` for **16 of 18**
+registered projects. Landed this pass: home-assistant `d61880f`, nine-speakers
+`7e2319e`, secretaire `e8afbdf`, sequestria `dfb478e`, bibliothecaire `6d3eeff`,
+ecosim `d8e3b40`, vkv-inventory `5d29177`, wtul `5e5f271` (+ abletim/chezz and
+the earlier three). All de-vendored to hold each branch's total-purge
+guarantee; no working tree disturbed.
+
+**HELD, deliberately: realisateur (`juge`, 44 subs) and senechal (`veille`,
+40 subs).** These are the genuine monoliths, and deriving them as single-verb
+is exactly the premature work Q1 (one-noun-many-verbs) exists to prevent. crt
+(`sonne`, 98) and scheduler (`dose`, 52) already carry derived contracts but
+are the same case — candidates to re-split if Q1 adopts many-verbs. The two
+stubs stay stubs until Zach answers Q1.
