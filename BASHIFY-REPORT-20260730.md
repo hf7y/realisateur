@@ -52,11 +52,42 @@ answers "can this cost me anything?"
 
 These are the point of the exercise. All probed 2026-07-30, not quoted.
 
-**1. Ten of nineteen projects had no callable entry point at all.**
-Not a bad one — none. Over half the ecosystem could not be invoked by a
-human at a shell prompt in any way. That is the honest measure of how
-much of this work was ever mechanised, and the answer is: less than half
-of it had even a front door.
+**1. ~~Ten of nineteen projects had no callable entry point at all.~~**
+**CORRECTED 2026-07-30 (same day) — this finding was wrong, and the
+correction changes the diagnosis.** It is left standing rather than
+edited away, because a headline that was published and then withdrawn is
+itself the finding.
+
+*What it said:* "Not a bad one — none. Over half the ecosystem could not
+be invoked by a human at a shell prompt in any way."
+
+*What was actually measured:* **shell scripts.** The discovery pass
+globbed for `*.sh` and `bin/`, so a project whose entry point is Python
+or Node counted as having none.
+
+*What is true, re-derived across all 19 registered projects:* of the
+**8** with zero shell tooling, **6 have argv-capable Python/JS entry
+points** (`argparse`/`sys.argv`/`process.argv`/`__main__`). Only `chezz`
+and `groc-mangr` genuinely have none. `quatre-vingt-douze`'s `page92.py`
+is a 380-line three-stage pipeline that runs free and unattended; so does
+`groc-mangr`'s `node --test` suite.
+
+*Why it matters:* the HOW column asks **whether a model is in the loop**,
+not what language the loop is written in. Under that definition most of
+these projects ARE mechanized — what they lack is a **verb surface**, not
+mechanization. That is a materially smaller job: wrapping an argv
+contract that already exists, rather than building one.
+
+*How it was caught:* not by re-reading the report. Two independent
+`basheur run --summon project-contract` runs — on `quatre-vingt-douze`
+and `groc-mangr` — each objected to their own project's prior contract
+unprompted, in the same terms. The instrument built to consume this
+report is what falsified it.
+
+*The standing lesson, which this repo has now recorded four times:* a
+headline QUANTITY must be re-derived before anyone acts on it. This one
+survived a session, a report, and a summary to Zach before an agent
+reading the underlying repos noticed.
 
 **2. `realisateur`'s own tooling fails the contract worst.**
 `bin/ecosystem-survey.sh --not-a-real-flag` **exits 0** and runs the full
