@@ -72,7 +72,17 @@ utilities, or not at all.
   exactly this, and if it fails the correct response is to **un-park**, not to
   keep mechanizing.
 
-### U0's first contract is `mete` — decided 2026-07-30, second `/ideate` pass
+### U0's first contract — decided 2026-07-30, second `/ideate` pass
+
+> **SUPERSEDED THE SAME NIGHT, third pass: the verb is `dose`, not `mete`.**
+> Zach moved the whole namespace to French ("french"), so `mete` (English)
+> became `dose` — same meaning, apportioning a measured amount, ASCII, and
+> shorter. The naming rule below also generalised: it is now French **noun**
+> = animate / French **imperative verb** = inanimate, one language and no
+> seam. And the cost sigil is **`--summon` long-form only** — `-$` was
+> dropped because `$` is a shell metacharacter, and `-s`/`-S` were rejected
+> on collision and shift-key grounds. Read the section below as history; the
+> bashify-pass section further down is what actually shipped.
 
 Zach: *"scheduler bashified to become simply a utility"* — a coherent bash
 repo with **no traces of claude, no traces of agent**, taking arguments and
