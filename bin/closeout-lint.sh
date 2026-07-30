@@ -43,6 +43,16 @@
 #   TODAY=YYYY-MM-DD  the date B and C treat as "today"
 set -uo pipefail
 
+CLI_NAME='closeout-lint.sh'
+CLI_SUMMARY='the deterministic half of session closeout -- what did today leave behind?'
+CLI_USAGE='  closeout-lint.sh            scan every registered project
+  closeout-lint.sh <name>...  scan only the named project(s)
+    (HOURS=<n> in the environment sets the lookback window)'
+CLI_FLAGS=''
+CLI_POSITIONAL=any
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+cli_guard "$@"
+
 SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Project Archive/scheduler}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FOCUS_MD="${FOCUS_MD:-$REPO_ROOT/.scheduler/FOCUS.md}"
@@ -66,6 +76,7 @@ for conf in "$SCHED_ROOT"/schedule/*.conf; do
   fi
   projects+=("$name"); paths+=("$p")
 done
+cli_require_matched want projects
 
 echo "closeout-lint -- $TODAY (repos touched in the last ${HOURS}h)"
 echo "(offline-first: no claude calls, writes nothing, always exits 0."

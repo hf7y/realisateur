@@ -21,6 +21,16 @@
 #                                        Never invents the decisions itself.
 set -uo pipefail
 
+CLI_NAME='incubation-audit.sh'
+CLI_SUMMARY='signals for judging which scaffolded projects have graduated the incubator'
+CLI_USAGE='  incubation-audit.sh              dry run: print signals + a naive suggestion
+  incubation-audit.sh --apply FILE  apply real decisions from FILE
+                                    (name|status|weight, one per line)'
+CLI_FLAGS='--apply'
+CLI_POSITIONAL=any
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+cli_guard "$@"
+
 SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
 PACED_CONF="$SCHED_ROOT/schedule/_paced.conf"
 today="$(date +%Y-%m-%d)"

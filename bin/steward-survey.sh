@@ -41,6 +41,18 @@ PACED_CONF="$SCHED_ROOT/schedule/_paced.conf"
 [ -d "$SCHED_ROOT/schedule" ] || { echo "FATAL: scheduler schedule/ not found at $SCHED_ROOT" >&2; exit 2; }
 [ -f "$PACED_CONF" ]          || { echo "FATAL: _paced.conf not found at $PACED_CONF" >&2; exit 2; }
 
+CLI_NAME='steward-survey.sh'
+CLI_SUMMARY='who is actually stewarding each project -- dispatch reality vs FOCUS activity'
+CLI_USAGE='  steward-survey.sh            survey every registered project
+  steward-survey.sh <name>...  survey only the named project(s)'
+CLI_FLAGS=''
+CLI_EXITS='  0  surveyed. Findings are SIGNALS, not verdicts -- a dark project is
+     often deliberate.
+  2  no registered project matched what was asked for'
+CLI_POSITIONAL=any
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+cli_guard "$@"
+
 today_epoch="$(date +%s)"
 want=("$@")
 

@@ -45,7 +45,15 @@ set -uo pipefail
 die() { printf 'focus-commit: FAIL: %s\n' "$*" >&2; exit 1; }
 note() { printf 'focus-commit: %s\n' "$*"; }
 
-case "${1:-}" in -h|--help|'') sed -n '2,/^set -uo/p' "$0" | sed 's/^# \{0,1\}//;$d'; exit 0 ;; esac
+case "${1:-}" in
+  -h|--help|'') sed -n '2,/^set -uo/p' "$0" | sed 's/^# \{0,1\}//;$d'; exit 0 ;;
+  # The first argument is a REPO PATH, so a flag reaching here is a misparse.
+  # It used to surface as "not a directory: -s" (exit 1) -- loud, but it named
+  # the wrong problem, and exit 1 is this script's real-failure code.
+  --summon) printf 'focus-commit: --summon rejected: this tool makes no AI calls and cannot spend.\n' >&2; exit 2 ;;
+  -*)       printf 'focus-commit: expected a repo path, got a flag: %s\n' "$1" >&2
+            printf 'try `focus-commit.sh --help`\n' >&2; exit 2 ;;
+esac
 
 repo="$1"; msgfile="$2"; shift 2
 [ "$#" -ge 1 ] || die "no files named -- usage: focus-commit.sh <repo> <msgfile> <file>..."

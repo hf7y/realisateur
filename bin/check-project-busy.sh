@@ -22,7 +22,27 @@
 # Exit 1 + "BUSY: <job-name>" (one line per busy job) if any is held.
 set -uo pipefail
 
+CLI_NAME='check-project-busy.sh'
+CLI_SUMMARY='is a scheduler-dispatched job running against <project> right now?'
+CLI_USAGE='  check-project-busy.sh <project>   probe that project'"'"'s locks; print BUSY or free'
+CLI_FLAGS=''
+CLI_POSITIONAL=any
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+cli_guard "$@"
+
 project="${1:?usage: check-project-busy.sh <project>}"
+[ "$#" -eq 1 ] || { echo "check-project-busy.sh: takes exactly one project, got $#" >&2; exit 2; }
+
+# A MISSPELLED PROJECT MUST NOT READ AS "free". This script's whole job is to
+# gate cross-writes, and its safe-looking answer is the permissive one -- so an
+# unregistered name silently returning "free" is the exact shape of a guard
+# that fails open. Verified 2026-07-30: `check-project-busy.sh --not-a-real-flag`
+# exited 0 and reported free.
+if [ ! -f "/home/zach/Documents/Project Archive/scheduler/schedule/$project.conf" ]; then
+  echo "check-project-busy.sh: '$project' is not a scheduler-registered project" >&2
+  echo "  (no schedule/$project.conf -- refusing to answer 'free' for a name I cannot check)" >&2
+  exit 2
+fi
 share_dir="$HOME/.local/share"
 
 # Shared scheduler INFRASTRUCTURE job dirs, not any one project's own

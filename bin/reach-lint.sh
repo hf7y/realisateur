@@ -40,6 +40,18 @@
 #                                held hostage by another project frontmatter.
 set -uo pipefail
 
+CLI_NAME='reach-lint.sh'
+CLI_SUMMARY='can the executor reading a command file actually reach what it names?'
+CLI_USAGE='  reach-lint.sh                scan every registered project + ~/.claude/commands
+  reach-lint.sh --strict       exit 1 if ANY check FLAGged (for hooks)
+  reach-lint.sh --strict-reach exit 1 only if the reach check (B) FLAGged'
+CLI_FLAGS='--strict --strict-reach'
+CLI_EXITS='  0  scanned; no FLAGs, or FLAGs found but no --strict mode asked for
+  1  --strict/--strict-reach was given and the corresponding check FLAGged'
+CLI_POSITIONAL=none
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+cli_guard "$@"
+
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
 USER_CMD_DIR="$HOME/.claude/commands"

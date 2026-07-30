@@ -81,6 +81,12 @@ case "${1:-}" in
   -h|--help)   sed -n '2,60p' "${BASH_SOURCE[0]}"; exit 0 ;;
   "")          ;;
   --*)         echo "unknown flag: $1" >&2; exit 2 ;;
+  # A SHORT flag fell through to the project-name branch. `silence-audit -s`
+  # audited a project literally named "-s" and printed a full, confident
+  # report (measured 2026-07-30) -- the misparse this script exists to catch,
+  # in this script. -s/-S specifically are near-misses on --summon, the only
+  # flag in this ecosystem that spends money, and must never be swallowed.
+  -*)          echo "unknown flag: $1 (short flags are not accepted; the cost flag --summon is long-form only)" >&2; exit 2 ;;
   *)           ONLY="$1" ;;
 esac
 

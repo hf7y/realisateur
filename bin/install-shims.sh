@@ -18,6 +18,15 @@
 # reported loudly (see --check).
 set -uo pipefail
 
+CLI_NAME='install-shims.sh'
+CLI_SUMMARY='install/refresh the ~/.local/bin shims that put realisateur bin/ on PATH'
+CLI_USAGE='  install-shims.sh           install or refresh every shim
+  install-shims.sh --check   report drift only, write nothing'
+CLI_FLAGS='--check'
+CLI_POSITIONAL=none
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+cli_guard "$@"
+
 REPO="/home/zach/Documents/Projects/realisateur"
 BIN_DEST="$HOME/.local/bin"
 CMD_SRC="$REPO/.claude/commands"

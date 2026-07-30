@@ -69,7 +69,23 @@ want=()
 for a in "$@"; do
   case "$a" in
     --apply) apply=1 ;;
-    -*) die "unknown option: $a" ;;
+    -h|--help)
+      printf 'restamp-discipline.sh -- propagate BUILD-DISCIPLINE.md'"'"'s one source into every project\n\n'
+      printf 'usage:\n'
+      printf '  restamp-discipline.sh              dry run: report drift, write nothing\n'
+      printf '  restamp-discipline.sh --apply      rewrite the managed region in each project\n'
+      printf '  restamp-discipline.sh <name>...    limit to the named project(s)\n\n'
+      printf 'flags: --apply\n\n'
+      printf 'exit codes:\n'
+      printf '  0  ran to completion\n'
+      printf '  1  a stated failure (missing source, unknown option, git refusal)\n\n'
+      printf 'this tool makes no AI calls and cannot spend: --summon is rejected.\n'
+      exit 0 ;;
+    # exit 2, not die's exit 1: a usage error is not a real failure, and this
+    # script's exit 1 already means "a stated failure occurred".
+    --summon) printf 'restamp-discipline: --summon rejected: this tool makes no AI calls and cannot spend.\n' >&2; exit 2 ;;
+    -*) printf 'restamp-discipline: unknown option: %s\n' "$a" >&2
+        printf 'try `restamp-discipline.sh --help`\n' >&2; exit 2 ;;
     *) want+=("$a") ;;
   esac
 done

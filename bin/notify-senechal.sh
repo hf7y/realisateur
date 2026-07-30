@@ -72,6 +72,32 @@ die() { printf 'notify-senechal: FAIL: %s\n' "$*" >&2; exit 1; }
 text="${1:-}"
 [ -n "$text" ] || die "no text given. Usage: notify-senechal.sh '<what changed, where, who owns it>'"
 
+# A LEADING DASH IS A MISPARSE, NOT A MESSAGE. This script's argument is free
+# text, so it has no flags to get wrong -- which meant a mistyped or
+# programmatically-passed flag became the note's BODY and was pushed to
+# senechal's repo. That is not hypothetical: on 2026-07-30 a probe sweep ran
+# `notify-senechal.sh --not-a-real-flag` across bin/ to find exit-0 no-ops, and
+# this script filed "--not-a-real-flag" into senechal's FOCUS.md and pushed it
+# (senechal 6f9f6f7, retracted in place same day). No human writes a note that
+# starts with a dash; a caller that does has lost track of its own arguments.
+case "$text" in
+  --help|-h)
+    printf "notify-senechal.sh -- announce a machine-wide config change to senechal\n\n"
+    printf "usage:\n  notify-senechal.sh '<what changed, where, who owns it>'\n\n"
+    printf "flags: none -- the single argument is free text\n\n"
+    printf "exit codes:\n"
+    printf "  0  the note is confirmed present on senechal's remote\n"
+    printf "  1  any failure, with a stated reason (no exit-0 no-op)\n"
+    printf "  2  usage error: the message looks like a misparsed flag\n\n"
+    printf "this tool makes no AI calls and cannot spend: --summon is rejected.\n"
+    exit 0 ;;
+  -*)
+    printf "notify-senechal: refusing to file a note that begins with '-': %s\n" "$text" >&2
+    printf "  This is almost always a misparsed flag rather than a message. If you\n" >&2
+    printf "  really mean it, lead with a word: 'note: %s'\n" "$text" >&2
+    exit 2 ;;
+esac
+
 [ -x "$SCHED_ROOT/bin/scheduler" ] || die "scheduler front door not found/executable at $SCHED_ROOT/bin/scheduler"
 [ -d "$SENECHAL/.git" ]           || die "senechal repo not found at $SENECHAL"
 

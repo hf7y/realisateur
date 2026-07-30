@@ -106,6 +106,21 @@ check_one() {
 [ $# -gt 0 ] || die "no arguments. See the usage block at the top of this script."
 
 case "${1:-}" in
+  -h|--help)
+    printf 'stamp-agent.sh -- stamp a project with its agent role, bar and laws\n\n'
+    printf 'usage:\n'
+    printf '  stamp-agent.sh <project> --role R [--bar B] [--item I]... [--law L]... [--apply]\n'
+    printf '  stamp-agent.sh --check <project>    verify one project'"'"'s stamp\n'
+    printf '  stamp-agent.sh --list               check every registered project\n\n'
+    printf 'flags: --role --bar --item --law --apply --check --list --selftest\n\n'
+    printf 'exit codes:\n'
+    printf '  0  stamped, or the checked stamp is present and current\n'
+    printf '  1  a stated failure, or a --check/--list stamp is missing or drifted\n'
+    printf '  2  usage error\n\n'
+    printf 'this tool makes no AI calls and cannot spend: --summon is rejected.\n'
+    exit 0 ;;
+  --summon) die "--summon rejected: this tool makes no AI calls and cannot spend." ;;
+  -s|-S)    die "'$1' rejected as a near-miss on --summon (the cost flag is long-form only)." ;;
   --check)
     [ $# -ge 2 ] || die "--check needs a project name"
     check_one "$2"; exit $?

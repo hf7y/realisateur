@@ -51,6 +51,17 @@
 # intake time. That is the intended direction of travel.
 set -uo pipefail
 
+CLI_NAME='precipitation-scan.sh'
+CLI_SUMMARY='find recurring terms clustering across projects'"'"' open FOCUS entries'
+CLI_USAGE='  precipitation-scan.sh    all three reports. Configured by ENV, not flags:
+    FOCUS_DIR=...     directory of per-project focus files
+    MIN_SCORE / MIN_SHARED / UBIQUITY / MIN_TERMLEN   clustering thresholds
+    HUBFRAC / MAX_CLUSTERS / INCLUDE_LOGS'
+CLI_FLAGS=''
+CLI_POSITIONAL=none
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+cli_guard "$@"
+
 SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
 FOCUS_DIR="${FOCUS_DIR:-$SCHED_ROOT/focus}"   # overridable for fixture tests
 [ -d "$FOCUS_DIR" ] || { echo "FATAL: scheduler focus/ not found at $FOCUS_DIR" >&2; exit 2; }

@@ -137,6 +137,18 @@ case "$action" in
     echo "free"
     exit 0
     ;;
+  -h|--help)
+    printf 'session-marker.sh -- record/probe a live interactive session for a project\n\n'
+    printf 'usage:\n'
+    printf '  session-marker.sh acquire < hook-json   from a Claude SessionStart hook\n'
+    printf '  session-marker.sh release < hook-json   from a Claude SessionEnd hook\n'
+    printf '  session-marker.sh probe <project>       print "free" or a live-session line\n\n'
+    printf 'flags: none -- the first argument is a subcommand\n\n'
+    printf 'exit codes:\n'
+    printf '  0  the subcommand completed (probe prints its answer on stdout)\n'
+    printf '  2  usage error: unknown subcommand or missing argument\n\n'
+    printf 'this tool makes no AI calls and cannot spend: --summon is rejected.\n'
+    exit 0 ;;
   *)
     echo "usage: session-marker.sh {acquire|release} < hook-json" >&2
     echo "       session-marker.sh probe <project>" >&2

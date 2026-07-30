@@ -85,6 +85,23 @@
 # not "trust the majority signal."
 set -uo pipefail
 
+# THE SHARPEST CASE IN THE REPO. This script rewrites and PUSHES
+# schedule/_paced.conf. It is configured entirely by environment variable and
+# accepts no flags -- so before this guard, `weight-audit.sh --dry-run` (a flag
+# a careful operator would reach for, and which has never existed; the real
+# knob is WEIGHT_AUDIT_DRY_RUN=1) silently performed a live apply-and-push.
+CLI_NAME='weight-audit.sh'
+CLI_SUMMARY='re-derive paced weights from commit velocity, then rewrite and push _paced.conf'
+CLI_USAGE='  weight-audit.sh    compute and apply. Configured by ENV, not flags:
+    WEIGHT_AUDIT_DRY_RUN=1   compute and print, touch nothing
+    WEIGHT_AUDIT_APPLY=0     skip the _paced.conf rewrite/commit
+    WEIGHT_AUDIT_PUSH=0      commit locally, do not push
+    WEIGHT_AUDIT_SKIP=...    space-separated projects to leave alone'
+CLI_FLAGS=''
+CLI_POSITIONAL=none
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+cli_guard "$@"
+
 SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
 # EVERY host's rotation file, not just mandark's. Until 2026-07-29 this was
 # hardcoded to schedule/_paced.conf, which is mandark's file -- so a project

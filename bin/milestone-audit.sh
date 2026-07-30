@@ -17,6 +17,15 @@
 # status: reached == graduated). See STABILITY-MILESTONES.md "Relationships".
 set -uo pipefail
 
+CLI_NAME='milestone-audit.sh'
+CLI_SUMMARY='report each project'"'"'s STABILITY-MILESTONES progress'
+CLI_USAGE='  milestone-audit.sh            audit every registered project
+  milestone-audit.sh <name>...  audit only the named project(s)'
+CLI_FLAGS=''
+CLI_POSITIONAL=any
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+cli_guard "$@"
+
 SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
 [ -d "$SCHED_ROOT/schedule" ] || { echo "FATAL: scheduler schedule/ not found at $SCHED_ROOT" >&2; exit 2; }
 
@@ -34,6 +43,7 @@ for conf in "$SCHED_ROOT"/schedule/*.conf; do
   fi
   projects+=("$name")
 done
+cli_require_matched want projects
 
 echo "milestone-audit -- $(date '+%Y-%m-%d %H:%M')"
 echo "(offline-first: no claude calls -- findings are SIGNALS, not verdicts."

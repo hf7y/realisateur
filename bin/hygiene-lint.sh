@@ -34,6 +34,18 @@
 # stance as ecosystem-survey.sh). Grep for "FLAG" in the output to gate on it.
 set -uo pipefail
 
+CLI_NAME='hygiene-lint.sh'
+CLI_SUMMARY='offline-first build-hygiene scan across scheduler-registered projects'
+CLI_USAGE='  hygiene-lint.sh            scan every registered project, print findings
+  hygiene-lint.sh <name>...  scan only the named project(s)
+                             (skips the ecosystem-wide BLOCKERS.md check)'
+CLI_FLAGS=''
+CLI_EXITS='  0  scanned. FINDINGS ARE SIGNALS, NOT FAILURES -- grep the output for
+     "FLAG" to gate on them. A clean exit does not mean a clean tree.'
+CLI_POSITIONAL=any
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+cli_guard "$@"
+
 SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
 
 # --- discover registered projects (same loop as ecosystem-survey.sh) --------
@@ -49,6 +61,7 @@ for conf in "$SCHED_ROOT"/schedule/*.conf; do
   fi
   projects+=("$name")
 done
+cli_require_matched want projects
 
 echo "hygiene-lint -- $(date '+%Y-%m-%d %H:%M')"
 echo "(offline-first: no claude calls -- findings are SIGNALS, not verdicts;"

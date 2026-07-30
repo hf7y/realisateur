@@ -18,6 +18,24 @@
 #      preserve that distinction rather than flatten it to "nonzero".
 set -uo pipefail
 
+case "${1:-}" in
+  -h|--help)
+    printf 'ecosim-sensor-tick.sh -- run ecosim'"'"'s sensors on a tick and keep the log\n\n'
+    printf 'usage:\n  ecosim-sensor-tick.sh    run the sensor once, append to the run log\n'
+    printf '    ECOSIM_SENSOR_BIN=...  override the sensor binary path\n\n'
+    printf 'flags: none accepted\n\n'
+    printf 'exit codes (Monitoring Plugins convention -- the exit code IS the finding):\n'
+    printf '  0  OK      2  CRIT\n'
+    printf '  1  WARN    3  BLIND (could not read part of its domain -- beats CRIT)\n\n'
+    printf 'this tool makes no AI calls and cannot spend: --summon is rejected.\n'
+    exit 0 ;;
+  "") ;;
+  *)
+    printf 'ecosim-sensor-tick.sh: takes no arguments, got: %s\n' "$1" >&2
+    printf 'try `ecosim-sensor-tick.sh --help`\n' >&2
+    exit 2 ;;
+esac
+
 SENSOR="${ECOSIM_SENSOR_BIN:-/home/zach/Documents/Projects/ecosim/bin/ecosim-sensor}"
 STATE_DIR="$HOME/.local/share/ecosim-sensor"
 LOG="$STATE_DIR/run.log"

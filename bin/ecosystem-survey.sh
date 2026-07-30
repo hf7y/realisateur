@@ -14,6 +14,14 @@
 # behind "vision debt" (see chezz/.claude/commands/ideate.md 4.5).
 set -uo pipefail
 
+CLI_NAME='ecosystem-survey.sh'
+CLI_SUMMARY='offline-first ecosystem health check across every registered project'
+CLI_USAGE='  ecosystem-survey.sh    survey every registered project, then rank open dated ideas'
+CLI_FLAGS=''
+CLI_POSITIONAL=none
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+cli_guard "$@"
+
 SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
 SCHED_BIN="$SCHED_ROOT/bin/scheduler"
 
