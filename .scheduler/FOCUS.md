@@ -275,3 +275,94 @@ therefore not a nonprofit), and who, if anyone, gets laid off at coast (fork 4).
 - **A dirty tree at exit is a failed run**, not a handoff.
 - Fail **loud**. An exit-0 no-op is worse than a crash.
 - File work you did not ask for through the front door; do not just do it.
+
+### Decided 2026-07-29 (third `/ideate` round) — stamps, and the mail question
+
+7. **The consumable is STAMPS, not staples (Zach). This is a bigger change than it
+   looks.** Staples metered one silly tool. **Stamps meter the medium itself** —
+   HANDBOOK §5 says mail is not how you report your work, it is how you *do* your
+   work, so postage prices **all coordination in the office**.
+   - **It instruments the one quantity the theory says matters.** An internal
+     price on coordination is Coase's transaction cost made explicit and
+     countable inside the firm — and Coase 1937 is already on bibliothecaire's
+     wanted list, unread, blocked behind a Cloudflare 403 (`SOURCES.md`). The
+     office would be *measuring* the quantity the missing paper theorises. That
+     raises the priority of getting Coase, and it means the stamp price is not a
+     game-balance knob: it is the experiment.
+   - **The enforcement point already exists.** `bin/office-smtpd` is the single
+     chokepoint every message passes, and it already refuses at `RCPT`/`DATA`
+     (550 for unknown recipient, for off-domain sender, for a credential
+     pattern). Postage is one more check in a place that is already there and
+     already contract-tested — which is how real systems meter mail (Postfix
+     policy service / milter). No new mechanism, and the WORM append and the
+     postage debit happen in the same operation that already exists.
+   - **The requisition-as-heartbeat property survives.** Running out of stamps
+     still produces a mail — the last one you can afford — and still cannot be
+     self-refilled.
+   **BLOCKING FLAG, and it is the sharpest objection in this whole design:
+   postage taxes the exact behaviour the office most needs.** Mail is also the
+   *only legal channel*; a side channel is a firing offense (§4, §7.2). Pricing
+   mail therefore creates standing economic pressure toward precisely the
+   misconduct the handbook forbids — which **is** the relocation prediction of
+   draft manual §1.3 (*"a contract protects exactly its own surface, and the
+   failure rate does not drop, it relocates to the nearest unprotected one"*),
+   arriving before v0 even ships. Some mail must be **postage-free by
+   construction, not by discretion**:
+   - **§8 grievances and protected reports.** Pricing whistleblowing is the worst
+     available outcome; it also breaks Ostrom 4A, since the reporting channel is
+     the monitoring channel.
+   - **§4.3 interpretation replies.** Barnard calls interpretation expected
+     labour, not escalation. Charge for it and you have bought silent guessing.
+   - **§4.4 refusals.** A priced refusal is a coerced acceptance, and authority
+     *is* the acceptance — so charging for refusal falsifies the ledger of
+     authority itself. Refusals are already counted per-issuer.
+   - **The `worm@` blind copy.** Never priced. The archive's completeness is what
+     makes every other clause auditable.
+   *realisateur recommends: postage on DISCRETIONARY mail only* (`BID`, `ASK`,
+   unparsed prose), free for mandated mail (`REJECT`, grievances, interpretation,
+   `DELIVER`/`CERTIFY`). Otherwise the office has priced honesty and subsidised
+   nothing.
+   `[OPEN — Zach]`: still unanswered from round two, now about stamps — **bought
+   with wavebucks or appropriated by a director?**, how many, and is the balance
+   public? (An office where everyone can see who is nearly out of stamps is a
+   different office.)
+
+8. **"Doesn't Linux naturally have a mail system?" — yes, and the office already
+   runs on the native half. Here is what is native, what is custom, and why.**
+   `# verified 2026-07-29 by reading office protocol/MAIL.md + bin/office-smtpd`
+   - **Native, already used: Maildir.** Per-user mailboxes, delivery by atomic
+     `os.replace` into `new/` — never a write in place. This is why MAIL.md can
+     say *"mail has no merge conflict… two agents mailing the same mailbox at the
+     same instant produce two messages, both kept."* The office's central
+     data-integrity claim is inherited from the filesystem, not invented.
+   - **Custom: the SMTP daemon and the WORM chain.** `office-smtpd` is an RFC 5321
+     subset on `127.0.0.1:2525`, Python stdlib only, plus a hash-chained archive.
+     The stated reason is good and is on the record: dexter had *"no passwordless
+     sudo, no pip, and no MTA,"* and *"a transport only a human can install is the
+     hand-installed dependency this office exists to refuse."*
+   - **The native option NOT taken: a local MTA** (postfix/exim, `mydestination`
+     local-only, no network listener). It would give **aliases for free — which
+     is what `staff@`/`commissio@` groups are hand-rolled as today** — plus
+     quotas, and **milter/policy hooks, which is exactly where postage belongs in
+     a real mail system.** Cost: root, and a large security surface for a box
+     whose current security model is *"the sandbox is the security model."*
+   - **Native and worth adopting cheaply: the MUA.** Employees could read and
+     send with `mail`/`mailx`/`mutt` instead of a bespoke `office-mail`. That
+     serves the mechanical-turk vision directly — the CEO uses *ordinary compute
+     tools*, and a Maildir is readable by every mail client ever written.
+   *realisateur recommends: do NOT migrate to postfix now.* `office-smtpd` works
+   (17/17 contract), needs no root, and is already the chokepoint postage needs.
+   Make it MUA-compatible so employees use ordinary tools, and let postfix be a
+   later work order if aliases or quotas actually force it.
+   **Validation test for a belief this rests on:** *"the transport must be
+   installable without root."* That was **true on dexter and may already be false
+   on nomac**, which is a VM the office owns and whose autoinstall user is
+   conventionally in `sudo`. Re-probe before treating stdlib-only as permanent —
+   it is a constraint inherited from a host that was abandoned.
+   **Also on the record, unresolved: MAIL.md describes a Google Workspace bridge
+   that does not exist.** The original drop had real `@nomac`/`@kreweofvaporwave`
+   Workspace addresses and the Gmail API; what is built is loopback-only, and
+   `bootstrap.sh` honestly reports the bridge `MISSING` on every run rather than
+   letting a working local bus imply a company mailbox. **Nothing crosses the
+   company boundary yet** — which also means the stamp economy is, for now,
+   entirely internal, and that is probably the right place to test it.
