@@ -906,3 +906,41 @@ actually IS.** "Secrecy is part of the experiment" says the boundary matters;
 it does not yet say what sits behind it for these three specific verbs, which
 today wire zero subcommands. The client/boundary is buildable without that
 answer; a USEFUL secret verb is not.
+
+### 2026-07-30 (build, Zach AFK) — bashified ecosystem + office-economy
+
+Named exception to `/ideate`: Zach directed a build ("just focus on setting
+up the bashified ecosystem... then if I'm not back, develop a user identity...
+commissio... write bashify contracts").
+
+**Research first** (`RESEARCH-VERB-ECOSYSTEM-20260730.md`, realisateur
+`7b99aaf`): the case for **one noun, many verbs**. The naming rule (noun =
+animate project, verb = inanimate tool) implies a project has several verbs,
+and the data agrees — crt/sonne wires 98 subcommands, scheduler/dose 52,
+realisateur/juge 44, senechal/veille 40, each spanning multiple domains.
+Pipeability finding: `lib/verb.sh` parses `--json`/`--quiet` but nothing
+honors them (verbs pass through to legacy scripts), so "pipe-able" is
+advertised and not delivered — which pulls reimplement-don't-wrap forward.
+
+**Four contract-shape questions filed** for Zach (`ae8baae`, QUESTIONS.md):
+Q1 many-verbs-per-project, Q2 make pipeability real, Q3 a REMOTE fourth HOW
+for office-secrecy verbs, Q4 per-target residue.
+
+**office-economy built** (realisateur `0d134de`, `office-economy/`) — staged
+here, not written into romulus's live tree; reads the REAL ledger format.
+Four pipeable, quiet-by-default verbs, all already non-agentic, each a basheur
+contract: **persona** (worker identity + six traits, no vendor marker —
+individuation IS the claude-ness obfuscation), **fitness** (score from the
+ledger; BLIND ≠ score-0), **commissio** (the bounty board whose `match` is the
+decision-economizer: traits filter the board, no model chooses work),
+**evolve** (rank/keep/retire/recombine — fitness made heritable). 19 tests
+pass. One [OPEN] for Zach in fitness.contract (savings vs spend-authority).
+
+**Derived contracts landed on `bashified`:** abletim `0b25f52`, chezz
+`ca6fb2c` (+ quatre-vingt-douze/groc-mangr/vim-arcade earlier). De-vendored
+to keep the total-purge guarantee.
+
+**Still running (background):** basheur `project-contract` for home-assistant,
+nine-speakers, secretaire, sequestria — will land on completion. The big four
+(crt/scheduler/realisateur/senechal) are HELD pending Q1, deliberately not
+derived as single-verb.
