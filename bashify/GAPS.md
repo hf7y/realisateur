@@ -115,3 +115,51 @@ No before-measurement exists for what these passes replaced, so the saving
 is **unmeasured — not zero, and not assumed**. `bashify` spends nothing, so
 it produces no after-number either. Closing this needs a real measurement of
 a real summon, not an estimate.
+
+## Discovery finds programs only under `bin/`, `scripts/` or `tools/`
+
+**Half-closed 2026-07-31, and the remaining half is stated rather than fixed.**
+
+Discovery excluded programs by file extension — `py|js|mjs|cjs|ts` were
+stripped alongside data files — so a verb's subcommand count tracked *shell
+scripts* rather than *tooling*. Measured across all 19 registered projects:
+
+| project | subcommands | tooling |
+|---|---|---|
+| nine-speakers | 0 | 20 Python programs, 0 shell |
+| vim-arcade | 0 | 15 Python, 0 shell |
+| quatre-vingt-douze | 0 | 2 Python, 0 shell |
+| secretaire | 0 | 2 Python, 0 shell |
+| abletim | 0 | 2 Python, 0 shell |
+| home-assistant | 0 | 1 Python, 0 shell |
+| bibliothecaire | 2 | 6 Python, **2 shell** |
+| crt | 48 | 79 shell |
+| scheduler | 25 | 41 shell |
+
+The count equals the shell-script count in every row. Six verbs were blind to
+their own project's language, and an empty subcommand list read as "this
+project has nothing" rather than "this discovery cannot see it".
+
+**The language filter is deleted** — the extension blacklist now strips data
+files and `.pyc` only. That closed **one** project of six (`bibliothecaire`
+2 → 7), because bibliothecaire keeps its Python in `bin/`.
+
+**The other five are still invisible, deliberately unfixed.** Discovery's
+first branch globs `*.sh` alone, so a program outside `bin|scripts|tools` is
+found only if it is a shell script. `quatre-vingt-douze`'s `page92.py` sits at
+the repository root and remains undiscoverable; so does `nine-speakers`'
+twenty. Closing it means widening that glob, which is a change to how `emit`
+works and is therefore an amendment's job, not a patch's: `man/bashify.1` now
+promises language-independent discovery, and the next `--summon` at this call
+site is obliged to satisfy the page rather than the code it finds.
+
+## `emit` writes summaries that fail row 1
+
+**12 of 18** emitted `VERB_SUMMARY` strings join clauses with "and" —
+`guard the estate's data: nightly backups and their proof`,
+`survey the ecosystem and read its state`,
+`sort the mail and decide what deserves an answer`. Row 1 of the page test
+rejects exactly this, so the generator produces pages that fail its own
+contract before any implementation exists. `garde`, the only verb on `PATH`,
+scores 3 of 9 and fails row 1 for this reason. The page now states the
+one-clause obligation; the generator does not yet keep it.

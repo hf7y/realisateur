@@ -55,7 +55,7 @@ mapfile -t SCRIPTS < <(cd "$REPO" && {
     git ls-files ${SCOPE:+"$SCOPE"} '*.sh'
     git ls-files ${SCOPE:+"$SCOPE"} | grep -E '(^|/)(bin|scripts|tools)/'
   } | sort -u \
-    | grep -vE '\.(md|txt|json|yml|yaml|conf|template|py|pyc|js|mjs|cjs|ts)$' \
+    | grep -vE '\.(md|txt|json|yml|yaml|conf|template|pyc)$' \
     | grep -vE '(^|/)(test|tests)/' \
     | grep -vE '(^|/)lib/' \
     | grep -vE '(^|/)test-' \

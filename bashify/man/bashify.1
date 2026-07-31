@@ -52,10 +52,21 @@ branch carrying a verb\-named utility, its man page, its contract, and a
 contract test. The branch is built in a
 .BR git\-worktree (1),
 so a project's working tree is never touched, even mid\-session. Discovery
-reads every tracked script anywhere in the tree, not only
+reads every tracked executable program anywhere in the tree, not only
 .IR bin/ ,
-because a project that keeps its tooling elsewhere otherwise ships a utility
-silently missing most of itself.
+and not only those written in the shell, because a project that keeps its
+tooling elsewhere \- or writes it in another language \- otherwise ships a
+utility silently missing most of itself. "Script" here means any program a
+caller runs, whatever it is written in: a subcommand count that tracks one
+language is a front door that reports the tree it can read as the tree that
+exists.
+.PP
+The summary
+.B emit
+writes for a verb is one clause. Row 1 of
+.B THE PAGE TEST
+rejects an "and" in a NAME line, so a generator that emits one has written a
+page that fails its own contract before any implementation exists.
 .TP
 .B page
 Write or rewrite the man page for one verb, standalone, against a live
