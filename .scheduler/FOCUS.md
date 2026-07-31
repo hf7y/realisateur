@@ -1179,3 +1179,46 @@ for the editor routes around the guard.
   signature `page <verb> <command>` still requires a live command, contradicting
   the page-first method it serves; fixing it is its own amendment through
   `bashify amend`. This is what blocks bibliothecaire's verb pages.
+
+### 2026-07-30 (interactive `/ideate` bibliothecaire) — the man-page pass is fork-blocked
+
+Zach asked for bibliothecaire's man pages and then a bashify of them. It does not
+start: **the NAME line of every page depends on an unanswered fork of his own**
+(`one verb or three?`, filed the same day), and two of the four domains he named
+in the ask — a dump-it-and-sort-it-later box, and "checkout" — **have no code in
+that repo at all**. Writing pages first would be writing promises against
+nothing, so nothing was built.
+
+Four forks recorded with a recommendation each, cross-written to
+**bibliothecaire `840440f`** (`.scheduler/QUESTIONS.md`, `check-project-busy`
+reported `free` before and after). The entry supersedes the narrower same-day
+count question rather than duplicating it.
+
+1. **How many verbs** — recommend three, split by *failure mode*: `range`
+   (reads/reports), `cherche` (rate-limited network), `verse` (deletes files).
+   Row 1 of the page test is really that test; the single-verb NAME line
+   (`shelve, catalogue and retrieve`) fails it by construction. Sequencing cost
+   stands: `bashify emit` hardcodes one branch per project (`bashify.sh:42`).
+2. **The unsorted box is a retention decision, not a UI convenience** — that
+   project's three existing doors have incompatible retention rules. Recommend
+   quarantine-as-licensed-until-classified: worst case is re-scanning an owned
+   book, not retaining a licensed copy.
+3. **"checkout" is three unrelated acts** sharing a word (a licensed-material
+   lease / a physical-book register / consumer retrieval). Recommend the lease —
+   the only one that closes a contract row already open (who owns the delete).
+4. **Obsidian** appears in that repo exactly once, as the *trigger* his
+   2026-07-28 answer set. Recommend senechal keeps the vault, bibliothecaire
+   publishes linkable markdown into it — same shape as the existing consumer
+   contract.
+
+Two findings worth carrying beyond the forks:
+- **The gap is the front door, not the mechanization.** `bin/range` lives only on
+  `origin/bashified` and exposes **2 subcommands, both installers**; five working
+  programs in `bin/` are unreachable; nothing from the project is on `PATH`.
+- **Not mine, pre-existing, flagged:** bibliothecaire's tree was already dirty on
+  arrival (`bin/validate-quotes.py`, `quotes/quotes.json`, `quotes/quotes.txt`)
+  and its contract already records three `scheduler sweep: adopted dirty …`
+  backstops from 03:48 today, each with "author unknown". I staged only
+  `QUESTIONS.md`; the three files are untouched and still uncommitted.
+
+No project was scaffolded, no feature code written, no weight changed.
