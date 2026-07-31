@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# amend.sh -- the four-step contract-change gate.
+#
+# Changing a promise is a different act from keeping one. This mechanises the
+# four steps that were previously run by hand, and could therefore be skipped
+# by hand. Written 2026-07-30 at its own exit-4 call site, the same way
+# `check` was.
+#
+# It does NOT perform the edit. The caller edits the page; this decides
+# whether that edit is allowed to stand. The distinction matters: a gate that
+# also writes is a gate that can be satisfied by its own output.
+#
+# usage: amend.sh <page> <reason>
+# exit:  0 all four gates passed   2 usage   5 broken   6 blind
+#        7 a gate failed -- the amendment failed, which is not this tool failing
+
+set -uo pipefail
+
+SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+CHECK_IMPL="$SELF/lib/check.sh"
+SCHED="/home/zach/Documents/Project Archive/scheduler"
+
+PAGE="${1:-}"
+REASON="${2:-}"
+
+die()   { printf 'amend: %s\n' "$*" >&2; exit 2; }
+blind() { printf 'amend: BLIND: %s\n' "$*" >&2
+          printf 'amend: this is "I cannot see", NOT "nothing to report".\n' >&2
+          exit 6; }
+broke() { printf 'amend: BROKEN: %s\n' "$*" >&2; exit 5; }
+
+[ -n "$PAGE" ]   || die "usage: amend <page> <reason>"
+[ -n "$REASON" ] || die "the first gate is a STATED REASON. Pass it as the second argument."
+[ -f "$PAGE" ]   || blind "no such page: $PAGE"
+
+VERB="$(basename "$PAGE" .1)"
+PAGEDIR="$(cd "$(dirname "$PAGE")" && pwd)"
+REPO="$(git -C "$PAGEDIR" rev-parse --show-toplevel 2>/dev/null)" \
+  || blind "$PAGE is not inside a git repository, so no previous page can exist"
+REL="${PAGEDIR#"$REPO"/}/$(basename "$PAGE")"
+
+FAILED=0
+gate_pass() { printf 'PASS  %-10s %s\n' "$1" "$2"; }
+gate_fail() { printf 'FAIL  %-10s %s\n' "$1" "$2"; FAILED=1; }
+
+printf '=== amendment gate: %s\n' "$REL"
+printf '    verb: %s\n\n' "$VERB"
+
+# ---- gate 1: a stated reason ----------------------------------------------
+# What the tool learned that the page did not know. A reason that merely says
+# the tool cannot do the thing is the failure this whole gate exists to catch:
+# that case is exit 4 and a GAPS.md line, never a page edit.
+if [ "${#REASON}" -lt 24 ]; then
+  gate_fail 'REASON' "too short to be a reason (${#REASON} chars); say what the tool learned"
+elif printf '%s' "$REASON" | grep -qiE "(could|can)( ?n[o']?t|not) (do|implement|build|manage)|too hard|not feasible|gave up"; then
+  gate_fail 'REASON' 'reads as "the tool cannot do it" -- that is exit 4 and a GAPS.md line, not a page edit'
+else
+  gate_pass 'REASON' "stated (${#REASON} chars)"
+fi
+
+# ---- gate 2: the previous page preserved ----------------------------------
+# Preserved means "in version control", not "in a .bak file". If the page is
+# untracked, there is no previous promise to compare against and the change is
+# invisible to a reader.
+if ! git -C "$REPO" ls-files --error-unmatch -- "$REL" >/dev/null 2>&1; then
+  gate_fail 'PRESERVED' "$REL is untracked; the previous page is not in version control"
+elif git -C "$REPO" diff --quiet -- "$REL" && git -C "$REPO" diff --cached --quiet -- "$REL"; then
+  gate_fail 'PRESERVED' "$REL is unmodified; there is no amendment to gate"
+else
+  PREV="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null)"
+  gate_pass 'PRESERVED' "previous page is at $PREV; this edit is uncommitted, so both texts exist"
+fi
+
+# ---- gate 3: a full re-run of the nine rows -------------------------------
+# Against the NEW text. Amending a contract to match a broken implementation
+# is the specific failure this catches, so the rows are re-run rather than
+# assumed to still hold.
+CMD="$REPO/bin/$VERB"
+[ -x "$CMD" ] || CMD="$PAGEDIR/../bin/$VERB"
+if [ ! -x "$CMD" ]; then
+  gate_fail 'ROWS' "cannot find an executable for '$VERB' to score the new page against"
+elif [ ! -x "$CHECK_IMPL" ]; then
+  broke "the page test is missing at $CHECK_IMPL; the rows cannot be re-run"
+else
+  ROWS_OUT="$("$CHECK_IMPL" "$PAGE" "$CMD" 2>&1)"; ROWS_RC=$?
+  ROWS_LINE="$(printf '%s\n' "$ROWS_OUT" | grep -E '^--- .*rows passed' | head -1)"
+  if [ "$ROWS_RC" = 0 ]; then
+    gate_pass 'ROWS' "${ROWS_LINE:-nine rows re-run against the new text}"
+  else
+    gate_fail 'ROWS' "the new text does not pass its own page test (check exit $ROWS_RC)"
+    printf '%s\n' "$ROWS_OUT" | grep -E '^FAIL' | sed 's/^/        /'
+  fi
+fi
+
+# ---- gate 4: callers checked ----------------------------------------------
+# A changed promise breaks a downstream pipeline silently, and nothing
+# currently looks. This is the half of the gate that most needed a machine.
+# Prose mentioning the verb is not a caller; an invocation is.
+INVOCATIONS=0; PROSE=0; SCANNED=0; UNREADABLE=0
+if [ ! -d "$SCHED/schedule" ]; then
+  gate_fail 'CALLERS' "cannot read the project registry at $SCHED/schedule"
+else
+  for conf in "$SCHED"/schedule/*.conf; do
+    [ -e "$conf" ] || continue
+    proj="$(basename "$conf" .conf)"
+    case "$proj" in _*) continue ;; esac
+    path="$(grep -h '^PROJECT_REPO_PATH=' "$conf" 2>/dev/null | head -1 | cut -d'"' -f2)"
+    [ -n "$path" ] && [ -d "$path/.git" ] || { UNREADABLE=$((UNREADABLE+1)); continue; }
+    git -C "$path" rev-parse --verify -q origin/bashified >/dev/null 2>&1 || continue
+    SCANNED=$((SCANNED+1))
+    while IFS= read -r hit; do
+      [ -n "$hit" ] || continue
+      line="${hit#*:}"; line="${line#*:}"
+      # An invocation is the verb in command position. Anything else is prose.
+      if printf '%s' "$line" | grep -qE "(^|[|;&(\`]|\\\$\()[[:space:]]*(\./)?(bin/)?$VERB([[:space:]]|$)"; then
+        INVOCATIONS=$((INVOCATIONS+1))
+        printf '        INVOCATION %s: %s\n' "$proj" "$(printf '%s' "$hit" | cut -c1-100)"
+      else
+        PROSE=$((PROSE+1))
+      fi
+    done <<<"$(git -C "$path" grep -w -n "$VERB" origin/bashified 2>/dev/null)"
+  done
+  if [ "$SCANNED" = 0 ]; then
+    gate_fail 'CALLERS' 'no bashified branch could be searched; the caller question is UNANSWERED, which is not the same as "no callers"'
+  elif [ "$INVOCATIONS" -gt 0 ]; then
+    gate_fail 'CALLERS' "$INVOCATIONS invocation(s) of '$VERB' across $SCANNED branch(es) -- a changed promise breaks them silently"
+  else
+    gate_pass 'CALLERS' "$SCANNED branch(es) searched; $PROSE prose mention(s), 0 invocations"
+  fi
+fi
+[ "$UNREADABLE" -gt 0 ] && printf '      note: %d registered project(s) had no readable repository\n' "$UNREADABLE"
+
+# ---- verdict ---------------------------------------------------------------
+printf '\n'
+if [ "$FAILED" = 0 ]; then
+  printf -- '--- amendment ALLOWED: all four gates passed\n'
+  printf '    state the reason in the commit message; git holds the previous page.\n'
+  exit 0
+fi
+printf -- '--- amendment REFUSED: at least one gate failed\n'
+exit 7

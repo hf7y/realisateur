@@ -8,6 +8,17 @@ file is the reason.
 
 ## `page` — writing a man page standalone
 
+**Reclassified 2026-07-30 from GAP to SUMMON.** GAP means no tooling *and* no
+escalation. Since `bashify` now spends, `page` has an escalation: it refuses
+with exit 3, names its purpose and cost, and reaches the contract store under
+`--summon`. It is a metered promise, not a missing one.
+
+It is still not *kept*: the store carries no `verb-page` contract, so an
+authorised `page` exits 4 naming exactly that. The page-first defect also
+stands — the documented signature is `page <verb> <command>`, which requires a
+live command, while the method it serves exists precisely to write a page
+before any command does. Fixing that signature is its own amendment.
+
 `bashify.sh` writes a man page *inline*, as part of `emit`, from a fixed
 template. There is no way to write or rewrite a page for one verb against a
 live command, which is what the page-first method needs: the page comes
@@ -15,16 +26,24 @@ first, the tool moves toward it, the page is extended as the tool learns.
 Today extending a page means editing troff by hand — which is how this page
 was amended, and the labour is the evidence for building this.
 
-## `amend` — the contract-change gate
+## `amend` — built 2026-07-30
 
-The four steps (stated reason, previous page preserved, full re-run of the
-rows, callers searched) are run by hand and can therefore be skipped by
-hand. The first real amendment of `man/bashify.1` ran all four manually:
-the caller search was `git grep -w bashify` across every `bashified` branch
-in the ecosystem (six hits, all prose, no invocations), and the re-run was
-`bashify check`. Both halves are scriptable; neither is scripted. The step
-that most needs a machine is the caller search, because a changed promise
-breaks a downstream pipeline silently and nothing currently looks.
+Built at its own exit-4 call site, and used the same session to gate the cost-
+boundary reversal of `man/bashify.1`. It rules on an edit; it never writes one,
+because a gate that also writes can be satisfied by its own output.
+
+It refused that amendment **three times** before allowing it — an undocumented
+`--summon` and two stale doctests, then prose naming the very thing the page
+forbids naming, then a modal sentence. Every one was the tooling catching its
+own author, which is the whole argument for a script over a habit.
+
+**What it still cannot do.** The caller search classifies a hit as an
+invocation by matching the verb in command position; a verb invoked through a
+variable, an alias, or `xargs` reads as prose. It searches `origin/bashified`
+only, so a caller on a default branch is invisible. And a project whose
+repository is unreadable is counted and reported, not silently skipped — one
+was on this run — but the gate still passes, so "18 searched" is a floor and
+not a total.
 
 ## `check` — what it does not cover
 
@@ -39,7 +58,12 @@ The escape hatch is bounded — row 3 still requires every such form's
 subcommand to exist in the tool's own `list` — but a page could hide a
 broken form behind the annotation, and only the printed count would show it.
 
-**Exit codes it does not provoke.** Row 4 verifies that every code the tool
+**Exit codes it does not provoke — and the converse, which is worse.** Row 4
+compares only against codes the run happened to provoke, so an *undocumented
+but reachable* code passes. On 2026-07-30 the tool gained exit 3 and the page
+did not list it; row 4 passed, and a human reading the EXAMPLES caught it. The
+row is therefore weaker than it reads: it catches a documented ghost, not a
+silent surface. Row 4 verifies that every code the tool
 *returns during the run* is documented, and that no documented code
 redefines the shared vocabulary. It does **not** prove a documented code is
 reachable; codes no invocation provoked are printed as UNCHECKED. On this

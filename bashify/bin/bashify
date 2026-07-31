@@ -13,14 +13,27 @@ SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 VERB_NAME=bashify
 VERB_SUMMARY="state a project's promise as a contract a shell can hold"
 VERB_USAGE="bashify <subcommand> [args...]   (list, emit, page, check, amend)"
-VERB_CAN_SUMMON=0
+# Reversed 2026-07-30. bashify spends, through one front door. Animacy in this
+# ecosystem means carrying an agenda -- a loop of one's own -- not touching a
+# model: a verb that summons at a call site is not carrying an agent, it is
+# calling one. Law 3 forbids the former and says nothing against the latter.
+VERB_CAN_SUMMON=1
+VERB_SUMMON_COST="unmeasured; metered by the contract store, printed before spending"
 # shellcheck source=../skel/lib/verb.sh
 . "$SELF/skel/lib/verb.sh"
 
 # The one place the implementation of `emit` is named.
 EMIT_IMPL="$SELF/bashify.sh"
 CHECK_IMPL="$SELF/lib/check.sh"
+AMEND_IMPL="$SELF/lib/amend.sh"
+# The contract store. bashify is the front door; this is what stands behind it
+# when a promise cannot be kept mechanically.
+STORE="/home/zach/Documents/Projects/basheur/bin/basheur"
 SCHED="/home/zach/Documents/Project Archive/scheduler"
+
+# Subcommands that can spend. Named here so `--summon` on anything else is a
+# usage error rather than a flag that quietly does nothing.
+_spends() { case "$1" in page) return 0 ;; *) return 1 ;; esac; }
 
 # state <sub> -- MECHANIZED iff something real is behind it. Derived from the
 # filesystem, not typed, so a subcommand cannot claim to be built by assertion.
@@ -29,7 +42,10 @@ _state() {
     list)          echo MECHANIZED ;;
     emit)          [ -x "$EMIT_IMPL" ] && echo MECHANIZED || echo GAP ;;
     check)         [ -x "$CHECK_IMPL" ] && echo MECHANIZED || echo GAP ;;
-    page|amend)    echo GAP ;;
+    amend)         [ -x "$AMEND_IMPL" ] && echo MECHANIZED || echo GAP ;;
+    # Not GAP. GAP means no tooling AND no escalation; page has an escalation
+    # now that bashify can spend, so it is a metered promise, not a missing one.
+    page)          [ -x "$STORE" ] && echo SUMMON || echo GAP ;;
   esac
 }
 
@@ -51,6 +67,14 @@ case "${1:-}" in
 esac
 verb_parse "$@"
 set -- "${VERB_ARGS[@]+"${VERB_ARGS[@]}"}"
+
+# --summon authorises spending. It does not request an act. Passing it with no
+# act attached must fail: a cost flag that exits 0 having done nothing is an
+# implicit spend wearing a no-op, which is the exact pair this ecosystem
+# records more than any other.
+if [ "$VERB_SUMMON" = 1 ] && ! _spends "$cmd"; then
+  verb_die "--summon authorises spending, but '$cmd' never spends. No act was requested."
+fi
 
 case "$cmd" in
   list)
@@ -92,7 +116,19 @@ case "$cmd" in
 
   page)
     _no_json
-    verb_gap 'page: writing a man page standalone is not built; only emit writes pages, inline'
+    [ $# -eq 2 ] || verb_die "page takes exactly 2 arguments: <verb> <command> (got $#)"
+    # Writing a page is judgment: it states a promise nothing yet keeps, so
+    # there is no mechanical source to derive it from. That is what a summon
+    # is for, and it is refused rather than spent without one.
+    verb_need_summon "writing a man page states a promise no tool yet keeps; that is judgment, not lookup"
+    [ -x "$STORE" ] || verb_broke "the contract store is missing at $STORE"
+    "$STORE" run --summon verb-page "$1" "$2"
+    rc=$?
+    case "$rc" in
+      0) ;;
+      4) verb_gap "page: the contract store has no 'verb-page' contract; nothing can write this yet" ;;
+      *) verb_broke "page: the contract store failed (exit $rc)" ;;
+    esac
     ;;
 
   check)
@@ -105,7 +141,10 @@ case "$cmd" in
 
   amend)
     _no_json
-    verb_gap 'amend: the four-step contract-change gate is not mechanised yet'
+    [ $# -eq 2 ] || verb_die "amend takes exactly 2 arguments: <page> <reason> (got $#)"
+    [ -x "$AMEND_IMPL" ] || verb_gap "amend: implementation missing at $AMEND_IMPL"
+    "$AMEND_IMPL" "$1" "$2"
+    exit $?
     ;;
 
   help|--help|-h) verb_usage ;;

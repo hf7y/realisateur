@@ -78,10 +78,19 @@ below.
 .PP
 Run
 .B bashify list
-to see which of these are backed by tooling here and now. A subcommand this
-page names but which has no tooling behind it exits
+to see how each is backed here and now.
+.B MECHANIZED
+runs free with no model in the loop.
+.B SUMMON
+is a promise kept by judgment rather than by lookup: it refuses with
+.B 3
+until
+.B \-\-summon
+authorises the spending.
+.B GAP
+is neither \- no tooling and no escalation \- and exits
 .B 4
-and says what is missing. It never exits 0 having done nothing.
+naming what is missing. None of the three ever exits 0 having done nothing.
 .SH THE PAGE TEST
 .B bashify check
 scores nine rows. A page passes when a reader with no access to the
@@ -108,8 +117,13 @@ Doctests. Each is executed and its stated output matches. An illustrative
 example is a falsehood with a shell prompt in front of it.
 .TP
 .B 6 COST
-Whether the tool can spend money is answerable from the page alone. Silence
-fails.
+Whether the tool can spend money is answerable from the page alone, and
+.I which
+of its subcommands spend is answerable too. Silence fails. Naming
+.B \-\-summon
+once at the top of a page is not enough when most verbs carry it: the flag
+sorts nothing if the answer is always yes, so the page states the spending
+subcommands by name.
 .TP
 .B 7 LINEAGE
 SEE ALSO names the standard tools this one behaves like, so expectations can
@@ -151,6 +165,16 @@ and a line in
 not an edit to the page.
 .SH OPTIONS
 .TP
+.B \-\-summon
+Authorise spending real money. Accepted only by a subcommand that spends \-
+today
+.B page
+alone \- and a usage error anywhere else, because a cost flag that exits 0
+having done nothing is an implicit spend wearing a no\-op. It authorises; it
+does not request. There is no short form; see
+.B THE COST BOUNDARY
+below.
+.TP
 .B \-\-json
 Machine\-readable output. Honoured by
 .BR list .
@@ -169,24 +193,46 @@ Print the utility name and exit.
 .B \-\-
 End of flags; everything after is a positional argument.
 .SH THE COST BOUNDARY
-.B bashify does not spend money and has no \-\-summon flag.
-Every act it performs is a shell reading files. Passing
-.B \-\-summon
-is a usage error here, and so is any abbreviation of it.
+.B bashify spends money, through one front door, and only under \-\-summon.
+One subcommand spends:
+.BR page ,
+because writing a page states a promise no tool yet keeps, and there is no
+mechanical source to derive that from. Every other act is a shell reading
+files. Behind the door stands a contract store, which meters the spending and
+prints the cost before any is incurred.
 .PP
-A utility in this family that
-.I can
-spend declares
+This reverses the boundary as first written, and the reason is a change in
+what
+.I animate
+means here rather than a change of policy about money. A thing is animate
+when it carries an agenda of its own \- a loop, an initiative, a nightly pass
+it launches unbidden. Reaching a general intelligence is not that. A verb that
+summons at a call site, because a caller typed the word, does not house one;
+it calls one. The law forbidding a project to grow its own is untouched.
+.PP
+The cost of the reinterpretation is real and is stated here rather than
+discovered later: when almost every verb can spend, the presence of
 .B \-\-summon
-and refuses to spend without it. There is deliberately no short form:
+stops sorting anything, and
+.B \-\-help
+answers "can this cost me?" with yes nearly everywhere. So the question that
+carries the information moves from whether a tool spends to
+.I which of its subcommands
+do, which is why the page names them and why row 6 of the page test requires
+it.
+.PP
+There is deliberately no short form:
 .B \-s
 collides with existing tools and
 .B \-S
 differs from it by one shift key, which is an unacceptable property for the
 only flag that costs real money. Spelling the word out is the deliberateness.
-Because the flag is absent when the tool cannot spend,
 .B \-\-help
-alone answers "can this cost me anything?".
+names the flag and its cost, and
+.B list
+names which subcommands reach it, so the two together answer "what can cost me
+anything?" \- which is the question worth asking once the answer to "can it" is
+usually yes.
 .SH ENVIRONMENT
 .TP
 .B BASHIFY_WORK
@@ -207,11 +253,17 @@ a co\-owner of a shared repository.
 The promise was kept.
 .TP
 .B 2
-Usage error; the caller is wrong.
+Usage error; the caller is wrong. Authorising spending with no act attached is
+one of these.
+.TP
+.B 3
+NEEDS\-SUMMON: the promise can be kept, but only by judgment, and the spending
+was not authorised. A finding rather than an error \- the subcommand names the
+purpose of the spending and its cost, then refuses.
 .TP
 .B 4
-GAP: the tooling to keep this promise does not exist yet. The subcommand
-names what is missing on standard error.
+GAP: the tooling to keep this promise does not exist yet, and no escalation
+exists either. The subcommand names what is missing on standard error.
 .TP
 .B 5
 BROKEN: it ran with valid arguments and failed to finish.
@@ -241,6 +293,12 @@ The page test
 .B check
 runs.
 .TP
+.I lib/amend.sh
+The four\-step gate
+.B amend
+runs. It rules on an edit; it never writes one, because a gate that also
+writes can be satisfied by its own output.
+.TP
 .I skel/lib/verb.sh
 The shared runtime: one copy of the argument grammar, the cost boundary, and
 the exit vocabulary, so utilities cannot drift into dialects.
@@ -257,11 +315,11 @@ List the subcommands and whether each is backed by tooling:
 .RS
 .nf
 $ bashify list
-GAP           amend
+MECHANIZED    amend
 MECHANIZED    check
 MECHANIZED    emit
 MECHANIZED    list
-GAP           page
+SUMMON        page
 .fi
 .RE
 .PP
@@ -277,16 +335,29 @@ $ echo $?
 .fi
 .RE
 .PP
-Ask for a subcommand that is not built. The request is refused loudly, not
-answered emptily:
+Ask for the one act that spends, without authorising the spending. It refuses
+and prices itself rather than either failing silently or charging:
 .PP
 .RS
 .nf
-$ bashify amend man/bashify.1
-bashify: GAP: amend: the four-step contract-change gate is not mechanised yet
-bashify: no tooling exists for this yet; see GAPS.md
+$ bashify page dose bin/dose
+bashify: this needs a summon: writing a man page states a promise no tool yet keeps; that is judgment, not lookup
+bashify: cost: unmeasured; metered by the contract store, printed before spending
+bashify: re-run with --summon to authorise spending real money.
 $ echo $?
-4
+3
+.fi
+.RE
+.PP
+Authorise spending with no act attached. The flag grants permission; it never
+requests work, so on its own it is a usage error rather than a silent no\-op:
+.PP
+.RS
+.nf
+$ bashify --summon
+bashify: --summon authorises spending, but 'list' never spends. No act was requested.
+$ echo $?
+2
 .fi
 .RE
 .PP
@@ -318,6 +389,19 @@ placeholder arguments has to declare itself unrunnable, and that two of the
 examples had gone false the moment
 .B check
 started working. The previous text is in version control.
+.PP
+Amended again 2026\-07\-30, when
+.B amend
+was built at its own exit\-4 call site and became the first gate this page
+passed through rather than around. The change is the cost boundary, reversed:
+what
+.I animate
+means was narrowed to carrying an agenda, so summoning at a call site stopped
+counting as being animate, and the one front door became defensible. The gate
+refused the amendment twice before allowing it \- once for an undocumented
+flag and two doctests that had gone stale, once because the new prose named
+the very thing the page forbids naming. Both were the tooling catching its
+author, which is the argument for the gate being a script rather than a habit.
 .SH SEE ALSO
 .BR man (1),
 .BR git-worktree (1),
