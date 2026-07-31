@@ -5,15 +5,19 @@ bashify \- state a project's promise as a contract a shell can hold
 .B bashify
 [\fIlist\fR]
 .br
+.\" bashify: norun
 .B bashify emit
 \fIproject\fR \fIverb\fR \fIsummary\fR
 .br
+.\" bashify: norun
 .B bashify page
 \fIverb\fR \fIcommand\fR
 .br
+.\" bashify: norun
 .B bashify check
 \fIpage\fR \fIcommand\fR
 .br
+.\" bashify: norun
 .B bashify amend
 \fIpage\fR
 .br
@@ -50,8 +54,8 @@ contract test. The branch is built in a
 so a project's working tree is never touched, even mid\-session. Discovery
 reads every tracked script anywhere in the tree, not only
 .IR bin/ ,
-because a project that keeps its tooling elsewhere would otherwise ship a
-utility silently missing most of itself.
+because a project that keeps its tooling elsewhere otherwise ships a utility
+silently missing most of itself.
 .TP
 .B page
 Write or rewrite the man page for one verb, standalone, against a live
@@ -59,7 +63,10 @@ command.
 .TP
 .B check
 Score a man page against the nine\-row page test and report the rows that
-fail. See
+fail, the limits of the run, and the exit codes it could not provoke. Exits
+.B 7
+when the page fails a row: the page failing is not this utility failing, so
+it is not reported as 5. See
 .B THE PAGE TEST
 below.
 .TP
@@ -208,6 +215,17 @@ names what is missing on standard error.
 .TP
 .B 5
 BROKEN: it ran with valid arguments and failed to finish.
+.TP
+.B 6
+BLIND: it cannot read what it was asked to judge \- a page that does not
+exist, or a subject that is not executable. This is "I cannot see", never
+"nothing to report", and it is never reported as a pass.
+.TP
+.B 7
+The page under test failed at least one row. Specific to
+.BR check ,
+and declared above the shared vocabulary rather than reusing one of its
+codes, because the subject failing is not the tool failing.
 .SH FILES
 .TP
 .I bin/bashify
@@ -216,6 +234,11 @@ This utility.
 .I bashify.sh
 The implementation
 .B emit
+runs.
+.TP
+.I lib/check.sh
+The page test
+.B check
 runs.
 .TP
 .I skel/lib/verb.sh
@@ -235,20 +258,32 @@ List the subcommands and whether each is backed by tooling:
 .nf
 $ bashify list
 GAP           amend
-GAP           check
+MECHANIZED    check
 MECHANIZED    emit
 MECHANIZED    list
 GAP           page
 .fi
 .RE
 .PP
-Ask for a page to be scored before the scorer exists. The request is refused
-loudly, not answered emptily:
+Score a page. The page and the command it describes are both named, so one
+page can be scored against a legacy implementation and its replacement:
 .PP
 .RS
 .nf
-$ bashify check man/bashify.1 bin/bashify
-bashify: GAP: check: the nine-row page test is not mechanised yet
+$ bashify check man/bashify.1
+bashify: check takes exactly 2 arguments: <page> <command> (got 1)
+$ echo $?
+2
+.fi
+.RE
+.PP
+Ask for a subcommand that is not built. The request is refused loudly, not
+answered emptily:
+.PP
+.RS
+.nf
+$ bashify amend man/bashify.1
+bashify: GAP: amend: the four-step contract-change gate is not mechanised yet
 bashify: no tooling exists for this yet; see GAPS.md
 $ echo $?
 4
@@ -272,7 +307,17 @@ Written 2026-07-30, before three of the four subcommands it describes
 existed, which is the method rather than an oversight: the page is the
 specification, and
 .B list
-reports which parts of it are so far only a specification.
+reports which parts of it are specification only.
+.PP
+Amended the same day, when
+.B check
+was built at its own exit\-4 call site and scored this page 6 of 9. The
+amendment records what the tooling learned that the page did not know: that a
+scorer needs an exit code meaning "the subject failed", that a form carrying
+placeholder arguments has to declare itself unrunnable, and that two of the
+examples had gone false the moment
+.B check
+started working. The previous text is in version control.
 .SH SEE ALSO
 .BR man (1),
 .BR git-worktree (1),

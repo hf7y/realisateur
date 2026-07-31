@@ -19,6 +19,7 @@ VERB_CAN_SUMMON=0
 
 # The one place the implementation of `emit` is named.
 EMIT_IMPL="$SELF/bashify.sh"
+CHECK_IMPL="$SELF/lib/check.sh"
 SCHED="/home/zach/Documents/Project Archive/scheduler"
 
 # state <sub> -- MECHANIZED iff something real is behind it. Derived from the
@@ -27,7 +28,8 @@ _state() {
   case "$1" in
     list)          echo MECHANIZED ;;
     emit)          [ -x "$EMIT_IMPL" ] && echo MECHANIZED || echo GAP ;;
-    page|check|amend) echo GAP ;;
+    check)         [ -x "$CHECK_IMPL" ] && echo MECHANIZED || echo GAP ;;
+    page|amend)    echo GAP ;;
   esac
 }
 
@@ -95,7 +97,10 @@ case "$cmd" in
 
   check)
     _no_json
-    verb_gap 'check: the nine-row page test is not mechanised yet'
+    [ $# -eq 2 ] || verb_die "check takes exactly 2 arguments: <page> <command> (got $#)"
+    [ -x "$CHECK_IMPL" ] || verb_gap "check: implementation missing at $CHECK_IMPL"
+    "$CHECK_IMPL" "$1" "$2"
+    exit $?
     ;;
 
   amend)
