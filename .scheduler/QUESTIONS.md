@@ -337,3 +337,16 @@ the big-four are done.*
   leave it — serial is fine, the pile is a cumulative log; (c) a contract
   declares whether its residue is per-contract or per-invocation.
   > (answer inline here)
+
+- **Q5 — office-economy: is a worker's balance savings or expiring spend
+  authority?** (Personnel manual §2.3 [OPEN], surfaced here from
+  `office-economy/contracts/fitness.contract` so it sits in the answerable
+  queue rather than only in a contract file.) It changes how `fitness` should
+  weight a hoard: as *savings* (v1's assumption — more balance is fitter, a
+  thrifty survivor) or as *idled capital* (unspent authority is waste, so a
+  large unspent balance should read as LOWER fitness). Options: **(a)** savings
+  — keep v1 (**recommended** only because it is the current default, not
+  because it is settled); (b) expiring spend authority — flip the sign of the
+  hoarded portion in `fitness` (a one-line change, flagged in the impl); (c)
+  a hybrid — a modest reserve is savings, excess above a cap is idled.
+  > (answer inline here)
