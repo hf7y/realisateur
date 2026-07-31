@@ -1222,3 +1222,55 @@ Two findings worth carrying beyond the forks:
   `QUESTIONS.md`; the three files are untouched and still uncommitted.
 
 No project was scaffolded, no feature code written, no weight changed.
+
+### 2026-07-31 (interactive `/ideate` bibliothecaire) — three verbs, and the survey that priced them
+
+Zach answered the fork: **three verbs**, plus "be ecosystem aware if other
+utilities do things", plus adopt the author-unknown files. All three done.
+
+- bibliothecaire **`f97c33b`** — the author-unknown residue ADOPTED. Eight quotes
+  (Barnard ×5, Independent Sector ×3), the `nonprofit-management` theme, the
+  regenerated export; the matching brief was already committed, so this was the
+  sourcing half of finished work left uncommitted by one of the three 03:48
+  `scheduler sweep: adopted dirty …` backstops. Validated **before** adopting:
+  54 quotes / 50 publishable / 47 primary / 3 secondary, exit 0. Tree now clean.
+- bibliothecaire **`7d9ea64`** — the plan: `range` / `cherche` / `verse` split by
+  failure mode, every existing program placed, six-step milestone chain.
+- bibliothecaire **`3f77f1a`** — the two boundary forks the survey turned up.
+
+**The survey is the finding, and it moved the plan twice.** All 19 `bashified`
+branches read for verbs and subcommands:
+
+- **`garde` is the only verb on `PATH`, and its shape is the deployment recipe** —
+  a symlink into `~/Documents/Projects/gardien-garde`, a dedicated git worktree
+  pinned to `bashified`. This **dissolves the three-branch problem**: three verbs
+  on ONE branch, one worktree, three symlinks. `bashify.sh:42`'s
+  one-branch-per-project hardcode never bites, so bibliothecaire's own
+  QUESTIONS.md entry calling this "a decision about sequencing" **overstated the
+  cost** — a fork priced by reading code rather than by reading the note about it.
+- **`garde` scores 3 of 9 on its own page test, failing row 1 with exactly the
+  "and" defect** the three-verb answer avoids. The one verb that shipped is a
+  warning, not a template — it also has no executable examples, documents none of
+  the five flags its `--help` offers, and names "agent" on a total-purge branch.
+  **This is realisateur's to carry, not gardien's:** the page test exists and the
+  only page in production fails two thirds of it.
+- **Only 6 of 19 verbs have any subcommands.** Thirteen are empty shells. The
+  front-door gap is ecosystem-wide; 2-wide is the norm, not one project's failing.
+- **Two verb-boundary collisions**, filed in bibliothecaire's QUESTIONS.md:
+  `secretaire`/`trie` is already *"sort the mail and decide what deserves an
+  answer"* (0 subcommands — free to settle now), and
+  `quatre-vingt-douze`/`cueille` already *"gather page ninety-two"*, which
+  bibliothecaire's README says it borrows the rule of.
+- **This file was wrong about the pass it recorded.** The 2026-07-30 entry above
+  lists `e7d9cb3 realisateur/juge` and `d3aeeb4 senechal/veille`; the actual
+  branch verbs are **`arpente`** ("survey the ecosystem and read its state") and
+  **`ausculte`** ("examine the estate for health"). Two of nineteen names in the
+  record of the bashify pass do not match what shipped. Noted, not rewritten —
+  the entry stays as written and this is the correction.
+
+**Nothing was built.** No man page, no verb, no branch touched, no symlink. The
+session-scope call was asked twice and Zach was AFK both times. The thin thread
+is named and waiting: **`range maxim --add`** is a one-line `case` arm over
+`bin/file-maxim.py`, which already exists and already requires an `occasion` —
+so "use the verbs at the end of the session to record its lessons" is one small
+step away, not a build.
