@@ -1274,3 +1274,72 @@ is named and waiting: **`range maxim --add`** is a one-line `case` arm over
 `bin/file-maxim.py`, which already exists and already requires an `occasion` —
 so "use the verbs at the end of the session to record its lessons" is one small
 step away, not a build.
+
+### 2026-07-31 (interactive `/ideate`) — the amendment, the deletion, and row 1 failing ecosystem-wide
+
+**realisateur `dfe36da`.** Zach-directed and precisely scoped: *"do NOT change
+the code. only change the promise and remove the broken code."* Both halves done,
+and the half that did not close is stated rather than quietly fixed.
+
+**The promise.** `man/bashify.1` said discovery *"reads every tracked script
+anywhere in the tree"* — and the word "script" was read, by the implementation,
+as *shell* script. The page now says *every tracked executable program … not only
+those written in the shell*, and states outright that a subcommand count tracking
+one language reports the tree it can read as the tree that exists. It also now
+obliges `emit` to write **one-clause summaries**. Gated through
+`bashify amend`: all four gates passed (REASON 635 chars, PRESERVED at `fcad192`,
+ROWS **9 of 9**, CALLERS 18 branches / 0 invocations).
+
+**The deletion, not a fix.** The extension blacklist in `bashify.sh` strips data
+files and `.pyc` only; the language exclusion is gone. **It closed one project of
+six** — `bibliothecaire` 2 → 7 — because bibliothecaire keeps its Python in
+`bin/`. The other five stay invisible **on purpose**: discovery's first branch
+globs `*.sh` alone, so `quatre-vingt-douze`'s `page92.py` at the repository root
+is still undiscoverable, as are `nine-speakers`' twenty programs. Widening that
+glob changes how `emit` works, so the amended page now obliges the next
+`--summon` to satisfy the page rather than the code it finds. Both halves are in
+`bashify/GAPS.md` with the measurement table.
+
+**The measurement that found it, and it is realisateur's own defect twice over.**
+
+- **Subcommand count equals shell-script count in every one of 19 rows.** Six
+  verbs were blind to their own project's language; `nine-speakers` shipped a
+  verb offering nothing over twenty Python programs. "13 empty shells" in
+  yesterday's entry was wrong about the cause — they were not empty projects,
+  they were unreadable ones.
+- **12 of 18 emitted verb summaries carry an "and"** — `garde`, `arpente`,
+  `trie`, `sonde`, `joue`, `cadence`, `loge`, `chante`, `capte`, `compte`,
+  `grave`, and `range` itself. Row 1 of this repo's own page test rejects
+  exactly that, so **the generator emits pages that fail its own contract before
+  any implementation exists.** Same signature as the exit-0 no-ops Zach already
+  made this repo fix: the tool that audits everyone else failing its own check.
+
+### The verb shape, after three subtractions
+
+Zach's decisions, each one removing a verb rather than adding one:
+
+| verb | owner | summary |
+|---|---|---|
+| `range` | secretaire | put each arrival in its place |
+| `atteste` | bibliothecaire | attest what the library publishes |
+| `verse` | bibliothecaire | drain the drop box, deleting nothing without proof |
+| `cueille` | bibliothecaire | gather texts from open archives |
+
+- **`cherche` does not exist.** `quatre-vingt-douze`'s `page92.py fetch` already
+  does rate-limited public-archive text acquisition, the same failure mode as
+  `find-open-copy.py`. It duplicated the verb it was being measured against.
+- **`quatre-vingt-douze` merges INTO bibliothecaire**, unwinding the 2026-07-26
+  rename split. Decided, **not executed** — unregistration edits scheduler's own
+  `schedule/` and needs Zach present.
+- **`range` and `trie` are one thing**, and the thing is *putting each arrival
+  where it belongs*.
+- **`atteste` and the direction of absorption are recommendations, not his
+  decisions** — flagged as such in all three projects. The open consequence: once
+  placing leaves for secretaire, bibliothecaire's corpus wing is unnamed, because
+  validating quotes was never sorting.
+
+Cross-writes, each `check-project-busy`-cleared and pushed: bibliothecaire
+**`36d9aa3`**, quatre-vingt-douze **`073e785`**, secretaire **`3ab1479`**.
+
+**Still not built:** no man page, no verb, no symlink. The session-scope call was
+asked twice and went unanswered both times.
