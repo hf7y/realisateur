@@ -1135,3 +1135,47 @@ since 22:43). Carry it next session.
 built. Two build attempts this session were stopped by Zach — correctly; the
 point of the process is that the tooling builds itself via summon, and reaching
 for the editor routes around the guard.
+
+### 2026-07-30 closeout — deferrals and findings filed
+
+- `[batch]` **DEFERRED CROSS-WRITE, gardien was BUSY: coin `fauche` and take
+  reaping off bibliothecaire.** Re-checked at close, still BUSY — a genuinely
+  foreign lock (pid 24955, a separate interactive session in gardien's own
+  project dir; this session was pid 47708, compared rather than assumed).
+  **Payload, carried here so a run that cannot see the conversation can act:**
+  Zach ruled interactively 2026-07-30 that reaping is gardien's domain, not
+  bibliothecaire's. Coin **`fauche`** (imperative of *faucher*, to scythe; pure
+  ASCII, no accent lost; `command -v fauche` returned nothing on mandark
+  2026-07-30). Evidence: `bibliothecaire/bin/intake.py` hand-implements a gardien
+  client — it SSHes to dexter, reads `.gardien-snapshot-complete`, checks snapshot
+  age, and hardcodes gardien's internals by line number (`GARDIEN_COMPLETE_MARKER`
+  at intake.py:1163 citing `gardien.py:55`; intake.py:1273 citing `gardien.py:417`)
+  with a comment stating it breaks if gardien renames the file. The seam to draw:
+  bibliothecaire proves a scan arrived and is snapshotted; gardien proves it is
+  held and performs the deletion. `--check-backup-proof` is gardien's question to
+  answer, asked by bibliothecaire, not reimplemented inside it. Related:
+  bibliothecaire `a517ce7` carries the same ruling on its own side.
+  **Reader:** realisateur's own nightly-batch, which dispatches from `[batch]`
+  rows in this file. If it does not pick this up, that is itself the finding.
+
+- `[batch]` **FINDING — `closeout-lint` section A cannot see a dirty tree in a
+  repo with no recent commit.** This session's summon appended residue to
+  `basheur/residue/project-contract.sh` and left it uncommitted; basheur's HEAD
+  was older than 12h, so it never appeared in "repos touched in the last 12h" and
+  the lint reported 0 FLAGs while a cross-project write sat dirty. Resolved by
+  hand here (basheur `c4f02b0`), but the check is blind to the class: it keys on
+  recent *commits*, not recent *writes*. A repo written to but not committed is
+  exactly the case the durability half exists to catch.
+
+- `[batch]` **FINDING — page-test row 4 catches a documented ghost, not a silent
+  surface.** It compares only against exit codes the run happened to provoke, so
+  an *undocumented but reachable* code passes. `bashify` gained exit 3 in
+  `3d9df31`; the page did not list it; row 4 passed. A human reading EXAMPLES
+  caught it. Recorded in `bashify/GAPS.md`; the row reads stronger than it is.
+
+- **Still open after `3d9df31`, with shas:** `bashify page` is reclassified
+  `GAP` → `SUMMON` but not *kept* — the contract store carries no `verb-page`
+  contract, so an authorised `page` exits 4 naming exactly that. Its documented
+  signature `page <verb> <command>` still requires a live command, contradicting
+  the page-first method it serves; fixing it is its own amendment through
+  `bashify amend`. This is what blocks bibliothecaire's verb pages.
