@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# bashify -- state a project's promise as a contract a shell can hold.
+#
+# This is the front door described by man/bashify.1. The page was written
+# first; this file exists to make the page true. Three of its four
+# subcommands are not built, and this file's job is to say so at exit 4
+# rather than let the page describe something that silently does nothing.
+#
+# Read the page, not this header: `man -l man/bashify.1`.
+
+SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+
+VERB_NAME=bashify
+VERB_SUMMARY="state a project's promise as a contract a shell can hold"
+VERB_USAGE="bashify <subcommand> [args...]   (list, emit, page, check, amend)"
+VERB_CAN_SUMMON=0
+# shellcheck source=../skel/lib/verb.sh
+. "$SELF/skel/lib/verb.sh"
+
+# The one place the implementation of `emit` is named.
+EMIT_IMPL="$SELF/bashify.sh"
+SCHED="/home/zach/Documents/Project Archive/scheduler"
+
+# state <sub> -- MECHANIZED iff something real is behind it. Derived from the
+# filesystem, not typed, so a subcommand cannot claim to be built by assertion.
+_state() {
+  case "$1" in
+    list)          echo MECHANIZED ;;
+    emit)          [ -x "$EMIT_IMPL" ] && echo MECHANIZED || echo GAP ;;
+    page|check|amend) echo GAP ;;
+  esac
+}
+
+_say() { [ "$VERB_QUIET" = 1 ] || printf '%s\n' "$*"; }
+
+# --json is honoured by `list` alone. Anywhere else it is REFUSED, never
+# dropped: a silently ignored flag is a caller who asked for one thing,
+# received another, and was told nothing.
+_no_json() { [ "$VERB_JSON" = 1 ] && verb_gap '--json: not wired for this subcommand'; return 0; }
+
+# A leading flag is a flag, not a subcommand. Taking `--version` as a
+# subcommand name made it exit 2 while the page documented it working, which
+# is a row-3 failure the page test caught: `bashify --json` must reach `list`,
+# and `bashify --not-real` must reach the unknown-flag error, not this case
+# statement's catch-all.
+case "${1:-}" in
+  -*) cmd=list ;;
+  *)  cmd="${1:-list}"; [ $# -gt 0 ] && shift ;;
+esac
+verb_parse "$@"
+set -- "${VERB_ARGS[@]+"${VERB_ARGS[@]}"}"
+
+case "$cmd" in
+  list)
+    if [ "$VERB_JSON" = 1 ]; then
+      printf '['
+      _sep=''
+      for s in amend check emit list page; do
+        printf '%s{"subcommand":"%s","state":"%s"}' "$_sep" "$s" "$(_state "$s")"; _sep=','
+      done
+      printf ']\n'
+    else
+      for s in amend check emit list page; do
+        printf '%-13s %s\n' "$(_state "$s")" "$s"
+      done
+    fi
+    ;;
+
+  emit)
+    _no_json
+    [ $# -eq 3 ] || verb_die "emit takes exactly 3 arguments: <project> <verb> <summary> (got $#)"
+    proj="$1"; verb="$2"; summary="$3"
+    # Preconditions are checked HERE so a caller error exits 2. Past this
+    # point the arguments are valid, so any failure is a broken promise (5),
+    # never a usage error wearing a different number.
+    [ -f "$SCHED/schedule/$proj.conf" ] \
+      || verb_die "emit: no registered project named '$proj'"
+    case "$verb" in
+      *[!a-z]*) verb_die "emit: verb '$verb' must be lowercase ASCII letters only" ;;
+    esac
+    if command -v "$verb" >/dev/null 2>&1; then
+      verb_die "emit: '$verb' is already claimed on PATH; coin another"
+    fi
+    [ -x "$EMIT_IMPL" ] || verb_gap "emit: implementation missing at $EMIT_IMPL"
+    _say "bashify: emitting $proj -> $verb"
+    "$EMIT_IMPL" "$proj" "$verb" "$summary"
+    rc=$?
+    [ "$rc" = 0 ] || verb_broke "emit: the branch for '$proj' was not produced (implementation exit $rc)"
+    ;;
+
+  page)
+    _no_json
+    verb_gap 'page: writing a man page standalone is not built; only emit writes pages, inline'
+    ;;
+
+  check)
+    _no_json
+    verb_gap 'check: the nine-row page test is not mechanised yet'
+    ;;
+
+  amend)
+    _no_json
+    verb_gap 'amend: the four-step contract-change gate is not mechanised yet'
+    ;;
+
+  help|--help|-h) verb_usage ;;
+  *) verb_die "unknown subcommand: $cmd  (try: bashify list)" ;;
+esac
