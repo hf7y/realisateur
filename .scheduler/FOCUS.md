@@ -1051,3 +1051,87 @@ invocations).
   surfaced because `closeout-lint` reports linked worktrees as BLIND and this
   session examined them by hand. A dirty tree on a staging branch is
   indistinguishable from an abandoned one — needs its owner to land or discard it.
+
+## 2026-07-30 (/ideate, interactive) — bashify gets `--summon`; the grammar is reinterpreted
+
+**Vision.** One front door. `bashify` carries `--summon`; `basheur` becomes the
+contract store it calls, rather than a second CLI a caller has to know about.
+Decided by Zach interactively this session. What is NOT decided: the exact
+call shape (`bashify --summon <subcommand>` vs. delegating to a named basheur
+contract), and whether `basheur` keeps a human-facing CLI at all or becomes
+library-only.
+
+**The grammar, restated.** Animacy means **carrying its own agenda** — a
+nightly loop, an initiative of its own — *not* ever invoking a model. A verb
+that summons at a call site is not carrying an agent; it is calling one.
+French noun = animate, French imperative verb = inanimate still holds; what
+changed is what animate MEANS. This is defensible on Law 3's own words: the
+law forbids a project growing its own nightly agent to do its own
+de-animation, which is about initiative, not model contact.
+
+**What this costs, recorded with the decision.** The old rule gave `--help`
+real discriminating power, because most verbs could not spend and the flag's
+presence was informative. Under the new grammar nearly every verb can carry
+`--summon`, so "can this cost me anything?" answers yes almost everywhere and
+sorts nothing. The discriminating question moves to **what it summons for**,
+which means COST must enumerate per *subcommand*, not per tool — a
+strengthening of page-test row 6, not a free change. `bashify`'s own page
+currently states "does not spend money and has no --summon flag" in three
+places (SYNOPSIS-adjacent OPTIONS, THE COST BOUNDARY, row 6); all three are
+now false and need an **amend**, not a fulfil.
+
+**Structural risk.** `bashify` -> `basheur` becomes mutual: basheur's
+`project-contract` is the instrument for bashifying projects, and bashify would
+call basheur to summon. Not fatal, but neither tool can then be understood
+alone, and "one front door" is true at the CLI while the dependency runs both
+ways.
+
+**Milestone chain.**
+1. *Current:* amend `man/bashify.1` for the cost boundary reversal. Blocked —
+   `bashify amend` is a GAP (exit 4), so the four-step gate runs by hand again.
+2. *Next:* `bashify page`, so pages stop being hand-written troff.
+3. *Later, undecided:* whether `emit` grows multi-verb support or is replaced.
+
+**Blockers on step 1.**
+- `bashify amend` is unbuilt (buildable-now; nobody has).
+- `lib/verb.sh` has **no refusal path and no exit 7** anywhere in shipped code
+  — found by the summon below, affects all 19 bashified verbs, so every
+  `refused` row in every contract is enforced by document, not by the verb.
+
+### The summon that produced this (Law 2 satisfied)
+
+`basheur run --summon project-contract bibliothecaire` — the option Zach chose
+when asked where the bootstrap should be cut, rather than hand-building.
+Product saved as `BIBLIOTHECAIRE-CONTRACT-20260730.md`; residue appended as run
+15 to `basheur/residue/project-contract.sh` (130KB, 21 numbered lessons).
+
+Findings, all re-probed by the summon rather than carried forward:
+- **It kept ONE verb, `range`** — disagreeing with this session's three-verb
+  read (`range`/`verse`/`cherche`). But its own role line is "shelve,
+  catalogue and retrieve" — two "and"s, which fails page-test row 1 by
+  construction. The disagreement is unresolved and visible in its own text.
+- **Four rows moved on re-probe, three of them OVERSTATING the gap.** The
+  fifth instance of the standing "re-derive a headline before acting" rule.
+- `--sources` prints four real defects and **exits 0** (report/gate split is
+  deliberate; `--require-sources` is the gating row).
+- `~/.local/bin/bibliothecaire-nightly-batch-loop.sh` — 420 bytes, executable,
+  owned by bibliothecaire, **tracked in no repo**. Would vanish with the home
+  directory. Machine-footprint finding, not fixed here.
+- bibliothecaire's tree is dirty (`validate-quotes.py`, `quotes.json`,
+  `quotes.txt`), with three `scheduler sweep: adopted dirty ... author unknown`
+  backstops on 2026-07-30 03:48.
+
+**Zach's ruling that the derived contract does not yet reflect:** reaping is
+**not bibliothecaire's**. It belongs to gardien's domain, as its own verb —
+**`fauche`** (imperative of *faucher*, to scythe; pure ASCII; `command -v`
+showed it unclaimed on this host 2026-07-30). `intake.py` today hand-implements
+a gardien client, hardcoding gardien's internals by line number
+(`GARDIEN_COMPLETE_MARKER`, "gardien.py:55", "gardien.py:417") with a comment
+saying it breaks if gardien renames the file. **Cross-write to gardien DEFERRED
+— `check-project-busy gardien` reported BUSY** (interactive session, pid 24955,
+since 22:43). Carry it next session.
+
+**Not done, deliberately:** no verb wired to PATH, no page written, nothing
+built. Two build attempts this session were stopped by Zach — correctly; the
+point of the process is that the tooling builds itself via summon, and reaching
+for the editor routes around the guard.
