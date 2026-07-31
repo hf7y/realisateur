@@ -350,3 +350,19 @@ the big-four are done.*
   hoarded portion in `fitness` (a one-line change, flagged in the impl); (c)
   a hybrid — a modest reserve is savings, excess above a cap is idled.
   > (answer inline here)
+
+- **2026-07-30 (interactive):** The nine-row **page test** now exists in two
+  places — `.claude/commands/bashify.md` (prose, for a session) and
+  `bashify/lib/check.sh` (mechanised, for a shell). Should it also become a row
+  in `BUILD-DISCIPLINE.md`, i.e. is "a shipped utility has a man page that
+  passes `bashify check`" a rule for the whole ecosystem, or does it stay
+  bashify's own standard? Ecosystem-wide would mean 19 bashified branches
+  acquire a failing check overnight, which is either the point or a mess.
+  > (answer inline here)
+
+- **2026-07-30 (interactive):** `bashify` is deliberately NOT on PATH — wiring a
+  verb into the machine is a human decision. Want it shimmed into
+  `~/.local/bin` (it would go through `notify-senechal` as machine-wide
+  config), or does it stay reachable only from its checkout until `page` and
+  `amend` are built?
+  > (answer inline here)

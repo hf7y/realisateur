@@ -990,3 +990,64 @@ both remains the held stub; the split verbs need their own contracts next.
 Busy-guard note: realisateur read BUSY on this session's OWN interactive marker
 (pid 3539364); the branch edit uses a detached worktree + separate ref with no
 other writer, so the self-marker did not apply — stated, not silently overridden.
+
+## 2026-07-30 (interactive, Zach-directed) — `/bashify` the command, and `bashify` the utility that holds its own contract
+
+**`/bashify` exists as a user-level slash command** (`5bf7db3`), source in
+`.claude/commands/bashify.md`, rendered by `install-shims`. Eschatological
+framing per Zach: it reaps agentic activity out of a project and suspends it in
+documentation, and the agency moves rather than dies — dexter VMs host it, one
+of them research. It carries the standing placement facts of this date: mandark
+is no longer a dev box (personal agents only), prose goes to bibliothecaire for
+Obsidian integration, vim-arcade is where coined verbs get spoken.
+
+**The nine-row page test is the deliverable** — the definition of what makes a
+man page successful, which is what makes "the page is the contract" decidable
+rather than a slogan: one-clause NAME, copy-pasteable SYNOPSIS, bidirectional
+surface, complete+reachable EXIT STATUS, EXAMPLES as doctests, cost answerable
+from the page alone, named unix lineage, no vendor names, present tense only.
+
+**`man/bashify.1` written first, then `bin/bashify` written to make it true**
+(`a46a8b2`). Three of four subcommands did not exist; the front door exists so
+they exit 4 and name what is missing. `bashify list` derives MECHANIZED/GAP from
+the filesystem, so a subcommand cannot claim to be built by assertion.
+
+**`bashify check` built at its own exit-4 call site** (`551e8cf`) — Zach's
+direction, "build check from inside itself as a test". `lib/check.sh` mechanises
+rows 1,2,5,7,8,9 (previously by-eye) and deepens 3 and 4. It scores its own page
+**9 of 9**, and a fixture built to fail scores **0 of 9** — the second number is
+the real witness, since a scorer that passes everything is indistinguishable from
+one that does nothing. `test/verify-check.sh`: 5 named assertions, all passing.
+
+**Findings worth keeping:**
+- Two of the checker's first five findings were its OWN bugs, not the page's:
+  bracketed italics are optional literals rather than placeholders, and a
+  `--help` that names `--summon` *to deny it* is not offering the flag. The
+  instrument falsifying itself on first contact is now the second instance of
+  this pattern in two days (the first withdrew the "ten of nineteen" headline).
+- The three real findings were all **staleness**: two examples went false the
+  moment `check` started working. An example is the part of a page that rots
+  first, which is the argument for doctests over illustration.
+- Exit **7** coined (`check` only, above the shared vocabulary): the subject
+  failed, which is not the tool failing and must not be reported as 5.
+
+**Fulfilling vs amending, exercised for real.** `--version` exiting 2 while the
+page documented it working was fixed in the tool with the page byte-identical
+(fulfilling). The exit-7/exit-6/norun changes were an **amend**, and the
+four-step gate ran by hand since `amend` is still a GAP: reason stated, prior
+page at `a46a8b2`, full nine-row re-run, and a caller search (`git grep -w
+bashify` across every bashified branch — six hits, all prose in CONTRACT.md, no
+invocations).
+
+**Left for the next session:**
+- `bashify amend` and `bashify page` remain GAPs (exit 4, named at the call
+  site, detailed in `bashify/GAPS.md`). `amend`'s caller search is the half that
+  most needs a machine: a changed promise breaks a pipeline silently and nothing
+  currently looks.
+- Nothing wired to PATH — a human decision and a machine-wide change.
+- `[batch]` FINDING, not this session's work: the `realisateur-staging-silence-audit`
+  worktree (branch `staging/silence-audit`) carries an uncommitted
+  `bin/hygiene-lint.sh` and `bin/silence-audit.sh`. Not touched by this session;
+  surfaced because `closeout-lint` reports linked worktrees as BLIND and this
+  session examined them by hand. A dirty tree on a staging branch is
+  indistinguishable from an abandoned one — needs its owner to land or discard it.
