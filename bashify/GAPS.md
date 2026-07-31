@@ -163,3 +163,52 @@ rejects exactly this, so the generator produces pages that fail its own
 contract before any implementation exists. `garde`, the only verb on `PATH`,
 scores 3 of 9 and fails row 1 for this reason. The page now states the
 one-clause obligation; the generator does not yet keep it.
+
+## `check` reports written sections as missing when the heading is quoted
+
+Found 2026-07-31 by `verb-page` RUN 4, at a cost of two rows on a page that had
+actually written them. `lib/check.sh` matches sections with a literal
+`.SH <name>` scan, so a page using the ordinary troff form `.SH "EXIT STATUS"`
+— quoted, as any multi-word heading may be — is read as having no EXIT STATUS
+section at all. **The failure direction is the dangerous one:** it reports a
+fully-written section as absent, so an author "fixes" a page that was correct.
+
+## `check` row 6 can pass for the wrong reason
+
+Found the same day by RUN 3. Row 6 greps `^\.B \-\-summon` across the whole
+page, so a page that names `--summon` **in order to deny it** ("this verb cannot
+spend, it has no `--summon`") lands on the summon branch and passes as though it
+had declared one. The row's PASS text said "page documents --summon" while the
+page said the opposite. Only reading the PASS *text* rather than the count
+caught it — which is the same failure mode as an exit-0 no-op, one level up.
+
+## A contract's `output:` field is not enforced by anything
+
+`basheur` lints that the field EXISTS; nothing checks that a summon obeyed it.
+Measured across five summons in one session, all violating the same clause
+("nothing else on stdout") in **three different ways**: `idea-to-contract`
+returned its contract wrapped in prose and a code fence; `verb-page` RUN 1
+returned the page inside a fence; RUNs 2–4 wrote the page to `/tmp/<verb>.1`
+and printed a *report* on stdout instead. Every caller therefore has to parse
+prose to find the artifact, which is precisely what a stated output field exists
+to prevent. The contracts are not wrong — they are unenforced.
+
+## The page test cannot score a page whose verb does not exist
+
+**The finding of the 2026-07-31 pass, and it is a tension in the doctrine, not a
+bug in the tool.** `man/bashify.1` says a page "is written before its utility is
+complete, and the utility is judged against the page rather than the reverse."
+But three of the nine rows can only be scored against a live verb:
+
+- **NAME** compares the page's name to the command under test's basename, so a
+  page for `fonde` scored against `bin/validate-quotes.py` fails by construction.
+- **SURFACE** compares the page's flags against the command's `--help`, which is
+  the legacy program's help, not the verb's.
+- **EXAMPLES** executes doctests that invoke a binary not on PATH.
+
+Measured on four pages written the same day: `fonde` 5/9, `verse` 6/9,
+`cueille` 6/9, `range` 5/9. **6 of 9 is the ceiling at page-writing time.**
+Either `verb-page` scores those three rows against `<verb>`, or the contract
+states the ceiling in its own output field. Unresolved deliberately — picking
+one silently would make a real doctrinal question look like a formatting choice.
+Four runs of evidence in `basheur/residue/verb-page.sh`.

@@ -1384,3 +1384,52 @@ exactly like one that proves something.
 
 Shape now: `range` (secretaire) · `fonde` · `verse` · `cueille` (bibliothecaire) ·
 `atteste` (gardien, unfiled). bibliothecaire **85e8e2d**. Still no verb built.
+
+### 2026-07-31 (interactive) — four man pages, written through the front door
+
+Zach: *"write the man pages for these verbs as per bashify. utilize bashify to
+create the page. do not go around the front door."* Done, and the front door
+held at every step rather than being narrated as holding:
+
+- `bashify page` without `--summon` → **exit 3**, cost printed, nothing spent.
+- `bashify page … --summon` → **exit 4 GAP**, naming its own escalation: basheur
+  had no `verb-page` contract.
+- That escalation was built, not bypassed — a prose idea through
+  `basheur run --summon idea-to-contract`, lints clean, **basheur `f96cfa4`**.
+- Then four summons, one per verb.
+
+**The pages, one clause each, no "and" — row 1 that 12 of 18 existing summaries
+fail:**
+
+| verb | NAME line | check |
+|---|---|---|
+| `fonde` | admit material into the library only on a citation that checks out | 5/9 |
+| `verse` | carry a scanned book from the drop share to a citable excerpt | 6/9 |
+| `cueille` | report where one work is readable without payment | 6/9 |
+| `range` | put the morning's accounts in the order a missed message costs most | 5/9 |
+
+Filed: bibliothecaire **`6e2f125`** (`man/` + a README stating the scores and
+why), secretaire **`b5d9f01`**. **Scored by me, mechanically — not taken from
+the summons' own claims.**
+
+**They do not pass, and the reason is the finding.** Every failing row fails
+because *the verb does not exist yet*: NAME compares against the legacy
+command's basename, SURFACE against the legacy program's `--help`, EXAMPLES
+invoke a binary not on PATH. **6 of 9 is the ceiling for any page written
+page-first** — which is a tension inside this repo's own doctrine, since
+`man/bashify.1` says the page precedes the utility. Left unresolved deliberately.
+
+**Four defects found by using the front door instead of reasoning about it**, all
+in `bashify/GAPS.md`:
+1. `check.sh` reads `.SH "EXIT STATUS"` (quoted, ordinary troff) as a missing
+   section — **reports written sections as absent**, the dangerous direction.
+2. `check.sh` row 6 passes when a page names `--summon` *to deny it*; the PASS
+   text said the opposite of the page.
+3. **No contract's `output:` field is enforced by anything.** Five summons, all
+   violating "nothing else on stdout", in three distinct ways.
+4. The Python behind every verb returns `exit 1` for all failures, so a caller
+   cannot distinguish an unreadable ledger from a violated schema. The pages hold
+   the shared vocabulary; the programs must move to it.
+
+Still no verb built, nothing on PATH. `bin/fonde` is next, and `fonde maxim
+--add` is what makes tonight's lessons recordable through a verb.
