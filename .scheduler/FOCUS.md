@@ -1343,3 +1343,44 @@ Cross-writes, each `check-project-busy`-cleared and pushed: bibliothecaire
 
 **Still not built:** no man page, no verb, no symlink. The session-scope call was
 asked twice and went unanswered both times.
+
+### 2026-07-31 (interactive) — the test for whether a verb belongs to a project
+
+Zach's challenge — *"atteste may or may not be a subset of gardien. similar with
+verse. are those librarian specific?"* — killed one of realisateur's own
+recommendations from earlier the same session and produced the rule that should
+have generated it. Recorded here because it generalises past bibliothecaire:
+
+> **A verb is project-specific when it owns a failure mode nobody else can have.**
+
+Applied: `verse` keeps its verb (an image-only scan snapshotted with an empty
+text layer satisfies the reaper's gate and licenses deleting the only copy — only
+a library fails that way). `atteste` loses it ("nobody looked recently" is every
+project's failure). The corpus wing gets **`fonde`** — *ground each published line
+in a source it can be followed to* — because a published line nobody can trace is
+again only a library's failure.
+
+**`atteste` is garde's second half.** `garde` is *"nightly backups **and** their
+proof"*; split at the "and" Zach already called malformed and the proof half is
+attestation — which bibliothecaire also built independently (`ATTESTATION.md`,
+all-green-only writes, 26h staleness, `UNKNOWN` is red). Two projects built
+proof-of-having-looked separately and neither knows about the other. That is a
+missing ecosystem regulator surfacing as a duplicate, which `PRECIPITATION.md`
+says to answer by naming the regulator rather than promoting either instance.
+
+**DEFERRED — gardien cross-write, second consecutive session.**
+`check-project-busy gardien` reported **BUSY: interactive session (pid 24958,
+since 00:04)**, so nothing was written into gardien. It must be filed next
+session: garde's summary splits at its "and", and the proof half already exists in
+two places. Note the pattern — the previous closeout (`b5f4028`) also deferred a
+gardien cross-write. **Two deferrals in a row is a queue, not a coincidence.**
+
+**Method finding, self-inflicted and reported.** An attempt to prove the corpus
+wing unique by grepping all 19 repos for citation/locator language returned ten
+matching projects on words like "attribution" — **too noisy to be evidence**, and
+it was withdrawn rather than quoted. Same failure family as the
+false-cluster/false-DARK surveys: a headline quantity that proves nothing reads
+exactly like one that proves something.
+
+Shape now: `range` (secretaire) · `fonde` · `verse` · `cueille` (bibliothecaire) ·
+`atteste` (gardien, unfiled). bibliothecaire **85e8e2d**. Still no verb built.
