@@ -2325,3 +2325,59 @@ are declared deliberate per-project runtimes. This is the kind of thing
 that gets answered once and then stops recurring; it is posed now because
 `transplante` is about to make gardien-garde's copy more clearly the good
 one.
+
+#### 2026-08-01 — `transplante` built, and what it cost bashify to allow it
+
+Zach directed the build (`/ideate` posture named and overridden explicitly).
+Answered mid-session: `transplante` lives in gardien-garde; the verb.sh forks
+stay separate; **bashify itself must assume many verbs live on a bashified
+branch — "perhaps this requires bashify amend bashify."** That was the right
+diagnosis and it is what the work became.
+
+**The near-miss.** `gardien-garde` is a git *worktree* of `gardien` on the
+`bashified` branch, and `bashify emit` opens with `worktree remove --force`
+plus `branch -D bashified`. `bashify emit gardien transplante ...` would have
+deleted `garde`, `fauche`, their pages and contracts, and the reap record,
+rebuilding from a `main` that never carried them. Nothing stopped it, because
+bashify still encoded one-verb-per-project. Checked before running: the branch
+was level with `origin/bashified` (ahead=0 behind=0), so it was recoverable —
+but that is a restore, not a plan.
+
+**Built, page first** (realisateur `e1ee033`, PR #4, now carrying two commits):
+`bashify coin` adds one verb to an existing branch, sourcing that *branch's*
+runtime rather than the skeleton's; `emit` refuses a populated branch at exit
+2 naming `coin` (not 7 — that already means "the page failed a row" here);
+`man/bashify.1` amended through `bashify amend`, all four gates passed.
+
+**Two guards were narrowed, and that is the part worth review.**
+1. `check.sh` row 8 (PURGE) now skips verbatim `.nf`/`.fi` blocks. Row 5
+   requires examples to reproduce the tool's real bytes, and bashify's own
+   stderr says "agent" because its subject is de-animation — a page could
+   satisfy row 5 or row 8, never both. Negative-tested: authored prose naming
+   a vendor still fails.
+2. `amend.sh` now treats a shell **comment** as prose. The backtick is in the
+   shell separator alphabet, so senechal's `ausculte` explaining itself scored
+   as a caller of bashify. The identical defect was already fixed for
+   markdown; it was never looked for in prose *inside code*.
+Both narrow a guard to make this work pass, which is the pattern this
+ecosystem distrusts on principle. Each states its assumption in the code and
+each was checked against a case that must still fail.
+
+**`transplante`** (gardien `46db25c`, 9/9 rows, installed via `installe`,
+senechal notified by `installe` itself). Shaped like `fauche` on purpose:
+`check` decides, `plan` writes a script to stdout for a human to run, and
+there is **no `apply`** — a utility that both judges a relocation safe and
+performs it has one failure mode with no survivors. It never writes a
+crontab; `plan` names `sync-crontab.sh` as the reader's step, per the
+correction earlier today.
+
+**Two findings from running it, neither fixed:**
+- **`scheduler` is not relocatable today.** `transplante check` refuses it:
+  **6 commits exist on no remote**, plus 21 referring files under
+  `~/.local/bin`. `wtul` passes clean, 0 references. So the move order should
+  invert from what was filed this morning — wtul is ready, scheduler is not.
+- **No verb's man page resolves anywhere in the ecosystem.** `man fauche`,
+  `man garde`, `man bashify`, `man range` all return "No manual entry", while
+  every one of those pages tells its reader `man <verb>` for the contract.
+  MANPATH carries no ecosystem entry. This is the advertised-but-not-delivered
+  shape the family keeps cataloguing, in the family's own front door.
