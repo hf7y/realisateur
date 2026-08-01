@@ -205,15 +205,36 @@ elif [ -z "$(find "$RL" -newermt '-18 hours' 2>/dev/null)" ]; then
   unprov "3.3 one clean run has completed" \
          "runner has not ticked in 18h (last $(date -r "$RL" '+%F %H:%M')) -- the loop has not run yet"
 else
-  gb="$(git -C "$PROJECTS/gardien" for-each-ref --format='%(refname:short) %(committerdate:unix)' refs/heads 2>/dev/null \
-        | awk -v c="$(date -d '-18 hours' +%s 2>/dev/null || echo 0)" '$1!="main" && $2>c {print $1}' | head -1)"
-  dirty="$(git -C "$PROJECTS/gardien" status --porcelain 2>/dev/null | grep -c . || true)"
-  fail="$(systemctl --user list-units --state=failed --no-legend 2>/dev/null | grep -c . || true)"
-  if [ -n "$gb" ] && [ "$dirty" = 0 ] && [ "$fail" = 0 ]; then
-    met "3.3 a run landed on branch '$gb', tree clean, 0 failed units"
-  else
+  # The witness must be the RUNNER's own record that it dispatched, not the
+  # mere existence of a non-main branch. An earlier version accepted any branch
+  # with a recent commit and reported 3.3 MET on `bashified` -- a branch from
+  # hand-driven bashify work -- on an evening when the 18:00 tick had SKIPped
+  # the only enabled participant on an expired dead-man switch. A gate that
+  # passes because unrelated work happened is worse than no gate.
+  #
+  # run.log lines: `DISPATCH [i/n] <name> -> <cmd>` then `DONE <name> rc=<n>
+  # outcome=<...>`. A tick that holds, freezes, or skips logs none of these.
+  proj="$(grep -oE '^[a-z][a-z-]*(?=\|1\|)' "$SCHED/schedule/_paced.conf" 2>/dev/null \
+          || grep -E '^[a-z][a-z-]*\|1\|' "$SCHED/schedule/_paced.conf" 2>/dev/null | cut -d'|' -f1 | head -1)"
+  proj="${proj:-gardien}"
+  dispatched="$(grep -c "DISPATCH .* $proj ->" "$RL" 2>/dev/null || true)"
+  done_line="$(grep "DONE $proj rc=" "$RL" 2>/dev/null | tail -1)"
+  skipped="$(grep "SKIP $proj" "$RL" 2>/dev/null | tail -1)"
+  if [ "$dispatched" = 0 ] || [ -z "$done_line" ]; then
     notmet "3.3 one clean run has completed" \
-           "branch='${gb:-none}' dirty=$dirty failed_units=$fail"
+           "runner ticked but never dispatched $proj"
+    [ -n "$skipped" ] && say "            last: $(printf '%s' "$skipped" | sed 's/^[0-9T:+-]* //')"
+  else
+    dirty="$(git -C "$PROJECTS/$proj" status --porcelain 2>/dev/null | grep -c . || true)"
+    fail="$(systemctl --user list-units --state=failed --no-legend 2>/dev/null | grep -c . || true)"
+    onmain="$(git -C "$PROJECTS/$proj" log --oneline -1 --since='18 hours ago' main 2>/dev/null | grep -c . || true)"
+    if [ "$dirty" = 0 ] && [ "$fail" = 0 ] && [ "$onmain" = 0 ]; then
+      met "3.3 $proj dispatched and finished; tree clean, nothing new on main, 0 failed units"
+      say "            $done_line"
+    else
+      notmet "3.3 one clean run has completed" \
+             "dirty=$dirty failed_units=$fail new_commits_on_main=$onmain"
+    fi
   fi
 fi
 
