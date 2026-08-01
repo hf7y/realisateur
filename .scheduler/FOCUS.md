@@ -2029,3 +2029,724 @@ pass is still reported MECHANIZED. Law 4's territory; filed at scheduler
 `cbeb8e1`.
 
 **Philosophy delta: none.** No doctrine file edited.
+
+## 2026-08-01 — overnight: the bashification measured, and three dead tools
+
+Unattended, Zach AFK. Instruction: set ecosim up to measure the bashify
+process, register with senechal, report to bibliothecaire, then apply the
+measurement to the rest of the ecosystem.
+
+**The measurement did not exist.** `command -v` sees installed verbs, not
+coined ones, so *never coined* and *coined but not installed* share one
+symbol — the collapse that coined `ausculte` twice. First reading:
+**7 of 12 coined verbs could not be spoken**; at close, **11 of 13 are
+REACHABLE**.
+
+- ecosim `fe97801`, `b0f0f77`, `bcf1243`, `3c6a963` — the
+  `ecosim.bashification` sensor, its first report, the session record and
+  an addendum. `sonde selftest` 8/8 symbols, 0 violations across 37. **Its
+  own first version committed the fault this project exists to detect**:
+  it scored gardien's *ahead-of-origin* branch as CRIT drift, collapsing
+  *stale* and *ahead*. Split into `DRIFTED` and `UNPUSHED`. PR ecosim #23.
+- realisateur `eaef4b4` (branch `worktree-bashify-generator-fixes`, **draft
+  PR #4, NOT merged**) — **`bashify emit` had never worked.** The
+  unmodified copy from `main`, run against a throwaway registry, exits 5
+  for every project: its purge guard greps for `agent`, and the branch
+  always contains the `lib/verb.sh` *it writes itself*, whose mentions of
+  the word are the documentation of `--summon`. Meanwhile `bashify list`
+  reported emit MECHANIZED, because `_state` only asks whether the file is
+  executable — Law 4 again. Because it could not be run, its man-page
+  template had drifted to **4 failures of `bashify check`'s own 9 rows**
+  (`.SH FLAGS` where the gate reads `OPTIONS`; a SYNOPSIS placeholder the
+  gate executes literally; no EXAMPLES; one future-tense clause). A freshly
+  emitted verb now scores **9 of 9, exit 0**. `SCHED` is overridable via
+  `BASHIFY_SCHED` because the generator was untestable — `emit` does
+  `git branch -D bashified` on the real repo.
+- senechal `1b54a0e`, realisateur `4a9dc85`, vim-arcade `bab1de1`, gardien
+  `324e382`, ecosim `fec2c45`, bibliothecaire `3505afe` — **11 generated
+  verbs rejected the flags their own `--help` advertises.** `bin/bashify`
+  grew `-*) cmd=list` for itself on 2026-07-31; the template never received
+  it. **Fulfilling, not modifying:** no page changed. Verified by running
+  each flag on each verb, not by reading code.
+- gardien `e15ce01`, `92cbd3b`, `544b83a`, `b269f5d` — **`fauche` built**,
+  the reap verb WAITING-ROOM.md has named since 07-30 and which existed
+  nowhere. It decides whether a repository is recoverable and emits a
+  removal script; **it never deletes**. Page written by `bashify page
+  --summon`, scoring **9 of 9**, `bashify check` exit 0.
+- vault `dee2e64`, `22ba97e`, `7a2389b`, `c5490fa`, `4b7b618` — **150
+  documents consigned** through `fonde consign`, which routed to the
+  MECHANIZED `consign-prose` impl and **spent nothing**. Nothing deleted.
+- senechal `7b061a0`, `ee8f89b` — the new sensor and the machine-wide
+  changes filed, via `notify-senechal`.
+
+**Three refusals reported, not routed around.** `installe verb scheduler
+dose` exit 2 (scheduler is not under `~/Documents/Projects`, so `dose`
+stays unreachable); `installe -f verb gardien garde` exit 7 — its own
+message says "`--force` overwrites it" and `link_it` never consults
+`VERB_FORCE`, so `garde` cannot be brought under installe governance;
+basheur's residue lock refused four `verb-page` summons while another
+session held it, and the lock was never removed nor the page hand-written.
+
+**A finding worth more than the verb it came from:** an AGENT-backed
+contract can report a refusal as success. A refused `verb-page` attempt
+printed "REFUSED — exit 7" as prose on *stdout* and exited **0**; basheur
+scored it a kept promise and the refusal text was one `cp` from being
+committed as a man page. `bashify check` caught it (exit 6). Recorded at
+gardien `b269f5d`.
+
+**My own error, recorded rather than smoothed:** I installed `fauche` onto
+PATH *before* asking for its page, so `verb-page` correctly refused it —
+that contract writes pages for verbs that do not exist yet. Retired,
+paged, reinstalled, in that order.
+
+**Philosophy delta: none.** No doctrine file edited.
+
+### 2026-08-01 addendum — Zach answered mid-close: "fauche it"
+
+The reap ran, the same night the verb was built. **crt, front-door,
+groc-mangr, nine-speakers, sequestria removed; ~1.1 GB freed**, essentially
+all of it crt.
+
+Verified twice before deleting anything, the second time by a method
+different from `fauche`'s own: `git rev-list --count --branches --not
+--remotes` = 0 for all five, and `git ls-remote --heads origin` reached
+every remote and found 2–3 branches on each. A configured-but-dead remote,
+or a push that had not landed, fails that check and not the first.
+
+The doctrine's known reap hazard was **checked, not assumed**: the
+scheduler's `focus/`/`questions/` symlinks were swept afterwards and nothing
+dangled — those five had been unregistered at parking, so the links went
+with the confs.
+
+- gardien `0d1f074` — the reap record, consigned to the vault under
+  `gardien-garde/` with wikilinks to `[[fauche]]`, `[[bashify]]`,
+  `[[scheduler]]`.
+- realisateur `11f9050` — **WAITING-ROOM.md corrected**. Its "parking is not
+  reaping … the repo stays on disk" is now partly false and says so, by
+  addendum rather than rewrite. This is the one thing a reap would otherwise
+  have left silently untrue.
+- scheduler `58344a7` (the decision), `b5753e3` (its answer).
+- senechal `f927ab0` — the estate told.
+
+**Left open, both with a sha:** the `bashify emit` purge-guard narrowing
+(draft PR #4, scheduler `58344a7` decision 1) and basheur scoring an agent's
+refusal as success (scheduler `58344a7` decision 3).
+
+## 2026-08-01 (/ideate, Zach-directed) — relocation as a verb: `transplante`
+
+Zach asked how to move `scheduler` out of `Documents/Project Archive/` and
+`wtul` out of `Documents/wtul` into `Documents/Projects/`, in the new verb
+vocabulary, with ecosim measuring the process and prose landing in
+bibliothecaire. Four forks were put to him and all four answered; this
+records the answers and what the survey found, not a build.
+
+### Vision
+
+**A relocation is an ecosystem operation, not a `mv`.** The vocabulary
+already owns the destructive half — `fauche` clears a repo off this host
+once every byte is recoverable elsewhere — and owns nothing for the
+constructive half. **Decided: mint `transplante`** (`check|plan|apply`),
+which rewrites references, re-points what `installe` governs, verifies at
+the destination, and only then hands the old copy to `fauche`. The move
+becomes repeatable; this is the second relocation, not the first.
+
+Explicitly NOT decided: which repo `transplante` lives in
+(`realisateur-verbs` is the obvious home but `gardien-garde` already owns
+`fauche`, and keeping a move's two halves in one place is an argument);
+whether `transplante` may touch a crontab itself or must emit a plan for
+`installe`/`notify-senechal` to apply.
+
+### What the survey actually found
+
+1. **"Project Archive" is a false name and that is the real reason to
+   move.** `scheduler` is the live engine: its path is hardcoded in **21
+   of its own tracked files** (`bin/scheduler`, `usage-gate.sh`,
+   `usage-paced-runner.sh`, `morning-report.sh`, the completion script, the
+   entry template, `tests/sched-root-witness.sh`), in **21 files under
+   `~/.local/bin`**, in three symlinks, and in the crontab. Verified
+   2026-08-01 via `git grep -I "Project Archive"` and
+   `grep -rlI ~/.local/bin`.
+2. **`wtul`'s blocker is a credential, not a directory.** Dropped from
+   mandark's rotation 2026-07-25 and parked `enabled=0` in
+   `_paced.dexter.conf` because dexter has no `github-wtul-deploy` SSH host
+   alias and no wtul deploy key — `git ls-remote` fails at *name
+   resolution*. Moving the mandark copy does not re-enable wtul. Recorded
+   here so the move cannot later be mistaken for the fix. (Same shape as
+   the standing credential-gap-not-a-race lesson.)
+3. **ecosim's contract forbids the thing it was about to be asked to do.**
+   `SENSOR-CONTRACT.md` v1: *no cross-repo writes*, *no remediation, ever
+   — ecosim is an observer with no stop bit*. **Decided: ecosim emits,
+   realisateur carries.** ecosim gains a relocation sensor emitting
+   `STATUS ecosim.relocation.SYMBOL k=v | text`; realisateur reads that
+   stream and authors the prose. The observer stays an observer.
+4. **bibliothecaire's prose home moved yesterday.** `cfbba6f` (2026-07-31)
+   reaped 41 documents out of the tree into the vault; `briefs/` no longer
+   exists in the repo, `BIBLIOTHECAIRE_BRIEFS` is now the config knob, and
+   `.scheduler/FOCUS.md`/`QUESTIONS.md` are gone — the registration is
+   being retired and the scheduler's symlinks dangle. Any plan that writes
+   "into bibliothecaire" must target the vault via that variable.
+5. **`range` refuses a prose dump.** Briefs require four sections — Claim,
+   Sources, Maps onto, Where it breaks — and a brief with no named
+   disanalogy is refused on principle. **Decided: both** — shelve the raw
+   sensor stream as a dated record, and derive one gated brief from it once
+   the move settles, so the brief is written from evidence.
+
+### Milestone chain
+
+1. **Current — collapse `SCHED_ROOT` to one source.** Decided ahead of any
+   move: the 21 hardcoded paths become one resolved variable, with
+   `tests/sched-root-witness.sh` as the existing witness. This turns the
+   relocation into a one-line change and is worth doing whether or not
+   `transplante` ever ships. Scheduler's own engine — goes through the
+   front door (`scheduler -i scheduler`), not a hand-edit from here.
+2. **Next — ecosim's relocation sensor, built BEFORE the move.** Measuring
+   an outcome needs a baseline, so the sensor must exist and emit a clean
+   pre-move reading first. Per the contract's rule 4, **domain includes
+   hosts**: mandark and dexter both carry scheduler confs, so the sensor
+   reads both or emits BLIND for the one it could not. Coverage gate
+   applies — every declared symbol must be made to fire by a fixture.
+3. **Then — mint `transplante`**, in the `bashify` verb shape (bin/, lib/
+   verb.sh, CONTRACT.md, GAPS.md, man page, contract test). `check` is the
+   dry run; `apply` is gated on `check` clean; the `fauche` handoff is the
+   last step, never the first.
+4. **Then — move `scheduler`, then `wtul`,** scheduler first because it is
+   the harder case and the one everything else depends on. Machine-wide by
+   definition: `notify-senechal` on the same pass, not afterwards.
+5. **Later, undecided** — whether the other roots (`Documents/wtul` is not
+   the only stray) get swept the same way, and whether `transplante`
+   should be able to move a project *between hosts* rather than only
+   between directories on one.
+
+### Blockers on the current step
+
+- **Human-only:** where `transplante` lives (realisateur-verbs vs
+  gardien-garde alongside `fauche`), and whether it may write a crontab.
+- **Buildable now:** the `SCHED_ROOT` single-source change (step 1) needs
+  nothing from anyone; it is a scheduler-owned front-door proposal.
+- **Re-probe before relying on it:** the vault's actual path was not
+  resolvable from `gardien-garde/REAP-RECORD-2026-08-01.md` or
+  `garde.json` in this session. Step 2's prose destination is therefore
+  named but not verified.
+- **Not a blocker, a correction:** bibliothecaire's dangling scheduler
+  symlinks (`focus/bibliothecaire.md`, `questions/bibliothecaire.md`) are
+  the visible edge of an incomplete unregistration, flagged in `cfbba6f`'s
+  own message. Belongs to whoever finishes that retirement.
+
+**Nothing was scaffolded and no feature code was written this session.**
+
+#### 2026-08-01 correction to the entry above (Zach, same session)
+
+Two things in the entry are miscast; corrected here rather than rewritten.
+
+1. **`installe` does not govern cron.** Its surface is
+   `installe <path> | verb <project> <name> | retire <name> | list | audit`
+   — PATH and shims, nothing else. So "re-points what `installe` governs"
+   above must be read narrowly as the PATH/shim surface, and the open
+   question as posed ("may `transplante` touch a crontab itself, or emit a
+   plan for `installe`/`notify-senechal` to apply") **named the wrong
+   applier**. `installe` was never a candidate.
+   **The fork resolves rather than moves:** `transplante` never writes
+   cron. It declares what moved; **scheduler's own `bin/sync-crontab.sh`
+   regenerates the crontab** from `schedule/*.conf`, and
+   `notify-senechal` fires afterward as the estate notification. This is
+   not merely the cleaner split — it is the rule scheduler already states
+   in its own source: *"the crontab is generated from schedule/*.conf by
+   bin/sync-crontab.sh — never edit crontab by hand"* (`bin/scheduler:324`).
+   A `transplante` that wrote cron would be a hand-edit under a new name.
+
+2. **My "21 tracked files" was an overstated headline, and re-deriving it
+   moved the work.** `SCHED_ROOT` already exists and most scripts already
+   self-locate: `SCHED_ROOT="${SCHED_ROOT:-$(cd "$(dirname
+   "${BASH_SOURCE[0]}")/.." && pwd)}"` in `questions-lint.sh`,
+   `blockers-freshness-check.sh`, `check-witness-lint.sh`,
+   `rotation-lint.sh`, `token-usage.sh`. In `bin/scheduler` the literal at
+   line 38 is a **fallback** after self-location, not the primary path.
+   Only **7 files under `bin/`** still carry the literal — `morning-report.sh`,
+   `overnight-dev.sh`, `scheduler`, `scheduler-completion.bash`,
+   `scheduler-dev-cycle.sh`, `usage-gate.sh`, `usage-paced-runner.sh`. The
+   rest of the 21 were docs, BLOCKERS.md, DESIGN-NOTES.md, a conf template
+   and a test — real occurrences, but not engine work.
+   Milestone step 1 is therefore **smaller and better-defined than filed**:
+   finish an existing convention across 7 files, not introduce one across
+   21. The shims under `~/.local/bin` and the three symlinks are unaffected
+   by this correction and remain the larger surface.
+
+#### 2026-08-01 — `transplante` lives in gardien-garde; does gardien need cleaning first?
+
+**No, and the reason inverts the question.** Probed today.
+
+`lib/verb.sh` has **forked four ways** across the ecosystem:
+`gardien-garde` (md5 82b283ad, unique), `bibliothecaire-verbs` (714d8100),
+`senechal-verbs` (5526f7e2), and a shared d584420a across
+`realisateur-verbs`, `ecosim-verbs`, `secretaire-verbs`, `vim-arcade-verbs`.
+
+**gardien-garde's fork is the richest one in the ecosystem.** It is the
+only copy that defines `verb_refuse` (exit 7), and it alone carries
+`verb_gap_or_summon` and `verb_record_cost`. The shared runtime defines
+only `verb_die/gap/need_summon/broke/blind/parse/usage` — no refusal
+concept at all (its help line stops at 6, so it is at least honest about
+that; `grep -rn 'exit 7\|verb_refuse'` across the three d584420a repos
+returns nothing). That richness is the *result* of gardien's earlier
+self-wiring — commit `324e382`, "fulfilling: honour the flags this verb's
+own --help advertises."
+
+So gardien-garde is the correct home for `transplante` on the merits, not
+merely by adjacency to `fauche`. **`transplante` needs a refusal path
+specifically**: refusing to move a repository whose references it cannot
+resolve, or whose old copy is not yet recoverable elsewhere, is a
+won't-do-on-principle, not a gap — exit 7, with no escalation offered.
+Built in any of the d584420a repos it would have to invent that path or
+silently degrade the refusal into a `verb_die`. The earlier open question
+("realisateur-verbs is the obvious home, but gardien-garde owns `fauche`")
+is therefore **settled on a second, stronger ground**.
+
+**What does NOT need cleaning first.** garde's largest recorded gap is
+that `gardien.py` — the snapshot rotator, the actual point of the repo —
+has no verb surface, so `garde` wraps the scaffolding around gardien
+rather than gardien itself (GAPS.md, 2026-07-30). Real, but orthogonal:
+`transplante` does not touch `gardien.py`, and the two verbs share only
+the runtime. It stays garde's gap.
+
+**Two things that do need handling, both small.**
+- `gardien-garde` carries an untracked `garde.json.bak-20260730-205930` —
+  build debris by BUILD-DISCIPLINE's own row. Clear it before adding a
+  verb, so a dirty tree at the next exit is unambiguous.
+- **The fork itself is the real finding, and it is regulator-shaped.**
+  Per PRECIPITATION, a cross-project cluster is answered by naming the
+  missing regulator, not by promoting its members: **nothing owns
+  `lib/verb.sh`.** Each bashify pass copied it, and improvements now do
+  not propagate — a refusal path exists in exactly one repo out of seven.
+  Adding `transplante` to gardien-garde deepens that fork's value without
+  spreading it.
+
+**OPEN, for Zach — not decided here:** whether gardien-garde's runtime is
+backported to the other six (one owner, propagating fixes) or the forks
+are declared deliberate per-project runtimes. This is the kind of thing
+that gets answered once and then stops recurring; it is posed now because
+`transplante` is about to make gardien-garde's copy more clearly the good
+one.
+
+#### 2026-08-01 — `transplante` built, and what it cost bashify to allow it
+
+Zach directed the build (`/ideate` posture named and overridden explicitly).
+Answered mid-session: `transplante` lives in gardien-garde; the verb.sh forks
+stay separate; **bashify itself must assume many verbs live on a bashified
+branch — "perhaps this requires bashify amend bashify."** That was the right
+diagnosis and it is what the work became.
+
+**The near-miss.** `gardien-garde` is a git *worktree* of `gardien` on the
+`bashified` branch, and `bashify emit` opens with `worktree remove --force`
+plus `branch -D bashified`. `bashify emit gardien transplante ...` would have
+deleted `garde`, `fauche`, their pages and contracts, and the reap record,
+rebuilding from a `main` that never carried them. Nothing stopped it, because
+bashify still encoded one-verb-per-project. Checked before running: the branch
+was level with `origin/bashified` (ahead=0 behind=0), so it was recoverable —
+but that is a restore, not a plan.
+
+**Built, page first** (realisateur `e1ee033`, PR #4, now carrying two commits):
+`bashify coin` adds one verb to an existing branch, sourcing that *branch's*
+runtime rather than the skeleton's; `emit` refuses a populated branch at exit
+2 naming `coin` (not 7 — that already means "the page failed a row" here);
+`man/bashify.1` amended through `bashify amend`, all four gates passed.
+
+**Two guards were narrowed, and that is the part worth review.**
+1. `check.sh` row 8 (PURGE) now skips verbatim `.nf`/`.fi` blocks. Row 5
+   requires examples to reproduce the tool's real bytes, and bashify's own
+   stderr says "agent" because its subject is de-animation — a page could
+   satisfy row 5 or row 8, never both. Negative-tested: authored prose naming
+   a vendor still fails.
+2. `amend.sh` now treats a shell **comment** as prose. The backtick is in the
+   shell separator alphabet, so senechal's `ausculte` explaining itself scored
+   as a caller of bashify. The identical defect was already fixed for
+   markdown; it was never looked for in prose *inside code*.
+Both narrow a guard to make this work pass, which is the pattern this
+ecosystem distrusts on principle. Each states its assumption in the code and
+each was checked against a case that must still fail.
+
+**`transplante`** (gardien `46db25c`, 9/9 rows, installed via `installe`,
+senechal notified by `installe` itself). Shaped like `fauche` on purpose:
+`check` decides, `plan` writes a script to stdout for a human to run, and
+there is **no `apply`** — a utility that both judges a relocation safe and
+performs it has one failure mode with no survivors. It never writes a
+crontab; `plan` names `sync-crontab.sh` as the reader's step, per the
+correction earlier today.
+
+**Two findings from running it, neither fixed:**
+- **`scheduler` is not relocatable today.** `transplante check` refuses it:
+  **6 commits exist on no remote**, plus 21 referring files under
+  `~/.local/bin`. `wtul` passes clean, 0 references. So the move order should
+  invert from what was filed this morning — wtul is ready, scheduler is not.
+- **No verb's man page resolves anywhere in the ecosystem.** `man fauche`,
+  `man garde`, `man bashify`, `man range` all return "No manual entry", while
+  every one of those pages tells its reader `man <verb>` for the contract.
+  MANPATH carries no ecosystem entry. This is the advertised-but-not-delivered
+  shape the family keeps cataloguing, in the family's own front door.
+
+#### 2026-08-01 update — scheduler is now relocatable
+
+The 6 commits were not on `main` (level with origin throughout) but stranded
+on a local-only branch, **`paced/2026-07-27`**, absent from the remote and
+absent from `main` by content: `blockers-append.sh`, the `sweep-loop-common`
+rescue-ref before `reset --hard`, the `cmd_commit_file` conflict-marker
+refusal, `blockers-liveness-check`, and the paced-runner's dirty-schedule
+dispatch refusal. Five days stranded — the ecosystem's own recorded
+stranded-commit signature, found by the new verb rather than by a survey.
+
+Pushed as a new remote branch (`439256f`), additive, no force, `main`
+untouched and still level. Verified on the remote by `git ls-remote`, not by
+the local ahead-count.
+
+`transplante check` now returns **relocatable, exit 0**: CLEAN / PUSHED /
+WORKTREES none / FREE. The 21 referring files under `~/.local/bin` remain —
+a census, not a blocker, and the work `plan` hands to its reader.
+
+Both targets are now clear. The move itself is still a human's act: `plan`
+writes the script, nobody runs it unattended.
+
+#### 2026-08-01 — ecosim watches the move; scheduling it is BLOCKED on THE PLAY
+
+Built and committed (ecosim `cbc0a5b`, branch `sensor-bashification`):
+`ecosim.relocation`, six symbols, selftest 6/6 with 0 contract violations
+across the ecosystem's 43 declared symbols. It emits; realisateur carries the
+prose, per this morning's decision — ecosim's no-cross-repo-writes boundary
+was not touched.
+
+**Baseline captured before any move**, which was the whole point:
+`realisateur/archive/relocation-baselines/2026-08-01-premove.txt`. mandark
+reads six projects `AT_DECLARED`; scheduler shows 21 referring files, matching
+`transplante check`'s count derived independently by a different tool.
+
+**Rule 4 paid for itself immediately.** Probing dexter rather than assuming
+it: dexter answers ssh as `zach` in WSL2, has **no `~/scheduler` at all**, and
+its crontab was emptied 2026-07-29 for THE PLAY run 3. The sensor emits
+`BLIND_CONF_UNREADABLE` naming the path it searched, and the run exits 3 —
+BLIND beats OK, so mandark's health is never extended over dexter.
+
+**SCHEDULING IS DELIBERATELY NOT DONE, and this is the open item.**
+`ecosim-sensor-tick` exists on PATH (realisateur-owned wrapper) but **no
+crontab entry runs it**, so nothing runs the sensor unattended. It was not
+wired, for two reasons that both point the same way:
+1. mandark's crontab is empty **by design** — THE PLAY run 3's premise is
+   that nothing dispatches until scheduler brings dispatch back up itself
+   from `_runner.conf` via `sync-crontab.sh`. A hand-added line would falsify
+   a live experiment.
+2. The crontab is a generated file. Hand-editing it is the exact act this
+   week's `transplante` work refused to build in.
+
+Not a blocker for the move itself: `transplante` has no `apply`, so the move
+is a human act, and a manual reading before and after is coherent and
+sufficient. It IS a blocker for continuous drift detection.
+
+**For Zach — the fork, unanswered:** register the tick through
+`schedule/_runner.conf` so `sync-crontab.sh` generates it when dispatch
+returns (correct, but arrives only when THE PLAY concludes), or run the
+sensor by hand at each relocation and defer scheduling entirely.
+
+#### 2026-08-01 — scheduler moved, bashified; dispatch NOT restarted
+
+**The move is done and verified.** `~/Documents/Project Archive/scheduler` →
+`~/Documents/Projects/scheduler`. Judged by `transplante check`, script read
+from `transplante plan`, move performed by hand — the verb has no `apply` and
+did not acquire one.
+
+Repointed: 4 symlinks on PATH, 21 shim scripts, scheduler's own
+`focus/scheduler.md` and `questions/scheduler.md` (both dangled after the
+move), and live code in realisateur, ecosim, basheur, senechal,
+bibliothecaire-verbs. **Prose, journals, event logs and baselines deliberately
+still name the old path** — they record where it was, and a record edited to
+match the present has stopped being one. Two files under `~/.local/bin` also
+keep it on purpose and are inert: `scheduler.bak.2026-07-28` and
+`wtul-batch-loop.sh.pre-scheduler-migration.2026-07-27`; rewriting a backup
+falsifies it.
+
+Verified three ways: `tests/sched-root-witness.sh` 11/11, `ecosystem-survey`
+back to 6 registered projects from 0, and `ecosim.relocation` reporting
+`AT_DECLARED` at the new path. senechal told via `notify-senechal`.
+
+**Two defects the work found in the tools doing it.**
+1. `sed -i` **replaces a symlink with a regular file** rather than following
+   it. It detached five links, including `bashify` — whose target carries
+   another session's uncommitted work. The broken link is what protected that
+   work; had sed followed instead, it would have been silently edited. All
+   five restored.
+2. **A symlink names a path in its target, where grep cannot see it.** Both
+   `transplante` (gardien `6b46299`) and `ecosim.relocation` counted only file
+   contents and missed the four symlinks that put `scheduler` on PATH — the
+   most load-bearing references of the lot. Both now scan symlinks; census
+   went 21→25 and 19→23.
+
+**Bashified**: `dose` regenerated at the new root (its `LEGACY_ROOT` still
+named the old one), 25 scripts discovered, page 9/9, installed via `installe`.
+Caught mid-flight: `installe` first linked it into the **/tmp scratchpad
+worktree** `emit` builds in — an install that would break on cleanup. Given a
+durable checkout at `Projects/scheduler-dose`, on the `gardien-garde` pattern,
+and reinstalled.
+
+**Dispatch deliberately NOT restarted.** `dose sync-crontab` dry-run shows
+`--apply` would install the paced runner (*/5) and sweep tick (*/15),
+resuming unattended spending for six projects and ending THE PLAY run 3's
+premise. Zach's call, and his framing is the finding: **those routines are
+self-dev work, and ecosim is non-agentic maintenance — the two should not
+share a slot.**
+
+**Filed through the front door (scheduler `b569ece`): scheduler has no
+semantic category for non-agent work.** The crontab tag `scheduler:<name>:
+<KIND>` admits exactly RUNNER, SWEEP, BATCH, and all three are agent runs or
+dispatchers of them. The consequence is not cosmetic: they are gated by
+`USAGE_CEILING`, so a monitor wired through any of them stops reporting
+precisely when quota is exhausted — "quota exhausted" and "nothing to report"
+collapse into one silence, at the scheduling layer. Proposed a fourth kind,
+`MONITOR`, ungated because it never spends, with its exit code preserved as a
+finding rather than flattened to nonzero.
+
+Until scheduler acts on that, `ecosim-sensor run relocation` is hand-run —
+which is coherent, since the move it watches is a human act too.
+
+#### 2026-08-01 — `arme`: the vocabulary for work that never spends
+
+Zach's route, and it was the right one: **wire it from the inside with
+`bashify coin`** rather than patch `sync-crontab.sh` from outside. The verb
+ships inside scheduler, so scheduler is the one changing its own engine.
+
+`arme` (scheduler `bashified`, commits `f10a4d8` / `4d18033` / `9820a72`)
+arms non-agent recurring jobs from `schedule/_monitor.conf` into **its own
+crontab block**. `sync-crontab.sh` already reads a table before rewriting it
+so unmanaged lines survive; `arme` returns the courtesy. Two blocks, two
+owners, neither able to eat the other's work — which is a better answer than
+the `MONITOR` kind I proposed this morning (scheduler `b569ece`), because it
+needs no change to the engine at all. That proposal should now be read as
+superseded by this.
+
+It writes the crontab where `transplante` refuses to, and the line is
+**ownership**: the crontab belongs to scheduler and this verb ships inside
+scheduler. A tool may write what it owns.
+
+**The ecosim monitor is armed and verified running**:
+`*/30 * * * * ecosim-sensor-tick`, tick exercised by hand first (exit 3 =
+BLIND for dexter, the honest verdict; 7 relocation lines in the log).
+**THE PLAY run 3 is intact — the `scheduler-managed` block is still absent
+and no metered job was armed.**
+
+**Four defects the build found, each fixed rather than documented around.**
+1. `set -- $cron` without `set -f` **globbed the asterisks** against the
+   working directory, so a valid `*/30 * * * *` read as "not five fields".
+2. **The spend check passed two jobs that spend.** It followed literal paths;
+   the wrapper execs `scheduler-run`, which resolves its engine from
+   `BASH_SOURCE` at run time and names nothing a reader can follow. Static
+   reading cannot settle this, so it stopped pretending to: the verdicts are
+   now SPENDS / FREE (an obvious leaf) / **UNVERIFIED, which is not a pass**,
+   cleared only by a written attestation in the register's fifth field. A
+   command naming the model runner is refused whatever its attestation says —
+   negative-tested with a deliberately false attestation.
+3. `list` returned **1** whenever the last register line was blank or parked —
+   a status varying with the data while meaning nothing. Caught by
+   `bashify check` as an undocumented exit code.
+4. `apply` reported **"armed 5 monitor(s)" over one armed job**, counting this
+   verb's own subcommands after `list` and `jobs` were split. A count wrong in
+   a reassuring direction is worse than no count.
+
+**The page went through `bashify amend`**, all four gates passing, to state
+the whole six-verdict alphabet instead of three — the closure property the
+sensor contract makes a hard gate, applied to a man page. The gate refused
+the first draft for a modal ("would never fire").
+
+Also: `bashify check`'s SURFACE row reads `<verb> list` as the verb's
+**subcommand** enumeration, which is why `list` and `jobs` are separate here.
+Worth knowing before writing the next verb.
+
+#### 2026-08-01 — `wtul` moved, and the tree it entered has an owner
+
+Done in the ecosystem's own verbs, as Zach asked: `garde` → `transplante
+check` → `sonde` → `transplante plan` → move by hand → `fauche` → consign →
+`recense`/`installe` → `sonde` again.
+
+**What the move actually changes is which verb governs the repo.** `garde`
+guards bytes that exist nowhere else; `fauche` guards the claim that
+everything here exists somewhere else. `~/Documents/Projects` is excluded from
+garde's manifest **because that tree is fauche's** — so moving a repo in is a
+declaration that it is remote-recoverable, and the declaration has a price.
+
+Confirmed with the estate's own instrument rather than by reading the
+manifest: `garde <path>` on `~/Documents/wtul` was **silent (fully covered)**;
+on `Projects/scheduler` it named **24 uncovered paths**. Scheduler was
+declared remote-recoverable this morning without paying. **Both debts are now
+paid:** 14 documents consigned, wtul's 2 and scheduler's 12.
+
+`fauche check wtul` now reads **REMOVABLE**. Every one of wtul's
+garde-uncovered paths is git-tracked, and its 6 ignored entries are
+`__pycache__`, `.pytest_cache`, a log and local settings — nothing
+irreplaceable. The declaration holds on evidence.
+
+**The sensor was widened before the move, not after.** It derived subjects
+from `schedule/*.conf` alone, so it saw only what dispatches; wtul was
+invisible to it entirely while the six it could read were reported with full
+confidence. Subjects now come from the registry **and** the tree fauche
+governs — borrowing the ecosystem's existing answer to "which repositories
+live here" rather than minting a second one. **6 subjects → 20.** wtul went
+from absent in the baseline to `AT_DECLARED` after (ecosim `2b4c1ba`;
+readings in `archive/relocation-baselines/`).
+
+**Two defects found by using the tools, both fixed.**
+1. **`fauche` reported every repository's own primary worktree as "a worktree
+   outside this repo"** (gardien `0dd64f1`). `git worktree list` prints
+   absolute paths and the self-exclusion compared them to the caller's
+   argument — so `fauche check wtul`, exactly the documented form, never
+   matched. The condition fired universally and blocked every candidate on a
+   reason that was never true. Invisible from `fauche list`, which builds
+   absolute paths itself.
+2. **`fonde consign` still refuses as "no mechanism yet" and demands
+   `--summon`** — but `basheur list` reports `consign-prose` **MECHANIZED**,
+   with a working impl. fonde is metering work that is now free. Not fixed
+   here (bibliothecaire-verbs is not this session's tree); the 14 documents
+   went through `basheur run consign-prose` directly, free. **Filed as a
+   finding for whoever owns fonde.**
+
+**Two corrections to my own plan**, both from reading before acting:
+- I listed two "code references that must follow" the move. Neither should:
+  the ecosim one is a **fixture literal** that deliberately names a
+  nonexistent path (that is what makes `REFS_ORPHANED` fire), and the basheur
+  one is a **run record** noting wtul was found in a third location.
+  Rewriting either would break a test or falsify a finding.
+- `garde-coverage`'s exit codes are grep's, not the shell's: **0 = uncovered
+  paths found, 1 = everything covered.** Deliberate and commented; I nearly
+  reported it as a defect.
+
+**Unchanged on purpose:** wtul is still unregistered and still parked on
+dexter behind a missing `github-wtul-deploy` key — a credential gap, not a
+directory. Dispatch is still down; the crontab still holds one line, `arme`'s
+monitor. `installe audit` reports **0 broken** entries after the move.
+
+**Still open:** `fauche check scheduler` now names three `paced/*` branches
+that exist only on this host. `transplante` called scheduler PUSHED because
+every *commit* is on some remote; `fauche` asks whether each *branch* has its
+own remote ref. Both true, different questions — and the second is unanswered.
+
+### 2026-08-01 (/cloture) — next phase queued: bashify scheduler fully, then reap
+
+Zach's framing for what follows: **scheduler bashification, and reaping
+agent-shaped material into the archive and off mandark.** Filed here rather
+than described, so a run that cannot see this conversation can pick it up.
+
+- **[batch] Finish scheduler's bashification along its domain seams.**
+  `dose` carries 25 discovered subcommands welded from four domains
+  (`RESEARCH-VERB-ECOSYSTEM-20260730.md` named the seams: dispatch, reporting,
+  linting, usage-gating). `arme` split the first seam off today — non-agent
+  work — and proved the route: `bashify coin <project> <verb>` writes onto the
+  existing branch without touching its neighbours, sourcing that branch's own
+  runtime. Remaining seams are candidates, not a decree; each wants a page at
+  9/9 and an `installe verb` before the next is coined. Reader: whoever holds
+  scheduler's bashification, or the next interactive pass.
+
+- **[batch] Reap agent-shaped material into the archive and off mandark.**
+  Two immediate candidates, both already named by `fauche list`:
+  `realisateur-research-ecosim` (**76 unconsigned prose files**) and
+  `realisateur-staging-silence-audit` (**69**). Both are worktrees of
+  realisateur carrying research residue. The order is fixed by doctrine and by
+  today's evidence: **consign first, reap second** — `basheur run
+  consign-prose <vault> <paths>` is MECHANIZED and free, so this costs nothing
+  but time. `fauche` will not call either REMOVABLE until the prose has a vault
+  note, which is the guard working. Reader: a `/nightly-batch` pass or the
+  next interactive session.
+
+- **Precondition for that reap, unresolved:** `fauche check scheduler` names
+  three `paced/*` branches that exist only on this host and one 8 commits
+  ahead of its own upstream. `transplante` called scheduler PUSHED because
+  every *commit* is on some remote; `fauche` asks whether each *branch* has
+  its own remote ref. Both true, different questions. Nothing off mandark
+  should be reaped while a branch exists only here.
+
+**Two findings filed for their owners, neither fixed here.**
+- `fonde consign` still refuses as "no mechanism yet" and demands `--summon`,
+  while `basheur list` reports `consign-prose` **MECHANIZED** with a working
+  impl. fonde meters work that is now free. Owner: bibliothecaire-verbs.
+- **Creating `briefs/` in the bibliothecaire repo disables the vault
+  fallback.** The reap made `BIBLIOTHECAIRE_BRIEFS` configuration with a
+  fallback used only *when the directory is absent*; authoring one brief there
+  re-created it, and `--require-briefs` reported all 14 concepts missing while
+  reading a directory holding one file. Triggered and repaired today
+  (bibliothecaire `43fac6d`); the shape is worth a guard, not just a memory.
+
+#### 2026-08-01 — doctrine settled and propagated: a host-only branch is a blocker
+
+Zach's answer to the question filed at scheduler `8efc617`. Propagated as
+**guards, not prose** — this repo's own rule, applied to its own doctrine.
+
+**The survey came first, and it made the job small.** Exactly **one live code
+site** still used the weaker commit-level test (`rev-list --branches --not
+--remotes`, in `transplante`); every other hit for that idiom was prose or a
+record. `fauche` already asked correctly. So propagation was two edits, not a
+sweep.
+
+- `transplante` (gardien `68a527b`) — enumerates `refs/heads/`, asks about
+  `origin/<branch>`. Now agrees with `fauche` exactly on the same five
+  branches.
+- `closeout-lint` (realisateur `9d7b279`) — **read `HEAD` alone**, so a
+  host-only branch was invisible unless checked out. scheduler carried three
+  through this entire session and no lint mentioned them; only `fauche` saw
+  them. FLAGs went **2 → 7**.
+- `BUILD-DISCIPLINE.md` (same commit) — the settled definition with the exact
+  test, and why it lives in three places rather than one: each answers it for
+  a different act (may it be removed / moved / did this session strand
+  anything).
+
+**The first attempt at the fix was wrong in the way it was fixing.** It used
+`@{u}`, which asks whether upstream *tracking* is configured — a branch pushed
+by explicit refspec has none and is still on origin. It counted 7 where fauche
+counted 5, and the two extras were branches this session had pushed itself.
+**The test is the remote ref, never the tracking config.** Recorded in the
+doctrine section so the next propagation does not repeat it.
+
+**Consequence, and it is scheduler's to clear:** nothing may be reaped off
+mandark until `bootstrap/stamp-2026-07-29` (+8), `paced/2026-07-26` (+3), and
+`paced/2026-07-24` / `-25` / `-28` (host-only) are pushed or deliberately
+deleted. Answer filed to scheduler at `98b3386`. This is now a hard
+precondition on the reap phase queued at `02e2c98`, not a caveat.
+
+#### 2026-08-01 — tree cleaned, one worktree reaped, a third verb cut from `dose`
+
+**Scheduler's tree: four of five blockers cleared.** `paced/2026-07-24`,
+`-25`, `-28` had **no commits absent from a remote** — only the *name* was
+host-only, so pushing was pure preservation. `paced/2026-07-26` had 3 real
+unpushed commits. All four pushed.
+
+**The fifth is genuinely yours.** `bootstrap/stamp-2026-07-29` is diverged, 8
+ahead and 2 behind, and `git cherry` shows one of the two remote commits
+(`bf07983`) is **unique by content** — a force-push destroys real work.
+Resolving it needs a merge or a rebase, both of which this session is barred
+from. Until it is cleared, the settled doctrine blocks reaping scheduler off
+mandark.
+
+**Reaped: `realisateur-research-ecosim`, 14M off mandark.** Its 76 prose files
+were consigned first (vault `305f242`), its branch `research/ecosystem-
+cybernetics` verified on origin and level, then `git worktree remove`.
+Branch and origin ref both intact afterwards.
+
+**`fauche` is the wrong instrument for a worktree, and this is worth knowing
+before the next reap.** These worktrees list each other as external
+dependents, so each permanently blocks the others — none can ever be
+REMOVABLE. The correct act is `git worktree remove`, which git guards itself.
+`fauche`'s script correctly refused and deleted nothing; the verb was doing
+its job on a subject it was not built for.
+
+**NOT reaped: `realisateur-staging-silence-audit`.** It carries **2
+uncommitted files of another session's work** — wiring `silence-audit` in as
+`hygiene-lint`'s check 12, and cutting 392 lines from `silence-audit.sh`.
+Removing it destroys that. This is exactly what fauche's dirty-tree condition
+guards, and it is left alone deliberately.
+
+**Bashified: `relis`** (scheduler-dose `f9dba90`, 9/9, installed) — the
+linting seam cut out of `dose`. Five checks that each read a file this
+ecosystem writes about itself. It wraps and never reimplements. `all` runs
+every check and **the worst outcome wins, not the last**, with GAP outranking
+findings.
+
+Three defects the build found: findings passed through as the wrapped script's
+own 1 or 2, colliding with "the caller is wrong"; **1 turned out to be
+reserved** by the shared vocabulary — `bashify check` said so about this very
+page — so findings are now **7**, the code `bashify check` itself uses when a
+tested page fails a row; and the GAP verdict was a plain assignment, so a
+later finding silently demoted 4 to 1 and the missing check vanished behind a
+check that ran. Negative-tested with an empty legacy root.
+
+**Still queued:** the reporting seam (5 subcommands) and usage-gating seam (3)
+remain welded into `dose`. The route is proven three times now.

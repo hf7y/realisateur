@@ -69,7 +69,7 @@ only what it touches. Also read this repo's own
 `.scheduler/FOCUS.md`/`QUESTIONS.md`.
 
 **Single-project (`$ARGUMENTS` given):** run
-`"/home/zach/Documents/Project Archive/scheduler/bin/scheduler" status <project>`
+`"/home/zach/Documents/Projects/scheduler/bin/scheduler" status <project>`
 directly instead of the full survey -- same offline-first data, scoped
 to just that project. Read that project's own FOCUS.md and
 QUESTIONS.md in full -- `.scheduler/` for migrated projects, legacy

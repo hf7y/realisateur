@@ -1,0 +1,14 @@
+# ecosim.relocation -- PRE-MOVE BASELINE
+# captured 2026-08-01 via: ecosim-sensor run relocation
+# before any relocation of scheduler or wtul. Exit 3 = BLIND (dexter), which
+# beats OK: dexter's state is unknown, not fine.
+
+OK ecosim.relocation.AT_DECLARED subject=ecosim host=mandark path=/home/zach/Documents/Projects/ecosim refs=0 | /home/zach/Documents/Projects/ecosim present; 0 file(s) name it
+OK ecosim.relocation.AT_DECLARED subject=gardien host=mandark path=/home/zach/Documents/Projects/gardien refs=0 | /home/zach/Documents/Projects/gardien present; 0 file(s) name it
+OK ecosim.relocation.AT_DECLARED subject=realisateur host=mandark path=/home/zach/Documents/Projects/realisateur refs=9 | /home/zach/Documents/Projects/realisateur present; 9 file(s) name it
+OK ecosim.relocation.AT_DECLARED subject=scheduler host=mandark path="/home/zach/Documents/Project Archive/scheduler" refs=21 | /home/zach/Documents/Project Archive/scheduler present; 21 file(s) name it
+OK ecosim.relocation.AT_DECLARED subject=senechal host=mandark path=/home/zach/Documents/Projects/senechal refs=0 | /home/zach/Documents/Projects/senechal present; 0 file(s) name it
+OK ecosim.relocation.AT_DECLARED subject=vim-arcade host=mandark path=/home/zach/Documents/Projects/vim-arcade refs=0 | /home/zach/Documents/Projects/vim-arcade present; 0 file(s) name it
+BLIND ecosim.relocation.BLIND_CONF_UNREADABLE subject=dexter host=dexter | reachable, but no registry: ~/scheduler/schedule/*.conf declares nothing on dexter
+
+# exit=3 (BLIND beats CRIT/OK per SENSOR-CONTRACT v1)

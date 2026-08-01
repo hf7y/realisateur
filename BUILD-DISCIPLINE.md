@@ -506,6 +506,50 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     system and its observers will see it.
 
 
+20. **A census is blind to a class it cannot enumerate, and its number
+    does not get quieter.** A check counts its subject by one method —
+    `grep` for a string, a glob over a directory, a read of one config.
+    Some part of the domain is not representable that way. The count
+    still prints, the exit code is still zero, and nothing distinguishes
+    *"the domain is empty"* from *"the domain was not enumerable"*.
+
+    This is Ashby's transducer failure applied to instruments rather than
+    messages: two different worlds reach the same output, and the decoder
+    that would tell them apart does not exist. See the
+    `census-blindness` brief in the vault for the sourced argument.
+
+    Four instances on 2026-08-01, none found by review and all found by
+    running the tool against a real case:
+    - **A symlink names its path in its target, which is not file
+      content.** `transplante` and `ecosim.relocation` both counted
+      references with `grep` and missed the four symlinks that put
+      `scheduler` itself on PATH — the most load-bearing references in
+      the set.
+    - **Static reading cannot establish a negative capability.**
+      `arme check` passed two jobs that spend, because the wrapper
+      `exec`s a script that resolves its engine at run time and names
+      nothing a reader can follow.
+    - **A self-exclusion compared across two representations excludes
+      nothing.** `fauche` filtered its own worktree by string match,
+      comparing git's absolute output against a relative argument, so
+      every repository reported its own worktree as foreign.
+    - **A count of the wrong set.** `arme apply` reported five armed
+      monitors over one, counting subcommands after two lists were split.
+
+    Distinct from pattern 14 (a sensor reporting a negative it never
+    checked for): there the check was never run. Here it ran correctly,
+    over a domain smaller than the one it claims. Distinct from pattern 6
+    for the same reason — this is not a silent failure, it is a confident
+    success about less than you think.
+
+    **The rule:** a census never reports a bare number. It names the
+    method it used and the domain it read, so a reader can see what was
+    not looked at. This is a discipline that makes the failure *legible
+    after the fact* — it does not prevent it, and the brief says so.
+    Prevention comes from the second half: **the negative test for a
+    census is an instance of the class it cannot see.** Write one.
+
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a
@@ -589,6 +633,35 @@ boot-path line) over a reminder. Reminders decay; guards fail loud.
   A dirty tree at exit is a failed run, not a handoff — an uncommitted
   change to a live script is indistinguishable from an abandoned one, and
   the next autocommit may adopt it under someone else's name.
+
+### Settled definition: "pushed" (2026-08-01, Zach)
+
+**A host-only branch is a blocker.** A repository is not recoverable
+elsewhere while any branch of it exists only on this host — commit-level
+recoverability is not sufficient, because a branch is a name someone
+chose to keep, and losing the name loses the reason those commits were
+separated.
+
+The test is the remote **ref**, never the tracking config:
+
+```sh
+git for-each-ref --format='%(refname:short)' refs/heads/ | while read -r b; do
+  git rev-parse --verify -q "origin/$b" >/dev/null || echo "$b exists only here"
+  [ "$(git rev-list --count "origin/$b..$b")" = 0 ] || echo "$b is ahead"
+done
+```
+
+`@{u}` is the wrong question: a branch pushed by explicit refspec
+(`git push origin b:b`) has no upstream configured and is still safely on
+origin. The first attempt at propagating this doctrine used `@{u}` and
+over-reported by two — failing in exactly the way pattern 20 describes,
+while implementing pattern 20's own remedy.
+
+Enforced in three places, deliberately not one, because each answers it
+for a different act: `fauche` (may this repository be removed),
+`transplante` (may it be moved), `closeout-lint` (did this session
+leave anything stranded). Any new instrument that asks "is this pushed"
+uses the block above.
 
 ## The baseline (restamped into every project's CLAUDE.md)
 

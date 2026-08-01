@@ -53,7 +53,7 @@ CLI_POSITIONAL=any
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Project Archive/scheduler}"
+SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Projects/scheduler}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FOCUS_MD="${FOCUS_MD:-$REPO_ROOT/.scheduler/FOCUS.md}"
 BLOCKERS_MD="${BLOCKERS_MD:-$SCHED_ROOT/BLOCKERS.md}"
@@ -137,18 +137,33 @@ while [ "$i" -lt "${#projects[@]}" ]; do
 
   # unpushed: "verified where the consumer reads it" -- the nightly clones
   # the REF, not this working tree.
-  br="$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null)"
-  if git -C "$repo" rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
-    ahead="$(git -C "$repo" rev-list --count '@{u}..HEAD' 2>/dev/null)"
-    if [ "${ahead:-0}" -gt 0 ]; then
-      echo "    FLAG [unpushed] $name: $ahead commit(s) on $br not pushed to upstream"
-      git -C "$repo" log --oneline '@{u}..HEAD' 2>/dev/null | head -5 | sed 's/^/      /'
+  # EVERY BRANCH, not just the checked-out one. This read HEAD alone until
+  # 2026-08-01, so a branch that exists only on this host was invisible unless
+  # it happened to be checked out -- scheduler carried three such `paced/*`
+  # branches through an entire session and no lint mentioned them. `fauche`
+  # caught them, because it enumerates refs/heads/ rather than HEAD. Same
+  # defect shape as BUILD-DISCIPLINE pattern 20: the census read one branch
+  # and the report named the repository.
+  #
+  # A HOST-ONLY BRANCH IS A BLOCKER (Zach, 2026-08-01). The test is the remote
+  # REF, never the tracking config: a branch pushed by explicit refspec has no
+  # upstream configured and is still safely on origin.
+  while IFS= read -r br; do
+    [ -n "$br" ] || continue
+    if git -C "$repo" rev-parse --verify -q "origin/$br" >/dev/null 2>&1; then
+      ahead="$(git -C "$repo" rev-list --count "origin/$br..$br" 2>/dev/null)"
+      if [ "${ahead:-0}" -gt 0 ]; then
+        echo "    FLAG [unpushed] $name: $ahead commit(s) on $br not on origin/$br"
+        git -C "$repo" log --oneline "origin/$br..$br" 2>/dev/null | head -5 | sed 's/^/      /'
+        flags=$((flags+1))
+      fi
+    else
+      echo "    FLAG [host-only-branch] $name: branch '$br' has no origin/$br -- it exists only on this host"
       flags=$((flags+1))
     fi
-  else
-    echo "    FLAG [no-upstream] $name: branch $br tracks nothing -- commits reach no consumer"
-    flags=$((flags+1))
-  fi
+  done <<EOF
+$(git -C "$repo" for-each-ref --format='%(refname:short)' refs/heads/ 2>/dev/null)
+EOF
   i=$i
 done
 [ "$touched" -eq 0 ] && echo "  (no registered repo has a commit younger than ${HOURS}h)"

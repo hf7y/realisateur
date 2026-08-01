@@ -46,7 +46,7 @@ CLI_POSITIONAL=any
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
+SCHED_ROOT="/home/zach/Documents/Projects/scheduler"
 
 # --- discover registered projects (same loop as ecosystem-survey.sh) --------
 want=("$@")

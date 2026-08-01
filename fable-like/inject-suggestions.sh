@@ -32,7 +32,7 @@ DOCS="$HOME/Documents"
 
 # project|path-to-real-FOCUS.md (as of 2026-07-25; update if normalization lands)
 TARGETS=$(cat <<'EOF'
-scheduler|Project Archive/scheduler/.scheduler/FOCUS.md
+scheduler|Projects/scheduler/.scheduler/FOCUS.md
 realisateur|Projects/realisateur/.scheduler/FOCUS.md
 crt|Projects/crt/.claude/FOCUS.md
 chezz|Project Archive/chezz/.scheduler/FOCUS.md
