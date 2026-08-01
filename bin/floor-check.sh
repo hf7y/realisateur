@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+# floor-check.sh -- is THE FLOOR met? Nine criteria, probed live, no AI.
+#
+# THE FLOOR (realisateur/THE-FLOOR.md) is the ecosystem-scoped stability
+# milestone: nothing runs from a path that no longer exists, every repo's
+# history exists in at least two places, and exactly one cron line dispatches
+# agents, with one project enabled, whose overnight run leaves a clean tree
+# and a commit on a branch.
+#
+# This script exists because THE FLOOR would otherwise be prose, and this
+# ecosystem's recorded pathology is prose outliving the thing it describes.
+# Every criterion here is a probe of live state, never a quotation of a
+# document. Run it to answer "what is between us and the floor" without
+# asking anyone.
+#
+# usage:
+#   bin/floor-check.sh              report every criterion, exit 1 if any unmet
+#   bin/floor-check.sh --quiet      print only the verdict line
+#   bin/floor-check.sh --restore    ALSO run the real restore test for 2.2
+#                                   (pulls a file back off the backup host and
+#                                   diffs it -- costs a few seconds and one ssh)
+#
+# exit: 0 every criterion met   1 one or more unmet   2 usage error
+#
+# 2.2 deserves a note. "The backup ran" is not the criterion; "a file came
+# back" is. Without --restore this script reports 2.2 as UNPROVEN rather than
+# MET, because a copy verified by md5 at write time says nothing about whether
+# the destination can be read back. THE-UNWIRING.md section 5 calls backup
+# failure the one unrecoverable failure mode, so it is the one box that must
+# not be closed by assertion.
+set -uo pipefail
+
+QUIET=0; DO_RESTORE=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --quiet|-q) QUIET=1 ;;
+    --restore)  DO_RESTORE=1 ;;
+    -h|--help)  sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) printf 'floor-check: unknown flag: %s\n' "$1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+PROJECTS="${PROJECTS_ROOT:-$HOME/Documents/Projects}"
+SCHED="$PROJECTS/scheduler"
+unmet=0; unproven=0
+say() { [ "$QUIET" = 1 ] || printf '%s\n' "$*"; }
+met()      { say "  MET       $1"; }
+notmet()   { say "  NOT MET   $1"; [ -n "${2:-}" ] && say "            -> $2"; unmet=$((unmet+1)); }
+unprov()   { say "  UNPROVEN  $1"; [ -n "${2:-}" ] && say "            -> $2"; unproven=$((unproven+1)); }
+
+say "THE FLOOR -- $(date '+%F %H:%M') on $(hostname -s)"
+say ""
+say "GATE 1 -- NO GHOSTS"
+
+# 1.1  Nothing enabled points at a path that does not exist.
+d_shim=0
+for f in "$HOME"/.local/bin/*; do
+  [ -L "$f" ] && [ ! -e "$f" ] && { d_shim=$((d_shim+1)); say "            dangling shim: $f"; }
+done
+d_unit="$(systemctl --user list-units --state=failed --no-legend 2>/dev/null | grep -c . || true)"
+# Every crontab command must resolve. Field 6 onward is the command; take $6.
+d_cron=0
+while read -r line; do
+  cmd="$(printf '%s' "$line" | awk '{for(i=6;i<=NF;i++){if($i ~ /^\//){print $i; exit}}}')"
+  [ -n "$cmd" ] && [ ! -e "$cmd" ] && { d_cron=$((d_cron+1)); say "            cron path missing: $cmd"; }
+done < <(crontab -l 2>/dev/null | grep -vE '^\s*(#|$)')
+if [ "$d_shim" = 0 ] && [ "$d_unit" = 0 ] && [ "$d_cron" = 0 ]; then
+  met "1.1 no enabled unit, shim or cron line names a missing path"
+else
+  notmet "1.1 no enabled unit, shim or cron line names a missing path" \
+         "$d_shim dangling shim(s), $d_unit failed unit(s), $d_cron dead cron path(s)"
+fi
+
+# 1.2  Exactly one cron line dispatches agents. The sensor tick and the sweep
+# tick are not agent dispatch: the first is an offline sensor, the second is
+# pure git/bash. Counting "all cron lines" would fail for the wrong reason.
+disp="$(crontab -l 2>/dev/null | grep -vE '^\s*(#|$)' | grep -c 'usage-paced-runner' || true)"
+other="$(crontab -l 2>/dev/null | grep -vE '^\s*(#|$)' \
+         | grep -vE 'usage-paced-runner|ecosim-sensor-tick|scheduler sweep' | grep -c . || true)"
+if [ "$disp" = 1 ] && [ "$other" = 0 ]; then
+  met "1.2 exactly one agent-dispatching cron line, no unaccounted lines"
+else
+  notmet "1.2 exactly one agent-dispatching cron line, no unaccounted lines" \
+         "dispatchers=$disp unaccounted=$other"
+fi
+
+# 1.3  Every guard the propagated checklist names resolves and fails loud.
+if [ -x "$SCHED/../realisateur/bin/install-shims.sh" ] || [ -x "$PROJECTS/realisateur/bin/install-shims.sh" ]; then
+  if bash "$PROJECTS/realisateur/bin/install-shims.sh" --check >/dev/null 2>&1; then
+    met "1.3 shims and user commands in sync with source"
+  else
+    notmet "1.3 shims and user commands in sync with source" "run: realisateur/bin/install-shims.sh"
+  fi
+else
+  notmet "1.3 shims and user commands in sync with source" "install-shims.sh not found"
+fi
+
+say ""
+say "GATE 2 -- TWO COPIES"
+
+# 2.1  Every repo has a reachable non-local origin, is 0-ahead of it, and clean.
+# A DIRTY tree is deliberately NOT a failure here. THE FLOOR gate 2 is about
+# recoverability -- does this history exist anywhere but this disk -- and
+# uncommitted edits are work in progress, which is a moving target by design
+# and is somebody's active session, not a fault. (Checked 2026-08-01 against
+# dcp-gate-site, a project created that afternoon and still being edited.)
+# The agent-side version of that concern is enforced per-run by the
+# SubagentStop dirty-tree hook, not here.
+#
+# COMMITTED-BUT-UNPUSHED *is* a failure: that is exactly the state basheur was
+# in on 2026-08-01, when two commits existed in precisely one directory on one
+# 91%-full disk, and the repo had no GitHub remote at all.
+bad=""; dirty_info=""
+for d in "$PROJECTS"/*/; do
+  [ -d "$d/.git" ] || continue
+  n="$(basename "$d")"
+  u="$(git -C "$d" remote get-url origin 2>/dev/null)" || { bad="$bad $n(no-origin)"; continue; }
+  case "$u" in /*) bad="$bad $n(local-only)"; continue ;; esac
+  b="$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+  a="$(git -C "$d" rev-list --count "origin/$b..$b" 2>/dev/null || echo 0)"
+  [ "$a" != 0 ] && bad="$bad $n(+$a unpushed)"
+  [ -n "$(git -C "$d" status --porcelain 2>/dev/null)" ] && dirty_info="$dirty_info $n"
+done
+if [ -z "$bad" ]; then met "2.1 every repo has a non-local origin, nothing unpushed"
+else notmet "2.1 every repo has a non-local origin, nothing unpushed" "$bad"; fi
+[ -n "$dirty_info" ] && say "            (note, not a failure -- work in progress:$dirty_info)"
+
+# 2.2  The backup completes AND a file restores. See the header note.
+#
+# `garde media list` exits 6 when no destination is reachable, and prints
+# "BLIND: ... the REMOTE column above is unknown, not empty". Its PENDING rows
+# then mean "I could not look", NOT "there is no copy". An earlier version of
+# this script counted those rows and reported 15 sets uncovered while the
+# backup was in fact intact -- collapsing could-not-look into nothing-there,
+# which is the precise failure ecosim exists to name and silence-audit exists
+# to catch. Check the exit code BEFORE reading the rows.
+gl="$(garde media list 2>/dev/null)"; grc=$?
+if [ "$grc" = 6 ]; then
+  unprov "2.2 backup coverage is UNKNOWN -- garde is BLIND (exit 6)" \
+         "no destination reachable; check garde.json host against \`ip -4 addr\` -- a hardcoded LAN IP goes stale when the subnet changes"
+elif [ "$grc" != 0 ]; then
+  unprov "2.2 backup coverage is UNKNOWN" "garde media list exited $grc"
+elif [ "$(printf '%s' "$gl" | grep -c 'PENDING')" != 0 ]; then
+  notmet "2.2 backup covers every set" \
+         "$(printf '%s' "$gl" | grep -c 'PENDING') set(s) PENDING -- run: garde media run --all-pending"
+elif [ "$DO_RESTORE" = 1 ]; then
+  # Pull one real file back off the destination and diff it. Chosen from a set
+  # that is small and stable; the point is the round trip, not the file.
+  src="$HOME/Documents/Projects/realisateur/README.md"
+  rem="/mnt/d/gardien-media/mandark/Documents/Projects/realisateur/README.md"
+  tmp="$(mktemp)"
+  if timeout 60 scp -q -P 2223 "dexter:$rem" "$tmp" 2>/dev/null && diff -q "$src" "$tmp" >/dev/null 2>&1; then
+    met "2.2 backup complete AND a file restored and matched"
+  else
+    notmet "2.2 backup complete AND a file restored and matched" \
+           "restore of $rem failed or differed"
+  fi
+  rm -f "$tmp"
+else
+  unprov "2.2 backup complete; RESTORE NOT EXERCISED" \
+         "copy+md5 is not restore. re-run with --restore"
+fi
+
+# 2.3  The repos are actually inside a backup set.
+if grep -q '"Projects"' "$PROJECTS/gardien-garde/garde.json" 2>/dev/null; then
+  met "2.3 ~/Documents/Projects is a named backup set"
+else
+  notmet "2.3 ~/Documents/Projects is a named backup set" "no Projects set in gardien-garde/garde.json"
+fi
+
+say ""
+say "GATE 3 -- ONE LOOP, WATCHED"
+
+# 3.1  Generated crontab, exactly one enabled participant.
+en="$(grep -cE '^[a-z][a-z-]*\|1\|' "$SCHED/schedule/_paced.conf" 2>/dev/null || echo 0)"
+frz=0; [ -e "$SCHED/schedule/FREEZE" ] && frz=1
+if [ "$en" = 1 ] && [ "$disp" = 1 ] && [ "$frz" = 0 ]; then
+  met "3.1 one enabled participant, dispatcher installed, not frozen"
+else
+  notmet "3.1 one enabled participant, dispatcher installed, not frozen" \
+         "enabled=$en dispatcher=$disp FREEZE_present=$frz"
+fi
+
+# 3.2  The harness refuses a dirty exit and a push to main.
+S="$HOME/.claude/settings.json"
+hook="$(python3 -c "import json;d=json.load(open('$S'));print(1 if d.get('hooks',{}).get('SubagentStop') else 0)" 2>/dev/null || echo 0)"
+deny="$(python3 -c "import json;d=json.load(open('$S'));print(len(d.get('permissions',{}).get('deny',[])))" 2>/dev/null || echo 0)"
+hookx=0; [ -x "$HOME/.claude/hooks/subagent-closeout.sh" ] && hookx=1
+if [ "$hook" = 1 ] && [ "$deny" -ge 1 ] && [ "$hookx" = 1 ]; then
+  met "3.2 SubagentStop guard live and $deny deny rule(s) installed"
+else
+  notmet "3.2 harness refuses dirty exits and main pushes" \
+         "SubagentStop=$hook deny_rules=$deny hook_executable=$hookx"
+fi
+
+# 3.3  One overnight run landed on a BRANCH, left the tree clean, broke nothing.
+# The runner's own log is the witness that a tick actually dispatched -- an
+# untouched log means the loop has not run yet, which is not the same as a
+# loop that ran and failed. Report those differently.
+RL="$HOME/.local/share/scheduler-paced-runner/run.log"
+if [ ! -f "$RL" ]; then
+  unprov "3.3 one clean run has completed" "no runner log yet"
+elif [ -z "$(find "$RL" -newermt '-18 hours' 2>/dev/null)" ]; then
+  unprov "3.3 one clean run has completed" \
+         "runner has not ticked in 18h (last $(date -r "$RL" '+%F %H:%M')) -- the loop has not run yet"
+else
+  gb="$(git -C "$PROJECTS/gardien" for-each-ref --format='%(refname:short) %(committerdate:unix)' refs/heads 2>/dev/null \
+        | awk -v c="$(date -d '-18 hours' +%s 2>/dev/null || echo 0)" '$1!="main" && $2>c {print $1}' | head -1)"
+  dirty="$(git -C "$PROJECTS/gardien" status --porcelain 2>/dev/null | grep -c . || true)"
+  fail="$(systemctl --user list-units --state=failed --no-legend 2>/dev/null | grep -c . || true)"
+  if [ -n "$gb" ] && [ "$dirty" = 0 ] && [ "$fail" = 0 ]; then
+    met "3.3 a run landed on branch '$gb', tree clean, 0 failed units"
+  else
+    notmet "3.3 one clean run has completed" \
+           "branch='${gb:-none}' dirty=$dirty failed_units=$fail"
+  fi
+fi
+
+say ""
+if [ "$unmet" = 0 ] && [ "$unproven" = 0 ]; then
+  say "THE FLOOR IS MET -- 9/9."
+  exit 0
+fi
+say "NOT MET -- $unmet unmet, $unproven unproven."
+[ "$unproven" != 0 ] && say "(unproven is not met: a criterion nobody has exercised is a claim, not a check.)"
+exit 1
