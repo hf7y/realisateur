@@ -2897,3 +2897,46 @@ scheduler writes these; retire them there, not here") and
 `chezz-bug-sweep-precheck.sh` (**unknown** — "a human put it here; installe
 will not guess"). All three are inert, since chezz is unregistered. Retiring
 them is scheduler's act and a human's, not this session's.
+
+#### 2026-08-01 — chezz's sweep paused in the file, and the cause found
+
+**The cause was not the API key.** Pulled from the run annotations rather than
+guessed:
+
+    Could not fetch an OIDC token. Did you remember to add
+    `id-token: write` to your workflow permissions?
+
+`anthropics/claude-code-action@v1` authenticates by OIDC; the workflow grants
+only `contents: write`. **The fix is one line.** `ANTHROPIC_API_KEY` is present
+and was never at fault — worth stating, because "the key expired" is the first
+guess and it is wrong.
+
+**Paused in the file, not from the Actions tab** (chezz `95e98f2`). A workflow
+switched off in GitHub's UI still reads as *scheduled* to anyone opening the
+YAML — that is pattern 19, a bypass the system cannot see. The cron is
+commented out with its reason inline, so `git log` carries the pause. Verified
+on the remote; only `workflow_dispatch` remains, and YAML still parses.
+
+Restoring the cron and adding `id-token: write` belong in **one commit**, so
+the schedule cannot return without the permission it needs. Left to a human:
+re-enabling an unattended agent that pushes to `main` is a decision about
+spending and trust, not a syntax change.
+
+**Done without re-adding chezz to mandark.** Cloned to the job's tmp,
+committed, pushed, consigned, deleted. `Project Archive/chezz` is still gone.
+
+**Filed to the vault via bibliothecaire** (vault `1cd62ed`):
+`chezz/INCIDENT-2026-08-01-bug-sweep-oidc.md`, carrying the four-day failure
+window, why it went unnoticed, the cause, the one-line fix, and chezz's
+removal with its recovery command. Provenance is real —
+`source_commit 95e98f2` is on chezz's remote — though `source_repo` names the
+temporary clone, which no longer exists. It resolved wikilinks to `[[fauche]]`
+and `[[scheduler]]`.
+
+The generalisable line, and it is the same shape as this session's other
+findings: **a scheduled job and a working job are two world-states, and a run
+history shows both as activity.** The job started cleanly and failed at step 7
+of 12.
+
+**Ecosystem-wide: every repository's prose is now consigned.** Zero
+unconsigned files anywhere.
