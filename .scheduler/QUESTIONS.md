@@ -408,3 +408,58 @@ the big-four are done.*
   > (answer inline here)
 
 - **2026-07-31 (bashify, note, no answer needed): `basheur status` went 6/12 → 6/13 and that is the honest direction.** Filing `print-sheet-count` as an AGENT-backed contract lowered the mechanized fraction. Nothing got worse: the work was always unmechanized, it was just hidden inside a `GAPS.md` line instead of declared as a contract. Recorded because a falling ratio normally reads as regression, and here it is the metric finally seeing a debt that already existed.
+
+- **2026-08-01 (interactive): `bashify check` cannot pass a hyphenated
+  subcommand, and `bashify amend`'s caller gate counts prose as invocations.**
+  Both found by finally running the gate instead of hand-running its steps.
+  (a) SURFACE reads page subcommands with `\K[a-z]+`, truncating
+  `dead-config` to `dead`, and filters the tool's own `list` with `^[a-z]+$`,
+  which drops the hyphenated name entirely — so the two sides can never
+  agree. Five of senechal's seven `ausculte` subcommands are hyphenated; this
+  will refuse every hyphenated verb in the ecosystem, not just that one.
+  (b) CALLERS greps the verb name across `bashified` branches and counts
+  **prose mentions** as invocations. Documenting why `ausculte` moved raised
+  the count from 1 to 2, so the gate is unsatisfiable: the only way to lower
+  it is to delete the explanation. Fixing (a) is a regex; (b) needs a rule
+  for what counts as an invocation — a fenced command, an exec, a PATH call —
+  which is a judgment, not a patch.
+  > (answer inline here)
+
+- **2026-08-01 (interactive): `/bashify` §6 now says something false, and it
+  cost a session.** It reads "Until that check is a script, run the four
+  steps by hand" — but `bashify check` and `bashify amend` have been
+  MECHANIZED and free since 2026-07-31. Quoting that permission without
+  re-probing produced a hand-run "four gates pass" against the real gate's
+  exit 7. Retire the sentence and point at `bashify amend`, or keep it with a
+  dated expiry? The general form is the more valuable one: **prose that
+  grants a temporary exemption should carry the probe that decides whether it
+  still applies.**
+  > (answer inline here)
+
+- **2026-08-01 (interactive): nothing checks a coined-but-uninstalled verb
+  name, which is how `ausculte` got coined twice.** `command -v` sees
+  installed verbs only; `installe audit` reads PATH; `recense` takes a census
+  of installed executables. None reads the `man/` pages on other projects'
+  `bashified` branches, where a coined name actually lives. senechal coined
+  `ausculte` on 2026-07-30, never installed it, and ecosim coined it again on
+  2026-08-01 against a clean `command -v`. Related: **`installe` does not
+  refuse a collision** — it reports "would repoint" and hands the name over.
+  Should the check live in `installe` (it already owns what is reachable) or
+  in `bashify` (it already reads every branch for the caller gate)? Proposed,
+  deliberately not built, so it lands inside an existing tool rather than
+  beside one.
+  > (answer inline here)
+
+- **2026-08-01 (interactive), appended to the open vault-destination
+  question: `consign-prose` misfiles when run from a git worktree.** It
+  derives the destination from the path relative to the source repo, so a run
+  from `realisateur/.claude/worktrees/waiting-room` stamped
+  `project: waiting-room` and created a top-level vault project that does not
+  exist. Proven both ways the same night: the same document filed under
+  `waiting-room` from the worktree (removed, vault `f1743b0`) and under
+  `realisateur` from the main checkout (vault `7a7382e`). This is the same
+  defect as the `.scheduler/` dot-directory question one layer up — the
+  destination comes from a filesystem path that is not guaranteed to be the
+  project's name, so a worktree, a clone, or a renamed directory each
+  misfile silently and nothing checks.
+  > (answer inline here)
