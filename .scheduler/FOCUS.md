@@ -1587,3 +1587,63 @@ decided home before the footprint comes out.
 **Blocked, both needing Zach:** deleting `schedule/bibliothecaire.conf` was
 refused by this session's permission gate; and the samba/`bibscan` removal needs
 root (no passwordless sudo). **Not built:** `verse` and `cueille`.
+
+## 2026-07-31 (`/cloture`) — bibliothecaire is reaped: 13 of 15, and the two that remain need root
+
+**Philosophy delta, and it is real.** `--summon` was documented only as a cost
+boundary, and this session was about to strip the flag from a page as a doctrine
+violation when carrying it was correct. Corrected in
+`bashify/skel/lib/verb.sh` and `.claude/commands/bashify.md` (`99f5d64`, on
+branch `worktree-summon-overt`, **PR #1, not merged**): a summon is how a verb
+writes itself from the inside — it buys the answer *and* the mechanism that
+makes the next answer free. And in `basheur/DOCTRINE.md`, three commits naming
+what that claim does NOT yet deliver: `e1e0ea9` (residue is instructed not
+enforced; never fed to a later summon; nothing retries), `93a55e2` (the
+direction: a summon should be a resumable attempt, not a one-shot rental), and
+`57556ac` (routing: all of it is basheur engine work, not a `bashify amend`).
+The accurate sentence, now written down: **promotion is automatic and
+continuously re-derived; authoring the impl is entirely manual.**
+
+**The reaping.** Test written first at Zach's instruction (`9f58c36`), failing
+10 of 15 the moment it existed and never edited to match what happened.
+Now 13 of 15.
+
+| repo | sha | what |
+|---|---|---|
+| bibliothecaire | `cfbba6f` | 41 documents deleted, each verified in the vault by content hash BEFORE deletion |
+| bibliothecaire | `1ac5db9`, `176f85b` | the retirement decided and recorded |
+| bibliothecaire-verbs | `c3c4ca6`, `620542f` | `fonde` + its page amended through the four gates |
+| bibliothecaire-verbs | `8c4562b` | `verse`, and the two page rows its audit exposed |
+| bibliothecaire-verbs | `3642999` | `cueille`, third verb, no amendment needed |
+| bibliothecaire-verbs | `9f58c36`, `5b7522d`, `6d738f3` | the test, the manifest, REFUSED-is-not-BROKEN |
+| basheur | `d6af142` | survive being a symlink — it was on PATH and broken everywhere it was needed |
+| basheur | `6912ebd`, `6a4893b`, `d4c0277` | `consign-prose` contracted, MECHANIZED, and its provenance corrected |
+| scheduler | `c9000f2`, `7d01ec2` | unregistered — paced row, then the conf |
+| scheduler | `ca99c9c` | BLOCKERS: the four decisions this could not take |
+| gardien | `3d81f63` | `garde` splits at its "and"; attestation exists twice |
+| quatre-vingt-douze | `c771420` | the merge decided |
+| ecosystem1-vault | `b86c896`…`54fe34d` | the vault, and 42 deposits |
+
+**Three defects found by the machinery rather than by reading it**, which is the
+part worth keeping: the amendment gate refused a page draft four times and was
+right each time; `verify-consign-prose.sh` caught an overwrite refusal that
+compared only the body, so an annotated note was silently replaceable; and the
+read-back gate caught a file with no trailing newline truncating by one line.
+**The first corruption report was the test's own fault** — it trimmed bytes
+before hashing and called a faithful deposit corrupt. Recorded as memory
+`feedback-verify-the-harness-first`.
+
+**One capability nearly lost silently.** Reaping `briefs/` would have left
+`fonde corpus --briefs` reporting all 14 concepts missing forever — a contracted
+check becoming a permanent no-op. The brief check now follows the prose into the
+vault; measured there, 14 concepts, 14 clean, identical to before.
+
+**Left undone, each with the sha that filed it** — all four in `scheduler
+ca99c9c`: the samba share and `bibscan` need root; the 1.4 GB intake corpus needs
+a home; gardien has no provable snapshot so `verse reap` cannot delete; and a
+subagent pushed `main` twice against CLAUDE.md's rule (`basheur 3e8b5bc`,
+`29ad187` — good changes, crossed boundary).
+
+**Note for the next session:** bibliothecaire is unregistered, so
+`closeout-lint` and `ecosystem-survey` no longer see it. Its two trees were
+verified clean and pushed by hand at close.
