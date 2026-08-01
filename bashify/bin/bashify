@@ -29,7 +29,7 @@ AMEND_IMPL="$SELF/lib/amend.sh"
 # The contract store. bashify is the front door; this is what stands behind it
 # when a promise cannot be kept mechanically.
 STORE="/home/zach/Documents/Projects/basheur/bin/basheur"
-SCHED="/home/zach/Documents/Project Archive/scheduler"
+SCHED="/home/zach/Documents/Projects/scheduler"
 
 # Subcommands that can spend. Named here so `--summon` on anything else is a
 # usage error rather than a flag that quietly does nothing.
@@ -117,6 +117,10 @@ case "$cmd" in
   page)
     _no_json
     [ $# -eq 2 ] || verb_die "page takes exactly 2 arguments: <verb> <command> (got $#)"
+    # Counting arguments is not inspecting them: `bashify page "" ""` passed
+    # the line above and spent a summon that could only ever exit 2. Thirteen
+    # such summons were paid for before this guard landed.
+    { [ -n "$1" ] && [ -n "$2" ]; } || verb_die "page: <verb> and <command> must both be non-empty"
     # Writing a page is judgment: it states a promise nothing yet keeps, so
     # there is no mechanical source to derive it from. That is what a summon
     # is for, and it is refused rather than spent without one.
@@ -126,7 +130,14 @@ case "$cmd" in
     rc=$?
     case "$rc" in
       0) ;;
+      2) verb_die "page: the contract rejected the request as malformed (see its diagnostic above)" ;;
       4) verb_gap "page: the contract store has no 'verb-page' contract; nothing can write this yet" ;;
+      6) verb_blind "page: the repository holding <command> could not be read" ;;
+      # 7 is REFUSED: the verb is already claimed on PATH, or already paged.
+      # That is the contract working, not the machinery failing.
+      7) printf '%s: REFUSED: page: %s\n' "$VERB_NAME" \
+           "the request was declined (see its diagnostic above); to change an existing page use \`bashify amend\`" >&2
+         exit 7 ;;
       *) verb_broke "page: the contract store failed (exit $rc)" ;;
     esac
     ;;
