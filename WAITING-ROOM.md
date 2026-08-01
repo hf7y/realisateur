@@ -94,3 +94,39 @@ scattered stamps (2026-08-01), so this table is the record and a parked
 project's own FOCUS.md says nothing about being parked. The cost is real —
 open a parked repo alone and nothing in it tells you — and it is accepted
 rather than overlooked.
+
+---
+
+## 2026-08-01, later the same day — five of these are no longer on disk
+
+**"Parking is not reaping" above is now partly false, deliberately, and by
+Zach's instruction ("fauche it").** Corrected here rather than rewritten
+above, so the promise and its change are both readable.
+
+`fauche` — gardien's reap verb, named in this file's own utility table since
+it was written and built the same night — found five repositories provably
+recoverable and emitted a removal script. Zach ran it.
+
+| repository | was | now |
+|---|---|---|
+| crt | parked, 1.1 G on disk | `git clone https://github.com/hf7y/crt.git` |
+| sequestria | parked, 1.5 M on disk | `git clone https://github.com/hf7y/sequestria.git` |
+| groc-mangr | parked, 1.2 M on disk | `git clone https://github.com/hf7y/groc-mangr.git` |
+| nine-speakers | parked, 1.7 M on disk | `git clone https://github.com/hf7y/nine-speakers.git` |
+| front-door | not in the table above | `git clone https://github.com/hf7y/front-door.git` |
+
+**~1.1 GB freed.** The `bashified` heads recorded in the table above are
+still accurate and still on `origin` — that is what made this safe.
+
+What changed is only the sentence "the repo stays on disk". Every byte is
+still recoverable, the prose is in the vault (150 documents consigned the
+same night), and the scheduler's `focus/`/`questions/` symlinks were swept
+afterwards with nothing dangling.
+
+**The remaining five parked project repos are untouched**: wtul,
+vkv-inventory, aedile, home-assistant, chezz — none of which is on this host
+in the first place. Re-registration is still the deliberate act that ends a
+stay here, and for a reaped one it now begins with a clone.
+
+Record: gardien `0d1f074`; decision and its answer at scheduler `58344a7`
+and `b5753e3`.
