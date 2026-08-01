@@ -1433,3 +1433,51 @@ in `bashify/GAPS.md`:
 
 Still no verb built, nothing on PATH. `bin/fonde` is next, and `fonde maxim
 --add` is what makes tonight's lessons recordable through a verb.
+
+## 2026-07-31 (`/ideate`, Zach present) — bibliothecaire's retirement decided; `installe` displaces a hand-rolled deploy recipe
+
+Single-project session scoped to bibliothecaire, continuing the bashification.
+Four forks put to Zach, four answered. Full record in
+`bibliothecaire/.scheduler/FOCUS.md`, same date; cross-writes filed to
+`quatre-vingt-douze` and `senechal`. **Nothing was built and no verb was
+written** — the build is a later interactive pass, not a nightly job, because
+bibliothecaire is DARK.
+
+**The ecosystem-level finding, which is realisateur's to hold and neither
+project could see alone:** bibliothecaire had recorded a plan to deploy its
+three verbs *"the `garde` way"* — a pinned worktree, three hand-made symlinks
+into `~/.local/bin`, then a remembered `notify-senechal`. Meanwhile senechal had
+already shipped **`installe`** to its `bashified` branch and **onto `PATH`**,
+whose entire subject is governing what a prompt can reach by name, and which
+files the senechal declaration *itself, on the caller's behalf*. One project was
+one session away from hand-building the thing its neighbour had already
+installed. The recipe it was copying — `garde` — **scores 3 of 9 on its own page
+test**, so the reference implementation being copied was also the worst-scoring
+verb in the ecosystem.
+
+This is the third time this ecosystem has produced two independent builds of one
+mechanism (the others: attestation, built separately by gardien and
+bibliothecaire, found earlier the same day; and the two page-92 gatherers, which
+Zach resolved by merging the projects). **The pattern is not that projects
+duplicate work — it is that a project cannot see a verb that exists unless
+something looks across all of them.** `installe list` / `installe audit` is now
+the cheapest instrument for that, and it should be read at the start of any
+bashify pass, alongside `basheur list`.
+
+**Also worth recording:** `installe` and `garde` are the only two verbs on
+`PATH` ecosystem-wide. Thirteen of nineteen bashified branches carry verbs with
+no subcommands. The bashification's real bottleneck is not page-writing — it is
+that almost nothing written has been installed, so almost nothing is reachable,
+so nothing gets dogfooded. Zach's "dogfood all the way" call this session is the
+correct lever pointed at exactly that.
+
+**Queued, needing Zach or the front door, not done here:**
+- The **Obsidian vault does not exist** on mandark (no `.obsidian` under
+  `/home/zach`). Two of bibliothecaire's steps write into it. Human-only.
+- **Unregistering bibliothecaire and quatre-vingt-douze** touches scheduler's
+  own `schedule/*.conf`, not the `_paced.conf` weight field realisateur owns —
+  goes through `scheduler -i scheduler`.
+- **`atteste` belongs to gardien** — carried from earlier today, when the
+  cross-write was deferred on `check-project-busy gardien` = BUSY. Still not
+  filed. `garde`'s summary splits at its "and" and the proof half already exists
+  twice.
