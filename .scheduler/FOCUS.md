@@ -1481,3 +1481,64 @@ correct lever pointed at exactly that.
   cross-write was deferred on `check-project-busy gardien` = BUSY. Still not
   filed. `garde`'s summary splits at its "and" and the proof half already exists
   twice.
+
+## 2026-07-31 (interactive, Zach-directed) — `recense` and `installe`, and the first foreign run of `bashify amend`
+
+**Full brief:** `bibliothecaire/briefs/verb-contracts-and-their-instruments-2026-07-31.md`
+(bibliothecaire `774857e`). Five findings with arguments against each; read
+that rather than this. This entry is the index and the shas.
+
+**Two verbs coined in senechal, both real implementations, neither a wrapper.**
+- `recense` — take a census of the executables installed under a home directory
+  (senechal `bashified` `b119cf3`). Holds the *installed* vs *present*
+  distinction: `PATH` reaches ~112 under `/home/zach`; the execute bit is on
+  thousands. Found `~/.local/bin` listed **twice** on `PATH`.
+- `installe` — govern what is reachable from a prompt (`37e5f23`). Carries its
+  negation `retire` **on the page before any implementation existed**; that is
+  what forced the ownership manifest and the refusal (exit 7) of anything it
+  did not install. Audited `~/.local/bin`: 64 entries — 31 generated, 22
+  unknown, 5 link, 4 repo-link, 2 backup.
+
+**The dogfood lever from the earlier entry moved.** Verbs reachable from a
+prompt went **1 of 18 → 3**. `installe` installed itself from its own location,
+then installed `recense` through `installe verb`. Both filed with
+`notify-senechal` by the tool, unprompted, and verified with `recense where`,
+which reads PATH from outside and never consults the manifest.
+`senechal-verbs/` is now a persistent worktree of senechal's `bashified`
+branch — the `gardien-garde` pattern, second instance.
+
+**`bashify amend`'s first run against a page it did not author refused it, and
+was wrong three times out of five** (fixed here, `67567d5`, main):
+- `section()` matched headings by exact string, so `.SH "EXIT STATUS"` was
+  invisible — two rows failing on a pair of quote characters, on most of
+  senechal's pages.
+- the OPTIONS flag scan read escaped roff, so `\-\-dry\-run` became `--dry`,
+  reporting a phantom flag and a missing one from one correct page.
+- example command lines executed with backslashes intact, so every example
+  containing a flag "did not reproduce".
+- `amend`'s caller scan counted the verb's own project: `installe` scored six
+  callers, all itself. **As written, no amendment to any real verb could pass
+  gate 4.** `man/bashify.1` still scores 9/9 after the fix.
+
+**The two rows the gate was right about**, and both my pages changed, not the
+rule: exit `1` is reserved (project codes only above 6 — both verbs moved to
+`9`), and EXAMPLES stating no output are illustrations, not doctests.
+
+**The finding worth carrying:** `recense` was reported complete on its own
+suite — 9 rows, 25 assertions, 0 failures — and scored **6 of 9** against
+`bashify check`. A test written beside its subject encodes its author's reading
+of the rules. Score against the shared instrument before reporting a contract
+kept. Related: `installe verb` shipped broken (`00ade33`) because it was the
+one form no fixture invoked, under a suite reporting 40 passed.
+
+**Not done, deliberately:**
+- Man pages are not on `MANPATH`. `~/.local/share/man` *is* on it, so linking
+  them there would make `man installe` work — but `installe` governs `bin`, not
+  `man`, and extending it is a contract change, not a convenience.
+- `installe adopt` does not exist: no way to say "this entry is mine now"
+  short of `--force` retire plus reinstall. Recorded in senechal's `GAPS.md`
+  at `37e5f23`; it would convert the 4 `repo-link` entries in one pass.
+- The 31 `generated` entries in `~/.local/bin` are refused by `retire` and
+  correctly so — they come off at their generator, and no verb does that yet.
+- **`atteste` belongs to gardien** — still carried, still unfiled, unchanged
+  from the entry above. Not touched this session.
