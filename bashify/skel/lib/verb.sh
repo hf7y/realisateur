@@ -5,11 +5,52 @@
 # vocabulary, so nineteen utilities cannot drift into nineteen dialects.
 # Config is read here and nowhere else.
 #
-# THE COST BOUNDARY (the reason this file exists at all):
+# WHAT --summon ACTUALLY IS (read this before the cost boundary below;
+# stating it only as a cost boundary is what made it misread -- Zach,
+# interactive, 2026-07-31):
+#
+#   A summon is how a verb WRITES ITSELF FROM THE INSIDE.
+#
+#   In this ecosystem the man page is written BEFORE the utility works, and
+#   the utility is judged against the page. So a page routinely contracts an
+#   action with no mechanism behind it yet. That is the normal case, not a
+#   defect. When a caller invokes such an action:
+#
+#     without --summon  the verb exits 3 and PRINTS THE SUMMON it would have
+#                       made. Nothing is spent. The gap is named, not hidden.
+#     with --summon     an agent is summoned to perform the action AND to
+#                       leave behind a durable mechanism that performs it
+#                       WITHOUT an agent next time (basheur Law 2: every
+#                       summon leaves residue; residue becomes an impl).
+#
+#   So the flag does not merely buy one answer. It buys the answer plus the
+#   machine that makes the next answer free. A verb carrying --summon is a
+#   verb still under construction by its own callers, and the correct
+#   direction of travel is that the flag stops costing anything, one
+#   subcommand at a time, because the mechanism now exists.
+#
+#   Escalate through basheur -- `basheur run --summon <contract>` -- never by
+#   contacting a model directly. basheur is the contract store that decides
+#   MECHANIZED (exec the impl, spend nothing, say so) versus AGENT (summon).
+#   A verb that calls a model itself has re-animated its own project, which
+#   is what Law 3 forbids.
+#
+# THE COST BOUNDARY (the second thing this file exists for):
 #   Nothing in a bashified utility may spend money implicitly. A utility
 #   that CAN spend declares VERB_CAN_SUMMON=1 and gains --summon; one that
-#   cannot does not carry the flag at all, so `--help` alone answers the
-#   question "can this cost me anything?".
+#   cannot does not carry the flag at all.
+#
+#   --summon means "spend IF AND ONLY IF the contract cannot be fulfilled
+#   mechanically" -- a grant of permission, never an instruction to spend.
+#   On an already-mechanized action it costs zero and says so on stderr.
+#   The other reading ("spend because I said so") looks identical at the
+#   prompt and diverges completely in the bill: under it, de-animation stops
+#   showing up in the only place it was ever going to show up.
+#
+#   Because nearly every verb can now escalate, the presence of --summon no
+#   longer sorts tools into spending and non-spending. The informative
+#   question moved from WHETHER a tool spends to WHICH OF ITS SUBCOMMANDS do,
+#   which is why a man page must name them and the page test checks it.
 #
 #   Short form is deliberately ABSENT. `-s` collides with existing tools
 #   and `-S` differs from it by one shift key, which is an unacceptable
@@ -54,8 +95,10 @@ verb_need_summon() {
     return 0
   fi
   printf '%s: this needs a summon: %s\n' "$VERB_NAME" "$what" >&2
-  printf '%s: cost: %s\n' "$VERB_NAME" "$VERB_SUMMON_COST" >&2
-  printf '%s: re-run with --summon to authorise spending real money.\n' "$VERB_NAME" >&2
+  printf '%s: no mechanism for it exists yet, so nothing was done and nothing was spent.\n' "$VERB_NAME" >&2
+  printf '%s: cost if summoned: %s\n' "$VERB_NAME" "$VERB_SUMMON_COST" >&2
+  printf '%s: re-run with --summon to have an agent perform it AND leave behind\n' "$VERB_NAME" >&2
+  printf '%s: the mechanism that performs it without an agent next time.\n' "$VERB_NAME" >&2
   exit 3
 }
 
@@ -95,7 +138,14 @@ verb_usage() {
   printf '  -h, --help    this text\n'
   printf '  --version     print version\n'
   if [ "$VERB_CAN_SUMMON" = 1 ]; then
-    printf '  --summon      AUTHORISE SPENDING REAL MONEY (cost: %s)\n' "$VERB_SUMMON_COST"
+    printf '  --summon      permit an agent to be summoned for an action this\n'
+    printf '                utility does not yet implement -- it performs the\n'
+    printf '                action and leaves behind the mechanism that will\n'
+    printf '                perform it next time without an agent.\n'
+    printf '                Spends real money ONLY if no mechanism exists yet\n'
+    printf '                (cost: %s). Already-mechanized work costs nothing\n' "$VERB_SUMMON_COST"
+    printf '                and says so. Without this flag such an action\n'
+    printf '                exits 3 and prints the summon it would have made.\n'
     printf '                No short form exists, deliberately.\n'
   else
     printf '\nThis utility cannot spend money. It has no --summon flag.\n'
