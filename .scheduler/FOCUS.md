@@ -2553,3 +2553,70 @@ the first draft for a modal ("would never fire").
 Also: `bashify check`'s SURFACE row reads `<verb> list` as the verb's
 **subcommand** enumeration, which is why `list` and `jobs` are separate here.
 Worth knowing before writing the next verb.
+
+#### 2026-08-01 — `wtul` moved, and the tree it entered has an owner
+
+Done in the ecosystem's own verbs, as Zach asked: `garde` → `transplante
+check` → `sonde` → `transplante plan` → move by hand → `fauche` → consign →
+`recense`/`installe` → `sonde` again.
+
+**What the move actually changes is which verb governs the repo.** `garde`
+guards bytes that exist nowhere else; `fauche` guards the claim that
+everything here exists somewhere else. `~/Documents/Projects` is excluded from
+garde's manifest **because that tree is fauche's** — so moving a repo in is a
+declaration that it is remote-recoverable, and the declaration has a price.
+
+Confirmed with the estate's own instrument rather than by reading the
+manifest: `garde <path>` on `~/Documents/wtul` was **silent (fully covered)**;
+on `Projects/scheduler` it named **24 uncovered paths**. Scheduler was
+declared remote-recoverable this morning without paying. **Both debts are now
+paid:** 14 documents consigned, wtul's 2 and scheduler's 12.
+
+`fauche check wtul` now reads **REMOVABLE**. Every one of wtul's
+garde-uncovered paths is git-tracked, and its 6 ignored entries are
+`__pycache__`, `.pytest_cache`, a log and local settings — nothing
+irreplaceable. The declaration holds on evidence.
+
+**The sensor was widened before the move, not after.** It derived subjects
+from `schedule/*.conf` alone, so it saw only what dispatches; wtul was
+invisible to it entirely while the six it could read were reported with full
+confidence. Subjects now come from the registry **and** the tree fauche
+governs — borrowing the ecosystem's existing answer to "which repositories
+live here" rather than minting a second one. **6 subjects → 20.** wtul went
+from absent in the baseline to `AT_DECLARED` after (ecosim `2b4c1ba`;
+readings in `archive/relocation-baselines/`).
+
+**Two defects found by using the tools, both fixed.**
+1. **`fauche` reported every repository's own primary worktree as "a worktree
+   outside this repo"** (gardien `0dd64f1`). `git worktree list` prints
+   absolute paths and the self-exclusion compared them to the caller's
+   argument — so `fauche check wtul`, exactly the documented form, never
+   matched. The condition fired universally and blocked every candidate on a
+   reason that was never true. Invisible from `fauche list`, which builds
+   absolute paths itself.
+2. **`fonde consign` still refuses as "no mechanism yet" and demands
+   `--summon`** — but `basheur list` reports `consign-prose` **MECHANIZED**,
+   with a working impl. fonde is metering work that is now free. Not fixed
+   here (bibliothecaire-verbs is not this session's tree); the 14 documents
+   went through `basheur run consign-prose` directly, free. **Filed as a
+   finding for whoever owns fonde.**
+
+**Two corrections to my own plan**, both from reading before acting:
+- I listed two "code references that must follow" the move. Neither should:
+  the ecosim one is a **fixture literal** that deliberately names a
+  nonexistent path (that is what makes `REFS_ORPHANED` fire), and the basheur
+  one is a **run record** noting wtul was found in a third location.
+  Rewriting either would break a test or falsify a finding.
+- `garde-coverage`'s exit codes are grep's, not the shell's: **0 = uncovered
+  paths found, 1 = everything covered.** Deliberate and commented; I nearly
+  reported it as a defect.
+
+**Unchanged on purpose:** wtul is still unregistered and still parked on
+dexter behind a missing `github-wtul-deploy` key — a credential gap, not a
+directory. Dispatch is still down; the crontab still holds one line, `arme`'s
+monitor. `installe audit` reports **0 broken** entries after the move.
+
+**Still open:** `fauche check scheduler` now names three `paced/*` branches
+that exist only on this host. `transplante` called scheduler PUSHED because
+every *commit* is on some remote; `fauche` asks whether each *branch* has its
+own remote ref. Both true, different questions — and the second is unanswered.
