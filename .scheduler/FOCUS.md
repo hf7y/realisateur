@@ -2441,3 +2441,63 @@ sufficient. It IS a blocker for continuous drift detection.
 `schedule/_runner.conf` so `sync-crontab.sh` generates it when dispatch
 returns (correct, but arrives only when THE PLAY concludes), or run the
 sensor by hand at each relocation and defer scheduling entirely.
+
+#### 2026-08-01 — scheduler moved, bashified; dispatch NOT restarted
+
+**The move is done and verified.** `~/Documents/Project Archive/scheduler` →
+`~/Documents/Projects/scheduler`. Judged by `transplante check`, script read
+from `transplante plan`, move performed by hand — the verb has no `apply` and
+did not acquire one.
+
+Repointed: 4 symlinks on PATH, 21 shim scripts, scheduler's own
+`focus/scheduler.md` and `questions/scheduler.md` (both dangled after the
+move), and live code in realisateur, ecosim, basheur, senechal,
+bibliothecaire-verbs. **Prose, journals, event logs and baselines deliberately
+still name the old path** — they record where it was, and a record edited to
+match the present has stopped being one. Two files under `~/.local/bin` also
+keep it on purpose and are inert: `scheduler.bak.2026-07-28` and
+`wtul-batch-loop.sh.pre-scheduler-migration.2026-07-27`; rewriting a backup
+falsifies it.
+
+Verified three ways: `tests/sched-root-witness.sh` 11/11, `ecosystem-survey`
+back to 6 registered projects from 0, and `ecosim.relocation` reporting
+`AT_DECLARED` at the new path. senechal told via `notify-senechal`.
+
+**Two defects the work found in the tools doing it.**
+1. `sed -i` **replaces a symlink with a regular file** rather than following
+   it. It detached five links, including `bashify` — whose target carries
+   another session's uncommitted work. The broken link is what protected that
+   work; had sed followed instead, it would have been silently edited. All
+   five restored.
+2. **A symlink names a path in its target, where grep cannot see it.** Both
+   `transplante` (gardien `6b46299`) and `ecosim.relocation` counted only file
+   contents and missed the four symlinks that put `scheduler` on PATH — the
+   most load-bearing references of the lot. Both now scan symlinks; census
+   went 21→25 and 19→23.
+
+**Bashified**: `dose` regenerated at the new root (its `LEGACY_ROOT` still
+named the old one), 25 scripts discovered, page 9/9, installed via `installe`.
+Caught mid-flight: `installe` first linked it into the **/tmp scratchpad
+worktree** `emit` builds in — an install that would break on cleanup. Given a
+durable checkout at `Projects/scheduler-dose`, on the `gardien-garde` pattern,
+and reinstalled.
+
+**Dispatch deliberately NOT restarted.** `dose sync-crontab` dry-run shows
+`--apply` would install the paced runner (*/5) and sweep tick (*/15),
+resuming unattended spending for six projects and ending THE PLAY run 3's
+premise. Zach's call, and his framing is the finding: **those routines are
+self-dev work, and ecosim is non-agentic maintenance — the two should not
+share a slot.**
+
+**Filed through the front door (scheduler `b569ece`): scheduler has no
+semantic category for non-agent work.** The crontab tag `scheduler:<name>:
+<KIND>` admits exactly RUNNER, SWEEP, BATCH, and all three are agent runs or
+dispatchers of them. The consequence is not cosmetic: they are gated by
+`USAGE_CEILING`, so a monitor wired through any of them stops reporting
+precisely when quota is exhausted — "quota exhausted" and "nothing to report"
+collapse into one silence, at the scheduling layer. Proposed a fourth kind,
+`MONITOR`, ungated because it never spends, with its exit code preserved as a
+finding rather than flattened to nonzero.
+
+Until scheduler acts on that, `ecosim-sensor run relocation` is hand-run —
+which is coherent, since the move it watches is a human act too.
