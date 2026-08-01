@@ -2100,3 +2100,34 @@ that contract writes pages for verbs that do not exist yet. Retired,
 paged, reinstalled, in that order.
 
 **Philosophy delta: none.** No doctrine file edited.
+
+### 2026-08-01 addendum — Zach answered mid-close: "fauche it"
+
+The reap ran, the same night the verb was built. **crt, front-door,
+groc-mangr, nine-speakers, sequestria removed; ~1.1 GB freed**, essentially
+all of it crt.
+
+Verified twice before deleting anything, the second time by a method
+different from `fauche`'s own: `git rev-list --count --branches --not
+--remotes` = 0 for all five, and `git ls-remote --heads origin` reached
+every remote and found 2–3 branches on each. A configured-but-dead remote,
+or a push that had not landed, fails that check and not the first.
+
+The doctrine's known reap hazard was **checked, not assumed**: the
+scheduler's `focus/`/`questions/` symlinks were swept afterwards and nothing
+dangled — those five had been unregistered at parking, so the links went
+with the confs.
+
+- gardien `0d1f074` — the reap record, consigned to the vault under
+  `gardien-garde/` with wikilinks to `[[fauche]]`, `[[bashify]]`,
+  `[[scheduler]]`.
+- realisateur `11f9050` — **WAITING-ROOM.md corrected**. Its "parking is not
+  reaping … the repo stays on disk" is now partly false and says so, by
+  addendum rather than rewrite. This is the one thing a reap would otherwise
+  have left silently untrue.
+- scheduler `58344a7` (the decision), `b5753e3` (its answer).
+- senechal `f927ab0` — the estate told.
+
+**Left open, both with a sha:** the `bashify emit` purge-guard narrowing
+(draft PR #4, scheduler `58344a7` decision 1) and basheur scoring an agent's
+refusal as success (scheduler `58344a7` decision 3).
