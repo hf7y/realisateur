@@ -2029,3 +2029,74 @@ pass is still reported MECHANIZED. Law 4's territory; filed at scheduler
 `cbeb8e1`.
 
 **Philosophy delta: none.** No doctrine file edited.
+
+## 2026-08-01 — overnight: the bashification measured, and three dead tools
+
+Unattended, Zach AFK. Instruction: set ecosim up to measure the bashify
+process, register with senechal, report to bibliothecaire, then apply the
+measurement to the rest of the ecosystem.
+
+**The measurement did not exist.** `command -v` sees installed verbs, not
+coined ones, so *never coined* and *coined but not installed* share one
+symbol — the collapse that coined `ausculte` twice. First reading:
+**7 of 12 coined verbs could not be spoken**; at close, **11 of 13 are
+REACHABLE**.
+
+- ecosim `fe97801`, `b0f0f77`, `bcf1243`, `3c6a963` — the
+  `ecosim.bashification` sensor, its first report, the session record and
+  an addendum. `sonde selftest` 8/8 symbols, 0 violations across 37. **Its
+  own first version committed the fault this project exists to detect**:
+  it scored gardien's *ahead-of-origin* branch as CRIT drift, collapsing
+  *stale* and *ahead*. Split into `DRIFTED` and `UNPUSHED`. PR ecosim #23.
+- realisateur `eaef4b4` (branch `worktree-bashify-generator-fixes`, **draft
+  PR #4, NOT merged**) — **`bashify emit` had never worked.** The
+  unmodified copy from `main`, run against a throwaway registry, exits 5
+  for every project: its purge guard greps for `agent`, and the branch
+  always contains the `lib/verb.sh` *it writes itself*, whose mentions of
+  the word are the documentation of `--summon`. Meanwhile `bashify list`
+  reported emit MECHANIZED, because `_state` only asks whether the file is
+  executable — Law 4 again. Because it could not be run, its man-page
+  template had drifted to **4 failures of `bashify check`'s own 9 rows**
+  (`.SH FLAGS` where the gate reads `OPTIONS`; a SYNOPSIS placeholder the
+  gate executes literally; no EXAMPLES; one future-tense clause). A freshly
+  emitted verb now scores **9 of 9, exit 0**. `SCHED` is overridable via
+  `BASHIFY_SCHED` because the generator was untestable — `emit` does
+  `git branch -D bashified` on the real repo.
+- senechal `1b54a0e`, realisateur `4a9dc85`, vim-arcade `bab1de1`, gardien
+  `324e382`, ecosim `fec2c45`, bibliothecaire `3505afe` — **11 generated
+  verbs rejected the flags their own `--help` advertises.** `bin/bashify`
+  grew `-*) cmd=list` for itself on 2026-07-31; the template never received
+  it. **Fulfilling, not modifying:** no page changed. Verified by running
+  each flag on each verb, not by reading code.
+- gardien `e15ce01`, `92cbd3b`, `544b83a`, `b269f5d` — **`fauche` built**,
+  the reap verb WAITING-ROOM.md has named since 07-30 and which existed
+  nowhere. It decides whether a repository is recoverable and emits a
+  removal script; **it never deletes**. Page written by `bashify page
+  --summon`, scoring **9 of 9**, `bashify check` exit 0.
+- vault `dee2e64`, `22ba97e`, `7a2389b`, `c5490fa`, `4b7b618` — **150
+  documents consigned** through `fonde consign`, which routed to the
+  MECHANIZED `consign-prose` impl and **spent nothing**. Nothing deleted.
+- senechal `7b061a0`, `ee8f89b` — the new sensor and the machine-wide
+  changes filed, via `notify-senechal`.
+
+**Three refusals reported, not routed around.** `installe verb scheduler
+dose` exit 2 (scheduler is not under `~/Documents/Projects`, so `dose`
+stays unreachable); `installe -f verb gardien garde` exit 7 — its own
+message says "`--force` overwrites it" and `link_it` never consults
+`VERB_FORCE`, so `garde` cannot be brought under installe governance;
+basheur's residue lock refused four `verb-page` summons while another
+session held it, and the lock was never removed nor the page hand-written.
+
+**A finding worth more than the verb it came from:** an AGENT-backed
+contract can report a refusal as success. A refused `verb-page` attempt
+printed "REFUSED — exit 7" as prose on *stdout* and exited **0**; basheur
+scored it a kept promise and the refusal text was one `cp` from being
+committed as a man page. `bashify check` caught it (exit 6). Recorded at
+gardien `b269f5d`.
+
+**My own error, recorded rather than smoothed:** I installed `fauche` onto
+PATH *before* asking for its page, so `verb-page` correctly refused it —
+that contract writes pages for verbs that do not exist yet. Retired,
+paged, reinstalled, in that order.
+
+**Philosophy delta: none.** No doctrine file edited.
