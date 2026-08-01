@@ -2131,3 +2131,105 @@ with the confs.
 **Left open, both with a sha:** the `bashify emit` purge-guard narrowing
 (draft PR #4, scheduler `58344a7` decision 1) and basheur scoring an agent's
 refusal as success (scheduler `58344a7` decision 3).
+
+## 2026-08-01 (/ideate, Zach-directed) — relocation as a verb: `transplante`
+
+Zach asked how to move `scheduler` out of `Documents/Project Archive/` and
+`wtul` out of `Documents/wtul` into `Documents/Projects/`, in the new verb
+vocabulary, with ecosim measuring the process and prose landing in
+bibliothecaire. Four forks were put to him and all four answered; this
+records the answers and what the survey found, not a build.
+
+### Vision
+
+**A relocation is an ecosystem operation, not a `mv`.** The vocabulary
+already owns the destructive half — `fauche` clears a repo off this host
+once every byte is recoverable elsewhere — and owns nothing for the
+constructive half. **Decided: mint `transplante`** (`check|plan|apply`),
+which rewrites references, re-points what `installe` governs, verifies at
+the destination, and only then hands the old copy to `fauche`. The move
+becomes repeatable; this is the second relocation, not the first.
+
+Explicitly NOT decided: which repo `transplante` lives in
+(`realisateur-verbs` is the obvious home but `gardien-garde` already owns
+`fauche`, and keeping a move's two halves in one place is an argument);
+whether `transplante` may touch a crontab itself or must emit a plan for
+`installe`/`notify-senechal` to apply.
+
+### What the survey actually found
+
+1. **"Project Archive" is a false name and that is the real reason to
+   move.** `scheduler` is the live engine: its path is hardcoded in **21
+   of its own tracked files** (`bin/scheduler`, `usage-gate.sh`,
+   `usage-paced-runner.sh`, `morning-report.sh`, the completion script, the
+   entry template, `tests/sched-root-witness.sh`), in **21 files under
+   `~/.local/bin`**, in three symlinks, and in the crontab. Verified
+   2026-08-01 via `git grep -I "Project Archive"` and
+   `grep -rlI ~/.local/bin`.
+2. **`wtul`'s blocker is a credential, not a directory.** Dropped from
+   mandark's rotation 2026-07-25 and parked `enabled=0` in
+   `_paced.dexter.conf` because dexter has no `github-wtul-deploy` SSH host
+   alias and no wtul deploy key — `git ls-remote` fails at *name
+   resolution*. Moving the mandark copy does not re-enable wtul. Recorded
+   here so the move cannot later be mistaken for the fix. (Same shape as
+   the standing credential-gap-not-a-race lesson.)
+3. **ecosim's contract forbids the thing it was about to be asked to do.**
+   `SENSOR-CONTRACT.md` v1: *no cross-repo writes*, *no remediation, ever
+   — ecosim is an observer with no stop bit*. **Decided: ecosim emits,
+   realisateur carries.** ecosim gains a relocation sensor emitting
+   `STATUS ecosim.relocation.SYMBOL k=v | text`; realisateur reads that
+   stream and authors the prose. The observer stays an observer.
+4. **bibliothecaire's prose home moved yesterday.** `cfbba6f` (2026-07-31)
+   reaped 41 documents out of the tree into the vault; `briefs/` no longer
+   exists in the repo, `BIBLIOTHECAIRE_BRIEFS` is now the config knob, and
+   `.scheduler/FOCUS.md`/`QUESTIONS.md` are gone — the registration is
+   being retired and the scheduler's symlinks dangle. Any plan that writes
+   "into bibliothecaire" must target the vault via that variable.
+5. **`range` refuses a prose dump.** Briefs require four sections — Claim,
+   Sources, Maps onto, Where it breaks — and a brief with no named
+   disanalogy is refused on principle. **Decided: both** — shelve the raw
+   sensor stream as a dated record, and derive one gated brief from it once
+   the move settles, so the brief is written from evidence.
+
+### Milestone chain
+
+1. **Current — collapse `SCHED_ROOT` to one source.** Decided ahead of any
+   move: the 21 hardcoded paths become one resolved variable, with
+   `tests/sched-root-witness.sh` as the existing witness. This turns the
+   relocation into a one-line change and is worth doing whether or not
+   `transplante` ever ships. Scheduler's own engine — goes through the
+   front door (`scheduler -i scheduler`), not a hand-edit from here.
+2. **Next — ecosim's relocation sensor, built BEFORE the move.** Measuring
+   an outcome needs a baseline, so the sensor must exist and emit a clean
+   pre-move reading first. Per the contract's rule 4, **domain includes
+   hosts**: mandark and dexter both carry scheduler confs, so the sensor
+   reads both or emits BLIND for the one it could not. Coverage gate
+   applies — every declared symbol must be made to fire by a fixture.
+3. **Then — mint `transplante`**, in the `bashify` verb shape (bin/, lib/
+   verb.sh, CONTRACT.md, GAPS.md, man page, contract test). `check` is the
+   dry run; `apply` is gated on `check` clean; the `fauche` handoff is the
+   last step, never the first.
+4. **Then — move `scheduler`, then `wtul`,** scheduler first because it is
+   the harder case and the one everything else depends on. Machine-wide by
+   definition: `notify-senechal` on the same pass, not afterwards.
+5. **Later, undecided** — whether the other roots (`Documents/wtul` is not
+   the only stray) get swept the same way, and whether `transplante`
+   should be able to move a project *between hosts* rather than only
+   between directories on one.
+
+### Blockers on the current step
+
+- **Human-only:** where `transplante` lives (realisateur-verbs vs
+  gardien-garde alongside `fauche`), and whether it may write a crontab.
+- **Buildable now:** the `SCHED_ROOT` single-source change (step 1) needs
+  nothing from anyone; it is a scheduler-owned front-door proposal.
+- **Re-probe before relying on it:** the vault's actual path was not
+  resolvable from `gardien-garde/REAP-RECORD-2026-08-01.md` or
+  `garde.json` in this session. Step 2's prose destination is therefore
+  named but not verified.
+- **Not a blocker, a correction:** bibliothecaire's dangling scheduler
+  symlinks (`focus/bibliothecaire.md`, `questions/bibliothecaire.md`) are
+  the visible edge of an incomplete unregistration, flagged in `cfbba6f`'s
+  own message. Belongs to whoever finishes that retirement.
+
+**Nothing was scaffolded and no feature code was written this session.**
