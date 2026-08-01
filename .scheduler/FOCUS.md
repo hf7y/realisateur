@@ -2233,3 +2233,40 @@ whether `transplante` may touch a crontab itself or must emit a plan for
   own message. Belongs to whoever finishes that retirement.
 
 **Nothing was scaffolded and no feature code was written this session.**
+
+#### 2026-08-01 correction to the entry above (Zach, same session)
+
+Two things in the entry are miscast; corrected here rather than rewritten.
+
+1. **`installe` does not govern cron.** Its surface is
+   `installe <path> | verb <project> <name> | retire <name> | list | audit`
+   — PATH and shims, nothing else. So "re-points what `installe` governs"
+   above must be read narrowly as the PATH/shim surface, and the open
+   question as posed ("may `transplante` touch a crontab itself, or emit a
+   plan for `installe`/`notify-senechal` to apply") **named the wrong
+   applier**. `installe` was never a candidate.
+   **The fork resolves rather than moves:** `transplante` never writes
+   cron. It declares what moved; **scheduler's own `bin/sync-crontab.sh`
+   regenerates the crontab** from `schedule/*.conf`, and
+   `notify-senechal` fires afterward as the estate notification. This is
+   not merely the cleaner split — it is the rule scheduler already states
+   in its own source: *"the crontab is generated from schedule/*.conf by
+   bin/sync-crontab.sh — never edit crontab by hand"* (`bin/scheduler:324`).
+   A `transplante` that wrote cron would be a hand-edit under a new name.
+
+2. **My "21 tracked files" was an overstated headline, and re-deriving it
+   moved the work.** `SCHED_ROOT` already exists and most scripts already
+   self-locate: `SCHED_ROOT="${SCHED_ROOT:-$(cd "$(dirname
+   "${BASH_SOURCE[0]}")/.." && pwd)}"` in `questions-lint.sh`,
+   `blockers-freshness-check.sh`, `check-witness-lint.sh`,
+   `rotation-lint.sh`, `token-usage.sh`. In `bin/scheduler` the literal at
+   line 38 is a **fallback** after self-location, not the primary path.
+   Only **7 files under `bin/`** still carry the literal — `morning-report.sh`,
+   `overnight-dev.sh`, `scheduler`, `scheduler-completion.bash`,
+   `scheduler-dev-cycle.sh`, `usage-gate.sh`, `usage-paced-runner.sh`. The
+   rest of the 21 were docs, BLOCKERS.md, DESIGN-NOTES.md, a conf template
+   and a test — real occurrences, but not engine work.
+   Milestone step 1 is therefore **smaller and better-defined than filed**:
+   finish an existing convention across 7 files, not introduce one across
+   21. The shims under `~/.local/bin` and the three symlinks are unaffected
+   by this correction and remain the larger surface.
