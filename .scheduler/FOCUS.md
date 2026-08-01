@@ -2381,3 +2381,24 @@ correction earlier today.
   every one of those pages tells its reader `man <verb>` for the contract.
   MANPATH carries no ecosystem entry. This is the advertised-but-not-delivered
   shape the family keeps cataloguing, in the family's own front door.
+
+#### 2026-08-01 update — scheduler is now relocatable
+
+The 6 commits were not on `main` (level with origin throughout) but stranded
+on a local-only branch, **`paced/2026-07-27`**, absent from the remote and
+absent from `main` by content: `blockers-append.sh`, the `sweep-loop-common`
+rescue-ref before `reset --hard`, the `cmd_commit_file` conflict-marker
+refusal, `blockers-liveness-check`, and the paced-runner's dirty-schedule
+dispatch refusal. Five days stranded — the ecosystem's own recorded
+stranded-commit signature, found by the new verb rather than by a survey.
+
+Pushed as a new remote branch (`439256f`), additive, no force, `main`
+untouched and still level. Verified on the remote by `git ls-remote`, not by
+the local ahead-count.
+
+`transplante check` now returns **relocatable, exit 0**: CLEAN / PUSHED /
+WORKTREES none / FREE. The 21 referring files under `~/.local/bin` remain —
+a census, not a blocker, and the work `plan` hands to its reader.
+
+Both targets are now clear. The move itself is still a human's act: `plan`
+writes the script, nobody runs it unattended.
