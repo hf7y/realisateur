@@ -366,3 +366,24 @@ the big-four are done.*
   config), or does it stay reachable only from its checkout until `page` and
   `amend` are built?
   > (answer inline here)
+
+- **2026-07-31 (interactive, after secretaire's reap):** Next reap —
+  **`quatre-vingt-douze`**, and the recommendation is to reap it *into*
+  bibliothecaire rather than on its own. The merge was already decided
+  2026-07-31 (quatre-vingt-douze `c771420`) and left unexecuted because
+  unregistering edits scheduler's `schedule/`; that step is now routine —
+  done twice, bibliothecaire `c9000f2`/`7d01ec2` and secretaire
+  `68da39e`/`4271945`. Grounds, measured not quoted: its whole surface is
+  `page92.py` (5 prose docs, 2 executables), its destination is already
+  reaped to a verb tree, and `cueille` already exists and is
+  **complementary, not duplicative** — `cueille` reports *where a work is
+  readable without payment*, `page92.py` *fetches and extracts the page*.
+  One verb, two halves, currently in two projects.
+  **The complication, and it is the same one that stopped R5 last night:**
+  `pages/` holds a real extracted-text corpus and `gallery/` an HTML view,
+  and neither is prose — so `fonde consign` is the wrong instrument and the
+  corpus needs a decided home before the footprint comes out, exactly like
+  the 1.4 GB intake (scheduler `ca99c9c`). Reap it, and if so does the
+  corpus go to the vault, stay on its default branch as the archive, or
+  move somewhere else?
+  > (answer inline here)
