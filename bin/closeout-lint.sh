@@ -158,9 +158,15 @@ echo "== B. TODAY'S SESSION RECORD ($FOCUS_MD) =="
 if [ ! -f "$FOCUS_MD" ]; then
   echo "  FLAG [no-focus] $FOCUS_MD does not exist"; flags=$((flags+1))
 else
-  # An entry opens with a bold dated line and runs to the next `---` rule.
+  # An entry opens with a dated line and runs to the next `---` rule. BOTH
+  # `**2026-07-31 ...` and `## 2026-07-31 ...` count: the file's older entries
+  # use the bold form and its recent ones use the heading form, and matching
+  # only the bold form made this check report "no durable record" over records
+  # that were sitting in the file. It fired that way against two real entries
+  # dated 2026-07-31 before anyone noticed, which is the failure mode this
+  # whole script exists to catch in other people's work.
   entry="$(awk -v d="$TODAY" '
-    $0 ~ "^\\*\\*" d {f=1}
+    $0 ~ "^(\\*\\*|##+[[:space:]]*)" d {f=1}
     f && /^---[[:space:]]*$/ {exit}
     f {print}
   ' "$FOCUS_MD")"
