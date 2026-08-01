@@ -1716,3 +1716,30 @@ archive that makes a total purge safe. So secretaire is off mandark as a
 mandark" cannot be satisfied at once, and this is the one that does not destroy
 anything. **If Zach wants the disk footprint gone too, that is a decision about
 where the archive lives, not a cleanup step.**
+
+**`/cloture` for the above, same session.** `closeout-lint`: 2 FLAGs, 4 BLIND,
+both FLAGs pre-existing and neither this session's — realisateur `?? .claude/worktrees/`
+(harness state) and senechal `?? journal/2026-07-31.json` (senechal's own
+19:01 observer artifact, an hour before this session wrote anything there;
+its siblings are tracked, so the ~:30 watcher will likely adopt it). All 4
+BLIND worktrees read by hand: only `realisateur-staging-silence-audit` is
+dirty, 2 files, 4 days old, not this session's. `hygiene-lint` on the three
+touched projects surfaces nothing new from tonight.
+
+- realisateur `f676210` — **next reap filed: `quatre-vingt-douze`, into
+  bibliothecaire.** Its merge was decided this morning (`c771420`) and stalled
+  on an unregistration step that has now been done twice and is routine.
+  Grounded by running `cueille --help` against `page92.py`: they are
+  complementary halves of one verb — *where a work is readable* and *fetch and
+  extract the page* — not the duplicate the earlier note implied. Names the
+  blocker rather than burying it: `pages/` is a corpus, not prose, so
+  `fonde consign` is the wrong instrument and it needs a decided home first,
+  the same finding that stopped bibliothecaire's R5.
+- realisateur `fce262e` (branch `worktree-summon-overt`, **PR #1, unmerged**) —
+  the sidecar sweep is now a step in `/bashify` step 7, with its verification
+  one-liner. **Not yet in effect:** the command is a generated shim, so it
+  takes hold when PR #1 merges and `install-shims.sh` reruns. Deliberately not
+  run from an unmerged branch.
+
+**Philosophy delta: none.** The sidecar finding changes a procedure, not a
+belief; `BUILD-DISCIPLINE.md` and `UNIVERSE.md` are untouched tonight.
