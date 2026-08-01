@@ -2665,3 +2665,39 @@ than described, so a run that cannot see this conversation can pick it up.
   re-created it, and `--require-briefs` reported all 14 concepts missing while
   reading a directory holding one file. Triggered and repaired today
   (bibliothecaire `43fac6d`); the shape is worth a guard, not just a memory.
+
+#### 2026-08-01 — doctrine settled and propagated: a host-only branch is a blocker
+
+Zach's answer to the question filed at scheduler `8efc617`. Propagated as
+**guards, not prose** — this repo's own rule, applied to its own doctrine.
+
+**The survey came first, and it made the job small.** Exactly **one live code
+site** still used the weaker commit-level test (`rev-list --branches --not
+--remotes`, in `transplante`); every other hit for that idiom was prose or a
+record. `fauche` already asked correctly. So propagation was two edits, not a
+sweep.
+
+- `transplante` (gardien `68a527b`) — enumerates `refs/heads/`, asks about
+  `origin/<branch>`. Now agrees with `fauche` exactly on the same five
+  branches.
+- `closeout-lint` (realisateur `9d7b279`) — **read `HEAD` alone**, so a
+  host-only branch was invisible unless checked out. scheduler carried three
+  through this entire session and no lint mentioned them; only `fauche` saw
+  them. FLAGs went **2 → 7**.
+- `BUILD-DISCIPLINE.md` (same commit) — the settled definition with the exact
+  test, and why it lives in three places rather than one: each answers it for
+  a different act (may it be removed / moved / did this session strand
+  anything).
+
+**The first attempt at the fix was wrong in the way it was fixing.** It used
+`@{u}`, which asks whether upstream *tracking* is configured — a branch pushed
+by explicit refspec has none and is still on origin. It counted 7 where fauche
+counted 5, and the two extras were branches this session had pushed itself.
+**The test is the remote ref, never the tracking config.** Recorded in the
+doctrine section so the next propagation does not repeat it.
+
+**Consequence, and it is scheduler's to clear:** nothing may be reaped off
+mandark until `bootstrap/stamp-2026-07-29` (+8), `paced/2026-07-26` (+3), and
+`paced/2026-07-24` / `-25` / `-28` (host-only) are pushed or deliberately
+deleted. Answer filed to scheduler at `98b3386`. This is now a hard
+precondition on the reap phase queued at `02e2c98`, not a caveat.
