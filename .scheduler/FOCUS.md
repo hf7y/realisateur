@@ -2501,3 +2501,55 @@ finding rather than flattened to nonzero.
 
 Until scheduler acts on that, `ecosim-sensor run relocation` is hand-run —
 which is coherent, since the move it watches is a human act too.
+
+#### 2026-08-01 — `arme`: the vocabulary for work that never spends
+
+Zach's route, and it was the right one: **wire it from the inside with
+`bashify coin`** rather than patch `sync-crontab.sh` from outside. The verb
+ships inside scheduler, so scheduler is the one changing its own engine.
+
+`arme` (scheduler `bashified`, commits `f10a4d8` / `4d18033` / `9820a72`)
+arms non-agent recurring jobs from `schedule/_monitor.conf` into **its own
+crontab block**. `sync-crontab.sh` already reads a table before rewriting it
+so unmanaged lines survive; `arme` returns the courtesy. Two blocks, two
+owners, neither able to eat the other's work — which is a better answer than
+the `MONITOR` kind I proposed this morning (scheduler `b569ece`), because it
+needs no change to the engine at all. That proposal should now be read as
+superseded by this.
+
+It writes the crontab where `transplante` refuses to, and the line is
+**ownership**: the crontab belongs to scheduler and this verb ships inside
+scheduler. A tool may write what it owns.
+
+**The ecosim monitor is armed and verified running**:
+`*/30 * * * * ecosim-sensor-tick`, tick exercised by hand first (exit 3 =
+BLIND for dexter, the honest verdict; 7 relocation lines in the log).
+**THE PLAY run 3 is intact — the `scheduler-managed` block is still absent
+and no metered job was armed.**
+
+**Four defects the build found, each fixed rather than documented around.**
+1. `set -- $cron` without `set -f` **globbed the asterisks** against the
+   working directory, so a valid `*/30 * * * *` read as "not five fields".
+2. **The spend check passed two jobs that spend.** It followed literal paths;
+   the wrapper execs `scheduler-run`, which resolves its engine from
+   `BASH_SOURCE` at run time and names nothing a reader can follow. Static
+   reading cannot settle this, so it stopped pretending to: the verdicts are
+   now SPENDS / FREE (an obvious leaf) / **UNVERIFIED, which is not a pass**,
+   cleared only by a written attestation in the register's fifth field. A
+   command naming the model runner is refused whatever its attestation says —
+   negative-tested with a deliberately false attestation.
+3. `list` returned **1** whenever the last register line was blank or parked —
+   a status varying with the data while meaning nothing. Caught by
+   `bashify check` as an undocumented exit code.
+4. `apply` reported **"armed 5 monitor(s)" over one armed job**, counting this
+   verb's own subcommands after `list` and `jobs` were split. A count wrong in
+   a reassuring direction is worse than no count.
+
+**The page went through `bashify amend`**, all four gates passing, to state
+the whole six-verdict alphabet instead of three — the closure property the
+sensor contract makes a hard gate, applied to a man page. The gate refused
+the first draft for a modal ("would never fire").
+
+Also: `bashify check`'s SURFACE row reads `<verb> list` as the verb's
+**subcommand** enumeration, which is why `list` and `jobs` are separate here.
+Worth knowing before writing the next verb.
