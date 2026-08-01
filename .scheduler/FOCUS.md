@@ -1762,3 +1762,84 @@ deposit at vault `cd8faba`, source_commit `626b612`, verified three ways.
 **The generalisable bit: a guard written as if it were the last line of
 defence is right to refuse; before overriding one, check whether that
 assumption actually holds. Here it did not.**
+
+## 2026-07-31 (bashify, background job) — quatre-vingt-douze folded into bibliothecaire and REMOVED
+
+`/bashify quatre-vingt-douze` executed the merge Zach decided earlier the same
+day. The project no longer exists on disk; its work is two verbs in
+bibliothecaire, its prose is in the vault, its history is on GitHub.
+
+**Two verbs, not one — `cueille` left byte-identical.** The folded project's
+FOCUS said "cueille absorbs acquisition as well as page 92". That does not
+survive contact with `cueille.1`, which promises *report where one work is
+readable without payment* and states it **fetches no full text**. Folding a
+fetch pipeline in would break a politeness promise and force an "and" into its
+NAME line (row 1 of the page test). So: `glane` (harvest page 92) and
+`accroche` (hang the pages), both unclaimed per `command -v`, both installed
+via `installe` — bibliothecaire-verbs `3c37161`.
+
+Harvesting and hanging are separate verbs because the carried constraint —
+*user judgment IS the product, the arranging is never automated* — attaches to
+the hanging. `accroche` refuses sort/group/rank with **exit 2**, not 4; exit 4
+would promise it later. Asserted as behaviour in `reaped-q92-test.sh`
+(`1d931d2`).
+
+**The pass's own largest error, caught by Zach, corrected same session.** The
+verbs were hand-written instead of self-writing, with `VERB_CAN_SUMMON=0`
+foreclosing the path by construction, and `accroche sheets` filed as **exit 4**
+when it is contracted on the page and should have been **exit 3 + `--summon`**.
+Exit 4 means "no contract exists"; a subcommand on a man page has one. Fixed
+in `ae95280` (a contract MODIFICATION, four gates recorded in the commit) with
+the contract it summons toward filed as basheur `a24ce3d`
+(`print-sheet-count`, AGENT-backed). `basheur status` went 6/12 → 6/13 — the
+ratio got *worse* on paper, which is correct: the debt was always there,
+hidden in a GAPS line instead of declared.
+
+**Other defects found and their disposition:** `glane nosuchthing` exited 0
+having run the default subcommand — an exit-0 wrong answer, found by provoking
+every documented exit code rather than by reading, guarded in both verbs
+(`3c37161`). Committed `__pycache__` debris, untracked (`8de1f8c`). The
+`accroche status` staleness check is **wrong under both implementations
+tried** and was reverted rather than patched twice (`329d7dd`), recorded as an
+open defect in GAPS (`f940ad2`).
+
+**The removal was proven safe before it was performed.** `reaped-q92-test.sh`
+was written first and not edited after: REMOVED / PRESERVED / ALIVE. At the
+moment of writing it scored 9/11 with the two failures being exactly the two
+removal rows — so PRESERVED and ALIVE held *before* anything was destroyed.
+11/11 after. It caught a near-miss worth keeping: the local bare remote named
+in the project's conf was **not** origin, held `main` only two commits behind,
+and no `bashified` — trusting it as the archive would have destroyed the
+merge-decision commits. Origin (GitHub) had both branches at the exact local
+SHAs.
+
+**Prose reaped** — 5 documents via `consign-prose`, each verified byte-for-byte
+by re-extracting the body and hashing it rather than trusting the frontmatter
+(vault `498344f`). The full pass record including its errors, and the closing
+insights plus a reap recommendation, were filed **through bibliothecaire's own
+verb** (`fonde consign --summon` → basheur → consign-prose, MECHANIZED, 0
+tokens): vault `ff837a8` and `fde46e8`.
+
+**Machine footprint:** deleted `~/.local/bin/quatre-vingt-douze-nightly-batch-loop.sh`
+and the two scheduler symlinks (dangling sweep clean); added `glane` and
+`accroche` to PATH via `installe`. Declared to senechal (`4af0c8c`).
+Unregistration filed through scheduler's front door (`ed9af18`), **not
+executed** — so `schedule/quatre-vingt-douze.conf` and its `_paced.conf` row
+still name a dispatch script that is gone. `closeout-lint` FLAGs this as
+`missing-repo`; that FLAG is correct and stays until a human closes it.
+
+  [batch] NEXT REAP CANDIDATE (recommendation, needs Zach — do not act
+  unattended): `nine-speakers`. Its `bashified` branch and verb `chante`
+  already exist (`1c29bf9`, `7e2319e`); it has a real Python package to front;
+  its own FOCUS says the software half is already built; and its remaining bar
+  is hardware and Zach's ears, which no unattended run can advance. It is
+  already `enabled=0`. Counter-argument: it is *blocked*, not finished, so
+  reaping bets the block is durable. Cheaper alternative if the goal is to
+  stop prose-generation rather than distill tooling: `sequestria`, whose own
+  FOCUS records its recent commits as "PROCESS.md self-logging, not product" —
+  but it has no scripts, so it yields a consignment and an unregistration, not
+  a verb. Full reasoning and evidence: vault `fde46e8`.
+  Checked at close: **no registered project reports a reached milestone**, so
+  a milestone bar is useless as a reap signal; and a `not-started` project is
+  never a candidate however quiet, because there is no completed agentic
+  activity to suspend.
