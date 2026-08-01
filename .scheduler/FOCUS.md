@@ -1542,3 +1542,48 @@ one form no fixture invoked, under a suite reporting 40 passed.
   correctly so — they come off at their generator, and no verb does that yet.
 - **`atteste` belongs to gardien** — still carried, still unfiled, unchanged
   from the entry above. Not touched this session.
+
+## 2026-07-31 (`/ideate`, Zach present) — bibliothecaire reaped: test first, then 10 of 15 rows closed to 5
+
+Zach: *"first write a test defining what success would be."* Done before any of
+the work it describes, and not edited afterwards to match what happened.
+`bibliothecaire-verbs/test/reaped-test.sh` (`9f58c36`), 15 rows in three
+groups — REAPED (the agent is gone), PRESERVED (nothing destroyed without a
+deposit), ALIVE (the verbs still answer). It failed 10 of 15 at the moment it
+was written. **It now fails 5.**
+
+**Closed:** the pacing row and dispatch script (scheduler `c9000f2`; the script
+was consigned to the vault first, since it was tracked in no repository and
+removing it destroyed the only copy — `installe retire` refused it as unowned,
+exit 7, and the override was taken deliberately). The vault has a private
+GitHub remote (`hf7y/ecosystem1-vault`). **All 37 prose documents are deposited,
+verified byte-for-byte by content hash**, manifest at `REAPED.tsv` checked for
+completeness against git rather than trusted.
+
+**`consign-prose` is MECHANIZED** (`basheur`, impl + verify). Zach authorised
+one summon on condition the impl make it permanent; the summon ran, the impl
+was written from what it produced, and the contract now declines summons and
+says so. **The cost was paid once.**
+
+**Three defects found by the machinery, not by reading it** — the useful part:
+- `verify-consign-prose.sh` caught the overwrite refusal comparing only the
+  region between the body markers, so a note a reader had annotated *below* the
+  body was indistinguishable from a fresh one and was silently replaced.
+- The read-back gate caught a file with no trailing newline running its last
+  line into the end marker; the body read back one line short. 1 of 37.
+- An earlier draft of the verify trimmed a blank line "to be safe" and reported
+  a **faithful** deposit as corrupt — a test damaging the evidence before
+  measuring it. Worth remembering: the first corruption report was the test's.
+
+**The finding that stops R5.** `/home/zach/bibliothecaire-intake` holds
+**1.4 GB across 555 files** — 206 accepted scans, 204 work, 136 published
+page-92 extracts. Every one is owned by **`zach:zach`, not `bibscan`**, so the
+"bibscan may still own unreaped scans" caveat that has guarded that account
+since 2026-07-27 is **empirically false** and can stop being repeated. But the
+1.4 GB itself sits outside any repository and is exactly what `verse` exists to
+operate on, so **nothing there was deleted** and the intake corpus needs a
+decided home before the footprint comes out.
+
+**Blocked, both needing Zach:** deleting `schedule/bibliothecaire.conf` was
+refused by this session's permission gate; and the samba/`bibscan` removal needs
+root (no passwordless sudo). **Not built:** `verse` and `cueille`.
