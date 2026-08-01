@@ -18,7 +18,7 @@ SKEL="$(cd "$(dirname "${BASH_SOURCE[0]}")/skel" && pwd)"
 # was not testable before: `emit` does `git branch -D bashified` on the real
 # repo, so the only way to exercise it was to destroy a live branch, and the
 # man-page template therefore shipped four gate failures for two days.
-SCHED="${BASHIFY_SCHED:-/home/zach/Documents/Project Archive/scheduler}"
+SCHED="${BASHIFY_SCHED:-/home/zach/Documents/Projects/scheduler}"
 WORK="${BASHIFY_WORK:-/tmp/claude-1000/-home-zach-Documents-Projects-realisateur/5ffa824d-364f-4e27-843a-13eac347b21d/scratchpad/wt}"
 
 PROJ="${1:?project}"; VERB="${2:?verb}"; SUMMARY="${3:?summary}"

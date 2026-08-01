@@ -28,7 +28,7 @@
 set -uo pipefail
 
 SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
-SCHED="/home/zach/Documents/Project Archive/scheduler"
+SCHED="/home/zach/Documents/Projects/scheduler"
 
 die()    { printf 'coin: %s\n' "$*" >&2; exit 2; }
 gap()    { printf 'coin: GAP: %s\n' "$*" >&2; exit 4; }
