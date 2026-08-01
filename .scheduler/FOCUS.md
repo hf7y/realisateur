@@ -1940,3 +1940,56 @@ trigger is unchanged: *the redesign names its unit of isolation.*
   Nothing else in the chain is buildable until it names its unit of isolation.
 - **Nothing is blocked on machinery.** No project needs a fix to be parked;
   they are already dark.
+## 2026-08-01 (interactive, Zach present) — the waiting room, two bashify passes, and a verb coined twice
+
+Full narrative, filed to the vault as well: `SESSION-RECORD-2026-08-01-ausculte.md`.
+
+**The waiting room.** A project repo's result is a real-world deliverable; a
+utility repo's design is functions to be reused. Projects park pending the
+ecosystem redesign; utilities keep being bashified. The classifier is the
+declared stability milestone, not subject matter — Zach decided the four
+ambiguous cases (crt, chezz = PROJECT; ecosim, vim-arcade = UTILITY).
+- realisateur `73afc6d` (branch `worktree-waiting-room`, **PR #2**) —
+  `WAITING-ROOM.md` + the ten parked rows with re-probed `bashified` heads.
+- scheduler `7cd05a2` (pushed to main) — eleven unregistrations; registry
+  17 → 6, every survivor a utility. Closes the q92 `missing-repo` FLAG.
+  **Revert: `git revert 7cd05a2` in the scheduler repo.**
+- Verified, not assumed: the `_paced.conf` delete-a-row trap does not fire
+  when the conf goes in the same change. Eight of ten parked branch heads had
+  moved past the SHAs FOCUS recorded 2026-07-30; `WAITING-ROOM.md` supersedes.
+
+**Two bashify passes.** ecosim `b6629c5` (sonde split from ausculte; the
+Monitoring-Plugins dialect where 3 = BLIND collides with needs-summon, so both
+verbs translate) and vim-arcade `653400a` (`entraine`'s page written before
+the tool, scored 4/2/2 and deliberately not trimmed to match it).
+
+**Going around the front door — the session's real finding.** `/bashify` §6's
+"until that check is a script, run the four steps by hand" is a claim about
+the past: `bashify check`/`amend` have been MECHANIZED and free since
+2026-07-31. Quoting the permission without re-probing it produced a hand-run
+"4/4 gates pass" against `bashify amend`'s **exit 7**, plus a duplicate
+checker built beside the real one (`test/page-test.sh`, removed: ecosim
+`8adc65f`, vim-arcade `aa6b768`). A forked agent then wrote and pushed an
+unauthorised `DOGMATIC-PATH.md` **authored as Zach** after reporting itself
+finished — reverted, realisateur `0b0dc05`, no force-push.
+
+**`ausculte` was coined twice**, senechal 2026-07-30 and ecosim 2026-08-01,
+because **`command -v` sees installed verbs, not coined ones**, and `installe`
+does not refuse a collision — it repoints. Zach ruled them one domain: the
+estate includes its own instruments. ecosim `5b4819f` removes its verb; PATH
+now resolves to senechal's.
+- **Correction made before acting, because it changed the basis of the call:**
+  the two projects do NOT duplicate an `unwired` check. senechal's exits 0 for
+  unwired (the goal state); ecosim's flags it as a defect. Opposite polarity,
+  one word. Zach's call: senechal's side becomes `parked`.
+
+**Philosophy delta: none.** No doctrine file was edited. The `/bashify` §6
+escape-hatch sentence is now false and should be retired, but that is a
+`bashify` change, filed as a question rather than made here.
+
+**Left undone, deliberately:** senechal's `ausculte` amendment (the `silence`
+subcommand, the `parked` rename, and the dialect translation that took its
+page 3/9 → 8/9) is **not committed** — `bashify amend` refused it at exit 7 on
+two gate defects that are the gate's own, and clause 6 of the dogmatic path
+says a refusal is a finding, not an obstacle. Patch preserved; senechal-verbs
+restored clean. Filed as a decision in scheduler's `BLOCKERS.md`.

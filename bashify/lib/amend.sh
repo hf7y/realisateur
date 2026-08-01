@@ -120,9 +120,23 @@ else
     SCANNED=$((SCANNED+1))
     while IFS= read -r hit; do
       [ -n "$hit" ] || continue
-      line="${hit#*:}"; line="${line#*:}"
+      # hit is "<ref>:<file>:<lineno>:<content>". Take the file, because the
+      # separator alphabet is NOT the same in a script and in prose, and strip
+      # the line number, because leaving it on means the ^ anchor can never
+      # match -- a bare invocation at the start of a line was invisible.
+      file="${hit#*:}"; file="${file%%:*}"
+      line="${hit#*:}"; line="${line#*:}"; line="${line#*:}"
       # An invocation is the verb in command position. Anything else is prose.
-      if printf '%s' "$line" | grep -qE "(^|[|;&(\`]|\\\$\()[[:space:]]*(\./)?(bin/)?$VERB([[:space:]]|$)"; then
+      # A backtick opens a command substitution in shell -- and quotes a NAME
+      # in markdown. Counting the markdown case made the gate unsatisfiable:
+      # documenting why a verb moved raised its caller count, so the only way
+      # to pass was to delete the explanation. Prose gets the shell-free
+      # separator alphabet.
+      case "$file" in
+        *.md|*.markdown|*.txt|*.1|*.rst) seps='[|;&(]' ;;
+        *)                               seps='[|;&(`]' ;;
+      esac
+      if printf '%s' "$line" | grep -qE "(^|$seps|\\\$\()[[:space:]]*(\./)?(bin/)?$VERB([[:space:]]|$)"; then
         INVOCATIONS=$((INVOCATIONS+1))
         printf '        INVOCATION %s: %s\n' "$proj" "$(printf '%s' "$hit" | cut -c1-100)"
       else
