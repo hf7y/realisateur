@@ -634,6 +634,35 @@ boot-path line) over a reminder. Reminders decay; guards fail loud.
   change to a live script is indistinguishable from an abandoned one, and
   the next autocommit may adopt it under someone else's name.
 
+### Settled definition: "pushed" (2026-08-01, Zach)
+
+**A host-only branch is a blocker.** A repository is not recoverable
+elsewhere while any branch of it exists only on this host — commit-level
+recoverability is not sufficient, because a branch is a name someone
+chose to keep, and losing the name loses the reason those commits were
+separated.
+
+The test is the remote **ref**, never the tracking config:
+
+```sh
+git for-each-ref --format='%(refname:short)' refs/heads/ | while read -r b; do
+  git rev-parse --verify -q "origin/$b" >/dev/null || echo "$b exists only here"
+  [ "$(git rev-list --count "origin/$b..$b")" = 0 ] || echo "$b is ahead"
+done
+```
+
+`@{u}` is the wrong question: a branch pushed by explicit refspec
+(`git push origin b:b`) has no upstream configured and is still safely on
+origin. The first attempt at propagating this doctrine used `@{u}` and
+over-reported by two — failing in exactly the way pattern 20 describes,
+while implementing pattern 20's own remedy.
+
+Enforced in three places, deliberately not one, because each answers it
+for a different act: `fauche` (may this repository be removed),
+`transplante` (may it be moved), `closeout-lint` (did this session
+leave anything stranded). Any new instrument that asks "is this pushed"
+uses the block above.
+
 ## The baseline (restamped into every project's CLAUDE.md)
 
 **This fenced block is the ONE SOURCE.** `bin/restamp-discipline.sh` reads
