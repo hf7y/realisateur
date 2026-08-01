@@ -2806,3 +2806,51 @@ through. Correct by its own contract, destructive if acted on — something must
 join it to `installe`'s knowledge of what is reachable from a prompt before a
 reap is automated. It also enumerates `Projects/.claude`, which is not a
 repository.
+
+#### 2026-08-01 — what remains outside the waiting room, and the `dose` split completed
+
+**The survey.** Of the 10 parked project repos, only **3 remain on disk**:
+`wtul` and `abletim` in `Projects/`, and **`chezz` in `Project Archive`** —
+outside the tree `fauche` governs, so invisible to every instrument, the same
+blindness `wtul` had before this morning. The other seven were reaped earlier.
+
+Outside the waiting room, in `Projects/`:
+
+| class | count | status |
+|---|---|---|
+| utility repos, still bashified | 7 | see below |
+| "already reaped" but resident **and live** | 2 | `bibliothecaire`, `secretaire` |
+| verb worktrees | 8 | the deliverable, not reapable |
+| dead worktree | 1 | **reaped this pass** |
+| not a repository | 1 | `Projects/.claude` — fauche noise |
+
+**Correction to my own model:** realisateur and senechal were *already*
+split — `arpente`/`epluche`/`juge` and
+`installe`/`recense`/`ausculte`/`lance`/`veille`. `dose` at 25 was the last
+large weld.
+
+**Reaped: `realisateur-staging-silence-audit`, 1.2M.** Verified first: 0
+commits ahead of main, 180 behind, branch present on origin. `git worktree
+remove`; the branch ref survives.
+
+**`bibliothecaire` and `secretaire` are not reapable despite being marked
+already-reaped.** Their verbs — `fonde`, `range`, `glane`, `accroche`,
+`cueille`, `verse` — front them through `LEGACY_ROOT`. Same shape as
+`basheur`: recoverable by `fauche`'s test, load-bearing in fact. This is the
+second and third instance of the liveness gap filed today.
+
+**The `dose` split is complete.** The scheduler noun now carries five verbs,
+each 9/9 and installed: `dose` (dispatch), `arme` (non-agent cron), `relis`
+(the five lints), **`rapporte`** (`cf3d4bb`, the four accounts), **`jauge`**
+(`4695d81`, burn and gate).
+
+Two findings from cutting the last two seams, neither visible to a generator:
+- **`dose` fronts a deprecated script as a live subcommand.**
+  `bin/morning-report.sh` says on its own second line *"DEPRECATED
+  (2026-07-20) — superseded by bin/scheduler"*. A generated subcommand table
+  cannot read a deprecation notice. `rapporte` leaves it behind; the script is
+  untouched.
+- **The usage seam is finer than the domain.** It looked like three scripts;
+  `usage-paced-runner` is the pacing *dispatcher*, not an instrument. It stays
+  with `dose`. `jauge` measures and rules; it never spends — a verb that did
+  both is the shape this ecosystem refuses everywhere else.
