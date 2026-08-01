@@ -2854,3 +2854,46 @@ Two findings from cutting the last two seams, neither visible to a generator:
   `usage-paced-runner` is the pacing *dispatcher*, not an instrument. It stays
   with `dose`. `jauge` measures and rules; it never spends — a verb that did
   both is the shape this ecosystem refuses everywhere else.
+
+#### 2026-08-01 — chezz reaped off mandark, and its autonomy premise is FALSE
+
+**Confirmed removable, and removed** — 203M, `Project Archive/chezz` gone.
+Verified three independent ways before deleting: `fauche check` REMOVABLE;
+`rev-list --branches --not --remotes` = 0; and **all 8 local heads matched
+`ls-remote` by sha**, which also proved the remote answers. Recover with
+`git clone git@github-chezz-deploy:hf7y/chezz.git`.
+
+Prepared first: **4 branches pushed** (`feature/movement-qol`,
+`minimalist-fork`, `simplify-and-polish` host-only; `readable-html` 13 ahead).
+All four had **zero commits absent from a remote** — only the names were at
+risk. 3 prose files consigned (vault `9857e30`).
+
+**THE PREMISE DID NOT HOLD, and this is the finding.** "chezz should be
+working autonomously on github" — it is *scheduled* autonomously and **failing
+autonomously**. The `Bug Sweep` workflow has run on its `0 14 * * *` cron and
+**failed every run for four consecutive days** (07-29, 07-30, 07-31, 08-01),
+each time at the `anthropics/claude-code-action@v1` step. `Test` also fails on
+push. The `ANTHROPIC_API_KEY` secret exists (set 2026-07-17), so it is not
+missing — the key or the action is the fault, and nobody was watching because
+the run *starts* fine and the failure is only visible in the Actions tab.
+
+Removing the local copy did not cause this and does not worsen it: mandark
+never dispatched chezz (unregistered, crontab empty). But **chezz is now a
+repository whose only automation is broken**, and its working copy is no
+longer on this host to notice it. Fixing it needs a clone.
+
+**A third false blocker found in `fauche`** (gardien `6da9147`). Its worktree
+check extracted paths with `awk '{print $2}'`, which **stops at the first
+space**: `/home/zach/Documents/Project Archive/chezz` became
+`/home/zach/Documents/Project`, so the self-exclusion missed and every
+repository under a path containing a space reported its own primary worktree
+as foreign. chezz flipped KEEP → REMOVABLE with nothing about chezz changing.
+Together with `0dd64f1` this is one defect wearing two hats: **comparing paths
+never normalised to the same form.** Regression-checked.
+
+**Left on PATH, deliberately:** `chezz-nightly-batch-loop.sh`,
+`chezz-bug-sweep-loop.sh` (both `installe`-classified **generated** — "a
+scheduler writes these; retire them there, not here") and
+`chezz-bug-sweep-precheck.sh` (**unknown** — "a human put it here; installe
+will not guess"). All three are inert, since chezz is unregistered. Retiring
+them is scheduler's act and a human's, not this session's.
