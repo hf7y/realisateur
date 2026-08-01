@@ -2402,3 +2402,42 @@ a census, not a blocker, and the work `plan` hands to its reader.
 
 Both targets are now clear. The move itself is still a human's act: `plan`
 writes the script, nobody runs it unattended.
+
+#### 2026-08-01 — ecosim watches the move; scheduling it is BLOCKED on THE PLAY
+
+Built and committed (ecosim `cbc0a5b`, branch `sensor-bashification`):
+`ecosim.relocation`, six symbols, selftest 6/6 with 0 contract violations
+across the ecosystem's 43 declared symbols. It emits; realisateur carries the
+prose, per this morning's decision — ecosim's no-cross-repo-writes boundary
+was not touched.
+
+**Baseline captured before any move**, which was the whole point:
+`realisateur/archive/relocation-baselines/2026-08-01-premove.txt`. mandark
+reads six projects `AT_DECLARED`; scheduler shows 21 referring files, matching
+`transplante check`'s count derived independently by a different tool.
+
+**Rule 4 paid for itself immediately.** Probing dexter rather than assuming
+it: dexter answers ssh as `zach` in WSL2, has **no `~/scheduler` at all**, and
+its crontab was emptied 2026-07-29 for THE PLAY run 3. The sensor emits
+`BLIND_CONF_UNREADABLE` naming the path it searched, and the run exits 3 —
+BLIND beats OK, so mandark's health is never extended over dexter.
+
+**SCHEDULING IS DELIBERATELY NOT DONE, and this is the open item.**
+`ecosim-sensor-tick` exists on PATH (realisateur-owned wrapper) but **no
+crontab entry runs it**, so nothing runs the sensor unattended. It was not
+wired, for two reasons that both point the same way:
+1. mandark's crontab is empty **by design** — THE PLAY run 3's premise is
+   that nothing dispatches until scheduler brings dispatch back up itself
+   from `_runner.conf` via `sync-crontab.sh`. A hand-added line would falsify
+   a live experiment.
+2. The crontab is a generated file. Hand-editing it is the exact act this
+   week's `transplante` work refused to build in.
+
+Not a blocker for the move itself: `transplante` has no `apply`, so the move
+is a human act, and a manual reading before and after is coherent and
+sufficient. It IS a blocker for continuous drift detection.
+
+**For Zach — the fork, unanswered:** register the tick through
+`schedule/_runner.conf` so `sync-crontab.sh` generates it when dispatch
+returns (correct, but arrives only when THE PLAY concludes), or run the
+sensor by hand at each relocation and defer scheduling entirely.
