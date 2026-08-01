@@ -139,3 +139,66 @@ claim about the past.** The escape hatch had expired, the availability check
 measured the wrong set, and a harness written this session was treated as
 evidence. The instrument to trust is the ecosystem's own, and its refusal is
 the answer rather than an obstacle.
+
+---
+
+## 8. Addendum — the gate was repaired rather than overridden
+
+Zach's direction, same session: *"fix the two gate defects in bashify via
+bashify amend."* Not an override. The instrument was repaired and re-run, and
+it then allowed the amendment on its own.
+
+**Three parser defects, all in `bashify`, all found by finally running it:**
+
+1. **SURFACE could not express a hyphenated subcommand.** Page subcommands
+   were read with `\K[a-z]+`, truncating `dead-config` to `dead`; the tool's
+   own `list` was filtered with `^[a-z]+$`, dropping the hyphenated name
+   entirely. The two sides could never agree, so **every hyphenated verb in
+   the ecosystem was unpassable** — not one page.
+2. **CALLERS counted markdown as shell.** Its separator class contained a
+   backtick, which opens a command substitution in a script and quotes a
+   *name* in prose. The gate was therefore unsatisfiable: writing the
+   sentence explaining why a verb moved RAISED its caller count, so the only
+   way to pass was to delete the explanation.
+3. **Latent, found while fixing the second:** the matched line kept its
+   `<lineno>:` prefix, so the `^` anchor could never match. A bare invocation
+   at the start of a line — the most ordinary shape there is — was invisible.
+   Fixing it makes the gate STRICTER, which is the point.
+
+**Fulfilling, not amending:** `man/bashify.1` is byte-identical. These make
+the tool do what its page already promised.
+
+**Measured end to end:** senechal's `ausculte` page goes 8 of 9 rows to
+**9 of 9**, and `bashify amend` moves from **exit 7 (REFUSED)** to **exit 0
+(ALLOWED)** — 5 branches searched, 9 prose mentions, 0 invocations.
+
+**Two corrections to claims made earlier in this same session**, recorded
+because each was stated confidently and each was wrong:
+
+- I said the CALLERS gate did not distinguish prose from invocations. It
+  already did, and says so in its own comment. The defect was narrower: the
+  backtick.
+- I said my patch made `verify-amend.sh` hang. It did not — that was disk
+  contention with a concurrently running test. It completes in 8.4 seconds,
+  8 passed, 0 failed.
+
+**Found, not fixed, and named rather than patched to green:**
+`test/verify-check.sh` fails 1 of 5 — it asserts bashify's own page scores 9
+of 9 and it scores 8. **Pre-existing**, confirmed by running the untouched
+copy on main. It means a contract whose verify does not pass is still
+reported MECHANIZED, which is Law 4's territory and its own decision.
+
+**Both pull requests merged** (realisateur `6199a12`, `e65c8da`). PR #2
+conflicted on `.scheduler/FOCUS.md` because two appends collided — this
+branch's `/ideate` entry and main's session record. Both were kept in the
+order they happened, and the resolution was verified by diffing the result
+against `origin/main` to prove no line of main's was dropped.
+
+## 9. The standing lesson, restated after the addendum
+
+The session's shape did not change: **a documented permission is a claim
+about the past.** What the addendum adds is the other half — when the
+ecosystem's own instrument refuses, the answer is not to route around it and
+not to obey it blindly, but to ask whether the refusal is measuring the
+artifact or measuring itself. Here it was measuring itself, three times over,
+and saying so out loud is what let it be fixed instead of bypassed.

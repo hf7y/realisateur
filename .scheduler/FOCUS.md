@@ -1993,3 +1993,39 @@ page 3/9 → 8/9) is **not committed** — `bashify amend` refused it at exit 7 
 two gate defects that are the gate's own, and clause 6 of the dogmatic path
 says a refusal is a finding, not an obstacle. Patch preserved; senechal-verbs
 restored clean. Filed as a decision in scheduler's `BLOCKERS.md`.
+
+### 2026-08-01 (addendum) — the bashify gate repaired, both PRs merged
+
+Zach: *"fix the two gate defects in bashify via bashify amend."* Repaired and
+re-run rather than overridden; the gate then allowed the amendment itself.
+
+- realisateur `8ae2709`, merged `6199a12` — **three parser defects in
+  `bashify`.** SURFACE could not express a hyphenated subcommand (so every
+  hyphenated verb in the ecosystem was unpassable, not one page); CALLERS
+  counted a markdown backtick as command substitution, which made the gate
+  unsatisfiable because documenting a move raised the caller count; and a
+  latent third — the line kept its `<lineno>:` prefix, so `^` never matched
+  and a bare invocation at the start of a line was invisible. **Fulfilling,
+  not amending:** `man/bashify.1` is byte-identical.
+- senechal `5276bbb` — the amendment that exposed them. `ausculte` gains
+  `silence`, `project-unwired` becomes `parked`, and the legacy 0/1/2 dialect
+  is translated (1 → 8 FLAGS, 2 → 6 BLIND) after the gate ruled code 1
+  reserved. Page 3/9 → **9/9**; `bashify amend` exit 7 → **exit 0**.
+  `ausculte silence` and `ausculte parked` are live on PATH.
+- realisateur `3c6fff3`, merged `e65c8da` — PR #2's FOCUS conflict resolved
+  by keeping BOTH 2026-08-01 entries; verified by diffing against
+  `origin/main` that nothing of main's was dropped.
+- ecosim `7f2ff29` — sensor archive from the verification runs.
+- scheduler `cbeb8e1` — the blocker recorded as resolved, appended not rewritten.
+
+**Two corrections to my own earlier claims this session:** the CALLERS gate
+*did* already separate prose from invocations (the defect was only the
+backtick), and my patch did *not* hang `verify-amend` (that was disk
+contention; it runs in 8.4s, 8/0).
+
+**Open, named rather than folded in:** `bashify/test/verify-check.sh` fails
+1 of 5 — pre-existing on main — which means a contract whose verify does not
+pass is still reported MECHANIZED. Law 4's territory; filed at scheduler
+`cbeb8e1`.
+
+**Philosophy delta: none.** No doctrine file edited.
