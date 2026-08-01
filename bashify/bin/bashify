@@ -12,7 +12,7 @@ SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 
 VERB_NAME=bashify
 VERB_SUMMARY="state a project's promise as a contract a shell can hold"
-VERB_USAGE="bashify <subcommand> [args...]   (list, emit, page, check, amend)"
+VERB_USAGE="bashify <subcommand> [args...]   (list, emit, coin, page, check, amend)"
 # Reversed 2026-07-30. bashify spends, through one front door. Animacy in this
 # ecosystem means carrying an agenda -- a loop of one's own -- not touching a
 # model: a verb that summons at a call site is not carrying an agent, it is
@@ -26,6 +26,7 @@ VERB_SUMMON_COST="unmeasured; metered by the contract store, printed before spen
 EMIT_IMPL="$SELF/bashify.sh"
 CHECK_IMPL="$SELF/lib/check.sh"
 AMEND_IMPL="$SELF/lib/amend.sh"
+COIN_IMPL="$SELF/lib/coin.sh"
 # The contract store. bashify is the front door; this is what stands behind it
 # when a promise cannot be kept mechanically.
 STORE="/home/zach/Documents/Projects/basheur/bin/basheur"
@@ -41,6 +42,7 @@ _state() {
   case "$1" in
     list)          echo MECHANIZED ;;
     emit)          [ -x "$EMIT_IMPL" ] && echo MECHANIZED || echo GAP ;;
+    coin)          [ -x "$COIN_IMPL" ] && echo MECHANIZED || echo GAP ;;
     check)         [ -x "$CHECK_IMPL" ] && echo MECHANIZED || echo GAP ;;
     amend)         [ -x "$AMEND_IMPL" ] && echo MECHANIZED || echo GAP ;;
     # Not GAP. GAP means no tooling AND no escalation; page has an escalation
@@ -81,12 +83,12 @@ case "$cmd" in
     if [ "$VERB_JSON" = 1 ]; then
       printf '['
       _sep=''
-      for s in amend check emit list page; do
+      for s in amend check coin emit list page; do
         printf '%s{"subcommand":"%s","state":"%s"}' "$_sep" "$s" "$(_state "$s")"; _sep=','
       done
       printf ']\n'
     else
-      for s in amend check emit list page; do
+      for s in amend check coin emit list page; do
         printf '%-13s %s\n' "$(_state "$s")" "$s"
       done
     fi
@@ -107,11 +109,40 @@ case "$cmd" in
     if command -v "$verb" >/dev/null 2>&1; then
       verb_die "emit: '$verb' is already claimed on PATH; coin another"
     fi
+    # emit is a BOOTSTRAP: bashify.sh opens with `git rm -r .` and rebuilds
+    # the branch from the default branch's tooling. Against a branch that has
+    # since grown verbs by hand, that is destruction, not regeneration. The
+    # doctrine is now one noun, many verbs, so a populated branch is the
+    # expected state rather than an odd one, and emit must refuse it and name
+    # the act that does apply. Counted from the branch, never assumed: one
+    # verb is what emit itself leaves behind, so only more than one is
+    # evidence of hand-evolution.
+    repo="$(grep -oP '^PROJECT_REPO_PATH=\K.*' "$SCHED/schedule/$proj.conf" | tr -d '"'"'"'')"
+    repo="${BASHIFY_REPO:-$repo}"
+    if [ -n "$repo" ] && git -C "$repo" rev-parse --verify -q bashified >/dev/null 2>&1; then
+      existing="$(git -C "$repo" ls-tree --name-only bashified bin/ 2>/dev/null | grep -c .)"
+      if [ "${existing:-0}" -gt 1 ]; then
+        # Exit 2, not 7: bashify's 7 already means "the page under test failed
+        # a row", and minting a second meaning for a code is the collapse this
+        # family's own contracts forbid. The caller asking emit for a branch
+        # that needs coin IS a usage error -- the wrong subcommand, named.
+        verb_die "emit: '$proj' already has a bashified branch carrying $existing verbs, and emit rebuilds a branch from scratch -- it would delete them. To add one verb: bashify coin $proj $verb '$summary'"
+      fi
+    fi
     [ -x "$EMIT_IMPL" ] || verb_gap "emit: implementation missing at $EMIT_IMPL"
     _say "bashify: emitting $proj -> $verb"
     "$EMIT_IMPL" "$proj" "$verb" "$summary"
     rc=$?
     [ "$rc" = 0 ] || verb_broke "emit: the branch for '$proj' was not produced (implementation exit $rc)"
+    ;;
+
+  coin)
+    _no_json
+    [ $# -eq 3 ] || verb_die "coin takes exactly 3 arguments: <project> <verb> <summary> (got $#)"
+    [ -x "$COIN_IMPL" ] || verb_gap "coin: implementation missing at $COIN_IMPL"
+    _say "bashify: coining $2 onto $1"
+    "$COIN_IMPL" "$1" "$2" "$3"
+    exit $?
     ;;
 
   page)

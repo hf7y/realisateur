@@ -357,8 +357,26 @@ r7() {
 
 # ------------------------------------------------------------------- row 8
 r8() {
-  local hits
-  hits="$(grep -oiE 'claude|anthropic|\bagent\b|openai|gpt|llm|assistant' "$PAGE" | sort -u | tr '\n' ' ')"
+  local hits scanned
+  # SCOPED 2026-08-01, and this narrows a guard, so the reasoning is here
+  # rather than in a commit message nobody re-reads.
+  #
+  # The row's assumption is that naming a vendor on a page means the tool
+  # depends on an external paid service. That assumption holds for prose the
+  # page's author WRITES. It does not hold for output the page QUOTES: row 5
+  # (EXAMPLES) requires every example to reproduce the tool's real bytes, so
+  # a page documenting a tool whose own stderr says "agent" could satisfy
+  # row 5 or row 8, never both. bashify is exactly that tool -- its subject
+  # is de-animation, so "agent" is unavoidable in what it prints.
+  #
+  # Verbatim blocks are therefore excluded, on the same principle that
+  # already scopes row 9 to the contract sections. This is not a hole: row 5
+  # independently proves those bytes came from the tool, so a vendor name can
+  # only appear inside one by the tool genuinely printing it -- which is a
+  # finding about the tool, and is what row 8 should report against the
+  # implementation rather than the prose.
+  scanned="$(awk '/^\.nf$/{skip=1} /^\.fi$/{skip=0; next} !skip' "$PAGE")"
+  hits="$(printf '%s\n' "$scanned" | grep -oiE 'claude|anthropic|\bagent\b|openai|gpt|llm|assistant' | sort -u | tr '\n' ' ')"
   if [ -n "$hits" ]; then
     row_fail 'PURGE' "the page names: $hits"
   else

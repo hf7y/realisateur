@@ -136,6 +136,18 @@ else
         *.md|*.markdown|*.txt|*.1|*.rst) seps='[|;&(]' ;;
         *)                               seps='[|;&(`]' ;;
       esac
+      # A COMMENT LINE IS PROSE, wherever it lives. Added 2026-08-01: the
+      # backtick belongs to the shell alphabet above, so a script explaining
+      # itself -- "# `bashify check` rules code 1 a reserve" -- scored as an
+      # invocation of bashify. That is the same defect already fixed for
+      # markdown two lines up, in the one place it was not looked for: prose
+      # inside code. It made this gate unsatisfiable in the same way, since
+      # the only way to pass was for another project to delete its comment.
+      # A comment executes nothing; classifying it as a caller is a claim
+      # about the file that reading the file refutes.
+      case "$(printf '%s' "$line" | sed 's/^[[:space:]]*//')" in
+        '#'*) PROSE=$((PROSE+1)); continue ;;
+      esac
       if printf '%s' "$line" | grep -qE "(^|$seps|\\\$\()[[:space:]]*(\./)?(bin/)?$VERB([[:space:]]|$)"; then
         INVOCATIONS=$((INVOCATIONS+1))
         printf '        INVOCATION %s: %s\n' "$proj" "$(printf '%s' "$hit" | cut -c1-100)"

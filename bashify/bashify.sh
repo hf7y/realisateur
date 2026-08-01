@@ -14,7 +14,11 @@
 
 set -uo pipefail
 SKEL="$(cd "$(dirname "${BASH_SOURCE[0]}")/skel" && pwd)"
-SCHED="/home/zach/Documents/Projects/scheduler"
+# Overridable so this generator can be run against a throwaway registry. It
+# was not testable before: `emit` does `git branch -D bashified` on the real
+# repo, so the only way to exercise it was to destroy a live branch, and the
+# man-page template therefore shipped four gate failures for two days.
+SCHED="${BASHIFY_SCHED:-/home/zach/Documents/Projects/scheduler}"
 WORK="${BASHIFY_WORK:-/tmp/claude-1000/-home-zach-Documents-Projects-realisateur/5ffa824d-364f-4e27-843a-13eac347b21d/scratchpad/wt}"
 
 PROJ="${1:?project}"; VERB="${2:?verb}"; SUMMARY="${3:?summary}"
@@ -146,7 +150,16 @@ cat <<'EOF'
     ''
 }
 
-cmd="${1:-}"; [ $# -gt 0 ] && shift
+# A leading flag is a flag, not a subcommand. Taking `--version` as a
+# subcommand name made every generated verb exit 2 on three of the four flags
+# its own `--help` advertises -- `--json`, `--quiet` and `--version` -- while
+# the shared runtime parsed all of them. `bin/bashify` fixed this for itself
+# on 2026-07-31 and the template it emits never received the fix, so the
+# defect shipped into every verb this generator has ever written.
+case "${1:-}" in
+  -*) cmd=list ;;
+  *)  cmd="${1:-}"; [ $# -gt 0 ] && shift ;;
+esac
 verb_parse "$@"
 set -- "${VERB_ARGS[@]+"${VERB_ARGS[@]}"}"
 
@@ -177,7 +190,11 @@ DATE=2026-07-30
 {
 printf '.TH %s 1 "%s" "bashified" "Zach'"'"'s utilities"\n' "${VERB^^}" "$DATE"
 printf '.SH NAME\n%s \\- %s\n' "$VERB" "$SUMMARY"
-printf '.SH SYNOPSIS\n.B %s\n[\\fIsubcommand\\fR] [\\fIflags\\fR]\n' "$VERB"
+# SYNOPSIS forms are RUN by `bashify check`, so they are written as real
+# invocations rather than as a shape. `[\fIsubcommand\fR]` reads to that row
+# as an optional LITERAL -- brackets are stripped, no italic survives, and it
+# executed `<verb> subcommand`, which every generated page then failed on.
+printf '.SH SYNOPSIS\n.B %s\n[\\fIlist\\fR]\n.br\n.B %s\n\\-\\-help\n.br\n.B %s\n\\-\\-version\n' "$VERB" "$VERB" "$VERB"
 printf '.SH DESCRIPTION\n'
 printf 'A plain shell utility. It takes arguments, keeps a stated promise, and\n'
 printf 'exits with a code that says exactly what happened.\n'
@@ -185,10 +202,15 @@ printf '.PP\n'
 printf 'Run\n.B %s list\nto see the subcommands that are actually backed by tooling.\n' "$VERB"
 printf 'A subcommand the contract names but for which no tooling exists exits 4\n'
 printf '(GAP) and says so, rather than exiting 0 having done nothing.\n'
-printf '.SH FLAGS\n'
+# OPTIONS, not FLAGS. `bashify check`'s SURFACE row reads `section OPTIONS`,
+# so a page heading its flags FLAGS documents none of them as far as the gate
+# is concerned -- and every flag the shared runtime offers was then reported
+# undocumented. The section is named for the reader that checks it.
+printf '.SH OPTIONS\n'
 printf '.TP\n.B \\-\\-json\nMachine-readable output.\n'
 printf '.TP\n.B \\-\\-quiet, \\-q\nResults only, no commentary.\n'
 printf '.TP\n.B \\-h, \\-\\-help\nUsage summary.\n'
+printf '.TP\n.B \\-\\-version\nPrint the version and exit.\n'
 printf '.SH THE COST BOUNDARY\n'
 printf 'This utility does not spend money and therefore has\n.B no --summon flag.\n'
 printf 'Any utility in this family that CAN spend declares\n.B \\-\\-summon\n'
@@ -202,7 +224,14 @@ printf '.TP\n.B 2\nUsage error; the caller is wrong.\n'
 printf '.TP\n.B 3\nNeeds a summon and did not get one. A finding, not an error.\n'
 printf '.TP\n.B 4\nGAP: the tooling to keep this promise does not exist yet.\n'
 printf '.TP\n.B 5\nBROKEN: it ran and produced a wrong or partial answer.\n'
-printf '.TP\n.B 6\nBLIND: it cannot read its domain, so it will not report on it.\n'
+# "will not report" is future tense, and TENSE reads EXIT STATUS. The one
+# aspirational verb in the template failed that row on every page it wrote.
+printf '.TP\n.B 6\nBLIND: it cannot read its domain, so it reports nothing about it.\n'
+printf '.SH EXAMPLES\n'
+printf 'Print the version and the code it exits with:\n'
+printf '.PP\n.nf\n'
+printf '$ %s \\-\\-version\n%s (bashified)\n$ echo $?\n0\n' "$VERB" "$VERB"
+printf '.fi\n'
 printf '.SH FILES\n.TP\n.I CONTRACT.md\nThe promise this utility must keep.\n'
 printf '.TP\n.I GAPS.md\nWhat the contract names and the tooling cannot yet do.\n'
 printf '.SH HISTORY\n'
@@ -315,7 +344,27 @@ printf '## Verify\n\n```\n./test/contract-test.sh bin/%s\n```\n' "$VERB"
 # ---- verify the purge actually happened, before committing ----------------
 # Mechanised, not trusted. The guarantee this branch makes about itself is
 # the one thing that must never be asserted without a check.
-LEAK="$(cd "$WT" && grep -rilE 'claude|anthropic|\bagent\b|openai' . 2>/dev/null | grep -v '^\./\.git' || true)"
+# THE ONE EXEMPTION, and why it is safe. `lib/verb.sh` is not discovered
+# material -- this generator writes it, from `skel/lib/verb.sh`, and its
+# mentions of the word "agent" ARE the documentation of `--summon`: the
+# mechanism by which a verb completes itself. Satisfying the guard on that
+# file means deleting the explanation of the mechanism, so the guard was
+# UNSATISFIABLE and `emit` exited 5 for every project, on every run, for two
+# days -- while `bashify list` went on reporting emit MECHANIZED, because
+# `_state` only asks whether the file is executable.
+#
+# The exemption is bounded three ways, so it cannot be used to smuggle
+# anything: it covers exactly one path; it applies only to the generic
+# English word `agent`, never to a vendor name; and it applies only if the
+# file is BYTE-IDENTICAL to the skel this generator just copied. A modified
+# lib/verb.sh is checked like anything else.
+VERB_SH_CLEAN=0
+if cmp -s "$SKEL/lib/verb.sh" "$WT/lib/verb.sh"; then VERB_SH_CLEAN=1; fi
+LEAK="$(cd "$WT" && {
+    grep -rilE 'claude|anthropic|openai|gpt|llm|assistant' . 2>/dev/null
+    grep -rilE '\bagent\b' . 2>/dev/null \
+      | { [ "$VERB_SH_CLEAN" = 1 ] && grep -vx './lib/verb.sh' || cat; }
+  } | grep -v '^\./\.git' | sort -u || true)"
 if [ -n "$LEAK" ]; then
   echo "bashify: PURGE FAILED for $PROJ -- these files still name an agent:" >&2
   printf '  %s\n' $LEAK >&2
