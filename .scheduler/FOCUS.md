@@ -1844,6 +1844,102 @@ still name a dispatch script that is gone. `closeout-lint` FLAGs this as
   never a candidate however quiet, because there is no completed agentic
   activity to suspend.
 
+---
+
+## 2026-08-01 (`/ideate`, Zach present) — the waiting room, and the distinction that fills it
+
+The question that opened the session was "what repos remain unreaped", and
+the answer turned out to be less interesting than the sorting it forced.
+
+### Vision (decided)
+
+**Two kinds of repo were being run through one instrument.** A **project**
+repo's result is a real-world deliverable — a disc ripped, an order placed,
+nine speakers playing in a room, groceries actually bought. A **utility /
+assistant** repo's design is functions to be reused again. The bashify pass
+treated all nineteen alike, and distilling a project repo to a reusable verb
+is not what finishing it means.
+
+So: **project repos park** in `WAITING-ROOM.md` pending the ecosystem
+redesign, and are **rescheduled for self-dev after it**. **Utility repos keep
+being bashified** — that is their finished form.
+
+**The classifier is the declared stability milestone, not subject matter.**
+`milestone-audit` sorts sixteen repos almost by itself: a milestone naming an
+event outside the computer is a project; one naming a capability the ecosystem
+consumes is a utility. Four were genuinely ambiguous and Zach decided them
+this session — **crt and chezz are PROJECTS** (real hardware in a real room;
+real players) despite each containing an agent loop; **ecosim and vim-arcade
+are UTILITIES** (a sensor already installed into realisateur's own lint; the
+place coined verbs get spoken) despite each having a human-facing surface.
+
+**Parking is not reaping, and the difference is the whole point.** A reap
+suspends completed agentic activity and deletes the material. Parking suspends
+the *scheduling* and keeps every byte. Nothing was deleted from any project
+repo this session.
+
+**Not decided:** where self-dev is re-hosted — deliberately, and it is the
+same open question the 2026-07-30 dexter-isolation deferral turns on. The
+waiting room exists precisely because that answer does not, and its revisit
+trigger is unchanged: *the redesign names its unit of isolation.*
+
+### Milestone chain
+
+**W2 — the parked ten are rescheduled for self-dev. `[blocked on the redesign]`**
+- *Test:* each row in `WAITING-ROOM.md` is re-registered and dispatching.
+- Not startable. Re-registration before the redesign names its isolation unit
+  would put the projects back under the topology the redesign is meant to
+  replace.
+
+**W1 — the registry means "utility". `[DONE this session]`**
+- *Test:* `ecosystem-survey` reports only utility repos; `sync-crontab.sh`
+  preview re-arms nothing.
+- Both hold — 6 registered (ecosim, gardien, realisateur, scheduler, senechal,
+  vim-arcade), 6 BATCH notes, all suppressed.
+
+**W0 — the distinction is written down. `[DONE this session]`**
+- `WAITING-ROOM.md` at this repo's root: the two definitions, the ten parked
+  rows with verb / `bashified` head / milestone-at-parking / what each waits
+  on, the seven utilities, and what ends a stay.
+
+### What was done, and what it cost
+
+- **scheduler `7cd05a2`, pushed to `origin/main`.** Eleven unregistrations:
+  the ten parked projects (conf + `_paced.conf` row + `focus/`/`questions/`
+  sidecar symlinks), plus **quatre-vingt-douze**, whose conf and row still
+  named a dispatch script deleted in its 2026-07-31 reap. crt and wtul also
+  had `_paced.dexter.conf` rows; both removed. `ecosystem-survey` 17 → 6.
+  This closes `closeout-lint`'s standing `missing-repo` FLAG. **Revert:
+  `git revert 7cd05a2` in the scheduler repo restores every conf and row.**
+- **The delete-a-row trap did not fire, and that was verified rather than
+  assumed.** `_paced.conf`'s header warns in caps that deleting rows re-arms
+  a fixed nightly BATCH line for every project, because suppression keys on
+  rotation membership. It does not apply when the `schedule/<name>.conf` goes
+  in the same change — `sync-crontab.sh`'s glob has nothing left to read.
+  Confirmed by running the preview: six BATCH notes, all six suppressed.
+- **The FOCUS heads recorded 2026-07-30 are stale.** Re-probing every
+  `bashified` branch found **eight of ten parked projects had advanced past
+  the SHA that entry lists**. All ten match their `origin/bashified` — checked
+  before anything was unregistered, since a pushed archive is the only thing
+  that makes parking safe. `WAITING-ROOM.md` carries the current heads and
+  supersedes that list.
+- **`steward-survey` reads 0 live / 15 dark, 265 ideas stranded.** The
+  ecosystem was already parked in fact; this session only made the registry
+  say so. Nothing was turned off that was running.
+- **Accepted cost, stated so no later session reads it as an oversight:** no
+  per-project FOCUS.md stamp. Zach chose the single ledger over ten scattered
+  stamps, so a parked repo opened on its own says nothing about being parked.
+- **Procedural flag on this entry itself:** it is landing via a branch and PR,
+  not `focus-commit`, because the background-isolation guard requires a
+  worktree and `focus-commit` operates on the real checkout. The ~:30
+  autocommit watcher can therefore still race `main`. Same shape as PR #1.
+
+### Blockers
+
+- **The ecosystem redesign is the only blocker on W2, and it is Zach's.**
+  Nothing else in the chain is buildable until it names its unit of isolation.
+- **Nothing is blocked on machinery.** No project needs a fix to be parked;
+  they are already dark.
 ## 2026-08-01 (interactive, Zach present) — the waiting room, two bashify passes, and a verb coined twice
 
 Full narrative, filed to the vault as well: `SESSION-RECORD-2026-08-01-ausculte.md`.
