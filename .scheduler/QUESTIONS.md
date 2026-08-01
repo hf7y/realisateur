@@ -387,3 +387,19 @@ the big-four are done.*
   corpus go to the vault, stay on its default branch as the archive, or
   move somewhere else?
   > (answer inline here)
+
+- **2026-07-31 (interactive, after PR #1 merged):** Two small closing calls,
+  both yours because they touch your own working surfaces.
+  (a) The worktree `/home/zach/Documents/Projects/realisateur/.claude/worktrees/summon-overt`
+  now holds a branch **fully merged into main** (`626b612`), so it is spent —
+  remove it (`git worktree remove`, branch deletable too), or keep it because
+  you are still working in it? Not removed here: you did not open it at my
+  request and I cannot tell a spent worktree from one you are mid-thought in.
+  (b) The lesson from the same merge — *a guard written as if it were the last
+  line of defence is right to refuse; before overriding one, check whether that
+  assumption still holds* (it did not: the vault is versioned, so `consign`'s
+  no-`--force` refusal was protecting a copy git already held) — is recorded in
+  FOCUS (`dda97d6`). Should it become a **row in `BUILD-DISCIPLINE.md`**? It
+  generalises past this vault, but adding a row is a doctrine change and
+  `/cloture` says report, not build.
+  > (answer inline here)
