@@ -64,7 +64,7 @@
 # non-zero with a stated reason -- no exit-0 no-op.
 set -uo pipefail
 
-SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
+SCHED_ROOT="/home/zach/Documents/Projects/scheduler"
 SENECHAL="/home/zach/Documents/Projects/senechal"
 
 die() { printf 'notify-senechal: FAIL: %s\n' "$*" >&2; exit 1; }

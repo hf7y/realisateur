@@ -14,7 +14,7 @@
 
 set -uo pipefail
 SKEL="$(cd "$(dirname "${BASH_SOURCE[0]}")/skel" && pwd)"
-SCHED="/home/zach/Documents/Project Archive/scheduler"
+SCHED="/home/zach/Documents/Projects/scheduler"
 WORK="${BASHIFY_WORK:-/tmp/claude-1000/-home-zach-Documents-Projects-realisateur/5ffa824d-364f-4e27-843a-13eac347b21d/scratchpad/wt}"
 
 PROJ="${1:?project}"; VERB="${2:?verb}"; SUMMARY="${3:?summary}"

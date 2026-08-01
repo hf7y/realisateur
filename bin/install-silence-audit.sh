@@ -38,7 +38,7 @@ set -uo pipefail
 
 REPO_DEFAULT="/home/zach/Documents/Projects/realisateur"
 REPO="${SILENCE_AUDIT_REPO:-$REPO_DEFAULT}"
-SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Project Archive/scheduler}"
+SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Projects/scheduler}"
 BIN_DEST="$HOME/.local/bin"
 
 # The literals retired, and the single row that replaces them. Kept here as

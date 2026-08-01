@@ -18,7 +18,7 @@ set -uo pipefail
 
 SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 CHECK_IMPL="$SELF/lib/check.sh"
-SCHED="/home/zach/Documents/Project Archive/scheduler"
+SCHED="/home/zach/Documents/Projects/scheduler"
 
 PAGE="${1:-}"
 REASON="${2:-}"

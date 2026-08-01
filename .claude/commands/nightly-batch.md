@@ -225,7 +225,7 @@ For each unarchived artifact:
   credentials needed unless one already clearly exists for this idea), a
   `.scheduler/FOCUS.md` + `.scheduler/QUESTIONS.md` (NOT `.claude/` -- the
   sensitive-file gate blocks unattended writes there; set `SCHEDULER_SUBDIR=".scheduler"` in the conf) + `.claude/commands/nightly-batch.md` + a root `CLAUDE.md` (adapt the
-  templates in `~/Documents/Project Archive/scheduler/examples/` to what
+  templates in `~/Documents/Projects/scheduler/examples/` to what
   the new project actually is -- `CLAUDE.md.template` is the "suggest
   `/ideate <project>` instead of implementing" guardrail, worth every new
   project having from day one), push to the bare remote, then drop

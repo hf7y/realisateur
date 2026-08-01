@@ -9,7 +9,7 @@ itself the same way (`nightly-batch.md` step 3 points here) — read it as
 
 ## What the scheduler is
 
-`~/Documents/Project Archive/scheduler` is a shared engine + config registry
+`~/Documents/Projects/scheduler` is a shared engine + config registry
 that runs unattended `claude -p` jobs on top of plain cron — it is **not a
 daemon**. Two job tiers a project can opt into, independently:
 
@@ -29,7 +29,7 @@ hand-picked cron slot.
 
 ## What registering actually requires
 
-Read `~/Documents/Project Archive/scheduler/README.md` and `MIGRATION.md`
+Read `~/Documents/Projects/scheduler/README.md` and `MIGRATION.md`
 first — they're the source of truth; this file is a project-specific
 pointer into them, not a replacement. In short, registering means:
 

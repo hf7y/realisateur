@@ -38,7 +38,7 @@ project="${1:?usage: check-project-busy.sh <project>}"
 # unregistered name silently returning "free" is the exact shape of a guard
 # that fails open. Verified 2026-07-30: `check-project-busy.sh --not-a-real-flag`
 # exited 0 and reported free.
-if [ ! -f "/home/zach/Documents/Project Archive/scheduler/schedule/$project.conf" ]; then
+if [ ! -f "/home/zach/Documents/Projects/scheduler/schedule/$project.conf" ]; then
   echo "check-project-busy.sh: '$project' is not a scheduler-registered project" >&2
   echo "  (no schedule/$project.conf -- refusing to answer 'free' for a name I cannot check)" >&2
   exit 2

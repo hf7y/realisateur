@@ -53,7 +53,7 @@ CLI_POSITIONAL=any
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Project Archive/scheduler}"
+SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Projects/scheduler}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FOCUS_MD="${FOCUS_MD:-$REPO_ROOT/.scheduler/FOCUS.md}"
 BLOCKERS_MD="${BLOCKERS_MD:-$SCHED_ROOT/BLOCKERS.md}"

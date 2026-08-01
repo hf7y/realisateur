@@ -53,7 +53,7 @@ CLI_POSITIONAL=none
 cli_guard "$@"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
+SCHED_ROOT="/home/zach/Documents/Projects/scheduler"
 USER_CMD_DIR="$HOME/.claude/commands"
 
 STRICT=0

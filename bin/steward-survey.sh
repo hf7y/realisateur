@@ -35,7 +35,7 @@
 #   steward-survey.sh <name>...       restrict to named projects
 set -uo pipefail
 
-SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
+SCHED_ROOT="/home/zach/Documents/Projects/scheduler"
 PACED_CONF="$SCHED_ROOT/schedule/_paced.conf"
 
 [ -d "$SCHED_ROOT/schedule" ] || { echo "FATAL: scheduler schedule/ not found at $SCHED_ROOT" >&2; exit 2; }

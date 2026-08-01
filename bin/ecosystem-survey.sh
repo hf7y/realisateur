@@ -22,7 +22,7 @@ CLI_POSITIONAL=none
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-SCHED_ROOT="/home/zach/Documents/Project Archive/scheduler"
+SCHED_ROOT="/home/zach/Documents/Projects/scheduler"
 SCHED_BIN="$SCHED_ROOT/bin/scheduler"
 
 echo "ecosystem-survey -- $(date '+%Y-%m-%d %H:%M')"
