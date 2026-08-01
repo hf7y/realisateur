@@ -2750,3 +2750,59 @@ check that ran. Negative-tested with an empty legacy root.
 
 **Still queued:** the reporting seam (5 subcommands) and usage-gating seam (3)
 remain welded into `dose`. The route is proven three times now.
+
+#### 2026-08-01 — the ecosystem is git-proper; `apure` recommended
+
+Zach's goal: every document proper in git terms so `fauche` and the other
+utilities proceed mechanically. **Reached.** Every tree clean, every branch on
+origin and level, vault clean.
+
+Six items, each needing a different question answered — the full account and
+the verb recommendation are in `GIT-PROPRIETY-PASS-20260801.md` (consigned to
+the vault at `1b0911a`).
+
+- `basheur` `05d7666`, `senechal` `50a61a1` — untracked files whose *tracked
+  siblings* settled it: 21 and 2 respectively. Convention, not judgement.
+- `abletim` `1e764d9` — the 516K GrimeSweepers fixture tracked. Untracked, the
+  tests were unreproducible on a fresh clone: the fixture existed only on this
+  host, the same defect class as a host-only branch.
+- `realisateur` `bff6d32` — the contested `bashify/bin/bashify` committed with
+  **both authors named in the message**. Eleven lines are another session's
+  `page` arity guard (thirteen summons were paid for before it landed); one is
+  mine. Zach directed adoption over splitting a shared hunk.
+- `realisateur` `0c20afe` — `.claude/worktrees/` gitignored; harness scratch
+  that showed dirty at every close.
+- **PR #4 merged to main** (`948e182`) after resolving one conflict in
+  `bashify/bashify.sh` — the branch's overridable `BASHIFY_SCHED` kept over
+  main's hardcoded path. `coin` and the arity guard are both on main; page
+  9/9, verify-check 5/5.
+- **`bootstrap/stamp-2026-07-29` merged** (`2ca783e`, pushed), on Zach's
+  explicit authorisation. Verified after: `bf07983`, the remote commit unique
+  by content, is an ancestor, and `git cherry` shows the remote holds nothing
+  HEAD lacks. Both sides preserved.
+
+**I misread damage as work, twice, and carried it into a plan.**
+`realisateur-staging-silence-audit` was reported all session as another
+session's in-progress refactor — "392 lines cut from silence-audit.sh". It was
+`install-shims.sh` writing a **shim over the source the shim points at**. The
+deleted lines were the real implementation; the surviving `+6` were an older
+variant of something main already had, ending `|| true` — swallowing the exit
+code, which is the defect `silence-audit` exists to detect. The branch was
+**173 behind main with zero ahead**. Discarded, not merged; diff preserved.
+Three mechanical signals separate damage from work and **none appear in
+`git status`** — that is the argument for the verb.
+
+**Recommended: `apure`** (*apurer*, to settle accounts) — `survey`,
+`classify`, `plan`. No `apply`, on `transplante`'s precedent. Mechanizable:
+the census, untracked-by-convention, shim-over-source detection,
+superseded-branch detection, fast-forwardable pushes. Not mechanizable, and it
+should refuse rather than guess: is a binary a fixture, is contested
+authorship split, does a diverged branch merge or rebase.
+
+**Two gaps filed against `fauche`.** It judges *recoverability*, not
+*liveness*: with every tree clean it now calls **`basheur` REMOVABLE**, and
+basheur is the live contract store `bashify page` and `consign-prose` run
+through. Correct by its own contract, destructive if acted on — something must
+join it to `installe`'s knowledge of what is reachable from a prompt before a
+reap is automated. It also enumerates `Projects/.claude`, which is not a
+repository.
