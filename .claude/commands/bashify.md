@@ -260,6 +260,17 @@ deleting it, and rather than leaving it in the bashified tree. Obsidian's
 linking is what turns those notes into something integrable -- so write
 them as linkable notes, not as a dump.
 
+**Deleting `.scheduler/` prose breaks the registry, and nothing checks.**
+`scheduler/focus/<project>.md` and `scheduler/questions/<project>.md` are
+**symlinks** into the project's own `.scheduler/`, so a reap that consigns
+and removes that prose leaves two dangling links behind it. This has
+happened on both reaps run so far -- bibliothecaire's went unnoticed for a
+day -- so sweep them as part of the pass, and verify with:
+
+```
+for f in focus/*.md questions/*.md; do [ -e "$f" ] || echo "DANGLING: $f"; done
+```
+
 `vim-arcade` is becoming the universe this vocabulary lives in: a verb
 coined here is a verb spoken there. Note new verbs in a form vim-arcade can
 pick up rather than assuming it will re-derive them.
