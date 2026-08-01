@@ -2620,3 +2620,48 @@ monitor. `installe audit` reports **0 broken** entries after the move.
 that exist only on this host. `transplante` called scheduler PUSHED because
 every *commit* is on some remote; `fauche` asks whether each *branch* has its
 own remote ref. Both true, different questions — and the second is unanswered.
+
+### 2026-08-01 (/cloture) — next phase queued: bashify scheduler fully, then reap
+
+Zach's framing for what follows: **scheduler bashification, and reaping
+agent-shaped material into the archive and off mandark.** Filed here rather
+than described, so a run that cannot see this conversation can pick it up.
+
+- **[batch] Finish scheduler's bashification along its domain seams.**
+  `dose` carries 25 discovered subcommands welded from four domains
+  (`RESEARCH-VERB-ECOSYSTEM-20260730.md` named the seams: dispatch, reporting,
+  linting, usage-gating). `arme` split the first seam off today — non-agent
+  work — and proved the route: `bashify coin <project> <verb>` writes onto the
+  existing branch without touching its neighbours, sourcing that branch's own
+  runtime. Remaining seams are candidates, not a decree; each wants a page at
+  9/9 and an `installe verb` before the next is coined. Reader: whoever holds
+  scheduler's bashification, or the next interactive pass.
+
+- **[batch] Reap agent-shaped material into the archive and off mandark.**
+  Two immediate candidates, both already named by `fauche list`:
+  `realisateur-research-ecosim` (**76 unconsigned prose files**) and
+  `realisateur-staging-silence-audit` (**69**). Both are worktrees of
+  realisateur carrying research residue. The order is fixed by doctrine and by
+  today's evidence: **consign first, reap second** — `basheur run
+  consign-prose <vault> <paths>` is MECHANIZED and free, so this costs nothing
+  but time. `fauche` will not call either REMOVABLE until the prose has a vault
+  note, which is the guard working. Reader: a `/nightly-batch` pass or the
+  next interactive session.
+
+- **Precondition for that reap, unresolved:** `fauche check scheduler` names
+  three `paced/*` branches that exist only on this host and one 8 commits
+  ahead of its own upstream. `transplante` called scheduler PUSHED because
+  every *commit* is on some remote; `fauche` asks whether each *branch* has
+  its own remote ref. Both true, different questions. Nothing off mandark
+  should be reaped while a branch exists only here.
+
+**Two findings filed for their owners, neither fixed here.**
+- `fonde consign` still refuses as "no mechanism yet" and demands `--summon`,
+  while `basheur list` reports `consign-prose` **MECHANIZED** with a working
+  impl. fonde meters work that is now free. Owner: bibliothecaire-verbs.
+- **Creating `briefs/` in the bibliothecaire repo disables the vault
+  fallback.** The reap made `BIBLIOTHECAIRE_BRIEFS` configuration with a
+  fallback used only *when the directory is absent*; authoring one brief there
+  re-created it, and `--require-briefs` reported all 14 concepts missing while
+  reading a directory holding one file. Triggered and repaired today
+  (bibliothecaire `43fac6d`); the shape is worth a guard, not just a memory.
