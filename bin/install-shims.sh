@@ -28,9 +28,11 @@ CLI_POSITIONAL=none
 cli_guard "$@"
 
 REPO="/home/zach/Documents/Projects/realisateur"
-BIN_DEST="$HOME/.local/bin"
+# Overridable so the test suite can install into a scratch dir instead of the
+# live machine. Not normally set -- same idiom as closeout-lint.sh/hygiene-lint.sh.
+BIN_DEST="${BIN_DEST:-$HOME/.local/bin}"
 CMD_SRC="$REPO/.claude/commands"
-CMD_DEST="$HOME/.claude/commands"
+CMD_DEST="${CMD_DEST:-$HOME/.claude/commands}"
 
 # Both lists below are DERIVED, not typed. A hand-maintained list is what
 # produced the 2026-07-27 gap: three shims existed because three were typed,
@@ -140,6 +142,28 @@ EOF
 
 install_file() {
   local path="$1" content="$2" mode="$3" label="$4"
+  # A symlink at an install target is never something this installer made -- it
+  # only ever writes regular files. Left in place it is actively destructive,
+  # because both checks below follow it: `-f`/`cat` read through to the TARGET
+  # (so a symlink pointing at this repo's own source compares source-vs-shim,
+  # always differs, and never short-circuits), and then `> "$path"` writes
+  # through to that same target.
+  #
+  # Hit for real on 2026-08-01: a hand-made
+  #   ln -s $REPO/bin/silence-audit.sh ~/.local/bin/silence-audit
+  # made this function overwrite bin/silence-audit.sh with a shim that exec'd
+  # itself. Infinite recursion, source destroyed -- and the run printed
+  # "written silence-audit" and exited 0, so nothing anywhere reported a fault.
+  # That silent-success-on-destruction is BUILD-DISCIPLINE's first row.
+  if [ -L "$path" ]; then
+    local target; target="$(readlink "$path")"
+    if [ "$CHECK_ONLY" = 1 ]; then
+      flag "$label is a symlink -> $target; installing would write THROUGH it and clobber that file (rerun without --check to replace it)"
+      return
+    fi
+    note "  WARN    $label was a symlink -> $target; replaced with a regular file"
+    rm -f "$path" || { flag "could not remove symlink $path"; return; }
+  fi
   if [ -f "$path" ] && [ "$(cat "$path")" = "$content" ]; then
     note "  ok      $label"
     return
