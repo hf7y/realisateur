@@ -96,7 +96,8 @@ fi
 # A changed promise breaks a downstream pipeline silently, and nothing
 # currently looks. This is the half of the gate that most needed a machine.
 # Prose mentioning the verb is not a caller; an invocation is.
-INVOCATIONS=0; PROSE=0; SCANNED=0; UNREADABLE=0
+INVOCATIONS=0; PROSE=0; SCANNED=0; UNREADABLE=0; SELFSKIP=0
+OWNER_GITDIR="$(cd "$REPO" && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"
 if [ ! -d "$SCHED/schedule" ]; then
   gate_fail 'CALLERS' "cannot read the project registry at $SCHED/schedule"
 else
@@ -107,6 +108,15 @@ else
     path="$(grep -h '^PROJECT_REPO_PATH=' "$conf" 2>/dev/null | head -1 | cut -d'"' -f2)"
     [ -n "$path" ] && [ -d "$path/.git" ] || { UNREADABLE=$((UNREADABLE+1)); continue; }
     git -C "$path" rev-parse --verify -q origin/bashified >/dev/null 2>&1 || continue
+    # Skip the project that OWNS the verb. Its own implementation, its own
+    # test and its own GAPS.md all name it, and counting those as downstream
+    # callers made every amendment to a real verb unpassable: `installe`
+    # scored 6 invocations, all of them itself. Compared by common git dir so
+    # a worktree of the owner is recognised as the owner.
+    if [ -n "$OWNER_GITDIR" ] \
+       && [ "$(cd "$path" && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = "$OWNER_GITDIR" ]; then
+      SELFSKIP=$((SELFSKIP+1)); continue
+    fi
     SCANNED=$((SCANNED+1))
     while IFS= read -r hit; do
       [ -n "$hit" ] || continue
@@ -128,6 +138,7 @@ else
     gate_pass 'CALLERS' "$SCANNED branch(es) searched; $PROSE prose mention(s), 0 invocations"
   fi
 fi
+[ "$SELFSKIP" -gt 0 ] && printf "      note: %d branch(es) skipped as the verb's own project (self-reference is not a caller)\n" "$SELFSKIP"
 [ "$UNREADABLE" -gt 0 ] && printf '      note: %d registered project(s) had no readable repository\n' "$UNREADABLE"
 
 # ---- verdict ---------------------------------------------------------------

@@ -45,9 +45,17 @@ note()     { NOTES+=("$1"); printf '      %s\n' "$1"; }
 
 # ---------------------------------------------------------------- page parts
 # Section body: everything between `.SH <name>` and the next `.SH`.
-section() { awk -v want=".SH $1" '
-    $0 == want {inb=1; next}
-    /^\.SH / {inb=0}
+# `.SH "EXIT STATUS"` and `.SH EXIT STATUS` are the same heading to every roff
+# on earth, and an exact string match saw only the second. Every page written
+# with the quoted form -- which is most of senechal's -- scored "no EXIT STATUS
+# codes documented" and "SEE ALSO names no standard tool", two rows failing on
+# a pair of quote characters. The check has to read what a reader reads.
+section() { awk -v want="$1" '
+    { h = $0
+      if (h ~ /^\.SH /) {
+        sub(/^\.SH[ \t]+/, "", h); gsub(/^"|"$/, "", h)
+        inb = (h == want); next
+      } }
     inb {print}' "$PAGE"; }
 
 # Strip troff markup down to readable text.
@@ -167,7 +175,12 @@ r2() {
 r3() {
   local bad=0
   local page_flags help_flags f
-  page_flags="$(section OPTIONS | grep -oP '\\-\\-[a-z-]+' | sed 's/\\-/-/g' | sort -u)"
+  # Unescape BEFORE matching, not after. `\-\-dry\-run` matched only as far as
+  # the third `\`, yielding `--dry`, so the row reported a flag the page does
+  # not document and a flag the tool does not offer -- two failures, one
+  # hyphen, on a page that was correct. Any flag with a hyphen in its name was
+  # unscoreable.
+  page_flags="$(section OPTIONS | detroff | grep -oE '\-\-[a-z][a-z-]*' | sort -u)"
   run_cut --help
   help_flags="$(printf '%s' "$LAST_OUT" | grep -oE '\-\-[a-z-]+' | sort -u)"
   # A utility that cannot spend names --summon in order to DENY it. Counting
@@ -278,8 +291,16 @@ r5() {
     esac
     [ "$inblock" = 1 ] || continue
     case "$line" in
-      '$ '*) _settle; cmd="${line#\$ }" ;;
-      *) [ -n "$cmd" ] && expected+="$line"$'\n' ;;
+      # Detroff the command too, not just the prose. An example that shows a
+      # flag is written `\-n` in the source, and handing that to the shell
+      # verbatim invoked the tool with a literal backslash -- so every example
+      # containing a flag "did not reproduce", for a reason that had nothing to
+      # do with the tool.
+      '$ '*) _settle; cmd="$(printf '%s' "${line#\$ }" | sed -e 's/\\-/-/g' -e 's/\\&//g')" ;;
+      # Expected output is detroffed for the same reason the command is: the
+      # page writes a hyphen `\-`, the tool prints a hyphen, and comparing the
+      # two verbatim failed every example whose output contained one.
+      *) [ -n "$cmd" ] && expected+="$(printf '%s' "$line" | sed -e 's/\\-/-/g' -e 's/\\&//g')"$'\n' ;;
     esac
   done < <(section EXAMPLES)
   _settle
