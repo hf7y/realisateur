@@ -2701,3 +2701,52 @@ mandark until `bootstrap/stamp-2026-07-29` (+8), `paced/2026-07-26` (+3), and
 `paced/2026-07-24` / `-25` / `-28` (host-only) are pushed or deliberately
 deleted. Answer filed to scheduler at `98b3386`. This is now a hard
 precondition on the reap phase queued at `02e2c98`, not a caveat.
+
+#### 2026-08-01 — tree cleaned, one worktree reaped, a third verb cut from `dose`
+
+**Scheduler's tree: four of five blockers cleared.** `paced/2026-07-24`,
+`-25`, `-28` had **no commits absent from a remote** — only the *name* was
+host-only, so pushing was pure preservation. `paced/2026-07-26` had 3 real
+unpushed commits. All four pushed.
+
+**The fifth is genuinely yours.** `bootstrap/stamp-2026-07-29` is diverged, 8
+ahead and 2 behind, and `git cherry` shows one of the two remote commits
+(`bf07983`) is **unique by content** — a force-push destroys real work.
+Resolving it needs a merge or a rebase, both of which this session is barred
+from. Until it is cleared, the settled doctrine blocks reaping scheduler off
+mandark.
+
+**Reaped: `realisateur-research-ecosim`, 14M off mandark.** Its 76 prose files
+were consigned first (vault `305f242`), its branch `research/ecosystem-
+cybernetics` verified on origin and level, then `git worktree remove`.
+Branch and origin ref both intact afterwards.
+
+**`fauche` is the wrong instrument for a worktree, and this is worth knowing
+before the next reap.** These worktrees list each other as external
+dependents, so each permanently blocks the others — none can ever be
+REMOVABLE. The correct act is `git worktree remove`, which git guards itself.
+`fauche`'s script correctly refused and deleted nothing; the verb was doing
+its job on a subject it was not built for.
+
+**NOT reaped: `realisateur-staging-silence-audit`.** It carries **2
+uncommitted files of another session's work** — wiring `silence-audit` in as
+`hygiene-lint`'s check 12, and cutting 392 lines from `silence-audit.sh`.
+Removing it destroys that. This is exactly what fauche's dirty-tree condition
+guards, and it is left alone deliberately.
+
+**Bashified: `relis`** (scheduler-dose `f9dba90`, 9/9, installed) — the
+linting seam cut out of `dose`. Five checks that each read a file this
+ecosystem writes about itself. It wraps and never reimplements. `all` runs
+every check and **the worst outcome wins, not the last**, with GAP outranking
+findings.
+
+Three defects the build found: findings passed through as the wrapped script's
+own 1 or 2, colliding with "the caller is wrong"; **1 turned out to be
+reserved** by the shared vocabulary — `bashify check` said so about this very
+page — so findings are now **7**, the code `bashify check` itself uses when a
+tested page fails a row; and the GAP verdict was a plain assignment, so a
+later finding silently demoted 4 to 1 and the missing check vanished behind a
+check that ran. Negative-tested with an empty legacy root.
+
+**Still queued:** the reporting seam (5 subcommands) and usage-gating seam (3)
+remain welded into `dose`. The route is proven three times now.
