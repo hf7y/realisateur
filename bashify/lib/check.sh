@@ -201,10 +201,14 @@ r3() {
 
   # Subcommands, both directions, when the tool can enumerate its own.
   local page_subs tool_subs s
-  page_subs="$(section SYNOPSIS | grep -oP "^\.B $PAGE_NAME \K[a-z]+" | sort -u)"
+  # Subcommand names may be hyphenated -- five of senechal's seven are. A
+  # bare [a-z]+ truncated `dead-config` to `dead` on the page side and
+  # dropped it entirely on the tool side, so the two could never agree and
+  # every hyphenated verb in the ecosystem was unpassable.
+  page_subs="$(section SYNOPSIS | grep -oP "^\.B $PAGE_NAME \K[a-z][a-z-]*" | sort -u)"
   run_cut list
   if [ "$LAST_RC" = 0 ] && [ -n "$page_subs" ]; then
-    tool_subs="$(printf '%s' "$LAST_OUT" | awk '{print $NF}' | grep -E '^[a-z]+$' | sort -u)"
+    tool_subs="$(printf '%s' "$LAST_OUT" | awk '{print $NF}' | grep -E '^[a-z][a-z-]*$' | sort -u)"
     for s in $page_subs; do
       printf '%s\n' "$tool_subs" | grep -qx -- "$s" || {
         row_fail 'SURFACE' "SYNOPSIS names subcommand '$s' which the tool does not list"; bad=1; }
