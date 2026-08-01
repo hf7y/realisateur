@@ -107,13 +107,34 @@ place, `bashify/skel/lib/verb.sh`. Do not invent a dialect:
 |---|---|
 | 0 | kept -- the contract was satisfied |
 | 2 | usage error -- the caller is wrong |
-| 3 | needs-summon -- only an agent can do this yet |
+| 3 | needs-summon -- contracted here, but no mechanism for it exists yet |
 | 4 | gap -- the tooling does not exist yet |
 | 5 | broken -- the tool exists and failed |
 | 6 | blind -- it could not see what it needed to judge |
 
 A project-specific code is allowed **above 6**, documented in EXIT STATUS,
 never a redefinition of one of these.
+
+**Exit 3 and `--summon` are the self-writing mechanism, not a cost note.**
+This is the part most easily misread, so state it plainly in every page you
+write. The page is written before the utility works, so a page routinely
+contracts an action with nothing behind it yet — that is the normal case.
+Invoked without `--summon`, that action **exits 3 and prints the summon it
+would have made**: nothing is spent and the gap is named. Invoked *with*
+`--summon`, an agent is summoned to perform the action **and to leave behind
+a durable mechanism that performs it without an agent next time** (basheur
+Law 2: every summon leaves residue; residue becomes an impl). The flag buys
+the answer *plus the machine that makes the next answer free*, which is why
+a verb's correct direction of travel is for its summons to stop costing
+anything, one subcommand at a time. Escalate through
+`basheur run --summon <contract>` — a verb that contacts a model directly
+has re-animated its own project, which Law 3 forbids.
+
+Exit 4 (`gap`) is the *different* case, and the distinction is load-bearing:
+3 means "an agent could do this now, and would leave a mechanism behind";
+4 means "no contract for this exists at all — write one, or file a
+`GAPS.md` line." Amending a page because the tool cannot do the thing is
+always 4 plus a GAPS line, never a quiet edit to the promise.
 
 **Default to unix synonyms.** A caller should be able to guess this tool.
 Where a standard behavior exists, adopt its name and its shape rather than
@@ -238,6 +259,17 @@ the test, or `GAPS.md` is research material. Move it to `bibliothecaire`
 deleting it, and rather than leaving it in the bashified tree. Obsidian's
 linking is what turns those notes into something integrable -- so write
 them as linkable notes, not as a dump.
+
+**Deleting `.scheduler/` prose breaks the registry, and nothing checks.**
+`scheduler/focus/<project>.md` and `scheduler/questions/<project>.md` are
+**symlinks** into the project's own `.scheduler/`, so a reap that consigns
+and removes that prose leaves two dangling links behind it. This has
+happened on both reaps run so far -- bibliothecaire's went unnoticed for a
+day -- so sweep them as part of the pass, and verify with:
+
+```
+for f in focus/*.md questions/*.md; do [ -e "$f" ] || echo "DANGLING: $f"; done
+```
 
 `vim-arcade` is becoming the universe this vocabulary lives in: a verb
 coined here is a verb spoken there. Note new verbs in a form vim-arcade can
