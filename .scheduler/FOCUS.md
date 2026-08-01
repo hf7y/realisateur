@@ -1647,3 +1647,72 @@ subagent pushed `main` twice against CLAUDE.md's rule (`basheur 3e8b5bc`,
 **Note for the next session:** bibliothecaire is unregistered, so
 `closeout-lint` and `ecosystem-survey` no longer see it. Its two trees were
 verified clean and pushed by hand at close.
+
+## 2026-07-31 (Zach-directed) — secretaire reaped by dogfooding: the verbs did the reaping
+
+The second full reap, and the first done **entirely with the ecosystem's own
+verbs** rather than by hand: `installe` wired it, `fonde consign` archived it,
+`check-project-busy` and `ecosystem-survey` witnessed it.
+
+| repo | sha | what |
+|---|---|---|
+| secretaire | `8daf452` | `range` on `bashified` — the verb, written to a page that already existed |
+| secretaire | `87bbb2e` | main reaped: 9 files deleted, replaced by a pointer |
+| ecosystem1-vault | `1926edb` | 7 documents consigned, hash-verified three ways |
+| scheduler | `68da39e`, `4271945` | unregistered — the conf, then the paced row |
+| senechal | `f510c22` | the machine-config footprint, filed through its front door |
+
+**FULFILLING, not modifying.** `man/range.1` was committed on main yesterday as
+*"the contract, written before the verb"*. It is carried onto `bashified`
+**byte-identical** (verified by `diff` against `main:man/range.1`) and the
+implementation moved to it. No amendment gate was needed because the page never
+moved. This is the shape the command asks for and the first time it has happened
+in that order without an amendment chasing it.
+
+**`trie` retired into `range`.** Its summary — *"sort the mail **and** decide
+what deserves an answer"* — failed row 1, and the "and" was load-bearing: the
+first half is a table sort over a tracked file, the second needs eight
+mailboxes. The second half is now a **refusal** in CONTRACT.md, not a gap. A
+refusal filed as a gap becomes a backlog item, which is how a boundary quietly
+stops being one.
+
+**Not a wrapper.** `bin/range` is a rewrite in shell; nothing execs `triage.py`,
+which is deleted. The branch is self-contained, so `man range` describes the
+whole of it. `--json` and `--quiet` are **honored**, not merely parsed — the
+shared runtime accepts both everywhere and nothing consumed them here, which is
+the exit-0 no-op wearing a flag.
+
+**Scored, by machine.** `test/range-test.sh` — 41 rows, each naming the page
+sentence it checks — plus `test/contract-test.sh` 7/7. Rows 1–9 all pass; rows
+1, 7 and 9 were checked by eye, the other six by the suite. The EXAMPLES block is
+a doctest: the BLIND example reproduces byte-for-byte against the inventory as it
+actually ships.
+
+**Three findings, all from machinery rather than reading:**
+- **The test was wrong before the page was.** Four of its first seven failures
+  were its own: it grepped raw troff, where every hyphen is `\-`, and reported
+  five documented flags as missing. Second time in two days the harness was the
+  defect — the fix is commented in place so the next reader does not re-earn it.
+- **A commit claimed two changes and made one.** scheduler `68da39e` staged the
+  conf deletion, left the `_paced.conf` edit unstaged, and `git commit` without
+  `-a` took only what was staged. Caught by re-reading `git status` after the
+  push instead of trusting the message; fixed in `4271945`.
+- **Both reaps left dangling registry symlinks.** `focus/<project>.md` and
+  `questions/<project>.md` are symlinks into the project's `.scheduler/`, so
+  deleting that prose breaks them. **bibliothecaire's two have been broken since
+  last night's reap and nobody noticed.** All four removed; the registry now
+  resolves clean. **This is a step the reap procedure is missing** — a bashify
+  pass that deletes `.scheduler/` prose must sweep the sidecars, and nothing
+  checks for it.
+
+**What is deliberately NOT done: the clone stays on mandark.** `installe`
+installs a verb as a `git worktree` of the project repo, so
+`secretaire-verbs` structurally depends on `secretaire/.git`. Deleting the
+clone would break the installed verb, and the alternative — re-cloning the
+`bashified` branch standalone — is **forbidden by DOCTRINE §8**: it destroys the
+archive that makes a total purge safe. So secretaire is off mandark as a
+*project* (unregistered, no dispatch script, no prose, no agent, `ecosystem-survey`
+18 → 17) while remaining on disk as the archive. Both readings of "take it off
+mandark" cannot be satisfied at once, and this is the one that does not destroy
+anything. **If Zach wants the disk footprint gone too, that is a decision about
+where the archive lives, not a cleanup step.**
