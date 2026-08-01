@@ -2270,3 +2270,58 @@ Two things in the entry are miscast; corrected here rather than rewritten.
    finish an existing convention across 7 files, not introduce one across
    21. The shims under `~/.local/bin` and the three symlinks are unaffected
    by this correction and remain the larger surface.
+
+#### 2026-08-01 — `transplante` lives in gardien-garde; does gardien need cleaning first?
+
+**No, and the reason inverts the question.** Probed today.
+
+`lib/verb.sh` has **forked four ways** across the ecosystem:
+`gardien-garde` (md5 82b283ad, unique), `bibliothecaire-verbs` (714d8100),
+`senechal-verbs` (5526f7e2), and a shared d584420a across
+`realisateur-verbs`, `ecosim-verbs`, `secretaire-verbs`, `vim-arcade-verbs`.
+
+**gardien-garde's fork is the richest one in the ecosystem.** It is the
+only copy that defines `verb_refuse` (exit 7), and it alone carries
+`verb_gap_or_summon` and `verb_record_cost`. The shared runtime defines
+only `verb_die/gap/need_summon/broke/blind/parse/usage` — no refusal
+concept at all (its help line stops at 6, so it is at least honest about
+that; `grep -rn 'exit 7\|verb_refuse'` across the three d584420a repos
+returns nothing). That richness is the *result* of gardien's earlier
+self-wiring — commit `324e382`, "fulfilling: honour the flags this verb's
+own --help advertises."
+
+So gardien-garde is the correct home for `transplante` on the merits, not
+merely by adjacency to `fauche`. **`transplante` needs a refusal path
+specifically**: refusing to move a repository whose references it cannot
+resolve, or whose old copy is not yet recoverable elsewhere, is a
+won't-do-on-principle, not a gap — exit 7, with no escalation offered.
+Built in any of the d584420a repos it would have to invent that path or
+silently degrade the refusal into a `verb_die`. The earlier open question
+("realisateur-verbs is the obvious home, but gardien-garde owns `fauche`")
+is therefore **settled on a second, stronger ground**.
+
+**What does NOT need cleaning first.** garde's largest recorded gap is
+that `gardien.py` — the snapshot rotator, the actual point of the repo —
+has no verb surface, so `garde` wraps the scaffolding around gardien
+rather than gardien itself (GAPS.md, 2026-07-30). Real, but orthogonal:
+`transplante` does not touch `gardien.py`, and the two verbs share only
+the runtime. It stays garde's gap.
+
+**Two things that do need handling, both small.**
+- `gardien-garde` carries an untracked `garde.json.bak-20260730-205930` —
+  build debris by BUILD-DISCIPLINE's own row. Clear it before adding a
+  verb, so a dirty tree at the next exit is unambiguous.
+- **The fork itself is the real finding, and it is regulator-shaped.**
+  Per PRECIPITATION, a cross-project cluster is answered by naming the
+  missing regulator, not by promoting its members: **nothing owns
+  `lib/verb.sh`.** Each bashify pass copied it, and improvements now do
+  not propagate — a refusal path exists in exactly one repo out of seven.
+  Adding `transplante` to gardien-garde deepens that fork's value without
+  spreading it.
+
+**OPEN, for Zach — not decided here:** whether gardien-garde's runtime is
+backported to the other six (one owner, propagating fixes) or the forks
+are declared deliberate per-project runtimes. This is the kind of thing
+that gets answered once and then stops recurring; it is posed now because
+`transplante` is about to make gardien-garde's copy more clearly the good
+one.
