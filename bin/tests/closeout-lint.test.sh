@@ -18,6 +18,9 @@
 #   B4 FOCUS.md missing               -> FLAG [no-focus]
 #   C1 BLOCKERS.md dated today        -> ok, no flag
 #   C2 BLOCKERS.md with nothing today -> NOTE only, still no flag
+#   D1 --strict, a FLAG is printed    -> exit 1
+#   D2 --strict, nothing FLAGged      -> exit 0
+#   D3 no --strict, a FLAG is printed -> exit 0 (bare invocation stays green)
 #
 # Negative-tested against an `exit 0` stub: 13 of the 16 assertions fail as
 # they should. The 3 that survive are all `hasnt` (absence) assertions, which
@@ -40,6 +43,8 @@ bad()  { echo "  FAIL $1"; fail=$((fail+1)); }
 has()  { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
 # hasnt <name> <output> <pattern> -- output must NOT contain pattern
 hasnt(){ case "$2" in *"$3"*) bad "$1 (unexpected: $3)" ;; *) ok "$1" ;; esac; }
+# rc <name> <expected-exit> <actual-exit>
+rc()   { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3)"; fi; }
 
 mkdir -p "$T/sched/schedule"
 reg() { # reg <name> <path>
@@ -59,6 +64,12 @@ newrepo() {
 
 # --- fixtures --------------------------------------------------------------
 newrepo clean
+# strictclean: a SEPARATE pushed, untouched repo for the D-section --strict
+# clean-exit case. Reusing "clean" there would be contaminated by A8/A9,
+# which add a worktree (an extra local branch with no origin/<branch>) to
+# "clean" and "oldrepo" in place -- correct per those cases, but it means
+# "clean" is no longer clean by the time D2 runs later in the same file.
+newrepo strictclean
 newrepo dirtyrepo && echo scratch >> "$T/dirtyrepo/f.txt"
 newrepo aheadrepo && { echo two > "$T/aheadrepo/g.txt"; git -C "$T/aheadrepo" add -A; \
                        git -C "$T/aheadrepo" commit -qm ahead; }
@@ -78,6 +89,14 @@ run() { # run <FOCUS_MD> <BLOCKERS_MD> [projects...]
   local f="$1" b="$2"; shift 2
   TODAY="$DAY" SCHED_ROOT="$T/sched" FOCUS_MD="$f" BLOCKERS_MD="$b" HOURS=12 \
     "$SCRIPT" "$@" 2>&1
+}
+# run_rc <FOCUS_MD> <BLOCKERS_MD> [args...] -- same, but sets RUN_OUT/RUN_RC
+# instead of only printing output, so a case can assert the exit code too.
+run_rc() {
+  local f="$1" b="$2"; shift 2
+  RUN_OUT="$(TODAY="$DAY" SCHED_ROOT="$T/sched" FOCUS_MD="$f" BLOCKERS_MD="$b" HOURS=12 \
+    "$SCRIPT" "$@" 2>&1)"
+  RUN_RC=$?
 }
 
 echo "closeout-lint.test.sh"
@@ -143,6 +162,19 @@ has   "C1 today-dated BLOCKERS block passes"   "$out" "ok -- BLOCKERS.md carries
 out="$(run "$T/focus-ok.md" "$T/blockers-old.md" clean)"
 has   "C2 stale BLOCKERS reported as NOTE"     "$out" "NOTE BLOCKERS.md has nothing dated"
 hasnt "C2 and NOT as a flag"                   "$out" "FLAG ["
+
+echo "-- D. --strict exit code (exit-code plumbing, not a new FLAG type)"
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --strict dirtyrepo
+rc    "D1 --strict exits nonzero when a FLAG was printed" 1 "$RUN_RC"
+has   "D1 output still shows the FLAG"                    "$RUN_OUT" "FLAG [dirty-tree]"
+
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --strict strictclean
+rc    "D2 --strict exits 0 on an all-clean scan"          0 "$RUN_RC"
+hasnt "D2 no FLAG in a clean --strict run"                "$RUN_OUT" "FLAG ["
+
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" dirtyrepo
+rc    "D3 bare invocation stays exit 0 despite a FLAG"    0 "$RUN_RC"
+has   "D3 the FLAG is still printed (signal, not silence)" "$RUN_OUT" "FLAG [dirty-tree]"
 
 echo
 echo "$pass passed, $fail failed"

@@ -20,36 +20,58 @@
 #   hygiene-lint.sh            scan every registered project, print findings
 #   hygiene-lint.sh <name>...  scan only the named project(s)
 #                              (skips the ecosystem-wide BLOCKERS.md check)
+#   hygiene-lint.sh --strict [<name>...]   exit 1 if any FLAG was printed
 #
 # Env overrides (used by the tests/fixtures, not normally set):
-#   STALE_DAYS=7    age at which a `verified <date>` stamp is flagged
-#   BLOCKERS_MD=... path to the BLOCKERS.md to scan
+#   STALE_DAYS=7      age at which a `verified <date>` stamp is flagged
+#   BLOCKERS_MD=...   path to the BLOCKERS.md to scan
+#   SCHED_ROOT=...    scheduler repo (project registry lives in schedule/*.conf)
+#   SHIM_INSTALLER=... path to the install-shims.sh check 10 shells out to
+#   REACH_LINT=...      path to the reach-lint.sh check 11 shells out to
+#   SILENCE_AUDIT=...   path to the silence-audit.sh check 12 shells out to
 #
 # Known false-positive class, left in deliberately: BUILD-DISCIPLINE.md's own
 # prose DEFINES the `# verified <date> via <cmd>` format, so its example line
 # ages like a real claim. Same stance as senechal's base64 test fixture --
 # a documented recurring FLAG beats a special case that could hide a real one.
 #
-# Exit status is always 0 -- findings are signals, not build failures (same
-# stance as ecosystem-survey.sh). Grep for "FLAG" in the output to gate on it.
+# Exit status is 0 by default -- findings are signals, not build failures
+# (same stance as ecosystem-survey.sh). Grep for "FLAG" in the output to
+# gate on it, or pass --strict for a hard exit 1 when any FLAG was printed
+# (exit 2, via lib/cli-guard.sh, is already "usage error" -- so --strict
+# uses 1, matching reach-lint.sh/silence-audit.sh).
 set -uo pipefail
 
 CLI_NAME='hygiene-lint.sh'
 CLI_SUMMARY='offline-first build-hygiene scan across scheduler-registered projects'
 CLI_USAGE='  hygiene-lint.sh            scan every registered project, print findings
   hygiene-lint.sh <name>...  scan only the named project(s)
-                             (skips the ecosystem-wide BLOCKERS.md check)'
-CLI_FLAGS=''
-CLI_EXITS='  0  scanned. FINDINGS ARE SIGNALS, NOT FAILURES -- grep the output for
-     "FLAG" to gate on them. A clean exit does not mean a clean tree.'
+                             (skips the ecosystem-wide BLOCKERS.md check)
+  hygiene-lint.sh --strict [<name>...]   exit 1 if any FLAG was printed'
+CLI_FLAGS='--strict'
+CLI_EXITS='  0  scanned; no --strict given, or --strict given and nothing FLAGged.
+     FINDINGS ARE SIGNALS, NOT FAILURES without --strict -- grep the output
+     for "FLAG" to gate on them yourself if you are not using --strict.
+  1  --strict was given and at least one FLAG was printed'
 CLI_POSITIONAL=any
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-SCHED_ROOT="/home/zach/Documents/Projects/scheduler"
+SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Projects/scheduler}"
+
+# --strict is a mode flag, not a project name -- strip it before building
+# the positional project-filter list (cli_guard validated it but never
+# consumes args, per its own contract; each script parses its own).
+STRICT=0
+want=()
+for a in "$@"; do
+  case "$a" in
+    --strict) STRICT=1 ;;
+    *)        want+=("$a") ;;
+  esac
+done
 
 # --- discover registered projects (same loop as ecosystem-survey.sh) --------
-want=("$@")
 projects=()
 for conf in "$SCHED_ROOT"/schedule/*.conf; do
   name="$(basename "$conf" .conf)"
@@ -355,7 +377,7 @@ fi
 # that makes bin/install-shims.sh a real path rather than a one-shot deploy.
 echo
 echo "== 10. INSTALLED SHIM / USER-COMMAND DRIFT =="
-SHIM_INSTALLER="$(dirname "${BASH_SOURCE[0]}")/install-shims.sh"
+SHIM_INSTALLER="${SHIM_INSTALLER:-$(dirname "${BASH_SOURCE[0]}")/install-shims.sh}"
 if [ ! -x "$SHIM_INSTALLER" ]; then
   echo "  FLAG [shim-drift] install-shims.sh missing or not executable -- cannot verify"
   total_flags=$((total_flags + 1))
@@ -379,7 +401,7 @@ fi
 # names something that only resolves inside realisateur.
 echo
 echo "== 11. COMMAND SCOPE / REACH =="
-REACH_LINT="$(dirname "${BASH_SOURCE[0]}")/reach-lint.sh"
+REACH_LINT="${REACH_LINT:-$(dirname "${BASH_SOURCE[0]}")/reach-lint.sh}"
 if [ ! -x "$REACH_LINT" ]; then
   echo "  FLAG [reach] reach-lint.sh missing or not executable -- cannot verify"
   total_flags=$((total_flags + 1))
@@ -407,7 +429,7 @@ fi
 # the one result that must never render as clean.
 echo
 echo "== 12. NULL-DISCRIMINATION (silence-audit) =="
-SILENCE_AUDIT="$(dirname "${BASH_SOURCE[0]}")/silence-audit.sh"
+SILENCE_AUDIT="${SILENCE_AUDIT:-$(dirname "${BASH_SOURCE[0]}")/silence-audit.sh}"
 if [ ! -x "$SILENCE_AUDIT" ]; then
   echo "  FLAG [silence] silence-audit.sh missing or not executable -- cannot verify"
   total_flags=$((total_flags + 1))
@@ -434,3 +456,5 @@ echo "############################################################"
 echo "== $total_flags total FLAG(s) across ${#projects[@]} project(s) =="
 echo "FLAGs are candidates, not confirmed problems -- a human/AI confirms"
 echo "each before acting. NOTEs are advisory. See BUILD-DISCIPLINE.md."
+[ "$STRICT" = 1 ] && [ "$total_flags" -gt 0 ] && exit 1
+exit 0

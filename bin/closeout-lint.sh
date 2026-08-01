@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # closeout-lint.sh -- the deterministic half of the `/cloture` session-closing
 # rite (design: realisateur .scheduler/FOCUS.md 2026-07-26). Offline-first,
-# zero AI, writes nothing, exit status always 0: same signals-not-verdicts
-# stance as ecosystem-survey.sh / hygiene-lint.sh / milestone-audit.sh.
+# zero AI, writes nothing. Bare invocation exits 0 always -- same
+# signals-not-verdicts stance as ecosystem-survey.sh / hygiene-lint.sh /
+# milestone-audit.sh -- FLAGs printed here are for a human/AI to triage.
+# `--strict` gates on them (exit 1) for a caller that wants a hard failure,
+# e.g. a pre-close hook. Exit 2 is already used (via lib/cli-guard.sh) for
+# usage errors, so --strict uses 1, matching reach-lint.sh/silence-audit.sh.
 #
 # It answers ONE question a session cannot answer about itself reliably:
 # "is the work this session did actually durable, where its consumers read?"
@@ -34,6 +38,7 @@
 # Usage:
 #   closeout-lint.sh              scan every registered project
 #   closeout-lint.sh <name>...    scan only the named project(s)
+#   closeout-lint.sh --strict [<name>...]   exit 1 if any FLAG was printed
 #
 # Env overrides (used by bin/tests/closeout-lint.test.sh, not normally set):
 #   HOURS=12        age below which a repo counts as "touched by this session"
@@ -45,10 +50,13 @@ set -uo pipefail
 
 CLI_NAME='closeout-lint.sh'
 CLI_SUMMARY='the deterministic half of session closeout -- what did today leave behind?'
-CLI_USAGE='  closeout-lint.sh            scan every registered project
-  closeout-lint.sh <name>...  scan only the named project(s)
+CLI_USAGE='  closeout-lint.sh              scan every registered project
+  closeout-lint.sh <name>...    scan only the named project(s)
+  closeout-lint.sh --strict [<name>...]   exit 1 if any FLAG was printed
     (HOURS=<n> in the environment sets the lookback window)'
-CLI_FLAGS=''
+CLI_FLAGS='--strict'
+CLI_EXITS='  0  scanned; no --strict given, or --strict given and nothing FLAGged
+  1  --strict was given and at least one FLAG was printed'
 CLI_POSITIONAL=any
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
@@ -60,8 +68,19 @@ BLOCKERS_MD="${BLOCKERS_MD:-$SCHED_ROOT/BLOCKERS.md}"
 HOURS="${HOURS:-12}"
 TODAY="${TODAY:-$(date +%Y-%m-%d)}"
 
+# --strict is a mode flag, not a project name -- strip it before building
+# the positional project-filter list (cli_guard validated it but never
+# consumes args, per its own contract; each script parses its own).
+STRICT=0
+want=()
+for a in "$@"; do
+  case "$a" in
+    --strict) STRICT=1 ;;
+    *)        want+=("$a") ;;
+  esac
+done
+
 # --- discover registered projects (same loop as hygiene-lint.sh) ------------
-want=("$@")
 projects=()
 paths=()
 for conf in "$SCHED_ROOT"/schedule/*.conf; do
@@ -224,4 +243,5 @@ echo "== $flags FLAG(s) across $touched recently-touched repo(s); $blind BLIND =
 [ "$blind" -gt 0 ] && echo "BLIND means a domain existed and was NOT read -- not a clean result."
 echo "FLAGs are candidates for the closing session to resolve before it ends;"
 echo "this script never edits, commits, or pushes anything."
+[ "$STRICT" = 1 ] && [ "$flags" -gt 0 ] && exit 1
 exit 0
