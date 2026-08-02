@@ -103,8 +103,12 @@ makes load-bearing) and recorded where not, in `bashify/PURGE-EXEMPT.tsv`.
 Exemptions are themselves checked: an entry whose file no longer matches is
 reported `STALE` and fails.
 
-`PURGE-EXEMPT.tsv` **ships empty**, deliberately. 25 files fail and none is
-classified; populating it first would record a guess as a judgement.
+`PURGE-EXEMPT.tsv` was written **empty** and stayed empty until the audit
+landed — classifying first would have recorded a guess as a judgement. It now
+carries 16 rows, all verified by reading the matching lines rather than by
+trusting the audit's table, taking the guard from **25 findings to 9**. The 9
+that remain are 4 genuine defects and 5 judgement calls (§7-D); none is
+exempted, and the guard stays red on them deliberately.
 
 ---
 
@@ -240,7 +244,8 @@ revertible.
 | # | decision | why | revert |
 |---|---|---|---|
 | D1 | Made `agent` **unanchored** in the shared pattern | Measured: zero verdict changes estate-wide; anchoring would expose `subagent-closeout.sh` | one line in `bashify/lib/surface.sh` (`SURFACE_RE_AGENT`) |
-| D2 | Ship `PURGE-EXEMPT.tsv` **empty**, leaving the guard red at 25 | Classifying without the audit would record a guess as a judgement | add rows; the guard goes green as they land |
+| D2 | Record 16 exemptions once the audit landed; leave 9 red | The 16 are summon-docs, test artifacts and `User-Agent` substrings, each re-verified by reading the lines. The 9 are defects and judgements — exempting those would be switching the guard off | delete rows from `bashify/PURGE-EXEMPT.tsv`; the guard returns to 25 |
+| D7 | Fixed `emit` by bounding its exemption on **byte-identity** rather than on the word `agent` | The word-level bound is what made the guard unsatisfiable twice; byte-identity to a reviewed skeleton is what actually makes it safe | revert the `LEAK=` block in `bashify/bashify.sh` — but `emit` breaks again for every project |
 | D3 | Put the work on a **new branch** `bashify-closure-guard`, not `propagate-runtime` | `propagate-runtime` was already merged as #14 | branch is independent; nothing else moved |
 | D4 | Reset local `propagate-runtime` to `origin/propagate-runtime` | It sat 3 ahead with commits already pushed elsewhere; the divergence was bookkeeping noise | `git branch -f propagate-runtime b151c84` |
 | D5 | **Did not** fix the stale "4 call sites" in `skel/lib/verb.sh` | The skeleton is byte-identity-checked; editing a comment marks all 6 adopted repos DRIFTED until a mass re-sync — wrong trade unattended at 98% gate | n/a — nothing changed; see §6 |
