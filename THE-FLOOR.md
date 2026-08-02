@@ -8,14 +8,46 @@ and a milestone made of prose would be self-defeating.*
 
 ---
 
-**Restamped 2026-08-02.** Every status below was re-probed, not quoted —
-agent status claims are stale by construction, and this file is the one place
-that would launder a stale one into a milestone. **2 of 9 gates moved to MET**
-(2.1 two-copies, 3.2 harness-refusal), 1.3 moved to MET *after* correcting a
-misread proof command, and two gates were found to be citing things that no
-longer exist (2.2 named a deleted systemd unit; 1.3 named the wrong flag).
-Where a status changed, the original text is struck through or quoted rather
-than overwritten, so the claim and its correction are both readable.
+> # THE FLOOR IS MET — 9/9, 2026-08-02 03:02 CDT
+>
+> ```
+> $ bin/floor-check.sh --restore    # exit 0
+> MET  2.2 destination readable AND a file restored byte-identical
+>      /mnt/d/gardien-media/mandark/Projects/realisateur/README.md
+>      -> md5 4a96ae0a00fc matches source
+> ```
+>
+> The last unproven criterion was the restore, and it is now exercised rather
+> than asserted: a real file pulled back off dexter and diffed byte-for-byte
+> against its source. **The resumption contract at the bottom of this file is
+> therefore unlocked** — read it before arming anything, especially the
+> one-project-at-a-time rule.
+>
+> **Carry this forward, because it is the live hazard:** `gardien`'s last run
+> ended `outcome=NOT-DONE` with no verdict written, so the runner will
+> re-dispatch it every tick and spin until the project writes a verdict or is
+> unpaced. Harmless while nothing is armed; a loop the moment something is.
+
+**`bin/floor-check.sh` IS THE AUTHORITY, not the tables below.** This file's own
+premise is that "every exit criterion is a command" — so when the prose and the
+command disagree, the command wins, and on 2026-08-02 they disagreed badly.
+The checker's criteria were **deliberately revised** after this document was
+written (`4928775`, `0acb7f6`, `f0d911e`), and the prose tables were never
+updated to match:
+
+| gate | prose below says | the checker actually asks |
+|---|---|---|
+| 1.2 | total cron surface is exactly **2 lines** | exactly **one agent-dispatching** line, no unaccounted lines |
+| 3.1 | `_paced.conf` has **exactly one** enabled row | a **ceiling** on armed agents — zero armed is fine |
+| 2.2 | start `gardien.service` | restore a real file from the destination and diff it |
+| 2.3 | `ecosystem1` **and** `git-remotes` are named sets | `~/Documents/Projects` is a named set |
+
+**A correction to the restamp of earlier today.** That pass reported "2 of 9
+MET" by hand-evaluating the prose criteria above. Measured against the
+*command*, the true figure at that moment was 8 of 9 with one unproven. The
+error was reading the specification instead of running the mechanization — the
+exact substitution this milestone exists to prevent. The tables below are kept
+as history; they are no longer the score.
 
 ## Relationship to the prior art
 
