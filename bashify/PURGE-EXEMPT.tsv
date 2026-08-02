@@ -19,6 +19,11 @@
 #                        DATA -- a literal `\bagent\b` in an assertion. It
 #                        names a vendor only in the sense a mirror names its
 #                        subject. Deleting it deletes the test of the guard.
+#   EXEMPT-INCIDENTAL    the token is a substring of an unrelated term of art.
+#                        Every current row is the HTTP `User-Agent` header,
+#                        which no anchoring can distinguish from the bare word
+#                        (`-` is a word boundary on both sides), so it cannot
+#                        be fixed in the pattern and must be recorded here.
 #
 # There is deliberately NO class for "we decided to keep it". Material that is
 # genuinely a trace gets REMOVED from the branch; it does not get a row.
@@ -27,6 +32,45 @@
 # is reported STALE and fails the guard. An exemption outliving its reason is
 # how a temporary divergence becomes permanent.
 #
-# EMPTY AS OF 2026-08-02, and that is the honest state: 25 files across 7
-# branches currently fail, and none has been classified yet. Populating this
-# file before the audit would be recording a guess as a judgement.
+# PROVENANCE. Classified 2026-08-02 from an audit of all 31 matching files
+# across the seven branches. The `User-Agent` rows and the test-artifact rows
+# were re-verified here by reading the matching lines directly, because an
+# audit's classification is a claim like any other.
+#
+# WHAT IS DELIBERATELY *NOT* EXEMPTED -- 9 files, and the guard stays red on
+# them. Four are genuine defects and five are judgements that belong to a
+# human, not to this file:
+#
+#   DEFECT      bibliothecaire CONTRACT.md   "two an assistant processes" --
+#                                            broken grammar from a find/replace
+#                                            of a vendor name; a laundering
+#                                            artifact, not documentation
+#   DEFECT      gardien CONTRACT.md          states the live Law 3 violation
+#   DEFECT      gardien bin/garde            `claude -p` named in a comment
+#   DEFECT      gardien lib/verb.sh          NOT byte-identical: the pre-defork
+#                                            dialect, with EXECUTABLE `claude -p`
+#   JUDGEMENT   bibliothecaire REAPED.tsv    a cryptographic proof-of-DELETION
+#                                            that must name what it deleted
+#   JUDGEMENT   ecosim GAPS.md               names a governance file by filename
+#   JUDGEMENT   gardien bin/fauche           real code that must name the file
+#                                            to classify it, in OTHER repos
+#   JUDGEMENT   scheduler bin/arme           live spend-detection code whose JOB
+#                                            is grepping for vendor names
+#   JUDGEMENT   vim-arcade CONTRACT.md       the game's own pedagogical premise
+#
+bibliothecaire	GAPS.md	EXEMPT-SUMMON-DOC	documents accroche sheets' AGENT/MECHANIZED state, the same vocabulary as the exempted skeleton
+bibliothecaire	bin/accroche	EXEMPT-SUMMON-DOC	comment and UX text documenting the sheets summon
+bibliothecaire	bin/fonde	EXEMPT-SUMMON-DOC	documents consign's summon escalation
+bibliothecaire	man/accroche.1	EXEMPT-SUMMON-DOC	man-page mirror of bin/accroche's summon documentation
+bibliothecaire	bin/glane	EXEMPT-INCIDENTAL	the HTTP User-Agent header, verified by reading the matching lines
+bibliothecaire	bin/page92.py	EXEMPT-INCIDENTAL	USER_AGENT constant and the header it sets; a scraper identifying itself honestly
+bibliothecaire	man/glane.1	EXEMPT-INCIDENTAL	documents the User-Agent that bin/glane sends
+bibliothecaire	test/reaped-q92-test.sh	EXEMPT-TEST-ARTIFACT	asserts a removed file's hash is preserved in the vault; names it to check it
+bibliothecaire	test/reaped-test.sh	EXEMPT-TEST-ARTIFACT	asserts the governance files are ABSENT from the tree
+bibliothecaire	test/trie-test.sh	EXEMPT-TEST-ARTIFACT	embeds the purge guard's own regex as literal test code
+gardien	GAPS.md	EXEMPT-SUMMON-DOC	documents a caught bug in contract-state reporting
+gardien	man/garde.1	EXEMPT-SUMMON-DOC	standard exit-4 summon language, verbatim across the estate
+scheduler	man/arme.1	EXEMPT-SUMMON-DOC	documents arme's core distinction: it arms non-agent maintenance only
+scheduler	test/arme-spend-scope-test.sh	EXEMPT-TEST-ARTIFACT	fixture text built to exercise arme's own spend detector
+senechal	test/installe-test.sh	EXEMPT-TEST-ARTIFACT	embeds the purge guard's own regex as literal test code
+senechal	test/recense-test.sh	EXEMPT-TEST-ARTIFACT	embeds the purge guard's own regex as literal test code

@@ -385,11 +385,35 @@ if cmp -s "$SKEL/lib/verb.sh" "$WT/lib/verb.sh"; then VERB_SH_CLEAN=1; fi
 # `claudes`, `assistants`. Trailing anchors would let a plural through, which
 # is a real evasion; a leading anchor rejects only mid-word noise, which never
 # is one.
+# THE EXEMPTION COVERS THE WHOLE PATTERN, not the `agent` half. Corrected
+# 2026-08-02, and the bug it fixes is this one, AGAIN:
+#
+#   The exemption above was bounded three ways, one of which was "it applies
+#   only to the generic English word `agent`, never to a vendor name." Then the
+#   de-fork (8f83801) added this line to the skeleton, for good reason:
+#
+#     # gardien's `verb_gap_or_summon` is NOT here. It calls `claude -p` ...
+#
+#   `claude` is a vendor name, and the vendor grep had no exemption at all, for
+#   any path, ever. So EVERY `bashify emit` exited 5 -- for every project, on
+#   every run -- while `bashify list` went on reporting emit MECHANIZED,
+#   because `_state` only asks whether the file is executable.
+#
+# That is verbatim the failure this same header already describes happening for
+# two days before. It recurred because the bound was written against a WORD
+# when the property that actually makes the exemption safe is BYTE-IDENTITY:
+# the file must equal the skel this generator just copied. A reviewed,
+# version-controlled skeleton cannot smuggle anything, whatever words it uses,
+# and the word-level bound only ever added a way for the guard to become
+# unsatisfiable when the skeleton's prose changed.
+#
+# Reproduced on a throwaway registry before and after the fix -- see
+# test/verify-emit.sh, which is the end-to-end run this generator never had.
 LEAK="$(cd "$WT" && {
     grep -rilE "$SURFACE_RE_VENDOR" . 2>/dev/null
-    grep -rilE "$SURFACE_RE_AGENT" . 2>/dev/null \
-      | { [ "$VERB_SH_CLEAN" = 1 ] && grep -vx './lib/verb.sh' || cat; }
-  } | grep -v '^\./\.git' | sort -u || true)"
+    grep -rilE "$SURFACE_RE_AGENT" . 2>/dev/null
+  } | { [ "$VERB_SH_CLEAN" = 1 ] && grep -vx './lib/verb.sh' || cat; } \
+    | grep -v '^\./\.git' | sort -u || true)"
 if [ -n "$LEAK" ]; then
   echo "bashify: PURGE FAILED for $PROJ -- these files still name an agent:" >&2
   printf '  %s\n' $LEAK >&2
