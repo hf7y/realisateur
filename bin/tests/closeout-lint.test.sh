@@ -21,12 +21,26 @@
 #   D1 --strict, a FLAG is printed    -> exit 1
 #   D2 --strict, nothing FLAGged      -> exit 0
 #   D3 no --strict, a FLAG is printed -> exit 0 (bare invocation stays green)
+#   E1 --repo on an UNREGISTERED tree -> audited anyway (registry bypassed)
+#   E2 --repo                         -> sections B and C skipped
+#   E3 --repo on a stale-HEAD repo    -> age gate ignored, branches checked
+#   E4 --strict, BLIND and no FLAG    -> exit 6
+#   E5 --strict --allow-blind, BLIND  -> exit 0 (warning, not a gate)
+#   E6 --strict, a FLAG and no BLIND  -> exit 1 (FLAG outranks BLIND)
+#   E7..E9 --repo misuse              -> exit 2
+#   E10 --repo <subdir>               -> resolves to the work-tree root
 #
-# Negative-tested against an `exit 0` stub: 13 of the 16 assertions fail as
-# they should. The 3 that survive are all `hasnt` (absence) assertions, which
-# a silent stub passes vacuously -- so every `hasnt` case here is deliberately
-# paired with a positive assertion on the same fixture (A1, A5, C2), and no
-# case rests on absence alone.
+# Negative-tested against an `exit 0` stub: 31 of the 49 assertions fail as
+# they should. The 18 that survive are all `hasnt` (absence) or expect-exit-0
+# assertions, which a silent stub passes vacuously -- so every one of those is
+# deliberately paired with a positive assertion on the same fixture (A1, A5,
+# C2, E1, E2), and no case rests on absence alone.
+#
+# Mutation-verified beyond that, each against the assertion that should catch
+# it: remove the BLIND gate -> E4; ignore --allow-blind -> E5; restore the age
+# gate in --repo mode -> E3; stop skipping B/C -> E2; remove the
+# host-only-branch check -> A4; reword the unpushed count -> A3; remove BLIND
+# worktree detection -> A8 and A9.
 #
 # Usage: bin/tests/closeout-lint.test.sh   (exit 0 = all pass)
 set -uo pipefail
@@ -196,6 +210,69 @@ hasnt "D2 no FLAG in a clean --strict run"                "$RUN_OUT" "FLAG ["
 run_rc "$T/focus-ok.md" "$T/blockers-today.md" dirtyrepo
 rc    "D3 bare invocation stays exit 0 despite a FLAG"    0 "$RUN_RC"
 has   "D3 the FLAG is still printed (signal, not silence)" "$RUN_OUT" "FLAG [dirty-tree]"
+
+echo "-- E. --repo (one tree) and the BLIND gate"
+# An UNREGISTERED repo: nothing in the scratch registry names it. Registry
+# mode cannot reach it at all, so this proves --repo bypasses discovery
+# rather than merely filtering it.
+git init -q --bare "$T/loose.git"
+git clone -q "$T/loose.git" "$T/loose" 2>/dev/null
+git -C "$T/loose" config user.email t@test; git -C "$T/loose" config user.name T
+git -C "$T/loose" checkout -q -B main
+echo one > "$T/loose/f.txt"; git -C "$T/loose" add -A
+git -C "$T/loose" commit -qm init; git -C "$T/loose" push -q origin main
+git -C "$T/loose" branch -q --set-upstream-to=origin/main
+
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --repo "$T/loose"
+rc    "E1 --repo audits an UNREGISTERED tree"             0 "$RUN_RC"
+has   "E1 names the tree it audited"                      "$RUN_OUT" "single tree: $T/loose"
+hasnt "E1 registry mode could never have reached it"      "$RUN_OUT" "recently-touched repo(s)"
+
+# Sections B and C are session-wide. A hook auditing one worktree must not be
+# blocked by realisateur's FOCUS.md lacking today's entry, so --repo skips
+# them -- note this uses focus-OLD, which would FLAG [no-record] in registry mode.
+run_rc "$T/focus-old.md" "$T/blockers-old.md" --repo "$T/loose"
+hasnt "E2 --repo skips section B"                         "$RUN_OUT" "B. TODAY'S SESSION RECORD"
+hasnt "E2 --repo skips section C"                         "$RUN_OUT" "C. DECISION RESIDUE"
+rc    "E2 so a stale FOCUS.md cannot gate one tree"       0 "$RUN_RC"
+
+# The age gate answers "did this session touch it", which is the wrong
+# question when the caller named the tree. oldrepo's HEAD is 2026-07-01 and
+# HOURS=12, so registry mode never scans it; --repo must.
+out="$(run "$T/focus-ok.md" "$T/blockers-today.md" oldrepo)"
+has   "E3 registry mode skips a stale repo"    "$out" "no registered repo has a commit younger"
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --repo "$T/oldrepo"
+hasnt "E3 --repo ignores the age gate"                    "$RUN_OUT" "no registered repo has a commit younger"
+has   "E3 and actually checks its branches"               "$RUN_OUT" "FLAG [host-only-branch]"
+
+# The gate itself. wtrepo is clean and its `side` branch is pushed, so it has
+# 0 FLAGs and exactly 1 BLIND -- the case that used to exit 0 and is the
+# silent pass THE FLOOR gate 3.3 names by hand.
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --strict --repo "$T/wtrepo"
+rc    "E4 BLIND-only under --strict exits 6"              6 "$RUN_RC"
+hasnt "E4 and it really was BLIND-not-FLAG"               "$RUN_OUT" "FLAG ["
+
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --strict --allow-blind --repo "$T/wtrepo"
+rc    "E5 --allow-blind downgrades BLIND to a warning"    0 "$RUN_RC"
+
+# A FLAG is something we DID see; BLIND is something we could not. dirtyrepo
+# has no worktree, so this also pins that a plain FLAG still exits 1 and not 6.
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --strict --repo "$T/dirtyrepo"
+rc    "E6 a FLAG still exits 1, not 6"                    1 "$RUN_RC"
+
+# Usage errors. Two selectors that disagree is a usage error, not something
+# to resolve by precedence and silently honour one of.
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --repo "$T/loose" clean
+rc    "E7 --repo plus a project name is rejected"         2 "$RUN_RC"
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --repo "$T/sched"
+rc    "E8 --repo on a non-git directory is rejected"      2 "$RUN_RC"
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --repo
+rc    "E9 --repo with no path is rejected"                2 "$RUN_RC"
+
+# A subdirectory argument must still name the repo, or a hook whose cwd is
+# nested would audit nothing and report clean.
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --repo "$T/loose/.git/.."
+has   "E10 --repo resolves to the work-tree root"         "$RUN_OUT" "single tree: $T/loose"
 
 echo
 echo "$pass passed, $fail failed"
