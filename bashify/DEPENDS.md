@@ -156,14 +156,115 @@ bashified branch**. The branch's stated guarantee would then be false, and false
 in exactly the way the guard exists to prevent.
 
 **The guard checks files individually and is blind to `source`.** Two possible
-fixes, both real work, neither done here:
+fixes were named:
 
-1. **Transitive closure** — resolve `source`/`.` within the moved set and score
-   the closure, not the file. Correct, and it is what the rule actually meant.
+1. **Transitive closure** — resolve `source`/`.` and score the closure, not the
+   file. Correct, and it is what the rule actually meant.
 2. **An explicit recorded judgement** per script, in `DEPENDS.overrides.tsv`.
    Cheaper, but it is prose in a table and will decay.
 
-Until one exists, **`scheduler-run` must not be moved**, and the partition's
-CLEAN column cannot be trusted as a move-list — only as a first pass. Any other
-script that `source`s a library outside the moved set is the same class; nothing
-has enumerated them yet.
+### RESOLVED 2026-08-02 — option 1, in `lib/closure.sh`
+
+`bashify/lib/closure.sh` resolves `source`/`.` transitively and scores the
+closure. `scheduler-run` now reads:
+
+```
+scheduler  bin/scheduler-run  ESSENTIAL  self=0  closure=35  members=4
+           via lib/sweep-loop-common.sh
+```
+
+The chain, verified rather than inferred: `bin/scheduler-run` →
+`lib/sweep-loop-common.sh` → {`lib/autonomy-merge.sh`, `lib/registry-lock.sh`}.
+
+**A third class the original note did not reach.** `scheduler-run:44` is
+`source "$CONF"` — a path that is *runtime state*. No static tool can score
+what is behind it, and silently treating an unresolvable source as *no
+dependency* rebuilds this exact false negative one layer down, where it is
+harder to see. Such a script is `UNRESOLVED` and is **never CLEAN**.
+`scheduler-run` therefore fails twice, for two independent reasons.
+
+### THE ENUMERATION — done, and it is exactly two
+
+*"Any other script that `source`s a library outside the moved set is the same
+class"* — enumerated across all seven repos:
+
+| project | script | class | why |
+|---|---|---|---|
+| scheduler | `bin/scheduler-run` | ESSENTIAL | sources the model dispatcher |
+| scheduler | `bin/morning-report.sh` | UNRESOLVED | `. "$conf"` at line 110 |
+
+**Both are scheduler; neither may move.** No other repo has one.
+
+**`ESCAPES` is 0.** No wrapped script in the estate sources a file outside its
+own repo — a question that had been open and is now closed by measurement.
+
+### Partition by CLOSURE — re-derived 2026-08-02
+
+> **23 CLEAN / 25 COMMENT-ONLY / 45 ESSENTIAL / 1 UNRESOLVED / 0 ESCAPES**
+> over **94** wrapped scripts
+
+**The denominator differs from the 72 above and neither figure is wrong.** The
+72 was measured on 2026-07-30; the trees have grown, and this run covers every
+repo with a `bashified` branch including realisateur itself. Quoting one
+against the other would be comparing two different questions — re-derive with
+`bashify/lib/closure.sh`, do not cite the number.
+
+### The single-source fix underneath it
+
+`lib/surface.sh` now holds the vendor list and the discovery rule *once*.
+They had been typed out separately, which is precisely how the anchoring fix
+above reached the content guard and not the path guard eleven lines earlier —
+so `fullmatch.sh` and `killmode.sh` were still being purged from the subcommand
+surface, silently, as "deliberately not exposed".
+
+Applying the anchor to the path guard changes the classification of **zero**
+real files estate-wide: it removes the false-positive class and regresses
+nothing.
+
+**`agent` is deliberately UNANCHORED**, and the asymmetry with the vendor half
+is measured in both directions:
+
+- widening `\bagent\b` → `agent` changed the verdict on **zero** files — every
+  file containing `subagents`/`agentic`/`agentish` already contained a bare
+  `agent`, so nothing newly fails;
+- anchoring it flips `realisateur/hooks/subagent-closeout.sh` from purged to
+  **exposed** — a subcommand named after an agent on a branch promising none.
+
+The vendor half needs a leading anchor because `llm`/`gpt` are substrings of
+ordinary English. `agent` needs none because every compound of it names an
+agent. Same file, opposite failure modes.
+
+## A SECOND, LARGER FINDING — the guard is emit-time only
+
+Found while building the above. `bashify.sh` checks the purge at **emit**,
+against the tree it is about to commit, and **nothing ever asks again**.
+
+Since 2026-07-30 the doctrine is one noun, many verbs: `bashify coin` adds
+verbs to an existing branch, and `emit` *refuses* to run against a branch
+carrying more than one because it would delete them. So the guard runs at the
+moment the branch is smallest, and never again across the whole period it is
+actually being added to.
+
+Measured across all seven branches as they stand — **25 files break the
+promise their own README makes**:
+
+| repo | files |
+|---|---|
+| bibliothecaire | 12 |
+| gardien | 5 |
+| scheduler | 3 |
+| senechal | 2 |
+| ecosim | 1 |
+| vim-arcade | 1 |
+| realisateur | 0 |
+
+`bashify/lib/branch-purge.sh` is the guard that re-asks. Its gardien row
+includes `lib/verb.sh`, caught **independently** as drifted from the skeleton —
+the same Law 3 violation `runtime-check.sh` reports, reached by a different
+question.
+
+Exemptions are derived where possible (`lib/verb.sh`, and only while
+byte-identical to the skeleton) and recorded where not, in
+`bashify/PURGE-EXEMPT.tsv`. That file **ships empty**: 25 files fail and none
+is classified yet, and populating it first would record a guess as a
+judgement.
