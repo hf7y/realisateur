@@ -147,14 +147,24 @@ elif [ "$(printf '%s' "$gl" | grep -c 'PENDING')" != 0 ]; then
 elif [ "$DO_RESTORE" = 1 ]; then
   # Pull one real file back off the destination and diff it. Chosen from a set
   # that is small and stable; the point is the round trip, not the file.
+  # garde lays each SET DOWN UNDER ITS SET NAME at the destination root, not
+  # under its source path: the set `Projects` (path ~/Documents/Projects) lands
+  # at <root>/Projects, NOT <root>/Documents/Projects. Getting that wrong made
+  # this check report a restore failure on 2026-08-01 when the backup was fine
+  # -- a false NOT MET, which erodes trust in the gate as surely as a false MET.
   src="$HOME/Documents/Projects/realisateur/README.md"
-  rem="/mnt/d/gardien-media/mandark/Documents/Projects/realisateur/README.md"
+  rem="/mnt/d/gardien-media/mandark/Projects/realisateur/README.md"
   tmp="$(mktemp)"
-  if timeout 60 scp -q -P 2223 "dexter:$rem" "$tmp" 2>/dev/null && diff -q "$src" "$tmp" >/dev/null 2>&1; then
-    met "2.2 backup complete AND a file restored and matched"
+  err="$(timeout 60 scp -q "dexter:$rem" "$tmp" 2>&1)"; src_rc=$?
+  if [ "$src_rc" != 0 ]; then
+    notmet "2.2 a file restored and matched" "scp failed: ${err:-rc=$src_rc}"
+  elif [ ! -s "$tmp" ]; then
+    notmet "2.2 a file restored and matched" "restored file is empty: $rem"
+  elif diff -q "$src" "$tmp" >/dev/null 2>&1; then
+    met "2.2 backup complete AND a file restored byte-identical"
+    say "            $rem -> md5 $(md5sum < "$tmp" | cut -c1-12) matches source"
   else
-    notmet "2.2 backup complete AND a file restored and matched" \
-           "restore of $rem failed or differed"
+    notmet "2.2 a file restored and matched" "restored $rem DIFFERS from source"
   fi
   rm -f "$tmp"
 else
