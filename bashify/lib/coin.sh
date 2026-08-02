@@ -56,6 +56,29 @@ esac
 if command -v "$VERB" >/dev/null 2>&1; then
   die "'$VERB' is already claimed on PATH; coin another"
 fi
+# PATH is not the claim register. `command -v` above answers "is this name
+# reachable on THIS HOST RIGHT NOW", and the declarations live in the repos --
+# so on a host where nothing is installed it finds nothing and every name looks
+# free. That is not hypothetical: the 2026-07-30 pass installed nothing on
+# PATH, `command -v range` came back empty twice, and `range` was assigned to
+# both bibliothecaire and secretaire with unrelated meanings. Only one can own
+# the name; secretaire's won, and bibliothecaire's verb is unreachable. The
+# report for that pass says "all verbs confirmed unclaimed on PATH before
+# assignment" -- true, and still a collision, because PATH was the wrong
+# register to confirm against.
+# shellcheck source=../../bin/lib/verb-set.sh
+if [ -r "$SELF/../bin/lib/verb-set.sh" ]; then
+  . "$SELF/../bin/lib/verb-set.sh"
+  _claimants="$(verb_set_claimants "$VERB" | grep -vx "$PROJ" || true)"
+  [ -z "$_claimants" ] \
+    || die "'$VERB' is already declared by:$(printf ' %s' $_claimants) -- coin another. (Declared means that project's bashified branch carries bin/$VERB and man/$VERB.1, whether or not it is installed here.)"
+else
+  # A missing guard is a finding, not an inconvenience: say so rather than
+  # silently falling back to the check that produced the collision.
+  printf 'coin: WARNING: bin/lib/verb-set.sh is unreadable, so the only claim check\n' >&2
+  printf 'coin: that ran is `command -v`, which is host state and misses any verb\n' >&2
+  printf 'coin: declared but not installed here. This is how `range` collided.\n' >&2
+fi
 
 # ---- REFUSAL 1: there must already be a branch to add to -------------------
 # This is the whole distinction between coin and emit, so it is enforced

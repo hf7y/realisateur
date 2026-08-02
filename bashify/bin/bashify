@@ -109,6 +109,22 @@ case "$cmd" in
     if command -v "$verb" >/dev/null 2>&1; then
       verb_die "emit: '$verb' is already claimed on PATH; coin another"
     fi
+    # PATH is not the claim register -- see the long note at the same check in
+    # lib/coin.sh. `command -v` asks what is reachable on THIS HOST; the
+    # declarations live in the repos, so on a host with nothing installed every
+    # name reads as free. That is exactly how `range` was assigned to both
+    # bibliothecaire and secretaire on 2026-07-30.
+    # shellcheck source=../../bin/lib/verb-set.sh
+    if [ -r "$SELF/../bin/lib/verb-set.sh" ]; then
+      . "$SELF/../bin/lib/verb-set.sh"
+      claimants="$(verb_set_claimants "$verb" | grep -vx "$proj" || true)"
+      [ -z "$claimants" ] \
+        || verb_die "emit: '$verb' is already declared by:$(printf ' %s' $claimants) -- coin another. (Declared means that project's bashified branch carries bin/$verb and man/$verb.1, whether or not it is installed here.)"
+    else
+      printf '%s: WARNING: bin/lib/verb-set.sh is unreadable, so the only claim\n' "$VERB_NAME" >&2
+      printf '%s: check that ran is `command -v` -- host state, which misses any\n' "$VERB_NAME" >&2
+      printf '%s: verb declared but not installed here. This is how `range` collided.\n' "$VERB_NAME" >&2
+    fi
     # emit is a BOOTSTRAP: bashify.sh opens with `git rm -r .` and rebuilds
     # the branch from the default branch's tooling. Against a branch that has
     # since grown verbs by hand, that is destruction, not regeneration. The
