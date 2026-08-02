@@ -9,7 +9,7 @@
 #   A1 clean, pushed repo             -> no flag
 #   A2 dirty working tree             -> FLAG [dirty-tree]
 #   A3 commit ahead of upstream       -> FLAG [unpushed]
-#   A4 branch tracking nothing        -> FLAG [no-upstream]
+#   A4 branch with no origin/<branch> -> FLAG [host-only-branch]
 #   A5 HEAD older than HOURS          -> not scanned at all (no flag, not listed)
 #   A6 registered path does not exist -> FLAG [missing-repo]
 #   B1 today's entry citing a sha     -> ok
@@ -65,10 +65,12 @@ newrepo() {
 # --- fixtures --------------------------------------------------------------
 newrepo clean
 # strictclean: a SEPARATE pushed, untouched repo for the D-section --strict
-# clean-exit case. Reusing "clean" there would be contaminated by A8/A9,
-# which add a worktree (an extra local branch with no origin/<branch>) to
-# "clean" and "oldrepo" in place -- correct per those cases, but it means
-# "clean" is no longer clean by the time D2 runs later in the same file.
+# clean-exit case. A9 still adds a worktree on a host-only branch to
+# "oldrepo" in place (correct for that case), and the general hazard is that
+# any fixture mutated mid-file is no longer the thing a later case names. A
+# dedicated repo per assertion is cheap; a shared one silently drifts.
+# (A8 used to mutate "clean" the same way, which is what made A8 and C2 fail
+# once the host-only-branch check landed -- it now uses its own "wtrepo".)
 newrepo strictclean
 newrepo dirtyrepo && echo scratch >> "$T/dirtyrepo/f.txt"
 newrepo aheadrepo && { echo two > "$T/aheadrepo/g.txt"; git -C "$T/aheadrepo" add -A; \
@@ -110,10 +112,16 @@ has   "A2 dirty tree flagged"                  "$out" "FLAG [dirty-tree] dirtyre
 
 out="$(run "$T/focus-ok.md" "$T/blockers-today.md" aheadrepo)"
 has   "A3 unpushed commit flagged"             "$out" "FLAG [unpushed] aheadrepo"
-has   "A3 names the count"                     "$out" "1 commit(s) on main not pushed"
+has   "A3 names the count"                     "$out" "1 commit(s) on main not on origin/main"
 
+# A4 was written against a [no-upstream] check that the host-only-branch
+# doctrine (2026-08-01, BUILD-DISCIPLINE.md "Settled definition: pushed")
+# replaced. A branch with no origin/<branch> is not merely untracked -- it
+# exists ONLY on this host, which is a blocker, and `fauche`/`transplante`
+# refuse on it. The fixture's `orphan` branch is exactly that case.
 out="$(run "$T/focus-ok.md" "$T/blockers-today.md" detached)"
-has   "A4 untracked branch flagged"            "$out" "FLAG [no-upstream] detached"
+has   "A4 host-only branch flagged"            "$out" "FLAG [host-only-branch] detached"
+has   "A4 names the branch it would strand"    "$out" "branch 'orphan' has no origin/orphan"
 
 out="$(run "$T/focus-ok.md" "$T/blockers-today.md" oldrepo)"
 hasnt "A5 stale repo not flagged"              "$out" "FLAG ["
@@ -130,12 +138,25 @@ hasnt "A7 no worktrees means no BLIND line"    "$out" "BLIND [worktrees]"
 out="$(run "$T/focus-ok.md" "$T/blockers-today.md" clean)"
 hasnt "A7 clean repo likewise silent"          "$out" "BLIND [worktrees]"
 
-git -C "$T/clean" worktree add -q -b side "$T/clean-side" >/dev/null 2>&1
-out="$(run "$T/focus-ok.md" "$T/blockers-today.md" clean)"
-has   "A8 linked worktree reported BLIND"      "$out" "BLIND [worktrees] clean: 1 linked worktree(s)"
+# A8 gets its OWN repo, and its branch is PUSHED WITHOUT an upstream being
+# configured. Both halves matter:
+#   - `git worktree add -b side` on `clean` created a branch with no
+#     origin/side, so the (correct) host-only-branch FLAG fired and broke
+#     A8's "a BLIND raises no FLAG" assertion -- and, because `clean` stayed
+#     contaminated, C2's as well. Isolating the fixture fixes both.
+#   - `git push origin side` WITHOUT --set-upstream is the case
+#     BUILD-DISCIPLINE.md's settled definition calls out by name: `@{u}` is
+#     the WRONG question, and asking it over-reported by two on the first
+#     propagation pass. A8 therefore doubles as the regression test for it.
+newrepo wtrepo
+git -C "$T/wtrepo" branch -q side && git -C "$T/wtrepo" push -q origin side
+git -C "$T/wtrepo" worktree add -q "$T/wtrepo-side" side >/dev/null 2>&1
+out="$(run "$T/focus-ok.md" "$T/blockers-today.md" wtrepo)"
+has   "A8 linked worktree reported BLIND"      "$out" "BLIND [worktrees] wtrepo: 1 linked worktree(s)"
 has   "A8 names the worktree branch"           "$out" "[side]"
 has   "A8 BLIND counted in the summary"        "$out" "1 BLIND"
 hasnt "A8 BLIND is not a FLAG"                 "$out" "FLAG ["
+hasnt "A8 pushed-but-no-upstream not host-only" "$out" "FLAG [host-only-branch]"
 
 git -C "$T/oldrepo" worktree add -q -b oldside "$T/oldrepo-side" >/dev/null 2>&1
 out="$(run "$T/focus-ok.md" "$T/blockers-today.md" oldrepo)"
