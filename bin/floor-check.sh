@@ -188,13 +188,32 @@ say ""
 say "GATE 3 -- ONE LOOP, WATCHED"
 
 # 3.1  Generated crontab, exactly one enabled participant.
-en="$(grep -cE '^[a-z][a-z-]*\|1\|' "$SCHED/schedule/_paced.conf" 2>/dev/null || echo 0)"
+# 3.1 asked for "exactly one enabled participant" until 2026-08-01, when Zach
+# drew the line this gate actually cares about: MECHANISMS RUN ON A CLOCK,
+# AGENTS RUN WHEN THERE IS WORK. A mechanism is cheap, deterministic and free,
+# so a timer is the right trigger; an agent costs tokens and needs something to
+# decide, so pending work is the right trigger and a clock is merely the
+# cheapest wrong one.
+#
+# Under that rule ZERO enabled agents is not a failure -- it is the correct
+# state when nothing is pending, and it is what unpacing gardien produced after
+# its first run correctly found nothing to do. What must hold is the CEILING:
+# never more than one agent armed at a time, the dispatcher present so work can
+# be picked up when it appears, and no FREEZE silently swallowing dispatch.
+# grep -c PRINTS 0 and EXITS 1 on no-match, so `|| echo 0` yields "0\n0" and
+# every numeric test after it explodes. Masked until the count was legitimately
+# zero, which is exactly the state this gate now has to handle.
+en="$(grep -cE '^[a-z][a-z-]*\|1\|' "$SCHED/schedule/_paced.conf" 2>/dev/null || true)"; en="${en:-0}"
 frz=0; [ -e "$SCHED/schedule/FREEZE" ] && frz=1
-if [ "$en" = 1 ] && [ "$disp" = 1 ] && [ "$frz" = 0 ]; then
-  met "3.1 one enabled participant, dispatcher installed, not frozen"
+if [ "$en" -le 1 ] && [ "$disp" = 1 ] && [ "$frz" = 0 ]; then
+  if [ "$en" = 0 ]; then
+    met "3.1 no agent armed (nothing pending); dispatcher installed, not frozen"
+  else
+    met "3.1 one agent armed, dispatcher installed, not frozen"
+  fi
 else
-  notmet "3.1 one enabled participant, dispatcher installed, not frozen" \
-         "enabled=$en dispatcher=$disp FREEZE_present=$frz"
+  notmet "3.1 at most one agent armed, dispatcher installed, not frozen" \
+         "enabled=$en (ceiling 1) dispatcher=$disp FREEZE_present=$frz"
 fi
 
 # 3.2  The harness refuses a dirty exit and a push to main.
