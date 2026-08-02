@@ -41,7 +41,15 @@ trap 'rm -rf "$WORK"' EXIT
 export INSTALLE_PROJECTS="$WORK/projects"
 export INSTALLE_BIN="$WORK/bin"
 export INSTALLE_MANIFEST="$WORK/manifest.tsv"
-mkdir -p "$INSTALLE_PROJECTS" "$INSTALLE_BIN"
+# The registry. Set EXPLICITLY, and every fixture project is registered in it,
+# so the registration check (section F) contributes no finding to sections C/D.
+# Left at its default it would resolve inside the fixture, find nothing, and
+# report BLIND -- which would then satisfy C1's exit-1 assertion for a reason
+# that has nothing to do with absence. That is the same "passes for the wrong
+# reason" trap C1 was already rewritten once to escape.
+export SCHEDULE_DIR="$WORK/schedule"
+mkdir -p "$INSTALLE_PROJECTS" "$INSTALLE_BIN" "$SCHEDULE_DIR"
+register() { printf 'PROJECT="%s"\n' "$1" > "$SCHEDULE_DIR/$1.conf"; }
 
 G() { git -c user.email=t@t -c user.name=t -C "$1" "${@:2}"; }
 
@@ -65,6 +73,7 @@ make_project() {
 
 make_project alpha aaa bbb
 make_project beta  aaa           # deliberate collision with alpha
+register alpha; register beta    # so section F contributes no finding here
 mkdir -p "$INSTALLE_PROJECTS/gamma"; G "$INSTALLE_PROJECTS/gamma" init -q -b main
 echo x > "$INSTALLE_PROJECTS/gamma/README.md"
 G "$INSTALLE_PROJECTS/gamma" add -A; G "$INSTALLE_PROJECTS/gamma" commit -qm init
@@ -106,9 +115,12 @@ printf -- '-- C. absence fails loud (the intersection defect)\n'
 # and an intersection check would score green. That is the "PASS text, not the
 # count" trap this ecosystem already recorded against `bashify check` row 6.
 SOLO="$WORK/solo"
-mkdir -p "$SOLO/projects" "$SOLO/bin"
+mkdir -p "$SOLO/projects" "$SOLO/bin" "$SOLO/schedule"
 (
   export INSTALLE_PROJECTS="$SOLO/projects" INSTALLE_BIN="$SOLO/bin" INSTALLE_MANIFEST="$SOLO/manifest.tsv"
+  # Registered, so ABSENCE really is the only thing that can flag here.
+  export SCHEDULE_DIR="$SOLO/schedule"
+  printf 'PROJECT="solo"\n' > "$SCHEDULE_DIR/solo.conf"
   d="$INSTALLE_PROJECTS/solo"
   mkdir -p "$d"; G "$d" init -q -b main
   echo x > "$d/README.md"; G "$d" add -A; G "$d" commit -qm init
@@ -188,6 +200,51 @@ free_out="$(BASHIFY_REPO="$SCRATCH" "$COIN" scheduler zzz 'a free name' 2>&1)"; 
 check "E4 a free name is not refused by the claim check" "$free_rc" "7"
 has   "E5 it got as far as the no-branch refusal" "$free_out" 'no '"'"'bashified'"'"' branch'
 hasnt "E6 the free name was never called claimed" "$free_out" 'already declared'
+
+printf -- '-- F. registration: the classification, re-checked every run\n'
+# A verb is a UTILITY's finished form. The registry is what "utility" means
+# here, and `bashify emit`/`coin` already refuse an unregistered project -- but
+# only at MINT time. A project deregistered AFTER being bashified kept its verb
+# forever, which on 2026-08-02 was 9 verbs across 4 projects, 7 of them live on
+# PATH. These assertions are the standing re-check.
+FIX="$WORK/reg"
+mkdir -p "$FIX/projects" "$FIX/bin" "$FIX/schedule"
+(
+  export INSTALLE_PROJECTS="$FIX/projects" INSTALLE_BIN="$FIX/bin" \
+         INSTALLE_MANIFEST="$FIX/manifest.tsv" SCHEDULE_DIR="$FIX/schedule"
+  d="$INSTALLE_PROJECTS/prod"
+  mkdir -p "$d"; G "$d" init -q -b main
+  echo x > "$d/README.md"; G "$d" add -A; G "$d" commit -qm init
+  G "$d" checkout -q -b bashified
+  mkdir -p "$d/bin" "$d/man"
+  printf '#!/bin/sh\n' > "$d/bin/pverb"; chmod 755 "$d/bin/pverb"
+  printf '.TH pverb 1\n' > "$d/man/pverb.1"
+  G "$d" add -A; G "$d" commit -qm verbs; G "$d" checkout -q main
+
+  # F1/F2: unregistered project declaring a verb.
+  o="$("$INSTALL_VERBS" 2>&1)"; r=$?
+  if printf '%s' "$o" | grep -qE '^  UNREGISTERED  *prod'; then printf '  ok   F1 an unregistered project is named UNREGISTERED\n'
+  else printf '  FAIL F1 an unregistered project is named UNREGISTERED\n'; exit 1; fi
+  if [ "$r" = 1 ]; then printf '  ok   F2 and it makes the run exit 1\n'
+  else printf '  FAIL F2 and it makes the run exit 1 (got %s)\n' "$r"; exit 1; fi
+
+  # F3: registering it clears the finding -- the check reads the registry, it
+  # does not carry a hardcoded list of projects.
+  printf 'PROJECT="prod"\n' > "$SCHEDULE_DIR/prod.conf"
+  o="$("$INSTALL_VERBS" 2>&1)"
+  if printf '%s' "$o" | grep -qE '^  UNREGISTERED'; then printf '  FAIL F3 registering clears the finding\n'; exit 1
+  else printf '  ok   F3 registering clears the finding\n'; fi
+
+  # F4/F5: an UNREADABLE registry is BLIND, never "nothing is a utility".
+  # Reporting every project UNREGISTERED because the registry could not be read
+  # would be the strong claim made from an absence -- BUILD-DISCIPLINE #1.
+  o="$(SCHEDULE_DIR="$FIX/nosuchdir" "$INSTALL_VERBS" 2>&1)"
+  if printf '%s' "$o" | grep -q 'BLIND: cannot read the registry'; then printf '  ok   F4 an unreadable registry reports BLIND\n'
+  else printf '  FAIL F4 an unreadable registry reports BLIND\n'; exit 1; fi
+  if printf '%s' "$o" | grep -qE '^  UNREGISTERED'; then printf '  FAIL F5 BLIND does not accuse every project of being unregistered\n'; exit 1
+  else printf '  ok   F5 BLIND does not accuse every project of being unregistered\n'; fi
+) || fail=$((fail+1))
+pass=$((pass+5))
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

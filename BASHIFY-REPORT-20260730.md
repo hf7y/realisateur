@@ -9,6 +9,47 @@ contains a verb-named shell utility, a man page, a contract, a contract
 test, and a `GAPS.md`. Nothing else — the purge is total, and it is
 mechanically verified rather than asserted (see "the guard" below).
 
+> ### SUNSET NOTE — 2026-08-02. The table below is history, not inventory.
+>
+> This report is left as written, because a published headline that was later
+> narrowed should be readable next to its narrowing rather than quietly
+> edited. **What it records is no longer the live state.**
+>
+> The pass's own defect is the thing being undone: it ran one instrument over
+> all 19 projects, so **products got verbs too**. A verb is a *utility's*
+> finished form; a product's finished form is an event outside the computer
+> (`WAITING-ROOM.md`). Three `bashified` branches are retired:
+>
+> | project | verb | archived at | why |
+> |---|---|---|---|
+> | `abletim` | `cadence` | tag `parked/bashified` (`0b25f52`) | product; the verb was an empty stub — no subcommands were ever wired |
+> | `wtul` | `grave` | tag `parked/bashified` (`5e5f271`) | product; and already dead — its `LEGACY_ROOT` named `/home/zach/Documents/wtul`, a path that does not exist, so all 4 subcommands exited 4 in the environment they were generated in |
+> | `secretaire` | `range` (was `trie`) | tag `parked/bashified` (`8daf452`) | product; its verb **moved** to `bibliothecaire` as `trie` rather than dying |
+>
+> Deleted refs, not deleted commits: each repo carries a pushed
+> `parked/bashified` tag. `bin/lib/verb-set.sh` consults only `bashified` and
+> `origin/bashified`, so a tag preserves the archive **without** declaring the
+> verb.
+>
+> **`bibliothecaire` was classified a utility** (Zach, 2026-08-02) and
+> registered in `scheduler/schedule/` — registration is what "utility" means
+> here, and it had none while declaring seven verbs. Its live scanner product
+> is to be parted off into its own repo; that is deferred.
+>
+> This also dissolved a real collision the table above conceals: `secretaire`
+> and `bibliothecaire` **both** declared `range`, with unrelated meanings.
+> secretaire's won on `PATH` and bibliothecaire's was unreachable by name.
+> Note row `secretaire | trie` below — the verb was renamed to `range` on
+> 07-31, colliding, and has now been moved back to `trie` inside
+> bibliothecaire.
+>
+> Declared verbs: **27 across 10 projects → 25 across 7.**
+>
+> The generator gap that allowed all of this: `bashify emit`/`coin` already
+> refuse an unregistered project, but **only at mint time and never again**,
+> so a project deregistered after being bashified keeps its verb forever.
+> `bin/install-verbs.sh` now re-checks it on every run.
+
 | project | verb | subcommands | contract |
 |---|---|---|---|
 | scheduler | **dose** — apportion scarce capacity | 25 | 7/7 |

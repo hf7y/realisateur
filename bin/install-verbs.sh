@@ -140,6 +140,46 @@ if [ "${#ALSO[@]}" -gt 0 ]; then
   note ""
 fi
 
+# ------------------------------------------------------------- registration --
+# THE CLASSIFICATION, RE-CHECKED. A verb is a UTILITY's finished form; a
+# product's finished form is an event outside the computer (WAITING-ROOM.md).
+# In this ecosystem the registry IS that classification -- a project is a
+# utility iff scheduler/schedule/<project>.conf exists.
+#
+# That rule was already enforced, and still failed. `bashify emit`
+# (bashify/bin/bashify:104) and `bashify coin` (bashify/lib/coin.sh:45) both
+# refuse an unregistered project -- but only at MINT time, and never again. So
+# a project deregistered AFTER being bashified kept its verb forever and
+# nothing anywhere re-asked. On 2026-08-02 that was 9 verbs across 4 projects,
+# 7 of them live on PATH, including a name collision between two of them.
+#
+# A guard that fires once is a guard that has already stopped guarding. This
+# asks every run.
+SCHEDULE_DIR="${SCHEDULE_DIR:-$PROJECTS/scheduler/schedule}"
+note "-- registration (the registry is what 'utility' means here) -----------"
+if [ ! -d "$SCHEDULE_DIR" ]; then
+  # BLIND, never clean. If the registry cannot be read, every project would
+  # otherwise report UNREGISTERED -- turning "I cannot see the registry" into
+  # "nothing here is a utility", which is the strong claim made from an
+  # absence. One finding for the blindness; none for the projects.
+  note "  BLIND: cannot read the registry at $SCHEDULE_DIR"
+  note "         Not reporting anything UNREGISTERED from that -- an unreadable"
+  note "         registry is not an empty one. Set SCHEDULE_DIR if it moved."
+  flag
+else
+  for project in $(verb_set_declared | cut -f1 | sort -u); do
+    n="$(verb_set_declared | awk -F'\t' -v p="$project" '$1 == p' | wc -l)"
+    if [ -f "$SCHEDULE_DIR/$project.conf" ]; then
+      printf '  %-13s %-16s %s\n' registered "$project" "$n verb(s)"
+    else
+      printf '  %-13s %-16s %s\n' UNREGISTERED "$project" \
+        "$n verb(s), but no $SCHEDULE_DIR/$project.conf -- a verb is a utility's finished form; register it or retire the branch"
+      flag
+    fi
+  done
+fi
+note ""
+
 # ------------------------------------------------------------------- per verb --
 note "-- this host ---------------------------------------------------------"
 row STATUS verb project detail

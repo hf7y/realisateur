@@ -48,12 +48,12 @@ the FOCUS list is stale and this table supersedes it.
 |---|---|---|---|---|
 | sequestria | `capte` | `dfb478e` | one real Instagram ad against a real storefront, and one real order by a real person | a decided brand direction; its own FOCUS calls recent commits "self-logging, not product" |
 | nine-speakers | `chante` | `7e2319e` | nine channels playing in the office, levels balanced by microphone measurement | hardware and Zach's ears — no unattended run can advance it |
-| wtul | `grave` | `5e5f271` | rips a disc end-to-end with correct metadata, logged in a form Zach can trust unchecked | Zach at the station with discs |
+| wtul | ~~`grave`~~ **RETIRED 2026-08-02** → tag `parked/bashified` (`5e5f271`) | — | rips a disc end-to-end with correct metadata, logged in a form Zach can trust unchecked | Zach at the station with discs |
 | vkv-inventory | `compte` | `5d29177` | the drill-down browse redesign merged to `main` (milestone line malformed — lacks a status token) | a real inventory and real users |
 | aedile | `annonce` | `22c5f5d` | the scenario library replaces the PR-review gate without losing Tyler-visibility | Tyler, and a live wavebucks cycle |
 | groc-mangr | `mange` | `7a51ce3` | Zach buys groceries before he otherwise would have — a real purchase, not a metric | Zach's actual shopping |
 | home-assistant | `loge` | `d61880f` | circadian automations soak-tested, unavailable-bulb resolved, house reachable over HTTPS (milestone line malformed) | the house, and real soak time |
-| abletim | `cadence` | `0b25f52` | marker-to-marker regions of a real `.als` cut to their own files on disk | a chosen entry path; spike unstarted |
+| abletim | ~~`cadence`~~ **RETIRED 2026-08-02** → tag `parked/bashified` (`0b25f52`) | — | marker-to-marker regions of a real `.als` cut to their own files on disk | a chosen entry path; spike unstarted |
 | crt | `sonne` | `47ef553` | the voice loop reliable on real potato hardware, and the Book Game funnel end-to-end | potato hardware in a real room |
 | chezz | `joue` | `ca6fb2c` | autopilot loop stable — players file ideas in-game, nightly runs ship or triage them | real players |
 
@@ -71,13 +71,63 @@ function is what they are *for*.
 | ecosim | `sonde` | probes what cannot be seen; its `silence-audit` is already installed into realisateur's lint |
 | vim-arcade | `entraine` | trains the hands; the place where coined verbs get spoken |
 | basheur | *(its own)* | the one live self-dev agent — the instrument that does the bashifying |
+| bibliothecaire | `range` +6 | **added 2026-08-02** — see below; classified a utility and registered |
 
-## Already reaped — not here
+## Verb branches RETIRED — 2026-08-02
 
-bibliothecaire (`range`), secretaire (`trie`), quatre-vingt-douze (`cueille`,
-folded into bibliothecaire as `glane`/`accroche` and removed from disk).
-Reaped repos do not park; their agentic activity is suspended and their
-prose is in the vault.
+Parking a project stopped its *dispatch*; it never took its verb away. Three
+products were still carrying one, so `bashify`'s output outlived the
+classification that should have prevented it. Their `bashified` branches are
+deleted and archived to a pushed `parked/bashified` tag in each repo.
+
+| project | verb | tag | note |
+|---|---|---|---|
+| abletim | `cadence` | `0b25f52` | empty stub — `verb_subcommands` was never populated |
+| wtul | `grave` | `5e5f271` | already dead: `LEGACY_ROOT` named `/home/zach/Documents/wtul`, which does not exist |
+| secretaire | `range` | `8daf452` | the verb **moved** to bibliothecaire as `trie` rather than dying |
+
+Refs deleted, commits kept. `bin/lib/verb-set.sh` consults only `bashified`
+and `origin/bashified`, so a tag preserves the archive **without** declaring
+the verb. Deleting the remote-tracking ref matters as much as the local head —
+skip the prune and the verb stays declared from a ref nobody can see.
+
+**Declared verbs: 27 across 10 projects → 25 across 7.**
+
+### Why this could happen at all, and what now prevents it
+
+`bashify emit` and `bashify coin` already refuse a project with no
+`scheduler/schedule/<project>.conf` — but **only at mint time, and never
+again**. A project deregistered *after* being bashified kept its verb forever,
+and nothing anywhere re-asked. `bin/install-verbs.sh` now re-checks
+registration on every run and reports `UNREGISTERED`, so this cannot silently
+regress. A guard that fires once is a guard that has already stopped guarding.
+
+## Reclassified — bibliothecaire and secretaire
+
+Both sat under "already reaped" while being resident, live, and — between them
+— holding 7 of the 25 verbs on `PATH`. Neither was in the registry, so by the
+classifier both read as products carrying a verb surface. Zach decided them
+2026-08-02:
+
+- **bibliothecaire is a UTILITY.** Registered in `scheduler/schedule/`
+  (classification only — both tiers blank, no `_paced.conf` row, cron surface
+  verified unchanged). It now declares 7 verbs, having absorbed `trie`.
+  **Deferred:** its `main` still carries a live hardware-bound product — a
+  physical scanner, an SMB share, three systemd timers. That scanner parts off
+  into its own repo, leaving bibliothecaire a stable non-agent core utility.
+  Until that lands the repo is a utility by intent and a product by content.
+- **secretaire is a PRODUCT**, retired above.
+
+This also dissolved a live collision: **both** declared `range`, with unrelated
+meanings — "shelve, catalogue and retrieve the ecosystem's texts" versus "put
+the morning's accounts in the order a missed message costs most". secretaire's
+won on `PATH`; bibliothecaire's own verb was unreachable by name. Moving the
+verb resolved it rather than picking a winner. The name `trie` is its original
+one; only the name returned — the two-clause summary that got it renamed to
+`range` on 07-31 did not.
+
+quatre-vingt-douze (`cueille`) remains genuinely reaped: folded into
+bibliothecaire as `glane`/`accroche` and removed from disk.
 
 ## What ends a stay here
 
