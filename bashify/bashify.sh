@@ -360,8 +360,32 @@ printf '## Verify\n\n```\n./test/contract-test.sh bin/%s\n```\n' "$VERB"
 # lib/verb.sh is checked like anything else.
 VERB_SH_CLEAN=0
 if cmp -s "$SKEL/lib/verb.sh" "$WT/lib/verb.sh"; then VERB_SH_CLEAN=1; fi
+# THE VENDOR LIST IS LEADING-WORD-ANCHORED, since 2026-08-02, and the anchor is
+# load-bearing rather than tidiness.
+#
+# Unanchored, `llm` and `gpt` are three-letter substrings that occur inside
+# ordinary English and ordinary code. Measured across the seven bashified
+# repos, the old pattern matched:
+#
+#   ecosim   bin/migration-watch.py            re.fu[llm]atch
+#   senechal remedies/plasma-panel-visible.sh  re.fu[llm]atch
+#   senechal journal/2026-07-31.json           nKi[llM]ode
+#
+# None of those names a vendor. Every one would have been reported as "this
+# file still names an agent" and blocked a commit, or -- worse, and this is the
+# real cost -- classified a perfectly movable script as unmovable during the
+# self-containment migration, on the strength of the letters in `fullmatch`.
+#
+# A guard that cries wolf is a guard someone eventually switches off. The
+# `\bagent\b` half below was word-bounded from the start; the vendor half was
+# not, and the asymmetry was simply an oversight.
+#
+# LEADING boundary only, deliberately: `\b(llm)` still catches `LLMs`,
+# `claudes`, `assistants`. Trailing anchors would let a plural through, which
+# is a real evasion; a leading anchor rejects only mid-word noise, which never
+# is one.
 LEAK="$(cd "$WT" && {
-    grep -rilE 'claude|anthropic|openai|gpt|llm|assistant' . 2>/dev/null
+    grep -rilE '\b(claude|anthropic|openai|gpt|llm|assistant)' . 2>/dev/null
     grep -rilE '\bagent\b' . 2>/dev/null \
       | { [ "$VERB_SH_CLEAN" = 1 ] && grep -vx './lib/verb.sh' || cat; }
   } | grep -v '^\./\.git' | sort -u || true)"
