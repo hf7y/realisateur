@@ -8,6 +8,15 @@ and a milestone made of prose would be self-defeating.*
 
 ---
 
+**Restamped 2026-08-02.** Every status below was re-probed, not quoted —
+agent status claims are stale by construction, and this file is the one place
+that would launder a stale one into a milestone. **2 of 9 gates moved to MET**
+(2.1 two-copies, 3.2 harness-refusal), 1.3 moved to MET *after* correcting a
+misread proof command, and two gates were found to be citing things that no
+longer exist (2.2 named a deleted systemd unit; 1.3 named the wrong flag).
+Where a status changed, the original text is struck through or quoted rather
+than overwritten, so the claim and its correction are both readable.
+
 ## Relationship to the prior art
 
 `STABILITY-MILESTONES.md` is a **per-project admission-control convention**.
@@ -62,9 +71,24 @@ onto this floor adds agents to a surface nobody can enumerate.
 
 | # | Criterion | Proof | Status |
 |---|---|---|---|
-| 1.1 | No enabled unit, installed shim, or crontab line names a path that does not exist | `ausculte dead-config` exits 0 (today: exit 6, BLIND, 3 WARN) **and** `for f in ~/.local/bin/*; do [ -L "$f" ] && [ ! -e "$f" ] && echo "$f"; done` prints nothing (today: `silence-audit`) | **NOT MET** |
-| 1.2 | Total executable cron surface is 2 lines, both on `zach@mandark` | `crontab -l \| grep -cvE '^\s*(#\|$)'` = 2; same for `svc-vaporwave` = 0; `ssh dexter crontab -l \| grep -cvE '^\s*(#\|PATH=\|$)'` = 0 | **NOT MET** (1 / **2** / 0) |
-| 1.3 | Every guard the propagated checklist names resolves and fails loud | `install-shims.sh --check` exits 0 (today: 1); `command -v silence-audit` resolves (today: dangling); `reach-lint.sh --strict-reach` exits nonzero when it prints FLAGs (today: **exit 0 with 5 FLAGs**) | **NOT MET** |
+| 1.1 | No enabled unit, installed shim, or crontab line names a path that does not exist | `ausculte dead-config` exits 0 (08-02: still **exit 6, BLIND** — it cannot read `svc-vaporwave`'s crontab, which is finding 1.2 wearing a different hat) **and** `for f in ~/.local/bin/*; do [ -L "$f" ] && [ ! -e "$f" ] && echo "$f"; done` prints nothing (08-02: **prints nothing ✓**, was `silence-audit`) | **NOT MET** (dangling-shim half now clean) |
+| 1.2 | Total executable cron surface is 2 lines, both on `zach@mandark` | `crontab -l \| grep -cvE '^\s*(#\|$)'` = 2; same for `svc-vaporwave` = 0; `ssh dexter crontab -l \| grep -cvE '^\s*(#\|PATH=\|$)'` = 0 | **NOT MET** (**3** / not re-probed, needs sudo / **0 ✓**) |
+| 1.3 | Every guard the propagated checklist names resolves and fails loud | `install-shims.sh --check` exits 0 (08-02: **0 ✓**); `command -v silence-audit` resolves (08-02: **resolves ✓**); every lint gates when asked: `reach-lint.sh --strict`, `closeout-lint.sh --strict`, `hygiene-lint.sh --strict` all exit 1 while printing FLAGs (08-02: **all three ✓**, `a8218b6`) | **MET ✓** |
+
+**Correction to 1.3 as originally written (2026-08-02).** The row cited
+`reach-lint.sh --strict-reach` exiting 0 while printing 5 FLAGs as evidence of
+broken exit discipline. That was a misreading of a correct guard: `--strict-reach`
+gates on check B (reach) *only*, deliberately, because check A's `scope:`
+convention is one other repos have not adopted and a caller asking "are my own
+instructions reachable?" must not be held hostage by another project's
+frontmatter (`bin/reach-lint.sh:35-41`). All 5 FLAGs were check A; check B was
+clean; exit 0 was right. `--strict` — the flag the assertion actually wanted —
+exited 1 the whole time.
+
+Recorded rather than quietly deleted because it is this ecosystem's own
+recurring shape: **the check reporting the defect was itself the thing
+misread.** The real half of the finding was true — `closeout-lint` and
+`hygiene-lint` genuinely had no `--strict` at all, and now do.
 
 ## GATE 2 — TWO COPIES
 
@@ -80,8 +104,8 @@ recoverable, every later gate is theatre.
 
 | # | Criterion | Proof | Status |
 |---|---|---|---|
-| 2.1 | Every repo under `Projects/` has a reachable non-local origin and is 0-ahead of it | `for d in ~/Documents/Projects/*/; do u=$(git -C "$d" remote get-url origin 2>/dev/null) \|\| continue; case $u in /*) echo "LOCAL-ONLY $d";; esac; done` prints nothing (today: `basheur`) **and** `git -C basheur rev-list --count origin/main..main` = 0 (today: **2**) | **NOT MET** |
-| 2.2 | gardien's nightly backup completes, and a named file restores out of the newest snapshot | `systemctl --user start gardien.service && systemctl --user is-failed gardien.service` → `inactive`; then restore one known path and `diff` it against source, exit 0 | **NOT MET** — and note there is **no snapshot anywhere**: no `.gardien-snapshot-complete` marker exists on the filesystem, and the Pegasus destination is `online: false` |
+| 2.1 | Every repo under `Projects/` has a reachable non-local origin and is 0-ahead of it | `for d in ~/Documents/Projects/*/; do u=$(git -C "$d" remote get-url origin 2>/dev/null) \|\| continue; case $u in /*) echo "LOCAL-ONLY $d";; esac; done` prints nothing (08-02: **prints nothing ✓** — `basheur` now on `https://github.com/hf7y/basheur.git`) **and** 0-ahead (08-02: **0 ✓**, was 2). Re-probed 08-02 across all **20** repos, and widened to the doctrinal test rather than `main` alone: **0 host-only branches, 0 ahead-of-origin, ecosystem-wide** | **MET ✓** |
+| 2.2 | gardien's nightly backup completes, and a named file restores out of the newest snapshot | ~~`gardien.service`~~ → `systemctl --user start garde-nightly.service && systemctl --user is-failed garde-nightly.service` → `inactive`; then restore one known path and `diff` it against source, exit 0 | **NOT MET** — and note there is **no snapshot anywhere**: no `.gardien-snapshot-complete` marker exists on the filesystem, and the Pegasus destination is `online: false`. **08-02: the proof command named a unit that no longer exists** — `gardien.service`, `gardien-check-stale` and `gardien-git-hygiene` were retired 2026-08-01; the live unit is `garde-nightly.timer`, enabled and armed for 03:33, which has **never run** (`LAST` = `-`, journal empty). A gate whose own proof command names a deleted unit is gate 1.1's defect inside gate 2 |
 | 2.3 | `~/ecosystem1` and `~/git-remotes` are named backup sets | `grep -c ecosystem1 gardien-garde/garde.json` ≥ 1 and `grep -c git-remotes …` ≥ 1 (today: **0 and 0**; `~/Documents` is a set, so `Projects/` is transitively covered *if backups ran* — the vault and the bare remotes are not covered at all) | **NOT MET** |
 
 ## GATE 3 — ONE LOOP, WATCHED
@@ -112,8 +136,8 @@ its failure is the only one `THE-UNWIRING.md` §5 calls unrecoverable.
 | # | Criterion | Proof | Status |
 |---|---|---|---|
 | 3.1 | Crontab matches the block above, installed by `sync-crontab.sh --apply`, one project enabled | `crontab -l \| grep -c 'scheduler:paced-runner:META'` = 1; `grep -cE '^\s*[a-z-]+\|1\|' schedule/_paced.conf` = 1 (today: 0 and **0 of 6 enabled**) | **NOT MET** |
-| 3.2 | The harness refuses a dirty exit and a `main` push, mechanically | `jq '.hooks.SubagentStop' ~/.claude/settings.json` names a script running `closeout-lint --strict`; `jq '.permissions.deny'` contains a `git push`-to-`main` rule. Verify by attempting each and observing refusal | **NOT MET** |
-| 3.3 | One overnight run left a clean tree, a commit on a branch, and no BLIND | Next morning: `closeout-lint` reports 0 BLIND (today: 6 BLIND, **exit 0** — itself a silent pass) and `git -C gardien log --oneline -1 main` is unchanged while a dated branch carries the night's commit | **NOT MET** |
+| 3.2 | The harness refuses a dirty exit and a `main` push, mechanically | `jq '.hooks.SubagentStop' ~/.claude/settings.json` names a script running `closeout-lint --strict`; `jq '.permissions.deny'` contains a `git push`-to-`main` rule. Verify by attempting each and observing refusal | **MET in substance, not in letter** (08-02). `permissions.deny` holds **7** rules ✓ — `git push origin main:*`, `master:*`, both `HEAD:` forms, and all three force-push forms. `SubagentStop` **is** wired ✓, to `~/.claude/hooks/subagent-closeout.sh`, which exits 2 to BLOCK on a dirty tree, loop-guards on `stop_hook_active`, and fails loud (exit 1) if git is missing. But it does its **own** `git status --porcelain` rather than calling `closeout-lint --strict`, so it catches a dirty tree and nothing else — not unpushed commits, not host-only branches, not a missing session record. See the follow-up below |
+| 3.3 | One overnight run left a clean tree, a commit on a branch, and no BLIND | Next morning: `closeout-lint` reports 0 BLIND (today: 6 BLIND, **exit 0** — itself a silent pass) and `git -C gardien log --oneline -1 main` is unchanged while a dated branch carries the night's commit | **NOT MET** — and the silent pass is **still open** as of 08-02: `--strict` gates on FLAGs only, so a run with 0 FLAGs and N BLIND still exits 0. See the follow-up below |
 
 ---
 
@@ -183,18 +207,49 @@ under these rules.
 
 **Guards that MUST BE WRITTEN FIRST** — stated plainly rather than assumed:
 
-1. **A `SubagentStop` hook running `closeout-lint --strict`.** Does not exist.
-   `PLAYBOOK.md` Play 1 named it on 2026-07-26; six days later `settings.json`
-   still has only `SessionStart`/`SessionEnd`. A dirty tree at exit must
-   *terminate* the run, not be reported by it.
-2. **`permissions.deny` blocking `git push` to `main`.** Does not exist.
-   CLAUDE.md's "commits to a branch, does not push main" is prose, and prose
-   has already failed twice.
-3. **`--strict` exit discipline on `reach-lint`, `closeout-lint`,
-   `hygiene-lint`.** All three print FLAGs and exit 0.
+1. ~~**A `SubagentStop` hook running `closeout-lint --strict`.**~~ **LANDED
+   2026-08-01** as `~/.claude/hooks/subagent-closeout.sh` — but it implements
+   the dirty-tree check *inline* instead of calling `closeout-lint --strict`,
+   which did not exist at the time. It now does. See follow-up A.
+2. ~~**`permissions.deny` blocking `git push` to `main`.**~~ **LANDED** — 7
+   rules, covering `origin main`/`master`, both `HEAD:` forms, and all three
+   force-push forms.
+3. ~~**`--strict` exit discipline on `reach-lint`, `closeout-lint`,
+   `hygiene-lint`.**~~ **LANDED 2026-08-02** (`a8218b6`). Note the original
+   framing was wrong about `reach-lint`, which had `--strict` all along — see
+   the correction under gate 1.3. `closeout-lint` and `hygiene-lint` genuinely
+   lacked it and now have it, with witnesses: closeout-lint 32/0,
+   hygiene-lint 9/0, reach-lint 13/0.
 4. **A machine-footprint check in `fauche`.** `BINDIR` is assigned at
    `bin/fauche:27` and never used — ten lines in a file that already knows
-   where to look.
+   where to look. **Still open.**
+
+**Follow-ups opened 2026-08-02, both deliberately NOT taken unattended:**
+
+**A. Point the `SubagentStop` hook at `closeout-lint --strict`.** The hook
+catches a dirty tree; `closeout-lint` catches that *plus* unpushed commits,
+host-only branches, a missing session record, and BLIND worktrees. The gap is
+not theoretical — the 2026-07-25 incident this hook exists for (76 uncommitted
+lines in `sync-crontab.sh`) would be caught either way, but the 2026-07-27
+incident (an agent waking after "completed" and writing outside its mandate)
+leaves *unpushed commits*, which the inline check cannot see. Not done here
+because `~/.claude/**` is machine-wide config: it is senechal's to know about
+and Zach's to authorise, and an agent editing the hook that constrains agents
+is exactly the wrong party to do it silently.
+
+**B. Decide whether BLIND gates.** `--strict` exits 1 on a FLAG and 0
+otherwise, so a scan with 0 FLAGs and 6 BLIND — today's actual state — passes.
+Gate 3.3 asks for "no BLIND", and this cannot deliver it. The reason it was
+left alone rather than patched: `a8218b6` states a deliberate rationale for
+the exit codes (*"Exit 2 is already used via lib/cli-guard.sh for usage
+errors, so --strict uses 1"*), and BLIND wants a **third** answer — senechal's
+`lib/common.sh` already means *could-not-check* by 2, and `ausculte` signals
+BLIND with 6. Three conventions, one script, and the choice changes the
+contract of a guard that hooks may call. **Zach's call**, and it is one line
+once made:
+  - reuse **2** for BLIND (matches senechal, collides with cli-guard's usage error), or
+  - fold BLIND into **1** (simplest; loses the "I could not look" vs "I found a problem" distinction the ecosystem's own `silence-audit` doctrine exists to preserve), or
+  - leave it and drop "no BLIND" from gate 3.3 as unmechanized.
 
 **Standing rules once restarted.** One project enabled at a time. Every run
 reports every file and every account it touched, including reverted ones. A
