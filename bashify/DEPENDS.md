@@ -117,3 +117,53 @@ half was not. Fixed to a **leading** `\b`, which still catches `LLMs`,
 `claudes`, `assistants` (a trailing anchor would let a plural evade).
 
 **A guard that cries wolf is a guard someone eventually switches off.**
+
+### Corrected partition after that fix
+
+The movable/essential split was computed with the unanchored pattern.
+`plasma-panel-visible.sh` matched only on `re.fu`**`llm`**`atch` and flips to
+CLEAN, so `veille` goes 10 → **9** subcommands, not 10 → 8, and the partition
+of the 72 wrapped scripts becomes:
+
+> **23 CLEAN / 18 COMMENT-ONLY / 31 ESSENTIAL**
+
+The two other instances found by a whole-tree sweep — `ecosim
+bin/migration-watch.py` and `senechal journal/2026-07-31.json` — were never in
+the 72: `.py` is excluded from script discovery at `bashify.sh:62`, and a
+journal is not a script. Both counts are consistent; they have different scopes.
+
+## THE BLOCKER FOR THE MIGRATION — a false negative, and it is worse
+
+Anchoring fixed the false-*positive* class. The false-*negative* class is
+untouched and it is the one that can put the model dispatcher onto a branch
+that guarantees it contains no such thing.
+
+**`scheduler/bin/scheduler-run` scores ZERO on the purge guard.** Measured:
+
+```
+grep -ciE '\b(claude|…)|\bagent\b' bin/scheduler-run          -> 0   (passes)
+bin/scheduler-run:93   source "$SCHED_ROOT/lib/sweep-loop-common.sh"
+grep -ciE '…' lib/sweep-loop-common.sh                        -> 35  (fails hard)
+```
+
+That library is the engine: `claude -p`, `PROMPT`, `MODEL`. So a script whose
+whole job is dispatching a model **passes the guard**, because the naming is one
+`source` away.
+
+Under the migration rule — *"a wrapped script moves iff it passes the purge
+guard"* — `scheduler-run` would be classified CLEAN and **moved onto the
+bashified branch**. The branch's stated guarantee would then be false, and false
+in exactly the way the guard exists to prevent.
+
+**The guard checks files individually and is blind to `source`.** Two possible
+fixes, both real work, neither done here:
+
+1. **Transitive closure** — resolve `source`/`.` within the moved set and score
+   the closure, not the file. Correct, and it is what the rule actually meant.
+2. **An explicit recorded judgement** per script, in `DEPENDS.overrides.tsv`.
+   Cheaper, but it is prose in a table and will decay.
+
+Until one exists, **`scheduler-run` must not be moved**, and the partition's
+CLEAN column cannot be trusted as a move-list — only as a first pass. Any other
+script that `source`s a library outside the moved set is the same class; nothing
+has enumerated them yet.
