@@ -1,0 +1,32 @@
+#project	path	class	justification
+#
+# Read by lib/branch-purge.sh. Every row is a WRITTEN JUDGEMENT that a mention
+# of a vendor or an agent on a bashified branch is load-bearing rather than a
+# trace the branch promised not to carry.
+#
+# This file is small ON PURPOSE. The bulk of the guard is derived: lib/verb.sh
+# is exempt automatically while byte-identical to the skeleton, and needs no
+# row here. A row is for the cases where no mechanical signal decides it --
+# the same shape as DEPENDS.overrides.tsv, and for the same reason: emit the
+# finding rather than guess, and resolve it from a small reviewable record.
+#
+# CLASSES
+#   EXEMPT-SUMMON-DOC    the mention IS the documentation of the --summon
+#                        mechanism. Deleting it deletes the explanation of how
+#                        a verb completes itself, which is why lib/verb.sh is
+#                        exempt in bashify.sh for exactly this reason.
+#   EXEMPT-TEST-ARTIFACT the file is a test carrying the guard's own pattern as
+#                        DATA -- a literal `\bagent\b` in an assertion. It
+#                        names a vendor only in the sense a mirror names its
+#                        subject. Deleting it deletes the test of the guard.
+#
+# There is deliberately NO class for "we decided to keep it". Material that is
+# genuinely a trace gets REMOVED from the branch; it does not get a row.
+#
+# An entry naming a file that no longer matches, or is no longer on the branch,
+# is reported STALE and fails the guard. An exemption outliving its reason is
+# how a temporary divergence becomes permanent.
+#
+# EMPTY AS OF 2026-08-02, and that is the honest state: 25 files across 7
+# branches currently fail, and none has been classified yet. Populating this
+# file before the audit would be recording a guess as a judgement.
