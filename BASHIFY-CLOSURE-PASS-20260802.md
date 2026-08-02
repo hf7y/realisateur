@@ -108,6 +108,57 @@ classified; populating it first would record a guess as a judgement.
 
 ---
 
+## 2b. The third finding — `bashify emit` was broken for every project
+
+Found by the branch audit, verified by reproduction. **This is the most
+consequential item in the pass.**
+
+`bashify.sh`'s own header records this happening once before:
+
+> the guard was UNSATISFIABLE and `emit` exited 5 for every project, on every
+> run, **for two days** — while `bashify list` went on reporting emit
+> MECHANIZED, because `_state` only asks whether the file is executable.
+
+**It happened again, the same way.** The de-fork commit (`8f83801`, the same
+day) added this line to the skeleton, for good reason:
+
+```
+# gardien's `verb_gap_or_summon` is NOT here. It calls `claude -p` directly.
+```
+
+`claude` is a vendor name. The exemption was bounded to *"the generic English
+word `agent`, never to a vendor name"*, and the vendor grep had **no exemption
+at all, for any path, ever**. So every `emit` matched the skeleton it had just
+copied in and exited 5.
+
+**Reproduced rather than reasoned about.** A throwaway registry, a clean
+one-script repo, run against both the current generator and the pre-change one
+at `7225a19`. Both exit 5 on `./lib/verb.sh` — so this predates this pass and
+the widened `agent` pattern did not cause it.
+
+*(A first attempt also flagged `bin/<verb>`. That was the fixture living under
+a path containing `.claude`, which the generated verb bakes into `LEGACY_ROOT`.
+A false attribution caught before it was recorded; test E0 now asserts the
+fixture path is clean.)*
+
+**The fix** bounds the exemption by **byte-identity alone**, which is the
+property that actually makes it safe: a reviewed, version-controlled skeleton
+cannot smuggle anything whatever words it uses. The word-level bound only ever
+added a way for the guard to become unsatisfiable when the skeleton's prose
+changed. This also makes `bashify.sh` agree with `branch-purge.sh`, which
+already exempted the byte-identical runtime from the whole pattern.
+
+`test/verify-emit.sh` is the end-to-end run this generator **never had** — 11
+assertions, of which E1 is simply *"emit exits 0 on a clean project."* Nothing
+has ever asserted that. That is why it broke twice.
+
+**The pattern worth naming:** both times, emit's health was inferred from a
+file mode (`_state` asks `[ -x ]`) rather than from running it. A subcommand
+that reports MECHANIZED because its implementation file is executable is
+reporting on the filesystem, not on the promise.
+
+---
+
 ## 3. Underneath both: one definition instead of three
 
 `bashify/lib/surface.sh` now holds the vendor list and the discovery rule
@@ -201,9 +252,10 @@ revertible.
 
 **Ordered by what unblocks what.**
 
-1. **Classify the 25 branch-purge failures** into `PURGE-EXEMPT.tsv`
-   (`EXEMPT-SUMMON-DOC` / `EXEMPT-TEST-ARTIFACT`) or remove the material.
-   Until this lands `branch-purge.sh` is red and cannot gate anything.
+1. **Resolve the 9 remaining branch-purge failures.** The other 16 are now
+   classified and recorded in `PURGE-EXEMPT.tsv`, taking the guard from 25 to
+   9. What is left is 4 genuine defects and 5 judgement calls (§7-D). The
+   defects are removable without asking anyone; the judgements are not.
    *Blocks: using the guard in CI or a closeout hook.*
 
 2. **Fix the stale "4 call sites" in `skel/lib/verb.sh` and re-sync.** One
@@ -224,6 +276,18 @@ revertible.
 5. **`verify-amend.sh` hangs** on a timeout. Pre-existing and unrelated to this
    pass (it references none of the changed files; `amend.sh` sources nothing).
    A test that hangs is a test nobody runs.
+
+6. **`consign-prose` has no implementation.** `fonde consign` is contracted on
+   the page and gated behind `--summon`, so every deposit into the vault
+   currently costs an agent turn to do by hand what the contract fully
+   specifies: derive frontmatter, copy the body byte-for-byte, and generate the
+   `Referenced` wikilinks from the scheduler registry rather than a typed list.
+   The contract is precise enough to implement directly — including its exit
+   codes and its refusal to overwrite a note whose body differs. Writing
+   `bibliothecaire/test/verify-consign-prose.sh` and the mechanism behind it
+   would retire a recurring cost, which is what `--summon` exists to make
+   temporary. *This note was deposited by executing that specification
+   mechanically rather than by paying the summon.*
 
 ---
 
@@ -256,6 +320,32 @@ fit. The alternative is to do the design work directly and delete the summon
 path. *This is a judgement about what basheur is for, which is why it is here
 and not in a diff.*
 
+**D. Nine branch-purge findings remain, and five of them are yours to decide.**
+
+Four are **defects** and can simply be removed:
+
+- `bibliothecaire CONTRACT.md` — *"two an assistant processes"*: broken grammar
+  left by a find/replace of a vendor name. A laundering artifact, not
+  documentation.
+- `gardien CONTRACT.md`, `gardien bin/garde`, `gardien lib/verb.sh` — all three
+  are the Law 3 violation in §4, stated, commented, and **executable**
+  respectively.
+
+Five are **judgements**, where the guard-as-written conflicts with a legitimate
+tool, and no mechanical signal decides it:
+
+| file | the tension |
+|---|---|
+| `bibliothecaire REAPED.tsv` | a cryptographic proof-of-**deletion** that must name what it deleted |
+| `ecosim GAPS.md` | names a governance file by filename |
+| `gardien bin/fauche` | real code that must name the file to classify it — in *other*, unpurged repos |
+| `scheduler bin/arme` | live spend-detection code whose **job** is grepping for vendor names |
+| `vim-arcade CONTRACT.md` | the game's own pedagogical premise (pasting to/from a chat) |
+
+`scheduler bin/arme` is the sharpest: the guard's text says the exemption
+"applies only to `lib/verb.sh`, never to a vendor name", and `arme` cannot do
+its job without naming vendors. One of the two has to give.
+
 **C. The 7-day usage window is at 98% util against a 93.3% burn-line**
 (slack −4.7pts, `status=allowed_warning`, resets in ~11h). This pass was
 deliberately scoped down because of it — one subagent pair instead of a fan-out,
@@ -271,6 +361,7 @@ bashify/lib/closure.sh --false-neg     # just the migration blockers
 bashify/lib/branch-purge.sh            # the 25, per repo
 bashify/test/verify-closure.sh         # 27 assertions
 bashify/test/verify-branch-purge.sh    # 12 assertions
+bashify/test/verify-emit.sh            # 11 assertions -- emit actually runs
 bin/install-verbs.sh                   # the UNOWNED garde row
 ```
 
