@@ -39,6 +39,34 @@
 #   closeout-lint.sh              scan every registered project
 #   closeout-lint.sh <name>...    scan only the named project(s)
 #   closeout-lint.sh --strict [<name>...]   exit 1 if any FLAG was printed
+#   closeout-lint.sh --repo <path>          audit ONE working tree
+#   closeout-lint.sh --allow-blind          downgrade BLIND to a warning
+#
+# --repo exists because this script's own BLIND message says "run closeout-lint
+# against them by hand" -- and until now there was no way to do that. A linked
+# worktree is not a registered project, so no positional name reaches it. In
+# --repo mode the registry is not consulted, the $HOURS age gate does not
+# apply (the caller just worked in that tree; whether HEAD is old is not the
+# question), and sections B and C are skipped: they are session-wide concerns,
+# not properties of one directory. It is what a SubagentStop hook needs --
+# "is THIS tree durable" -- and running the full registry scan from a hook
+# would block every subagent because some unrelated project is dirty.
+#
+# BLIND GATES, and it exits 6 to do it. Decided 2026-08-02 (Zach). A domain
+# that existed and was NOT read is not a pass, so under --strict it must stop
+# the caller. 6 rather than 1 or 2 because the ecosystem already has a blind
+# code and this reuses it instead of inventing a third: `garde --help` states
+# "6 blind" in its own exit table, and `ausculte` exits 6 for the same
+# condition. 1 stays FLAG-only, and 2 belongs to lib/cli-guard.sh for usage
+# errors -- a hook that cannot tell "I called this wrong" from "a domain was
+# unreadable" is a hook that will be ignored.
+#
+# The override is deliberate and two-shaped: --allow-blind for unattended
+# callers (explicit, auditable, greppable in a crontab) and an interactive
+# y/N prompt when stdin AND stdout are both a TTY. The prompt can never fire
+# unattended, which is the property that matters -- a lint that blocks
+# forever waiting on an answer nobody is there to give is worse than one that
+# does not gate at all.
 #
 # Env overrides (used by bin/tests/closeout-lint.test.sh, not normally set):
 #   HOURS=12        age below which a repo counts as "touched by this session"
@@ -53,10 +81,16 @@ CLI_SUMMARY='the deterministic half of session closeout -- what did today leave 
 CLI_USAGE='  closeout-lint.sh              scan every registered project
   closeout-lint.sh <name>...    scan only the named project(s)
   closeout-lint.sh --strict [<name>...]   exit 1 if any FLAG was printed
+  closeout-lint.sh --repo <path>          audit ONE working tree (sections
+                                          B/C skipped, age gate ignored)
+  closeout-lint.sh --allow-blind          BLIND warns instead of gating
     (HOURS=<n> in the environment sets the lookback window)'
-CLI_FLAGS='--strict'
-CLI_EXITS='  0  scanned; no --strict given, or --strict given and nothing FLAGged
-  1  --strict was given and at least one FLAG was printed'
+CLI_FLAGS='--strict --repo --allow-blind'
+CLI_EXITS='  0  scanned; no --strict given, or --strict given and nothing found
+  1  --strict was given and at least one FLAG was printed
+  6  --strict was given and a domain existed but was NOT read (BLIND), and
+     neither --allow-blind nor an interactive override was given. Matches
+     `garde` and `ausculte`, which already use 6 for blind'
 CLI_POSITIONAL=any
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
@@ -68,41 +102,77 @@ BLOCKERS_MD="${BLOCKERS_MD:-$SCHED_ROOT/BLOCKERS.md}"
 HOURS="${HOURS:-12}"
 TODAY="${TODAY:-$(date +%Y-%m-%d)}"
 
-# --strict is a mode flag, not a project name -- strip it before building
-# the positional project-filter list (cli_guard validated it but never
-# consumes args, per its own contract; each script parses its own).
+# Mode flags are not project names -- strip them before building the
+# positional project-filter list (cli_guard validated them but never consumes
+# args, per its own contract; each script parses its own).
 STRICT=0
+ALLOW_BLIND=0
+REPO_ARG=""
 want=()
-for a in "$@"; do
-  case "$a" in
-    --strict) STRICT=1 ;;
-    *)        want+=("$a") ;;
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --strict)      STRICT=1 ;;
+    --allow-blind) ALLOW_BLIND=1 ;;
+    --repo)
+      shift
+      [ "$#" -gt 0 ] || cli_die "--repo needs a path"
+      REPO_ARG="$1"
+      ;;
+    *) want+=("$1") ;;
   esac
+  shift
 done
 
-# --- discover registered projects (same loop as hygiene-lint.sh) ------------
 projects=()
 paths=()
-for conf in "$SCHED_ROOT"/schedule/*.conf; do
-  [ -f "$conf" ] || continue
-  name="$(basename "$conf" .conf)"
-  case "$name" in _*) continue ;; esac
-  p="$(sed -n 's/^PROJECT_REPO_PATH=["'\'']\?\([^"'\'']*\)["'\'']\?[[:space:]]*$/\1/p' "$conf" | head -1)"
-  [ -n "$p" ] || continue
-  if [ "${#want[@]}" -gt 0 ]; then
-    skip=1; for w in "${want[@]}"; do [ "$w" = "$name" ] && skip=0; done
-    [ "$skip" -eq 1 ] && continue
-  fi
-  projects+=("$name"); paths+=("$p")
-done
-cli_require_matched want projects
+if [ -n "$REPO_ARG" ]; then
+  # --repo: audit exactly this tree. Refuse to also take project names rather
+  # than silently honouring one and dropping the other -- two selectors that
+  # disagree is a usage error, not something to resolve by precedence.
+  [ "${#want[@]}" -eq 0 ] || \
+    cli_die "--repo and project names are two different selectors: ${want[*]}"
+  [ -d "$REPO_ARG" ] || cli_die "--repo path is not a directory: $REPO_ARG"
+  git -C "$REPO_ARG" rev-parse --is-inside-work-tree >/dev/null 2>&1 || \
+    cli_die "--repo path is not inside a git work tree: $REPO_ARG"
+  # Resolve to the tree's own root so a subdirectory argument still names the
+  # repo, and so the label matches what a reader would call it.
+  REPO_ARG="$(git -C "$REPO_ARG" rev-parse --show-toplevel 2>/dev/null || echo "$REPO_ARG")"
+  projects+=("$(basename "$REPO_ARG")"); paths+=("$REPO_ARG")
+else
+  # --- discover registered projects (same loop as hygiene-lint.sh) ----------
+  for conf in "$SCHED_ROOT"/schedule/*.conf; do
+    [ -f "$conf" ] || continue
+    name="$(basename "$conf" .conf)"
+    case "$name" in _*) continue ;; esac
+    p="$(sed -n 's/^PROJECT_REPO_PATH=["'\'']\?\([^"'\'']*\)["'\'']\?[[:space:]]*$/\1/p' "$conf" | head -1)"
+    [ -n "$p" ] || continue
+    if [ "${#want[@]}" -gt 0 ]; then
+      skip=1; for w in "${want[@]}"; do [ "$w" = "$name" ] && skip=0; done
+      [ "$skip" -eq 1 ] && continue
+    fi
+    projects+=("$name"); paths+=("$p")
+  done
+  cli_require_matched want projects
+fi
 
-echo "closeout-lint -- $TODAY (repos touched in the last ${HOURS}h)"
-echo "(offline-first: no claude calls, writes nothing, always exits 0."
+if [ -n "$REPO_ARG" ]; then
+  echo "closeout-lint -- $TODAY (single tree: $REPO_ARG)"
+else
+  echo "closeout-lint -- $TODAY (repos touched in the last ${HOURS}h)"
+fi
+if [ "$STRICT" = 1 ]; then
+  echo "(offline-first: no claude calls, writes nothing. --strict: FLAG=1, BLIND=6."
+else
+  echo "(offline-first: no claude calls, writes nothing, exits 0 -- --strict to gate."
+fi
 echo " FLAGs are SIGNALS a closing session should look at, not verdicts."
 echo " Run alongside hygiene-lint.sh; see realisateur/BUILD-DISCIPLINE.md.)"
 echo
-echo "== A. RECENTLY TOUCHED REPOS =="
+if [ -n "$REPO_ARG" ]; then
+  echo "== A. THIS WORKING TREE =="
+else
+  echo "== A. RECENTLY TOUCHED REPOS =="
+fi
 
 flags=0
 blind=0
@@ -141,7 +211,11 @@ while [ "$i" -lt "${#projects[@]}" ]; do
   ct="$(git -C "$repo" log -1 --format=%ct 2>/dev/null)"
   [ -n "$ct" ] || continue
   age=$(( now - ct ))
-  [ "$age" -gt "$cutoff" ] && continue
+  # The age gate answers "did THIS SESSION touch it", which is the right
+  # question for a registry sweep and the wrong one for --repo: the caller
+  # names the tree explicitly, so skipping it as "too old" would silently
+  # audit nothing and report clean -- the exact shape of a false all-clear.
+  if [ -z "$REPO_ARG" ] && [ "$age" -gt "$cutoff" ]; then continue; fi
   touched=$((touched+1))
   printf '  %-18s HEAD %sh ago\n' "$name" "$(( age / 3600 ))"
 
@@ -185,8 +259,16 @@ $(git -C "$repo" for-each-ref --format='%(refname:short)' refs/heads/ 2>/dev/nul
 EOF
   i=$i
 done
-[ "$touched" -eq 0 ] && echo "  (no registered repo has a commit younger than ${HOURS}h)"
+[ -n "$REPO_ARG" ] || [ "$touched" -ne 0 ] || \
+  echo "  (no registered repo has a commit younger than ${HOURS}h)"
 
+# B and C ask about the SESSION -- did it leave a dated record, did it file a
+# decision -- not about a directory. --repo skips them: a hook auditing one
+# worktree must not block on realisateur's FOCUS.md lacking today's entry.
+# Wrapped in a function purely so the body stays unindented and diffs cleanly
+# against the version before this flag existed; bash functions share scope, so
+# `flags` still accumulates.
+session_wide_sections() {
 echo
 echo "== B. TODAY'S SESSION RECORD ($FOCUS_MD) =="
 if [ ! -f "$FOCUS_MD" ]; then
@@ -237,11 +319,42 @@ else
   echo "    decision-shaped residue to file. If it did, it belongs there as a"
   echo "    '> '-answerable one-liner under the filing project's ## section."
 fi
+}
+[ -n "$REPO_ARG" ] || session_wide_sections
 
 echo
-echo "== $flags FLAG(s) across $touched recently-touched repo(s); $blind BLIND =="
+if [ -n "$REPO_ARG" ]; then
+  echo "== $flags FLAG(s) in $REPO_ARG; $blind BLIND =="
+else
+  echo "== $flags FLAG(s) across $touched recently-touched repo(s); $blind BLIND =="
+fi
 [ "$blind" -gt 0 ] && echo "BLIND means a domain existed and was NOT read -- not a clean result."
 echo "FLAGs are candidates for the closing session to resolve before it ends;"
 echo "this script never edits, commits, or pushes anything."
+
+# --- the gate --------------------------------------------------------------
+# Order matters: a FLAG is something we DID see and is the stronger claim, so
+# it wins over BLIND when both are present.
 [ "$STRICT" = 1 ] && [ "$flags" -gt 0 ] && exit 1
+
+if [ "$STRICT" = 1 ] && [ "$blind" -gt 0 ] && [ "$ALLOW_BLIND" != 1 ]; then
+  # Interactive override. Both stdin AND stdout must be a TTY: a hook gets
+  # neither, cron gets neither, and a lint that blocks forever waiting for an
+  # answer nobody is there to give is worse than one that never gated.
+  if [ -t 0 ] && [ -t 1 ]; then
+    printf '\n%s BLIND domain(s) were not read. Proceed anyway? [y/N] ' "$blind" >&2
+    read -r _reply </dev/tty 2>/dev/null || _reply=""
+    case "$_reply" in
+      [yY]|[yY][eE][sS])
+        echo "closeout-lint: proceeding past $blind BLIND on an interactive override." >&2
+        exit 0
+        ;;
+    esac
+  fi
+  echo "closeout-lint: refusing -- $blind BLIND domain(s) unread." >&2
+  echo "  Audit them: closeout-lint.sh --strict --repo <path>   (one per worktree)" >&2
+  echo "  Or accept:  re-run with --allow-blind (states, in the command, that" >&2
+  echo "              you chose to proceed without reading them)." >&2
+  exit 6
+fi
 exit 0

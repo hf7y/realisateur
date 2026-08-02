@@ -27,12 +27,22 @@ CLI_POSITIONAL=none
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-REPO="/home/zach/Documents/Projects/realisateur"
-# Overridable so the test suite can install into a scratch dir instead of the
-# live machine. Not normally set -- same idiom as closeout-lint.sh/hygiene-lint.sh.
-BIN_DEST="${BIN_DEST:-$HOME/.local/bin}"
+# DELIBERATELY NOT self-locating, unlike bin/blockers-freshness-check.sh and
+# bin/token-usage.sh. Those answer "where am I"; this one answers "what should
+# the INSTALLED shim point at", and the answer must be a stable checkout
+# rather than whatever tree the installer happened to be invoked from.
+# Deriving it from BASH_SOURCE would let a run inside .claude/worktrees/*
+# silently repoint every shim on PATH at a temporary worktree.
+#
+# Overridable by environment for tests only (bin/tests/*, which also override
+# HOME so nothing real is written). Not a migration hook: a second host wants
+# its own stable path here, set once, not inherited from a caller's cwd.
+REPO="${REPO:-/home/zach/Documents/Projects/realisateur}"
+BIN_DEST="$HOME/.local/bin"
 CMD_SRC="$REPO/.claude/commands"
-CMD_DEST="${CMD_DEST:-$HOME/.claude/commands}"
+CMD_DEST="$HOME/.claude/commands"
+HOOK_SRC="$REPO/hooks"
+HOOK_DEST="$HOME/.claude/hooks"
 
 # Both lists below are DERIVED, not typed. A hand-maintained list is what
 # produced the 2026-07-27 gap: three shims existed because three were typed,
@@ -178,7 +188,7 @@ install_file() {
 }
 
 note "install-shims -- source of truth: $REPO"
-mkdir -p "$BIN_DEST" "$CMD_DEST"
+mkdir -p "$BIN_DEST" "$CMD_DEST" "$HOOK_DEST"
 
 note "PATH shims -> $BIN_DEST"
 for name in "${SHIMMED[@]}"; do
@@ -197,6 +207,35 @@ for name in "${GLOBAL_COMMANDS[@]}"; do
   fi
   install_file "$CMD_DEST/$name.md" "$(render_command "$name")" 644 "/$name"
 done
+
+# Claude Code hooks. Added 2026-08-02: subagent-closeout.sh was installed by
+# hand on 2026-08-01 and tracked in NO repo, which is the same defect that
+# broke the dexter bootstrap in July -- `usage-paced-runner.sh` was a symlink
+# hand-made once that nothing in any repo created, so a bare host could not
+# receive it and deleting it was a total outage. A guard that only exists in
+# ~/.claude cannot be reproduced on a second host and cannot be reviewed.
+#
+# Derived by glob, not typed: the comment on SHIMMED above records that a
+# hand-maintained list is exactly what produced the 2026-07-27 coverage gap.
+note "Claude Code hooks -> $HOOK_DEST"
+shopt -s nullglob
+hook_files=("$HOOK_SRC"/*.sh)
+shopt -u nullglob
+if [ "${#hook_files[@]}" -eq 0 ]; then
+  flag "$HOOK_SRC holds no *.sh -- refusing to report clean about hooks that should exist"
+else
+  for f in "${hook_files[@]}"; do
+    hname="$(basename "$f")"
+    install_file "$HOOK_DEST/$hname" "$(cat "$f")" 755 "$hname"
+    # Installed is not wired. settings.json is Zach's file and this script
+    # does not edit it -- but an installed-and-unreferenced hook is the
+    # build-but-do-not-wire failure, and silence about it would be the
+    # exit-0 no-op this whole script exists to prevent.
+    if [ -f "$HOME/.claude/settings.json" ] && ! grep -q "$hname" "$HOME/.claude/settings.json"; then
+      flag "$hname is installed but NOT referenced in ~/.claude/settings.json -- it will never fire"
+    fi
+  done
+fi
 
 # The lists above are derived from the command files, so a coverage check
 # against those same files would only confirm the derivation. The check that
