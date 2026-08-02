@@ -38,11 +38,25 @@ cli_guard "$@"
 # HOME so nothing real is written). Not a migration hook: a second host wants
 # its own stable path here, set once, not inherited from a caller's cwd.
 REPO="${REPO:-/home/zach/Documents/Projects/realisateur}"
-BIN_DEST="$HOME/.local/bin"
+# EVERY destination is env-overridable, and that is a test-safety property, not
+# a convenience. bin/tests/install-shims.test.sh redirects them to a scratch
+# dir; without the override the test silently ran against the REAL
+# ~/.local/bin, ~/.claude/commands and ~/.claude/hooks -- writing to live
+# machine config to assert something about a temp directory, and failing three
+# assertions because the files it examined were never the files it wrote.
+#
+# It regressed exactly that way on 2026-08-02: `4eb0caf` added the overrides
+# for BIN_DEST/CMD_DEST together with the test that needs them, `f990f87`
+# edited the same block from the pre-4eb0caf base, and git merged both with no
+# textual conflict -- so the hardcoded lines won and the overrides vanished
+# while every test still "passed" on each branch alone. A semantic collision
+# no conflict marker would have shown. Keep these as `${VAR:-...}`.
+BIN_DEST="${BIN_DEST:-$HOME/.local/bin}"
 CMD_SRC="$REPO/.claude/commands"
-CMD_DEST="$HOME/.claude/commands"
+CMD_DEST="${CMD_DEST:-$HOME/.claude/commands}"
 HOOK_SRC="$REPO/hooks"
-HOOK_DEST="$HOME/.claude/hooks"
+HOOK_DEST="${HOOK_DEST:-$HOME/.claude/hooks}"
+CLAUDE_SETTINGS="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"
 
 # Both lists below are DERIVED, not typed. A hand-maintained list is what
 # produced the 2026-07-27 gap: three shims existed because three were typed,
@@ -231,7 +245,7 @@ else
     # does not edit it -- but an installed-and-unreferenced hook is the
     # build-but-do-not-wire failure, and silence about it would be the
     # exit-0 no-op this whole script exists to prevent.
-    if [ -f "$HOME/.claude/settings.json" ] && ! grep -q "$hname" "$HOME/.claude/settings.json"; then
+    if [ -f "$CLAUDE_SETTINGS" ] && ! grep -q "$hname" "$CLAUDE_SETTINGS"; then
       flag "$hname is installed but NOT referenced in ~/.claude/settings.json -- it will never fire"
     fi
   done
