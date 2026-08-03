@@ -288,51 +288,136 @@ tested** — copies are proven by hash, but nothing has been read back.
 
 ## 4. Operational on dexter
 
-**Nothing. And today, mandark cannot reach it at all.**
+> **This section was probed twice, and the answer changed between the two.**
+> At 10:46 dexter's Linux userland was unreachable; at 11:18 it was up and I
+> was logged into it. The first probe was not wrong — the host restarted at
+> 10:51, five minutes after it. Both readings are kept below, because "how it
+> looked when the audit ran" is exactly the kind of claim this ecosystem
+> keeps getting burned by. The 11:18 reading is the current one.
 
-Dexter appears on the tailnet as `100.107.253.56`, node type **windows**,
-`active; direct 192.168.2.2:41641`. The Windows host is up and answering.
+### What dexter *is*
 
-The Linux userland is not:
+**WSL2 — not a VM you administer.** Verified from inside it:
 
 ```
-nc 100.107.253.56 22    → OPEN     (Windows sshd; publickey denied for zach)
-nc 100.107.253.56 2223  → REFUSED  (the WSL2 sshd — down)
-ssh -p 2223 dexter      → Connection refused
+uname -r      6.18.33.2-microsoft-standard-WSL2
+/etc/os-release   Ubuntu 26.04 LTS
+/proc/version     ...microsoft...
+/mnt/         c  d  wsl  wslg
+devices       .../VMBUS:00/...  (Hyper-V synthetic bus)
 ```
 
-Two independent faults, and it is worth keeping them apart:
+So the stack is: a Windows host (the tailnet node `dexter` reports
+`OS: windows`), and inside it WSL2's Hyper-V-managed utility VM running an
+Ubuntu 26.04 distro. There is **no VirtualBox, KVM or libvirt guest** —
+`/dev/kvm` is present and nested virt would work, but the "office VM"
+described in `DEXTER-DEPLOY-PLAN-20260729.md` was never built.
 
-1. **The WSL2 sshd is down.** Refused by IP, so this is not name resolution.
-   Port 2223 is the WSL2 sshd holding the `mandark-to-dexter-gardien` key;
-   port 22 is Windows. (That distinction is itself a recorded lesson — four
-   sessions once misfiled it as a missing credential.)
-2. **MagicDNS is broken on mandark.** `getaddrinfo for host "dexter"` →
-   *Temporary failure in name resolution*, and `tailscale status` warns
-   *"Tailscale can't reach the configured DNS servers."* Anything resolving
-   the bare name `dexter` fails independently of (1).
+Two sshds, which is the single most misfiled fact about this host:
 
-Everything downstream follows from this: `garde`'s only online destination is
-unreachable, so backups are BLIND; bibliothecaire's `backup-proof` fails;
-ecosim's `relocation` checks report seven projects DECLARED_ABSENT on dexter.
+```
+port 22    Windows sshd      OPEN, publickey denied for zach
+port 2223  WSL2 sshd         the one that holds the gardien key
+port 3389  RDP               OPEN
+port 445   SMB               OPEN
+```
 
-**What was true of dexter's userland when last seen (2026-08-02), and there is
-no evidence any of it changed:** no project directory of any kind; `~/.local/bin`
-holds only `claude`, `node`, `npm`, `npx`; `~/.config/systemd/user/` empty and
-`Linger=no`; zero executable crontab lines; **none of the guard commands
-installed** — no `notify-senechal`, no `check-project-busy`, no
-`focus-commit`, no `scheduler`. It does hold a live Claude credential and a
-file-based `gh` token, and it has 16 cores, 14 GiB RAM and 953 G free — more
-of every resource than mandark.
+Storage, from inside: `/` is 1007 G (3.1 G used), `/mnt/c` 476 G at 79 %,
+**`/mnt/d` 3.7 T at 28 % — 2.7 T free.**
 
-Config for dexter is elaborate and entirely aspirational: `_paced.dexter.conf`
-(two participants, both `|0|`), `_runner.dexter.conf` (a `*/30` tick),
-`_sweep.dexter.conf` (a deliberate opt-out). Hundreds of lines of carefully
-reasoned host-scoped policy, describing a host that runs nothing.
+### What is running on it
 
-**The honest summary:** dexter is a bigger, quieter machine that serves as
-mandark's backup destination and nothing else — and today it is not even
-doing that.
+Stock Ubuntu, and nothing else. Every running service:
+
+```
+chrony  cron  dbus  getty@tty1  networkd-dispatcher  rsyslog
+ssh  systemd-journald  systemd-logind  systemd-resolved
+systemd-udevd  unattended-upgrades  user@1000
+```
+
+- **`crontab -l` holds one `PATH=` line and zero jobs.**
+- **`~/.config/systemd/user/` is empty** — no user units at all.
+- All timers are Ubuntu stock (`apt-daily`, `logrotate`, `man-db`, …).
+- Only listeners are `systemd-resolved` on 53 and sshd on 2223.
+
+**Nothing of this ecosystem executes on dexter, and nothing is scheduled to.**
+That part of the 08-02 snapshot still holds exactly.
+
+### What it *does* hold — and this has changed
+
+Two claims from the 08-02 snapshot are **no longer true**:
+
+- **`~` is no longer dotfiles-only.** It holds `realisateur` and `scheduler`,
+  both clean, both at their `origin/main` tip, both on `https://` remotes.
+  Notably `~/realisateur` is at `bbf0eb3` — **the same tip mandark's working
+  checkout is 12 commits short of.** Dexter is running fresher realisateur
+  code than mandark is.
+- **`~/.local/bin` is no longer four node binaries.** It holds 14 entries,
+  ten of them realisateur-owned guards and lints: `notify-senechal`,
+  `check-project-busy`, `focus-commit`, `closeout-lint`, `hygiene-lint`,
+  `milestone-audit`, `ecosystem-survey`, `precipitation-scan`,
+  `silence-audit`, `steward-survey`. A machine-scoped change made on dexter
+  today *can* now be filed and announced.
+
+**No verb is installed** — `garde`, `arpente`, `juge`, `ausculte`, `dose`,
+`sonde`, `bashify`, `basheur` are all absent. The guard layer landed; the
+verb layer did not.
+
+### Its real job: the backup destination
+
+This is the one thing dexter genuinely does, and it does it at scale:
+
+```
+/mnt/d/gardien-media           261 G
+/mnt/d/gardien-media/mandark   21 sets
+```
+
+Present and dated: `Projects` (Aug 2 10:45), `git-remotes` (Jul 29),
+`ecosystem1` (Jul 31), `.config` (Aug 1 19:51), `Downloads`/`Pictures`
+(Aug 1 20:08–20:13), plus the media sets and two `*.case-collisions`
+directories from the case-insensitive-filesystem handling. On a 3.7 T volume
+with 2.7 T free — there is no space pressure here at all, in contrast to
+mandark's 42 G.
+
+### The availability problem
+
+At 10:46 today: `nc 2223` **refused by IP** (so not a name-resolution
+failure), `ssh -p 2223` refused. At 11:18: open, and `ps -p 1` shows the
+distro's init started at **10:51:03**. The WSL2 distro had been down and came
+back.
+
+Independently, **MagicDNS is broken on mandark**: `getaddrinfo for host
+"dexter"` → *Temporary failure in name resolution*, and `tailscale status`
+warns *"Tailscale can't reach the configured DNS servers."* So anything
+resolving the bare name `dexter` fails **even while dexter is up** — which is
+what bibliothecaire's health check hit at 10:02:
+
+```
+[FAIL] backup-proof   ssh dexter failed (exit 255): Could not resolve hostname dexter
+```
+
+That is a mandark-side DNS fault wearing a dexter-side costume. The two
+failure modes stack, and only one of them is dexter's.
+
+**WSL2 does not survive a Windows reboot unattended** — the distro starts on
+logon, not on boot. A backup destination that disappears without warning, on
+a host whose Linux side has no `Linger` and no user units, is the structural
+reason §3's `garde` bug matters: the destination *will* be intermittently
+absent, by design, and the nightly job treats absent as fine.
+
+### The gap that remains
+
+Config for dexter is elaborate and still largely aspirational:
+`_paced.dexter.conf` (two participants, both `|0|`), `_runner.dexter.conf`
+(a `*/30` tick), `_sweep.dexter.conf` (a deliberate opt-out) — hundreds of
+lines of carefully reasoned host-scoped policy describing dispatch that does
+not happen.
+
+**The honest summary:** dexter is a 16-core, 14 GiB, 2.7 T-free machine whose
+Linux side is a WSL2 distro that holds 261 G of mandark's backups, two clean
+repos, ten guard commands, and **not one scheduled job.** It is now
+bootstrappable in a way it was not on 08-02 — the guards arrived — but
+nothing has taken the next step.
 
 ---
 
@@ -350,11 +435,12 @@ host:
   layer is a very good CLI for a human, and almost nothing else calls it.
   (This is an improvement on 08-01, when the count was zero.)
 - **`man <verb>`.** 25 man pages written, none installed.
-- **Anything on dexter.** No repo, no scheduler, no guard command, no unit,
-  no cron line.
+- **Dispatch on dexter.** It now has two repos and ten guard commands, but
+  zero cron jobs, zero user systemd units, and **no verb installed at all**.
 - **Installability.** Of seven bashified utilities, only `realisateur` ships
-  an installer. There is no way to put this ecosystem onto a bare machine,
-  which is precisely why dexter is empty despite being the better host.
+  an installer — which is exactly why dexter has realisateur's guards and
+  nobody else's verbs. There is still no way to put the ecosystem as a whole
+  onto a machine.
 - **A tested restore.** Copies are hash-proven; no byte has ever been read
   back and used.
 - **A second backup destination.** `pegasus` is `online: false`. The 91 %-full
@@ -391,12 +477,16 @@ records, and backs itself up, and does no work of its own. The sensors are
 correct and unread — a health check FAILED hourly for days, a sensor BLIND
 103 consecutive times, 7 KB of sweep output mailed nightly into a dead MTA.
 
-The one asymmetry worth acting on is dexter. It has more of every resource,
-it is credentialed, and it holds the only second copy of this estate's data.
-It is empty because nothing here knows how to install itself onto a bare
-machine — and today it is unreachable, which means the estate is running on
-one 91 %-full disk with no verified second copy and a backup job that reports
-success regardless.
+The one asymmetry worth acting on is dexter. It has more of every resource
+(16 cores, 2.7 T free against mandark's 42 G), it is credentialed, and it
+holds 261 G that is the estate's only second copy. It is *no longer bare* —
+realisateur's installer put ten guard commands and two repos there. But no
+verb followed them, and nothing is scheduled, so the better machine still
+does one job: hold bytes, intermittently, on a WSL2 distro that stops when
+Windows logs out.
+
+That intermittency is the thread tying §3 and §4 together. The destination is
+*designed* to vanish, and the nightly backup treats vanished as fine.
 
 ---
 
@@ -416,8 +506,15 @@ Re-probed today; these prior statements are no longer true.
 | `gardien.service` failing nightly since 07-24 | 08-01 §5 | **Retired.** Unit gone; `garde-nightly.timer` replaced it and succeeds. |
 | `front-door-watch.service` active, looping on a deleted path | 08-01 §5 | **Disabled and inactive;** unit file still installed. |
 | `crt-whisper-server.service` active on `0.0.0.0:8991` | 08-01 §5 | **Gone.** No such unit. |
-| dexter reachable on 2223 | 08-02 | **False today.** Connection refused by IP; MagicDNS also broken. |
+| dexter's `~` holds dotfiles only, no project directory | 08-02 | **False.** `~/realisateur` and `~/scheduler`, both clean at `origin/main`. |
+| dexter's `~/.local/bin` holds only claude/node/npm/npx | 08-02 | **False.** 14 entries, ten realisateur guards and lints. |
+| none of the ecosystem guard commands exist on dexter | 08-02 | **False.** `notify-senechal`, `check-project-busy`, `focus-commit` et al. are installed. |
 | garde-nightly had never run | 08-02 | **It runs.** And its success is not trustworthy — §3. |
+
+And one correction to **this file**, made an hour after it was written:
+dexter's Linux userland was recorded unreachable at 10:46 and was reachable
+at 11:18 — its WSL2 distro restarted at 10:51. §4 carries both readings
+rather than silently adopting the later one.
 
 ---
 
