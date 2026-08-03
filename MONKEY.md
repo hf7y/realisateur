@@ -292,12 +292,22 @@ Three human sittings; everything else is scriptable.
   (Ubuntu's `.profile` only adds it if it exists at login time). Harden sshd:
   `PasswordAuthentication no`, `PermitRootLogin no` — the NAT hostfwd binds every
   Windows interface, and this is the control that holds regardless of firewall.
-- **H3 — autostart.** `nomac` has `autostart-enabled=off`, so VBoxAutostart has
-  never been exercised here. Use a Scheduled Task, **run as `Zach`, not
-  `SYSTEM`** (VMs are registered per-Windows-user; a SYSTEM task fails with
-  *"Could not find a registered machine named 'monkey'"*). Then **reboot Windows
-  and verify** — a startup task that has never survived a reboot is hoped for,
-  not configured.
+- **H3 — autostart. SETTLED 2026-08-03, Zach: LOGON start is the milestone,
+  not boot.** Installed as `monkey-vm.bat` in the Startup folder, with a guard
+  that no-ops if the VM is already running (verified: run while up leaves
+  exactly one VM, still reachable). Filed with senechal; retire by deleting
+  that one file.
+
+  **Why logon and not boot.** A boot-time Scheduled Task needs the Windows
+  password stored in Task Scheduler, and it would bring monkey up while dexter
+  WSL2 — the jump host *and* the backup destination — is still down, since
+  WSL2 also only starts at logon. Making the VM strictly more available than
+  the host around it buys nothing and hides the dependency. (`VBoxAutostart`
+  was also never exercised on this box: `nomac` has `autostart-enabled=off`.)
+
+  **Still unproven:** it has not survived a real logon. By this file's own
+  standard that means hoped for, not configured — the milestone is met when a
+  logout/login brings monkey up unattended, and not before.
 
 Then arm: `_paced.monkey.conf` with one enabled row (`ecosim|1|1|<abs path>`),
 `_runner.monkey.conf` (`0 */6`, `PACED_MAX_PER_TICK=1`), `_sweep.monkey.conf`
