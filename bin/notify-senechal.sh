@@ -64,8 +64,24 @@
 # non-zero with a stated reason -- no exit-0 no-op.
 set -uo pipefail
 
-SCHED_ROOT="/home/zach/Documents/Projects/scheduler"
-SENECHAL="/home/zach/Documents/Projects/senechal"
+# WHERE PROJECTS LIVE IS A PROPERTY OF THE HOST, NOT OF ZACH'S LAPTOP.
+# These were absolute paths under /home/zach, which is correct on mandark and
+# wrong everywhere else. On `monkey` -- the self-dev host stood up 2026-08-03,
+# one unix user per project -- this guard died with
+#
+#   notify-senechal: FAIL: scheduler front door not found/executable at
+#   /home/zach/Documents/Projects/scheduler/bin/scheduler
+#
+# so a machine-scoped change made on monkey could not be filed AT ALL. That is
+# the guard whose entire job is filing, structurally unable to do it on the
+# host the ecosystem is moving to. It failed loud, which is the only reason
+# this is a fix and not an incident.
+#
+# INSTALLE_PROJECTS is the name install-verbs.sh, verb-set.sh, installe and
+# land-selfdev.sh already share for this, so there are not two answers.
+PROJECTS_ROOT="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}"
+SCHED_ROOT="${SCHED_ROOT:-$PROJECTS_ROOT/scheduler}"
+SENECHAL="${SENECHAL:-$PROJECTS_ROOT/senechal}"
 
 die() { printf 'notify-senechal: FAIL: %s\n' "$*" >&2; exit 1; }
 
