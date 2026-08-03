@@ -5,7 +5,9 @@
 would park) and `THE-FLOOR.md` (which says what must hold before anything is
 armed). This one says **where it runs instead**.*
 
-**Status: phases 0–3 landed (the VM exists and is installing), phases 4–9 not started.** Every command output
+**Status: MILESTONE MET, 2026-08-03. `ecosim` dispatches unattended from monkey
+and files its questions as GitHub issues.** All phases have run; §10 records
+what that cost and what it did not buy. Every command output
 quoted below was captured on the date shown. Where a phase has not run, this
 file says so rather than describing what it would print — `THE-FLOOR.md` opens
 with a correction about a pass that scored itself by "reading the specification
@@ -246,8 +248,40 @@ wrong in the confident direction:**
    successful key auth returning `hostname -s` == `monkey`, not the first open
    socket.
 
-**Not yet captured, because those phases have not run:** the VM's own
-`land-selfdev.sh --check`, monkey's `crontab -l`, and the goal-C witness sha.
+### Phase 6–7, run 2026-08-03 — the milestone
+
+`land-selfdev.sh --land` as `ecosim`: 8 checkouts (4 repos + their `bashified`
+worktrees), 24 commands on PATH, **0 BAD**. Three private repos needed
+credentials, so four **per-repo deploy keys** were issued — `ecosim`
+read-write, the other three read-only. Least privilege per repo, which one
+account-wide PAT could not express. Read verified on all four; write verified
+by a `--dry-run` push that authenticated and created nothing.
+
+Armed, then witnessed. The three witnesses, and the negative one:
+
+```
+ROTATION host=monkey conf=.../_paced.monkey.conf [host-scoped for monkey] slots=1 :: ecosim
+FROZEN, but ecosim is EXEMPT ... (host=monkey, rule=ecosim@monkey) -- proceeding
+DISPATCH [0/1] ecosim -> .../bin/scheduler-run ecosim batch
+DONE ecosim rc=0 (835s)
+```
+
+- **the sha:** `278b4ee` on `origin/main` of `hf7y/ecosim`, confirmed from
+  **mandark** — work left the VM.
+- **unattended:** a cron-fired run under a stripped environment returned
+  `verdict=RUN http_code=200`, proving HOME, PATH and the `settings.json`
+  token all resolve with nothing inherited from a login shell.
+- **negative:** mandark `:RUNNER` = 0, dexter = 0. mandark's dispatcher was
+  retired by conf (`_runner.mandark.conf` blanking `RUNNER_CRON`), not by
+  hand-editing a crontab the next `--apply` would regenerate.
+- **issues:** #26 and #27 filed by `ecosim@monkey`, labelled `question`,
+  answered by Zach on GitHub, consumed and closed.
+
+**The near-miss worth keeping.** The first read of this run said "no commit was
+produced" — because ecosim's HEAD in `~/Documents/Projects` was unchanged. The
+batch works in a **dedicated clone** at `~/.local/share/ecosim-nightly-batch/repo`.
+A successful first dispatch was one step from being recorded as a failure,
+because the witness was pointed at the wrong repo.
 
 ## 7. The two scripts
 
@@ -282,12 +316,12 @@ Arming dispatch is the one step that spends a shared quota.
 
 Three human sittings; everything else is scriptable.
 
-- **H1 — build the VM** (WSL/Windows). Probe host RAM
+- **H1 — DONE.** Build the VM (WSL/Windows). Probe host RAM
   (`powershell.exe -NoProfile -c "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"`
   — WSL reporting 14 GiB *implies* 32 GB but is unprobed; if 16 GB use
   `MONKEY_RAM_MB=4096`). Generate `~/.ssh/selfdev_monkey`. Then `--check` →
   `--dry-run` → **read the generated `Unattended-*` user-data** → `--create`.
-- **H2 — root inside monkey**, then the interactive `claude` and `gh` logins,
+- **H2 — DONE.** Root inside monkey, then the interactive `claude` and `gh` logins,
   then the credential copy. Create `~/.local/bin` *before* ecosim's first login
   (Ubuntu's `.profile` only adds it if it exists at login time). Harden sshd:
   `PasswordAuthentication no`, `PermitRootLogin no` — the NAT hostfwd binds every
@@ -395,3 +429,59 @@ any host also spends the budget, and nothing gates that.
 
 *Every figure here was produced by a command on the date given. Where a phase
 has not run, this file says so.*
+
+---
+
+## 10. What the milestone cost, and what it did not buy
+
+*Added 2026-08-03 on reaching it. The point of this section is that the
+milestone is real and narrow, and neither half should be overstated.*
+
+**What is true now.** One project, on one host, dispatching itself on a
+six-hour tick behind a freeze that refuses everything else, filing its
+questions where a human already reads. mandark runs no agent dispatch at all.
+
+**What it does not mean.** Seventeen other projects are still parked. Nothing
+about `ecosim@monkey` proves the second participant works — and the second one
+is where the interesting problem is, because N project users each with their
+own `scheduler` clone is N dispatchers against ONE weekly quota. That trigger
+is written down in §9 and has not been touched.
+
+### The pattern this milestone kept finding
+
+Five separate defects on the day, all one shape: **one fact, two readers.**
+
+| what | who disagreed |
+|---|---|
+| `conf_field` | `schedule/*.conf` sourced (`$HOME` expands) vs grepped (it does not) |
+| `backup-proof` | bibliothecaire asserted against a backup tool that had been replaced |
+| `usage-gate` | read only the interactive-login credential; the host uses `setup-token` |
+| `notify-senechal` / `check-project-busy` | hardcoded `/home/zach`, on a host with no such user |
+| ecosim's own `install-silence-audit.sh` | found by the dispatched agent, unprompted, same day |
+
+Each was invisible until a *second host* ran the same code. A single-host
+ecosystem cannot detect this class at all — every reader agrees with every
+other because there is only one world. **The most valuable thing monkey
+produced on day one was not a commit. It was disagreement.**
+
+And the scale is measured, not guessed: **17 of 23 scripts in
+`realisateur/bin` still hardcode `/home/zach/Documents/Projects` in code.**
+Two are fixed. Fifteen will do the wrong thing, or nothing, on any host that
+is not mandark.
+
+### Known-broken, recorded rather than smoothed over
+
+- **Answers do not flow back in.** The issues channel is built to PUSH: a human
+  types answers locally, `scheduler` posts them and adds `answered`. Zach
+  answered directly on GitHub, which is the intended direction, and **nothing
+  consumes that**. Worse, `gh issue list --label question --state open` does
+  not filter `answered`, so an answered-but-open issue is re-rendered as an
+  unanswered question. #26 and #27 were closed by hand for exactly this reason.
+- **`gh issue create` fails** for the `ecosim` token — its GraphQL metadata
+  lookup needs `Contents: Read`, which the fine-grained PAT deliberately lacks.
+  Every call `scheduler` itself makes works; an agent reaching for the
+  convenience command will not.
+- **`NO-VERDICT`** was fixed by asking for one (`scheduler#11`) but the fix has
+  not yet been exercised by a real cycle.
+- **`hermes-gateway`** remains failed on mandark and in no footprint entry —
+  the only machine-scoped unit in the estate with no declared owner.
