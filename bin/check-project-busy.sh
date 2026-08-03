@@ -38,9 +38,15 @@ project="${1:?usage: check-project-busy.sh <project>}"
 # unregistered name silently returning "free" is the exact shape of a guard
 # that fails open. Verified 2026-07-30: `check-project-busy.sh --not-a-real-flag`
 # exited 0 and reported free.
-if [ ! -f "/home/zach/Documents/Projects/scheduler/schedule/$project.conf" ]; then
+# Same host-portability fix as bin/notify-senechal.sh: this was an absolute
+# path under /home/zach, so on any other host EVERY project read as
+# unregistered. That direction is at least safe -- it refuses rather than
+# answering "free" -- but a guard that refuses everything is no guard.
+PROJECTS_ROOT="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}"
+SCHED_ROOT="${SCHED_ROOT:-$PROJECTS_ROOT/scheduler}"
+if [ ! -f "$SCHED_ROOT/schedule/$project.conf" ]; then
   echo "check-project-busy.sh: '$project' is not a scheduler-registered project" >&2
-  echo "  (no schedule/$project.conf -- refusing to answer 'free' for a name I cannot check)" >&2
+  echo "  (no $SCHED_ROOT/schedule/$project.conf -- refusing to answer 'free' for a name I cannot check)" >&2
   exit 2
 fi
 share_dir="$HOME/.local/share"
