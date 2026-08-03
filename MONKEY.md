@@ -5,7 +5,7 @@
 would park) and `THE-FLOOR.md` (which says what must hold before anything is
 armed). This one says **where it runs instead**.*
 
-**Status: phases 0–2 landed, phases 3–9 not started.** Every command output
+**Status: phases 0–3 landed (the VM exists and is installing), phases 4–9 not started.** Every command output
 quoted below was captured on the date shown. Where a phase has not run, this
 file says so rather than describing what it would print — `THE-FLOOR.md` opens
 with a correction about a pass that scored itself by "reading the specification
@@ -195,7 +195,58 @@ the target; this is the script proving it reads a real host correctly):
 check only, nothing changed: 12 ok, 1 missing, 0 bad
 ```
 
-**Not yet captured, because the phases have not run:** the VM's own
+### Phase 3, run 2026-08-03
+
+Host capacity, from `VBoxManage list hostinfo` (the `powershell.exe` probe
+returned nothing under non-interactive ssh; VirtualBox already knows):
+
+```
+Processor core count: 8
+Memory size:          30439 MByte
+Memory available:     16413 MByte
+```
+
+So 6144 MB / 4 vCPU is comfortable: nomac 4 G + monkey 6 G + WSL's ceiling
+still fits inside 30 G, with 16 G free at the time of creation.
+
+`--dry-run` confirmed the three things it exists to confirm, before anything
+installed:
+
+```
+hostname                    = monkey.selfdev.local
+auxiliaryBasePath           = D:\VirtualBox VMs\monkey\Unattended-f3eda250-...
+postInstallCommand          = ...printf "%s\n" "ssh-ed25519 AAAA...selfdev-monkey" > /home/zach/.ssh/authorized_keys...
+detectedOSVersion           = 24.04.4 LTS "Noble Numbat"
+```
+
+— the short hostname is `monkey`, the basefolder took effect on **D:**, and the
+post-install quoting survived assembly through two shells with the key on one
+line. Then `--create`, and the VM as registered:
+
+```
+CfgFile="D:\VirtualBox VMs\monkey\monkey.vbox"     memory=6144  cpus=4
+"SATA-0-0"="D:\VirtualBox VMs\monkey\monkey.vdi"
+nomac: memory=4096  VMState="running"              <- untouched
+```
+
+**Two corrections earned during this phase, both recorded because they were
+wrong in the confident direction:**
+
+1. **The reachability hint.** This script "corrected" the ancestor's
+   `127.0.0.1` to a derived default-route address. On dexter the correction was
+   **wrong and the ancestor was right**: WSL2 here has localhost forwarding, so
+   `127.0.0.1:2225` reaches the guest, while the derived `192.168.0.1` (the LAN
+   router, not the Windows host) refuses. The address depends on WSL2's
+   networking mode, which the script cannot know — so it now **probes both and
+   prints what answered**.
+2. **An open port is not a finished install.** The first readiness watch fired
+   the moment 2225 accepted a connection, and key auth was then refused —
+   because Ubuntu's *installer environment* answers on 22 before the
+   post-install command has written `authorized_keys`. The witness is the first
+   successful key auth returning `hostname -s` == `monkey`, not the first open
+   socket.
+
+**Not yet captured, because those phases have not run:** the VM's own
 `land-selfdev.sh --check`, monkey's `crontab -l`, and the goal-C witness sha.
 
 ## 7. The two scripts

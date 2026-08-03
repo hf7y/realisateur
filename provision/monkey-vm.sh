@@ -288,16 +288,48 @@ act "unattended install (headless; this takes ~10-20 minutes)"
 vbm "${UNATTENDED_ARGS[@]}" --start-vm=headless
 ok "installer started"
 
-# The ancestor printed `ssh ... @127.0.0.1` as the from-dexter address. That is
-# WRONG under WSL2's default NAT: 127.0.0.1 inside WSL is WSL's own loopback,
-# not the Windows host's, and the forwarded port lives on Windows. Derive it.
-WINHOST="$(ip route show default 2>/dev/null | awk '{print $3; exit}')"
+# WHICH ADDRESS REACHES THE GUEST -- probed, not asserted, because BOTH of the
+# obvious answers are wrong on some WSL2 configuration and this script has now
+# been wrong in both directions.
+#
+# The ancestor printed 127.0.0.1 unconditionally. The first version of THIS
+# script "corrected" that to a derived default-route address, on the reasoning
+# that under WSL2 NAT the loopback inside WSL is not the Windows host's. On
+# dexter that correction was WRONG and the ancestor was right: WSL2 here has
+# localhost forwarding, so 127.0.0.1:2225 reaches the guest, while the derived
+# 192.168.0.1 (the LAN router, not the Windows host) refused the connection.
+#
+# The lesson is not "use 127.0.0.1". It is that the address depends on WSL2's
+# networking mode, which this script cannot know -- so it TRIES them and
+# reports what answered. A hint that was tested is worth printing; a hint that
+# was reasoned about is how twenty minutes goes into debugging an sshd that
+# was fine all along.
 echo
-echo "-- the port is forwarded on the WINDOWS host, not inside WSL --"
-echo "   From dexter (WSL2):  ssh -p $HOSTFWD_PORT -i ~/.ssh/selfdev_monkey $VM_USER@${WINHOST:-<windows-host-ip>}"
+echo "-- finding the address that actually reaches the guest --"
+GUESS_HOSTS=(127.0.0.1)
+_gw="$(ip route show default 2>/dev/null | awk '{print $3; exit}')"
+[ -n "$_gw" ] && GUESS_HOSTS+=("$_gw")
+REACHED=""
+for _h in "${GUESS_HOSTS[@]}"; do
+  if timeout 5 bash -c "</dev/tcp/$_h/$HOSTFWD_PORT" 2>/dev/null; then
+    REACHED="$_h"; ok "port $HOSTFWD_PORT answers at $_h"; break
+  else
+    gap "port $HOSTFWD_PORT does not answer at $_h (yet -- the install takes 10-20 min)"
+  fi
+done
+echo
+if [ -n "$REACHED" ]; then
+  echo "   From dexter (WSL2):  ssh -p $HOSTFWD_PORT -i ~/.ssh/selfdev_monkey $VM_USER@$REACHED"
+else
+  echo "   From dexter (WSL2):  try $VM_USER@127.0.0.1 first, then $VM_USER@${_gw:-<windows-host-ip>}"
+fi
 echo "   From mandark:        ssh -p $HOSTFWD_PORT -i ~/.ssh/selfdev_monkey $VM_USER@<dexter-tailnet-ip>"
 echo
-echo "Do not assume it came up. The first thing to do is connect."
+echo "Do not assume it came up, and do not take an OPEN PORT as done: Ubuntu's"
+echo "installer environment answers on 22 before the post-install command has"
+echo "written authorized_keys, so the first successful connection is the"
+echo "witness, not the first open socket. Poll for:"
+echo "   ssh ... $VM_USER@<addr> hostname -s     # must print exactly: monkey"
 echo
 echo "Then the root sitting on the guest (users, linger, node, claude, sshd"
 echo "hardening), and only then:"
