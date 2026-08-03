@@ -354,11 +354,20 @@ printf '## Verify\n\n```\n./test/contract-test.sh bin/%s\n```\n' "$VERB"
 # days -- while `bashify list` went on reporting emit MECHANIZED, because
 # `_state` only asks whether the file is executable.
 #
-# The exemption is bounded three ways, so it cannot be used to smuggle
-# anything: it covers exactly one path; it applies only to the generic
-# English word `agent`, never to a vendor name; and it applies only if the
-# file is BYTE-IDENTICAL to the skel this generator just copied. A modified
+# The exemption is bounded TWO ways, so it cannot be used to smuggle
+# anything: it covers exactly one path, and it applies only if the file is
+# BYTE-IDENTICAL to the skel this generator just copied. A modified
 # lib/verb.sh is checked like anything else.
+#
+# It was bounded a THIRD way until 2026-08-02 -- "only to the generic English
+# word `agent`, never to a vendor name" -- and that third bound is deleted,
+# not merely relaxed. It is the direct cause of the two-day outage described
+# above and of its recurrence recorded below; a word-level bound on a
+# byte-identical file adds no safety, because byte-identity to a reviewed,
+# version-controlled skeleton already proves the bytes came from the tool.
+# What it adds is a way for the guard to become UNSATISFIABLE the moment the
+# skeleton's own prose changes. The sentence is called out here because it
+# was still being quoted as live doctrine after the behaviour had changed.
 VERB_SH_CLEAN=0
 if cmp -s "$SKEL/lib/verb.sh" "$WT/lib/verb.sh"; then VERB_SH_CLEAN=1; fi
 # THE VENDOR LIST IS LEADING-WORD-ANCHORED, since 2026-08-02, and the anchor is

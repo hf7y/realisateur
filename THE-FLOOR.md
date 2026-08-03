@@ -8,7 +8,23 @@ and a milestone made of prose would be self-defeating.*
 
 ---
 
-> # THE FLOOR IS MET — 9/9, 2026-08-02 03:02 CDT
+> # ⚠ SUPERSEDED — that banner was true for 31 minutes
+>
+> **Re-measured 2026-08-02 22:00: `bin/floor-check.sh` → NOT MET, 3 unmet.**
+> The stamp below was taken at 03:02. `garde-nightly.service` fired at 03:33
+> and failed, which broke gate 1.1 half an hour later. Read
+> `MANDARK-DEXTER-PLAN-20260802.md` §0, then **run the checker** — this file
+> says four paragraphs down that the command is the authority and the prose is
+> not, and this banner is what that warning looks like when it comes true.
+>
+> Since re-measured: the backup was fixed (17/17 sets, gate 2.2 restore now
+> exercised and MET), failed units 2 → 1. What still holds it NOT MET is two
+> things needing Zach — `hermes-gateway.service` failed, and `basheur` +6
+> unpushed. Both are named in the plan's §5.
+>
+> ---
+>
+> # THE FLOOR WAS MET — 9/9, 2026-08-02 03:02 CDT
 >
 > ```
 > $ bin/floor-check.sh --restore    # exit 0
