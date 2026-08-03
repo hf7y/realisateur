@@ -14,6 +14,12 @@
 
 set -uo pipefail
 SKEL="$(cd "$(dirname "${BASH_SOURCE[0]}")/skel" && pwd)"
+# The vendor list and the discovery rule live in ONE file, sourced here and by
+# lib/closure.sh. They used to be typed out separately in both, and on
+# 2026-08-02 that cost a defect: the leading-word anchor was added to the
+# content guard below and not to the path guard, because they were two copies.
+# shellcheck source=lib/surface.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/lib" && pwd)/surface.sh"
 # Overridable so this generator can be run against a throwaway registry. It
 # was not testable before: `emit` does `git branch -D bashified` on the real
 # repo, so the only way to exercise it was to destroy a live branch, and the
@@ -47,7 +53,7 @@ git -C "$REPO" branch -D bashified 2>/dev/null
 git -C "$REPO" worktree add -b bashified "$WT" "$DEFAULT" >/dev/null 2>&1 || {
   echo "bashify: could not create worktree for $PROJ" >&2; exit 1; }
 
-FORBIDDEN='claude|anthropic|agent|openai|gpt|llm|assistant'
+# (the vendor list is SURFACE_VENDORS in lib/surface.sh -- do not retype it)
 
 # ---- discover the tooling that actually exists -----------------------------
 # Discovery must not assume bin/. senechal keeps its tooling in health/ and
@@ -55,15 +61,10 @@ FORBIDDEN='claude|anthropic|agent|openai|gpt|llm|assistant'
 # 23 scripts and would have shipped a utility silently missing most of the
 # project. Take every tracked .sh anywhere, plus anything in the usual
 # executable dirs, minus tests and libraries (not caller-facing).
-mapfile -t SCRIPTS < <(cd "$REPO" && {
-    git ls-files ${SCOPE:+"$SCOPE"} '*.sh'
-    git ls-files ${SCOPE:+"$SCOPE"} | grep -E '(^|/)(bin|scripts|tools)/'
-  } | sort -u \
-    | grep -vE '\.(md|txt|json|yml|yaml|conf|template|pyc)$' \
-    | grep -vE '(^|/)(test|tests)/' \
-    | grep -vE '(^|/)lib/' \
-    | grep -vE '(^|/)test-' \
-    | head -60)
+# The rule itself is surface_discover in lib/surface.sh, because lib/closure.sh
+# must partition EXACTLY the same set: a closure computed over a different set
+# of scripts than the one that moves would answer a question nobody asked.
+mapfile -t SCRIPTS < <(surface_discover "$REPO" "$SCOPE")
 
 # Dedupe by basename: two scripts sharing a stem would emit two `case` arms
 # with the same pattern, and the second would be silently unreachable --
@@ -77,7 +78,7 @@ declare -A _seen=()
 _uniq=()
 for _s in ${SCRIPTS[@]+"${SCRIPTS[@]}"}; do
   _b="$(basename "$_s")"; _b="${_b%.sh}"
-  if printf '%s' "$_s" | grep -qiE "$FORBIDDEN"; then
+  if surface_names_vendor "$_s"; then
     PURGED+=("$_s"); continue
   fi
   if [ -n "${_seen[$_b]:-}" ]; then
@@ -94,11 +95,11 @@ mapfile -t OTHER < <(cd "$REPO" && git ls-files ${SCOPE:+"$SCOPE"} '*.js' '*.mjs
 # forbidden ones are COUNTED, never printed.
 PY=(); PY_HIDDEN=0
 for _f in ${PY_ALL[@]+"${PY_ALL[@]}"}; do
-  if printf '%s' "$_f" | grep -qiE "$FORBIDDEN"; then PY_HIDDEN=$((PY_HIDDEN+1)); else PY+=("$_f"); fi
+  if surface_names_vendor "$_f"; then PY_HIDDEN=$((PY_HIDDEN+1)); else PY+=("$_f"); fi
 done
 OTHER_SHOWN=(); OTHER_HIDDEN=0
 for _f in ${OTHER[@]+"${OTHER[@]}"}; do
-  if printf '%s' "$_f" | grep -qiE "$FORBIDDEN"; then OTHER_HIDDEN=$((OTHER_HIDDEN+1)); else OTHER_SHOWN+=("$_f"); fi
+  if surface_names_vendor "$_f"; then OTHER_HIDDEN=$((OTHER_HIDDEN+1)); else OTHER_SHOWN+=("$_f"); fi
 done
 
 # ---- TOTAL PURGE: the branch keeps only what the utility needs -------------
@@ -384,11 +385,35 @@ if cmp -s "$SKEL/lib/verb.sh" "$WT/lib/verb.sh"; then VERB_SH_CLEAN=1; fi
 # `claudes`, `assistants`. Trailing anchors would let a plural through, which
 # is a real evasion; a leading anchor rejects only mid-word noise, which never
 # is one.
+# THE EXEMPTION COVERS THE WHOLE PATTERN, not the `agent` half. Corrected
+# 2026-08-02, and the bug it fixes is this one, AGAIN:
+#
+#   The exemption above was bounded three ways, one of which was "it applies
+#   only to the generic English word `agent`, never to a vendor name." Then the
+#   de-fork (8f83801) added this line to the skeleton, for good reason:
+#
+#     # gardien's `verb_gap_or_summon` is NOT here. It calls `claude -p` ...
+#
+#   `claude` is a vendor name, and the vendor grep had no exemption at all, for
+#   any path, ever. So EVERY `bashify emit` exited 5 -- for every project, on
+#   every run -- while `bashify list` went on reporting emit MECHANIZED,
+#   because `_state` only asks whether the file is executable.
+#
+# That is verbatim the failure this same header already describes happening for
+# two days before. It recurred because the bound was written against a WORD
+# when the property that actually makes the exemption safe is BYTE-IDENTITY:
+# the file must equal the skel this generator just copied. A reviewed,
+# version-controlled skeleton cannot smuggle anything, whatever words it uses,
+# and the word-level bound only ever added a way for the guard to become
+# unsatisfiable when the skeleton's prose changed.
+#
+# Reproduced on a throwaway registry before and after the fix -- see
+# test/verify-emit.sh, which is the end-to-end run this generator never had.
 LEAK="$(cd "$WT" && {
-    grep -rilE '\b(claude|anthropic|openai|gpt|llm|assistant)' . 2>/dev/null
-    grep -rilE '\bagent\b' . 2>/dev/null \
-      | { [ "$VERB_SH_CLEAN" = 1 ] && grep -vx './lib/verb.sh' || cat; }
-  } | grep -v '^\./\.git' | sort -u || true)"
+    grep -rilE "$SURFACE_RE_VENDOR" . 2>/dev/null
+    grep -rilE "$SURFACE_RE_AGENT" . 2>/dev/null
+  } | { [ "$VERB_SH_CLEAN" = 1 ] && grep -vx './lib/verb.sh' || cat; } \
+    | grep -v '^\./\.git' | sort -u || true)"
 if [ -n "$LEAK" ]; then
   echo "bashify: PURGE FAILED for $PROJ -- these files still name an agent:" >&2
   printf '  %s\n' $LEAK >&2
