@@ -305,9 +305,22 @@ Three human sittings; everything else is scriptable.
   the host around it buys nothing and hides the dependency. (`VBoxAutostart`
   was also never exercised on this box: `nomac` has `autostart-enabled=off`.)
 
-  **Still unproven:** it has not survived a real logon. By this file's own
-  standard that means hoped for, not configured — the milestone is met when a
-  logout/login brings monkey up unattended, and not before.
+  **PROVEN 2026-08-03T21:26Z. Milestone met.** Zach restarted dexter's Windows
+  host and logged in. Evidence, and it is a controlled result rather than an
+  inference — the same host, the same shutdown, one VM with the Startup entry
+  and one without:
+
+  | | |
+  |---|---|
+  | Windows went down | monkey's prior session logged `RUNNING → SUSPENDING` (VirtualBox saves state on Windows shutdown) |
+  | WSL2 started | 21:26:02Z |
+  | **monkey restored** | **21:26:04Z — two seconds after logon** |
+  | **nomac** (no Startup entry) | **still `saved`** — did not come back |
+
+  The guest reporting a longer uptime than the host is expected: a restored VM
+  continues its clock from the save point, so uptime is *not* a witness here
+  and the VBox log is. Read `VBox.log` for `Log opened` + `Restoring`, not
+  `uptime`, if this is ever re-checked.
 
 Then arm: `_paced.monkey.conf` with one enabled row (`ecosim|1|1|<abs path>`),
 `_runner.monkey.conf` (`0 */6`, `PACED_MAX_PER_TICK=1`), `_sweep.monkey.conf`
