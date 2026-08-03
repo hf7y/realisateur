@@ -38,6 +38,37 @@ cli_guard "$@"
 # HOME so nothing real is written). Not a migration hook: a second host wants
 # its own stable path here, set once, not inherited from a caller's cwd.
 REPO="${REPO:-/home/zach/Documents/Projects/realisateur}"
+
+# A SOURCE OF TRUTH THAT IS NOT THERE IS A HARD FAILURE, NOT A FLAG.
+#
+# Found 2026-08-02 while bootstrapping dexter, and it is the reason the
+# 2026-08-02 snapshot could say "nothing in the ecosystem knows how to install
+# itself onto a bare machine" while realisateur was the one project that
+# shipped an installer. Run on dexter as `bash ~/realisateur/bin/
+# install-shims.sh`, with no REPO set, this defaulted to mandark's path -- a
+# directory that does not exist on that host -- printed two FLAGs about the
+# hooks it could not find, installed NOTHING, and **exited 0**.
+#
+# ~/.local/bin was still exactly `claude node npm npx` afterwards and
+# ~/.claude/{commands,hooks} were empty, while the caller was told the run
+# succeeded. That is an exit-0 no-op on the installer itself: the single
+# failure mode this ecosystem's doctrine names as worse than a crash, in the
+# script whose whole job is making the guards exist.
+#
+# The comment above is right that REPO must not be derived from BASH_SOURCE --
+# that would let a run inside .claude/worktrees/* repoint every shim on PATH at
+# a temporary worktree. The override is the migration path, exactly as line 38
+# says ("a second host wants its own stable path here, set once"). What was
+# missing is that choosing a path nobody ever validated is indistinguishable
+# from choosing the right one, right up until nothing is installed.
+if [ ! -d "$REPO/bin" ] || [ ! -d "$REPO/.git" ]; then
+  printf '%s: REPO does not name a realisateur checkout: %s\n' \
+    "${0##*/}" "$REPO" >&2
+  printf '%s: (need both %s/bin and %s/.git)\n' "${0##*/}" "$REPO" "$REPO" >&2
+  printf '%s: on a second host, set it explicitly and once:\n' "${0##*/}" >&2
+  printf '%s:   REPO=$HOME/realisateur %s\n' "${0##*/}" "$0" >&2
+  exit 5
+fi
 # EVERY destination is env-overridable, and that is a test-safety property, not
 # a convenience. bin/tests/install-shims.test.sh redirects them to a scratch
 # dir; without the override the test silently ran against the REAL
