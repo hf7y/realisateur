@@ -397,11 +397,10 @@ any host also spends the budget, and nothing gates that.
 
 **Deferred, each with its real question stated:**
 
-- **A second project user.** Before project #2 exists, decide the dispatcher
-  topology — N users each with a `scheduler` clone means N dispatchers against
-  one quota. Likely a dedicated dispatcher account with a `runas`-scoped sudoers
-  rule, not blanket NOPASSWD. No account is created now; an unused account is a
-  ghost.
+- ~~**A second project user.**~~ **DECIDED 2026-08-03, Zach — see §9.1 below.**
+  The dispatcher topology question is answered: N dispatchers is fine, because
+  the thing being protected is a quota and the quota already has its own
+  sensor.
 - **Man pages.** 25 verbs ship `man/<verb>.1`, `MANPATH` has no ecosystem entry,
   and every page tells its reader `man <verb>` for the contract. The real
   question: *does `installe`'s contract extend to `man/`, or does a second verb
@@ -424,6 +423,60 @@ any host also spends the budget, and nothing gates that.
   nightly on 2026-08-01. Either read and retire it, or record it as knowingly
   out of scope — but do not let this document claim a clean mandark it cannot
   prove.
+
+---
+
+## 9.1 The dispatcher topology, decided (2026-08-03, Zach)
+
+**Zach, 2026-08-03:** *"I don't fully understand the topology hang. Just give
+every account the creds to run and block new agents from spawning when too
+close to threshold. we had something like that working fine on mandark."*
+
+**The hang was a category error, and the correction is worth keeping.** §9 and
+`schedule/_paced.monkey.conf`'s header both framed the problem as *counting
+dispatchers*: N project users each with their own `scheduler` clone is N
+dispatchers against ONE weekly quota, therefore N must not exceed 1 until
+someone designs a single-dispatcher topology (a dedicated dispatcher account
+with `runas`-scoped sudoers was the sketch).
+
+But **nothing was ever protecting the quota by counting dispatchers.** The
+protection is `scheduler/bin/usage-gate.sh`, and it does not count anything
+local. It spends ~23 Haiku tokens on a live probe and reads Anthropic's
+**unified rate-limit headers** — `anthropic-ratelimit-unified-{5h,7d}-*` —
+which are **account-wide**: web, Slack, cron, every machine, every unix user,
+every interactive session. Its own header says so and names that as the
+requirement, not a side effect. Its exit code IS the verdict (0=RUN, 1=HOLD,
+2=ERROR, and every caller must treat ERROR as HOLD), it holds above
+`USAGE_CEILING` (0.85) and below an even-burn pace line, and it honours the
+5-hour and 7-day windows independently, deferring to whichever binds.
+
+So a second account does not dilute the guard. Both accounts probe the same
+account-wide utilisation and both see the second one's spend. This is what was
+already "working fine on mandark" — mandark and dexter shared one budget under
+this same gate, which is why `_usage.<host>.conf` exists at all. **Adding
+accounts scales the number of things asking permission; it does not scale what
+they are asking about.**
+
+**Two residuals, carried knowingly rather than designed away:**
+
+1. **The flock is per-account, not global.** `usage-paced-runner.sh` sets
+   `STATE_DIR="$HOME/.local/share/$JOB_NAME"` and locks `run.lock` inside it,
+   so `ecosim`'s lock and `bibliothecaire`'s lock are different files and two
+   accounts CAN dispatch in the same tick. The bound on damage is the gate's
+   band, not the lock: `USAGE_CEILING` 0.85 leaves 15% of headroom for the race
+   to eat, and `PACED_MAX_PER_TICK=1` at `0 */6` means the worst case is two
+   concurrent agents, not two runaway rotations. If a third and fourth account
+   land, revisit this *first* — the ceiling absorbs a race between two, and it
+   is not obvious it absorbs one between five.
+2. **Interactive sessions still spend the budget ungated** — unchanged from
+   §9, and it is the same residual, not a new one.
+
+**What this decision does NOT grant.** Credentials to run, not privilege.
+`bin/provision-selfdev-user.sh` still writes no sudoers file for a project
+account and prints that absence as an action. "Give every account the creds"
+means the shared Claude credential is copied in so the account can spend a
+token — which is exactly what that script automates and what it exists to stop
+being reconstructed from memory.
 
 ---
 

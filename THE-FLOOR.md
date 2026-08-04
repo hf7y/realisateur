@@ -303,9 +303,47 @@ once made:
 reports every file and every account it touched, including reverted ones. A
 run producing no commit says so explicitly (`vkv-inventory` burned three
 dispatches on 07-30/31/08-01 with no commit anywhere). Agent status claims are
-**stale by construction** — re-probed before relaying, never quoted. A second
+**stale by construction** — re-probed before relaying, never quoted. ~~A second
 project is unparked only after the first has completed seven consecutive clean
-nights.
+nights.~~ **OVERRIDDEN 2026-08-03 — see below.**
+
+### Override: the seven-night wait, retired 2026-08-03 (Zach, explicit)
+
+**Zach, 2026-08-03:** *"the floor resumption contract was not written by me.
+safe to override. make a durable override and claim that successful ecosim
+round trip is proof enough."*
+
+The seven-night rule was authored by this ecosystem's own automation, not by
+the human it constrains, and it was never adopted as policy — it was written
+down and then obeyed as if it had been. That is the prose-becomes-mechanism
+pathology this file names in its own opening paragraph, running in the
+direction nobody audits: a rule invents caution, and caution is never checked
+for whether it is buying anything.
+
+**What replaces it as the bar for unparking project #2:** a completed round
+trip by project #1. `ecosim@monkey` did that on 2026-08-03 — armed by conf,
+dispatched by the paced runner from behind the freeze, `rc=0` in 835s, sha
+`278b4ee` on `origin/main` confirmed **from mandark** (work left the VM), a
+cron-fired run under a stripped environment returning
+`verdict=RUN http_code=200`, and issues #26/#27 filed, answered by a human on
+GitHub, consumed and closed. `MONKEY.md` §6 is the witness record. That is the
+whole loop — dispatch, spend, commit, push, ask, consume — and seven
+repetitions of a loop that has closed once do not test anything the first
+closing didn't.
+
+**What the seven nights would have bought,** stated so this override is not a
+blank cheque: repetition catches *intermittent* failure — a job that works on
+Monday and not on Thursday. That risk is real and is now **carried, not
+eliminated**. It is carried deliberately, because the cost of waiting is
+seventeen projects staying parked and the cost of being wrong is one noisy
+dispatch on a host that is frozen by default and will dispatch nothing not
+named in `schedule/FREEZE`.
+
+**What is NOT overridden:** every other sentence in this block. "One project
+at a time" is retired; *every run reports every file and account it touched*,
+*a run producing no commit says so explicitly*, and *agent claims are
+re-probed, not quoted* all stand. Those are reporting duties rather than a
+waiting period, and nothing about the ecosim round trip speaks to them.
 
 ---
 
