@@ -11,7 +11,24 @@ Written at `/cloture` by the session that put `monkey` on the tailnet, taught
 
 ## 1. PRs: merge, or why not
 
-Four open. **Two are ready. Two are paired and must not land alone.**
+Five open. **Three are ready. Two are paired and must not land alone.**
+
+### `hf7y/scheduler#17` — MERGE (it rescues a stranded write)
+*relay-vim-arcade-blockers · 1 commit*
+
+`vim-arcade`'s batch produced `8ef2ecc` in its own scheduler checkout on monkey
+and **could not push it**: that account's deploy key for `hf7y/scheduler` is
+read-only by design. The checkout sat `[ahead 1]` with nowhere to go. The agent
+correctly declined to push it under its own credentials — and that is also
+exactly how a write gets silently lost, so this relays it via `git am` from
+`format-patch` (original author, date and message preserved).
+
+`BLOCKERS.md` only, +78/−1, and the single deletion is an **answer slot being
+consumed**, not a prune — checked specifically, because that file is
+machine-appendable but never machine-prunable. Contains a correction (the
+"unauthorized commit `5b5783e` was never pushed" premise was stale) and a new
+blocker (the sensitive-file gate refused two edits mid-run with no human
+present, and the run reported it instead of routing around it).
 
 ### `hf7y/ecosim#28` — MERGE
 *rotation-sees-monkey · 4 commits*
@@ -81,10 +98,28 @@ file.
 #### UPDATE at close — the dispatch finished, and the divergence is now LIVE
 
 The first manual vim-arcade dispatch **succeeded**: `160 passed in 0.12s`,
-`main MERGED and PUSHED -- b0fd41c` (revert with
-`git revert -m 1 b0fd41c`), 1297s. Work reached `origin/main` of
-`hf7y/vim-arcade`; the batch clone and origin agree at `b0fd41c`. That is a
-real first self-dev run with a real deliverable, not a smoke test.
+1297s, real deliverable (`vim_arcade/paste_lesson.py` — the actual
+stability-milestone bar — plus 19 new tests).
+
+**Where it landed, corrected.** An earlier close-out of this session said the
+work reached `origin/main` at `b0fd41c`. That was wrong, and the way it was
+wrong is worth more than the fact:
+
+    refs/heads/main               1e88818   <- the batch's own commit
+    refs/heads/tmux-pane-mechanic b0fd41c   <- the autonomy-merge forward
+
+`hf7y/vim-arcade`'s **GitHub default branch is `tmux-pane-mechanic`, not
+`main`.** A plain `git clone` therefore checks out `tmux-pane-mechanic`, and
+reading its log as "origin/main" is how `b0fd41c` got reported as main's tip.
+That is the wrong-ref witness error — the same class this session spent the day
+removing from `ecosim`, committed by the session itself. Verified with
+`gh api repos/hf7y/vim-arcade -q .default_branch` and `git ls-remote`, which is
+what should have been used the first time.
+
+**This is also a live decision for Zach:** the default branch is what
+`scheduler-run` resolves to when `BATCH_BRANCH` is unset, so an unattended batch
+targets `tmux-pane-mechanic` unless told otherwise. Pre-existing, not caused by
+this session, and probably not intended.
 
 **The half-wiring is no longer hypothetical.** During arming, `scheduler ask`
 filed a genuine design question as **`hf7y/vim-arcade` issue #6** ("tmux design
@@ -195,6 +230,12 @@ at `/srv/scheduler` that every account reads and none owns. All three hosts read
 BLIND. `vim-arcade` is armed (`vim-arcade|1|1|` on main, `EXEMPT:
 vim-arcade@monkey`, crontab installed) and a first manual dispatch was running
 at close (see the UPDATE in section 1 -- it succeeded).
+
+**Open decisions added at close:** `hf7y/vim-arcade`'s default branch is
+`tmux-pane-mechanic`, which is what `scheduler-run` targets when `BATCH_BRANCH`
+is unset — decide whether that is intended. And `hf7y/vim-arcade` issue **#6**
+(the tmux design fork) is a real question waiting on Zach, currently in a
+channel the batch cannot read until `#16`+`#7` land.
 
 **Open decisions (issues, not this file):** #31 tailnet join at install time and
 key policy · #32 NOPASSWD scope for hands accounts · #33 how secrets reach an
