@@ -13,6 +13,30 @@ corollary under Law 1.)*
 
 A single-user machine ecosystem is one organism, not a workplace.
 
+**Updated 2026-08-03: it is no longer a single machine.** The anatomy below
+was written when everything ran on `mandark`, and the body it describes is
+still right — but it now has a skeleton, and where an organ lives changed
+what the organ could see (Law 4).
+
+```
+mandark   the laptop. 91% full, sleeps, travels. NO agent dispatch since
+          2026-08-03. Still: the scanner, the SMB shares, the hourly estate
+          check, the nightly backup SOURCE, and the human.
+dexter    a Windows host. Inside it:
+          - WSL2      jump host + backup DESTINATION (262G). Dispatches nothing.
+          - monkey    the SELF-DEV host. One unix user per project. Ubuntu on
+                      VirtualBox, disk on D:, starts at logon. `ecosim` runs
+                      here on a six-hour tick.
+          - nomac     the OFFICE. media-arts-collective, co-directed. Not ours
+                      to touch, and deliberately a separate VM: its economy
+                      gates execution on a wavebucks balance.
+```
+
+The rule the split encodes: **hardware-bound work stays where the hardware
+is.** bibliothecaire's scanner cannot move, so bibliothecaire's *intake* half
+cannot move; only its librarian half ever could. Any plan that says "move
+project X to host Y" without naming which half is wrong on contact.
+
 - **Zach** — the only decider. Simultaneously the organism's environment
   (the source of all disturbance: new ideas, moved targets) and its
   scarcest organ (the rate-limiting enzyme — every `> ` reply, every
@@ -30,7 +54,7 @@ A single-user machine ecosystem is one organism, not a workplace.
   commits, merge conflicts, stale clones, layered rewrites) happened in
   this tissue, at an interface between writers.
 
-## The three laws
+## The four laws
 
 Each law is only real to the extent it is paired with a mechanism.
 Prose decays; enforcement doesn't (this file's own doctrine).
@@ -84,6 +108,47 @@ bibliothecaire archive, still shape-open, parked — and the scheduler
 front-door consolidation as this law's first real proof, still
 unstarted. *(status verified 2026-07-27 via realisateur `.scheduler/FOCUS.md`
 — re-derive from there, not from this line, once it ages.)*
+
+### Law 4 — One fact, one reader (established 2026-08-03; found by a second host)
+
+A claim about the world is read by more than one thing, and the readers
+drift apart silently. Nothing is broken at the moment they diverge — each
+reader is individually correct — so nothing reports it, and the
+divergence surfaces only when a reader runs somewhere the others never
+did.
+
+**Five instances in a single day**, all found on the day the ecosystem
+first had a second host running agents:
+
+| what | who disagreed |
+|---|---|
+| `conf_field` | `schedule/*.conf` **sourced** (`$HOME` expands) vs **grepped** (it does not). Broke `scheduler -i`, the front door. |
+| bibliothecaire `backup-proof` | asserted against a backup tool that had been replaced — and was *correctly* reporting that nothing was backed up |
+| `usage-gate` | read only the interactive-login credential; the unattended host uses `setup-token` |
+| `notify-senechal`, `check-project-busy` | hardcoded `/home/zach`, on a host with no such user |
+| ecosim `install-silence-audit.sh` | found by the dispatched agent, unprompted, the same day |
+
+**Why a single-host ecosystem cannot detect this class at all:** every
+reader agrees with every other when there is only one world. Divergence
+is not observable from inside one machine. This is the deep reason the
+migration mattered more than the throughput it bought — *the most
+valuable thing `monkey` produced on day one was not a commit, it was
+disagreement.*
+
+**Enforced by:** a second host that actually runs the code (not a test
+fixture standing in for one); `scheduler/tests/conf-field-witness.sh` and
+`usage-gate-token-witness.sh`, both of which assert against the REAL
+shipped confs rather than a mock, and both verified to FAIL on the
+pre-fix tree — a test that does not fail on the broken version is not
+evidence.
+
+**The standing counter-measure**, and it is a habit rather than a script:
+when a check reports something wrong, **probe the claim before repairing
+the claimant.** bibliothecaire's `backup-proof` looked like stale config
+pointed at a retired tool; re-pointing it would have been one step from
+deleting the only copy of scans of physical books, because the check was
+right and the corpus genuinely had no backup. A failing check is evidence
+about the world, not only about itself.
 
 ## The cybernetic reading (Ashby)
 
