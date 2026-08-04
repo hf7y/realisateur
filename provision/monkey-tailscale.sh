@@ -91,19 +91,31 @@ case "$MODE" in
     info OK "tailscale at $TAILSCALE (daemon: $TAILSCALED, ip: $STATUS)"
   fi
   [ "$SUDO_NOPASS" = yes ] \
-    && info OK      "sudo needs no password" \
-    || info NEEDS   "sudo requires a password -> set MONKEY_SUDO_PASS for --install"
+    && info OK      "sudo needs no password; --install can run unattended" \
+    || info NEEDS   "sudo needs a password -> run ./monkey-nopasswd.sh --install once"
   echo
   echo "check only. Nothing changed."
   ;;
 
 --install)
-  [ -n "${TS_AUTHKEY:-}" ]       || die "TS_AUTHKEY is unset. Generate one at
+  [ -n "${TS_AUTHKEY:-}" ] || die "TS_AUTHKEY is unset. Generate one at
     https://login.tailscale.com/admin/settings/keys and export it. This script
     will not invent a credential, and will not read one out of a file."
-  [ -n "${MONKEY_SUDO_PASS:-}" ] || die "MONKEY_SUDO_PASS is unset. zach@monkey
-    has sudo but not NOPASSWD, so installing a daemon needs it. Export it for
-    this one command; do not add it to a file in this repo."
+
+  # A password is needed ONLY if the host still asks for one. Once
+  # `monkey-nopasswd.sh --install` has run, this whole branch is skipped and
+  # --install becomes unattended, which is the point of that script.
+  if ssh -o BatchMode=yes -o ConnectTimeout=10 "$JUMP" \
+       "ssh -i $KEYFILE -o BatchMode=yes -p $PORT ${USER_ON_MONKEY}@127.0.0.1 \
+        'sudo -n true'" >/dev/null 2>&1; then
+    echo "  OK       sudo is passwordless on monkey; no MONKEY_SUDO_PASS needed"
+    MONKEY_SUDO_PASS=""
+  else
+    [ -n "${MONKEY_SUDO_PASS:-}" ] || die "sudo on monkey still needs a password.
+    Either run ./monkey-nopasswd.sh --install once (recommended -- it prompts
+    you a single time and this script then runs unattended), or export
+    MONKEY_SUDO_PASS for this one command. Do not add it to a file in this repo."
+  fi
 
   echo "== monkey tailscale (--install) =="
   # Idempotent: if tailscaled is already up with an address, this re-runs
@@ -113,7 +125,13 @@ case "$MODE" in
   # so neither is visible in `ps` on monkey.
   out="$(TS_AUTHKEY="$TS_AUTHKEY" MONKEY_SUDO_PASS="$MONKEY_SUDO_PASS" on_monkey '
     set -e
-    S() { printf "%s\n" "$MONKEY_SUDO_PASS" | sudo -S -p "" "$@"; }
+    # Passwordless when the drop-in is in place, -S on stdin otherwise. Never
+    # in argv either way, so the secret is not visible in `ps` on monkey.
+    if [ -n "${MONKEY_SUDO_PASS:-}" ]; then
+      S() { printf "%s\n" "$MONKEY_SUDO_PASS" | sudo -S -p "" "$@"; }
+    else
+      S() { sudo -n "$@"; }
+    fi
     if ! command -v tailscale >/dev/null 2>&1; then
       echo "installing tailscale..."
       curl -fsSL https://tailscale.com/install.sh -o /tmp/ts-install.sh
