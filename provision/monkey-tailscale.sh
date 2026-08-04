@@ -28,11 +28,14 @@
 #   TS_AUTHKEY        a tailnet auth key (https://login.tailscale.com/admin/settings/keys)
 #                     Use an EPHEMERAL=false, PREAUTHORIZED key tagged for
 #                     this host. Passed by ENVIRONMENT, never a file here.
-#   MONKEY_SUDO_PASS  zach@monkey has sudo but NOT NOPASSWD, and installing a
-#                     system daemon needs root. Passed by ENVIRONMENT, fed to
-#                     `sudo -S` on stdin, never in argv and never echoed.
-#
 # A secret in a tracked file is the discipline row this repo will not break.
+# TS_AUTHKEY is read from the environment HERE and then sent to monkey on
+# STDIN -- never as a remote environment variable (ssh does not forward it)
+# and never in argv (visible in `ps`). See push_secret.
+#
+# PRECONDITION: passwordless sudo on monkey, from ./monkey-nopasswd.sh.
+# This script used to accept MONKEY_SUDO_PASS as an alternative; that path
+# was removed because it doubled the secrets in flight to save one command.
 #
 # AFTER A SUCCESSFUL --install THIS IS MACHINE-WIDE CONFIG on another host:
 # a systemd unit (tailscaled) and a new network identity. The script prints
@@ -60,6 +63,26 @@ on_monkey() {
   ssh -o BatchMode=yes -o ConnectTimeout=10 "$JUMP" \
     "ssh -i $KEYFILE -o BatchMode=yes -o ConnectTimeout=10 -p $PORT \
         ${USER_ON_MONKEY}@127.0.0.1 \"echo $b64 | base64 -d | bash -s\""
+}
+
+# Put a secret on monkey, reading it from STDIN, at mode 0600.
+#
+# WHY NOT AN ENVIRONMENT VARIABLE, which is what the first version did and is
+# the bug this function exists to make impossible: `FOO=x ssh host 'echo $FOO'`
+# sets FOO on the LOCAL side. ssh does not forward arbitrary environment
+# without SendEnv/AcceptEnv configured at both ends, so `$TS_AUTHKEY` arrived
+# on monkey EMPTY, `tailscale up --authkey=` fell back to interactive browser
+# login, and the run hung until a human killed it.
+#
+# WHY NOT ARGV: a secret in a command line is visible in `ps` on BOTH hosts,
+# and here it would also sit inside the base64 payload of the outer ssh
+# command, which is worse because it looks encrypted and is not.
+#
+# STDIN crosses both hops untouched and appears in no process listing.
+push_secret() {                 # $1 = filename under $HOME on monkey
+  ssh -o BatchMode=yes -o ConnectTimeout=10 "$JUMP" \
+    "ssh -i $KEYFILE -o BatchMode=yes -o ConnectTimeout=10 -p $PORT \
+        ${USER_ON_MONKEY}@127.0.0.1 \"umask 077; cat > \\\$HOME/$1\""
 }
 
 MODE="${1:---check}"
@@ -102,48 +125,62 @@ case "$MODE" in
     https://login.tailscale.com/admin/settings/keys and export it. This script
     will not invent a credential, and will not read one out of a file."
 
-  # A password is needed ONLY if the host still asks for one. Once
-  # `monkey-nopasswd.sh --install` has run, this whole branch is skipped and
-  # --install becomes unattended, which is the point of that script.
-  if ssh -o BatchMode=yes -o ConnectTimeout=10 "$JUMP" \
-       "ssh -i $KEYFILE -o BatchMode=yes -p $PORT ${USER_ON_MONKEY}@127.0.0.1 \
-        'sudo -n true'" >/dev/null 2>&1; then
-    echo "  OK       sudo is passwordless on monkey; no MONKEY_SUDO_PASS needed"
-    MONKEY_SUDO_PASS=""
-  else
-    [ -n "${MONKEY_SUDO_PASS:-}" ] || die "sudo on monkey still needs a password.
-    Either run ./monkey-nopasswd.sh --install once (recommended -- it prompts
-    you a single time and this script then runs unattended), or export
-    MONKEY_SUDO_PASS for this one command. Do not add it to a file in this repo."
-  fi
+  # PRECONDITION, not a fallback. An earlier version accepted a sudo password
+  # as an alternative and fed it to `sudo -S`; that path is gone, because it
+  # doubled the number of secrets in flight to save one human command. Run
+  # ./monkey-nopasswd.sh --install once and this becomes unattended forever.
+  ssh -o BatchMode=yes -o ConnectTimeout=10 "$JUMP" \
+     "ssh -i $KEYFILE -o BatchMode=yes -p $PORT ${USER_ON_MONKEY}@127.0.0.1 \
+      'sudo -n true'" >/dev/null 2>&1 \
+    || die "sudo on monkey still needs a password. Run
+    ./monkey-nopasswd.sh --install once, from a terminal, and re-run this."
+  echo "  OK       sudo is passwordless on monkey"
 
   echo "== monkey tailscale (--install) =="
-  # Idempotent: if tailscaled is already up with an address, this re-runs
-  # `tailscale up` with the same flags, which is a no-op rather than a second
-  # node. The auth key and sudo password reach the remote shell on STDIN of
-  # `sudo -S` and via the environment respectively; neither appears in argv,
-  # so neither is visible in `ps` on monkey.
-  out="$(TS_AUTHKEY="$TS_AUTHKEY" MONKEY_SUDO_PASS="$MONKEY_SUDO_PASS" on_monkey '
+
+  # The key travels on STDIN into a 0600 file. See push_secret for why not
+  # env (it does not cross ssh) and why not argv (visible in `ps`).
+  printf '%s' "$TS_AUTHKEY" | push_secret .ts-authkey \
+    || die "could not place the auth key on monkey"
+
+  # Idempotent: re-running `tailscale up` with the same flags is a no-op
+  # rather than a second node.
+  out="$(on_monkey '
     set -e
-    # Passwordless when the drop-in is in place, -S on stdin otherwise. Never
-    # in argv either way, so the secret is not visible in `ps` on monkey.
-    if [ -n "${MONKEY_SUDO_PASS:-}" ]; then
-      S() { printf "%s\n" "$MONKEY_SUDO_PASS" | sudo -S -p "" "$@"; }
-    else
-      S() { sudo -n "$@"; }
-    fi
+    K="$HOME/.ts-authkey"
+    # Delete the key on ANY exit path, including failure. A credential left
+    # in a home directory because the script died early is worse than the
+    # failure that killed it.
+    trap "rm -f \"$K\"" EXIT
+    KEY="$(cat "$K" 2>/dev/null || true)"
+
+    # THE GUARD THIS SCRIPT DID NOT HAVE, and the reason the first run hung.
+    # `tailscale up --authkey=` with an EMPTY value is not an error to
+    # tailscale: it silently falls back to interactive browser login and
+    # blocks forever. On an unattended two-hop run that is indistinguishable
+    # from a network stall. Refuse loudly instead, and refuse BEFORE the
+    # call rather than diagnosing the hang afterwards.
+    case "$KEY" in
+      "")        echo "REFUSED: the auth key arrived EMPTY on monkey" >&2; exit 2 ;;
+      tskey-*)   : ;;
+      *)         echo "REFUSED: value does not look like a tailscale auth key" >&2; exit 2 ;;
+    esac
+
     if ! command -v tailscale >/dev/null 2>&1; then
       echo "installing tailscale..."
       curl -fsSL https://tailscale.com/install.sh -o /tmp/ts-install.sh
-      S bash /tmp/ts-install.sh
+      sudo -n bash /tmp/ts-install.sh >/dev/null 2>&1
       rm -f /tmp/ts-install.sh
     else
-      echo "tailscale already present"
+      echo "tailscale already present: $(tailscale --version | head -1)"
     fi
-    S systemctl enable --now tailscaled
-    S tailscale up --authkey="$TS_AUTHKEY" --hostname="'"$HOSTNAME_WANTED"'" --ssh=false
+    sudo -n systemctl enable --now tailscaled
+
+    # --timeout so a wedged join fails instead of hanging the whole chain.
+    sudo -n tailscale up --authkey="$KEY" \
+        --hostname="'"$HOSTNAME_WANTED"'" --ssh=false --timeout=90s
     printf "IP=%s\n" "$(tailscale ip -4 | head -1)"
-    printf "NAME=%s\n" "$(tailscale status --json | grep -o "\"DNSName\":\"[^\"]*\"" | head -1)"
+    printf "BACKEND=%s\n" "$(tailscale status | head -1)"
   ' 2>&1)" || die "install failed:
 $out"
   printf '%s\n' "$out" | sed 's/^/  /'
