@@ -478,6 +478,48 @@ Also corrected here: `land-selfdev.sh` reported `install-shims.sh failed` for a
 `settings.json`, so it never fires. True finding, deliberately not auto-fixed
 (that file is the human's), but it is a gap, not a failure, and it now says so.
 
+## 8.2 Account #3 (`chezz`), and the tick that stopped being a race
+
+**The tick.** `_runner.monkey.conf` went from `0 */6` to `0,30 * * * *` on
+2026-08-04. Its header had explicitly refused this, on the premise that
+mandark, dexter and monkey all draw on ONE weekly quota, so a faster tick here
+wins a race rather than adding throughput. Re-probed before the edit:
+`crontab -l | grep -c scheduler-paced-runner:RUNNER` is **0 on mandark**
+(retired by conf, `RUNNER_CRON=""`) and **0 on dexter**. monkey is the only
+host that dispatches anything — there is nobody to race. And the cron was never
+the guard: `usage-gate.sh` is, on every tick, whatever the cron says. **The
+cron decides how often we ask; the gate decides how often the answer is yes.**
+On the only dispatching host, asking more often converts quota that would have
+expired unused into work, which is what `usage-paced-runner.sh` is for.
+Immediate cause: five corpus research requests (bibliothecaire #8–#12) wanted
+to be through the queue by morning, and `0 */6` with `PACED_MAX_PER_TICK=1` is
+four dispatches a day.
+
+**`chezz` is registered and staged, one flag short of armed.** It had been
+*deregistered* — `_paced.conf`'s footer still lists it under "Rows removed
+here" while line 116 pointed at a `schedule/chezz.conf` that had been deleted.
+That dangling reference is now repaired. The repo is public, `main`, already
+carrying `.scheduler/FOCUS.md`; the consign header's source path
+(`~/Documents/Project Archive/chezz`) is **gone**, so the GitHub remote is the
+only canonical copy and this is a clone rather than a rescue.
+
+Its rotation row is `|0|`, and that 0 is the only thing between it and
+dispatching. Not caution — an enabled row whose command path does not exist
+makes every runner on the host log `SKIP chezz -- command not runnable` on
+**every** tick, which at 30-minute ticks is ~48 lines a night of a failure that
+is not one, in the same `run.log` being read to see how the research went.
+
+**`bin/setup-selfdev-project.sh` — one root command per new account.** The
+answer to *"what is keeping this from being automated?"* was that the three
+things needing root were the same requirement three times, spread across three
+sittings (create the account; install a key so the rest could be driven; copy
+the gh credential). This sequences those plus the unprivileged remainder —
+provision, hands key, four per-repo deploy keys, land — and **stops before
+arming**, because a rotation row is a judgment about a shared weekly quota.
+`--no-key` declines the ssh grant; the grant is not a privilege increase (that
+key can already sudo to root, hence to the account) but it is real, so it is
+a flag rather than a silent step.
+
 ---
 
 ## 9.1 The dispatcher topology, decided (2026-08-03, Zach)
