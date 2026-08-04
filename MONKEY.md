@@ -558,12 +558,31 @@ they are asking about.**
 1. **The flock is per-account, not global.** `usage-paced-runner.sh` sets
    `STATE_DIR="$HOME/.local/share/$JOB_NAME"` and locks `run.lock` inside it,
    so `ecosim`'s lock and `bibliothecaire`'s lock are different files and two
-   accounts CAN dispatch in the same tick. The bound on damage is the gate's
-   band, not the lock: `USAGE_CEILING` 0.85 leaves 15% of headroom for the race
-   to eat, and `PACED_MAX_PER_TICK=1` at `0 */6` means the worst case is two
-   concurrent agents, not two runaway rotations. If a third and fourth account
-   land, revisit this *first* — the ceiling absorbs a race between two, and it
-   is not obvious it absorbs one between five.
+   accounts CAN dispatch in the same tick, and nothing on this host serialises
+   them.
+
+   > **CORRECTED 2026-08-04.** This paragraph originally said the race was
+   > bounded because "`USAGE_CEILING` 0.85 leaves 15% of headroom for the race
+   > to eat". **That was wrong.** 0.85 is `usage-gate.sh`'s *built-in default*;
+   > `schedule/_usage.conf` overrides it with **`USAGE_CEILING=0.99`** and
+   > **`USAGE_RUSH_BEFORE_RESET_MIN=10080`**. 10080 minutes is seven days — the
+   > entire 7-day window — so the rush-before-reset policy is **permanently in
+   > force and the even-burn pacing hold never applies**. Every gate line on
+   > this host reads `rush=True`, which is the observable that should have
+   > prompted the check. Pacing is not protecting this quota; a 0.99 ceiling
+   > and a `rejected` status are, and that is the whole list — roughly **1% of
+   > headroom, not 15%**.
+   >
+   > The error mattered twice: it is the justification written into
+   > `_paced.monkey.conf` for tolerating the per-account lock, *and* it was
+   > leaned on to raise this host's tick to every 30 minutes the same night
+   > (reverted after ~9h, scheduler `7f4a99e`).
+
+   So before a third dispatcher: at ~1% headroom with no pacing hold, the
+   ceiling barely absorbs the *second* concurrent account. Either serialise
+   the accounts with a **host-wide** lock rather than the current `$HOME`-scoped
+   one, or restore the pacing hold by lowering `USAGE_RUSH_BEFORE_RESET_MIN`
+   toward its documented `120`. Neither is done; both are named.
 2. **Interactive sessions still spend the budget ungated** — unchanged from
    §9, and it is the same residual, not a new one.
 
