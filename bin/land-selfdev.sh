@@ -84,14 +84,40 @@ else
   gap "scheduler not cloned yet; cannot check for _paced.$HOST.conf"
 fi
 
+# THREE WAYS THIS USER CAN BE AUTHENTICATED, and the check must know all of
+# them or it reports a false gap on the shape we actually use.
+#
+#   1. ~/.claude/.credentials.json   the interactive OAuth login. EXPIRES.
+#   2. ~/.claude/settings.json       an "env" block carrying
+#                                    CLAUDE_CODE_OAUTH_TOKEN, from
+#                                    `claude setup-token`. Long-lived, and the
+#                                    only one that survives cron without the
+#                                    secret going into a crontab or a repo --
+#                                    claude reads it itself, so a plain argv
+#                                    command inherits nothing and still works.
+#   3. $CLAUDE_CODE_OAUTH_TOKEN      already exported in this environment.
+#
+# Mode is checked on whichever file carries it: a world-readable token is a
+# finding, not a detail.
 CRED="$HOME/.claude/.credentials.json"
-if [ -f "$CRED" ]; then
-  m="$(stat -c%a "$CRED" 2>/dev/null || echo '?')"
-  [ "$m" = "600" ] && ok "claude credential present, mode 600" \
-                   || bad "claude credential is mode $m, expected 600"
-else
-  gap "no $CRED -- this user cannot spend a token, so dispatch would run and produce nothing"
+SETTINGS="$HOME/.claude/settings.json"
+auth=""
+if [ -f "$CRED" ]; then auth="$CRED"
+elif [ -f "$SETTINGS" ] && grep -q 'CLAUDE_CODE_OAUTH_TOKEN' "$SETTINGS" 2>/dev/null; then auth="$SETTINGS"
 fi
+if [ -n "$auth" ]; then
+  m="$(stat -c%a "$auth" 2>/dev/null || echo '?')"
+  [ "$m" = "600" ] && ok "claude auth configured in $(basename "$auth"), mode 600" \
+                   || bad "$auth is mode $m, expected 600 -- a readable token is a finding"
+elif [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+  gap "auth is only in this shell's environment -- cron will not have it; run \`claude setup-token\` and put it in $SETTINGS"
+else
+  gap "no claude auth for $(id -un) -- dispatch would run and produce NOTHING, silently"
+fi
+# Configuration is not capability. The only real proof is a call, and it costs
+# a token, so it is not run here -- but say so, rather than letting "ok" above
+# read as more than it is.
+[ -n "$auth" ] && printf '  ..      the witness is a live call, not this file: claude -p "reply ok"\n'
 
 # Read AND write. A key existing is not the same fact as GitHub accepting it,
 # and this ecosystem has already lost four days to that exact distinction.
