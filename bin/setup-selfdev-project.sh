@@ -114,17 +114,33 @@ run_as() {
     bash -lc "$1"
 }
 
+# STAGE, don't reach across accounts. $HERE is whatever checkout this script
+# was invoked from -- typically an EXISTING project account's own realisateur
+# clone, e.g. bibliothecaire's -- and every project home is 0700 (provisioned
+# that way on purpose: "repos and working state are isolated per project").
+# `sudo -u "$PROJECT"` therefore cannot read, let alone execute, a sibling
+# script living under a different account's home: it fails as
+# "Permission denied", not as a missing file, which looks like a broken
+# install rather than what it is. Found running this script for real the
+# first time, account #4 (vim-arcade, 2026-08-04). Fix: copy the two
+# unprivileged scripts into THIS account's own home, owned by it, before
+# calling them as it.
+STAGE="$HOME_DIR/.selfdev-setup"
+install -d -m 700 -o "$PROJECT" -g "$PROJECT" "$STAGE"
+install -m 700 -o "$PROJECT" -g "$PROJECT" \
+  "$HERE/wire-selfdev-git.sh" "$HERE/land-selfdev.sh" "$STAGE/"
+
 say "3/4 git credentials, per repo"
 for repo in realisateur scheduler senechal "$PROJECT"; do
   access=""
   # READ-WRITE only for the account's own repo; read-only for the three shared.
   [ "$repo" = "$PROJECT" ] && access="--rw"
   echo "  -- $repo ${access:---read-only}"
-  run_as "'$HERE/wire-selfdev-git.sh' '$repo' --apply $access" 2>&1 | sed 's/^/     /'
+  run_as "'$STAGE/wire-selfdev-git.sh' '$repo' --apply $access" 2>&1 | sed 's/^/     /'
 done
 
 say "4/4 land"
-run_as "'$HERE/land-selfdev.sh' --land" 2>&1 | tail -25
+run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
 
 cat <<EOF
 
