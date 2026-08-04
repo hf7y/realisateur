@@ -145,8 +145,31 @@ echo
 echo "== landing =="
 mkdir -p "$PROJECTS"
 
+# Credentials come BEFORE the clone that needs them, per repo, derived from
+# the same loop -- added 2026-08-03 after ecosim's four deploy keys turned out
+# to have been made by hand and written down nowhere ("we can't do this for
+# every install", Zach). wire-selfdev-git.sh is idempotent, so a re-land is
+# free; it is looked for NEXT TO THIS SCRIPT because both are copied onto a
+# bare host together, not installed.
+WIRE="$(dirname "$0")/wire-selfdev-git.sh"
+
+wire_repo() {
+  local name="$1" access=""
+  [ -x "$WIRE" ] || { gap "$name: wire-selfdev-git.sh not found beside $(basename "$0") -- clone will use whatever credential happens to exist"; return 0; }
+  # READ-WRITE only for the account's OWN repo. The account is named for its
+  # project, which is the whole reason one unix user per project buys anything.
+  [ "$name" = "$(id -un)" ] && access="--rw"
+  # NOT piped into sed: a pipeline's status is the LAST command's, so `| sed`
+  # would swallow every failure this script exists to surface.
+  local out rc
+  out="$("$WIRE" "$name" --apply $access 2>&1)"; rc=$?
+  printf '%s\n' "$out" | sed 's/^/    /'
+  [ "$rc" -eq 0 ] || bad "$name: git credentials could not be wired (rc=$rc)"
+}
+
 clone_or_update() {
   local name="$1" url="$2" dir="$PROJECTS/$1"
+  case "$url" in *"github.com/$GH_OWNER/"*|*"github.com:$GH_OWNER/"*) wire_repo "$name" ;; esac
   if [ -d "$dir/.git" ]; then
     act "$name: fast-forward only"
     git -C "$dir" fetch -q origin && git -C "$dir" pull -q --ff-only || \
