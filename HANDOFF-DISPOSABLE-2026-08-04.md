@@ -72,11 +72,35 @@ file. Land `#7` alone and the reverse. **Neither side errors.**
 2. A vim-arcade nightly dispatch **was still running against that repo** when
    this was written, so the branch may not have settled.
 
-**Order:** let the dispatch finish → review `#7` against its title (split the
-`nightly-batch.md` change out, or retitle it honestly) → merge both together.
+**Order:** review `#7` against its title (split the `nightly-batch.md` change
+out, or retitle it honestly) → merge both together.
 
 Both PRs carry comments explaining this, so the reasoning survives without this
 file.
+
+#### UPDATE at close — the dispatch finished, and the divergence is now LIVE
+
+The first manual vim-arcade dispatch **succeeded**: `160 passed in 0.12s`,
+`main MERGED and PUSHED -- b0fd41c` (revert with
+`git revert -m 1 b0fd41c`), 1297s. Work reached `origin/main` of
+`hf7y/vim-arcade`; the batch clone and origin agree at `b0fd41c`. That is a
+real first self-dev run with a real deliverable, not a smoke test.
+
+**The half-wiring is no longer hypothetical.** During arming, `scheduler ask`
+filed a genuine design question as **`hf7y/vim-arcade` issue #6** ("tmux design
+fork: grid-world metaphor or a real tmux session…"), correctly stamped by
+`cmd_ask` (`q-94e71f · filed 2026-08-04`, "Answer by commenting on this
+issue"). So the issues machinery **demonstrably works**.
+
+But on `main`, `ANSWER_CHANNEL` is unset and `nightly-batch.md` still reads the
+file — so **the batch that just ran could not have seen issue #6, and will not
+see an answer posted there.** Mitigating detail worth knowing: the agent wrote
+`**SUPERSEDED 2026-08-04**` into `scheduler/questions/vim-arcade.md`, so a
+*human* reading the file is redirected to issues. A human is redirected; the
+batch is not.
+
+This makes merging `#16` + `#7` **more** urgent, not less: there is now a real
+open question sitting in a channel the running mechanism does not read.
 
 ---
 
@@ -170,7 +194,7 @@ at `/srv/scheduler` that every account reads and none owns. All three hosts read
 `sync LEVEL behind=0`. `ecosim` produces 12 readings about monkey with zero
 BLIND. `vim-arcade` is armed (`vim-arcade|1|1|` on main, `EXEMPT:
 vim-arcade@monkey`, crontab installed) and a first manual dispatch was running
-at close.
+at close (see the UPDATE in section 1 -- it succeeded).
 
 **Open decisions (issues, not this file):** #31 tailnet join at install time and
 key policy · #32 NOPASSWD scope for hands accounts · #33 how secrets reach an
