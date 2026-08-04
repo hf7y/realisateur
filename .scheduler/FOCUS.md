@@ -3009,3 +3009,64 @@ rather than answered here:
 - **#33** — how should secrets reach an unattended provisioning run? **This
   is the one that actually blocked this session**, and the blocker was a
   location problem, not a permissions one.
+
+## 2026-08-04 (background job, Zach-directed) — monkey audited from mandark; ecosim generalised to arbitrary hosts
+
+Session record with shas, per `/cloture` step 6. Handoff for the next
+session is `HANDOFF-DISPOSABLE-2026-08-04.md` on branch
+`provision-selfdev-user` (`415fb79`) — disposable by its own first line.
+
+**What landed.** `monkey` joined the tailnet and is now reachable and
+auditable directly from mandark, no dexter hop. `ecosim` stopped carrying
+a hardcoded host tuple. `vim-arcade` was armed as the third paced
+participant on monkey.
+
+  ecosim (branch `rotation-sees-monkey`, PR #28)
+    `ee000da` rotation: see monkey instead of reporting it as parked
+    `77189bc` sensors: derive the host set; reach hosts over whatever works
+    `c3f7484` rotation: a CRIT invented out of a swallowed error
+    `f5d9d3d` rotation: prefer the system-wide /srv/scheduler install
+    `2813282` quota, sync, relocation: read /srv too, and stop inferring absence
+  realisateur (branch `provision-selfdev-user`, PR #30)
+    `d96a772` provision: the script that puts monkey on the tailnet
+    `1451292` provision: passwordless sudo for the hands account on monkey
+    `bfc731a` monkey-tailscale: the auth key never reached monkey
+    `c0bc273` provision: scheduler installed once per host, owned by root
+    `415fb79` HANDOFF (disposable)
+  realisateur main (pushed directly, per CLAUDE.md push permission)
+    `0e341f3` FOCUS: record why hand-provisioning monkey does not generalize
+    `9c26317` FOCUS: cross-link the three provisioning decisions to issues
+
+**THE FINDING WORTH KEEPING, and it recurred three times in one day in
+three different files: an unreadable thing reported as a known state.**
+A swallowed error became `CRIT FREEZE_NOT_PROPAGATED` about a freeze that
+was present. An unexpanded `$HOME` became seven CRITs about repositories
+that all existed. A 0700 directory the login account cannot traverse
+became "does not exist on this host". Present / absent / cannot-see are
+three states, and absence must be ESTABLISHED, never inferred from a
+failed look. That it happened three times in one day is the argument for
+`ecosim/lib/hosts.py` holding the answer once.
+
+**`closeout-lint` still has the `$HOME` form of this bug, and it is
+live.** Run at close today it emitted eight
+`FLAG [missing-repo] <proj>: $HOME/Documents/Projects/<proj> does not exist`
+and then concluded *"no registered repo has a commit younger than 12h"* —
+on a day with commits to four repos. A false ALL-CLEAR in the tool whose
+job is catching things at closing time. Same one-line class of fix as
+`relocation` got in `2813282`. Filed here rather than fixed because
+`/cloture` says report and route, do not build.
+
+**On the tailnet question Zach asked** (should ecosim sense via tailnet):
+yes as transport, no as census, and the measurement decides it. Tailnet
+held mandark/dexter/homeassistant while the dispatch set was
+mandark/dexter/monkey — the sets differ in BOTH directions, so a census
+from `tailscale status` would have invented a participant and dropped the
+only one that mattered. Recorded in `lib/hosts.py`'s own header so the
+next reader does not re-derive it.
+
+**Philosophy delta: none.** No doctrine file was edited. The candidate —
+"absence must be established, not inferred" — is a restatement of the
+BLIND-beats-clean rule `ecosim/SENSOR-CONTRACT.md` already holds, now
+with three fresh instances. If it earns a `BUILD-DISCIPLINE.md` row it
+should be on the strength of those instances, which is a judgement for a
+session that is not also the one that found them.
