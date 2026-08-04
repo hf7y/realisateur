@@ -3070,3 +3070,50 @@ BLIND-beats-clean rule `ecosim/SENSOR-CONTRACT.md` already holds, now
 with three fresh instances. If it earns a `BUILD-DISCIPLINE.md` row it
 should be on the strength of those instances, which is a judgement for a
 session that is not also the one that found them.
+
+## 2026-08-04 (background job, continued) — the issues channel landed, and a merge that went to the wrong branch
+
+Addendum to today's earlier entry. Zach reviewed and merged; this records
+what that took and the one defect it exposed.
+
+**Merged:** `scheduler#17` (`ae16241`, the relayed stranded commit),
+`ecosim#28` (`91716d7`), `realisateur#35` (`b2d10df`),
+`realisateur#30` (`58bb21e`), then the paired channel change —
+`scheduler#16` (`bf2daf4`) and `vim-arcade#7` (`b058ffd`).
+
+**THE DEFECT WORTH KEEPING: a merged PR is not the same as merged into
+`main`.** `vim-arcade#7` merged cleanly and its content was still absent
+from `main`, because `gh pr create` had defaulted its base to the
+repository's DEFAULT branch — which on `hf7y/vim-arcade` is
+`tmux-pane-mechanic`, not `main`. So for ~15 minutes the estate was in
+exactly the state both PRs existed to prevent: `scheduler` main said
+`ANSWER_CHANNEL="issues"` while vim-arcade's `main` still told the batch
+to read a file. Closed by fast-forwarding `main` to `b058ffd` (it was a
+strict ancestor; verified with `merge-base --is-ancestor` before acting).
+Both refs are now identical and both halves agree.
+
+This is the same wrong-ref family as the rest of today, in its fourth
+costume: a fresh `git clone` of that repo checks out
+`tmux-pane-mechanic`, and `scheduler-run` resolves the default branch
+when `BATCH_BRANCH` is unset. Whether that default is intended is a
+standing decision (realisateur issue, and vim-arcade#10 records the
+adjacent design direction).
+
+**A FALSE ALL-CLEAR I NEARLY ACTED ON, recorded because it was one
+command from destroying data.** Deciding whether vim-arcade's local
+`8ef2ecc` could be discarded, a comparison script `cd`-ed into a
+directory that did not exist; both `git show` calls therefore returned
+EMPTY and their sha256s matched, printing "IDENTICAL -- safe to
+discard". `e3b0c44298fc1c14` is the hash of the empty string. Re-run with
+explicit `git -C` paths, the real answer was the same (133530 bytes, hash
+equal) — but it was true by luck, not by measurement. **A comparison
+whose inputs are unread reports equality.** Guard added in the re-run:
+refuse to conclude anything when either side is under 100 bytes.
+
+**Also fixed:** two false-completion signals in one hour. A background
+watcher concluded "finished" when it polled before the process existed;
+a `nohup`'d dispatch died on ssh detach and left a log with no error.
+Both re-run with `setsid` and with a watcher that must observe the
+process ALIVE before it will believe it is gone.
+
+**Philosophy delta: none.** No doctrine file edited.
