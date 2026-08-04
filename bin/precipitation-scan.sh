@@ -62,7 +62,7 @@ CLI_POSITIONAL=none
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-SCHED_ROOT="/home/zach/Documents/Projects/scheduler"
+SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 FOCUS_DIR="${FOCUS_DIR:-$SCHED_ROOT/focus}"   # overridable for fixture tests
 [ -d "$FOCUS_DIR" ] || { echo "FATAL: scheduler focus/ not found at $FOCUS_DIR" >&2; exit 2; }
 

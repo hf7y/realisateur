@@ -41,7 +41,7 @@
 # failed (--apply). No exit-0 no-op.
 set -uo pipefail
 
-SCHED_ROOT="/home/zach/Documents/Projects/scheduler"
+SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 SELF_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BD_MD="$SELF_DIR/BUILD-DISCIPLINE.md"
 BEGIN_MARK='<!-- >>> realisateur-baseline'

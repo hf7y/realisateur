@@ -38,7 +38,7 @@
 # block a session from starting. Problems are reported to stderr only.
 set -uo pipefail
 
-SCHED_ROOT="/home/zach/Documents/Projects/scheduler"
+SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 REGISTRY_DIR="$HOME/.local/share/scheduler-registry"
 
 action="${1:-}"

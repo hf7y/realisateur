@@ -102,7 +102,7 @@ CLI_POSITIONAL=none
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-SCHED_ROOT="/home/zach/Documents/Projects/scheduler"
+SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 # EVERY host's rotation file, not just mandark's. Until 2026-07-29 this was
 # hardcoded to schedule/_paced.conf, which is mandark's file -- so a project
 # migrating to dexter left the domain of the ecosystem's only negative
