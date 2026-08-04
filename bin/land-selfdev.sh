@@ -225,8 +225,22 @@ else ok "installe already on PATH"; fi
 # because it deliberately does NOT self-locate (its header says why).
 if [ -x "$PROJECTS/realisateur/bin/install-shims.sh" ]; then
   act "install-shims.sh"
-  REPO="$PROJECTS/realisateur" "$PROJECTS/realisateur/bin/install-shims.sh" \
-    && ok "shims, user commands and hooks installed" || bad "install-shims.sh failed"
+  # A nonzero exit here is NOT necessarily a failed install: install-shims.sh
+  # also exits nonzero when it FLAGs, and its standing flag on a fresh account
+  # is "subagent-closeout.sh is installed but not referenced in
+  # ~/.claude/settings.json". That is a true finding and deliberately not
+  # auto-fixed (settings.json is the human's file, per that script's header) --
+  # but reporting it as "install-shims.sh failed" sent a reader hunting a
+  # broken installer on 2026-08-04. Say which it was.
+  shim_out="$(REPO="$PROJECTS/realisateur" "$PROJECTS/realisateur/bin/install-shims.sh" 2>&1)"; shim_rc=$?
+  printf '%s\n' "$shim_out"
+  if [ "$shim_rc" -eq 0 ]; then
+    ok "shims, user commands and hooks installed"
+  elif printf '%s' "$shim_out" | grep -q '^FLAG:'; then
+    gap "install-shims.sh installed everything but FLAGged (rc=$shim_rc) -- read the FLAG lines above; a hook that is installed and unreferenced never fires"
+  else
+    bad "install-shims.sh failed (rc=$shim_rc)"
+  fi
 fi
 if [ -x "$PROJECTS/realisateur/bin/install-verbs.sh" ]; then
   act "install-verbs.sh --apply (every write routed through installe)"
