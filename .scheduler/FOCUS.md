@@ -2940,3 +2940,67 @@ of 12.
 
 **Ecosystem-wide: every repository's prose is now consigned.** Zero
 unconsigned files anywhere.
+
+## 2026-08-04 (background job, Zach-directed) — monkey joined the tailnet by hand, and the hand is the finding
+
+Zach's verdict on the method, and the reason this section exists: **"this
+method was too tedious to be generalizable."** He is right, and the tedium
+has a specific shape worth recording before it is re-derived.
+
+**What it took to get one daemon onto one host.** Three scripts, two of
+them written this session, and a two-hop `ssh` for every single probe:
+`mandark -> dexter -> 127.0.0.1:2225`. Not one step was hard. All of them
+were fiddly, and the fiddliness was structural rather than incidental:
+
+- **`ssh -J` cannot work here.** The key that authenticates the last hop
+  (`selfdev_monkey`) lives ON dexter, and `ProxyJump` offers the *local*
+  key at the far end. So every command is a literal nested `ssh`, not a
+  jump.
+- **Nested `ssh` destroys quoting.** Every remote script had to be
+  base64-encoded to cross two shells intact. `monkey-vm.sh` already
+  records a post-install command that only just survived that assembly;
+  this session hit the same wall and worked around it three more times.
+- **Each privileged step needed its own credential decision.** NOPASSWD
+  itself had to be bootstrapped by a human at a TTY, because you cannot
+  automate away the first `sudo`.
+- **The step that finally could not be automated was not technical.**
+  `TS_AUTHKEY` was exported in Zach's interactive shell. An agent session's
+  shell is initialised from the profile and does *not* inherit that, so the
+  secret was invisible at exactly the moment everything else was ready.
+  The daemon was installed and enabled unattended; only `tailscale up`
+  waited on a human, and it waited for a *location* problem, not a
+  permission one.
+
+**THE ORDERING IS BACKWARDS, and that is the generalizable fix.** Every
+item above is a consequence of monkey being reachable only by a two-hop
+route. A host should join the tailnet **as part of its unattended
+install** — in `monkey-vm.sh`'s `postInstallCommand`, alongside the
+`authorized_keys` write that is already there — so that it is directly
+reachable by name from minute one and no provisioning script ever needs
+the jump dance. Doing it afterwards, as we did here, means every step
+before the join pays the two-hop tax, and the join itself is the step
+most likely to be deferred.
+
+**Proposed, not built:** `provision/lib/remote.sh` offering
+`on_host <host> <script>` which resolves the route once (ssh alias ->
+tailnet -> declared jump), base64-wraps the payload, and refuses if the
+host it reached is not the host it was asked for. Every provision script
+then declares *what it does*, never *how to get there*. Note that
+`ecosim/lib/hosts.py` (this same date) already implements exactly this
+resolution order in Python, including the correction that an ssh alias
+must beat a MagicDNS name because the alias carries the port and identity.
+The shell side must not re-derive that logic; the two must agree, and the
+cheapest way to guarantee agreement is for one to be generated from or
+tested against the other.
+
+**Landed today, so the batch does not repeat it:** tailscaled 1.102.1 is
+installed and systemd-enabled on monkey, `zach@monkey` has passwordless
+sudo, and both facts are filed with senechal. monkey is still `Logged
+out` — the join is one command with the key.
+
+Three decisions this needs from Zach are filed as issues on this repo
+rather than answered here: the auth-key policy that would let a host join
+at provision time, whether NOPASSWD-for-hands-accounts is now the standard
+across self-dev hosts, and how secrets should reach an unattended
+provisioning run at all — the last being the one that actually blocked
+this session.
