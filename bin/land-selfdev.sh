@@ -145,8 +145,31 @@ echo
 echo "== landing =="
 mkdir -p "$PROJECTS"
 
+# Credentials come BEFORE the clone that needs them, per repo, derived from
+# the same loop -- added 2026-08-03 after ecosim's four deploy keys turned out
+# to have been made by hand and written down nowhere ("we can't do this for
+# every install", Zach). wire-selfdev-git.sh is idempotent, so a re-land is
+# free; it is looked for NEXT TO THIS SCRIPT because both are copied onto a
+# bare host together, not installed.
+WIRE="$(dirname "$0")/wire-selfdev-git.sh"
+
+wire_repo() {
+  local name="$1" access=""
+  [ -x "$WIRE" ] || { gap "$name: wire-selfdev-git.sh not found beside $(basename "$0") -- clone will use whatever credential happens to exist"; return 0; }
+  # READ-WRITE only for the account's OWN repo. The account is named for its
+  # project, which is the whole reason one unix user per project buys anything.
+  [ "$name" = "$(id -un)" ] && access="--rw"
+  # NOT piped into sed: a pipeline's status is the LAST command's, so `| sed`
+  # would swallow every failure this script exists to surface.
+  local out rc
+  out="$("$WIRE" "$name" --apply $access 2>&1)"; rc=$?
+  printf '%s\n' "$out" | sed 's/^/    /'
+  [ "$rc" -eq 0 ] || bad "$name: git credentials could not be wired (rc=$rc)"
+}
+
 clone_or_update() {
   local name="$1" url="$2" dir="$PROJECTS/$1"
+  case "$url" in *"github.com/$GH_OWNER/"*|*"github.com:$GH_OWNER/"*) wire_repo "$name" ;; esac
   if [ -d "$dir/.git" ]; then
     act "$name: fast-forward only"
     git -C "$dir" fetch -q origin && git -C "$dir" pull -q --ff-only || \
@@ -202,8 +225,22 @@ else ok "installe already on PATH"; fi
 # because it deliberately does NOT self-locate (its header says why).
 if [ -x "$PROJECTS/realisateur/bin/install-shims.sh" ]; then
   act "install-shims.sh"
-  REPO="$PROJECTS/realisateur" "$PROJECTS/realisateur/bin/install-shims.sh" \
-    && ok "shims, user commands and hooks installed" || bad "install-shims.sh failed"
+  # A nonzero exit here is NOT necessarily a failed install: install-shims.sh
+  # also exits nonzero when it FLAGs, and its standing flag on a fresh account
+  # is "subagent-closeout.sh is installed but not referenced in
+  # ~/.claude/settings.json". That is a true finding and deliberately not
+  # auto-fixed (settings.json is the human's file, per that script's header) --
+  # but reporting it as "install-shims.sh failed" sent a reader hunting a
+  # broken installer on 2026-08-04. Say which it was.
+  shim_out="$(REPO="$PROJECTS/realisateur" "$PROJECTS/realisateur/bin/install-shims.sh" 2>&1)"; shim_rc=$?
+  printf '%s\n' "$shim_out"
+  if [ "$shim_rc" -eq 0 ]; then
+    ok "shims, user commands and hooks installed"
+  elif printf '%s' "$shim_out" | grep -q '^FLAG:'; then
+    gap "install-shims.sh installed everything but FLAGged (rc=$shim_rc) -- read the FLAG lines above; a hook that is installed and unreferenced never fires"
+  else
+    bad "install-shims.sh failed (rc=$shim_rc)"
+  fi
 fi
 if [ -x "$PROJECTS/realisateur/bin/install-verbs.sh" ]; then
   act "install-verbs.sh --apply (every write routed through installe)"

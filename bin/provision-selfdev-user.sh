@@ -176,6 +176,44 @@ p.write_text(json.dumps(d, indent=2) + "\n")
 p.chmod(0o600)
 PY
 
+# --- the OTHER credential ------------------------------------------------------
+# gh, on the same argument as the claude token above, and added 2026-08-03 for
+# the same reason the rest of this script exists: bibliothecaire was the second
+# account, and this was the step still being done by hand.
+#
+# WHY AN ACCOUNT NEEDS IT AT ALL. Two distinct jobs, and only the first is
+# obvious. (1) bin/wire-selfdev-git.sh registers this account's per-repo deploy
+# keys through `gh`, so without a token the account cannot obtain the git
+# credentials it needs to clone anything private. (2) the work itself: the
+# request queues these projects run on ARE GitHub issues -- bibliothecaire's
+# brief is literally "work the issues labelled request", and ecosim filed #26
+# and #27 the same way. An account with no gh is an account that cannot be
+# asked for anything and cannot answer.
+#
+# THE TOKEN IS SHARED, not minted. Same topology as the claude credential, and
+# the same accepted consequence: one identity, one audit trail. Least privilege
+# between REPOS is bought by per-repo deploy keys (see wire-selfdev-git.sh), not
+# by giving each account a different GitHub identity.
+GH_SRC="${SELFDEV_GH_HOSTS:-$CRED_HOME/.config/gh/hosts.yml}"
+if [ -r "$GH_SRC" ]; then
+  # No `MODE` guard here: --check has already exited above. Everything from
+  # this point down runs only under --apply.
+  act "copy the shared gh credential into $PROJECT's hosts.yml"
+  sudo install -d -m 700 -o "$PROJECT" -g "$PROJECT" "$HOME_DIR/.config" "$HOME_DIR/.config/gh"
+  sudo install -m 600 -o "$PROJECT" -g "$PROJECT" "$GH_SRC" "$HOME_DIR/.config/gh/hosts.yml"
+  # The witness is gh answering, not the file existing -- `gh auth status`
+  # actually calls GitHub, which is the same distinction the claude witness
+  # below draws between configuration and capability.
+  if sudo -u "$PROJECT" -H env -i HOME="$HOME_DIR" PATH=/usr/local/bin:/usr/bin:/bin \
+       gh auth status >/dev/null 2>&1; then
+    ok "$PROJECT can reach GitHub as an authenticated user"
+  else
+    bad "$PROJECT's gh copy does not authenticate -- deploy keys cannot be registered and issue queues cannot be worked"
+  fi
+else
+  gap "no gh credential at $GH_SRC -- $PROJECT will not be able to register deploy keys or work an issue queue. Run \`gh auth login\` as ${SUDO_USER:-$(id -un)} first."
+fi
+
 # --- witness -----------------------------------------------------------------
 # Configuration is not capability. The only proof is a call, and it is made
 # under a STRIPPED environment because that is how cron will make it.

@@ -426,6 +426,102 @@ any host also spends the budget, and nothing gates that.
 
 ---
 
+## 8.1 Account #2, and the three things only a second account could find
+
+`bibliothecaire@monkey`, uid 3002, landed and armed 2026-08-04. Five repos,
+25 verbs, `freeze-check` returning 0 EXEMPT from monkey's own clone, and a
+`0 */6` runner line in its crontab. §10 says a single host hides defects that
+only a *second host* reveals; the same is true one level down, and account #2
+found three in an afternoon.
+
+**1. The credentials were a memory, not a script.** ecosim's four deploy keys,
+its `config.selfdev`, and twelve `url.insteadOf` lines were all hand-made and
+written down nowhere. Zach, on being shown them: *"we can't do this for every
+install."* Now `bin/wire-selfdev-git.sh`, called per repo by `land-selfdev.sh`
+from the loop that already derives repos from `schedule/<p>.conf`. The
+non-obvious step in it is `ssh-keyscan`: a fresh account has no `known_hosts`,
+and an unattended clone against an unknown host key does not prompt — it
+**fails**, looking exactly like a bad key. `provision-selfdev-user.sh` now also
+copies the **gh** credential, which an account needs twice over: to register
+its own deploy keys, and because the request queues these projects run on ARE
+GitHub issues.
+
+**2. `notify-senechal` cannot work from a self-dev account, and this is
+structural.** `installe` exited **8** on all 25 verbs — *"UNDECLARED:
+notify-senechal ran and failed; the change stands, the estate was not told."*
+The cause is not a bug: the estate's front door **pushes to `hf7y/senechal`**,
+and a self-dev account holds a **read-only** deploy key there, on purpose. Two
+correct rules meet and one has to give:
+
+> least privilege says the account may not write senechal; the estate protocol
+> says every machine-config change must be filed with senechal.
+
+**This affects `ecosim` identically** — it was simply never noticed, because
+ecosim's verbs were installed during a root sitting by a user who could push.
+Three ways out, none taken here because the choice is Zach's: give self-dev
+accounts read-write on senechal (cheapest, and gives up the least-privilege
+claim); route `notify-senechal` through `gh issue` instead of a push (keeps
+least privilege, needs the gh credential §8.1(1) now copies, and makes the
+front door work from any host that can reach GitHub); or accept exit 8 and
+file from a host that can push, which is what was done on 2026-08-04 and does
+not scale. **Until it is decided, every verb install on every self-dev account
+reports a failure that is not one.**
+
+**3. The PATH trap, again.** `land-selfdev.sh` over a non-interactive ssh could
+not find `installe` even though the symlink existed: Ubuntu's `.profile` adds
+`~/.local/bin` only at **login**, and `ssh host 'cmd'` is not one. The same
+trap is already recorded for hand-running scheduler jobs on dexter. It presents
+as `FATAL: installe is not on PATH` from a script that just linked it.
+
+Also corrected here: `land-selfdev.sh` reported `install-shims.sh failed` for a
+**FLAG** — `subagent-closeout.sh` installed but not referenced in
+`settings.json`, so it never fires. True finding, deliberately not auto-fixed
+(that file is the human's), but it is a gap, not a failure, and it now says so.
+
+## 8.2 Account #3 (`chezz`), and the tick that stopped being a race
+
+**The tick.** `_runner.monkey.conf` went from `0 */6` to `0,30 * * * *` on
+2026-08-04. Its header had explicitly refused this, on the premise that
+mandark, dexter and monkey all draw on ONE weekly quota, so a faster tick here
+wins a race rather than adding throughput. Re-probed before the edit:
+`crontab -l | grep -c scheduler-paced-runner:RUNNER` is **0 on mandark**
+(retired by conf, `RUNNER_CRON=""`) and **0 on dexter**. monkey is the only
+host that dispatches anything — there is nobody to race. And the cron was never
+the guard: `usage-gate.sh` is, on every tick, whatever the cron says. **The
+cron decides how often we ask; the gate decides how often the answer is yes.**
+On the only dispatching host, asking more often converts quota that would have
+expired unused into work, which is what `usage-paced-runner.sh` is for.
+Immediate cause: five corpus research requests (bibliothecaire #8–#12) wanted
+to be through the queue by morning, and `0 */6` with `PACED_MAX_PER_TICK=1` is
+four dispatches a day.
+
+**`chezz` is registered and staged, one flag short of armed.** It had been
+*deregistered* — `_paced.conf`'s footer still lists it under "Rows removed
+here" while line 116 pointed at a `schedule/chezz.conf` that had been deleted.
+That dangling reference is now repaired. The repo is public, `main`, already
+carrying `.scheduler/FOCUS.md`; the consign header's source path
+(`~/Documents/Project Archive/chezz`) is **gone**, so the GitHub remote is the
+only canonical copy and this is a clone rather than a rescue.
+
+Its rotation row is `|0|`, and that 0 is the only thing between it and
+dispatching. Not caution — an enabled row whose command path does not exist
+makes every runner on the host log `SKIP chezz -- command not runnable` on
+**every** tick, which at 30-minute ticks is ~48 lines a night of a failure that
+is not one, in the same `run.log` being read to see how the research went.
+
+**`bin/setup-selfdev-project.sh` — one root command per new account.** The
+answer to *"what is keeping this from being automated?"* was that the three
+things needing root were the same requirement three times, spread across three
+sittings (create the account; install a key so the rest could be driven; copy
+the gh credential). This sequences those plus the unprivileged remainder —
+provision, hands key, four per-repo deploy keys, land — and **stops before
+arming**, because a rotation row is a judgment about a shared weekly quota.
+`--no-key` declines the ssh grant; the grant is not a privilege increase (that
+key can already sudo to root, hence to the account) but it is real, so it is
+a flag rather than a silent step.
+
+---
+
 ## 9.1 The dispatcher topology, decided (2026-08-03, Zach)
 
 **Zach, 2026-08-03:** *"I don't fully understand the topology hang. Just give
@@ -462,12 +558,31 @@ they are asking about.**
 1. **The flock is per-account, not global.** `usage-paced-runner.sh` sets
    `STATE_DIR="$HOME/.local/share/$JOB_NAME"` and locks `run.lock` inside it,
    so `ecosim`'s lock and `bibliothecaire`'s lock are different files and two
-   accounts CAN dispatch in the same tick. The bound on damage is the gate's
-   band, not the lock: `USAGE_CEILING` 0.85 leaves 15% of headroom for the race
-   to eat, and `PACED_MAX_PER_TICK=1` at `0 */6` means the worst case is two
-   concurrent agents, not two runaway rotations. If a third and fourth account
-   land, revisit this *first* — the ceiling absorbs a race between two, and it
-   is not obvious it absorbs one between five.
+   accounts CAN dispatch in the same tick, and nothing on this host serialises
+   them.
+
+   > **CORRECTED 2026-08-04.** This paragraph originally said the race was
+   > bounded because "`USAGE_CEILING` 0.85 leaves 15% of headroom for the race
+   > to eat". **That was wrong.** 0.85 is `usage-gate.sh`'s *built-in default*;
+   > `schedule/_usage.conf` overrides it with **`USAGE_CEILING=0.99`** and
+   > **`USAGE_RUSH_BEFORE_RESET_MIN=10080`**. 10080 minutes is seven days — the
+   > entire 7-day window — so the rush-before-reset policy is **permanently in
+   > force and the even-burn pacing hold never applies**. Every gate line on
+   > this host reads `rush=True`, which is the observable that should have
+   > prompted the check. Pacing is not protecting this quota; a 0.99 ceiling
+   > and a `rejected` status are, and that is the whole list — roughly **1% of
+   > headroom, not 15%**.
+   >
+   > The error mattered twice: it is the justification written into
+   > `_paced.monkey.conf` for tolerating the per-account lock, *and* it was
+   > leaned on to raise this host's tick to every 30 minutes the same night
+   > (reverted after ~9h, scheduler `7f4a99e`).
+
+   So before a third dispatcher: at ~1% headroom with no pacing hold, the
+   ceiling barely absorbs the *second* concurrent account. Either serialise
+   the accounts with a **host-wide** lock rather than the current `$HOME`-scoped
+   one, or restore the pacing hold by lowering `USAGE_RUSH_BEFORE_RESET_MIN`
+   toward its documented `120`. Neither is done; both are named.
 2. **Interactive sessions still spend the budget ungated** — unchanged from
    §9, and it is the same residual, not a new one.
 
