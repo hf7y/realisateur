@@ -11,6 +11,17 @@ Written at `/cloture` by the session that put `monkey` on the tailnet, taught
 
 ## 1. PRs: merge, or why not
 
+> **STATUS 2026-08-04, after Zach's review — three of these are DONE.**
+> `scheduler#17` merged (`ae16241`), `ecosim#28` merged (`91716d7`),
+> `realisateur#35` merged (`b2d10df`). `/srv/scheduler` re-synced to `ae16241`
+> afterwards, and `ecosim` re-verified from merged main: selftest 0 violations
+> across 43 symbols, `test_hosts.py` green, 12 readings about monkey with zero
+> BLIND.
+>
+> **What remains from this section: `scheduler#16` + `vim-arcade#7` only.**
+> They are still a pair, and the reason to hold them is now stronger, not
+> weaker — see the UPDATE below. Sections 2–4 are all still live.
+
 Five open. **Three are ready. Two are paired and must not land alone.**
 
 ### `hf7y/scheduler#17` — MERGE (it rescues a stranded write)
