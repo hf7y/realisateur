@@ -520,6 +520,81 @@ arming**, because a rotation row is a judgment about a shared weekly quota.
 key can already sudo to root, hence to the account) but it is real, so it is
 a flag rather than a silent step.
 
+## 8.3 Account #4 (`vim-arcade`), the first real run of `setup-selfdev-project.sh`, and the bug it found
+
+**Zach, 2026-08-04: vim-arcade is the next self-dev participant dispatching
+from monkey, instead of chezz.** chezz stays exactly where 8.2 left it —
+registered, staged, rotation row and FREEZE exemption both present, `|0|`.
+Park, never delete: deleting either would re-arm the fixed-cron suppression
+that `_paced.conf`'s own header says keys on rotation *membership*, not the
+enabled flag.
+
+**The account already existed.** `vim-arcade`, uid 3000 (lowest free in the
+3000–3099 band; `ecosim` holds 3001), was created as PR #27's own witness run
+for `provision-selfdev-user.sh` — the PR body's example output is literally
+`OK vim-arcade can spend a token under a cron-shaped environment`. That
+witness call is real capability, not a fixture: it left a working account
+with home `0700`, linger on, no sudoers entry, and a live Claude credential.
+Re-running `provision-selfdev-user.sh vim-arcade --apply` against it was a
+clean no-op (5 ok / 0 missing / 0 bad, nothing to change).
+
+**What 8.1 and 8.2 built was never actually run end to end, and account #4 is
+what finally ran it.** `bin/setup-selfdev-project.sh` (the "one root command"
+8.2 describes) had shipped but had no witness of its own — chezz's account
+does not exist yet, so its row could not be armed by this script or any other.
+Invoking it for real, as `sudo bash <bibliothecaire's realisateur
+checkout>/bin/setup-selfdev-project.sh vim-arcade --apply`, got through step
+1 (account, idempotent-OK) and step 2 (hands key installed) and then **failed
+every unprivileged call in steps 3 and 4**:
+
+```
+bash: line 1: /home/bibliothecaire/.../wire-selfdev-git.sh: Permission denied
+```
+
+**The cause.** `$HERE` is wherever the script itself was invoked from — in
+practice an *existing* project account's own realisateur checkout, since the
+hands account holds no project clones (§2). Every project home is `0700` by
+design ("repos and working state are isolated per project" — §3, and
+`provision-selfdev-user.sh`'s own comment on the same mode). So `sudo -u
+vim-arcade` could not even **read** bibliothecaire's copy of
+`wire-selfdev-git.sh`, let alone execute it — a permissions boundary working
+exactly as designed one account over, presenting as a broken install. Fixed
+by staging the two unprivileged sibling scripts into the **new** account's
+own home (`$HOME_DIR/.selfdev-setup`, owned by it, mode 700) before calling
+them as it, rather than reaching across into whichever account happened to
+invoke the script.
+
+**Verified live, without touching another account's checkout.** The fix was
+tested by copying the patched `setup-selfdev-project.sh` (plus its three
+unchanged siblings) to `/tmp` on monkey — not into bibliothecaire's or
+ecosim's repos, staying inside this task's scope limits — and re-running
+`--apply`. Result: four per-repo deploy keys (read-only realisateur,
+scheduler, senechal; read-write vim-arcade), each proven with a live `git
+ls-remote` witness over its own ssh alias, not just a file check:
+
+```
+OK      WITNESS: GitHub served hf7y/vim-arcade over github-vim-arcade
+```
+
+`land-selfdev.sh --land` then finished **17 ok, 3 missing, 0 bad**, landed at
+scheduler HEAD `874a58e`. The three MISSING are the same known-benign shape
+8.1 already recorded for account #2: `systemd --user` unavailable under the
+stripped `env -i` cron-shaped environment, the standing `install-shims.sh`
+FLAG (`subagent-closeout.sh` installed but not referenced in `settings.json`
+— that file is the human's, deliberately not auto-fixed), and one `UNOWNED`
+verb (`installe` itself, hand-made, not yet in its own manifest — the same
+bootstrap gap every account hits). The `sync-crontab.sh` preview for
+vim-arcade had **zero `ERROR [` lines**. `/tmp` on monkey was cleaned up
+after; `~/.selfdev-setup` remains inside vim-arcade's own home, which is
+unremarkable — same shape as the checkouts `land-selfdev.sh` itself puts
+there.
+
+**Not armed by this account work.** `setup-selfdev-project.sh` stops exactly
+where its own header says it stops: no crontab written, no rotation edit.
+Arming is the separate, reviewed `schedule/_paced.monkey.conf` /
+`schedule/FREEZE` change (this same change set, in the scheduler repo),
+merged through review rather than as a side effect of landing an account.
+
 ---
 
 ## 9.1 The dispatcher topology, decided (2026-08-03, Zach)
