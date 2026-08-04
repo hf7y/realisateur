@@ -3117,3 +3117,77 @@ Both re-run with `setsid` and with a watcher that must observe the
 process ALIVE before it will believe it is gone.
 
 **Philosophy delta: none.** No doctrine file edited.
+
+## 2026-08-04 — vim-arcade made usable on mandark; ten drift failures traced to one class
+
+Interactive session. `joue` went from crashing on launch to a working
+multi-repo triage tool, in vim-arcade (a cross-write target throughout —
+every sha below is vim-arcade's, not this repo's).
+
+**Shipped** — `ed0b40a` layout/crash fixes + scrollable issue bodies,
+`1a7e9ab` quit-time self-dev dispatch, `f2bde7b` answer channel,
+`1b98499` merge-safety refusals, `d1095c9` repo=pane + `--repo` threaded
+through every action, `4a3aac5` agent-identity provenance stamps,
+`6c25db5` CI + agents close what they ship, `d248fd2` one launcher / two
+zoom levels. `4ad9454` fixed a red `main`.
+
+**The finding worth keeping.** Ten distinct failures in one day were one
+class: **two copies of a truth, with nothing watching for drift.**
+`_launch()` and `main()` both owning the session (Q silently dispatched
+nothing); a test stub vs `TriageItem`, three separate times, once
+reaching `main`; `main` vs `tmux-pane-mechanic` both plausibly trunk; two
+event loops where the merge guard existed in one and not the other; the
+`answered` label vs the comment itself; one `hf7y` identity for two
+roles; `de7f77e` on a branch vs three issues closed as "fixed". Every fix
+was "collapse it to one source."
+
+`BUILD-DISCIPLINE.md` already states the rule — *"Config read from one
+source, not retyped per file"* — but **not one of the ten was config.**
+They were control flow, test doubles, branches, event loops, identities,
+and definitions of "landed". The principle is right and already held; it
+is scoped one category too narrow. Filed as vim-arcade#42; the doctrine
+question goes to BLOCKERS.md rather than being decided here.
+
+**The missing mechanism: there was no CI in any of eight repos**
+(vim-arcade, realisateur, scheduler, senechal, bibliothecaire, ecosim,
+wtul, basheur), and PRs reported zero status checks. Four of the ten
+existed only in the *combination* of branches that were each individually
+green. An estate built on "a command on PATH, not a rule to remember"
+had no automated check that a merge did not break the build. Added to
+vim-arcade in `6c25db5`.
+
+**CI earned its keep on its first two runs**, finding two real defects
+invisible from mandark: `cryptography` was an undeclared dependency (the
+repo had *no* dependency file, and the suite could not even be collected
+on a clean machine), and the real-git tests were non-hermetic — they
+clone repos, a clone inherits none of the origin's local `user.email`,
+and they passed here only because Zach's global git config existed. Both
+were "works on the machine that wrote it".
+
+**Parallelism is a divergence generator.** Six subagents ran; four
+integration breaks existed only where their branches met, and the only
+integration test was a human reading pytest output. That does not scale
+past about two branches. Not an argument against parallel agents — an
+argument that CI is their precondition.
+
+**Two process faults of my own, corrected.** Every agent brief I wrote
+said "no auto-closing keywords", which turned issue-closing into Zach's
+chore — twelve shipped issues sat open until hand-closed. Reversed in
+vim-arcade's `CLAUDE.md` and `nightly-batch.md` (`6c25db5`) so it binds
+future runs. And two subagents worked in the *shared* checkout rather
+than a worktree; switching branches under one of them disrupted it, the
+same shared-tree hazard already on record.
+
+**closeout-lint is BLIND here, not clean.** All 8 `[missing-repo]` FLAGs
+are the known `$HOME`-non-expansion defect in its registry discovery, so
+its "no registered repo has a commit younger than 12h" is false on a day
+with ~20 vim-arcade commits. Durability was verified by hand instead:
+vim-arcade, scheduler and realisateur all clean, on `main`, nothing
+unpushed. Already filed under scheduler's BLOCKERS.md `## realisateur`
+section (`874a58e`); re-confirmed still live today.
+
+**Philosophy delta: none in this repo.** No doctrine file edited here —
+vim-arcade's own `CLAUDE.md` gained two repo-local rules (close what you
+ship; CI is the gate, never weaken a test to make it pass). Whether
+`BUILD-DISCIPLINE.md` should gain a wider "one source" row and a CI row
+is Zach's call, filed to BLOCKERS.md.
