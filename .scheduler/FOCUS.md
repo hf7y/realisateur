@@ -2999,8 +2999,13 @@ sudo, and both facts are filed with senechal. monkey is still `Logged
 out` — the join is one command with the key.
 
 Three decisions this needs from Zach are filed as issues on this repo
-rather than answered here: the auth-key policy that would let a host join
-at provision time, whether NOPASSWD-for-hands-accounts is now the standard
-across self-dev hosts, and how secrets should reach an unattended
-provisioning run at all — the last being the one that actually blocked
-this session.
+rather than answered here:
+
+- **#31** — should self-dev hosts join the tailnet at install time, and
+  with what key policy? (the thing that would delete the two-hop tax)
+- **#32** — is NOPASSWD sudo for hands accounts now standard, or a monkey
+  one-off? `MONKEY.md` section 2 says the opposite about project accounts,
+  and does not currently say which precedent a reader should take.
+- **#33** — how should secrets reach an unattended provisioning run? **This
+  is the one that actually blocked this session**, and the blocker was a
+  location problem, not a permissions one.
