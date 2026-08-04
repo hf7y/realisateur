@@ -37,7 +37,7 @@ cli_guard "$@"
 # Overridable by environment for tests only (bin/tests/*, which also override
 # HOME so nothing real is written). Not a migration hook: a second host wants
 # its own stable path here, set once, not inherited from a caller's cwd.
-REPO="${REPO:-/home/zach/Documents/Projects/realisateur}"
+REPO="${REPO:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/realisateur}"
 
 # A SOURCE OF TRUTH THAT IS NOT THERE IS A HARD FAILURE, NOT A FLAG.
 #
@@ -183,7 +183,10 @@ EOF
 This command is installed at USER level and runs from whatever repo you
 happen to be in. Wherever the text above says "this repo", "this repo's
 own `.scheduler/FOCUS.md`", or "realisateur's own", it means the
-realisateur checkout at `/home/zach/Documents/Projects/realisateur` --
+realisateur checkout at:
+EOF
+  printf '  `%s`\n' "$REPO"
+  cat <<'EOF'
 not your current working directory. Every command it tells you to run
 (`ecosystem-survey`, `closeout-lint`, `focus-commit`, ...) is on PATH and
 is cwd-independent; `focus-commit` takes the target repo as its first

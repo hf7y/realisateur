@@ -26,7 +26,7 @@ CLI_POSITIONAL=any
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-SCHED_ROOT="/home/zach/Documents/Projects/scheduler"
+SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 [ -d "$SCHED_ROOT/schedule" ] || { echo "FATAL: scheduler schedule/ not found at $SCHED_ROOT" >&2; exit 2; }
 
 # Optional args: restrict to named projects (same shape as hygiene-lint.sh).

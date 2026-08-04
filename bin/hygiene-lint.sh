@@ -57,7 +57,7 @@ CLI_POSITIONAL=any
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Projects/scheduler}"
+SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 
 # --strict is a mode flag, not a project name -- strip it before building
 # the positional project-filter list (cli_guard validated it but never

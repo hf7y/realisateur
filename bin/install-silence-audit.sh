@@ -36,9 +36,9 @@
 # installs nothing is not a retirement, it is a deletion.
 set -uo pipefail
 
-REPO_DEFAULT="/home/zach/Documents/Projects/realisateur"
+REPO_DEFAULT="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/realisateur"
 REPO="${SILENCE_AUDIT_REPO:-$REPO_DEFAULT}"
-SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Projects/scheduler}"
+SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 BIN_DEST="$HOME/.local/bin"
 
 # The literals retired, and the single row that replaces them. Kept here as

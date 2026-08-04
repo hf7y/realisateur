@@ -42,7 +42,7 @@
 # one-line diff every day and the reproducibility claim is untestable.
 set -uo pipefail
 
-SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Projects/scheduler}"
+SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 STAMP_MARK="BOOTSTRAP STAMP"
 # Bootstrap briefs are briefs. Past this many lines a file has stopped
 # being one, and --check calls it out rather than passing it silently.

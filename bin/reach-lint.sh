@@ -55,7 +55,7 @@ cli_guard "$@"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Overridable for bin/tests/reach-lint.test.sh only -- real callers (install-
 # shims.sh, hygiene-lint.sh) never set these, so behavior is unchanged.
-SCHED_ROOT="${SCHED_ROOT:-/home/zach/Documents/Projects/scheduler}"
+SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 USER_CMD_DIR="${USER_CMD_DIR:-$HOME/.claude/commands}"
 
 STRICT=0

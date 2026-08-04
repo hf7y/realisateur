@@ -36,7 +36,7 @@ case "${1:-}" in
     exit 2 ;;
 esac
 
-SENSOR="${ECOSIM_SENSOR_BIN:-/home/zach/Documents/Projects/ecosim/bin/ecosim-sensor}"
+SENSOR="${ECOSIM_SENSOR_BIN:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/ecosim/bin/ecosim-sensor}"
 STATE_DIR="$HOME/.local/share/ecosim-sensor"
 LOG="$STATE_DIR/run.log"
 LATEST="$STATE_DIR/latest.txt"
