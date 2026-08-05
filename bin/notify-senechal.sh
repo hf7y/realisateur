@@ -17,20 +17,33 @@
 # recorded as owed in QUESTIONS.md, and only paid a session later by hand.
 # That is exactly the failure mode a script removes.
 #
-# WHY THE FRONT DOOR AND NOT A DIRECT FOCUS.md EDIT:
-# `scheduler -i senechal` routes through cmd_commit_file -- the same
-# staleness-checked single-file commit path the vim auto-commit hook uses.
-# That IS the multi-writer regulator for this interface, so it is safe
-# against a live senechal run in a way a hand edit is not. The 2026-07-26
-# check-project-busy.sh deferral was belt-and-braces on top of it.
+# WHY THE FRONT DOOR AND NOT A DIRECT WRITE:
+# `scheduler -i senechal` is the one interface senechal publishes for inbound
+# notes. Going around it means guessing where senechal keeps its inbox, which
+# is precisely the coupling the split below exists to prevent.
 #
-# WHY IT DOES NOT STOP AT `scheduler -i`:
-# `scheduler -i` deliberately SKIPS the push when the target repo is behind
-# origin, printing "run git push by hand". An unpushed note is invisible to
-# senechal's own nightly run, which clones from the remote -- the
-# "verified where the consumer reads it" row of BUILD-DISCIPLINE. So this
-# script resolves the divergence itself and verifies the rebase did not
-# change what the commit means, the same check focus-commit.sh makes.
+# WHAT CHANGED, 2026-08-05 (scheduler#22), and what it retires:
+# `scheduler -i` used to append to a LOCAL .scheduler/FOCUS.md in a senechal
+# clone and push it. It now files a GitHub ISSUE. So everything this script
+# did after the call -- fetch, merge-base containment, a SIGPIPE-safe blob
+# read of FOCUS.md, and a rebase-with-content-verification path for the
+# behind case -- had no subject any more and is DELETED, not switched off.
+#
+# Two things that bought:
+#   * this script no longer needs a senechal CLONE on the host it runs from.
+#     That clone was the last thing pinning senechal to every machine, and it
+#     was pinned by the one command the protocol requires everyone to call.
+#   * it fixes MONKEY.md 8.1(2) from the other side. A self-dev account holds
+#     a READ-ONLY deploy key on senechal, so the old push could never work:
+#     `installe` exited 8 on all 25 verbs while the change itself had landed.
+#     An issue needs no write access to any default branch.
+#
+# The old header argued this script must not stop at `scheduler -i` because
+# that command skips the push when the repo is behind, leaving a note the
+# consumer never reads. That reasoning is retired with the mechanism -- there
+# is no push to skip. The PRINCIPLE it came from is not: verify where the
+# consumer reads it. So `--- 2.` still re-reads the issue from GitHub rather
+# than trusting exit 0 and a URL we printed ourselves.
 #
 # WHO OWNS WHAT IN THIS FILE (Zach's call, 2026-07-27) -- read before editing:
 #
@@ -40,14 +53,15 @@
 #   calling it is mandatory when machine-wide config changes. Structure,
 #   existence, distribution.
 #
-#   senechal owns the CONTRACT -- everything below the `--- 2.` line: which
-#   file is senechal's inbox (focus_rel), what "landed" means, which ref the
-#   consumer actually reads, and the probe semantics. Facts about senechal's
-#   own read-path.
+#   senechal owns the CONTRACT -- everything below the `--- 2.` line: what
+#   "landed" means and which surface the consumer actually reads. That is now
+#   its issue queue rather than a file in its tree, which is a smaller and
+#   more stable contract than the one it replaces: an issue URL cannot be
+#   moved by senechal reorganising its own repository.
 #
-# Why split it rather than leave it all here: this script encodes senechal's
-# read-path in realisateur's repo, so if senechal ever moves its FOCUS.md its
-# own front door breaks and it is structurally unable to fix it. Not
+# Why split it rather than leave it all here: this script encoded senechal's
+# read-path in realisateur's repo, so if senechal moved its inbox its own
+# front door would break and it would be structurally unable to fix it. Not
 # hypothetical -- realisateur made exactly that .claude/ -> .scheduler/ move
 # on 2026-07-26. The 2026-07-27 SIGPIPE bug was the same seam: a defect in
 # senechal's verification logic that only senechal noticed, requiring an edit
@@ -81,7 +95,6 @@ set -uo pipefail
 # land-selfdev.sh already share for this, so there are not two answers.
 PROJECTS_ROOT="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}"
 SCHED_ROOT="${SCHED_ROOT:-$PROJECTS_ROOT/scheduler}"
-SENECHAL="${SENECHAL:-$PROJECTS_ROOT/senechal}"
 
 die() { printf 'notify-senechal: FAIL: %s\n' "$*" >&2; exit 1; }
 
@@ -115,111 +128,62 @@ case "$text" in
 esac
 
 [ -x "$SCHED_ROOT/bin/scheduler" ] || die "scheduler front door not found/executable at $SCHED_ROOT/bin/scheduler"
-[ -d "$SENECHAL/.git" ]           || die "senechal repo not found at $SENECHAL"
+# NOTE: no senechal clone is required any more -- the note goes to GitHub.
+# The check that used to be here (`[ -d "$SENECHAL/.git" ]`) is removed
+# deliberately: keeping it would have made this script keep DEMANDING the very
+# checkout the change exists to make unnecessary, on every host, forever.
 
-# --- 1. file it through the front door, capture the sha we are verifying -----
+# --- 1. file it through the front door, and capture the issue it created ----
+#
+# THE FRONT DOOR IS GITHUB (Zach, 2026-08-05; scheduler#22). `scheduler -i`
+# no longer appends to a local .scheduler/FOCUS.md and pushes -- it files a
+# GitHub issue labelled `idea`. Everything this script used to do after the
+# call was verification of a COMMIT: fetch, merge-base containment, a
+# SIGPIPE-safe blob read of FOCUS.md, and a rebase-with-content-verification
+# path for the behind case. None of that has a subject any more, so it is
+# deleted rather than left switched off.
+#
+# What it buys, beyond simplicity: this script no longer needs a senechal
+# CLONE on the host it runs from. That clone was the last thing pinning
+# senechal to every machine, and it was pinned by the one command the estate
+# protocol requires every project to call.
+#
+# It also fixes MONKEY.md 8.1(2) from the other side: a self-dev account
+# holds a READ-ONLY deploy key on senechal, so the old push could never work
+# and `installe` exited 8 on all 25 verbs while the change itself had landed.
+# Filing an issue needs no write access to any default branch.
 echo "notify-senechal: filing via 'scheduler -i senechal'..."
-"$SCHED_ROOT/bin/scheduler" -i senechal "$text" || die "scheduler -i senechal rejected the note"
-commit_sha="$(git -C "$SENECHAL" rev-parse HEAD 2>/dev/null)" \
-  || die "cannot read the commit that scheduler -i made in senechal"
-
-# --- 2. make sure it landed on the remote -----------------------------------
-# SENECHAL-OWNED from here down -- see "WHO OWNS WHAT IN THIS FILE" above.
-# This block asserts facts about senechal's read-path; senechal may change it
-# without asking realisateur, and should cross-write when it does.
-cd "$SENECHAL" || die "cannot cd to $SENECHAL"
-
-branch="$(git rev-parse --abbrev-ref HEAD)" || die "cannot read current branch"
-upstream="$(git rev-parse --abbrev-ref '@{u}' 2>&1)" \
-  || die "branch '$branch' tracks nothing -- cannot verify the note reached senechal's remote ($upstream)"
-
-git fetch -q origin || die "git fetch failed -- cannot verify the note landed"
-
-# The only BUILD-DISCIPLINE question: is the commit on the ref the consumer
-# reads? Use merge-base containment (robust to all race conditions on ahead/behind)
-# rather than rev-list counts (can be stale if refs move between checks). The
-# two paths below (ahead==0 means scheduler -i pushed, ahead>0 means we rebase)
-# both end at the same verification: our commit is an ancestor of the remote.
-focus_rel="$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -m1 'FOCUS.md' || echo '.scheduler/FOCUS.md')"
-probe="${text:0:60}"
-
-# NO PIPELINES IN HERE, DELIBERATELY -- this is the fix for the false
-# negative recorded on 2026-07-27 01:33, when this check failed a note that
-# HAD landed (present verbatim in .claude/FOCUS.md on senechal's remote).
-#
-# The old body was `git show "@{u}:$focus_rel" | grep -qF "$probe"`. Under
-# the `set -o pipefail` at the top of this script that is a trap: `grep -q`
-# exits the instant it matches, closing the pipe, so `git show` -- still
-# writing the rest of a ~100KB FOCUS.md -- dies of SIGPIPE (141), and
-# pipefail propagates 141 as the pipeline's status. A SUCCESSFUL match on a
-# large file therefore reported failure. It read as "transient" because it
-# is a race between grep's exit and git show's remaining writes, and because
-# re-running it by hand in an interactive shell (where pipefail is NOT set)
-# always passed. The suspected `git fetch` race was never the cause.
-#
-# Reproduced: `set -uo pipefail; git show 5b17f43:.claude/FOCUS.md | grep -qF
-# "<probe>"` -> status 141, while `grep -cF` on the same input -> 1 match.
-#
-# So: read the blob into a variable, match with a here-string. `probe` is
-# likewise sliced with bash parameter expansion rather than `| head -c 60`,
-# which had the same printf-SIGPIPE hazard.
-landed() {
-  local content
-  content="$(git show "@{u}:$focus_rel" 2>/dev/null)" || return 1
-  grep -qF -- "$probe" <<<"$content"
+out="$("$SCHED_ROOT/bin/scheduler" -i senechal "$text" 2>&1)" || {
+  printf '%s\n' "$out" >&2
+  die "scheduler -i senechal rejected the note"
 }
+printf '%s\n' "$out"
 
-on_remote() {
-  # The commit that scheduler -i created is on the remote if it is an ancestor
-  # of @{u}. This is robust to all fetch/push race conditions, unlike ahead/behind.
-  git merge-base --is-ancestor "$commit_sha" "@{u}"
-}
+# The URL is the receipt. Parsed rather than assumed, because a `scheduler -i`
+# that silently changed its output shape must fail here, not be reported as a
+# success nobody can find. This is the same reason the old body verified the
+# commit instead of trusting exit 0.
+issue_url="$(printf '%s\n' "$out" | grep -oE 'https://github\.com/[^[:space:]]+/issues/[0-9]+' | head -1)"
+[ -n "$issue_url" ] \
+  || die "scheduler -i reported success but printed no issue URL -- nothing verifiable was recorded"
 
-ahead="$(git rev-list --count '@{u}'..HEAD)"
-if [ "$ahead" -eq 0 ]; then
-  # scheduler -i pushed successfully. Verify the commit is on the remote AND
-  # that the content actually arrived (in case a concurrent push rewrote it).
-  if ! on_remote; then
-    die "'scheduler -i' reported success but $commit_sha is not an ancestor of the remote -- this should not happen, treat as unverified"
-  fi
-  landed || die "'scheduler -i' pushed but the note is not in $focus_rel on senechal's remote -- the push may have landed a different commit"
-  echo "notify-senechal: OK -- already on senechal's remote (scheduler -i pushed it), verified present in $focus_rel"
-  exit 0
+# --- 2. prove the issue exists on the remote --------------------------------
+#
+# Re-read it from GitHub rather than trusting the URL we were handed. The
+# discipline rule is "verified where the consumer reads it", and the consumer
+# here is whoever opens senechal's issue list.
+command -v gh >/dev/null 2>&1 \
+  || die "gh is not on PATH -- the note may have been filed, but nothing here can confirm it"
+
+if ! state="$(gh issue view "$issue_url" --json state,title -q '.state' 2>&1)"; then
+  printf '%s\n' "$state" >&2
+  die "filed $issue_url but could not read it back -- treat as UNVERIFIED"
 fi
+case "$state" in
+  OPEN|CLOSED) ;;
+  *) die "filed $issue_url but its state reads as '$state' -- treat as UNVERIFIED" ;;
+esac
 
-behind="$(git rev-list --count HEAD..'@{u}')"
-if [ "$behind" -gt 0 ]; then
-  echo "notify-senechal: $behind commit(s) behind upstream -- rebasing with content verification"
-
-  # Snapshot what OUR commits mean before the rebase: the fileset they touch
-  # relative to upstream, plus the content of each. A rename-following rebase
-  # silently rewrote an archived file's content on 2026-07-26 and was caught
-  # only because a human diffed it by hand -- this is that check, mechanized.
-  files_before="$(git diff --name-only '@{u}'...HEAD | sort)"
-  [ -n "$files_before" ] || die "our commits touch no files relative to upstream -- refusing to rebase blind"
-  hash_before="$(git diff '@{u}'...HEAD | sha256sum)"
-
-  git rebase -q origin/"$branch" || {
-    git rebase --abort 2>&1 || true
-    die "rebase failed (aborted, work left intact and unpushed) -- resolve by hand in $SENECHAL"
-  }
-
-  files_after="$(git diff --name-only '@{u}'...HEAD | sort)"
-  hash_after="$(git diff '@{u}'...HEAD | sha256sum)"
-
-  if [ "$files_before" != "$files_after" ] || [ "$hash_before" != "$hash_after" ]; then
-    printf 'fileset before:\n%s\nfileset after:\n%s\n' "$files_before" "$files_after" >&2
-    die "REBASE CHANGED WHAT OUR COMMIT MEANS. Work is intact and un-pushed in $SENECHAL -- read it by hand before pushing."
-  fi
-  echo "notify-senechal: rebase verified (fileset + content identical)"
-fi
-
-git push -q origin "$branch" || die "push rejected -- note is committed locally in $SENECHAL but senechal's nightly run will not see it"
-
-git fetch -q origin || die "pushed, but cannot re-fetch to confirm -- treat as unverified"
-if ! on_remote; then
-  die "push reported success but $commit_sha is not an ancestor of the remote -- this should not happen, treat as unverified"
-fi
-landed || die "push reported success but the note is NOT in $focus_rel on the remote -- the push may have landed a different commit"
-
-echo "notify-senechal: OK -- on senechal's remote as $(git rev-parse --short HEAD), verified present in $focus_rel"
+echo "notify-senechal: OK -- filed and verified on senechal's issue queue ($state)"
+echo "  $issue_url"
+exit 0
