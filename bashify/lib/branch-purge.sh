@@ -106,6 +106,12 @@ for conf in "$SCHED"/schedule/*.conf; do
     printf '%s\n' "${WANT[@]}" | grep -qxF "$proj" || continue
   fi
   repo="$(grep -oP '^PROJECT_REPO_PATH=\K.*' "$conf" 2>/dev/null | tr -d '"'"'"'')"
+  # Same defect closure.sh carried: the conf stores the path as a shell
+  # LITERAL, so `$HOME` never expanded, `-d` failed for every project, and this
+  # loop skipped all of them -- then printed "OK -- 0 branch(es) checked".
+  # A purge guard that checks nothing and says OK is worse than no guard.
+  repo="${repo/#\$HOME/$HOME}"
+  repo="${repo/#\$\{HOME\}/$HOME}"
   [ -n "$repo" ] && [ -d "$repo/.git" ] || continue
   git -C "$repo" rev-parse --verify -q bashified >/dev/null 2>&1 || continue
   branches=$((branches+1))
@@ -113,11 +119,33 @@ for conf in "$SCHED"/schedule/*.conf; do
   while read -r f; do
     [ -n "$f" ] || continue
     blob="$(git -C "$repo" show "bashified:$f" 2>/dev/null)" || continue
-    printf '%s' "$blob" | grep -qiE "$SURFACE_RE_ANY" || continue
-    checked=$((checked+1))
-
-    # 1. DERIVED: the skeleton runtime, and only while byte-identical.
+    # THE CRITERION IS INVOCATION, NOT NAMING (Zach, 2026-08-05 -- the same
+    # ruling applied to lib/closure.sh; rationale in lib/surface.sh under
+    # "NAMING vs INVOKING"). The branch's promise is that it DISPATCHES no
+    # model. Refusing every file that merely names one is a proxy, and it is
+    # the proxy that made the wrapped-script migration impossible: a script
+    # cannot move onto the branch that is supposed to carry it if a vendor name
+    # in a comment disqualifies it.
+    #
+    # Scored through a temp file because surface_invokes reads a FILE and must
+    # strip comment lines to answer "does this RUN one" -- a distinction that
+    # cannot be made on a blob without re-implementing it here, which is how
+    # the anchoring fix reached one guard and not the other.
+    # Only EXECUTABLE TEXT can dispatch anything. A man page or a CONTRACT.md
+    # that writes `basheur run media-triage` in a table is documenting the
+    # door, not opening it -- and scoring prose flagged exactly three such
+    # files on the first run, all false. Decided by shebang or extension
+    # rather than by directory, because senechal keeps scripts in health/ and
+    # remedies/ and gardien keeps them in systemd/.
+    # THE DRIFT CHECK RUNS FIRST, and independently of everything below.
+    # It was written after the invocation filter in the first version of this
+    # change, so a drifted lib/verb.sh that dispatches nothing was skipped by
+    # the filter and never reached it -- the guard's own test F5 caught it.
+    # Drift is not a question about vendors at all: it asks whether the shared
+    # runtime on this branch is still the skeleton it claims to be, and the
+    # answer must not depend on what the drifted copy happens to contain.
     if [ "$f" = 'lib/verb.sh' ]; then
+      checked=$((checked+1))
       if [ "$(printf '%s\n' "$blob" | md5sum | cut -d' ' -f1)" = "$skel_sum" ]; then
         exempted=$((exempted+1)); EX_HIT["$proj/$f"]=1; continue
       fi
@@ -125,13 +153,30 @@ for conf in "$SCHED"/schedule/*.conf; do
       fails=$((fails+1)); continue
     fi
 
+    # Only EXECUTABLE TEXT can dispatch. Everything else on the branch passes.
+    case "$f" in
+      *.sh|*.bash|*.py) is_script=1 ;;
+      *.md|*.1|*.tsv|*.json|*.txt|*.conf) is_script=0 ;;
+      *) case "$blob" in '#!'*) is_script=1 ;; *) is_script=0 ;; esac ;;
+    esac
+    [ "$is_script" = 1 ] || continue
+
+    tmpblob="$(mktemp)"; printf '%s\n' "$blob" > "$tmpblob"
+    inv="$(surface_invokes "$tmpblob")"
+    rm -f "$tmpblob"
+    [ "${inv:-0}" -gt 0 ] || continue
+    checked=$((checked+1))
+
     # 2. RECORDED: an entry with a written justification.
     if [ -n "${EX_WHY["$proj/$f"]:-}" ]; then
       exempted=$((exempted+1)); EX_HIT["$proj/$f"]=1; continue
     fi
 
-    hits="$(printf '%s' "$blob" | grep -ioE "$SURFACE_RE_ANY" | sort -u | tr '\n' ' ')"
-    FAIL_ROWS+=("$(printf '%-15s %-34s %s' "$proj" "$f" "names: $hits")")
+    # Report the INVOKING lines, not every vendor mention. Under the old
+    # criterion "names: claude agent" was the finding; now the finding is that
+    # the file runs one, and the reader needs the line that does it.
+    hits="$(printf '%s\n' "$blob" | grep -vE '^[[:space:]]*#' | grep -inE "$SURFACE_RE_INVOKE" | head -2 | tr '\n' ' ')"
+    FAIL_ROWS+=("$(printf '%-15s %-34s %s' "$proj" "$f" "invokes: $hits")")
     fails=$((fails+1))
     [ "$LIST" = 1 ] && printf '%s\t%s\n' "$proj" "$f"
   done < <(git -C "$repo" ls-tree -r --name-only bashified 2>/dev/null)
@@ -159,6 +204,15 @@ for k in "${!EX_WHY[@]}"; do
 done
 
 echo
+# Zero branches is not a clean estate, it is a guard that opened nothing. This
+# printed "OK -- 0 branch(es) checked" for as long as the $HOME defect above
+# survived, which is exactly how it survived.
+if [ "$branches" = 0 ]; then
+  echo "$CLI_NAME: 0 branches checked -- no conf in $SCHED/schedule resolved to a" >&2
+  echo "repository with a bashified branch. Refusing to report OK about nothing." >&2
+  exit 1
+fi
+
 if [ "$fails" = 0 ]; then
   echo "OK -- $branches branch(es) checked; $exempted exempt mention(s), all with a recorded reason."
 else

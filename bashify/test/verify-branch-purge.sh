@@ -107,14 +107,28 @@ check "H1 a genuinely clean branch exits 0" "$?" "0"
 "$GUARD" no-such-project-anywhere >/dev/null 2>&1
 check "H2 a name matching nothing exits 1, never 0" "$?" "1"
 
-# H3 -- the compound case, end to end on a real branch fixture. `subagent`
-# must be caught: this is the token that decided the anchoring in surface.sh.
+# H3 -- REWRITTEN 2026-08-05 with the criterion (Zach's ruling: INVOKING, not
+# NAMING -- see lib/surface.sh). This fixture's mention is in a COMMENT, and a
+# comment dispatches nothing, so the branch is clean. Asserting a failure here
+# would be asserting the superseded rule; the compound-token anchoring it was
+# written for is still covered by verify-closure.sh's E-series, which tests
+# surface.sh's pattern directly.
 r="$(mkbranch fixcompound)"
 mkdir -p "$r/bin"
 printf '#!/usr/bin/env bash\n# dispatched by the subagent runner\necho hi\n' > "$r/bin/thing"
 commit "$r"
 "$GUARD" fixcompound >/dev/null 2>&1
-check "H3 'subagent' on a branch is caught, not missed by an anchor" "$?" "1"
+check "H3 a comment naming a subagent is not a purge failure" "$?" "0"
+
+# H3b -- the half that must NOT relax with it. Same branch shape, but the
+# script actually dispatches. Without this, H3's change reads as "the purge
+# guard stopped caring" rather than "naming is not invoking".
+r="$(mkbranch fixinvoke)"
+mkdir -p "$r/bin"
+printf '#!/usr/bin/env bash\nclaude -p "$PROMPT"\n' > "$r/bin/thing"
+commit "$r"
+"$GUARD" fixinvoke >/dev/null 2>&1
+check "H3b a script that really dispatches IS caught" "$?" "1"
 
 echo
 printf 'passed %d, failed %d\n' "$pass" "$fail"
