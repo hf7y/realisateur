@@ -728,3 +728,85 @@ is not mandark.
   not yet been exercised by a real cycle.
 - **`hermes-gateway`** remains failed on mandark and in no footprint entry —
   the only machine-scoped unit in the estate with no declared owner.
+
+---
+
+## 9.2 Three decisions Zach made on GitHub, consumed 2026-08-05
+
+These were answered **on the issues themselves** — the intended direction —
+and then sat unconsumed, which is the failure this file's own "Answers do not
+flow back in" note predicted. They are recorded here because an answer that
+lives only in an issue comment is one `gh issue close` away from being lost,
+and because §8.1's third way out of the `notify-senechal` bind was explicitly
+"until it is decided". Each is quoted verbatim; the reading that follows is
+an interpretation and is marked as one.
+
+**(a) Passwordless sudo for hands accounts — `realisateur#32`.**
+
+> *"yes this is the standard. zach should always have nopasswd sudo on vms."*
+
+So `provision/monkey-nopasswd.sh` is not a monkey one-off. **§2's "project
+users get no sudo" is unchanged** and the distinction is now explicit: the
+rule binds `ecosim`/`bibliothecaire`/`chezz`/`vim-arcade` (uid 3000–3099),
+never the `zach` hands account. The cost §32 asked to be decided with in view
+still stands and is accepted: anything that can execute as `zach@<vm>` has
+root there, including any holder of `selfdev_monkey`.
+
+**(b) Secrets reaching an unattended provisioning run — `realisateur#33`.**
+
+> *"we need to set up permissions from the start. vms should be totally
+> controllable via their host (passwordless sudo etc)."*
+
+Read as: the answer to "how does a secret reach the run" is to need fewer
+secrets — a VM is controlled *from its host* over an already-trusted path,
+rather than by shipping credentials into it. The convention the scripts
+already follow (secrets by environment, never argv, never a tracked file)
+survives unchanged. **Not settled by this**: `TS_AUTHKEY` is a *third-party*
+credential that host trust cannot substitute for, so the original blocker
+recurs for tailnet keys specifically. See (c).
+
+**(c) Joining the tailnet at install time — `realisateur#31`.**
+
+> *"Let's make this a one-click touch from zach's side, either typing in his
+> pw or commenting on a gh issue for approval. Nothing special about monkey."*
+
+Two things, and the second is the larger one. The install stays **attended at
+exactly one point** — a human approval, not a stored key. And *"nothing
+special about monkey"* is a general instruction: this is the shape for any
+self-dev host, so the step belongs in the shared provisioning path rather
+than in a monkey-named script.
+
+**"Commenting on a gh issue for approval" is a mechanism this estate does not
+have yet.** It would make an issue comment a *control plane*, not just a
+record — a provisioning run that blocks, asks, and resumes on approval.
+Nothing here does that today, and building it is not a side-quest: it is the
+same channel the self-dev accounts already file questions on, which is
+precisely why it is attractive. Named, not built.
+
+### The residue on dexter, measured 2026-08-05
+
+`realisateur#37` and `#38` both concern dexter, and the numbers had drifted
+since they were filed, so they were re-probed rather than quoted:
+
+```
+~/realisateur   main, clean, behind 51
+~/scheduler     main, clean, behind  6
+crontab         1 non-comment line (a bare PATH=). No dispatcher.
+~/Documents/Projects/   does not exist
+```
+
+Note the path: dexter's checkouts are at `~/realisateur` and `~/scheduler`,
+**not** under `~/Documents/Projects`. Two probes in one sitting reported
+"the checkout is gone" from looking in the mandark location, which is the
+same wrong-ref witness error this estate keeps paying for.
+
+The consequence is sharper than "a stale clone". dexter's `~/.local/bin`
+shims exec scripts *inside* `~/realisateur`, so every ecosystem command on
+that host — `notify-senechal`, `focus-commit`, `silence-audit` — currently
+runs **51 commits behind**, successfully and silently. Nothing on dexter
+pulls, and nothing ever has.
+
+*(A third probe in the same sitting reported all those shims dead at rc=127.
+They are not: `~/.local/bin` is absent from a non-interactive ssh PATH, which
+is the trap already recorded for hand-running scheduler jobs on dexter. The
+shims work when PATH is set.)*
