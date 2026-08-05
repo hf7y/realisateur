@@ -56,8 +56,8 @@ fi
 # usage-paced-runner.sh and weight-audit.sh).
 [ -f "$LOG" ] && { tail -n 5000 "$LOG" > "$LOG.tmp" 2>/dev/null && mv "$LOG.tmp" "$LOG"; }
 
-OUT="$(mktemp)"; ERR="$(mktemp)"
-trap 'rm -f "$OUT" "$ERR"' EXIT
+OUT="$(mktemp)"; ERR="$(mktemp)"; AOUT="$(mktemp)"
+trap 'rm -f "$OUT" "$ERR" "$AOUT"' EXIT
 
 timeout 600 "$SENSOR" run > "$OUT" 2> "$ERR"
 rc=$?
@@ -77,6 +77,47 @@ cp "$OUT" "$LATEST" 2>/dev/null || true
   fi
   [ -s "$ERR" ] && sed 's/^/  stderr /' "$ERR"
 } >> "$LOG" 2>&1
+
+# --- the durable archive ------------------------------------------------
+# $LOG is TRIMMED to 5000 lines before every run (line 57) -- about 2.6 days
+# at this cadence -- and $LATEST keeps only the most recent run. NEITHER is a
+# record. This is the one that is: append-only, never trimmed, JSONL.
+#
+# WHY IT LIVES HERE AND NOT IN ecosim/sensors/. The contract's own archival
+# mode, `run --log`, appends into ecosim's repo. That is exactly the wrong
+# place during a migration whose PURPOSE is deleting dev clones: the record
+# would die with the thing it recorded. $STATE_DIR is realisateur's own, so
+# nothing crosses a repo boundary -- ecosim still "writes only into
+# ecosim/sensors/ and its own stdout" (SENSOR-CONTRACT.md section 5), and this
+# wrapper owns what it chooses to keep.
+#
+# A SECOND PROBE, deliberately, not a reformat of $OUT. `run` emits line
+# protocol and `run --json` emits JSONL; the contract does not promise the two
+# are inter-convertible, and it explicitly refuses to stabilise the human prose
+# ("Parse the symbol, never the prose"). Deriving one from the other would be
+# parsing exactly what was declared unstable. Both probes are offline, ~10s,
+# and cost no quota. They can observe slightly different states; that skew is
+# the price, and it is smaller than the cost of parsing an unpromised format.
+timeout 600 "$SENSOR" run --json > "$AOUT" 2>/dev/null
+arc=$?
+alines="$(wc -l < "$AOUT" 2>/dev/null || echo 0)"
+
+# The run-boundary record is why a FAILED probe stays visible. Without it an
+# empty archive block is indistinguishable from "no run happened" -- the same
+# silence-is-not-success fault the missing-sensor branch above guards against.
+#
+# TWO exit codes, on purpose. Measured 2026-08-05 on identical state:
+#   ecosim-sensor run          -> rc=3 (BLIND)
+#   ecosim-sensor run --json   -> rc=0
+# `--json` does not honour the exit-code half of SENSOR-CONTRACT v1 section 2
+# (0 OK / 1 WARN / 2 CRIT / 3 BLIND, BLIND beats CRIT). Filed on ecosim. Until
+# it is fixed, `rc` here is the AUTHORITATIVE line-protocol verdict and
+# `json_rc` is what the archival mode claimed -- recorded rather than
+# reconciled, so the discrepancy stays visible in the data instead of being
+# quietly papered over by whichever one this wrapper happened to trust.
+printf '{"ts": "%s", "record": "run", "rc": %s, "json_rc": %s, "lines": %s, "host": "%s"}\n' \
+  "$(ts)" "$rc" "$arc" "${alines:-0}" "$(hostname -s)" >> "$STATE_DIR/archive.jsonl"
+[ -s "$AOUT" ] && cat "$AOUT" >> "$STATE_DIR/archive.jsonl"
 
 case "$rc" in
   0) verdict="OK" ;;
