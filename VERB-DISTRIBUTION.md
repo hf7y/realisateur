@@ -349,6 +349,19 @@ looks complete is the precise failure §5 is built around. So the smoke path
 is structurally incapable of producing an artifact, and it says so in its
 own output rather than leaving a reader to infer it from a small number.
 
+**The smoke job measures the short-build gap, which turns out to be most of
+the ecosystem.** Its first run (realisateur run 30968673378, 2026-08-05):
+
+```
+ 9 verb(s) from  3 project(s)      <- default GITHUB_TOKEN, public only
+32 verb(s) from 13 project(s)      <- same script, same day, org credential
+```
+
+Both exit 0. Both print a well-formed manifest. Nothing in the shorter one
+announces that it is missing three quarters of the surface — which is why
+`build-verbs.yml` asserts its PAT before doing anything, rather than
+discovering the shortfall in a manifest that reads as healthy.
+
 ## 7. Open, each with its real question stated
 
 - **`joue`, twice over.** Two things are called `joue`: chezz **declares**

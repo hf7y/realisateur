@@ -26,6 +26,17 @@
 #   --dry-run, a flag cut-verb-build.sh refuses to combine with --assemble
 #   or --write: this path is structurally incapable of producing an artifact
 #   a host could install.
+#
+#   The gap is not subtle, and it is worth knowing the size of it. Measured
+#   on this job's first run (realisateur run 30968673378, 2026-08-05):
+#
+#     9 verb(s) from  3 project(s)    <- here, default GITHUB_TOKEN
+#    32 verb(s) from 13 project(s)    <- same script, same day, org credential
+#
+#   Both exit 0. Both print a well-formed manifest. Nothing in the shorter
+#   one announces that it is missing three quarters of the ecosystem, which
+#   is the entire reason the real workflow asserts its PAT before it starts
+#   and this one refuses to write anything.
 
 name: verb-build-smoke
 
