@@ -93,6 +93,82 @@ surface_score_code() {
   printf '%s' "${n:-0}"
 }
 
+# ---- NAMING vs INVOKING ---------------------------------------------------
+# Everything above answers "does this text NAME a vendor or an agent". That is
+# a PROXY for the question the bashified branch actually guarantees, which is
+# "does this script DISPATCH A MODEL". The proxy over-refuses, and measurably:
+#
+#   senechal health/no-self-dev.sh   ESSENTIAL, self=4
+#
+# Its entire job is asserting that self-dev stays OFF. It trips the guard on
+# `~/.claude/settings.json` and the word `claude-hook`, and it never runs a
+# model. Estate-wide the naming rule put 58 of 121 wrapped scripts in a class
+# that may not move onto a branch, which is what stalled the migration that
+# would let a verb carry its own implementation.
+#
+# Zach's call, 2026-08-05: score INVOCATION, not naming.
+#
+# WHAT COUNTS AS INVOKING
+# A vendor binary in COMMAND POSITION -- start of a line, or after a pipe,
+# `;`, `&&`, `||`, a subshell open, or one of the usual command prefixes
+# (exec/eval/xargs/env/timeout/nohup/sudo/...). Plus this estate's own two
+# delegation doors, `basheur run|summon` and a literal `--summon` flag.
+#
+# WHY COMMAND POSITION AND NOT A BARE NAME
+# `SENECHAL_CLAUDE_SETTINGS="$HOME/.claude/settings.json"` is a PATH. It can
+# never dispatch anything. `claude -p "$PROMPT"` is a dispatch. The difference
+# is entirely where the token sits, so that is what is matched.
+#
+# WHAT THIS DELIBERATELY KEEPS
+# The `source` hop still decides the verdict: closure.sh scores the CLOSURE,
+# so `scheduler-run` -- which invokes nothing itself and sources the library
+# that runs `claude -p` -- stays ESSENTIAL. Sharpening the criterion does not
+# reopen the false-negative hole that closure.sh exists to close; the two are
+# independent, and lib/closure.sh's own tests assert it.
+#
+# THE RESIDUAL RISK, NAMED
+# Indirection this cannot see: `$RUNNER -p`, where RUNNER is assigned from
+# runtime state. That is the same UNRESOLVED class closure.sh already refuses
+# to call CLEAN, and it is why an unresolvable `source` is never CLEAN either.
+SURFACE_VENDOR_BINS='claude|anthropic|openai|chatgpt|llm|gpt'
+
+# A command prefix that still leaves the NEXT word in command position.
+SURFACE_CMD_PREFIX='exec|eval|command|xargs|env|timeout|nohup|sudo|then|do|else|elif|if|while|until'
+
+# The binary must be followed by WHITESPACE OR END OF LINE, not merely a word
+# boundary. `\b` treats a hyphen as a boundary, so `claude-hook)` -- a case
+# label in senechal's no-self-dev.sh, the very script that motivated this
+# change -- matched as an invocation. Requiring whitespace also drops
+# `claude-code`, `llm-notes`, `gpt.json` and every other hyphenated or dotted
+# name, none of which can be a command being run.
+SURFACE_RE_INVOKE="((^|[|;&(\`{]|\\\$\\()[[:space:]]*|\\b(${SURFACE_CMD_PREFIX})[[:space:]]+)(${SURFACE_VENDOR_BINS})([[:space:]]|$)"
+SURFACE_RE_INVOKE="${SURFACE_RE_INVOKE}|\\bbasheur[[:space:]]+(run|summon)\\b"
+# `--summon` spends, but only when PASSED to a command. A bare `--summon\b`
+# matched realisateur bin/lib/cli-guard.sh four times -- the library whose
+# entire job is REFUSING the flag:
+#     --summon)  cli_die "--summon rejected: this tool makes no AI calls"
+# Every realisateur verb sources that guard, so all of them were classified
+# ESSENTIAL for containing the refusal. Same species of error as `claude-hook`
+# above: the token was read without its position.
+# So: the line must START with a bare command word, and no quote may appear
+# before the flag -- which excludes case labels (`--summon)` starts with the
+# flag) and every diagnostic string (`printf '... --summon ...'`).
+SURFACE_RE_INVOKE="${SURFACE_RE_INVOKE}|^[[:space:]]*[a-z][a-z0-9_-]*([[:space:]]+[^\"'#]*)?--summon\\b"
+# A variable whose NAME says it holds a model runner, used in command position.
+SURFACE_RE_INVOKE="${SURFACE_RE_INVOKE}|(^|[|;&(\`]|\\bexec[[:space:]]+)[[:space:]]*\"?\\\$[{]?[A-Za-z_]*(CLAUDE|LLM|MODEL_BIN|RUNNER)[A-Za-z_]*"
+
+# surface_invokes <file> -- how many NON-COMMENT lines dispatch a model.
+# Comments are excluded here and only here: a commented-out `claude -p` cannot
+# run. That is the opposite of surface_score_code's conservatism, and
+# deliberately so -- there the question was "does this name one", where a
+# comment is evidence; here it is "does this run one", where it is not.
+surface_invokes() {
+  local n
+  [ -r "$1" ] || { printf '0'; return 0; }
+  n="$(grep -vE '^[[:space:]]*#' "$1" 2>/dev/null | grep -ciE "$SURFACE_RE_INVOKE")"
+  printf '%s' "${n:-0}"
+}
+
 # ---- THE DISCOVERY RULE ---------------------------------------------------
 # Which files of a project become caller-facing subcommands.
 #

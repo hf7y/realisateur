@@ -212,16 +212,25 @@ for conf in "$SCHED"/schedule/*.conf; do
     fi
 
     self_s="$(surface_score "$repo/$rel")"
-    worst=0; worst_code=0; via='-'
+    self_inv="$(surface_invokes "$repo/$rel")"
+    worst=0; worst_code=0; worst_inv=0; via='-'; via_inv='-'
     for m in "${CLOSURE[@]}"; do
       s="$(surface_score "$repo/$m")"
       c="$(surface_score_code "$repo/$m")"
+      i="$(surface_invokes "$repo/$m")"
       if [ "$s" -gt "$worst" ]; then worst="$s"; via="$m"; fi
       [ "$c" -gt "$worst_code" ] && worst_code="$c"
+      if [ "$i" -gt "$worst_inv" ]; then worst_inv="$i"; via_inv="$m"; fi
     done
+    # ESSENTIAL now means the closure DISPATCHES a model, not that it names one
+    # (Zach, 2026-08-05; rationale in lib/surface.sh "NAMING vs INVOKING").
+    # `via` follows the reason for the verdict, so an ESSENTIAL row points at
+    # the member that actually runs the model rather than the one that merely
+    # mentions it most -- otherwise the row names the wrong file to go fix.
+    [ "$worst_inv" -gt 0 ] && via="$via_inv"
 
     nunres="${#UNRES[@]}"
-    if   [ "$worst_code" -gt 0 ]; then class=ESSENTIAL
+    if   [ "$worst_inv" -gt 0 ];  then class=ESSENTIAL
     elif [ "$nunres" -gt 0 ];     then class=UNRESOLVED
     elif [ "${#EXTERN[@]}" -gt 0 ]; then class=ESCAPES
     elif [ "$worst" -gt 0 ];      then class=COMMENT-ONLY
@@ -233,11 +242,15 @@ for conf in "$SCHED"/schedule/*.conf; do
     unres_tot=$((unres_tot + nunres))
 
     # THE FINDING: the file-at-a-time guard clears it, the closure does not.
+    # Under the invocation criterion the question is unchanged in shape but
+    # sharper in content: the script itself dispatches nothing, yet something
+    # it sources does. That is still the case a file-at-a-time reading ships.
+    # UNRESOLVED counts too -- an unscoreable source is never CLEAN.
     is_fn=0
-    if [ "$self_s" = 0 ] && [ "$class" != CLEAN ]; then
+    if [ "$self_inv" = 0 ] && { [ "$worst_inv" -gt 0 ] || [ "$nunres" -gt 0 ]; }; then
       is_fn=1; false_neg=$((false_neg+1))
       FN_ROWS+=("$(printf '%-13s %-26s %-12s self=0 closure=%-3s members=%-2s via %s' \
-        "$proj" "$rel" "$class" "$worst" "${#CLOSURE[@]}" "$via")")
+        "$proj" "$rel" "$class" "$worst_inv" "${#CLOSURE[@]}" "$via")")
     fi
     for u in ${UNRES[@]+"${UNRES[@]}"}; do UNRES_ROWS+=("$proj/$u"); done
 
