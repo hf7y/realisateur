@@ -5,14 +5,27 @@ vim-arcade's clone from mandark. Sibling to `MONKEY.md` (where development
 went) and `THE-UNWIRING.md` (what was parked). This one says how the thing
 agents build on monkey gets **back** to the hands that use it.*
 
-**Status: built and standing, waiting on one credential. `cut-verb-build.sh`
-and `install-verb-build.sh` exist and are tested (17/17 `bin/tests/
-verb-build-test.sh`, 31/31 `bin/tests/cut-verb-build-test.sh`). The
-meta-repo `hf7y/verbs` exists as of 2026-08-04 with its workflow installed
-and registered. It has cut **no build**: the workflow refuses to start
-without `VERBS_READ_TOKEN`, a PAT only Zach can mint. Nothing on this host
-has been switched over; `installe` is untouched and still owns
-`~/.local/bin`.**
+**Status: WORKING END TO END, 2026-08-05.** The meta-repo `hf7y/verbs` cut its
+first real build — `build/2026-08-05T025146Z`, **31 verbs from 12 projects**,
+1.5M — and a consumer installed it, switched to it, and ran verbs out of it.
+`installe` is still untouched and still owns `~/.local/bin`; the install above
+was into a sandbox build root, and **no dev clone has been removed from any
+host**.
+
+Two corrections earned getting there, both recorded because both were wrong in
+the confident direction, and §6 has the detail:
+
+1. The first build refused with 17 BLIND lines and it was read — by me — as a
+   missing PAT permission. The PAT was correct throughout. `actions/checkout`
+   had persisted the repo-scoped `GITHUB_TOKEN` as a local `extraheader`, which
+   beats the global `insteadOf` rewrite, so every `ls-remote` used the wrong
+   credential. **A credential can be correct and still not be the one in use**,
+   and `Repository not found` is a statement about the credential in effect.
+2. `chezz` declared `joue` and should not have declared anything — Zach,
+   2026-08-05: *"chezz needs to ditch it. chezz has no verbs."* Its `bashified`
+   branch is retired (tag `retired-bashified` at `ca6fb2c`; restore with
+   `git push origin retired-bashified:refs/heads/bashified`). 32 verbs became
+   31, which is the independent check that the retirement reached the build.
 
 Every figure below was produced by a command on 2026-08-04. Where something
 has not run, this file says so.
