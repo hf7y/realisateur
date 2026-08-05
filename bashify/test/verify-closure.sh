@@ -122,13 +122,37 @@ printf '#!/usr/bin/env bash\n# this used to call claude -p; it no longer does\ne
 chmod +x "$r/bin/former"; commit "$r"
 check "C2 a comment-only mention is COMMENT-ONLY" "$(cls fixcomment bin/former)" "COMMENT-ONLY"
 
-# C3 -- a trailing comment on a LINE OF CODE counts as code. Conservative on
-# purpose: misreading code as a comment is the direction that ships.
+# C3 -- REWRITTEN 2026-08-05 when the criterion changed from NAMING a model to
+# INVOKING one (Zach's call; see lib/surface.sh "NAMING vs INVOKING").
+# Previously this asserted ESSENTIAL, on the conservative reading that a
+# trailing comment sits on a line of code and code that names a vendor might
+# run one. Under the new rule the question is whether the line RUNS a model,
+# and `run_thing` does not -- the mention is in the comment, and a comment
+# cannot dispatch. So COMMENT-ONLY is now the correct answer, and asserting
+# ESSENTIAL here would be asserting the superseded criterion.
 r="$(mkrepo fixtrailing)"
 mkdir -p "$r/bin"
 printf '#!/usr/bin/env bash\nrun_thing   # dispatches via claude\n' > "$r/bin/mixed"
 chmod +x "$r/bin/mixed"; commit "$r"
-check "C3 a trailing comment on a code line counts as ESSENTIAL" "$(cls fixtrailing bin/mixed)" "ESSENTIAL"
+check "C3 a code line whose COMMENT names a model is COMMENT-ONLY" "$(cls fixtrailing bin/mixed)" "COMMENT-ONLY"
+
+# C3b -- the half that must NOT relax with it: an actual invocation is still
+# ESSENTIAL even when a trailing comment is what draws the eye. Without this,
+# C3's change would read as "trailing comments are ignored" rather than
+# "naming is not invoking".
+r="$(mkrepo fixtrailingreal)"
+mkdir -p "$r/bin"
+printf '#!/usr/bin/env bash\nclaude -p "$PROMPT"   # the real thing\n' > "$r/bin/mixed"
+chmod +x "$r/bin/mixed"; commit "$r"
+check "C3b a real invocation with a trailing comment is ESSENTIAL" "$(cls fixtrailingreal bin/mixed)" "ESSENTIAL"
+
+# C3c -- the refusal case that cost four false positives in cli-guard.sh: a
+# script REJECTING --summon must not be read as spending it.
+r="$(mkrepo fixrefusal)"
+mkdir -p "$r/bin"
+printf '#!/usr/bin/env bash\ncase "$1" in\n  --summon) die "--summon rejected: this tool cannot spend." ;;\nesac\n' > "$r/bin/guarded"
+chmod +x "$r/bin/guarded"; commit "$r"
+check "C3c refusing --summon is not invoking it" "$(cls fixrefusal bin/guarded)" "CLEAN"
 
 echo
 echo "== D. termination and arithmetic =="
