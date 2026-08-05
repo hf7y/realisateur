@@ -158,9 +158,26 @@ for repo in $repos; do
   # has no bashified branch" and "ls-remote could not read this repo at all"
   # both come out as an empty sha and mean opposite things: the first is the
   # normal answer for most repos, the second is blindness.
-  refs="$(git ls-remote "https://github.com/$OWNER/$repo.git" refs/heads/bashified 2>/dev/null)"
+  # git's stderr is CAPTURED, not discarded. It was `2>/dev/null`, and on
+  # 2026-08-05 the first real CI build refused with seventeen lines of
+  # "listed by the API but git could not read it" and no way to tell an
+  # auth denial from a missing repo from a network fault -- three causes,
+  # one message, three completely different fixes. A diagnostic that
+  # filters the evidence it exists to report is a blind spot, not tidiness.
+  giterr="$tmp/giterr"
+  refs="$(git ls-remote "https://github.com/$OWNER/$repo.git" refs/heads/bashified 2>"$giterr")"
   if [ $? -ne 0 ]; then
-    say "  BLIND  $repo: listed by the API but git could not read it"
+    # One line, and the credential is never echoed: the insteadOf rewrite
+    # puts a token in the URL, so git's own message can contain it.
+    reason="$(sed -e 's|https://[^@]*@|https://<redacted>@|g' "$giterr" 2>/dev/null | grep -v '^$' | head -1)"
+    case "$reason" in
+      *"Authentication failed"*|*"could not read Username"*|*"403"*|*"Permission"*)
+        hint=" -- the credential cannot READ this repository's contents. A fine-grained PAT needs Contents: Read, not only Metadata: Read; listing succeeded, so Metadata is already granted." ;;
+      *"not found"*|*"404"*|*"Repository not found"*)
+        hint=" -- not found for this credential. For a private repo that usually means the token was not granted access to it, since 'forbidden' and 'missing' are deliberately indistinguishable." ;;
+      *) hint="" ;;
+    esac
+    say "  BLIND  $repo: git could not read it: ${reason:-<no stderr>}$hint"
     blind=$((blind + 1))
     continue
   fi
