@@ -5,11 +5,14 @@ vim-arcade's clone from mandark. Sibling to `MONKEY.md` (where development
 went) and `THE-UNWIRING.md` (what was parked). This one says how the thing
 agents build on monkey gets **back** to the hands that use it.*
 
-**Status: designed and half-built. `cut-verb-build.sh` and
-`install-verb-build.sh` exist and are tested (17/17, `bin/tests/
-verb-build-test.sh`). The meta-repo does not exist yet — §6 is the
-stand-up, and it needs one human sitting. Nothing on this host has been
-switched over; `installe` is untouched and still owns `~/.local/bin`.**
+**Status: built and standing, waiting on one credential. `cut-verb-build.sh`
+and `install-verb-build.sh` exist and are tested (17/17 `bin/tests/
+verb-build-test.sh`, 31/31 `bin/tests/cut-verb-build-test.sh`). The
+meta-repo `hf7y/verbs` exists as of 2026-08-04 with its workflow installed
+and registered. It has cut **no build**: the workflow refuses to start
+without `VERBS_READ_TOKEN`, a PAT only Zach can mint. Nothing on this host
+has been switched over; `installe` is untouched and still owns
+`~/.local/bin`.**
 
 Every figure below was produced by a command on 2026-08-04. Where something
 has not run, this file says so.
@@ -260,18 +263,104 @@ precisely BUILD-DISCIPLINE's "*'working' backed by a test name or
 human-sense witness, not exit code alone*", failing inside the builder that
 is supposed to enforce it.
 
-**Not run.** The meta-repo does not exist. Standing it up:
+**Run, later on 2026-08-04: the meta-repo now exists.** `hf7y/verbs`,
+private, carrying `.github/workflows/build-verbs.yml` and a
+generated-do-not-edit README; `gh workflow list` shows `build-verbs active
+327473587`. Steps 1 and 2 of the stand-up are done.
 
-1. `gh repo create hf7y/verbs --private` — an outward-facing act, left to a
-   human deliberately.
-2. Add `provision/verbs-meta/build-verbs.yml` at
-   `.github/workflows/build-verbs.yml`.
+**Still not run: any build at all.** Step 3 is the gate and it is a human's:
+
 3. Add secret `VERBS_READ_TOKEN`: a fine-grained PAT with **read** on the
-   org's repos. The default `GITHUB_TOKEN` is scoped to the meta-repo alone
-   and would silently produce the short-build failure above.
+   account's repos. The default `GITHUB_TOKEN` is scoped to the meta-repo
+   alone and would silently produce the short-build failure above.
 4. `gh workflow run build-verbs` and read the manifest before any host
    installs it. As of 2026-08-04 a hand run of the same script produces 32
    verbs from 13 projects, 1.6M, all 32 passing the `--help` witness.
+
+The workflow now refuses to start at all without that secret rather than
+failing later at a checkout 404 — dispatched with no secret, run
+30968541374 ends at its first step: *"VERBS_READ_TOKEN is not set on this
+repository ... Refusing to run rather than produce one."* Which also means
+the nightly cron fails every night until the PAT exists, deliberately.
+
+### What hardening the workflow found
+
+Three defects, none of which a hand run on mandark could have shown,
+because all three only appear on a machine with no previous build on it.
+
+**(1) The shrink refusal was a no-op in CI.** It compared against
+`$BUILD_ROOT/current` — `~/.local/share/verb-builds` — which on a fresh
+Actions runner does not exist, so `prev_count` stayed 0 and no build could
+ever be smaller than it. The one check whose stated purpose is to catch a
+*nightly* build that lost a project to a flaked API call was disabled in
+the only place a nightly build runs. In CI the previous build is not
+missing, it is merely elsewhere: the meta-repo checkout being assembled
+into carries the last build's `manifest.tsv`. That is now also consulted,
+larger record wins.
+
+**(2) Retirement did not propagate to the tree.** Each project directory is
+removed and re-copied, so a project that *changed* was handled; a project
+that *left* was not. Nothing deleted its directory, so `git add -A` would
+re-commit a retired project's verbs every night and every consumer would
+keep installing a verb the manifest no longer names. This silently voids
+the archiving mechanism §5 rests on — archiving `quatre-vingt-douze` to
+settle the `cueille` collision would have dropped the row and left the
+executable in place. Verified before the fix by assembling three times into
+one directory with a planted `quatre-vingt-douze/bin/cueille`: it survived
+every run. The prune is driven by the previous build's own manifest, never
+by a directory listing, because `$ASSEMBLE` also holds the meta-repo's
+`README.md`, `.github/` and `.git`.
+
+**(3) The workflow's own no-change branch was unreachable.** `BUILD_ID` is a
+fresh timestamp every run, so `git diff --cached --quiet` was never true and
+the nightly job would have cut a distinct tag every night over a
+byte-identical tree — a stream of names for one artifact, which is the
+opposite of a build you can name and hold. The comparison is now on the
+payload (manifest body plus assembled files); a night in which no project
+moved cuts no tag.
+
+Also hardened: `GIT_TERMINAL_PROMPT=0`, so a repository the credential
+cannot read fails instead of waiting on a password prompt no runner will
+ever answer, and an `ls-remote` that *fails* is now counted BLIND rather
+than read as "this project has no bashified branch" — the two were
+indistinguishable in an empty sha and mean opposite things. Manifest rows
+are shape-checked (four fields, 40-hex sha, a `repo_url` naming its own
+project) before emission, so a malformed row is refused here rather than
+discovered by a consumer required to throw the whole build away.
+
+`bin/tests/cut-verb-build-test.sh` (31 tests) covers all of the above,
+hermetically: a fake `gh` and fixture repositories reached over `file://`,
+so the suite cannot pass merely because GitHub happened to be up.
+
+### Validating the pipeline with no credential
+
+`.github/workflows/verb-build-smoke.yml` — realisateur's first CI workflow —
+runs both contract suites and a live `cut-verb-build.sh --dry-run` using
+only the default `GITHUB_TOKEN`. It lives in realisateur rather than the
+meta-repo because a "dry run" dispatched in `hf7y/verbs` is *not* a
+credential-free path: its first real step checks out private
+`hf7y/realisateur` to obtain the script it would dry-run.
+
+`--dry-run` derives and shape-checks a manifest, writes nothing, and cannot
+be combined with `--assemble` or `--write`. That exclusion is the point: a
+credential-limited read is short **by construction** — it sees the public
+repositories and misses every private project — and a short build that
+looks complete is the precise failure §5 is built around. So the smoke path
+is structurally incapable of producing an artifact, and it says so in its
+own output rather than leaving a reader to infer it from a small number.
+
+**The smoke job measures the short-build gap, which turns out to be most of
+the ecosystem.** Its first run (realisateur run 30968673378, 2026-08-05):
+
+```
+ 9 verb(s) from  3 project(s)      <- default GITHUB_TOKEN, public only
+32 verb(s) from 13 project(s)      <- same script, same day, org credential
+```
+
+Both exit 0. Both print a well-formed manifest. Nothing in the shorter one
+announces that it is missing three quarters of the surface — which is why
+`build-verbs.yml` asserts its PAT before doing anything, rather than
+discovering the shortfall in a manifest that reads as healthy.
 
 ## 7. Open, each with its real question stated
 
