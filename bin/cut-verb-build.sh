@@ -174,7 +174,13 @@ for repo in $repos; do
       *"Authentication failed"*|*"could not read Username"*|*"403"*|*"Permission"*)
         hint=" -- the credential cannot READ this repository's contents. A fine-grained PAT needs Contents: Read, not only Metadata: Read; listing succeeded, so Metadata is already granted." ;;
       *"not found"*|*"404"*|*"Repository not found"*)
-        hint=" -- not found for this credential. For a private repo that usually means the token was not granted access to it, since 'forbidden' and 'missing' are deliberately indistinguishable." ;;
+        # Reaching this line means `gh repo list` ALREADY returned this repo,
+        # so the credential can see it. git then 404ing is not ambiguity --
+        # GitHub masks a contents-403 as a 404 for private repos, and a
+        # fine-grained PAT that has Metadata but not Contents produces
+        # exactly this pair. Said definitely, because a hedge here sends the
+        # reader to re-pick repositories in a token that already lists them.
+        hint=" -- but the API LISTED this repo, so the credential sees it and only its CONTENTS are refused. GitHub reports a contents-403 as 404 on a private repo. Fix: grant the fine-grained PAT 'Contents: Read' (Repository permissions), then re-run. Re-selecting repositories will not help; they are already selected." ;;
       *) hint="" ;;
     esac
     say "  BLIND  $repo: git could not read it: ${reason:-<no stderr>}$hint"
