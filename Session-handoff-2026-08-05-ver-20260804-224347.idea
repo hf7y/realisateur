@@ -1,0 +1,9 @@
+Session handoff 2026-08-05: verb builds, front door, and an attribution problem
+WHAT LANDED: the verb meta-repo works end to end -- hf7y/verbs cut build/2026-08-05T025146Z (31 verbs, 12 projects, 1.5M), a consumer installed it into a sandbox and ran verbs out of it. notify-senechal now verifies a GitHub ISSUE and needs no senechal clone (PR #51, paired with scheduler#22). dexter is cleared: ~/realisateur and ~/scheduler removed plus 10 shims, ~/.local/bin is now exactly claude/node/npm/npx. abletim, secretaire and wtul removed from mandark after fauche cleared them.
+
+STILL OPEN, and each is a real decision rather than a task:
+1. The verb build covers 26 of ~56 ecosystem commands on mandark. The other 30 are install-shims.sh shims and loop scripts that exec INSIDE the realisateur and scheduler checkouts. That is a fourth coupling VERB-DISTRIBUTION.md section 2 does not name. Zach 2026-08-05: scope the shim layer as separate, later.
+2. installe still does not read a build; it still creates a bashified WORKTREE of a dev clone. That is the chokepoint change nobody has made.
+3. joue is a declared verb in vim-arcade PR #52, which targets bashified and ships a known false startup prompt until PR #53 lands on main first. Merge order matters: #53, re-sync, then #52.
+
+ATTRIBUTION, and it is realisateur#40 live: this session closeout credited me with merging PR #22 and #51 and closing issues #37 and #38. I did none of those -- I left #37 and #38 open deliberately and said so. Everything is `hf7y`, so no tool can tell one actor from another, and a session summary is now confidently wrong in a way nobody downstream can detect. #40 called this unexplained; it is worse than unexplained, it is actively producing false records. Fixing attribution is now a correctness issue for every automated summary, not just a forensics gap.
