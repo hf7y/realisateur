@@ -91,12 +91,33 @@ baudin had spent **five consecutive passes** recording the edit as blocked and
 staging a hand-patch for a human — *"the checklist never caught up because the
 edit was believed blocked."*
 
-Across all five projects: baudin re-probed and it worked; nine-speakers logs it
-as *"harness-level, intermittent"*, self-resolved within one night; crt and
-groc-mangr never mention it; only sequestria claims a sustained block, and that
-claim is **unverified**. **Intermittent, not systematic.** The real defect is a
-nightly agent inheriting a prior pass's conclusion and not retesting it.
-Corrected in the issue.
+So I re-probed sequestria too, rather than leaving my own "should be re-probed"
+hanging. Cloned it and used the harness Edit path on `.claude/FOCUS.md` — the
+exact file and mechanism its `PROCESS.md` calls *"a standing tool-permission
+restriction… not a transient glitch"*. **It succeeded on the first try.**
+Reverted immediately; nothing committed or pushed.
+
+*Limitation, stated plainly:* that was an interactive session with broad
+latitude, not an unattended nightly agent, and the gate is documented as
+context-sensitive. It disproves "unconditionally protected", not "a nightly
+pass would succeed".
+
+| project | claim | retested? |
+|---|---|---|
+| baudin | 5 passes blocked | **yes — 6th re-probed, wrote fine** |
+| nine-speakers | blocked passes 3–7 | **yes — self-resolved same night**, *"harness-level, intermittent"* |
+| sequestria | *"standing… not a transient glitch"* | **yes, tonight — did not reproduce** |
+| crt / groc-mangr | no claim | — |
+
+**Every claim that has ever been retested has failed to reproduce. No project
+has a confirmed standing block.** So the original framing — migrate nine
+projects to escape a gate — is unsupported. `SCHEDULER_SUBDIR=".scheduler"`
+stays defensible as tidying, not as unblocking.
+
+**The finding that survives is about belief:** three separate projects recorded
+a hard block, each stopped testing it, and each was wrong. That belongs in
+whatever brief tells a nightly agent how to report a blocker — *re-probe before
+recording a block, and record the probe, not the conclusion.*
 
 ### 3.2 I reported a local-only branch as at-risk
 
