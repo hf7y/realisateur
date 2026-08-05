@@ -3191,3 +3191,68 @@ vim-arcade's own `CLAUDE.md` gained two repo-local rules (close what you
 ship; CI is the gate, never weaken a test to make it pass). Whether
 `BUILD-DISCIPLINE.md` should gain a wider "one source" row and a CI row
 is Zach's call, filed to BLOCKERS.md.
+
+## 2026-08-04 (later) — vim-arcade self-dev closed its own loop; a guard that cried wolf over file-manager litter
+
+Second half of the vim-arcade session. All shas are vim-arcade's unless
+named otherwise.
+
+**Landed:** `7ad5a8d` (#45) greened a red `main` — a test that called the
+live GitHub API and failed without an authenticated `gh`; `93c2d2a`
+(#51) classified the dirty-tree check and added post-merge / at-quit
+checkout sync. `096f59f` filed the AoE idea (#49) for batch.
+
+**The self-dev loop closed, unassisted.** Zach pressed `y` at quit and
+`joue` handed off through `scheduler -i` on its own: `56bc1ae` records it
+filing issue #48 and merging PR #51. Three of the ten currently-open
+issues (#47, #48, #50) were filed by him from inside the tool. The
+instrument is now reporting on itself, which was the whole objective.
+
+**The lesson worth keeping: I filtered the evidence out of my own
+diagnostics.** `joue` refused Zach's fast-forward twice with "the tree is
+dirty -- refusing to update automatically". The entire dirty tree was
+`?? .directory`, KDE/Dolphin litter that the incoming commits never
+touched — the fast-forward then succeeded by hand with the file still
+present. I could not see it because I had been running
+`git status --porcelain | grep -v '^?? \.directory'` all session to read
+durability. **I was filtering out the exact thing that was blocking
+him.** A noise filter in a diagnostic becomes a blind spot the moment
+that diagnostic is used to answer "why is this blocked?" — the same
+shape as this estate's silence-audit doctrine, applied to my own tooling
+rather than to a script.
+
+Worse, when it first fired I filed an issue and pulled his checkout by
+hand. That fixed the symptom for exactly one merge; the identical
+refusal returned the moment `main` moved, and he said "going in circles
+apparently". The real fix was one line — `.directory` added to
+`~/.config/git/ignore` (machine config, filed to senechal `5e04a96`) —
+which I should have reached for before writing a spec.
+
+**A guard that cries wolf trains the habit it exists to prevent.** #10
+already established this for a moved remote (inform, do not block); we
+had not applied it to dirt. `93c2d2a` now classifies: tracked
+modifications block, untracked files the incoming commits would
+overwrite block and are named, untracked files they never touch do not.
+
+**A standard with two implementations drifts exactly like data does.**
+#31 required refusals to name a reason AND a next action; `merge_safety`
+obeyed it, `staleness` did not — no file list, no command. Now both
+build refusals through one `refusal.py`. That is #42's class with a
+*rule* as the duplicated truth rather than a value.
+
+**`Closes #N` works.** #46 auto-closed when #51 merged — the first real
+use of the rule added in `6c25db5`, and the end of hand-closing shipped
+issues.
+
+**Philosophy delta: none.** No doctrine file edited in this repo. The
+"refusal names a next action" rule is mechanized repo-locally in
+vim-arcade's `refusal.py`; whether it belongs in `BUILD-DISCIPLINE.md`
+rides on the still-open BLOCKERS question about widening the "one
+source" row (`66d5c2d`).
+
+**closeout-lint remains BLIND**, not clean: the same 8 `[missing-repo]`
+FLAGs from its `$HOME`-non-expansion defect, so its "no repo touched in
+12h" line is false again on a day with ~30 vim-arcade commits.
+Durability verified by hand — vim-arcade, scheduler, realisateur and
+senechal all clean, on `main`, nothing unpushed, CI green on
+vim-arcade `main`.
