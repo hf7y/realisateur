@@ -185,6 +185,15 @@ for conf in "$SCHED"/schedule/*.conf; do
     printf '%s\n' "${WANT[@]}" | grep -qxF "$proj" || continue
   fi
   repo="$(grep -oP '^PROJECT_REPO_PATH=\K.*' "$conf" 2>/dev/null | tr -d '"'"'"'')"
+  # The confs store the path as a shell LITERAL -- `PROJECT_REPO_PATH="$HOME/..."`
+  # -- because cron expands it at run time. Read statically it is the seven
+  # characters `$HOME`, so `-d "$repo/.git"` failed for EVERY project and each
+  # one was skipped by the `continue` below. The run then reported a partition
+  # over 0 scripts and exited 0, which reads as "nothing is wrong" rather than
+  # "nothing was looked at". Verified 2026-08-05 via:
+  #   grep -oP '^PROJECT_REPO_PATH=\K.*' schedule/senechal.conf  ->  $HOME/...
+  repo="${repo/#\$HOME/$HOME}"
+  repo="${repo/#\$\{HOME\}/$HOME}"
   [ -n "$repo" ] && [ -d "$repo/.git" ] || continue
   git -C "$repo" rev-parse --verify -q bashified >/dev/null 2>&1 || continue
   repo="$(readlink -f "$repo")"
@@ -249,6 +258,17 @@ done
 if [ "$total" = 0 ] && [ "${#WANT[@]}" -gt 0 ]; then
   echo "$CLI_NAME: no project named '${WANT[*]}' has a bashified branch -- nothing was scored." >&2
   echo "(refusing to exit 0 about a name that matches nothing)" >&2
+  exit 1
+fi
+
+# The guard above only fired when a project FILTER was given, so the unfiltered
+# run -- the one a human types -- printed an all-zero partition and exited 0.
+# That is how the $HOME defect above survived: the tool reported a clean
+# migration surface across the whole estate while reading no repository at all.
+# Zero scripts is never an answer about the estate; it is a broken scan.
+if [ "$total" = 0 ]; then
+  echo "$CLI_NAME: scored 0 wrapped scripts across every conf in $SCHED/schedule." >&2
+  echo "(refusing to exit 0 having read nothing -- check PROJECT_REPO_PATH resolves)" >&2
   exit 1
 fi
 
