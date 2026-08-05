@@ -62,8 +62,9 @@ CLI_SUMMARY='pin every declared verb to one dated build manifest, read live from
 CLI_USAGE='  cut-verb-build.sh                    derive and print the manifest to stdout
   cut-verb-build.sh --write            also store it under the build root
   cut-verb-build.sh --assemble <dir>   lay every verb out under <dir> (what CI commits)
-  cut-verb-build.sh --allow-shrink     accept a build with fewer verbs than the last'
-CLI_FLAGS='--write --assemble --allow-shrink --owner --build-root'
+  cut-verb-build.sh --allow-shrink     accept a build with fewer verbs than the last
+  cut-verb-build.sh --dry-run          derive and check the manifest SHAPE only; never a build'
+CLI_FLAGS='--write --assemble --allow-shrink --dry-run --owner --build-root'
 CLI_POSITIONAL=any   # flag VALUES (--build <id>) read as positionals to cli-guard;
                      # the arg loop below rejects anything genuinely unknown.
 CLI_EXITS='  0  a complete manifest was derived
@@ -77,12 +78,14 @@ BUILD_ROOT="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}
 WRITE=0
 ALLOW_SHRINK=0
 ASSEMBLE=''
+DRY_RUN=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --write)        WRITE=1 ;;
     --assemble)     ASSEMBLE="${2:?--assemble needs a directory}"; shift ;;
     --allow-shrink) ALLOW_SHRINK=1 ;;
+    --dry-run)      DRY_RUN=1 ;;
     --owner)        OWNER="${2:?--owner needs a value}"; shift ;;
     --build-root)   BUILD_ROOT="${2:?--build-root needs a value}"; shift ;;
     *) printf '%s: unknown argument: %s\n' "$CLI_NAME" "$1" >&2; exit 2 ;;
@@ -92,6 +95,28 @@ done
 
 say() { printf '%s\n' "$*" >&2; }
 die() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
+
+# --dry-run is for CI that has NO org credential -- see the smoke workflow.
+# It must therefore be incapable of producing anything a host could install,
+# because a dry run's read is short BY CONSTRUCTION (a token that can only
+# see public repositories derives a build missing every private project),
+# and a short build that looks complete is the exact failure this whole
+# script is built to refuse. So the two flags are mutually exclusive at the
+# argument level rather than "handled" later.
+if [ "$DRY_RUN" -eq 1 ] && { [ -n "$ASSEMBLE" ] || [ "$WRITE" -eq 1 ]; }; then
+  printf '%s: --dry-run cannot be combined with --assemble or --write: a dry run reads with whatever credential it has, so its build is short by an unknown amount and must never become an artifact.\n' \
+    "$CLI_NAME" >&2
+  exit 2
+fi
+
+# An unreadable repository must FAIL LOUDLY, never sit waiting for a
+# password. git ls-remote against a repo the credential cannot read will ask
+# a terminal for one; in CI there is no terminal and the job hangs to the
+# six-hour limit, and on a host it stops a nightly cut dead. Refused here,
+# so the call returns non-zero -- which section 2 counts as BLIND rather
+# than as "this project has no bashified branch". Those two look identical
+# in an empty sha and mean opposite things.
+export GIT_TERMINAL_PROMPT=0
 
 command -v gh >/dev/null 2>&1 || die 'gh is not on PATH -- cannot read the declarations. Refusing to cut an empty build.'
 gh auth status >/dev/null 2>&1 \
@@ -129,7 +154,17 @@ blind=0
 projects=0
 
 for repo in $repos; do
-  sha="$(git ls-remote "https://github.com/$OWNER/$repo.git" refs/heads/bashified 2>/dev/null | awk 'NR==1{print $1}')"
+  # rc is read BEFORE the pipe, because "ls-remote succeeded and this repo
+  # has no bashified branch" and "ls-remote could not read this repo at all"
+  # both come out as an empty sha and mean opposite things: the first is the
+  # normal answer for most repos, the second is blindness.
+  refs="$(git ls-remote "https://github.com/$OWNER/$repo.git" refs/heads/bashified 2>/dev/null)"
+  if [ $? -ne 0 ]; then
+    say "  BLIND  $repo: listed by the API but git could not read it"
+    blind=$((blind + 1))
+    continue
+  fi
+  sha="$(printf '%s\n' "$refs" | awk 'NR==1{print $1}')"
   # No bashified branch is a normal answer: most repos are not bashified.
   [ -n "$sha" ] || continue
 
@@ -181,12 +216,35 @@ if [ -n "$dupes" ]; then
 fi
 
 # --- 4. compare against the previous build ------------------------------
+# WHERE "the previous build" LIVES DEPENDS ENTIRELY ON WHO IS RUNNING.
+#
+# A human at a terminal has one under $BUILD_ROOT/current. CI DOES NOT: a
+# GitHub Actions runner is a fresh machine every night, $BUILD_ROOT never
+# exists, prev_count stayed 0 -- and so the shrink refusal, the check whose
+# whole purpose is to catch a NIGHTLY build that lost a project to a flaked
+# API call, was a no-op in the one place it was ever going to matter. Found
+# 2026-08-04 while hardening the workflow, before the meta-repo had cut a
+# single build.
+#
+# The previous build is not missing in CI, it is merely somewhere else: the
+# meta-repo checkout being assembled INTO carries the last build's own
+# manifest.tsv. So --assemble supplies the comparison, and the LARGER of the
+# two records wins -- a shrink is a shrink whichever one noticed it.
 prev_count=0
+prev_where='(no previous build)'
 if [ -L "$BUILD_ROOT/current" ] && [ -f "$BUILD_ROOT/current/manifest.tsv" ]; then
   prev_count="$(grep -cv '^#' "$BUILD_ROOT/current/manifest.tsv" 2>/dev/null || echo 0)"
+  prev_where="$BUILD_ROOT/current/manifest.tsv"
+fi
+if [ -n "$ASSEMBLE" ] && [ -f "$ASSEMBLE/manifest.tsv" ]; then
+  assembled_prev="$(grep -cv '^#' "$ASSEMBLE/manifest.tsv" 2>/dev/null || echo 0)"
+  if [ "$assembled_prev" -gt "$prev_count" ]; then
+    prev_count="$assembled_prev"
+    prev_where="$ASSEMBLE/manifest.tsv"
+  fi
 fi
 if [ "$prev_count" -gt "$verb_count" ] && [ "$ALLOW_SHRINK" -eq 0 ]; then
-  say "  previous build: $prev_count verb(s)"
+  say "  previous build: $prev_count verb(s)  <- $prev_where"
   say "  this build:     $verb_count verb(s)"
   die 'this build is SMALLER than the current one. A verb that vanished because an API call flaked looks exactly like one that was retired. Re-run, or pass --allow-shrink if the loss is real.'
 fi
@@ -204,6 +262,48 @@ manifest="$tmp/manifest.tsv"
   printf '# project\tverb\tsha\trepo_url\n'
   sort "$rows"
 } > "$manifest"
+
+# --- 5a. the manifest's SHAPE -------------------------------------------
+# Four tab-separated fields, a 40-hex sha, and a repo_url that names the
+# project it claims to come from. This is cheap and it is the only part of
+# the pipeline a credential-less CI can exercise (see --dry-run), so it is
+# checked on EVERY run rather than only on dry ones: a malformed row reaches
+# install-verb-build.sh as a verb it will look for and not find, and that
+# consumer is required to discard the whole build over it. Better to refuse
+# to emit than to make a downstream host prove the build wrong.
+shape_bad=0
+while IFS= read -r line; do
+  case "$line" in '#'*|'') continue ;; esac
+  n_fields="$(printf '%s' "$line" | awk -F'\t' '{print NF}')"
+  IFS=$'\t' read -r s_project s_verb s_sha s_url <<< "$line"
+  if [ "$n_fields" -ne 4 ]; then
+    say "  MALFORMED  not 4 tab-separated fields: $line"; shape_bad=$((shape_bad+1)); continue
+  fi
+  case "$s_sha" in
+    [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) : ;;
+    *) say "  MALFORMED  sha is not 40 hex for $s_project/$s_verb: '$s_sha'"; shape_bad=$((shape_bad+1)) ;;
+  esac
+  case "$s_url" in
+    *"/$s_project.git") : ;;
+    *) say "  MALFORMED  repo_url does not name $s_project: '$s_url'"; shape_bad=$((shape_bad+1)) ;;
+  esac
+  case "$s_verb" in
+    ''|*/*|.|..) say "  MALFORMED  unusable verb name: '$s_verb'"; shape_bad=$((shape_bad+1)) ;;
+  esac
+done < "$manifest"
+[ "$shape_bad" -eq 0 ] || die "$shape_bad malformed manifest row(s). Refusing to emit a manifest a consumer would have to discard."
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  cat "$manifest"
+  say ""
+  say "DRY RUN. $verb_count verb(s) from $projects project(s), manifest shape OK."
+  say "This is NOT a build and NOTHING was written. The count above is only"
+  say "as complete as the credential this ran with: a token that can read"
+  say "just the public repositories derives a manifest missing every private"
+  say "project and looks entirely healthy doing it. Do not read this number"
+  say "as the size of the verb surface."
+  exit 0
+fi
 
 cat "$manifest"
 say ""
@@ -228,6 +328,39 @@ if [ -n "$ASSEMBLE" ]; then
     [ -n "$project" ] || continue
     printf '%s\n' "$project"
   done < "$rows" | sort -u > "$tmp/projects"
+
+  # WHAT THE PREVIOUS BUILD OWNED, so retirement can actually take effect.
+  #
+  # Each project directory is rm -rf'd and re-copied below, so a project
+  # that CHANGED is handled. A project that LEFT was not: nothing removed
+  # its directory, so its verbs stayed in the meta-repo tree, git add -A
+  # re-committed them every night, and every consumer kept installing a
+  # verb the manifest no longer names. That is not a cosmetic leak -- it
+  # silently voids the retirement mechanism VERB-DISTRIBUTION.md section 5
+  # rests on. `quatre-vingt-douze` was archived on 2026-08-04 precisely so
+  # that `cueille` would stop being declared twice; with this loop missing,
+  # archiving it would have removed the row from the manifest and left the
+  # executable sitting in the build.
+  #
+  # Verified 2026-08-04: three assembles into one directory, with a fake
+  # `quatre-vingt-douze/bin/cueille` planted between runs; it survived all
+  # of them. bin/tests/cut-verb-build-test.sh now holds that case.
+  #
+  # The previous build's OWN manifest is the authority on what to prune --
+  # never a directory listing. $ASSEMBLE also contains the meta-repo's
+  # README, its .github/ and its .git, and guessing which top-level entries
+  # are projects would eventually delete one of those.
+  if [ -f "$ASSEMBLE/manifest.tsv" ]; then
+    awk -F'\t' '!/^#/ && NF>=1 && $1 != "" {print $1}' "$ASSEMBLE/manifest.tsv" \
+      | sort -u > "$tmp/prev-projects"
+    while read -r gone; do
+      [ -n "$gone" ] || continue
+      case "$gone" in */*|.|..) continue ;; esac   # never leave $ASSEMBLE
+      [ -d "$ASSEMBLE/$gone" ] || continue
+      rm -rf "${ASSEMBLE:?}/$gone"
+      say "  RETIRED  $gone no longer declares a verb -- removed from the build"
+    done < <(comm -23 "$tmp/prev-projects" "$tmp/projects")
+  fi
 
   while read -r project; do
     [ -n "$project" ] || continue

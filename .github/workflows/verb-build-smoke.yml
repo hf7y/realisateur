@@ -1,0 +1,80 @@
+# verb-build-smoke.yml -- prove the verb-build pair still works, using NO
+# credential anybody has to mint.
+#
+# WHY THIS LIVES IN REALISATEUR AND NOT IN hf7y/verbs
+#   The meta-repo's own workflow cannot be exercised without a secret. Its
+#   very first step is `actions/checkout` of hf7y/realisateur, which is
+#   PRIVATE, and the default GITHUB_TOKEN in hf7y/verbs is scoped to
+#   hf7y/verbs alone. So a "dry run" dispatched in the meta-repo still needs
+#   VERBS_READ_TOKEN just to obtain the script it would dry-run. Only Zach
+#   can mint that PAT, and until he does the meta-repo's workflow is
+#   unrunnable and therefore unproven.
+#
+#   Here, the script is simply in the checkout. GITHUB_TOKEN can read
+#   realisateur because it IS realisateur, and `gh` with that token can see
+#   hf7y's PUBLIC repositories -- enough to run the real derivation, against
+#   the real GitHub, over real repositories, with no secret at all.
+#
+# WHAT THIS DOES AND DOES NOT PROVE
+#   PROVES: the two contract suites pass; and cut-verb-build.sh can reach
+#   GitHub, apply the declaration rule to live repositories, and emit a
+#   manifest of the right shape.
+#   DOES NOT PROVE: the size or completeness of a real build. This run sees
+#   only public repos, so it derives a manifest missing every private
+#   project -- which is exactly the "short build that looks complete"
+#   failure the design fears. That is why the derivation step runs
+#   --dry-run, a flag cut-verb-build.sh refuses to combine with --assemble
+#   or --write: this path is structurally incapable of producing an artifact
+#   a host could install.
+
+name: verb-build-smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'bin/cut-verb-build.sh'
+      - 'bin/install-verb-build.sh'
+      - 'bin/lib/verb-set.sh'
+      - 'bin/tests/verb-build-test.sh'
+      - 'bin/tests/cut-verb-build-test.sh'
+      - 'provision/verbs-meta/**'
+      - '.github/workflows/verb-build-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Hermetic: fixtures over file:// and a fake `gh`. No network, so a
+      # green result here cannot be an accident of GitHub being up.
+      - name: Contract suite -- deriving a build
+        run: bash bin/tests/cut-verb-build-test.sh
+
+      - name: Contract suite -- installing a build
+        run: bash bin/tests/verb-build-test.sh
+
+      # The one thing the fixtures cannot cover: that the real API shapes,
+      # the real declaration rule and the real repositories still line up.
+      - name: Derive against live GitHub (public repos only, commits nothing)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          bash bin/cut-verb-build.sh --dry-run --owner hf7y | tee /tmp/manifest.tsv
+          rows="$(grep -cv '^#' /tmp/manifest.tsv || true)"
+          # A floor, not an equality. This job's view is the public subset
+          # and asserting an exact count here would break the moment a
+          # project bashifies itself -- which is the one thing the live
+          # derivation is supposed to pick up without anybody editing a
+          # file. Zero, though, means the derivation stopped working.
+          if [ "${rows:-0}" -lt 1 ]; then
+            echo "::error::the live derivation produced no rows at all."
+            exit 1
+          fi
+          echo "live derivation OK: ${rows} row(s) from the public subset."
+          echo "This is NOT the size of a build -- see the header of this workflow."
