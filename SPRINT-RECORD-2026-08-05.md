@@ -264,6 +264,55 @@ senechal        1 prose file(s) have no note in the vault
 My own worktree count (7) **missed a hidden directory** `fauche` found
 immediately. §7.2 is right: believe it over any hand check.
 
+## 8b. Phase 4 — what each remaining pin actually needs
+
+`fauche check` on the three repos P1 does *not* free:
+
+**ecosim (6.5M) — the cleanest.** Its only `fauche` objection is its own verb
+worktree, which P1 removes. The real blocker is that `ecosim-sensor` is not a
+declared verb, so the build cannot carry it.
+
+`sonde` looked like the answer — ecosim's declared verb, already in the build,
+same vocabulary (`list|contract|run|sweep|selftest`). It is not a drop-in:
+
+```
+$ sonde run --json | head -1
+BLIND ecosim.rotation.BLIND_HOST_UNREADABLE ...   <- line protocol, flag ignored
+$ sonde --json run | head -1
+                                                   <- NOTHING, exit 6
+$ ecosim-sensor run --json | head -1
+{"ts": "...", "sensor": "rotation", "symbol": "BLIND_HOST_UNREADABLE", ...}
+
+$ sonde run; echo $?          -> 6
+$ ecosim-sensor run; echo $?  -> 3
+```
+
+`--json` is advertised in `sonde --help` and wired to nothing — and the
+`--json run` form emits *nothing at all* with a code meaning "blind", which is
+indistinguishable from the sensors failing to look. The exit vocabularies also
+differ (verb `6 blind` vs contract `3 BLIND`), so the tick's `0/1/2/3` map would
+report every run as an unmapped anomaly. Filed `ecosim#30` with both routes
+(teach `sonde`, or declare `ecosim-sensor`); choosing is ecosim's call.
+
+**basheur (4.3M).** `fauche`: *"branch 'main' is 6 commit(s) ahead of
+origin/main"* — verified against GitHub directly, 6 ahead / 0 behind, a clean
+fast-forward. All six are `residue: verb-page attempt NNN (summon exit 0)`,
+i.e. its own test residue. **Push before deleting.** Separately, `basheur` is
+installe-owned but has **no `bashified` branch**, so the build cannot carry it
+either — the declare-or-retire question stands.
+
+*(A correction: I first reported basheur's only remote as a local bare repo on
+the same disk. Wrong — `git remote -v | head -2` truncated the list and hid
+`origin`. It has a GitHub origin. Third self-correction of the night, and the
+same species as the other two: a truncated or conservative reading taken as a
+finding.)*
+
+**space-canon (1.6M) — genuinely unrecoverable.** `fauche`: *"no 'origin'
+remote: there is nowhere to recover this from"*, *"branch 'master' has no
+origin/master: it exists only on this host"*, and **30 prose files unvaulted**.
+No `bashified` branch. Not on GitHub. **Give it a remote before any sweep
+touches `~/Documents/Projects`.**
+
 ## 9. Phase 3 readiness — all five surveyed
 
 | project | verdict | why | default branch |
