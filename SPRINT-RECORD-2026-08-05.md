@@ -160,6 +160,45 @@ because no batch ran. **A rotation that dispatches nothing is indistinguishable
 from one being throttled, in the quota data itself.** `ROTATION EXHAUSTED`
 (added in #26) is what makes those tellable apart.
 
+## 4b. The 12:00 UTC tick, and a dispatcher that cannot be deployed to
+
+Second tick observed: **2 of 4 dispatched** (ecosim, vim-arcade), 2 wasted
+(bibliothecaire, chezz). Better than 06:00's zero and exactly the
+intermittent-by-phase behaviour #26 predicts — the waste rate depends on where
+each account's cursor happens to sit, which is why this reads as noise until
+you catch a tick where all four collide.
+
+It also exposed something bigger. ecosim logged `slots=4`; vim-arcade logged
+`DISPATCH [2/3]` — **a three-slot rotation, in the same tick**. The cause:
+
+```
+$ git -C ~vim-arcade/.../scheduler status --porcelain --untracked-files=no
+ M BLOCKERS.md
+$ git -C ~vim-arcade/.../scheduler rev-list --count HEAD..origin/main
+7
+
+PULL skip -- .../scheduler has uncommitted changes to TRACKED files   (every tick)
+```
+
+**One uncommitted file has frozen a live dispatcher 7 commits behind**, running
+a rotation from before chezz existed. The other three accounts are clean.
+
+**This changes the merge plan.** Merging #26 repairs ecosim, bibliothecaire and
+chezz — and leaves vim-arcade on the old runner indefinitely, while looking from
+outside like the fix deployed everywhere. Same for #27. Filed `scheduler#29`
+with the remedy.
+
+The edit that froze it is also itself a rule violation: it **rewrote** two of
+Zach's own answer-placeholder lines (re-quoting `>` to `>>`) rather than
+appending. `BLOCKERS.md` is human-owned and machine-*appendable* — append
+freely, never delete, rewrite, move or prune.
+
+**The generalisable part: a dispatcher with a dirty tracked file is silently
+undeployable**, and nothing reports it. The only signal is a `PULL skip` line in
+a per-account log, on a host where homes are 0700. `git status --porcelain
+--untracked-files=no` across dispatcher accounts would have caught it on the
+first tick.
+
 ## 5. Step 0 — what it became
 
 Wiring ecosim *into* bibliothecaire is refused by **both** projects' contracts,
