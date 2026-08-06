@@ -241,8 +241,47 @@ while [ "$i" -lt "${#projects[@]}" ]; do
   # A HOST-ONLY BRANCH IS A BLOCKER (Zach, 2026-08-01). The test is the remote
   # REF, never the tracking config: a branch pushed by explicit refspec has no
   # upstream configured and is still safely on origin.
+  # SCOPE (2026-08-05, Zach; senechal evidence). The two rules below assert a
+  # negative over EVERY ref in refs/heads/, which is wider than the run being
+  # gated. Two consequences, both seen for real in senechal that night:
+  #
+  #   1. Branches checked out in the LINKED WORKTREES this same section just
+  #      declared BLIND and "outside this check's domain" were flagged anyway
+  #      -- the check contradicted its own scope one screen earlier. Worse,
+  #      the remedy it implies (push it) means publishing a CONCURRENT
+  #      agent's in-flight work, which the propagated concurrent-agents rule
+  #      forbids. Three subagents each refused it, correctly, and each spent
+  #      real effort proving they were right to.
+  #   2. Stale local pointers were reported as lost work. A branch whose tip
+  #      is REACHABLE FROM ANY REMOTE REF has nothing to lose: the commits
+  #      are on origin under this name or another (squash-merge and
+  #      explicit-refspec pushes both land here). A session that pushed
+  #      everything it authored still failed the gate on its neighbours.
+  #
+  # Neither case goes silent -- both still print, they just do not FLAG.
+  # Reachability is the test, never the branch name: a genuinely unpushed
+  # branch is reachable from no remote ref and still blocks, so the
+  # 2026-08-01 host-only rule keeps its teeth.
+  wt_branches="$(git -C "$repo" worktree list --porcelain 2>/dev/null \
+        | awk -v m="$repo" '
+            /^worktree /{p=substr($0,10)}
+            /^branch /{b=substr($0,8); sub("^refs/heads/","",b); if (p != m) print b}')"
+  on_a_remote() { # <branch> -> 0 if its tip is reachable from any remote ref
+    local sha
+    sha="$(git -C "$repo" rev-parse -q --verify "$1" 2>/dev/null)" || return 1
+    [ -n "$sha" ] || return 1
+    [ -n "$(git -C "$repo" branch -r --contains "$sha" 2>/dev/null | head -1)" ]
+  }
   while IFS= read -r br; do
     [ -n "$br" ] || continue
+    if [ -n "$wt_branches" ] && printf '%s\n' "$wt_branches" | grep -qxF "$br"; then
+      echo "    skip [other-worktree] $name: '$br' is checked out in a linked worktree (BLIND above -- not this run's to push)"
+      continue
+    fi
+    if ! git -C "$repo" rev-parse --verify -q "origin/$br" >/dev/null 2>&1 && on_a_remote "$br"; then
+      echo "    note [stale-pointer] $name: '$br' has no origin/$br, but its tip is already reachable from a remote ref -- nothing unpushed"
+      continue
+    fi
     if git -C "$repo" rev-parse --verify -q "origin/$br" >/dev/null 2>&1; then
       ahead="$(git -C "$repo" rev-list --count "origin/$br..$br" 2>/dev/null)"
       if [ "${ahead:-0}" -gt 0 ]; then
