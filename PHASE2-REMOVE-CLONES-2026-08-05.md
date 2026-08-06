@@ -13,13 +13,20 @@ gone, and two of the remaining three are not unblocked at all.
 | repo | plan said | probed today | why |
 |---|---|---|---|
 | `gardien` | remove (6.1M) | **already gone** | clone absent; `fauche`/`garde`/`transplante` all serve from `verb-builds/current/gardien/bin`. This is the model working end to end. |
-| `vim-arcade` | remove (6.2M) | **one command away** | sole pin is `~/.local/bin/joue -> ~/Documents/Projects/vim-arcade/joue`. The build's `joue` is self-contained and verified (below). The command that repoints it is classifier-blocked. |
+| `vim-arcade` | remove (6.2M) | **REMOVED (7.2M)** | see §"vim-arcade is off mandark" below. |
 | `senechal` | remove (25M) | **structurally pinned** | 4 build verbs exec 20 scripts back into the clone. |
 | `bibliothecaire` | remove (88M) | **structurally pinned** | 3 systemd *system* units run `bin/intake.py` from the clone. |
 
-Realistic recoverable space today: **7.2M** (`vim-arcade`), not 125M.
+Recoverable space today: **7.2M** (`vim-arcade`), not 125M. It came off.
 
-## `vim-arcade` — ready, and blocked on one command
+## `vim-arcade` — ready, and blocked on one command (SUPERSEDED)
+
+> **Superseded the same day by the next section.** Kept because its *reasoning*
+> is what went wrong: it accepted "repoint `joue` at the build" as the goal and
+> then reported a harness block as the end of the road. Zach's answer was that
+> `joue` should not exist — and `installe retire`, the command for that, was
+> never blocked. **The block was real; treating it as the only door was mine.**
+> Do not act on the command in this section; it is here as a record.
 
 The build is genuinely standalone. `joue` became a declared verb on
 `origin/bashified` (94d7c47, vim-arcade#52) and **carries its own engine**:
@@ -56,6 +63,113 @@ blocker, not the ecosystem. I did not `ln -sfn` around it: a hand-installed
 symlink owned by nothing is the exact defect Phase 0 exists to remove.
 
 Once that lands, `fauche` should clear `vim-arcade` and the clone can go.
+*(It did clear, by the other route. See below.)*
+
+## vim-arcade is off mandark
+
+*Second pass, same day, after Zach read the above:*
+
+> "lets get vim-arcade off of here and address the joue problem. joue should
+> not even exist. vim arcade ships a game which should be called something
+> else and that's what I should have on my path. senechal should be
+> responsible for keeping it on my path and I should not need the entire
+> vim-arcade repo just to play the game."
+
+That reframes the blocker. The first pass was stuck trying to *repoint* `joue`
+at the build (`installe --force verb ...`, classifier-blocked). But `joue`
+should not exist at all — so the move was **retire, not repoint**, and retiring
+is a different command that is not blocked.
+
+### What was done
+
+```
+$ installe retire joue --force
+  installe: joue is off the path; its target was not touched
+  installe: declared to senechal: joue is no longer on PATH
+$ installe retire entraine --force          # Zach's call: he plays the queue, not the trainer
+  installe: declared to senechal: entraine is no longer on PATH
+$ fauche check ~/Documents/Projects/vim-arcade
+  REMOVABLE     /home/zach/Documents/Projects/vim-arcade
+$ fauche script ~/Documents/Projects/vim-arcade > remove.sh && bash remove.sh
+  removed 1 repository
+```
+
+**"senechal should be responsible for keeping it on my path" needed no work and
+no senechal edit: `installe` IS senechal's verb** (`verb-builds/current/senechal/bin/installe`),
+and it files its own declaration to senechal on every change — both lines above
+are its output, not mine. The senechal repo was not touched; it is open in
+another agent.
+
+Before deleting, `fauche`'s verdict was checked independently, because deletion
+is the one act with no undo:
+
+```
+$ git -C .../vim-arcade log --oneline --all --not --remotes=origin   # (empty)
+$ git -C .../vim-arcade status --porcelain                           # (empty)
+$ git -C .../vim-arcade stash list                                   # (empty)
+```
+
+Zero commits absent from origin across 25 local branches, clean tree, no stash.
+Also removed: the empty `~/Documents/Projects/.vim-arcade-worktrees`. No broken
+symlink was left behind — `find ~/.local/bin -xtype l` is empty.
+
+`~/Documents/Projects` is **785M**, down from 796M. Recover the repo any time
+with `git clone https://github.com/hf7y/vim-arcade.git`.
+
+### The rename: `joue` -> `vim-arcade`
+
+`hf7y/vim-arcade#71`, into `bashified`. The command is a game, not a verb —
+the rest of the estate's commands are things you tell the machine to do, and
+`joue` named the user's action rather than the thing being run.
+
+`bin/joue` -> `bin/vim-arcade`, `man/joue.1` -> `man/vim-arcade.1`,
+`JOUE_ENGINE_ROOT` -> `VIM_ARCADE_ENGINE_ROOT`. Historical references were
+deliberately left alone: `joue-panes` was a real script really collapsed into
+`--map` (#39), the predecessor symlink really was `~/.local/bin/joue`, and
+chezz really did declare `joue` twice. Renaming those would falsify the record.
+
+### The witness, and why `--help` was not it
+
+The first pass verified the build's `joue` with `--help`. That is a bad
+witness — `--help` answers before the engine is touched, so a build carrying
+only the launcher would have passed it. What was run instead, from a **700K
+shallow clone of `bashified`, on a machine with no vim-arcade repo anywhere**:
+
+```
+$ ./bin/vim-arcade                       # under a pty, TERM=xterm-256color
+  vim-arcade startup check
+  engine: vim-arcade is on 'rename-joue-to-vim-arcade', but the trunk is 'main'.
+  [Enter] continue on this copy
+  vim-arcade gh-triage -- 13 open item(s)
+  DRY RUN -- actions only log the gh command (pass --live to really act).
+  buffer:
+  @.I.............................................
+  ...
+```
+
+The game rendered its real queue with no repo on the desk. That is the property
+Zach asked for, shown rather than asserted. `contract-test.sh` also passes 7/7
+under the new name, and `man -l man/vim-arcade.1` renders as `VIM-ARCADE(1)`.
+
+### What is not done
+
+**`vim-arcade#71` is not merged — `gh pr merge` is classifier-blocked**, the
+same wall the 2026-08-05 overnight record hit. Until it lands and a build is
+cut (`gh workflow run build-verbs --repo hf7y/verbs`, or the 01:30 nightly),
+**there is no game command on the path at all**: `joue` is gone by design and
+`vim-arcade` is not built yet. One command from Zach closes it:
+
+```sh
+gh pr merge 71 --repo hf7y/vim-arcade --squash --delete-branch
+# then, once a build carries it:
+installe verb vim-arcade vim-arcade
+```
+
+Filed as `GAPS.md` §0 on that branch: **`entraine` is now broken in every
+build**, because it still reads `ENTRAINE_LEGACY_ROOT` defaulting to a clone
+that no longer exists. It is off the path, so it is inert rather than
+dangerous — but it would pass a `--help` witness while broken, which is the
+same false witness this section is about.
 
 ## `senechal` — the build verbs are shims into the clone
 
