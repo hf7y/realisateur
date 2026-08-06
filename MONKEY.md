@@ -810,3 +810,73 @@ pulls, and nothing ever has.
 They are not: `~/.local/bin` is absent from a non-interactive ssh PATH, which
 is the trap already recorded for hand-running scheduler jobs on dexter. The
 shims work when PATH is set.)*
+
+## 9.3 Decisions Zach locked 2026-08-06 — do not relitigate
+
+*From the vision session (`260806-zach-reply.txt`, `260806-zach-vision-chat.txt`).
+Recorded here rather than in a handoff doc because a handoff is disposable by
+construction and these are constraints on future work. Each carries its
+revisit trigger: a decision with no stated trigger is one that will be argued
+again from scratch, which is the thing §9.2 was written to stop.*
+
+**(a) `monkey` is strictly DEVELOPMENT.** This corrects the morning note's
+typo, which said production. Same for `mandark`, `potato`, `dexter` WSL. A dev
+host consumes its own **stable, versioned build outputs** as tooling — never
+real-time self-dev output. This is the rule the stale verb-build breaks in
+practice: production ran a build cut hours before the merge it needed, and the
+`ecosim-sensor` binary was absent from it entirely (`ecosim#34`).
+
+**(b) Anything user-facing moves off the dev hosts.** bibliothecaire's intake,
+the whisper server, and anything else a person depends on. **Revisit trigger:**
+too many VMs, or ssh in/out becoming major friction.
+
+**(c) Disposable clones and `reset --hard` are ending.** Zach: *"This should
+happen today. It's urgent enough."* Self-dev runs inside per-user accounts;
+the clone was faking an isolation those accounts already provide for real.
+**Done** — `scheduler#53`, merged `d71363c`. `reset --hard` is replaced by
+salvage-then-restore: work a previous run left behind is committed to a
+`salvage/*` branch and **pushed** before anything is moved, and a run whose
+salvage cannot be pushed **aborts with the work intact**. The motivating loss:
+ecosim's auto-stash held PARADIGM 4 (verdict designs), a supervisor
+history-loss fix and 87 lines of tests, unread for days.
+
+**(d) The Obsidian vault keeps its private GitHub remote for now.** The backup
+ecosystem is blocked on hardware (no RAID); this is not permanent. **Revisit
+trigger:** running out of remote space. Long-term preference is offline plus
+excerpt-and-destroy, which dissolves the IP question via fair use.
+
+**(e) The `BLOCKED` verdict vocabulary is essential**, and its weight should be
+tuned from backlog. Note this is currently unbuildable as stated: verdicts are
+destroyed at dispatch, so "the same blocker twice" is *structurally
+unobservable* rather than merely unimplemented. The append-only ledger is the
+precondition — `scheduler#54`.
+
+**(f) Agent D's workflow question is parked** until after this sprint.
+
+**(g) Budget is not metabolism.** Token budget is a *money* question — what
+Zach wants to spend. Metabolism is what the organism does with its energy, and
+critically it should **pace the build to Zach's bandwidth**: if he cannot clear
+issues fast enough, builds must not become runaway introspections elaborating
+low-value but unblocked areas. Currently conflated in one usage gate —
+`realisateur#81`, `scheduler#56`.
+
+**(h) `chezz` stays paused** (un-pause 2026-08-13). The afternoon note left
+this ambiguous — *"we can pause chezz self-dev pending audit or leave it since
+dispatch is down to 6-hourly"* — and it was already paused. Confirmed
+2026-08-06: paused is what he wants. The deep audit is still wanted; his hunch
+is the massive test suite, and his first idea is to **run testing separately
+and non-agentically**. chezz must learn how much it can chew in 120 turns.
+
+**(i) bibliothecaire's intake on mandark is PAUSED**, not fixed —
+`bibliothecaire#22`. *"Not in active use."* monkey's three timers were already
+disabled. Pausing mandark's three needs root and is queued for Zach. Two real
+health failures survive the pause and are recorded on that issue: nothing
+proves the corpus is backed up, and `attestation-fresh` misdiagnoses its own
+cause.
+
+**(j) The shared OAuth token rotation is DEFERRED**, by Zach's explicit choice
+on 2026-08-06 — *"save token rotation for later."* The exposure is real and
+stands recorded: one token sits in plaintext in all six monkey accounts'
+`~/.claude/settings.json`, and it was printed into a session transcript on
+2026-08-06 while checking bibliothecaire's permissions. Not a hazard that
+decays on its own; it waits until he picks it up.
