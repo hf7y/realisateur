@@ -250,6 +250,110 @@ The clone is also not in a removable state on its own terms: on branch
 88M is the largest single win in the plan and it is the furthest away. It needs
 its own migration (units first, then the untracked material), not this sprint.
 
+## ecosim is off mandark (2026-08-05, late)
+
+*Zach: "ecosim needs to just go. nothing on mandark really needs it. it's
+useless." — and, separately: "scheduler can just not be running on mandark at
+this point since nothing is being triggered."*
+
+Those turned out to be **one change**. mandark's crontab had exactly one
+active line, and it was ecosim's:
+
+```
+$ crontab -l | grep -vE '^\s*#' | grep -v '^\s*$'
+  */30 * * * * /home/zach/.local/bin/ecosim-sensor-tick # arme:ecosim-sensors:MONITOR
+```
+
+That line is **owned by `scheduler/schedule/_monitor.conf`**, not by hand, so
+editing the crontab directly would have been undone by the next sync. It was
+parked at source instead (`enabled=0`, the format's own contract for "stays
+declared and visible"), committed, and applied with `arme apply` —
+scheduler's own front door.
+
+**Flagged, because nobody asked for it:** `arme apply` writes the whole
+managed block, and `verb-build-check` was `enabled=1` in that conf while never
+having been written to the crontab. Applying therefore *removed* ecosim's line
+and *added* that one. Reconciling conf → crontab is the intended direction, but
+it means mandark now runs one line it did not run before — a free, non-agent
+`install-verb-build.sh --check` every 6 hours. Parking it too is a one-word
+edit if that is not wanted.
+
+Then, in order:
+
+```
+$ installe retire ecosim-sensor --force     # declared itself to senechal
+$ installe retire sonde --force             # ecosim's declared verb
+$ git -C .../ecosim log --oneline --all --not --remotes=origin   # (empty)
+$ git -C .../ecosim status --porcelain ; git stash list           # (both empty)
+$ fauche check /home/zach/Documents/Projects/ecosim
+  REMOVABLE
+$ fauche script ... | bash
+  removed 1 repository
+```
+
+`sonde` was retired rather than left to rot: probed first with
+`SONDE_LEGACY_ROOT=/nonexistent sonde list`, which GAPs loudly rather than
+misbehaving quietly, so the choice was between a loud-broken verb and no verb.
+
+### The one side effect, predicted and then confirmed
+
+```
+$ ausculte silence
+  ausculte: GAP: silence: .../ecosim/bin/silence-audit.sh is not executable or not present
+$ silence-audit --help
+  # silence-audit.sh -- the ecosystem's NULL-DISCRIMINATOR.
+```
+
+senechal's `ausculte` still defaults `AUSCULTE_SILENCE_AUDIT` into the deleted
+clone, and senechal is off-limits (another agent). The separate `silence-audit`
+command resolves into **realisateur's** copy and still works — which is the
+same three-copies-that-differ problem the ecosim subagent found earlier tonight
+and which `check_twin` is itself supposed to catch.
+
+ecosim's self-dev account on monkey (uid 3001) is untouched; only mandark's
+clone is gone. Recover with `git clone https://github.com/hf7y/ecosim.git`.
+
+### Disk
+
+ecosim's 6.5M came off, but `~/Documents/Projects` measured **786M** afterwards
+versus 785M before — because `senechal` grew ~6M in the same window from the
+other agent working in it. The saving is real; the directory total is not the
+witness for it.
+
+## What stopped the gardien move: nothing structural
+
+Asked directly, so answered from the config rather than from memory.
+
+`garde` does **not** need a clone — unlike senechal's verbs, it defaults
+`LEGACY_ROOT="${GARDE_LEGACY_ROOT:-$SELF}"` to the build, which is why gardien
+was the first repo to come off this machine cleanly. Its config lives at
+`~/.config/gardien/garde.json`, outside every repo:
+
+```json
+{ "name": "bibliothecaire-intake", "path": "~/bibliothecaire-intake",
+  "class": "irreplaceable", "copies": ["dexter-d"], "min_copies": 1,
+  "exclude": ["work", "rejected"] }
+```
+
+So the edit is a local file and takes a minute. **It was sequenced after the
+cutover on purpose**, for two reasons:
+
+1. `path` is a path *on the host running garde*. While mandark is still the
+   live pipeline, mandark's copy is the authoritative one. Repointing the
+   backup at monkey now would back up a standby and stop protecting the live
+   copy — strictly worse than today.
+2. That set's own `_comment` records why this is the dangerous one:
+   *"bibliothecaire's `--reap` DELETES originals once its backup proof passes,
+   and that proof was pointed at the retired python gardien chain; re-pointing
+   it without this set would have licensed deleting the only copy."* It is
+   `class: irreplaceable`, `min_copies: 1`, and the originals are paper on a
+   shelf.
+
+A backup that points at the wrong host is not a smaller problem than no
+backup; it is the same problem wearing a green light. Hence: cut over first,
+watch one real scan land, then repoint — the order in
+`bin/cutover-bibliothecaire-to-monkey.sh`.
+
 ## Not touched, per plan §4
 
 `dog` (564M, not a git repository) and `dcp-gate-site` (3.8M) — explicitly out
