@@ -123,7 +123,17 @@ project_repos() {
     name="$(basename "$conf" .conf)"
     case "$name" in _*) continue ;; esac
     [ -n "$ONLY" ] && [ "$name" != "$ONLY" ] && continue
-    repo="$(grep -oP '(?<=PROJECT_REPO_PATH=")[^"]*' "$conf" 2>/dev/null)"
+    # SOURCE the conf; do not scrape it. scheduler's schedule/*.conf are shell
+    # and correctly write PROJECT_REPO_PATH="$HOME/Documents/Projects/<name>".
+    # A `grep -oP` hands back the LITERAL five characters `$HOME`, so [ -d ]
+    # was false for every registered project and this script reported
+    # "BLIND -- parsed ZERO registered projects", exit 3, on every host, always.
+    # That made `silence-audit --strict` -- a BUILD-DISCIPLINE close-out row in
+    # ~19 projects' CLAUDE.md -- a gate that could never be passed: the exact
+    # null-discrimination defect this script exists to detect, committed by the
+    # detector. Diagnosed by senechal 2026-08-05 and fixed here 2026-08-06.
+    # Subshell + unset so one conf's value cannot leak into the next iteration.
+    repo="$(unset PROJECT_REPO_PATH; . "$conf" >/dev/null 2>&1; echo "${PROJECT_REPO_PATH:-}")"
     [ -n "$repo" ] && [ -d "$repo" ] && echo -e "$name\t$repo"
   done
 }
@@ -329,6 +339,17 @@ EOF
     >"$tmp/proj/bin/probe.sh"
   out="$(SCHED_ROOT="$tmp/sched" bash "${BASH_SOURCE[0]}" 2>&1)"
   t "stderr-silenced fires on silenced privileged probe" 'stderr-silenced.*probe\.sh' "$out"
+
+  # --- A conf whose PROJECT_REPO_PATH is an UNEXPANDED shell variable must
+  # still resolve. This is the shape production actually writes, and the ONLY
+  # shape it writes; the fixtures above all bake an absolute path, so they
+  # exercised an input the real registry never produces and passed while the
+  # real thing parsed zero projects. Assert the production shape directly.
+  mkdir -p "$tmp/varhome/schedule"
+  printf 'PROJECT_REPO_PATH="$HOME/proj"\n' >"$tmp/varhome/schedule/proj.conf"
+  out="$(HOME="$tmp" SCHED_ROOT="$tmp/varhome" bash "${BASH_SOURCE[0]}" 2>&1; echo "rc=$?")"
+  tn "conf with literal \$HOME is not reported BLIND" 'BLIND' "$out"
+  tn "conf with literal \$HOME does not exit 3"       'rc=3'  "$out"
 
   # --- BLIND: zero mechanisms must exit 3, not 0
   mkdir -p "$tmp/empty/schedule"
