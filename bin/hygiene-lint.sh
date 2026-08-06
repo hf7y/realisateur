@@ -13,8 +13,9 @@
 # crt/DEV-DISCIPLINE-RETROSPECTIVE-2026-07-23.md): secrets in tracked files,
 # build debris tracked as source, finished-but-uncommitted work, missing exec
 # bits, silent-pipeline smells, single-value config duplication, stamped-
-# checklist drift, stale `verified <date>` claims, and (once, ecosystem-wide)
-# task-shaped entries rotting in scheduler's BLOCKERS.md.
+# checklist drift, stale `verified <date>` claims, self-dev branch/convergence
+# drift, and (once, ecosystem-wide) task-shaped entries rotting in scheduler's
+# BLOCKERS.md.
 #
 # Usage:
 #   hygiene-lint.sh            scan every registered project, print findings
@@ -29,6 +30,8 @@
 #   SHIM_INSTALLER=... path to the install-shims.sh check 10 shells out to
 #   REACH_LINT=...      path to the reach-lint.sh check 11 shells out to
 #   SILENCE_AUDIT=...   path to the silence-audit.sh check 12 shells out to
+#   SELFDEV_BRANCH=main the one branch name all self-dev is expected to be on
+#                     (check 8c). Set it here, once, for the whole ecosystem.
 #
 # Known false-positive class, left in deliberately: BUILD-DISCIPLINE.md's own
 # prose DEFINES the `# verified <date> via <cmd>` format, so its example line
@@ -107,11 +110,32 @@ fi
 for name in "${projects[@]}"; do
   conf="$SCHED_ROOT/schedule/$name.conf"
   repo="$(grep -oP '(?<=PROJECT_REPO_PATH=")[^"]*' "$conf")"
+  # Every conf writes PROJECT_REPO_PATH="$HOME/Documents/Projects/<name>", and
+  # grep hands back the LITERAL `$HOME`. Until 2026-08-06 that string was used
+  # as a path directly, so `[ -d "$repo/.git" ]` was false for all thirteen
+  # registered projects and every per-project check (1-8) `continue`d with
+  # "(no git repo at that path -- skipped)". The scan still PRINTED, because
+  # checks 10/11/12 shell out to sibling tools that read live state -- so it
+  # looked like a working linter reporting a quiet ecosystem. It was reporting
+  # nothing at all. BUILD-DISCIPLINE pattern "fails silent"; found by adding
+  # check 8c and noticing it never fired anywhere.
+  #
+  # Expanded by SUBSTITUTION, not eval: a conf is config, and `eval`-ing a
+  # path out of it would make a registry entry a code-execution surface.
+  # Only the two forms the confs actually use are honored; anything else is
+  # left alone and will fail the -d test loudly below.
+  case "$repo" in
+    '$HOME'/*)  repo="$HOME/${repo#\$HOME/}" ;;
+    '${HOME}'/*) repo="$HOME/${repo#\$\{HOME\}/}" ;;
+    '~'/*)      repo="$HOME/${repo#\~/}" ;;
+  esac
   echo
   echo "############################################################"
   echo "# $name  ($repo)"
   if [ ! -d "$repo/.git" ]; then
-    echo "  (no git repo at that path -- skipped)"
+    echo "  FLAG [registry] PROJECT_REPO_PATH in $(basename "$conf") does not resolve to a git repo: $repo"
+    echo "  (per-project checks skipped for $name -- this is a finding, not a clean result)"
+    total_flags=$((total_flags + 1))
     continue
   fi
 
@@ -318,6 +342,45 @@ for name in "${projects[@]}"; do
   git -C "$repo" grep -InE '^[[:space:]]*#.*\b(confirmed|no crontab|does not exist|already (exists|installed|running)|is (running|enabled|empty))\b' \
       -- '*.conf' 2>/dev/null | grep -viE 'verified[[:space:]]+[0-9]{4}' | head -4 \
     | while IFS= read -r l; do [ -n "$l" ] && echo "  NOTE [unstamped-claim] $(echo "$l" | cut -c1-140)"; done
+
+  # 8c. SELF-DEV BRANCH DISCIPLINE + CONVERGENCE ------------------------------
+  # Zach's Decision 3 (2026-08-06): all self-dev on ONE consistently named
+  # branch, `main` for now -- stated as an ecosystem convention rather than a
+  # per-project fix, "because git branch discipline is severely lacking on
+  # Zach's side, so the solution must anticipate that." A convention that only
+  # exists as prose anticipates nothing; this is the checkable form of it.
+  #
+  # TWO checks, because the vim-arcade case proved one is not enough. That
+  # project was ALREADY on main -- Decision 3's stated action was a no-op --
+  # and it still could not converge, because a read-only deploy key turns every
+  # local commit into a permanent PULL WARNING (scheduler#38). So the branch
+  # NAME is only half the question; the other half is whether the branch can
+  # actually reach its remote. An unpushed-ahead count that never falls is the
+  # observable form of "this checkout is diverging from where the batch reads".
+  #
+  # SELFDEV_BRANCH overrides the convention for the whole ecosystem, from one
+  # place, if `main` is ever traded for a development branch (Zach's stated
+  # second preference). Do not special-case a project by editing this script.
+  SELFDEV_BRANCH="${SELFDEV_BRANCH:-main}"
+  cur_branch="$(git -C "$repo" branch --show-current 2>/dev/null)"
+  if [ -z "$cur_branch" ]; then
+    flag "branch" "detached HEAD -- self-dev commits here reach no branch at all"
+  elif [ "$cur_branch" != "$SELFDEV_BRANCH" ]; then
+    flag "branch" "checked out on '$cur_branch', ecosystem convention is '$SELFDEV_BRANCH' (SELFDEV_BRANCH to change it ecosystem-wide)"
+  fi
+  # Convergence: ahead-of-upstream is only meaningful against a real upstream.
+  # No upstream at all is itself the finding -- a self-dev checkout whose
+  # commits have nowhere to land. Deliberately NOT fetching: this script is
+  # offline-first, so this reads the last-known remote state and says so.
+  up="$(git -C "$repo" rev-parse --abbrev-ref '@{upstream}' 2>/dev/null)"
+  if [ -z "$up" ]; then
+    flag "branch-noremote" "'${cur_branch:-HEAD}' tracks no upstream -- self-dev commits have nowhere to land"
+  else
+    ahead="$(git -C "$repo" rev-list --count "$up..HEAD" 2>/dev/null || echo 0)"
+    if [ "${ahead:-0}" -gt 0 ]; then
+      flag "branch-unpushed" "$ahead commit(s) ahead of $up (offline count, not re-fetched) -- if this never falls to 0, the push path is broken, not the branch (cf. scheduler#38, read-only deploy key)"
+    fi
+  fi
 
   if [ "$n" -eq 0 ]; then
     echo "  clean -- no mechanical flags (NOTEs above, if any, are advisory)"

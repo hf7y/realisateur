@@ -22,6 +22,11 @@
 #       -> --strict exits 1
 #       -> bare invocation (no --strict) still exits 0 -- FLAGs are signals
 #          by default, never a build failure, unless the caller opted in
+#   D check 8c, self-dev branch discipline (Zach's Decision 3, 2026-08-06):
+#     D1 off-convention branch name; D2 ON the convention branch and still
+#     unpushed (the vim-arcade case -- scheduler#38's read-only deploy key);
+#     D3 no upstream at all; D4 SELFDEV_BRANCH retargets the convention
+#     ecosystem-wide from one place rather than per project.
 #
 # Usage: bin/tests/hygiene-lint.test.sh   (exit 0 = all pass)
 set -uo pipefail
@@ -65,11 +70,22 @@ mkreg() { # mkreg <name> <path>
   printf 'PROJECT_REPO_PATH="%s"\n' "$2" > "$T/sched/schedule/$1.conf"
 }
 
-newgitrepo() { # newgitrepo <path> -- a plain git repo, no remote needed
+newgitrepo() { # newgitrepo <path> [branch] -- git repo on `main` with a
+  # pushed upstream. Check 8c (self-dev branch discipline) FLAGs a repo that
+  # is off-convention, detached, upstream-less, or ahead of its upstream --
+  # so "clean" now means a real remote exists and HEAD is level with it. A
+  # bare repo beside it is enough; nothing here touches the network.
+  local br="${2:-main}"
   mkdir -p "$1"
-  git init -q "$1"
+  git init -q -b "$br" "$1"
   git -C "$1" config user.email t@test
   git -C "$1" config user.name T
+  git init -q --bare "$1.origin.git"
+  git -C "$1" remote add origin "$1.origin.git"
+}
+
+pushupstream() { # pushupstream <path> -- publish the current branch, level
+  git -C "$1" push -q -u origin HEAD 2>/dev/null
 }
 
 echo "hygiene-lint.test.sh"
@@ -79,6 +95,7 @@ newgitrepo "$T/cleanproj"
 echo "hello" > "$T/cleanproj/README.md"
 git -C "$T/cleanproj" add -A
 git -C "$T/cleanproj" commit -qm init
+pushupstream "$T/cleanproj"
 mkreg cleanproj "$T/cleanproj"
 
 run cleanproj
@@ -93,6 +110,7 @@ echo "hello" > "$T/dirtyproj/README.md"
 printf 'not a real key, just a fixture\n' > "$T/dirtyproj/id_rsa"
 git -C "$T/dirtyproj" add -A
 git -C "$T/dirtyproj" commit -qm init
+pushupstream "$T/dirtyproj"
 mkreg dirtyproj "$T/dirtyproj"
 
 run dirtyproj
@@ -108,6 +126,51 @@ run --strict cleanproj
 rc  "C --strict before the project name still parses" 0 "$RUN_RC"
 run --strict dirtyproj
 rc  "C --strict before a dirty project name exits 1"   1 "$RUN_RC"
+
+echo "-- D. self-dev branch discipline (check 8c)"
+# D1 off-convention branch name. Zach's Decision 3: one consistently named
+# branch for all self-dev, `main` today.
+newgitrepo "$T/branchproj" feature/side-quest
+echo hi > "$T/branchproj/README.md"
+git -C "$T/branchproj" add -A
+git -C "$T/branchproj" commit -qm init
+pushupstream "$T/branchproj"
+mkreg branchproj "$T/branchproj"
+run branchproj
+has "D1 FLAGs a project not on the convention branch" "$RUN_OUT" \
+    "FLAG [branch] checked out on 'feature/side-quest'"
+
+# D2 the vim-arcade case: ON main, and still not converging. A read-only
+# deploy key (scheduler#38) makes every local commit permanently unpushed,
+# which the branch NAME check cannot see.
+newgitrepo "$T/aheadproj"
+echo hi > "$T/aheadproj/README.md"
+git -C "$T/aheadproj" add -A
+git -C "$T/aheadproj" commit -qm init
+pushupstream "$T/aheadproj"
+echo more >> "$T/aheadproj/README.md"
+git -C "$T/aheadproj" commit -qam second
+mkreg aheadproj "$T/aheadproj"
+run aheadproj
+hasnt "D2 does NOT flag the branch name (it is on main)" "$RUN_OUT" "FLAG [branch] checked out"
+has   "D2 FLAGs the unpushed commit instead"             "$RUN_OUT" "FLAG [branch-unpushed] 1 commit(s) ahead"
+
+# D3 no remote at all -- Zach 2026-08-06: projects "often with no git
+# remotes", which he calls malformed. Commits have nowhere to land.
+newgitrepo "$T/noremoteproj"
+git -C "$T/noremoteproj" remote remove origin
+echo hi > "$T/noremoteproj/README.md"
+git -C "$T/noremoteproj" add -A
+git -C "$T/noremoteproj" commit -qm init
+mkreg noremoteproj "$T/noremoteproj"
+run noremoteproj
+has "D3 FLAGs a self-dev checkout with no upstream" "$RUN_OUT" "FLAG [branch-noremote]"
+
+# D4 SELFDEV_BRANCH retargets the convention ecosystem-wide, from one place.
+RUN_OUT="$(SELFDEV_BRANCH=feature/side-quest SCHED_ROOT="$T/sched" \
+  SHIM_INSTALLER="$T/stubs/install-shims.sh" REACH_LINT="$T/stubs/reach-lint.sh" \
+  SILENCE_AUDIT="$T/stubs/silence-audit.sh" "$SCRIPT" branchproj 2>&1)"
+hasnt "D4 SELFDEV_BRANCH=feature/side-quest clears D1's flag" "$RUN_OUT" "FLAG [branch] checked out"
 
 echo
 echo "$pass passed, $fail failed"
