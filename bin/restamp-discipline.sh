@@ -43,6 +43,8 @@ set -uo pipefail
 
 SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 SELF_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=lib/conf.sh
+. "$SELF_DIR/bin/lib/conf.sh"
 BD_MD="$SELF_DIR/BUILD-DISCIPLINE.md"
 BEGIN_MARK='<!-- >>> realisateur-baseline'
 END_MARK='<!-- <<< realisateur-baseline -->'
@@ -134,7 +136,14 @@ drifted=0; synced=0; failed=0; skipped=0
 
 for name in $(printf '%s\n' "${projects[@]}" | sort); do
   conf="$SCHED_ROOT/schedule/$name.conf"
-  repo="$(grep -oP '(?<=PROJECT_REPO_PATH=")[^"]*' "$conf")"
+  # EXPANDED, via lib/conf.sh. The raw grep this used to be returned the
+  # literal `$HOME/Documents/Projects/<name>`, so `-d "$repo/.git"` was false
+  # for every project on every host and this script propagated the baseline to
+  # NOBODY while exiting 0. See lib/conf.sh's header for the measurement.
+  repo="$(conf_repo_path "$conf")" || {
+    printf '  %-22s SKIP -- conf carries no PROJECT_REPO_PATH\n' "$name"
+    skipped=$((skipped+1)); continue
+  }
   claude="$repo/CLAUDE.md"
 
   if [ ! -d "$repo/.git" ]; then
@@ -239,6 +248,18 @@ done
 
 echo
 echo "== $synced in sync / $drifted drifted / $skipped skipped / $failed failed =="
+
+# A PASS THAT REACHED NOTHING IS NOT A CLEAN PASS. This is the exact shape the
+# unexpanded-$HOME defect wore for as long as it lasted: thirteen tidy SKIP
+# lines, a summary, and exit 0. Propagation to zero projects is a finding about
+# this host or this script, never a success -- and on a host that genuinely has
+# no checkouts, saying so out loud is still the right answer.
+if [ "$synced" -eq 0 ] && [ "$drifted" -eq 0 ]; then
+  echo "NOTHING WAS REACHED: every project in scope was skipped, so the baseline"
+  echo "propagated to no one. That is a defect in this host's checkouts or in this"
+  echo "script -- not a clean run. Check the SKIP reasons above."
+  exit 1
+fi
 
 if [ "$failed" -gt 0 ]; then
   echo "Some repos did not reach their remote. The baseline is only real where"
