@@ -151,25 +151,45 @@ The game rendered its real queue with no repo on the desk. That is the property
 Zach asked for, shown rather than asserted. `contract-test.sh` also passes 7/7
 under the new name, and `man -l man/vim-arcade.1` renders as `VIM-ARCADE(1)`.
 
-### What is not done
+### Closed out the same evening
 
-**`vim-arcade#71` is not merged — `gh pr merge` is classifier-blocked**, the
-same wall the 2026-08-05 overnight record hit. Until it lands and a build is
-cut (`gh workflow run build-verbs --repo hf7y/verbs`, or the 01:30 nightly),
-**there is no game command on the path at all**: `joue` is gone by design and
-`vim-arcade` is not built yet. One command from Zach closes it:
+Zach merged `vim-arcade#71` at 00:38Z. The rest was mechanical:
 
-```sh
-gh pr merge 71 --repo hf7y/vim-arcade --squash --delete-branch
-# then, once a build carries it:
-installe verb vim-arcade vim-arcade
+```
+$ gh workflow run build-verbs --repo hf7y/verbs
+  -> build 2026-08-06T003928Z, 32 verb(s), 12 project(s)
+  -> vim-arcade  vim-arcade  e02dc8ac  (and vim-arcade entraine, still declared)
+$ install-verb-build.sh --check
+  yours: 2026-08-05T233404Z   latest: 2026-08-06T003928Z
+$ install-verb-build.sh --latest --apply
+  verified: 32 verb(s), all present and executable
+  current -> 2026-08-06T003928Z
+$ installe verb vim-arcade vim-arcade
+  vim-arcade is reachable
+  declared to senechal: now on PATH -> verb-builds/current/vim-arcade/bin/vim-arcade
 ```
 
-Filed as `GAPS.md` §0 on that branch: **`entraine` is now broken in every
-build**, because it still reads `ENTRAINE_LEGACY_ROOT` defaulting to a clone
-that no longer exists. It is off the path, so it is inert rather than
-dangerous — but it would pass a `--help` witness while broken, which is the
-same false witness this section is about.
+The verb count held at **32** across the rename, which is why the build's
+shrink guard did not fire: one name left and one arrived in the same cut.
+
+Played, not merely installed — `vim-arcade` from `~/.local/bin`, run under a
+pty inside the realisateur checkout, with no vim-arcade repo on the machine:
+
+```
+vim-arcade gh-triage -- 9 open item(s)
+DRY RUN -- actions only log the gh command (pass --live to really act).
+buffer:
+@.i.............................................
+```
+
+Final state: `joue` and `entraine` resolve to nothing; `vim-arcade` resolves
+to `~/.local/bin/vim-arcade -> verb-builds/current/vim-arcade/bin/vim-arcade`,
+owned by `installe`, declared to senechal, recoverable by build id.
+
+**Still open:** `entraine` remains declared and built while broken in every
+build (GAPS §0 on that branch) — it reads `ENTRAINE_LEGACY_ROOT`, defaulting
+to the clone that no longer exists. Off the path, so inert; it would pass a
+`--help` witness while broken.
 
 ## `senechal` — the build verbs are shims into the clone
 
