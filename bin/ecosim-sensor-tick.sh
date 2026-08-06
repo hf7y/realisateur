@@ -36,7 +36,26 @@ case "${1:-}" in
     exit 2 ;;
 esac
 
-SENSOR="${ECOSIM_SENSOR_BIN:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/ecosim/bin/ecosim-sensor}"
+# THE BUILD, NOT A DEV CLONE.
+#
+# Until 2026-08-05 this defaulted to
+# ${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/ecosim/bin/ecosim-sensor --
+# a development checkout. Two things were wrong with that, and only the
+# second is obvious:
+#
+#   1. It pinned the clone. A */30 cron line reaching into
+#      ~/Documents/Projects made ecosim unremovable from mandark, which
+#      `fauche check` reported as the single reason to KEEP it.
+#   2. It read a MOVING target. Measured 2026-08-05: that clone was 12
+#      commits behind origin/main, so this monitor had been running a
+#      12-commit-stale sensor and nothing said so. A build is pinned to a
+#      named sha in verb-builds/current/manifest.tsv, and adopting a new one
+#      is a deliberate act with a record.
+#
+# The missing-binary branch below is unchanged and still fails LOUD, so if
+# the build is absent this reports BLIND rather than degrading to a no-op.
+# ECOSIM_SENSOR_BIN still overrides, for running against a working clone.
+SENSOR="${ECOSIM_SENSOR_BIN:-${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}/current/ecosim/bin/ecosim-sensor}"
 STATE_DIR="$HOME/.local/share/ecosim-sensor"
 LOG="$STATE_DIR/run.log"
 LATEST="$STATE_DIR/latest.txt"
