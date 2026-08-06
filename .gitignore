@@ -1,2 +1,9 @@
 .scheduler-autocommit.log
 .claude/worktrees/
+
+# Editor debris. A live vim swap file is never repo content, and it made
+# the SubagentStop closeout gate FLAG a dirty tree for a file no agent wrote
+# (2026-08-06). Build discipline: "tree clean of build debris".
+*.swp
+*.swo
+*~

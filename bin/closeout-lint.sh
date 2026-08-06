@@ -146,6 +146,24 @@ else
     case "$name" in _*) continue ;; esac
     p="$(sed -n 's/^PROJECT_REPO_PATH=["'\'']\?\([^"'\'']*\)["'\'']\?[[:space:]]*$/\1/p' "$conf" | head -1)"
     [ -n "$p" ] || continue
+    # Every conf writes PROJECT_REPO_PATH="$HOME/Documents/Projects/<name>",
+    # and sed hands back the LITERAL `$HOME`. Until 2026-08-06 that string was
+    # used as a path directly, so section A reported all thirteen registered
+    # repos as `FLAG [missing-repo] ... does not exist` -- from inside one of
+    # them -- and then concluded "no registered repo has a commit younger than
+    # 12h" while this very session's commits were minutes old. The gate that
+    # exists to catch work left un-durable was examining ZERO repos. The
+    # SubagentStop hook only escapes it by passing --repo, which bypasses this
+    # loop entirely. Same defect fixed the same day in bin/hygiene-lint.sh.
+    #
+    # Expanded by SUBSTITUTION, not eval: a conf is config, and eval-ing a
+    # path out of the registry would make a registry entry a code-execution
+    # surface. Unrecognized forms are left alone and still FLAG below.
+    case "$p" in
+      '$HOME'/*)   p="$HOME/${p#\$HOME/}" ;;
+      '${HOME}'/*) p="$HOME/${p#\$\{HOME\}/}" ;;
+      '~'/*)       p="$HOME/${p#\~/}" ;;
+    esac
     if [ "${#want[@]}" -gt 0 ]; then
       skip=1; for w in "${want[@]}"; do [ "$w" = "$name" ] && skip=0; done
       [ "$skip" -eq 1 ] && continue
