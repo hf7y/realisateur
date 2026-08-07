@@ -75,7 +75,7 @@ ROOT="$(cd "$SELF/.." && pwd)"                                             # rea
 cli_guard "$@"
 . "$SELF/lib/surface.sh"
 
-SCHED="${BASHIFY_SCHED:-/home/zach/Documents/Projects/scheduler}"
+SCHED="${BASHIFY_SCHED:-${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}}"
 SKEL="$SELF/skel/lib/verb.sh"
 EXEMPT="${BASHIFY_EXEMPT:-$SELF/PURGE-EXEMPT.tsv}"
 
