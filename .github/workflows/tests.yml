@@ -86,8 +86,15 @@ jobs:
           for t in bin/tests/*.sh; do
             ran=$((ran + 1))
             echo "::group::$t"
-            bash "$t"
-            rc=$?
+            # `rc=0; cmd || rc=$?` and NOT `cmd; rc=$?`. GitHub runs a `run:`
+            # block under `bash -eo pipefail`, so the plain form aborts the
+            # whole step on the first failing suite -- which is precisely the
+            # "one red assertion hides eight suites" failure this loop exists
+            # to prevent, and it is invisible until a suite actually fails.
+            # Measured: run 31153987276 stopped dead at closeout-lint and
+            # never ran the nine after it.
+            rc=0
+            bash "$t" || rc=$?
             echo "::endgroup::"
             if [ "$rc" -ne 0 ]; then
               echo "::error file=$t::suite failed (exit $rc)"
