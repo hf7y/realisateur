@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # release-gate.sh -- decide whether tonight's verb build is allowed to be cut.
 #
+# GUARD: is any project's default branch red, and must tonight's build therefore not be cut?
+# RUNNER: provision/verbs-meta/build-verbs.yml bin/tests/release-gate.test.sh
+# GUARD-TEST: bin/tests/release-gate.test.sh
+# GATE: none -- calls `gh` against live default branches; the fixture is in its own suite
+# VERIFIED: 2026-08-07 via bash bin/release-gate.sh --projects realisateur (RED, release BLOCKED -- correct, main is red)
+#
 # ============================================================================
 # WHY THIS EXISTS
 # ============================================================================

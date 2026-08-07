@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # silence-audit.sh -- the ecosystem's NULL-DISCRIMINATOR.
 #
+# GUARD: can a sensor tell nothing-there from could-not-look from did-not-look?
+# RUNNER: operator -- surveys every registered project's working checkout
+# GUARD-TEST: none -- it carries its own --self-test with fixtures, which is not a suite CI globs; closing this is the next repaint due
+# GATE: strict
+# VERIFIED: 2026-08-07 via bash bin/silence-audit.sh --self-test (PASS) and a live run (74 FLAGs, 15 after retiring [retirement-open])
+#
 # Offline-first (zero AI), writes nothing, exits 0 unless --strict.
 #
 # WHAT IS MISSING THAT THIS SUPPLIES
@@ -42,10 +48,40 @@
 #   [prose-only-rule]   a doc asserts a checkable rule for which no
 #                       executable check exists -- an unretired layer
 #                       waiting to happen.
-#   [retirement-open]   a change claims a retirement (RETIRES:/Retires:)
-#                       whose literal is still live somewhere. "Names what
-#                       it retires" is satisfied by the thing being GONE,
-#                       not by a commit message saying so.
+#
+# RETIRED 2026-08-07: [retirement-open]. It asked "does a RETIRES: claim's
+# literal still occur anywhere?", scraped every `RETIRES:` line in every
+# tracked .sh and .md, and counted occurrences of whatever followed. That
+# question CANNOT REACH ZERO BY CONSTRUCTION: declaring a retirement writes the
+# retired literal into a file, and documenting the mechanism writes it into
+# several more, so the check counts its own paperwork as proof the retirement
+# did not happen. Measured on the live estate the morning it was retired:
+#
+#   74 FLAG(s) total, of which 52 were [retirement-open]
+#   -- the SAME four claims, re-emitted once per registered project (13 x 4)
+#
+#   claims to retire `silencing stderr`      -- 66 live occurrence(s) remain
+#   claims to retire `Wired to a real path`  -- 51 live occurrence(s) remain
+#   claims to retire `names what it retires` -- 141 live occurrence(s) remain
+#   claims to retire `' | wc -l)"`           -- 29 live occurrence(s) remain
+#
+# The first three are the three checklist rows that the now-deleted
+# bin/install-silence-audit.sh declared retired, in its own header, which is
+# the file the scraper read them out of -- deleted 2026-08-07 with this check. The fourth is a fragment of shell source mis-parsed as a declaration.
+# All 52 are false. Its self-test passed throughout because the fixture holds
+# exactly one declaration in an otherwise empty repository -- the shape
+# production never has.
+#
+# 70% of this guard's output was one bug repeated, and CLAUDE.md has required
+# `silence-audit --strict` clean since the day it was written, so that row has
+# never once been satisfiable. A mandatory gate nobody can pass is how a
+# checklist stops being read.
+#
+# WHAT IS GIVEN UP: nothing was being checked. "Names what it retires" is now
+# carried by the repository idiom (a change that retires something names it)
+# and, for the guard estate specifically, by bin/tests/guard-estate.test.sh,
+# which fails when a guard is deleted while something still names it as its
+# runner or its test.
 #
 # Usage:
 #   silence-audit.sh                  audit the whole ecosystem
@@ -267,26 +303,6 @@ check_prose_only_rule() {
   done < <(project_repos)
 }
 
-check_retirement_open() {
-  # A retirement claim whose literal is still live. This is the mechanical
-  # form of "names what it retires": satisfaction means GONE, not stated.
-  local name repo claim lit live
-  while IFS=$'\t' read -r name repo; do
-    [ -z "${repo:-}" ] && continue
-    while IFS= read -r claim; do
-      lit="$(sed -E 's/.*RETIRES:[[:space:]]*//; s/[[:space:]]*$//' <<<"$claim")"
-      [ -z "${lit:-}" ] && continue
-      mechanisms=$((mechanisms+1))
-      # count live occurrences OUTSIDE any line that is itself a retirement notice
-      live="$(grep -rF -- "$lit" "$repo" \
-                --include='*.md' --include='*.sh' --include='*.conf' 2>/dev/null \
-              | grep -vF 'RETIRES:' | wc -l)"
-      if [ "${live:-0}" -gt 0 ]; then
-        flag retirement-open "$name: claims to retire \`$lit\` -- $live live occurrence(s) remain"
-      fi
-    done < <(grep -rhE 'RETIRES:' "$repo" --include='*.sh' --include='*.md' 2>/dev/null)
-  done < <(project_repos)
-}
 
 # ---------------------------------------------------------------- self-test
 # Fixtures, not exit codes. Each asserts the check FIRES on a known-bad
@@ -325,14 +341,16 @@ EOF
   t  "mute-null fires on unguarded scanner"  'mute-null.*bad\.sh'  "$out"
   tn "mute-null quiet on guarded scanner"    'mute-null.*good\.sh' "$out"
 
-  # --- retirement-open fires while the retired literal is still live
+  # --- [retirement-open] is RETIRED; assert it stays retired.
+  # The old pair of cases here passed on this fixture -- one declaration in an
+  # otherwise empty repo -- while the check was emitting 52 false FLAGs on the
+  # live estate. This replaces them with the only assertion that would have
+  # caught that: the scraper must not resurrect.
   printf '# RETIRES: LEGACY_TOKEN_XYZ\n' >"$tmp/proj/bin/new.sh"
   printf 'we still use LEGACY_TOKEN_XYZ here\n' >"$tmp/proj/OLD.md"
   out="$(SCHED_ROOT="$tmp/sched" bash "${BASH_SOURCE[0]}" 2>&1)"
-  t "retirement-open fires while literal is live" 'retirement-open.*LEGACY_TOKEN_XYZ' "$out"
+  tn "retirement-open stays retired" 'retirement-open' "$out"
   rm -f "$tmp/proj/OLD.md"
-  out="$(SCHED_ROOT="$tmp/sched" bash "${BASH_SOURCE[0]}" 2>&1)"
-  tn "retirement-open clears once literal is gone" 'retirement-open' "$out"
 
   # --- stderr-silenced fires on a privileged probe
   printf '#!/usr/bin/env bash\nsudo -n crontab -l 2>/dev/null\n[ -z "$x" ] && echo none found\n' \
@@ -387,7 +405,7 @@ self_wiring_banner() {
     echo "## Everything below is therefore a ONE-OFF READING, not surveillance. ##"
     echo "## It will not run again unless a human remembers to run it, which is ##"
     echo "## BUILD-DISCIPLINE pattern 2 -- the pattern this script audits for.  ##"
-    echo "## Wire it (install-silence-audit.sh) or delete it. Do not leave it   ##"
+    echo "## Wire it to a runner or delete it. Do not leave it standing.        ##"
     echo "## here looking like coverage.                                        ##"
     echo "########################################################################"
     echo
@@ -406,7 +424,6 @@ check_home_scoped
 check_stderr_silenced
 check_unwired
 check_prose_only_rule
-check_retirement_open
 
 echo
 if [ "${projects_seen:-0}" -eq 0 ]; then

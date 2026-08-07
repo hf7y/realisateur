@@ -20,37 +20,32 @@ review step until the morning.
 previous nightly run left work in progress (check the last report under
 `~/reports/realisateur/`), pick up from there rather than starting over.
 
-**Run `bin/ecosystem-survey.sh`** (offline, no AI cost, ~2s) before
-reasoning about anything else. It's realisateur's own equivalent of
-`scheduler status <project>` but across every registered project at
-once: per-project git health/open-questions/last-run-outcome (via
-`scheduler status`), plus an ecosystem-wide ranking of the oldest still-
-open dated ideas across every project's `FOCUS.md` -- the concrete signal
-behind "vision debt" (see `chezz/.claude/commands/ideate.md` 4.5 for
-where that pattern was named). Treat its output as a starting map of
-real current state, not something to act on item-by-item unprompted --
-most of what it surfaces belongs to other projects' own nightly-batch
-runs, not this one. It exists so this session (and `/ideate`) starts
-from ground truth instead of a stale mental model of the ecosystem.
+**Run `bin/precipitation-scan.sh`** (offline, no AI cost) before reasoning
+about anything else. It ranks promotion signals across every registered
+project's `FOCUS.md` -- re-arrival candidates and interface clusters,
+doctrine in `PRECIPITATION.md`. **In an unattended pass, treat reports B and
+C as READ-ONLY.** They are inference over prose, and their most convincing
+output is the most likely to be wrong -- a 5-project "cluster" on 2026-07-26
+turned out to be a shared boilerplate footer (worked example in
+`PRECIPITATION.md`). Confirming a candidate means opening its members and
+judging shape stability, which is an `/ideate` job with a human present, not
+a batch one. What this pass MAY do: note a striking candidate in
+`.scheduler/FOCUS.md` or `QUESTIONS.md` for the next interactive pass to
+judge. What it must NOT do: stamp `(re-arrival: …)`/`[iface: …]`, reorder
+anything, or change a weight on the strength of the scan alone. A promotion
+nobody stated is the silent reorder `/ideate` 4.5 forbids.
 
-`ecosystem-survey.sh` also runs **`bin/precipitation-scan.sh`** at its end
-(promotion signals: re-arrival candidates and interface clusters --
-doctrine in `PRECIPITATION.md`). Oldest-first, above, is the WEAKEST of
-the five ranked signals. **In an unattended pass, treat reports B and C
-as READ-ONLY.** They are inference over prose, and their most convincing
-output is the most likely to be wrong -- a 5-project "cluster" on
-2026-07-26 turned out to be a shared boilerplate footer (worked example
-in `PRECIPITATION.md`). Confirming a candidate means opening its members
-and judging shape stability, which is a `/ideate` job with a human
-present, not a batch one. What this pass MAY do: note a striking
-candidate in `.scheduler/FOCUS.md` or `QUESTIONS.md` for the next
-interactive pass to judge. What it must NOT do: stamp
-`(re-arrival: …)`/`[iface: …]`, reorder anything, or change a weight on
-the strength of the scan alone. A promotion nobody stated is the silent
-reorder `/ideate` 4.5 forbids.
+RETIRED 2026-08-07: `ecosystem-survey.sh`, `milestone-audit.sh` and
+`steward-survey.sh`. Four scripts each re-implemented the same
+`schedule/*.conf` enumeration, nothing ran any of them, and two computed the
+same FOCUS.md fact with a character-identical expression and printed it under
+two different names. For per-project git health and open questions use
+`scheduler status <project>` directly, which is what `ecosystem-survey.sh`
+was calling. See `bin/tests/guard-estate.test.sh` for the standard the
+survivors are now held to, and for what is knowingly given up.
 
 **Then run `bin/hygiene-lint.sh`** (offline, no AI cost). It's the third
-mechanical survey alongside `ecosystem-survey.sh`: it scans every
+mechanical survey: it scans every
 registered project for the recurring build/deploy failure signatures in
 `BUILD-DISCIPLINE.md` -- secrets in tracked files, build debris, finished-
 but-uncommitted scripts, missing exec bits, silent-pipeline smells, config
@@ -59,37 +54,6 @@ verdicts -- a human/AI confirms each before acting, and most belong to
 other projects' own nightly runs, not this one. Note any FLAG against a
 project *this* run touches and fix it before committing; don't go fix the
 whole ecosystem unprompted.
-
-**Then run `bin/milestone-audit.sh`** (offline, no AI cost). The third
-survey: per registered project it reports whether a `## Stability
-milestone` is declared, its current bar + status
-(`not-started`/`in-progress`/`reached`), and a rough parked/waiting
-reservoir signal. Convention: `STABILITY-MILESTONES.md`. This is what makes
-the park-by-default triage in step 3 decidable — you need each project's
-current milestone in front of you before judging whether an idea is
-`active` (required to reach it) or `parked` (beyond it). A project whose
-status is `reached` is a signal to set a new milestone or graduate it
-(drop its `_paced.conf` weight) — same signals-not-verdicts stance as the
-other two surveys.
-
-**Then run `bin/steward-survey.sh`** (offline, no AI cost). The fifth
-survey, and the only one that reads `_paced.conf`'s `enabled` flag — the
-other four report on every registered project as though it were running.
-It answers the steward question none of them can: **which organs are dark,
-and how much undrained vision is stranded behind each one.** Columns:
-paced weight, days since the repo's last commit, count of open dated ideas
-in its FOCUS.md, milestone status.
-
-Read it in the order its own summary states. The loudest signal is a
-**DARK row with a high weight** — weight is stated intent, `enabled=0` is
-actual dispatch, and the two disagreeing means an intention stopped being
-acted on without anyone deciding to stop. Second is a DARK row with a
-large stranded count: a reservoir filling behind a shut valve. Same
-signals-not-verdicts stance as its four siblings — **a dark project is
-very often deliberate** (`gardien` is blocked on hardware, `crt` was
-switched off on purpose), so this pass NEVER re-enables a project or
-changes a weight on the strength of the scan. Note a striking row in
-`.scheduler/FOCUS.md` for the next interactive pass to judge.
 
 **Read `.scheduler/QUESTIONS.md` and process any answers.** The user replies
 inline, on a line starting with `> ` directly under a question --
@@ -126,7 +90,6 @@ spent the night perceiving itself.
 So when there is no artifact to process, the job is **stewardship of the
 other projects**, and the output is *routing*, not building:
 
-- Re-read `bin/steward-survey.sh`'s section A and B from step 1.
 - Pick the **one** most striking row — a dark high-weight project, a
   reservoir stranded behind a closed valve, a live weight-1 project whose
   oldest open idea is weeks old.
@@ -185,7 +148,7 @@ For each unarchived artifact:
   be an addition to something already scaffolded, not a brand-new project.
 - **If it's an addition to an existing project, apply park-by-default
   triage** (see `STABILITY-MILESTONES.md`): is this idea required to reach
-  that project's *current* stability milestone (from `milestone-audit.sh` /
+  that project's *current* stability milestone (from its FOCUS.md /
   its FOCUS.md)? If **yes**, it's `active` -- build/queue it normally. If
   **no**, **park it**: append it to that project's FOCUS.md tagged
   `(parked)` with one line of why it's past the milestone, and do NOT build

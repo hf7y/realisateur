@@ -8,6 +8,12 @@
 # e.g. a pre-close hook. Exit 2 is already used (via lib/cli-guard.sh) for
 # usage errors, so --strict uses 1, matching reach-lint.sh/silence-audit.sh.
 #
+# GUARD: is the work this session did actually durable, where its consumers read?
+# RUNNER: hooks/subagent-closeout.sh bin/tests/closeout-lint.test.sh
+# GUARD-TEST: bin/tests/closeout-lint.test.sh
+# GATE: strict --repo $TREE
+# VERIFIED: 2026-08-07 via bash bin/tests/closeout-lint.test.sh (post-#99, squash-merge and worktree blindness fixed)
+#
 # It answers ONE question a session cannot answer about itself reliably:
 # "is the work this session did actually durable, where its consumers read?"
 # An overnight run that is not saved anywhere didn't happen -- and the three

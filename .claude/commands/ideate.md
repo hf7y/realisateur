@@ -29,7 +29,7 @@ repo root for the open question about a harder, hook-based guarantee.
 **Per-session tuning via `$ARGUMENTS`:** if invoked with a project name
 (`/ideate crt`, `/ideate senechal`), scope this session to that one
 project's vision/backlog -- read only its own FOCUS.md/QUESTIONS.md plus
-its `scheduler status` output plus `bin/milestone-audit.sh <project>`,
+its `scheduler status` output plus its FOCUS.md `## Stability milestone`,
 skip the ecosystem-wide survey. If
 invoked with no argument, run the full ecosystem sweep below. Either way
 this is the same command, same file, same conventions -- only the scope
@@ -37,26 +37,13 @@ of step 1 changes.
 
 ## 1. Orient
 
-**Ecosystem-wide (no argument):** run `bin/ecosystem-survey.sh` (offline,
-no AI, ~2s) -- per-project git health/open-questions/last-run outcome,
-plus the ranked "oldest still-open dated idea per project" vision-debt
-signal. **Then run `bin/milestone-audit.sh`** (offline) -- each project's
-current stability milestone + status + reservoir signal; this is what
-makes step 4's park-by-default triage decidable (you can't judge `active`
-vs `parked` without the current bar in front of you). See
-`STABILITY-MILESTONES.md`. **Then run `bin/steward-survey.sh`** (offline) --
-the only survey that reads `_paced.conf`'s `enabled` flag, so it is the
-only one that can tell you a project is DARK. The others report on every
-registered project as if it were running: on 2026-07-26, `crt` sat at
-`enabled=0` with the highest weight in the ecosystem (3) and 32 open
-ideas behind it, and no survey said so. This command is where that
-belongs, because re-enabling a project, reweighting one, or honestly
-parking a stranded reservoir are all **stated decisions** — exactly what
-an interactive pass with Zach present is for, and exactly what
-`/nightly-batch` is forbidden from doing on its own. Treat a
-high-weight DARK row as an `AskUserQuestion` candidate (step 3), not
-something to fix silently: many are deliberate.
-
+**Ecosystem-wide (no argument):** run `bin/precipitation-scan.sh` (offline,
+no AI cost) for promotion signals, and `scheduler status <project>` for any
+project you are about to touch. `ecosystem-survey`,
+`milestone-audit` and `steward-survey` were RETIRED 2026-08-07
+as four re-implementations of one registry enumeration that nothing ran; each
+project's stability milestone is read from its own FOCUS.md
+`## Stability milestone` section, convention in `STABILITY-MILESTONES.md`.
 **Then run `bin/hygiene-lint.sh`** (offline) --
 the build-hygiene scan for `BUILD-DISCIPLINE.md`'s recurring failure
 signatures. `/nightly-batch` has always run it; `/ideate` should too, and
@@ -114,7 +101,7 @@ found). Don't scaffold or implement speculatively while waiting.
 
 **Park-by-default triage (do this for every idea before recording it).**
 Against the target project's *current* stability milestone (from
-`milestone-audit.sh`), judge each idea: is it required to reach that
+its FOCUS.md), judge each idea: is it required to reach that
 milestone? If **yes** it's `active`; if **no**, tag it `(parked)` (or
 `(waiting: <dep>)` if it's blocked externally, not by choice) and record
 one line of why it's past the bar. Parking is the default for anything
@@ -222,7 +209,7 @@ For each decision:
 ## 4.5. Vision debt -- watch it, and know when to override oldest-first
 
 **The signal ladder is now formalized in `PRECIPITATION.md` and sensed by
-`bin/precipitation-scan.sh` (runs inside `ecosystem-survey.sh`).** Read
+`bin/precipitation-scan.sh`.** Read
 its three reports during orient, before triaging. In short: age is the
 WEAKEST of five signals; re-arrival-in-the-same-shape is the strongest;
 an idea that re-arrives in a DIFFERENT shape each time gets its weight
@@ -236,7 +223,7 @@ Same pattern chezz's `/ideate` named originally (2026-07-20, your own
 words: *"my ideas outpace implementation of stable versions so the
 target is always moving"*): a backlog that only grows is not this
 command failing, it's the expected shape of the problem. What would be a
-failure is letting the gap stay invisible -- `bin/ecosystem-survey.sh`'s
+failure is letting the gap stay invisible -- `precipitation-scan.sh`'s
 oldest-first ranking exists exactly so it can't hide.
 
 **But oldest-first is a signal, not a rule realisateur is bound by.**

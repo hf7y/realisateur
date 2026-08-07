@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # markdown-cost.sh -- give prose a price.
 #
+# GUARD: does this diff add more prose than mechanism?
+# RUNNER: .github/workflows/tests.yml
+# GUARD-TEST: bin/tests/markdown-cost.test.sh
+# GATE: none -- its range is a merge-base against origin/main, which a fixture repo with no origin cannot form; its suite builds a throwaway repo per case instead
+# VERIFIED: 2026-08-07 via bash bin/markdown-cost.sh and bash bin/tests/markdown-cost.test.sh
+#
 # WHY THIS EXISTS. On 2026-08-06 this ecosystem merged 26 pull requests and
 # filed 42 issues, and a large share of the output was prose describing its own
 # condition rather than mechanism that does anything. Zach, the same day:

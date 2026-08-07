@@ -2,6 +2,12 @@
 # thermostat-wiring.sh -- eight live probes asking one question: does the
 # ecosystem match the 2026-08-07 redesign, or only describe it?
 #
+# GUARD: does the ecosystem match the 2026-08-07 redesign, or only describe it?
+# RUNNER: bin/tests/thermostat-wiring.test.sh
+# GUARD-TEST: bin/tests/thermostat-wiring.test.sh
+# GATE: none -- probes the scheduler checkout and the issue tracker; the tests workflow already declines to wire it for that reason, and its suite fabricates an estate instead
+# VERIFIED: 2026-08-07 via bash bin/thermostat-wiring.sh (1/8 met, 0 blind, no regression)
+#
 # ---------------------------------------------------------------------------
 # WHY THIS IS A RATCHET AND NOT A CONFORMANCE TEST
 #
