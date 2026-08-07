@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
+# HERMETICITY: exports INSTALLE_PROJECTS / INSTALLE_BIN / INSTALLE_MANIFEST /
+# SCHEDULE_DIR into a temp dir, and registers `scheduler` in its OWN fixture
+# registry rather than relying on the live one.
+#
+# WAS RED WHEN CI FIRST RAN IT (30/4, run 31217552355); CLOSED 2026-08-07, and
+# the first diagnosis was REFUTED, which is the lesson. The hardcoded
+# `SCHED="/home/zach/Documents/Projects/scheduler"` was real, but c8fc45e (#89)
+# had ALREADY fixed it and said in its own message that it did not fix E2..E5.
+# The remaining red was the HARNESS: section E drives `coin scheduler ...` and
+# never registered `scheduler` in its own fixture registry -- it relied on the
+# live one, which is exactly why it was green only on zach's box, and #89 is
+# what stopped that working. `register scheduler` fixes it; no assertion
+# changed. Fixed alongside: coin.sh now honours SCHEDULE_DIR, the same name
+# bin/install-verbs.sh reads, instead of retyping the registry join, and reports
+# BLIND rather than "no registered project" when the registry is absent.
+#
 # verb-set.test.sh -- the declared set, and the two defects it closes.
 #
 # THE LOAD-BEARING ASSERTION IS C1: a declared verb that is NOT installed makes

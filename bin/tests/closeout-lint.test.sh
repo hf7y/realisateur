@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
+# HERMETICITY: builds its own scheduler registry and sets SCHED_ROOT, FOCUS_MD,
+# BLOCKERS_MD and TODAY on every invocation, so it reads a fixture and never the
+# live estate.
+#
+# WAS RED WHEN CI FIRST RAN IT (46/3, run 31217552355); CLOSED 2026-08-07, and
+# there were TWO stale fixtures, not one. 957b8b8 (#65) gave closeout-lint.sh
+# both an `on_a_remote` stale-pointer exemption and an `other-worktree` skip,
+# and this suite was last touched before it. (a) `detached`'s `orphan` branch
+# sat at main's tip, so its tip WAS reachable from a remote and the downgrade to
+# `note [stale-pointer]` was correct -- A4 asked for a state the fixture stopped
+# building. (b) E3's only host-only branch in `oldrepo` was `oldside`, which A9
+# puts in a linked worktree, so the new skip correctly declined to examine it.
+# The script was right both times. Fixed by giving `orphan` a commit on no
+# remote and `oldrepo` a plain host-only branch. No assertion text changed.
+#
 # closeout-lint.test.sh -- witness for bin/closeout-lint.sh. Offline, zero AI,
 # no network: builds a throwaway scheduler registry (schedule/*.conf), real
 # bare remotes + clones, and a scratch FOCUS.md/BLOCKERS.md, then drives every

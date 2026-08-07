@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# HERMETICITY: sets SCHED_ROOT, and points SHIM_INSTALLER, REACH_LINT and
+# SILENCE_AUDIT at throwaway stubs -- which is precisely what makes checks
+# 10/11/12 (the three that DO shell out to live-state tools) deterministic here.
+#
 # hygiene-lint.test.sh -- witness for bin/hygiene-lint.sh's --strict exit-code
 # plumbing. Offline, zero AI, no network.
 #
