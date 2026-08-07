@@ -33,8 +33,29 @@ CANARY="$WORK/canary-source.sh"
 printf '#!/usr/bin/env bash\n# CANARY -- must survive verbatim\necho canary\n' > "$CANARY"
 CANARY_SUM="$(md5sum < "$CANARY")"
 
+# REPO IS PASSED, AND THAT IS THE WHOLE POINT OF THIS FUNCTION.
+#
+# Until 2026-08-07 this passed only BIN_DEST and CMD_DEST. install-shims.sh
+# does not self-locate on purpose (see its header), so with REPO unset it fell
+# back to bin/install-shims.sh:40 --
+#     REPO="${REPO:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/realisateur}"
+# -- the LIVE SHARED CHECKOUT. On a developer machine that path exists, so
+# section D passed by auditing whatever was checked out at ~/Documents/
+# Projects/realisateur rather than the branch this file lives on. A green D
+# was never evidence about this branch's code, and could not go red for a
+# defect introduced on it. In a container the path is absent and the script
+# exits 5 -- which is how the workflow surfaced it (D2, D3, D5).
+# HOOK_DEST and CLAUDE_SETTINGS are redirected too, and they are not optional.
+# Passing REPO is what makes this run reach install-shims.sh's hook section at
+# all; before that it died at the checkout check, so the two missing overrides
+# were inert. With REPO passed and them unset, a test asserting things about a
+# temp directory would install into the REAL ~/.claude/hooks and read the real
+# settings.json -- the exact live-machine write install-shims.sh:72 says these
+# overrides exist to prevent, reintroduced by fixing a different line.
 run_shims() {
-  BIN_DEST="$WORK/bin" CMD_DEST="$WORK/cmds" bash "$SHIMS" "$@" >"$WORK/out" 2>"$WORK/err"
+  REPO="$REPO" BIN_DEST="$WORK/bin" CMD_DEST="$WORK/cmds" \
+    HOOK_DEST="$WORK/hooks" CLAUDE_SETTINGS="$WORK/settings.json" \
+    bash "$SHIMS" "$@" >"$WORK/out" 2>"$WORK/err"
   printf '%s' "$?"
 }
 
@@ -100,6 +121,26 @@ grep -q 'does not name a realisateur checkout' "$WORK/eerr" \
   || bad "E2 it says WHY on stderr, naming the path it rejected"
 check "E3 it wrote no shims before bailing" \
   "$([ -e "$WORK/ebin" ] && echo wrote || echo clean)" "clean"
+
+# E4 is the OTHER side of E1/E2, and without it the checkout test passes
+# vacuously by refusing everything. In a linked worktree `.git` is a FILE, not
+# a directory, so the `-d` test this check used until 2026-08-07 called every
+# worktree "not a realisateur checkout". Every agent in this repo works in
+# .claude/worktrees/*, and run_shims above now passes its own tree, so the
+# wrong predicate broke the suite from the only place it runs.
+git init -q "$WORK/wtsrc"
+git -C "$WORK/wtsrc" config user.email t@test; git -C "$WORK/wtsrc" config user.name T
+mkdir -p "$WORK/wtsrc/bin"; printf '#!/bin/sh\necho x\n' > "$WORK/wtsrc/bin/x.sh"
+git -C "$WORK/wtsrc" add -A; git -C "$WORK/wtsrc" commit -qm init
+git -C "$WORK/wtsrc" worktree add -q "$WORK/wtlinked" -b linked >/dev/null 2>&1
+BIN_DEST="$WORK/wbin" CMD_DEST="$WORK/wcmds" REPO="$WORK/wtlinked" \
+  HOOK_DEST="$WORK/whooks" CLAUDE_SETTINGS="$WORK/wsettings.json" \
+  bash "$SHIMS" >"$WORK/wout" 2>"$WORK/werr"
+check "E4 a linked worktree (.git is a file) is a checkout, not a rejection" \
+  "$([ -f "$WORK/wtlinked/.git" ] && echo file || echo notfile)" "file"
+grep -q 'does not name a realisateur checkout' "$WORK/werr" \
+  && bad "E5 it did not refuse the worktree as 'not a checkout'" \
+  || ok  "E5 it did not refuse the worktree as 'not a checkout'"
 
 printf -- '\n--- install-shims symlink guard: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

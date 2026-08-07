@@ -37,6 +37,13 @@ SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 # steward-survey.sh, precipitation-scan.sh and notify-senechal.sh; caught by
 # bin/tests/verb-set.test.sh once it ran in CI rather than only on zach's box.
 SCHED="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
+# ONE NAME FOR THE REGISTRY DIRECTORY, not one per file. bin/install-verbs.sh
+# reads `SCHEDULE_DIR` (defaulting to the same place), and coin did not, so a
+# caller who moved the registry got the two disagreeing about where projects
+# are declared -- silently, each insisting the other's projects do not exist.
+# Same override, same precedence, same default: SCHEDULE_DIR is the specific
+# answer and wins; SCHED_ROOT/INSTALLE_PROJECTS still derive it when unset.
+SCHEDULE_DIR="${SCHEDULE_DIR:-$SCHED/schedule}"
 
 die()    { printf 'coin: %s\n' "$*" >&2; exit 2; }
 gap()    { printf 'coin: GAP: %s\n' "$*" >&2; exit 4; }
@@ -50,7 +57,14 @@ PROJ="${1:-}"; VERB="${2:-}"; SUMMARY="${3:-}"
 [ $# -eq 3 ] || die "usage: coin <project> <verb> <summary> (got $#)"
 
 # ---- the project must be registered and have a repository ------------------
-conf="$SCHED/schedule/$PROJ.conf"
+conf="$SCHEDULE_DIR/$PROJ.conf"
+# BLIND, not GAP, when the registry itself is unreadable. "no registered
+# project named X" is an answer about the project; if the directory that holds
+# the answers is not there, the honest report is that nothing was read. This
+# is the exact confusion #89 named: an account with no registry looked like an
+# account with no projects.
+[ -d "$SCHEDULE_DIR" ] \
+  || blind "no registry directory at $SCHEDULE_DIR -- I read nothing, which is not the same as '$PROJ is unregistered'. Set SCHEDULE_DIR or SCHED_ROOT."
 [ -f "$conf" ] || die "no registered project named '$PROJ'"
 REPO="$(grep -oP '^PROJECT_REPO_PATH=\K.*' "$conf" | tr -d '"'"'"'')"
 REPO="${BASHIFY_REPO:-$REPO}"

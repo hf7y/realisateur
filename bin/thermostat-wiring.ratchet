@@ -1,0 +1,4 @@
+# thermostat-wiring.ratchet -- checks that were passing when accepted.
+# Raised by --accept. Never lowered by any flag. See bin/thermostat-wiring.sh.
+# accepted 2026-08-07T14:00:46-05:00
+prosepriced

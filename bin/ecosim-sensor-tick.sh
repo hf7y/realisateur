@@ -81,7 +81,7 @@ if [ ! -x "$SENSOR" ]; then
 fi
 
 # Trim before each run rather than growing unbounded (same shape as
-# usage-paced-runner.sh and weight-audit.sh).
+# usage-paced-runner.sh).
 [ -f "$LOG" ] && { tail -n 5000 "$LOG" > "$LOG.tmp" 2>/dev/null && mv "$LOG.tmp" "$LOG"; }
 
 OUT="$(mktemp)"; ERR="$(mktemp)"; AOUT="$(mktemp)"
