@@ -22,6 +22,28 @@
 #   2. the hands key into <p>'s authorized_keys    (root)  see --no-key
 #   3. bin/wire-selfdev-git.sh <repo> --apply      (as <p>) per-repo deploy keys
 #   4. bin/land-selfdev.sh --land                  (as <p>) clones + verbs
+#   5. the RELEASE BOOTSTRAP + its clock            (as <p>) see below
+#
+# WHY STEP 5 IS HERE AND NOWHERE ELSE. The account consumes tooling from the
+# verb release channel (`hf7y/verbs` build tags), not from a clone of any
+# repo's `main` -- see bin/lib/propagation-set.sh for that decision and why
+# `main` staying fast is the point of it. A build cannot deliver its own
+# installer, so a small, near-immutable BOOTSTRAP has to exist on the account
+# first: install-verb-build.sh, selfdev-release-tick.sh, and two libs. Four
+# files, copied once, whose only job is to find, verify and install a
+# versioned payload -- the gradlew/rustup shape.
+#
+# This script is the natural and only correct home for that copy, because it
+# is the one thing that already runs EXACTLY ONCE PER ACCOUNT. Putting it in
+# land-selfdev.sh would re-copy on every landing; putting it in the tick would
+# make the bootstrap install itself, which is the circularity the bootstrap
+# exists to cut.
+#
+# The clock goes in the ACCOUNT'S OWN crontab, installed BY the account. Pull,
+# not push: a hands account reaching into a 0700 home over sudo does not scale
+# past four accounts and leaves no record on the consumer side, so the account
+# cannot answer "what version am I on, and when did I last look" without
+# somebody else's shell history.
 #
 # WHAT IT DELIBERATELY DOES NOT DO: arm dispatch. That is a row in
 # schedule/_paced.<host>.conf going from 0 to 1, it is a judgment about how a
@@ -73,6 +95,8 @@ if [ "$MODE" = --check ]; then
                         || echo "    2. SKIPPED (--no-key)"
   echo "    3. wire-selfdev-git.sh for realisateur, scheduler, senechal, $PROJECT"
   echo "    4. land-selfdev.sh --land as $PROJECT"
+  echo "    5. release bootstrap into ~$PROJECT/.local/libexec/selfdev/, then"
+  echo "       selfdev-release-tick.sh --install-cadence --apply as $PROJECT"
   echo
   echo "  it will NOT arm dispatch: that is a 0->1 in schedule/_paced.$HOST.conf."
   echo "Next: sudo bash $0 $PROJECT --apply"
@@ -139,8 +163,44 @@ for repo in realisateur scheduler senechal "$PROJECT"; do
   run_as "'$STAGE/wire-selfdev-git.sh' '$repo' --apply $access" 2>&1 | sed 's/^/     /'
 done
 
-say "4/4 land"
+say "4/5 land"
 run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
+
+# --- 5. the release bootstrap, and the account's own clock -------------------
+# The set is DERIVED from bin/lib/propagation-set.sh, never typed here. A
+# second list of "what the bootstrap is" would drift from the one the test
+# suite enforces, which is exactly the one-fact-two-readers shape MONKEY.md
+# 10 found five times in a day.
+say "5/5 release bootstrap + clock"
+# shellcheck source=lib/propagation-set.sh
+. "$HERE/lib/propagation-set.sh"
+BOOT="$HOME_DIR/.local/libexec/selfdev"
+install -d -m 755 -o "$PROJECT" -g "$PROJECT" "$BOOT" "$BOOT/lib"
+boot_ok=1
+for f in $PROP_BOOTSTRAP_SCRIPTS $PROP_BOOTSTRAP_SUPPORT; do
+  if [ -f "$HERE/$f" ]; then
+    install -m 755 -o "$PROJECT" -g "$PROJECT" "$HERE/$f" "$BOOT/$f"
+    echo "  OK      $BOOT/$f"
+  else
+    echo "  BAD     $HERE/$f is missing -- the bootstrap is incomplete and this account cannot obtain a build"
+    boot_ok=0
+  fi
+done
+
+if [ "$boot_ok" -eq 1 ]; then
+  # Installed by the ACCOUNT, into the ACCOUNT'S crontab. run_as gives it a
+  # login-shaped PATH; the tick needs nothing else.
+  run_as "'$BOOT/selfdev-release-tick.sh' --install-cadence --apply" 2>&1 | sed 's/^/     /'
+  # WITNESS: read the crontab back, as the account, rather than trusting the
+  # installer's own report of itself.
+  if sudo -u "$PROJECT" crontab -l 2>/dev/null | grep -q 'selfdev-release:TICK'; then
+    echo "  OK      clock verified in $PROJECT's crontab (re-read, not asserted)"
+    echo "  DO      notify-senechal 'realisateur selfdev-release-tick cron in $PROJECT@$HOST crontab, owned by realisateur'"
+  else
+    echo "  BAD     the clock is NOT in $PROJECT's crontab -- this account will never advance past the build it has"
+  fi
+  echo "  ..      first adoption is a separate act: sudo -u $PROJECT $BOOT/selfdev-release-tick.sh --apply"
+fi
 
 cat <<EOF
 
