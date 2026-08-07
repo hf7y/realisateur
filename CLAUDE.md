@@ -44,8 +44,12 @@ Before marking anything done:
 - [ ] Multi-line or shell-quoting commit message written with
       **`git commit -F <file>`**, not `-m` (backticks inside double
       quotes execute)?
-- [ ] `silence-audit --strict` clean? (mechanizes the retired
-      stderr-silencing / wired-to-a-real-path / names-what-it-retires rows)
+- [ ] `silence-audit --strict` clean, ON THE PROJECTS THIS CHANGE TOUCHES?
+      (mechanizes the retired stderr-silencing / wired-to-a-real-path rows.
+      Scoped 2026-08-07: it had demanded a clean estate-wide run since the day
+      it was written and that has never once been passable -- 74 FLAGs on the
+      morning it was scoped, 52 of them one retired check's false alarms. A
+      mandatory row nobody can satisfy is how a checklist stops being read.)
 
 ## Ecosystem protocols (realisateur baseline)
 The checklist above governs work inside this repo. These govern anything

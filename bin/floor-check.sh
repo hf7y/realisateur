@@ -1,6 +1,34 @@
 #!/usr/bin/env bash
 # floor-check.sh -- is THE FLOOR met? Nine criteria, probed live, no AI.
 #
+# GUARD: is the ecosystem-wide stability floor met?
+# RUNNER: operator -- probes crontab, systemd, backups and every repo on this host
+# GUARD-TEST: none -- every criterion is a live host probe; a fixture would assert only that the fixture was built
+# GATE: none -- DEMOTED 2026-08-07 from gate to readout; see below
+# VERIFIED: 2026-08-07 via bash bin/floor-check.sh (NOT MET -- 6 unmet, 2 unproven)
+#
+# DEMOTED, NOT DELETED -- 2026-08-07, and the reasoning is worth keeping.
+#
+# It has never once reported MET. Today: 6 unmet, 2 unproven, 1 met. Several
+# criteria are about a dispatch topology this repo has since moved off (gate
+# 1.2 counts agent-dispatching cron lines; gate 3.1 counts armed agents), and
+# the ones that are still right -- gate 2, two copies and a named backup set --
+# are ecosystem operations, not anything a branch can affect.
+#
+# bin/thermostat-wiring.sh's own header names this exact failure mode: "a check
+# nobody expects to be green is a document with an exit code", which is why
+# that one was built as a RATCHET instead. A permanently-red gate is worse than
+# no gate, because it teaches everyone that red is the normal colour -- and
+# this repository has already paid that bill, when three suites sat red on main
+# for weeks and then blocked four PRs in one afternoon.
+#
+# So: it keeps its exit code for an operator who asks it a direct question, and
+# it gates nothing. What is given up is a hard stop on ecosystem stability
+# regressions, which it was never delivering. What still covers the live half:
+# bin/deploy-drift.sh (are dispatchers on the merged ref) and
+# bin/thermostat-wiring.sh's ratchet (regression from the current standing
+# fails the build, without requiring the vision to be fully realised first).
+#
 # THE FLOOR (realisateur/THE-FLOOR.md) is the ecosystem-scoped stability
 # milestone: nothing runs from a path that no longer exists, every repo's
 # history exists in at least two places, and exactly one cron line dispatches

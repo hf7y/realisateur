@@ -207,7 +207,6 @@ provision-selfdev-user.sh
 setup-selfdev-project.sh
 wire-selfdev-git.sh
 install-shims.sh
-install-silence-audit.sh
 install-verbs.sh
 relink-verbs-to-build.sh
 pivot.sh
@@ -218,27 +217,24 @@ session-marker.sh
 PROP_PAYLOAD_SCRIPTS="
 check-project-busy.sh
 closeout-lint.sh
-ecosystem-survey.sh
 focus-commit.sh
 hygiene-lint.sh
-milestone-audit.sh
 notify-senechal.sh
 precipitation-scan.sh
 silence-audit.sh
-steward-survey.sh
 "
 
 # --- THE LEAK, with a bound on it -------------------------------------------
 # PAYLOAD-class scripts that are NOT yet declared on any bashified branch.
 # realisateur's bashified branch declares THREE verbs (arpente, epluche,
-# juge); the ten below reach accounts as clone-backed shims instead, which is
+# juge); the seven below reach accounts as clone-backed shims instead, which is
 # `main` acting as a deploy ref through the back door.
 #
 # This list may SHRINK and must never GROW. propagation.test.sh enforces that
 # against PROP_LEAK_BOUND. Empty it by adding bin/<n> + man/<n>.1 to
 # realisateur's bashified branch -- never by reclassifying a row as bootstrap.
 PROP_PAYLOAD_PENDING="$PROP_PAYLOAD_SCRIPTS"
-PROP_LEAK_BOUND=10
+PROP_LEAK_BOUND=7
 
 # --- LOCAL: never leaves this repo ------------------------------------------
 # release-gate.sh and publish-release-verdict.sh are LOCAL because they run in

@@ -3,7 +3,7 @@
 # EVERY repo, not just this one. Two halves, one source of truth each:
 #
 #   1. PATH shims in ~/.local/bin for every bin/*.sh a command file names,
-#      so `ecosystem-survey` / `closeout-lint` / `focus-commit` work from
+#      so `hygiene-lint` / `closeout-lint` / `focus-commit` work from
 #      any cwd, any clone, any host with this checkout.
 #   2. User-level slash commands in ~/.claude/commands/, rendered from this
 #      repo's own .claude/commands/*.md with `bin/foo.sh` rewritten to the
@@ -200,7 +200,7 @@ EOF
   printf '  `%s`\n' "$REPO"
   cat <<'EOF'
 not your current working directory. Every command it tells you to run
-(`ecosystem-survey`, `closeout-lint`, `focus-commit`, ...) is on PATH and
+(`hygiene-lint`, `closeout-lint`, `focus-commit`, ...) is on PATH and
 is cwd-independent; `focus-commit` takes the target repo as its first
 argument, so pass it explicitly rather than assuming the current one.
 

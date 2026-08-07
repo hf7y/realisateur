@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # claim-drift.sh -- has a pull request grown since it was presented as done?
 #
+# GUARD: has a pull request grown since it was presented as done?
+# RUNNER: operator -- needs a GitHub credential against live PRs; run in a review pass
+# GUARD-TEST: bin/tests/claim-drift.test.sh
+# GATE: none -- every path calls `gh` against a live PR; the fixture is in its own suite
+# VERIFIED: 2026-08-07 via bash bin/claim-drift.sh --all (1 unclaimed draft, 0 drifted)
+#
 # THE FAILURE THIS CLOSES. An agent reported work COMPLETE and pointed at a
 # pull request. The PR was not a draft. Then more commits landed on it. The
 # thing reviewed -- or approved, or merely believed finished -- was not the
