@@ -257,6 +257,7 @@ markdown-cost.sh
 reach-lint.sh
 restamp-discipline.sh
 stamp-agent.sh
+suite-docs-lint.sh
 thermostat-wiring.sh
 "
 

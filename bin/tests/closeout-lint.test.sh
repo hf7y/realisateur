@@ -440,6 +440,15 @@ out="$(run "$T/focus-ok.md" "$T/blockers-today.md" wt_unpushed)"
 has   "G1 unpushed commit IN a worktree is FLAGged"  "$out" "FLAG [worktree-unpushed]"
 has   "G1 and it names the worktree branch"          "$out" "feat"
 hasnt "G1 and it is no longer merely BLIND"          "$out" "BLIND [worktrees]"
+# G5: the branch audit skips a branch that is checked out in a linked
+# worktree -- still correct, it is not this run's to push. But its message
+# said "(BLIND above -- not this run's to push)", pointing the reader at a
+# BLIND line that this branch just deleted. A dangling cross-reference to a
+# removed symbol is how prose decays into a lie one commit at a time, and the
+# reader it misleads is the one who went looking for the BLIND and found
+# nothing. The worktree is now READ, so the line must say so.
+has   "G5 a worktree-checked-out branch is still skipped" "$out" "skip [other-worktree]"
+hasnt "G5 and the skip cites no BLIND that no longer exists" "$out" "BLIND above"
 
 # G2: a DIRTY worktree is reported but does NOT gate. A concurrent agent's
 # worktree is dirty by construction while it is running, and gating on that

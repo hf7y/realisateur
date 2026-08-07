@@ -424,7 +424,7 @@ EOF
   while IFS= read -r br; do
     [ -n "$br" ] || continue
     if [ -n "$wt_branches" ] && printf '%s\n' "$wt_branches" | grep -qxF "$br"; then
-      echo "    skip [other-worktree] $name: '$br' is checked out in a linked worktree (BLIND above -- not this run's to push)"
+      echo "    skip [other-worktree] $name: '$br' is checked out in a linked worktree (read above -- not this run's to push)"
       continue
     fi
     if ! git -C "$repo" rev-parse --verify -q "origin/$br" >/dev/null 2>&1 && on_a_remote "$br"; then
