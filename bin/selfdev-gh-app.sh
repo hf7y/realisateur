@@ -9,7 +9,9 @@
 #   selfdev-gh-app.sh --adopt --account <name> --key <file.pem> --app-id <id>
 #                                          install a freshly downloaded key at
 #                                          mode 600, write its conf, and prove it
-#   selfdev-gh-app.sh --credential         git credential helper (reads git's stdin)
+#   selfdev-gh-app.sh --credential <op>    git credential helper. Git appends the
+#                                          operation itself: `get` mints, and
+#                                          `store`/`erase` are no-ops that exit 0.
 #   selfdev-gh-app.sh --wire               write git config so push/gh use the App
 #
 # WHY THIS EXISTS. bin/wire-selfdev-git.sh gives a self-dev account per-repo
@@ -46,10 +48,35 @@
 # can carry a different App without editing anything.
 set -uo pipefail
 
-MODE="--check"; REPOS=""; ADOPT_ACCOUNT=""; ADOPT_KEY=""; ADOPT_ID=""
+# GIT APPENDS AN OPERATION TO ITS CREDENTIAL HELPER, AND THIS PARSER USED TO
+# DIE ON IT.
+#
+# `git config credential.helper "!<cmd>"` is invoked by git as
+# `<cmd> <operation>`, where operation is `get`, `store` or `erase`. So the
+# helper wired by `--wire` actually runs as:
+#
+#     selfdev-gh-app.sh --credential get
+#
+# `get` matched no case, fell through to `*)`, printed usage and exited 2.
+# THE HELPER HAS THEREFORE NEVER FUNCTIONED, from the day it was written
+# (2026-08-06) to the day this was found (2026-08-07). Every fetch and push
+# through it fell back to whatever else git could find.
+#
+# bin/tests/selfdev-gh-app.test.sh exercised `--credential` -- but never with
+# the argument git actually appends, so it passed by testing a shape
+# production never runs. That is the same bug class as the `$HOME`-fixture
+# guards in MEMORY.md and as the `--build-id -` outage in this same PR: a test
+# green against a paraphrase of the real invocation.
+MODE="--check"; REPOS=""; ADOPT_ACCOUNT=""; ADOPT_KEY=""; ADOPT_ID=""; GIT_OP=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --check|--token|--identity|--credential|--wire|--jwt|--adopt) MODE="$1" ;;
+    get|store|erase)
+      # Accepted ONLY after --credential. A bare `get` with no mode is not a
+      # git invocation at all, and treating it as one would make a typo mint a
+      # token. The refusal below still catches it.
+      [ "$MODE" = "--credential" ] || { echo "$0: '$1' is a git credential operation and is only accepted after --credential" >&2; exit 2; }
+      GIT_OP="$1" ;;
     --repos) REPOS="${2:-}"; shift ;;
     --repos=*) REPOS="${1#--repos=}" ;;
     --account) ADOPT_ACCOUNT="${2:-}"; shift ;;
@@ -246,14 +273,39 @@ case "$MODE" in
 
   --credential)
     # git credential protocol: read key=value lines on stdin, answer in kind.
-    # Only `get` is answered; `store`/`erase` are no-ops BY DESIGN -- there is
-    # nothing to store, which is the point of a one-hour token.
     # Git's request is drained and ignored on purpose: the helper is configured
     # per-host in --wire, so there is nothing left to decide from the input, and
     # a helper that does not read its stdin leaves git writing into a closed pipe.
     while IFS= read -r line; do [ -z "$line" ] && break; done
-    tok="$(mint_token)" || exit 1
-    printf 'username=x-access-token\npassword=%s\n' "$tok"
+    case "$GIT_OP" in
+      store|erase)
+        # NO-OPS BY DESIGN, and they must exit 0. There is nothing to store --
+        # that is the point of a one-hour token minted on demand -- and
+        # nothing to erase. Git ignores a helper's output for these two
+        # operations but DOES notice a non-zero exit, so answering them
+        # loudly would put a spurious failure in front of every push.
+        exit 0 ;;
+      get|'')
+        # `''` is the hand-run form (`selfdev-gh-app.sh --credential`), kept
+        # so an operator can still exercise the helper from a terminal exactly
+        # as it was documented before git's operation argument was honoured.
+        # `exit 5`, matching --token and --identity two branches down.
+        # mint_token flattens die()'s 5 to `return 1` internally, so every
+        # caller restates the FATAL code; this one said 1 and was the only
+        # caller in the file that did. Git treats any non-zero as "no
+        # credential" so nothing downstream cares -- but the operator
+        # hand-running the helper does, and one script with two answers for
+        # its own FATAL code is how a missing key gets debugged as a revoked
+        # one.
+        tok="$(mint_token)" || exit 5
+        printf 'username=x-access-token\npassword=%s\n' "$tok"
+        ;;
+      *)
+        # Unreachable through the parser above, and left loud anyway: a future
+        # git operation this helper does not understand must not be answered
+        # with a token.
+        echo "$0: unknown git credential operation: $GIT_OP" >&2; exit 2 ;;
+    esac
     ;;
 
   --wire)

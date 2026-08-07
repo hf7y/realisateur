@@ -178,6 +178,69 @@ has "I runs the witness"       "$outI" "== selfdev-gh-app --check"
 has "I witness fails loud"     "$outI" "WITNESS FAILED"
 eq  "I exits 5 when the witness fails" "$rcI" "5"
 
+# --- J: the credential helper, INVOKED THE WAY GIT INVOKES IT ------------------
+# THE BUG THIS CASE EXISTS FOR, reproduced 2026-08-07:
+#
+#   $ bin/selfdev-gh-app.sh --credential get </dev/null
+#   usage: bin/selfdev-gh-app.sh [--check|--token|...]
+#   exit 2
+#
+# `git config credential.helper "!<cmd>"` makes git run `<cmd> <operation>`,
+# appending `get`, `store` or `erase`. The parser had no case for a bare
+# operation word, so it fell through to `*)` and printed usage. The helper had
+# NEVER worked -- from the day it was written to the day this was found.
+#
+# The suite above already exercised `--credential`, and passed, because it
+# passed the mode with no operation -- a shape git never produces. So the
+# assertion is deliberately written as the LITERAL argv git builds, not as a
+# convenient paraphrase of it. Same failure class as the `$HOME`-fixture
+# guards and as `--build-id -` in this same PR.
+echo
+echo "-- J: the git credential protocol --------------------------------------"
+
+# `get` must reach the minting path. With no App configured that path FATALs
+# on the missing key (exit 5) -- which is the proof it got there: a usage
+# error (exit 2) would mean the parser rejected git's own invocation, and a
+# hermetic test cannot mint a real token to see any further.
+outJ="$(run env SELFDEV_APP_CONF="$T/none.conf" SELFDEV_APP_ID=4520255 \
+        SELFDEV_APP_KEY="$T/absent.pem" "$SCRIPT" --credential get </dev/null 2>&1)"; rcJ=$?
+[ "$rcJ" != 2 ] && ok "J '--credential get' is not a usage error (git's real invocation is parsed)" \
+                || bad "J '--credential get' exited 2 -- git's own invocation is rejected"
+no  "J it does not print the usage banner" "$outJ" "usage: "
+has "J it reached the minting path (FATAL on the absent key)" "$outJ" "absent.pem"
+eq  "J it exits 5, the missing-credential code, not 2" "$rcJ" "5"
+
+# store/erase are no-ops and MUST exit 0. Git ignores their output but notices
+# a non-zero exit, so a loud refusal here would put a spurious failure in
+# front of every push. Note there is no key configured at all: these must not
+# even try to mint.
+for op in store erase; do
+  outK="$(printf 'protocol=https\nhost=github.com\n\n' | \
+          run env SELFDEV_APP_CONF="$T/none.conf" "$SCRIPT" --credential "$op" 2>&1)"; rcK=$?
+  eq "J '--credential $op' is a silent no-op, exit 0" "$rcK" "0"
+  no "J '--credential $op' mints nothing"   "$outK" "password="
+  no "J '--credential $op' prints no usage" "$outK" "usage: "
+done
+
+# It drains git's request without dying on a closed pipe -- the reason the
+# read loop exists at all.
+printf 'protocol=https\nhost=github.com\nusername=x\n\n' | \
+  run env SELFDEV_APP_CONF="$T/none.conf" SELFDEV_APP_ID=4520255 \
+      SELFDEV_APP_KEY="$T/absent.pem" "$SCRIPT" --credential get >/dev/null 2>&1
+[ "$?" = 5 ] && ok "J it consumes git's key=value request before answering" \
+             || bad "J it did not survive being handed a real git credential request"
+
+# A bare operation word with no --credential is NOT a git invocation, and must
+# not be silently treated as one -- otherwise a typo mints a token.
+outL="$(run "$SCRIPT" get </dev/null 2>&1)"; rcL=$?
+eq  "J a bare 'get' with no --credential exits 2" "$rcL" "2"
+has "J ...and says why"  "$outL" "only accepted after --credential"
+
+# The wiring and the parser have to agree about the flag name, or --wire
+# writes a helper line the parser rejects -- which is how this shipped.
+outW="$(grep -o 'credential\.\"https://github\.com\".helper.*' "$SCRIPT" | head -1)"
+has "J --wire writes a helper git will call as '<self> --credential <op>'" "$outW" "--credential"
+
 echo
 printf '%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ] || exit 1

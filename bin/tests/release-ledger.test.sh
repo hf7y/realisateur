@@ -202,6 +202,63 @@ has "...and says so plainly" "$O" "NO BUILD HAS EVER BEEN CUT"
 
 # ===========================================================================
 echo
+echo "-- 7. A STALE SUCCESS IS NOT A FRESH ONE -------------------------------"
+# ===========================================================================
+# THE 2026-08-07 FAILURE, REPRODUCED. The publisher died on its own argument
+# parser and published nothing. The endpoint went on serving the previous
+# night's CUT with blocked_streak 0. It was NINETEEN HOURS OLD -- inside the
+# 30h window -- so this script said `emitter alive` and selfdev-release-tick
+# said `release channel healthy`. On the one night the gate was broken, the
+# channel showed a confident green.
+#
+# The window is not the fix and this suite says so in an assertion rather than
+# in a comment: a 19h-old verdict from a NIGHTLY emitter is legitimately fresh,
+# and the first case below asserts it still grades that way. What changed is
+# that the document now declares its own expiry, and a document past it is BAD
+# whatever `decision` says.
+mkledger "$T/stalecut.tsv" <<'EOF'
+43 CUT nightly
+19 CUT nightly
+EOF
+
+# (a) 19h old with no expiry declared: still fresh. Shrinking the window to
+#     catch the failure would false-alarm here EVERY DAY, and a guard that is
+#     wrong every day is ignored on the day it is right.
+O="$(check "$T/stalecut.tsv")"; R=$?
+has "a 19h-old verdict from a nightly emitter is still graded alive" "$O" "emitter alive"
+rc  "...and the channel still grades healthy on it" 0 "$R"
+
+# (b) the same 19h-old document, past the expiry ITS OWN PUBLISHER stamped.
+#     Nothing about the row changed; the producer's claim about it did.
+O="$(LEDGER_VALID_UNTIL="$(at 3)" check "$T/stalecut.tsv")"; R=$?
+rc  "a verdict past its published valid_until exits non-zero" 1 "$R"
+has "it is named EXPIRED, not 'alive'"        "$O" "VERDICT EXPIRED"
+has "it names the expiry the emitter declared" "$O" "$(at 3)"
+has "it says the decision is the LAST one, not tonight's" "$O" "not tonight's"
+has "it names both causes: not running, or running and unable to publish" \
+    "$O" "running and cannot publish"
+hasnt "the expired document is NOT also graded alive" "$O" "emitter alive"
+
+# (c) an expiry still in the future grades alive and SAYS so with the deadline,
+#     so a reader can tell a graded channel from an ungraded one.
+O="$(LEDGER_VALID_UNTIL="$(at -5)" check "$T/stalecut.tsv")"; R=$?
+rc  "a verdict inside its published valid_until grades healthy" 0 "$R"
+has "...and the grade cites the deadline it was measured against" "$O" "valid until $(at -5)"
+
+# (d) an expiry this consumer cannot parse is UNGRADED, never 'fresh'. Same
+#     rule as rule 6: could-not-read and read-and-fine are different facts.
+O="$(LEDGER_VALID_UNTIL="soon" check "$T/stalecut.tsv")"; R=$?
+rc  "an unparseable valid_until exits non-zero" 1 "$R"
+has "...and says freshness is UNGRADED rather than fresh" "$O" "UNGRADED"
+
+# (e) EXPIRY OUTRANKS A HAPPY DECISION. The failure was specifically that the
+#     stale document said CUT. A BLOCKED document going stale is alarming to
+#     nobody; a CUT one is the whole problem.
+O="$(LEDGER_VALID_UNTIL="$(at 3)" check "$T/stalecut.tsv")"
+has "an expired CUT is still refused, decision notwithstanding" "$O" "decision CUT"
+
+# ===========================================================================
+echo
 echo "-- 5. AN EMPTY CHANNEL IS NOT A CLEAN CHANNEL --------------------------"
 # ===========================================================================
 printf '# date\tdecision\treason\tmain_sha\tci_run\tbuild_id\n' > "$T/empty.tsv"

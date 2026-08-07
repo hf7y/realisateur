@@ -97,6 +97,34 @@ cli_guard() {
         # separator would be exactly the quiet misparse this guards against.
         cli_die "'--' is not accepted."
         ;;
+      -)
+        # A BARE `-` IS A VALUE, NOT A FLAG, and this branch is here because
+        # treating it as one silenced the release channel on the first real
+        # gated cut (2026-08-07).
+        #
+        # cli_guard walks EVERY element of argv, values included -- it has to,
+        # because it does not know which flags take a value. So a value that
+        # begins with `-` reaches the `-*)` arm below. Almost always that is
+        # correct and desirable: `--reason --apply` is a misparse worth dying
+        # on. A bare `-` is the one exception, because in this estate it is
+        # not a near-miss on anything -- it is the DOCUMENTED sentinel that
+        # publish-release-verdict.sh and release-ledger.sh both use for "no
+        # build id", and it is their own default value for that field.
+        #
+        # WHAT IT COST. build-verbs.yml invokes the publisher with
+        # `--build-id "${CUT_BUILD:--}"`. CUT_BUILD is empty on every night
+        # that does NOT cut -- which is every BLOCKED, ERROR and NO_CHANGE
+        # night, i.e. exactly the nights the verdict channel was built for. So
+        # the publisher died `unknown flag: -`, exit 2, and published nothing.
+        # The endpoint went on serving the previous CUT verdict, and the
+        # consumer graded a broken gate as "release channel healthy".
+        #
+        # It is NOT waved through: with CLI_POSITIONAL=none it still dies, and
+        # it dies naming itself rather than as an "unknown flag", so a script
+        # that genuinely takes no arguments is no laxer than it was.
+        [ "${CLI_POSITIONAL:-none}" = none ] && \
+          cli_die "unexpected argument: '-' (this tool takes no positional arguments)"
+        ;;
       -*)
         case " ${CLI_FLAGS:-} " in
           *" $arg "*) ;;
