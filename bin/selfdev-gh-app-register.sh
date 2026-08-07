@@ -41,6 +41,14 @@
 # Run this where the browser is (mandark), then carry the .pem to the self-dev
 # account. --manifest-only writes the form and stops, for a host with no
 # browser at all.
+#
+# RUN IT IN A REAL TERMINAL, not inside a sandboxed or containerised shell.
+# Both halves of this flow cross the process boundary: the browser must open a
+# file this script wrote, and must reach a loopback port this script is
+# listening on. A shell with a private /tmp or a private network namespace
+# breaks one or both, and the failure is silent from the script's side -- it
+# goes on waiting for a redirect that is being delivered to a different
+# 127.0.0.1. Measured on mandark 2026-08-07.
 set -uo pipefail
 
 ACCOUNT=""; REPO=""; ROLE="writer"; PORT="8721"; OUT=""; MANIFEST_ONLY=0; IS_ORG=0
@@ -125,7 +133,16 @@ FORM="$T/register.html"
     "$(printf '%s' "$MANIFEST" | jq -Rs .)"
 } > "$FORM"
 # Survives the trap: the browser needs it after this script's temp dir would go.
-KEEP="${TMPDIR:-/tmp}/selfdev-register-$ACCOUNT-$$.html"
+#
+# Under $HOME and NOT /tmp, deliberately. /tmp is not reliably the same
+# directory for the script and for the browser -- a sandboxed or namespaced
+# shell gets a private one, and the symptom is a browser reporting the file
+# does not exist at a path the script can `ls`. Measured 2026-08-07 on
+# mandark, on the first real run of this script. $HOME is the one directory
+# both are guaranteed to agree on.
+KEEPDIR="${XDG_CACHE_HOME:-$HOME/.cache}/selfdev"
+mkdir -p "$KEEPDIR"
+KEEP="$KEEPDIR/register-$ACCOUNT-$$.html"
 cp "$FORM" "$KEEP"
 
 echo "== register $APP_NAME ($ROLE) under @$OWNER =="
