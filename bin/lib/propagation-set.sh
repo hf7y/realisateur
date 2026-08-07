@@ -203,13 +203,12 @@ publish-release-verdict.sh
 ecosim-sensor-tick.sh
 floor-check.sh
 hardcoded-home-lint.sh
-incubation-audit.sh
 make-bootstrap-branch.sh
 markdown-cost.sh
 reach-lint.sh
 restamp-discipline.sh
 stamp-agent.sh
-weight-audit.sh
+thermostat-wiring.sh
 "
 
 # prop_channel <script-basename> -- prints bootstrap|provision|payload|local,
