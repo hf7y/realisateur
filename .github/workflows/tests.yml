@@ -1,0 +1,127 @@
+# tests.yml -- run the suites in bin/tests/ on every pull request and on every
+# push to main.
+#
+# WHY THIS EXISTS. Before it, .github/workflows/verb-build-smoke.yml was the
+# only workflow in the repository and it ran 2 of the 9 suites in bin/tests/,
+# behind a `paths:` filter that excluded most of the tree. The other seven --
+# closeout-lint, hygiene-lint, reach-lint, focus-commit, install-shims,
+# verb-set, conf -- had no automated runner at all. They were real tests, they
+# passed, and nothing ever ran them, which makes them documentation. This file
+# is the difference between a test that exists and a test that gates.
+#
+# HERMETICITY, RE-PROBED RATHER THAN ASSUMED. The working assumption when this
+# was commissioned was that hygiene-lint and closeout-lint read live machine
+# state and could not run in a container. Reading them says otherwise, and it
+# is worth writing down which mechanism makes each one safe, because that
+# mechanism is what a future edit could quietly remove:
+#
+#   closeout-lint.test.sh  builds its own registry and sets SCHED_ROOT,
+#                          FOCUS_MD, BLOCKERS_MD and TODAY on every invocation.
+#   hygiene-lint.test.sh   sets SCHED_ROOT, and points SHIM_INSTALLER,
+#                          REACH_LINT and SILENCE_AUDIT at throwaway stubs --
+#                          which is precisely what makes checks 10/11/12
+#                          (the three that DO shell out to live-state tools)
+#                          deterministic here.
+#   reach-lint.test.sh     sets SCHED_ROOT and points USER_CMD_DIR at a
+#                          directory that deliberately does not exist.
+#   verb-set.test.sh       exports INSTALLE_PROJECTS / INSTALLE_BIN /
+#                          INSTALLE_MANIFEST / SCHEDULE_DIR into a temp dir.
+#   conf.test.sh           overrides HOME and SCHED_ROOT.
+#   install-shims.test.sh  passes BIN_DEST / CMD_DEST into a temp dir.
+#   focus-commit.test.sh   builds bare remotes and clones in a temp dir.
+#   markdown-cost.test.sh  builds a throwaway repo per case.
+#
+# All nine are therefore wired. If any of them ever needs a real ~/.local/bin,
+# a real scheduler registry or a real network, the honest fix is to give it a
+# fixture -- NOT to drop it from this list, and never to weaken the assertion.
+#
+# KNOWN RED AT THE TIME OF WRITING, and deliberately left red:
+#   closeout-lint.test.sh fails A4 (x2) and E3, 46 passed / 3 failed. Verified
+#   on 2026-08-07 via `bash bin/tests/closeout-lint.test.sh`. It is NOT an
+#   environment effect -- it reproduces on a developer machine. The `detached`
+#   fixture makes branch `orphan` at main's tip, and closeout-lint.sh's
+#   stale-pointer exemption (bin/closeout-lint.sh, `on_a_remote`) correctly
+#   downgrades a branch whose tip is already reachable from a remote ref to
+#   `note [stale-pointer]` instead of `FLAG [host-only-branch]`. The script is
+#   behaving as designed; the fixture predates the exemption and no longer
+#   builds a genuinely host-only branch. Fixing that is a one-line fixture
+#   change (give `orphan` a commit that exists on no remote) and is left to a
+#   human, because silencing a red suite to open a workflow is the exact move
+#   this repository's BUILD-DISCIPLINE.md exists to prevent.
+
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  suites:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Several suites commit into fixture repositories. Most set an identity
+      # per repo or per command, but a runner has no global one at all, so
+      # anything that does not is a confusing "empty ident name" failure that
+      # has nothing to do with the assertion under test.
+      - name: Give git an identity for fixture commits
+        run: |
+          git config --global user.email "ci@realisateur.invalid"
+          git config --global user.name  "realisateur CI"
+          git config --global init.defaultBranch main
+
+      # Every suite runs. A suite that fails does not stop the ones after it --
+      # one red assertion hiding eight other suites' results is how a run gets
+      # reported as "the tests are broken" instead of as a list.
+      - name: Run every suite in bin/tests/
+        run: |
+          set -uo pipefail
+          failed=""
+          ran=0
+          for t in bin/tests/*.sh; do
+            ran=$((ran + 1))
+            echo "::group::$t"
+            bash "$t"
+            rc=$?
+            echo "::endgroup::"
+            if [ "$rc" -ne 0 ]; then
+              echo "::error file=$t::suite failed (exit $rc)"
+              failed="$failed $t"
+            fi
+          done
+          echo
+          # A run that matched no suites is a broken glob, not a clean tree.
+          # Reporting it as success is the "found nothing / nothing is wrong"
+          # conflation this repository keeps paying for.
+          if [ "$ran" -eq 0 ]; then
+            echo "::error::bin/tests/*.sh matched nothing -- this run tested NOTHING."
+            exit 2
+          fi
+          echo "ran $ran suite(s)."
+          if [ -n "$failed" ]; then
+            echo "FAILED:$failed"
+            exit 1
+          fi
+          echo "all $ran suite(s) passed."
+
+  markdown-cost:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The default range is $(git merge-base HEAD origin/main)..HEAD, so
+      # origin/main has to actually exist as a remote-tracking ref. On a PR,
+      # actions/checkout fetches the PR refs; main is not guaranteed among them
+      # even at depth 0.
+      - name: Make origin/main resolvable
+        run: git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+
+      - name: Price the prose in this diff
+        run: bash bin/markdown-cost.sh
