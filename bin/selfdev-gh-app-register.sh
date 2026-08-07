@@ -3,7 +3,8 @@
 # and capture its private key, without anyone typing into a settings form.
 #
 #   selfdev-gh-app-register.sh <account> [--repo R] [--reader] [--owner O]
-#                              [--port N] [--out DIR] [--manifest-only]
+#                              [--org] [--port N] [--timeout S] [--out DIR]
+#                              [--manifest-only]
 #
 # WHY THIS EXISTS. bin/selfdev-gh-app.sh consumes an App; something has to
 # produce one. Doing that by hand is ~10 form fields, a permissions matrix and
@@ -43,6 +44,13 @@
 set -uo pipefail
 
 ACCOUNT=""; REPO=""; ROLE="writer"; PORT="8721"; OUT=""; MANIFEST_ONLY=0; IS_ORG=0
+# Matches GitHub's OWN one-hour manifest-code lifetime, deliberately. A shorter
+# wait is the worst possible setting: the server dies, the human clicks anyway
+# on a code that is still valid, GitHub creates the App, and the pem goes to a
+# closed socket -- an App nobody holds a key for, which cannot be recovered
+# because no endpoint mints a key for an existing App. The first draft of this
+# script waited 10 minutes.
+WAIT="3600"
 OWNER="${SELFDEV_GH_OWNER:-hf7y}"
 # Overridable so the test suite can point the exchange at a local stub. A
 # hardcoded api.github.com would make the one step that handles the private key
@@ -55,6 +63,7 @@ while [ $# -gt 0 ]; do
     --org)    IS_ORG=1 ;;
     --owner)  OWNER="${2:-}"; shift ;;
     --port)   PORT="${2:-}"; shift ;;
+    --timeout) WAIT="${2:-}"; shift ;;
     --out)    OUT="${2:-}"; shift ;;
     --reader) ROLE="reader" ;;
     --manifest-only) MANIFEST_ONLY=1 ;;
@@ -161,9 +170,9 @@ command -v xdg-open >/dev/null && xdg-open "$KEEP" >/dev/null 2>&1 &
 echo
 echo "  Waiting on http://127.0.0.1:$PORT ... open the form above if it did not"
 echo "  open itself, then click Create GitHub App. Ctrl-C to abandon."
-CODE="$(timeout 600 python3 "$T/cb.py" "$PORT" | head -1)"
+CODE="$(timeout "$WAIT" python3 "$T/cb.py" "$PORT" | head -1)"
 if [ -z "$CODE" ]; then
-  echo "  FATAL: no code received (timed out after 10m, or the port was busy)." >&2
+  echo "  FATAL: no code received (timed out after ${WAIT}s, or the port was busy)." >&2
   echo "  If GitHub DID create the App, delete it -- its key can never be minted." >&2
   exit 5
 fi

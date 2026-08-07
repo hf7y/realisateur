@@ -21,7 +21,11 @@
 #      the app id, install URL printed, exit 0
 #   F  stub returns an error body -> exits 5, writes NO key, and SAYS the App
 #      may exist without a key
-#   G  no code at the callback -> exits 5, writes nothing
+#   G  no code at the callback -> exits 5, writes nothing, and the wait is
+#      bounded by the script's own --timeout (default 3600s, matching GitHub's
+#      one-hour manifest-code lifetime -- a SHORTER wait is the dangerous
+#      setting, because the human can still click a valid code into a closed
+#      socket and strand an App whose key can never be minted)
 #
 # Usage: bin/tests/selfdev-gh-app-register.test.sh   (exit 0 = all pass)
 set -uo pipefail
@@ -153,9 +157,13 @@ has "F warns the App may exist keyless" "$outF" "may exist"
 [ -f "$T/outF/ecosim-self-dev.pem" ] && bad "F wrote no key" || ok "F wrote no key"
 
 # --- G: no code ever arrives ----------------------------------------------------
-# Nothing drives the callback; a 3s timeout stands in for the script's 10m one.
+# Nothing drives the callback. The script's OWN --timeout is what expires here,
+# not an external one: `timeout 4 <script>` kills the script but leaves its
+# python child holding the pipe, so the command substitution never returns and
+# the suite hangs. That is a property of the wrapper, not of the code under
+# test, and it hid case G entirely for one run.
 outG="$(run env SELFDEV_GH_API="http://127.0.0.1:$STUBPORT" BROWSER=true \
-        timeout 4 "$SCRIPT" ecosim --port 18799 --out "$T/outG" 2>&1)"; rcG=$?
+        "$SCRIPT" ecosim --port 18799 --timeout 2 --out "$T/outG" 2>&1)"; rcG=$?
 [ "$rcG" -ne 0 ] && ok "G exits non-zero when no code arrives" \
                  || bad "G exits non-zero when no code arrives (got 0)"
 [ -f "$T/outG/gh-app.conf" ] && bad "G wrote nothing" || ok "G wrote nothing"
