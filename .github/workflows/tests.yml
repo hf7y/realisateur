@@ -30,8 +30,21 @@
 #   install-shims.test.sh  passes BIN_DEST / CMD_DEST into a temp dir.
 #   focus-commit.test.sh   builds bare remotes and clones in a temp dir.
 #   markdown-cost.test.sh  builds a throwaway repo per case.
+#   thermostat-wiring.test.sh
+#                          builds a throwaway scheduler repo per case, sets
+#                          SCHED_ROOT at it, and shims a failing `gh` ahead of
+#                          the real one so the tracker probe is deterministically
+#                          BLIND. (Its first draft set PATH=/usr/bin:/bin
+#                          believing that removed gh; gh lives in /usr/bin, so
+#                          two cases were reading the live tracker.)
 #
-# All nine are therefore wired. If any of them ever needs a real ~/.local/bin,
+# NOT WIRED HERE, DELIBERATELY: bin/thermostat-wiring.sh itself. It probes the
+# estate -- the scheduler checkout, the issue tracker -- which a container
+# cannot see, so every ratcheted check would go BLIND and CI would be red for
+# a reason that says nothing about the branch. It is a HOST gate, run where the
+# estate exists. Its witness above is what CI can honestly assert.
+#
+# All ten are therefore wired. If any of them ever needs a real ~/.local/bin,
 # a real scheduler registry or a real network, the honest fix is to give it a
 # fixture -- NOT to drop it from this list, and never to weaken the assertion.
 #

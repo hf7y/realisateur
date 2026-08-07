@@ -47,6 +47,7 @@ MOVES=(
 "homes|bin/hardcoded-home-lint.sh -- refuses an absolute path into a named user's home, in code|/home/zach hardcoded in bashify.sh, coin.sh, amend.sh, branch-purge.sh, closure.sh|verb-set.test.sh running only on the one machine where that path existed|test -x bin/hardcoded-home-lint.sh"
 "ci|.github/workflows/tests.yml -- all ten suites on every PR, a failing suite does not hide the nine after it|seven test suites that existed and never ran|green-by-not-looking (CI is red on three real defects, and stays red)|test -f .github/workflows/tests.yml"
 "sonde|bin/ecosim-sensor-tick.sh speaks sonde's exit vocabulary (0/8/9/6, not 0/1/2/3)|the ecosim-sensor path that no build ever contained|exit code 3, which means BLIND upstream and needs-summon here|grep -q 'bin/sonde' bin/ecosim-sensor-tick.sh"
+"thermostat|bin/thermostat-wiring.sh -- eight live probes, ratcheted, asking whether the estate matches the 2026-08-07 redesign or only describes it|bin/weight-audit.sh, which rewrote AND PUSHED a weight column that allocates nothing (cli-guard.sh's own exhibit for the silent write)|bin/incubation-audit.sh, the other weight writer, which also prepended dated prose into a project's FOCUS.md|test -x bin/thermostat-wiring.sh && ! test -e bin/weight-audit.sh && ! test -e bin/incubation-audit.sh"
 )
 
 # --- the refusal that carries the argument ----------------------------------
