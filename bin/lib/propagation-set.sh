@@ -302,7 +302,19 @@ restamp-discipline.sh
 stamp-agent.sh
 suite-docs-lint.sh
 thermostat-wiring.sh
+path-provenance-audit.sh
 "
+# path-provenance-audit.sh is LOCAL and that is uncomfortable on purpose. It
+# is an estate-wide survey, like thermostat-wiring.sh above it, so LOCAL is
+# the correct list -- but the account class it most wants to measure is the
+# PROVISIONED one, where its bar is 100% and where LOCAL means it does not
+# reach. PAYLOAD is not the fix: adding an eighth row would push
+# PROP_PAYLOAD_PENDING past a PROP_LEAK_BOUND of 7 that only ever falls, and
+# would be reclassifying a gap rather than closing it. The gap is instead
+# MEASURED, by that script's own `fleetview` and `sweepwired` checks, and
+# handed to the project whose job it is (hf7y/senechal): a sweep senechal runs
+# from senechal/health/ reaches every account it has a view of, which is the
+# real answer and is not realisateur's to install.
 
 # prop_channel <script-basename> -- prints bootstrap|provision|payload|local,
 # or nothing (rc 1) when the script is unclassified. Callers MUST treat rc 1

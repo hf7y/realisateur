@@ -1,0 +1,6 @@
+# path-provenance-audit.ratchet -- the bars that were met when accepted.
+# Raised by --accept, never lowered by any flag. See bin/path-provenance-audit.sh.
+# accepted 2026-08-07T18:41:09-05:00 on a daily account
+bound undeclared 31
+nodrift
+noorphan
