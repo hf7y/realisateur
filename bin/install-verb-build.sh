@@ -118,14 +118,35 @@ if [ -n "$ROLLBACK" ]; then
 fi
 
 # --- fetch the meta-repo ------------------------------------------------
+# BOUNDED, because this runs unattended. Against an UNROUTABLE host the
+# kernel's TCP retry took 2m15s to give up -- measured 2026-08-07 against
+# 192.0.2.1 (TEST-NET-1) -- so the BLIND verdict was correct and arrived far
+# too late to be one. A human at a terminal hits Ctrl-C; cron does not, and
+# realisateur#54 filed exactly that: "a monitor row that hangs contributes a
+# stuck process every 6 hours and reports nothing, which is a worse failure
+# than the one it was added to catch."
+#
+# Two bounds, because there are two ways to stall:
+#   VERB_BUILD_NET_TIMEOUT  wall-clock ceiling on the whole reach, the shape
+#                           scheduler/bin/usage-paced-runner.sh already uses
+#                           (`timeout 20 git ... fetch`).
+#   GIT_TERMINAL_PROMPT=0   a credential prompt no runner will ever answer is
+#                           the second, quieter way to wait forever.
+# `timeout` exits 124 on expiry, which falls into the same `||` as any other
+# failure -- so a slow network and a dead one produce the same BLIND, which
+# is right: neither one looked.
+NET_TIMEOUT="${VERB_BUILD_NET_TIMEOUT:-45}"
+export GIT_TERMINAL_PROMPT=0
 mkdir -p "$BUILD_ROOT" || die "cannot create $BUILD_ROOT"
 if [ -d "$REPO/.git" ]; then
-  git -C "$REPO" fetch -q --tags --prune origin 2>/dev/null || blind "cannot fetch $REMOTE"
+  timeout "$NET_TIMEOUT" git -C "$REPO" fetch -q --tags --prune origin 2>/dev/null \
+    || blind "cannot fetch $REMOTE within ${NET_TIMEOUT}s"
 else
   rm -rf "$REPO"
-  git clone -q --bare "$REMOTE" "$REPO/.git" 2>/dev/null || blind "cannot clone $REMOTE"
+  timeout "$NET_TIMEOUT" git clone -q --bare "$REMOTE" "$REPO/.git" 2>/dev/null \
+    || blind "cannot clone $REMOTE within ${NET_TIMEOUT}s"
   git -C "$REPO" config core.bare false 2>/dev/null || true
-  git -C "$REPO" fetch -q --tags origin 2>/dev/null || true
+  timeout "$NET_TIMEOUT" git -C "$REPO" fetch -q --tags origin 2>/dev/null || true
 fi
 
 # Newest by tag name. Build ids are UTC timestamps, so lexical sort is

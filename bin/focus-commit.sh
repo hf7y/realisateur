@@ -105,6 +105,36 @@ if [ "$(printf '%s\n' "$staged" | sort -u)" != "$expected" ]; then
   die "staged set does not match the named files -- refusing. staged: $(printf '%s' "$staged" | tr '\n' ' ')"
 fi
 
+# --- 1b. stamp the commit with the verb build that produced it -------------
+# "What was ecosim running when it wrote that?" has to be answerable from the
+# artifact alone, months later, by someone who was not there. A git trailer
+# survives the clone, the cherry-pick and the patch, and no human maintains
+# it.
+#
+# The trailer is ALWAYS emitted, and says `unknown` when this host has no
+# build adopted rather than guessing a plausible id -- because an artifact
+# with no trailer (nothing stamped it) and one stamped `unknown` (the stamper
+# ran and told the truth) mean opposite things, and a guess destroys that
+# distinction while looking like an improvement.
+#
+# Appended to a COPY: msgfile is the caller's, and this script must not
+# rewrite a file it was only handed to read.
+_lib="$(dirname "${BASH_SOURCE[0]}")/lib/propagation-set.sh"
+if [ -r "$_lib" ]; then
+  # shellcheck source=lib/propagation-set.sh
+  . "$_lib"
+  if ! grep -qi '^Verb-Build:' "$msgfile" 2>/dev/null; then
+    _stamped="$(mktemp)"
+    cat "$msgfile" > "$_stamped"
+    # A trailer block needs one blank line before it, or git folds it into
+    # the body and `--format=%(trailers)` cannot see it.
+    [ -n "$(tail -c1 "$_stamped")" ] && printf '\n' >> "$_stamped"
+    tail -1 "$_stamped" | grep -q '^[A-Za-z-]\+:' || printf '\n' >> "$_stamped"
+    prop_build_trailer >> "$_stamped"
+    msgfile="$_stamped"
+  fi
+fi
+
 # --- 2. record what we are about to push, so the rebase can be verified ----
 base_before="$(git rev-parse '@{u}')"
 git commit -q -F "$msgfile" || die "git commit failed"
