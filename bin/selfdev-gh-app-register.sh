@@ -51,7 +51,7 @@
 # 127.0.0.1. Measured on mandark 2026-08-07.
 set -uo pipefail
 
-ACCOUNT=""; REPO=""; ROLE="writer"; PORT="8721"; OUT=""; MANIFEST_ONLY=0; IS_ORG=0
+ACCOUNT=""; REPO=""; ROLE="writer"; PORT="8721"; OUT=""; MANIFEST_ONLY=0; IS_ORG=0; NO_OPEN=0
 # Matches GitHub's OWN one-hour manifest-code lifetime, deliberately. A shorter
 # wait is the worst possible setting: the server dies, the human clicks anyway
 # on a code that is still valid, GitHub creates the App, and the pem goes to a
@@ -75,6 +75,7 @@ while [ $# -gt 0 ]; do
     --out)    OUT="${2:-}"; shift ;;
     --reader) ROLE="reader" ;;
     --manifest-only) MANIFEST_ONLY=1 ;;
+    --no-open) NO_OPEN=1 ;;
     -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
     -*) echo "usage: $0 <account> [--repo R] [--reader] [--owner O] [--port N] [--out DIR] [--manifest-only]" >&2; exit 2 ;;
     *)  [ -z "$ACCOUNT" ] && ACCOUNT="$1" || { echo "usage: $0 <account> ..." >&2; exit 2; } ;;
@@ -183,7 +184,15 @@ except SystemExit:
     pass
 PY
 
-command -v xdg-open >/dev/null && xdg-open "$KEEP" >/dev/null 2>&1 &
+# Open a browser ONLY on an interactive run. A script that hijacks the desktop
+# from a non-tty context is wrong in every direction: cron, CI, a background
+# job, and -- measured 2026-08-07 -- this script's OWN TEST SUITE, which runs it
+# with a sandboxed $HOME and threw real Firefox tabs at Zach pointing into a
+# fixture temp dir. `-t 1` is the whole guard: if nobody is watching this
+# terminal, printing the path is the most a script may do.
+if [ "$NO_OPEN" -eq 0 ] && [ -t 1 ] && command -v xdg-open >/dev/null; then
+  xdg-open "$KEEP" >/dev/null 2>&1 &
+fi
 echo
 echo "  Waiting on http://127.0.0.1:$PORT ... open the form above if it did not"
 echo "  open itself, then click Create GitHub App. Ctrl-C to abandon."
