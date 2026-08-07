@@ -134,6 +134,42 @@ out="$(run env SELFDEV_APP_CONF="$T/none.conf" SELFDEV_APP_ID=4520255 \
 has "G flags mode 644 as BAD" "$out" "must be 600"
 eq  "G exits 5" "$rc" "5"
 
+# --- H: --adopt refuses a bad key BEFORE it moves anything ---------------------
+# Ordering is the assertion. Validating after the install would leave a junk
+# file sitting where the next --check expects a key, and the operator would be
+# debugging GitHub instead of their download.
+outH="$(run "$SCRIPT" --adopt --account acct1 --key "$T/junk.pem" --app-id 123 2>&1)"; rcH=$?
+has "H names the bad key" "$outH" "not a valid RSA private key"
+eq  "H exits 5" "$rcH" "5"
+[ -e "$T/home/.config/selfdev/acct1" ] && bad "H wrote nothing" || ok "H wrote nothing"
+
+outH2="$(run "$SCRIPT" --adopt --account acct1 --key "$T/app.pem" 2>&1)"; rcH2=$?
+has "H2 refuses without --app-id" "$outH2" "app-id"
+eq  "H2 exits 5" "$rcH2" "5"
+
+# --- I: --adopt installs, configures and hands off to the witness --------------
+outI="$(run env SELFDEV_GH_API="http://127.0.0.1:1" "$SCRIPT" --adopt \
+        --account acct2 --key "$T/app.pem" --app-id 4520255 2>&1)"; rcI=$?
+has "I prints the fingerprint"  "$outI" "fingerprint:"
+has "I mentions the settings page" "$outI" "SHA256:"
+key="$T/home/.config/selfdev/acct2/acct2.pem"
+if [ -f "$key" ]; then
+  ok "I installed the key"
+  eq "I key is mode 600" "$(stat -c %a "$key")" "600"
+  eq "I conf is mode 600" "$(stat -c %a "$T/home/.config/selfdev/acct2/gh-app.conf")" "600"
+  has "I conf carries the app id" "$(cat "$T/home/.config/selfdev/acct2/gh-app.conf")" "SELFDEV_APP_ID=4520255"
+  # The fingerprint --adopt prints must be the one openssl computes here.
+  want="$(openssl rsa -in "$T/app.pem" -pubout -outform DER 2>/dev/null | openssl sha256 -binary | openssl base64)"
+  has "I fingerprint matches openssl" "$outI" "$want"
+else
+  bad "I installed the key"; bad "I key is mode 600"; bad "I conf is mode 600"
+  bad "I conf carries the app id"; bad "I fingerprint matches openssl"
+fi
+# It re-execs --check, so the closed-port witness must fail loud through it.
+has "I runs the witness"       "$outI" "== selfdev-gh-app --check"
+has "I witness fails loud"     "$outI" "WITNESS FAILED"
+eq  "I exits 5 when the witness fails" "$rcI" "5"
+
 echo
 printf '%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ] || exit 1

@@ -6,6 +6,9 @@
 #   selfdev-gh-app.sh --token [--repos a,b]  print an installation token to stdout
 #   selfdev-gh-app.sh --identity           print the bot's git user.name / user.email
 #   selfdev-gh-app.sh --jwt                print the App JWT only (401 debugging)
+#   selfdev-gh-app.sh --adopt --account <name> --key <file.pem> --app-id <id>
+#                                          install a freshly downloaded key at
+#                                          mode 600, write its conf, and prove it
 #   selfdev-gh-app.sh --credential         git credential helper (reads git's stdin)
 #   selfdev-gh-app.sh --wire               write git config so push/gh use the App
 #
@@ -43,14 +46,18 @@
 # can carry a different App without editing anything.
 set -uo pipefail
 
-MODE="--check"; REPOS=""
+MODE="--check"; REPOS=""; ADOPT_ACCOUNT=""; ADOPT_KEY=""; ADOPT_ID=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --check|--token|--identity|--credential|--wire|--jwt) MODE="$1" ;;
+    --check|--token|--identity|--credential|--wire|--jwt|--adopt) MODE="$1" ;;
     --repos) REPOS="${2:-}"; shift ;;
     --repos=*) REPOS="${1#--repos=}" ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
-    *) echo "usage: $0 [--check|--token|--identity|--credential|--wire] [--repos a,b]" >&2; exit 2 ;;
+    --account) ADOPT_ACCOUNT="${2:-}"; shift ;;
+    --key)     ADOPT_KEY="${2:-}"; shift ;;
+    --app-id)  ADOPT_ID="${2:-}"; shift ;;
+    -h|--help) sed -n '2,21p' "$0"; exit 0 ;;
+    *) echo "usage: $0 [--check|--token|--identity|--credential|--wire|--jwt] [--repos a,b]" >&2
+       echo "       $0 --adopt --account <name> --key <file.pem> --app-id <id>" >&2; exit 2 ;;
   esac
   shift
 done
@@ -180,6 +187,44 @@ bot_identity() {
 }
 
 case "$MODE" in
+  --adopt)
+    # Take a freshly downloaded .pem plus an App ID and produce a wired,
+    # PROVEN account config. Exists because this runs once per self-dev
+    # account and the hand version is four commands with two chances to leave
+    # a bearer credential world-readable -- which the very first real key
+    # already did (mode 664 out of the browser, 2026-08-07).
+    [ -n "$ADOPT_ACCOUNT" ] || die "--adopt needs --account <name>"
+    [ -n "$ADOPT_KEY" ]     || die "--adopt needs --key <file.pem>"
+    [ -r "$ADOPT_KEY" ]     || die "cannot read key file: $ADOPT_KEY"
+    [ -n "$ADOPT_ID" ]      || die "--adopt needs --app-id <id> (App ID or Client ID; both work as the JWT issuer)"
+
+    # Prove it is a private key BEFORE moving it anywhere. A truncated or
+    # HTML-error download is still a file, and every later failure would
+    # present as a GitHub 401.
+    openssl rsa -in "$ADOPT_KEY" -noout -check >/dev/null 2>&1 \
+      || die "$ADOPT_KEY is not a valid RSA private key -- re-download it"
+    fp="$(openssl rsa -in "$ADOPT_KEY" -pubout -outform DER 2>/dev/null | openssl sha256 -binary | openssl base64)"
+    ok "key is a valid RSA private key"
+    ok "fingerprint: $fp"
+    echo "          ^ must equal the SHA256: shown on the App's settings page"
+
+    dir="$HOME/.config/selfdev/$ADOPT_ACCOUNT"
+    mkdir -p "$dir" && chmod 700 "$HOME/.config/selfdev" "$dir"
+    install -m 600 "$ADOPT_KEY" "$dir/$ADOPT_ACCOUNT.pem" \
+      || die "could not install the key into $dir"
+    ok "key installed at $dir/$ADOPT_ACCOUNT.pem (mode 600)"
+    ( umask 077; { printf '# written by selfdev-gh-app.sh --adopt for %s\n' "$ADOPT_ACCOUNT"
+      printf 'SELFDEV_APP_ID=%s\n' "$ADOPT_ID"
+      printf 'SELFDEV_APP_KEY=%s/%s.pem\n' "$dir" "$ADOPT_ACCOUNT"
+      printf 'SELFDEV_GH_OWNER=%s\n' "$OWNER"; } > "$dir/gh-app.conf" )
+    ok "config written at $dir/gh-app.conf (mode 600)"
+    echo
+    # Re-exec rather than duplicate the witness. A second copy of this logic
+    # is a second thing to keep true.
+    exec env SELFDEV_APP_CONF="$dir/gh-app.conf" \
+         SELFDEV_APP_ID= SELFDEV_APP_KEY= SELFDEV_GH_OWNER= "$0" --check
+    ;;
+
   --jwt)
     # The App JWT, unexchanged. Exists because GitHub answers a malformed one
     # with a bare 401 that is indistinguishable from a revoked key -- with this
