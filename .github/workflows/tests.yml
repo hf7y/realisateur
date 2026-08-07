@@ -41,6 +41,18 @@
 #                          BLIND. (Its first draft set PATH=/usr/bin:/bin
 #                          believing that removed gh; gh lives in /usr/bin, so
 #                          two cases were reading the live tracker.)
+#   selfdev-gh-app-register.test.sh
+#                          overrides HOME and TMPDIR, and stands a local stub
+#                          up on 127.0.0.1 for the manifest-conversion call via
+#                          SELFDEV_GH_API -- so the one step that ever handles a
+#                          private key is exercised without a real one. It also
+#                          plays the browser by curling its own callback port.
+#                          Skips (exit 0) if python3 is absent.
+#   selfdev-gh-app.test.sh overrides HOME and XDG_CACHE_HOME into a temp dir,
+#                          generates its own throwaway RSA keypair, and points
+#                          SELFDEV_GH_API at 127.0.0.1:1 -- a closed port, so
+#                          the witness path is exercised and provably FAILS
+#                          rather than being skipped. No network, no real key.
 #
 # NOT WIRED HERE, DELIBERATELY: bin/thermostat-wiring.sh itself. It probes the
 # estate -- the scheduler checkout, the issue tracker -- which a container
@@ -48,10 +60,13 @@
 # a reason that says nothing about the branch. It is a HOST gate, run where the
 # estate exists. Its witness above is what CI can honestly assert.
 #
-# All of them are therefore wired. If any of them ever needs a real
-# ~/.local/bin, a real scheduler registry or a real network, the honest fix is
-# to give it a fixture -- NOT to drop it from this list, and never to weaken
-# the assertion.
+# All of them are therefore wired, and the loop below GLOBS rather than lists,
+# so a new suite gates the moment it lands. No count is stated here on purpose:
+# this sentence read "all nine" for two suites longer than it was true, which is
+# exactly why the RUNNER must never be a hand-maintained list. If any of them
+# ever needs a real ~/.local/bin, a real scheduler registry or a real network,
+# the honest fix is to give it a fixture -- NOT to drop it from this list, and
+# never to weaken the assertion.
 #
 # WAS KNOWN RED; CLOSED 2026-08-07. Three suites failed from the day this
 # workflow was created -- closeout-lint (46/3), install-shims (8/3), verb-set
