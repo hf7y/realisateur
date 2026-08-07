@@ -43,9 +43,17 @@ G() { git -c user.email=t@t -c user.name=t -C "$WORK/fix" "$@"; }
 mkdir -p "$WORK/fix/bin" "$WORK/fix/nested/bin" "$WORK/fix/archive"
 G init -q -b main
 
-# The path is assembled at runtime so that THIS test file does not itself trip
-# the lint when the lint is run over this repository (H9 below runs it here).
-H='/home/someuser/Documents/Projects'
+# ASSEMBLED, NEVER WRITTEN WHOLE. I3 below runs the lint over THIS repository,
+# and this file is tracked, so a literal `/home/<name>/` here makes the suite
+# flag itself. It did: the first CI run of this file failed I3 naming this
+# line. It passed locally only because the file was still UNTRACKED when it
+# was run, and `git ls-files` cannot see an untracked file -- the same
+# "green on the machine that has it" shape as the three suites this commit
+# fixes, reproduced while fixing them. Splitting the literal keeps the lint's
+# `/home/[a-z][a-z0-9_-]*/` from matching the source while the fixtures it
+# writes still carry the real thing.
+U=someuser
+H="/home/$U/Documents/Projects"
 
 # H1: a plain .sh with a hardcoded home, in code.
 printf '#!/bin/sh\nP="%s/scheduler"\necho "$P"\n' "$H" > "$WORK/fix/bin/guilty.sh"
