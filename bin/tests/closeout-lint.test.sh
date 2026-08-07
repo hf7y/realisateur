@@ -309,5 +309,72 @@ run_rc "$T/focus-ok.md" "$T/blockers-today.md" --repo "$T/loose/.git/.."
 has   "E10 --repo resolves to the work-tree root"         "$RUN_OUT" "single tree: $T/loose"
 
 echo
+echo "-- F. squash-merged branches (the 12-out-of-12 false alarm)"
+# WHAT THIS SECTION IS FOR, with the numbers that produced it.
+#
+# On 2026-08-07 closeout-lint reported 12 [host-only-branch] FLAGs against the
+# realisateur checkout -- "unmerged work at risk" -- and ALL TWELVE were PRs
+# that had been squash-merged and had their upstream branch deleted weeks or
+# hours earlier. Zero true positives. A guard that is wrong twelve times out of
+# twelve trains its reader to skip the section, and then a real one is skipped
+# too; that is exactly how three red suites sat on main long enough to become
+# furniture.
+#
+# The cause is that squash-merge REWRITES. GitHub lands one new commit with the
+# branch's content and a different sha, so `on_a_remote`'s question -- "is this
+# exact commit reachable from a remote ref?" -- is legitimately answered no for
+# work that landed. The question cannot be answered correctly under squash.
+#
+# The question that CAN be is "is this branch's content already on the default
+# branch?", and it is answerable offline with a patch-id compare against a
+# reconstructed squash commit. F1 pins that; F2 is the teeth.
+newrepo squashed
+git -C "$T/squashed" checkout -q -b feature
+echo alpha > "$T/squashed/a.txt"; git -C "$T/squashed" add -A
+git -C "$T/squashed" commit -qm 'first half'
+echo beta > "$T/squashed/b.txt"; git -C "$T/squashed" add -A
+git -C "$T/squashed" commit -qm 'second half'
+git -C "$T/squashed" push -q origin feature
+# ...and now GitHub's squash-merge, reproduced exactly: one new commit on main
+# carrying the branch's content, then the upstream branch deleted. The local
+# `feature` ref survives, pointing at the ORIGINAL two commits, which is the
+# state every one of the 12 was in.
+git -C "$T/squashed" checkout -q main
+git -C "$T/squashed" merge -q --squash feature
+git -C "$T/squashed" commit -qm 'feature (#1)'
+git -C "$T/squashed" push -q origin main
+git -C "$T/squashed" push -q origin --delete feature
+git -C "$T/squashed" fetch -q --prune origin
+
+# A branch REALLY unmerged, in the same repo, so F2 cannot pass by the fix
+# simply exempting everything. This is the assertion that keeps the teeth.
+git -C "$T/squashed" checkout -q -b lost main
+echo gamma > "$T/squashed/c.txt"; git -C "$T/squashed" add -A
+git -C "$T/squashed" commit -qm 'on no remote, in no squash'
+git -C "$T/squashed" checkout -q main
+
+out="$(run "$T/focus-ok.md" "$T/blockers-today.md" squashed)"
+hasnt "F1 squash-merged branch is NOT flagged as host-only" "$out" "FLAG [host-only-branch] squashed: branch 'feature'"
+has   "F1 it is reported as landed, not as lost"            "$out" "note [landed] squashed: 'feature'"
+has   "F2 a genuinely unmerged branch STILL flags"          "$out" "FLAG [host-only-branch] squashed: branch 'lost'"
+
+# F3: the downgrade must not need the network. Every case in this file runs
+# with no remote but a file:// bare and no `gh` on the fixture's behalf, so F1
+# passing at all is the offline proof -- but pin it explicitly, because a guard
+# that hard-requires a network is its own failure mode (it goes BLIND on a
+# plane and FLAGs everything, which is the same noise by another route).
+out="$(PATH="/nonexistent-bin:$PATH" run "$T/focus-ok.md" "$T/blockers-today.md" squashed)"
+hasnt "F3 offline (no gh on PATH) still declines to flag"   "$out" "FLAG [host-only-branch] squashed: branch 'feature'"
+has   "F3 and still flags the genuinely unmerged one"       "$out" "FLAG [host-only-branch] squashed: branch 'lost'"
+
+# F4: no git identity configured must not break the probe. Reconstructing a
+# squash commit needs an author, and a fresh container or a CI runner has no
+# global one -- the exact "empty ident name" failure the workflow sets an
+# identity to avoid. The script must supply its own rather than inherit.
+out="$(HOME="$T/no-identity" GIT_CONFIG_GLOBAL=/dev/null \
+       run "$T/focus-ok.md" "$T/blockers-today.md" squashed)"
+hasnt "F4 no git identity -> probe still works"             "$out" "FLAG [host-only-branch] squashed: branch 'feature'"
+
+echo
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

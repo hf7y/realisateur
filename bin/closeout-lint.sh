@@ -290,6 +290,75 @@ while [ "$i" -lt "${#projects[@]}" ]; do
     [ -n "$sha" ] || return 1
     [ -n "$(git -C "$repo" branch -r --contains "$sha" 2>/dev/null | head -1)" ]
   }
+
+  # SQUASH-MERGE MAKES `on_a_remote` STRUCTURALLY BLIND (2026-08-07).
+  #
+  # THE NUMBERS. This section reported 12 [host-only-branch] FLAGs against the
+  # realisateur checkout -- "unmerged work at risk" -- and all 12 were PRs that
+  # had been squash-merged and had their upstream branch deleted. Zero true
+  # positives, 12 false. Reconciling that against the 26 local branches whose
+  # upstream is `gone`: 29 branches had no origin/<name> ref, of which 4 were
+  # skipped as other-worktree and 13 were downgraded by `on_a_remote` -- but
+  # downgraded BY COINCIDENCE, because some other still-existing remote branch
+  # happened to contain their tip, not because anything knew they had landed.
+  # So the old rule was wrong in BOTH directions: it exempted 13 by accident
+  # and flagged 12 by accident, over a set where all 25 were equally merged.
+  #
+  # THE CAUSE IS THAT SQUASH REWRITES. GitHub lands ONE new commit carrying the
+  # branch's content under a DIFFERENT sha, then deletes the branch. So the
+  # question `on_a_remote` asks -- "is this exact commit reachable from a
+  # remote ref?" -- is correctly answered NO for work that landed weeks ago.
+  # No amount of fetching fixes it. The question is unanswerable, not unasked.
+  #
+  # THE QUESTION THAT IS ANSWERABLE: "is this branch's CONTENT already on the
+  # default branch?" Reconstruct what GitHub's squash would have produced -- a
+  # single commit whose tree is the branch tip's tree, parented on the merge
+  # base -- and ask `git cherry` whether the default branch already carries a
+  # patch-identical commit. That is exactly the object GitHub created, so the
+  # patch-ids match.
+  #
+  # OFFLINE ON PURPOSE, AND THIS IS A DELIBERATE CHOICE. `gh pr list --head`
+  # would answer the same question from the authority, and it was rejected as
+  # the PRIMARY test: a guard that hard-requires the network goes BLIND on a
+  # plane, in a container, and on the read-only deploy-key accounts, and a
+  # BLIND guard that then FLAGs everything is the same noise by another route.
+  # This probe needs no remote it does not already have, so it works
+  # everywhere the old one did. Measured: it identifies all 12 offline. What it
+  # cannot see is a branch merged since this clone last fetched -- that still
+  # FLAGs, which is the honest answer for a clone that has not looked.
+  #
+  # IT WRITES ONE UNREFERENCED OBJECT per candidate branch. `git commit-tree`
+  # creates a loose commit that no ref points at; `git gc` prunes it and
+  # nothing reachable changes. Identity is supplied here rather than inherited,
+  # because a CI runner or a fresh container has no global git identity and
+  # commit-tree fails with "empty ident name" -- which would make this probe
+  # silently unavailable in exactly the environment the workflow runs in.
+  default_remote="$(git -C "$repo" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null)"
+  if [ -z "$default_remote" ]; then
+    for c in origin/main origin/master; do
+      git -C "$repo" rev-parse -q --verify "$c" >/dev/null 2>&1 && { default_remote="$c"; break; }
+    done
+  fi
+  landed() { # <branch> -> 0 if its content is already on the default branch
+    local br="$1" base tree basetree probe
+    [ -n "$default_remote" ] || return 1
+    base="$(git -C "$repo" merge-base "$default_remote" "$br" 2>/dev/null)" || return 1
+    [ -n "$base" ] || return 1
+    tree="$(git -C "$repo" rev-parse -q --verify "$br^{tree}" 2>/dev/null)" || return 1
+    basetree="$(git -C "$repo" rev-parse -q --verify "$base^{tree}" 2>/dev/null)"
+    # A branch whose tree already equals the merge base's adds nothing at all.
+    # `git cherry` on an empty patch is not defined to say so, and a branch
+    # with nothing in it has nothing to lose either way.
+    [ "$tree" = "$basetree" ] && return 0
+    probe="$(GIT_AUTHOR_NAME=closeout-lint GIT_AUTHOR_EMAIL=closeout-lint@invalid \
+             GIT_COMMITTER_NAME=closeout-lint GIT_COMMITTER_EMAIL=closeout-lint@invalid \
+             git -C "$repo" commit-tree "$tree" -p "$base" -m squash-probe 2>/dev/null)" || return 1
+    [ -n "$probe" ] || return 1
+    case "$(git -C "$repo" cherry "$default_remote" "$probe" 2>/dev/null)" in
+      -*) return 0 ;;
+    esac
+    return 1
+  }
   while IFS= read -r br; do
     [ -n "$br" ] || continue
     if [ -n "$wt_branches" ] && printf '%s\n' "$wt_branches" | grep -qxF "$br"; then
@@ -298,6 +367,12 @@ while [ "$i" -lt "${#projects[@]}" ]; do
     fi
     if ! git -C "$repo" rev-parse --verify -q "origin/$br" >/dev/null 2>&1 && on_a_remote "$br"; then
       echo "    note [stale-pointer] $name: '$br' has no origin/$br, but its tip is already reachable from a remote ref -- nothing unpushed"
+      continue
+    fi
+    # ...and the same for a branch that was SQUASH-merged, whose tip is on no
+    # remote by construction but whose content is on the default branch.
+    if ! git -C "$repo" rev-parse --verify -q "origin/$br" >/dev/null 2>&1 && landed "$br"; then
+      echo "    note [landed] $name: '$br' has no origin/$br, but its content is already on $default_remote (squash-merged) -- nothing unpushed"
       continue
     fi
     if git -C "$repo" rev-parse --verify -q "origin/$br" >/dev/null 2>&1; then
