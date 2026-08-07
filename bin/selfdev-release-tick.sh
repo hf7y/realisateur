@@ -129,6 +129,7 @@ BUILD_ROOT="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}
 INSTALLER="${TICK_INSTALLER:-}"
 CRON_TAG='# realisateur:selfdev-release:TICK'
 CRON_SPEC="${TICK_CRON_SPEC:-41 5 * * *}"
+RELEASE_STATUS_URL="${RELEASE_STATUS_URL:-https://zach.audio/verbs/status.json}"
 SURVEY_HOST="${TICK_SURVEY_HOST:-monkey}"
 SURVEY_PASSWD="${TICK_SURVEY_PASSWD:-/etc/passwd}"
 UID_MIN="${TICK_UID_MIN:-3000}"
@@ -330,6 +331,27 @@ fi
 
 echo "-- clock --------------------------------------------------------------"
 check_clock
+
+# --- the CHANNEL's own health, read live from the published verdict ---------
+# This is the row that separates "no new build because nothing changed" from
+# "no new build because main is broken". Without it both are just an absence,
+# and the pin check below would say "up to date" for a fleet frozen for a
+# fortnight. Fetched LIVE on every tick and never cached: a cached verdict is
+# a file that drifts, which is the bug this whole design exists to remove.
+echo
+echo "-- release channel (live) ---------------------------------------------"
+led="$(dirname "${BASH_SOURCE[0]}")/release-ledger.sh"
+if [ -x "$led" ]; then
+  ch_out="$("$led" --url "$RELEASE_STATUS_URL" 2>&1)"; ch_rc=$?
+  printf '%s\n' "$ch_out" | sed 's/^/        /'
+  case "$ch_rc" in
+    0) ok "release channel healthy (verdict fresh, no blocked streak)" ;;
+    3) bad "release channel BLIND -- $RELEASE_STATUS_URL unreachable. Not 'healthy'." ;;
+    *) bad "release channel UNHEALTHY -- the emitter is silent or the pipeline is blocked. Rows above say which; this is why no new build has appeared." ;;
+  esac
+else
+  bad "release-ledger.sh is not beside this script -- the channel's own health is UNGRADED, so an absent build cannot be explained"
+fi
 
 echo
 echo "-- pin vs release channel ---------------------------------------------"

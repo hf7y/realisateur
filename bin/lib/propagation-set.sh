@@ -131,9 +131,14 @@ PROP_PIN_PATH=".local/share/verb-builds/current"
 # Every entry here is a file a consumer must hold BEFORE any payload can
 # arrive. Adding one is a review event, not a convenience -- see the bound
 # asserted in propagation.test.sh.
+# release-ledger.sh is bootstrap because the CONSUMER runs it: it is how an
+# account tells "no new build because nothing changed" from "no new build
+# because main is broken", and that question has to be answerable on a host
+# that has no payload installed at all.
 PROP_BOOTSTRAP_SCRIPTS="
 install-verb-build.sh
 selfdev-release-tick.sh
+release-ledger.sh
 "
 
 # Files the bootstrap scripts need alongside them. Named explicitly because
@@ -187,9 +192,14 @@ PROP_PAYLOAD_PENDING="$PROP_PAYLOAD_SCRIPTS"
 PROP_LEAK_BOUND=10
 
 # --- LOCAL: never leaves this repo ------------------------------------------
+# release-gate.sh and publish-release-verdict.sh are LOCAL because they run in
+# the release pipeline (GitHub Actions checks realisateur out to get them), not
+# on a consumer. An account never gates or publishes; it only reads the result.
 PROP_LOCAL_SCRIPTS="
 cut-verb-build.sh
 deploy-drift.sh
+release-gate.sh
+publish-release-verdict.sh
 ecosim-sensor-tick.sh
 floor-check.sh
 hardcoded-home-lint.sh

@@ -210,13 +210,32 @@ printf '2026-08-07T12:00:00Z rc=0 pin=2026-08-07T040739Z 2 ok\n' > "$T/s_fresh/s
 printf '2026-07-01T12:00:00Z rc=0 pin=old 2 ok\n' > "$T/s_old/selfdev-release-tick.status"
 touch -d '40 hours ago' "$T/s_old/selfdev-release-tick.status"
 
+# The tick now grades the RELEASE CHANNEL live, by fetching a URL. Keeping
+# that hermetic matters: a suite that reaches zach.audio could not tell its
+# own passing from the site being up. curl speaks file://, so the fixture IS
+# the real code path -- same curl, same JSON parse, same grading -- with no
+# network involved.
+mkfix() { # mkfix <file> <decision> <hours-ago>
+  local f="$1" d="$2" h="${3:-1}"
+  local at; at="$(date -u -d "@$(( $(date -u +%s) - h * 3600 ))" +%Y-%m-%dT%H:%M:%SZ)"
+  cat > "$f" <<EOF
+{"schema":1,"generated":"$at","decision":"$d","reason":"fixture",
+ "main_sha":"abc1234","ci_run":"1","build_id":"b1","blocked_streak":0,
+ "last_cut":{"at":"$at","build_id":"b1"},
+ "history":[{"at":"$at","decision":"$d","reason":"fixture","build_id":"b1"}]}
+EOF
+}
+mkdir -p "$T/emptyhome"
+mkfix "$T/status-ok.json" CUT 1
+FIXURL="file://$T/status-ok.json"
+
 tick() { # tick <state-dir> <installer> [args...]
   local s="$1" i="$2"; shift 2
   HOME="$T/emptyhome" TICK_STATE="$s" TICK_INSTALLER="$i" \
     VERB_BUILD_ROOT="$T/emptyhome/.local/share/verb-builds" \
+    RELEASE_STATUS_URL="$FIXURL" \
     "$TICK" "$@" 2>&1
 }
-mkdir -p "$T/emptyhome"
 
 O="$(tick "$T/s_none" "$INST_CURRENT")"
 has "an account that has NEVER ticked is a gap, by name" "$O" "NO CLOCK"
