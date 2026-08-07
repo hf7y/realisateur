@@ -11,8 +11,8 @@
 #   1. A bare line needs `2>&1 >> log`, and getting that order wrong
 #      silences stderr. This ecosystem has a `silence-audit` check because
 #      that keeps happening.
-#   2. The exit code IS the finding (0 OK / 1 WARN / 2 CRIT / 3 BLIND, the
-#      Monitoring Plugins codes). cron discards it, so it is recorded here.
+#   2. The exit code IS the finding (0 OK / 8 WARN / 9 CRIT / 6 BLIND, the
+#      sonde vocabulary). cron discards it, so it is recorded here.
 #   3. BLIND BEATS CRIT in this contract. A run that could not read part of
 #      its domain has not established the rest is fine, and the log has to
 #      preserve that distinction rather than flatten it to "nonzero".
@@ -24,9 +24,10 @@ case "${1:-}" in
     printf 'usage:\n  ecosim-sensor-tick.sh    run the sensor once, append to the run log\n'
     printf '    ECOSIM_SENSOR_BIN=...  override the sensor binary path\n\n'
     printf 'flags: none accepted\n\n'
-    printf 'exit codes (Monitoring Plugins convention -- the exit code IS the finding):\n'
-    printf '  0  OK      2  CRIT\n'
-    printf '  1  WARN    3  BLIND (could not read part of its domain -- beats CRIT)\n\n'
+    printf 'exit codes (sonde vocabulary -- the exit code IS the finding):\n'
+    printf '  0  OK      8  WARN     9  CRIT\n'
+    printf '  6  BLIND (could not read part of its domain -- beats CRIT)\n'
+    printf '  2  usage   4  GAP      5  BROKEN  (all reported as BLIND)\n\n'
     printf 'this tool makes no AI calls and cannot spend: --summon is rejected.\n'
     exit 0 ;;
   "") ;;
@@ -55,7 +56,15 @@ esac
 # The missing-binary branch below is unchanged and still fails LOUD, so if
 # the build is absent this reports BLIND rather than degrading to a no-op.
 # ECOSIM_SENSOR_BIN still overrides, for running against a working clone.
-SENSOR="${ECOSIM_SENSOR_BIN:-${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}/current/ecosim/bin/ecosim-sensor}"
+# REPOINTED 2026-08-07 to `sonde`, ecosim's front door (hf7y/ecosim#30, Zach:
+# "make sonde the front door and deprecate ecosim-sensor"). The old path,
+# .../current/ecosim/bin/ecosim-sensor, correctly does not exist in any build:
+# ecosim-sensor is CARRIED tooling on the `bashified` branch, deliberately
+# page-less so the declaration rule keeps it off the ecosystem PATH. This
+# monitor had therefore been reporting BLIND WRAPPER_NO_SENSOR rather than
+# sensing anything -- and that was read for two days as "ecosim was silently
+# dropped from the verb build", which it never was.
+SENSOR="${ECOSIM_SENSOR_BIN:-${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}/current/ecosim/bin/sonde}"
 STATE_DIR="$HOME/.local/share/ecosim-sensor"
 LOG="$STATE_DIR/run.log"
 LATEST="$STATE_DIR/latest.txt"
@@ -138,11 +147,24 @@ printf '{"ts": "%s", "record": "run", "rc": %s, "json_rc": %s, "lines": %s, "hos
   "$(ts)" "$rc" "$arc" "${alines:-0}" "$(hostname -s)" >> "$STATE_DIR/archive.jsonl"
 [ -s "$AOUT" ] && cat "$AOUT" >> "$STATE_DIR/archive.jsonl"
 
+# sonde's vocabulary, NOT the Monitoring Plugins one. sonde translates the
+# legacy codes on purpose: raw 3 means BLIND upstream but needs-summon here,
+# so passing them through would report a read failure as a request for money
+# (man/sonde.1, EXIT STATUS). Code 3 is deliberately unreachable from sonde.
+#
+# This mapping is the load-bearing half of the repoint. A bare repoint leaving
+# the old case in place would send sonde's WARN (8) and CRIT (9) into the
+# catch-all and render a real severity as "unexpected rc" -- a finding
+# swallowed into the wrong symbol, quietly, which is this monitor's whole
+# failure mode.
 case "$rc" in
   0) verdict="OK" ;;
-  1) verdict="WARN" ;;
-  2) verdict="CRIT" ;;
-  3) verdict="BLIND" ;;
+  8) verdict="WARN" ;;
+  9) verdict="CRIT" ;;
+  6) verdict="BLIND" ;;
+  4) verdict="BLIND (GAP -- the tooling sonde fronts is absent or not executable)" ;;
+  5) verdict="BLIND (BROKEN -- underlying tool exited a code its contract does not define)" ;;
+  2) verdict="BLIND (usage error -- this wrapper called sonde wrongly)" ;;
   124) verdict="BLIND (wrapper timeout after 600s)" ;;
   *) verdict="BLIND (unexpected rc=$rc -- an unmapped code is not a pass)" ;;
 esac
