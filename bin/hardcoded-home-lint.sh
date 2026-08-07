@@ -35,11 +35,35 @@ ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null)}"
   exit 2
 }
 
+# WHAT COUNTS AS EXECUTABLE CODE IS THE SHEBANG, NOT THE FILENAME.
+#
+# This selected `'*.sh' 'bin/*'` until 2026-08-07, and that missed an entire
+# shape: an extensionless executable outside the repo-root bin/. The cost was
+# not hypothetical. This lint was written (#91) because bashify/lib/coin.sh
+# carried `SCHED="/home/zach/Documents/Projects/scheduler"` -- and
+# bashify/bin/bashify carried the SAME two lines, STORE and SCHED, the whole
+# time. It was never scanned, so the guard reported "no hardcoded home in
+# code" over 72 files while the front door of the very family it was written
+# about still pointed into one user's home. A guard that reports clean over a
+# set that excludes the defect is worse than no guard: it retires the worry.
+#
+# So: every tracked file that is either named *.sh or opens with `#!`. That is
+# a property of the file rather than of where someone filed it, which is what
+# a new subdirectory cannot quietly step outside of.
+#
 # archive/ is exempt: those are retired scripts kept as a record. Code that
 # does not run cannot resolve a path wrongly, and flagging a graveyard trains
 # the reader to skip the output.
-mapfile -t files < <(git -C "$ROOT" ls-files -- '*.sh' 'bin/*' 2>/dev/null \
-                     | grep -v '^archive/' | sort -u)
+files=()
+while IFS= read -r f; do
+  case "$f" in archive/*) continue ;; esac
+  [ -f "$ROOT/$f" ] || continue
+  case "$f" in
+    *.sh) files+=("$f"); continue ;;
+  esac
+  # `head -c2` and not `read`: a binary blob must not be slurped as a line.
+  [ "$(head -c 2 -- "$ROOT/$f" 2>/dev/null)" = '#!' ] && files+=("$f")
+done < <(git -C "$ROOT" ls-files 2>/dev/null | sort -u)
 if [ "${#files[@]}" -eq 0 ]; then
   echo "hardcoded-home-lint: BLIND: matched zero tracked files under $ROOT" >&2
   echo "hardcoded-home-lint: this is 'I cannot see', NOT 'nothing to report'." >&2

@@ -30,6 +30,10 @@
 #   install-shims.test.sh  passes BIN_DEST / CMD_DEST into a temp dir.
 #   focus-commit.test.sh   builds bare remotes and clones in a temp dir.
 #   markdown-cost.test.sh  builds a throwaway repo per case.
+#   hardcoded-home-lint.test.sh
+#                          builds a throwaway repo per case, and its one
+#                          assertion about live state (I3, "this repository
+#                          is clean") is about the checkout, not the machine.
 #   thermostat-wiring.test.sh
 #                          builds a throwaway scheduler repo per case, sets
 #                          SCHED_ROOT at it, and shims a failing `gh` ahead of
@@ -44,51 +48,77 @@
 # a reason that says nothing about the branch. It is a HOST gate, run where the
 # estate exists. Its witness above is what CI can honestly assert.
 #
-# All ten are therefore wired. If any of them ever needs a real ~/.local/bin,
-# a real scheduler registry or a real network, the honest fix is to give it a
-# fixture -- NOT to drop it from this list, and never to weaken the assertion.
+# All of them are therefore wired. If any of them ever needs a real
+# ~/.local/bin, a real scheduler registry or a real network, the honest fix is
+# to give it a fixture -- NOT to drop it from this list, and never to weaken
+# the assertion.
 #
-# KNOWN RED, and deliberately left red. Three suites fail. Every one of them
-# is a real defect this workflow found, and not one is a reason to drop a
-# suite from the list -- measured on run 31154095796, 2026-08-07.
+# WAS KNOWN RED; CLOSED 2026-08-07. Three suites failed from the day this
+# workflow was created -- closeout-lint (46/3), install-shims (8/3), verb-set
+# (30/4), measured on run 31217552355. They are fixed, and the forensics stay
+# here because the SHAPE of each recurs and the diagnosis of one was wrong.
 #
-#   closeout-lint.test.sh -- 46 passed, 3 failed (A4 x2, E3). NOT an
-#     environment effect: it reproduces on a developer machine. The `detached`
-#     fixture makes branch `orphan` at main's tip, and closeout-lint.sh's
-#     stale-pointer exemption (`on_a_remote`) correctly downgrades a branch
-#     whose tip is already reachable from a remote ref to
-#     `note [stale-pointer]` instead of `FLAG [host-only-branch]`. The script
-#     is behaving as designed; the FIXTURE predates the exemption and no
-#     longer builds a genuinely host-only branch. One line to fix: give
-#     `orphan` a commit that exists on no remote.
+# The common thread, and the reason all three failed at once: a test that
+# reaches live machine state passes on the machine that has it and proves
+# nothing anywhere. Two of the three had been green for months by reading
+# ~zach rather than the branch under test. Wiring them to CI is what made
+# them say so.
 #
-#   install-shims.test.sh -- 8 passed, 3 failed (D2, D3, D5). This one is
-#     worth reading twice. Line 18 sets REPO to the checkout under test, but
-#     `run_shims` (line 37) passes only BIN_DEST and CMD_DEST to the script,
-#     and REPO is never exported. So install-shims.sh falls back to its own
-#     default, bin/install-shims.sh:40:
-#         REPO="${REPO:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/realisateur}"
-#     On Zach's machine that path exists, so section D passes -- by auditing
-#     the LIVE SHARED CHECKOUT instead of the branch under test. A green D on
-#     a developer machine was never evidence about this branch's code. In a
-#     container the path does not exist and install-shims.sh exits 5, which is
-#     precisely the dexter bootstrap failure the suite's OWN section E exists
-#     to pin. One line to fix: pass REPO="$REPO" in `run_shims`.
+#   closeout-lint.test.sh -- CONFIRMED as diagnosed, and there were TWO stale
+#     fixtures, not one. 957b8b8 (#65) gave closeout-lint.sh both an
+#     `on_a_remote` stale-pointer exemption and an `other-worktree` skip, and
+#     the suite was last touched before it. (a) `detached`'s `orphan` branch
+#     sat at main's tip, so its tip WAS reachable from a remote and the
+#     downgrade to `note [stale-pointer]` was correct -- A4 asked for a state
+#     the fixture stopped building. (b) E3's only host-only branch in
+#     `oldrepo` was `oldside`, which A9 puts in a linked worktree, so the new
+#     skip correctly declined to examine it. The script was right both times.
+#     Fixed by giving `orphan` a commit on no remote and `oldrepo` a plain
+#     host-only branch. No assertion text changed. Now 49/0.
 #
-#   verb-set.test.sh -- 30 passed, 4 failed (E2..E5). Section E drives
-#     bashify/lib/coin.sh, and bashify/lib/coin.sh:31 is:
-#         SCHED="/home/zach/Documents/Projects/scheduler"
-#     A hardcoded absolute path containing a username, with no environment
-#     override at all -- so coin cannot resolve a project on ANY account that
-#     is not zach, including the uid 3000-3099 accounts the monkey dispatch
-#     runs under. In CI the path is absent, coin dies at exit 2 before it ever
-#     reaches the claim check, and E2/E3/E5 miss their strings while E4 gets 2
-#     where it wants 7. This is not a test defect; it is a production defect
-#     the test could not see from Zach's home directory.
+#   install-shims.test.sh -- CONFIRMED, and the one-line fix uncovered two
+#     more defects behind it. `run_shims` passed only BIN_DEST and CMD_DEST,
+#     so REPO fell back to $HOME/Documents/Projects/realisateur and section D
+#     audited the LIVE SHARED CHECKOUT instead of the branch. Passing REPO
+#     then exposed: (1) install-shims.sh tested `-d "$REPO/.git"`, but in a
+#     linked worktree .git is a FILE, so it refused every worktree as "not a
+#     realisateur checkout" -- and every agent in this repo works in
+#     .claude/worktrees/*. Now `-e`, with E4/E5 pinning it. (2) With REPO
+#     passed, the run reaches the hook section, and HOOK_DEST/CLAUDE_SETTINGS
+#     were NOT redirected -- so the suite would have written into the real
+#     ~/.claude/hooks. Both overrides added. Now 13/0.
 #
-# All three are left for a human. Editing a test so a new workflow can open
-# green is the exact move this repository's BUILD-DISCIPLINE.md exists to
-# prevent, and the last two are findings about shipped code, not about tests.
+#   verb-set.test.sh -- REFUTED as written above, which is the lesson. The
+#     hardcoded `SCHED="/home/zach/Documents/Projects/scheduler"` was real,
+#     but c8fc45e (#89) had ALREADY fixed it and said in its own message that
+#     it did not fix E2..E5. The remaining red was the HARNESS: section E
+#     drives `coin scheduler ...` and never registered `scheduler` in its own
+#     fixture registry -- it relied on the live one, which is exactly why it
+#     was green only on zach's box, and #89 is what stopped that working.
+#     `register scheduler` fixes it; no assertion changed. Fixed alongside:
+#     coin.sh now honours SCHEDULE_DIR, the same name bin/install-verbs.sh
+#     reads, instead of retyping the registry join, and reports BLIND rather
+#     than "no registered project" when the registry directory is absent.
+#     Now 34/0.
+#
+# THE FINDING WORTH MORE THAN THE THREE FIXES. bin/hardcoded-home-lint.sh --
+# written for the coin.sh defect above (#91) -- reported "72 tracked files, no
+# hardcoded home in code" while `bashify/bin/bashify:32-33` still carried
+# `/home/zach/Documents/Projects/{basheur,scheduler}`. It selected
+# `'*.sh' 'bin/*'`, which does not match an extensionless executable outside
+# the repo-root bin/, so the front door of the very family the guard was
+# written about was never scanned. It also had no test and no runner: nothing
+# in bin/tests/ and nothing here ever executed it. Both closed --  it now
+# selects by shebang, bashify's paths are resolved, and
+# bin/tests/hardcoded-home-lint.test.sh gates it from this workflow, H5
+# mutation-verified against the old selection.
+#
+# THE BAR, unchanged and the whole point. Editing a test so a new workflow can
+# open green is the exact move this repository's BUILD-DISCIPLINE.md exists to
+# prevent. Fixing a harness that tests the wrong thing is not that, and
+# neither is fixing shipped code. Nothing above weakened an assertion: every
+# assertion string that was red is still red-able, and the suites gained ten
+# checks between them.
 
 name: tests
 
