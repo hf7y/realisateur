@@ -190,15 +190,43 @@ newrepo wtrepo
 git -C "$T/wtrepo" branch -q side && git -C "$T/wtrepo" push -q origin side
 git -C "$T/wtrepo" worktree add -q "$T/wtrepo-side" side >/dev/null 2>&1
 out="$(run "$T/focus-ok.md" "$T/blockers-today.md" wtrepo)"
-has   "A8 linked worktree reported BLIND"      "$out" "BLIND [worktrees] wtrepo: 1 linked worktree(s)"
-has   "A8 names the worktree branch"           "$out" "[side]"
-has   "A8 BLIND counted in the summary"        "$out" "1 BLIND"
-hasnt "A8 BLIND is not a FLAG"                 "$out" "FLAG ["
+# A8 REVERSED 2026-08-07, and the old assertion was itself a false alarm.
+#
+# This case used to assert `BLIND [worktrees] wtrepo: 1 linked worktree(s)` --
+# the 2026-07-28 decision (option b) to emit "did not look" rather than grow
+# section A to read them. The measurement that overturned it: on the real
+# realisateur checkout the same rule printed ONE BLIND line covering 13 linked
+# worktrees, sitting ABOVE twelve loud FLAG lines that were all false. A guard
+# for stranded work was noisy about 12 resolved things and quiet about 13
+# places it had not looked -- and agents in this estate work almost
+# exclusively IN worktrees, so the unread domain is where the stranded work
+# disproportionately IS.
+#
+# Probing all 13 for real: every one clean, none ahead. So the BLIND was not
+# protecting anything -- reading them costs ZERO new FLAGs and removes 13
+# unread domains. wtrepo here is the same shape: clean, and `side` is pushed.
+# There was never anything to be blind about, and saying BLIND about a domain
+# you could have read in 3ms is the "found nothing / did not look" conflation
+# pointed the other way.
+#
+# The old wording also violated what Zach restated today -- "if your answer
+# includes 'and then the human runs X', it is not finished". Its remedy line
+# was literally "run closeout-lint against them by hand".
+hasnt "A8 a readable worktree is READ, not declared BLIND" "$out" "BLIND [worktrees]"
+has   "A8 and it is named, so it is visibly examined"      "$out" "[side]"
+hasnt "A8 a clean, pushed worktree raises no FLAG"         "$out" "FLAG ["
 hasnt "A8 pushed-but-no-upstream not host-only" "$out" "FLAG [host-only-branch]"
 
 git -C "$T/oldrepo" worktree add -q -b oldside "$T/oldrepo-side" >/dev/null 2>&1
 out="$(run "$T/focus-ok.md" "$T/blockers-today.md" oldrepo)"
-has   "A9 BLIND survives the stale-HEAD gate"  "$out" "BLIND [worktrees] oldrepo"
+# A9's PROPERTY IS UNCHANGED; only the verb is. Worktrees are examined BEFORE
+# the age gate, so a registered repo whose own HEAD is too old to scan does not
+# hide the worktrees hanging off it -- that gate is precisely what hid two
+# unpushed commits on 2026-07-28. What changed on 2026-08-07 is that the
+# worktree is now READ rather than declared unread, so the surviving evidence
+# is a `read [worktree]` line instead of a `BLIND [worktrees]` one.
+has   "A9 worktrees survive the stale-HEAD gate" "$out" "read [worktree] oldrepo"
+has   "A9 and the worktree branch is named"      "$out" "[oldside]"
 has   "A9 stale repo still not scanned"        "$out" "no registered repo has a commit younger"
 
 echo "-- B. today's session record"
@@ -279,14 +307,22 @@ run_rc "$T/focus-ok.md" "$T/blockers-today.md" --repo "$T/oldrepo"
 hasnt "E3 --repo ignores the age gate"                    "$RUN_OUT" "no registered repo has a commit younger"
 has   "E3 and actually checks its branches"               "$RUN_OUT" "FLAG [host-only-branch]"
 
-# The gate itself. wtrepo is clean and its `side` branch is pushed, so it has
-# 0 FLAGs and exactly 1 BLIND -- the case that used to exit 0 and is the
-# silent pass THE FLOOR gate 3.3 names by hand.
-run_rc "$T/focus-ok.md" "$T/blockers-today.md" --strict --repo "$T/wtrepo"
-rc    "E4 BLIND-only under --strict exits 6"              6 "$RUN_RC"
+# The BLIND gate itself. It still exists and still exits 6 -- what changed on
+# 2026-08-07 is what EARNS a BLIND. A worktree that can be read is read; a
+# worktree that CANNOT is the genuine "a domain existed and was not read", and
+# that is what this fixture now builds: a registered worktree whose directory
+# has been removed underneath git, so `git worktree list` still names it and
+# nothing can be learned about it.
+newrepo blindrepo
+git -C "$T/blindrepo" branch -q ghostside
+git -C "$T/blindrepo" worktree add -q "$T/blindrepo-gone" ghostside >/dev/null 2>&1
+rm -rf "$T/blindrepo-gone"
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --strict --repo "$T/blindrepo"
+rc    "E4 an UNREADABLE worktree is BLIND and exits 6"    6 "$RUN_RC"
 hasnt "E4 and it really was BLIND-not-FLAG"               "$RUN_OUT" "FLAG ["
+has   "E4 names the unreadable worktree"                  "$RUN_OUT" "BLIND [worktree]"
 
-run_rc "$T/focus-ok.md" "$T/blockers-today.md" --strict --allow-blind --repo "$T/wtrepo"
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --strict --allow-blind --repo "$T/blindrepo"
 rc    "E5 --allow-blind downgrades BLIND to a warning"    0 "$RUN_RC"
 
 # A FLAG is something we DID see; BLIND is something we could not. dirtyrepo
@@ -374,6 +410,67 @@ has   "F3 and still flags the genuinely unmerged one"       "$out" "FLAG [host-o
 out="$(HOME="$T/no-identity" GIT_CONFIG_GLOBAL=/dev/null \
        run "$T/focus-ok.md" "$T/blockers-today.md" squashed)"
 hasnt "F4 no git identity -> probe still works"             "$out" "FLAG [host-only-branch] squashed: branch 'feature'"
+
+echo
+echo "-- G. linked worktrees are READ, not declared unread"
+# THE MEASUREMENT THAT PRODUCED THIS SECTION. On the realisateur checkout,
+# closeout-lint printed one `BLIND [worktrees] ... 13 linked worktree(s) NOT
+# examined` line ABOVE twelve FLAG lines, all twelve false (section F). A guard
+# whose whole purpose is catching stranded work was loud about 12 resolved
+# things and quiet about 13 places it had not looked -- and every agent in this
+# estate works IN a worktree, so the unread domain is exactly where stranded
+# work lives. Signal-to-noise, precisely inverted.
+#
+# Probing all 13 for real: all clean, none ahead. Reading them costs zero new
+# FLAGs. So the blindness was never protecting anyone from noise; it was just
+# not looking, and telling the human to look by hand.
+#
+# G1 is the load-bearing case: an unpushed COMMIT inside a linked worktree is
+# now FOUND. That is the state the old code could not represent at all.
+
+# G1: committed work inside a linked worktree, not on its upstream -> FLAG.
+newrepo wt_unpushed
+git -C "$T/wt_unpushed" branch -q feat
+git -C "$T/wt_unpushed" push -q origin feat
+git -C "$T/wt_unpushed" worktree add -q "$T/wt_unpushed-side" feat >/dev/null 2>&1
+echo stranded > "$T/wt_unpushed-side/s.txt"
+git -C "$T/wt_unpushed-side" add -A
+git -C "$T/wt_unpushed-side" commit -qm 'committed here and never pushed'
+out="$(run "$T/focus-ok.md" "$T/blockers-today.md" wt_unpushed)"
+has   "G1 unpushed commit IN a worktree is FLAGged"  "$out" "FLAG [worktree-unpushed]"
+has   "G1 and it names the worktree branch"          "$out" "feat"
+hasnt "G1 and it is no longer merely BLIND"          "$out" "BLIND [worktrees]"
+
+# G2: a DIRTY worktree is reported but does NOT gate. A concurrent agent's
+# worktree is dirty by construction while it is running, and gating on that
+# would make this guard red during every parallel session -- which is the
+# noise-becomes-furniture failure section F exists to undo. It must be
+# impossible to overlook and wrong to act on automatically: a note, never
+# silence.
+newrepo wt_dirty
+git -C "$T/wt_dirty" branch -q scratch
+git -C "$T/wt_dirty" push -q origin scratch
+git -C "$T/wt_dirty" worktree add -q "$T/wt_dirty-side" scratch >/dev/null 2>&1
+echo mid-run >> "$T/wt_dirty-side/f.txt"
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --strict --repo "$T/wt_dirty"
+has   "G2 a dirty worktree is reported"              "$RUN_OUT" "note [worktree-dirty]"
+hasnt "G2 but it is not a FLAG"                      "$RUN_OUT" "FLAG [worktree"
+rc    "G2 and it does not gate a concurrent run"     0 "$RUN_RC"
+
+# G3: an UNREADABLE worktree is still BLIND. Removing the audit's ability to
+# say "I could not look" would trade one conflation for another.
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --repo "$T/blindrepo"
+has   "G3 unreadable worktree still says BLIND"      "$RUN_OUT" "BLIND [worktree]"
+
+# G4: BLIND LEADS THE SUMMARY. The original defect was not only that 13
+# worktrees went unread -- it was that the one line saying so was buried above
+# twelve louder FLAG lines and got skipped. An admission of not having looked
+# must be the first thing the summary says, not a trailing clause.
+run_rc "$T/focus-ok.md" "$T/blockers-today.md" --repo "$T/blindrepo"
+case "$RUN_OUT" in
+  *"BLIND: "*"domain(s) existed and were NOT read"*) ok "G4 summary leads with BLIND" ;;
+  *) bad "G4 summary leads with BLIND (no leading BLIND banner in summary)" ;;
+esac
 
 echo
 echo "$pass passed, $fail failed"
