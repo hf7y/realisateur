@@ -28,7 +28,15 @@
 set -uo pipefail
 
 SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
-SCHED="/home/zach/Documents/Projects/scheduler"
+# Resolved, not hardcoded. This was `/home/zach/Documents/Projects/scheduler`
+# with no override, so `coin` could not see the registry from ANY other
+# account -- including the uid 3000-3099 accounts the monkey dispatch runs
+# under, where $HOME is /home/<project>. It failed as `gap` (exit 4, "not
+# registered") rather than as blind, so the account looked like it had no
+# projects instead of no path. Same resolution order as milestone-audit.sh,
+# steward-survey.sh, precipitation-scan.sh and notify-senechal.sh; caught by
+# bin/tests/verb-set.test.sh once it ran in CI rather than only on zach's box.
+SCHED="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 
 die()    { printf 'coin: %s\n' "$*" >&2; exit 2; }
 gap()    { printf 'coin: GAP: %s\n' "$*" >&2; exit 4; }
