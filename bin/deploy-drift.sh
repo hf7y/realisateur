@@ -35,13 +35,17 @@ while IFS=: read -r user _ uid _; do
   sudo -u "\$user" git -C "\$d" fetch --quiet origin main 2>/dev/null
   head=\$(sudo -u "\$user" git -C "\$d" rev-parse --short HEAD 2>/dev/null || echo UNKNOWN)
   ref=\$(sudo -u "\$user" git -C "\$d" rev-parse --short origin/main 2>/dev/null || echo UNKNOWN)
+  # AHEAD is the difference between "behind, and will catch up by itself" and
+  # "diverged, and never will". A checkout with a local commit is CLEAN, so the
+  # dirty-tree signal cannot see it, and --ff-only refuses it forever.
+  ahead=\$(sudo -u "\$user" git -C "\$d" rev-list --count origin/main..HEAD 2>/dev/null || echo 0)
   dirty=\$(sudo -u "\$user" git -C "\$d" status --porcelain --untracked-files=no 2>/dev/null | tr '\n' ' ')
   # ARMED is probed, not assumed: an account can have the engine checked out
   # and dispatch nothing. Four did on the first run of this script, and
   # failing on them would make this check cry wolf every night.
   armed=idle
   sudo -u "\$user" crontab -l 2>/dev/null | grep -q 'usage-paced-runner' && armed=armed
-  echo "\$user \$armed \$head \$ref \$dirty"
+  echo "\$user \$armed \$head \$ref \$ahead \$dirty"
 done < /etc/passwd
 [ "\$found" = 1 ] || exit 3
 EOF
@@ -63,11 +67,13 @@ fi
 drift=0
 idle_drift=0
 printf '%-16s %-7s %-10s %-10s %s\n' ACCOUNT ARMED HEAD ORIGIN/MAIN STATE
-while read -r user armed head ref dirty; do
+while read -r user armed head ref ahead dirty; do
   state="ok"
   bad=0
   if [ "$head" = UNKNOWN ] || [ "$ref" = UNKNOWN ]; then
     state="UNREADABLE"; bad=1
+  elif [ "${ahead:-0}" -gt 0 ] 2>/dev/null; then
+    state="DIVERGED (${ahead} local commit(s), never pushed)"; bad=1
   elif [ "$head" != "$ref" ]; then
     state="STALE"; bad=1
   fi
@@ -88,8 +94,10 @@ if [ "$idle_drift" != 0 ]; then
 fi
 if [ "$drift" != 0 ]; then
   echo "DRIFT: an ARMED dispatcher is not running origin/main." >&2
-  echo "  STALE fast-forwards on its own next tick unless it is also DIRTY." >&2
+  echo "  STALE fast-forwards on its own next tick -- if it is neither DIRTY nor DIVERGED." >&2
   echo "  DIRTY will NOT pull -- frozen until the listed file is resolved." >&2
+  echo "  DIVERGED will NEVER pull and shows NO dirty file: a run committed" >&2
+  echo "    locally and did not push, so --ff-only refuses it permanently." >&2
   exit 1
 fi
 echo "Every armed dispatcher is on origin/main."
