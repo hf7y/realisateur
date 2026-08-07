@@ -880,3 +880,80 @@ stands recorded: one token sits in plaintext in all six monkey accounts'
 `~/.claude/settings.json`, and it was printed into a session transcript on
 2026-08-06 while checking bibliothecaire's permissions. Not a hazard that
 decays on its own; it waits until he picks it up.
+
+## 11. Identity — the App, and what deploy keys never gave us
+
+Opened 2026-08-07, Zach-directed. Front door: **`bin/selfdev-gh-app.sh`**.
+Witness: **`bin/tests/selfdev-gh-app.test.sh`** (22 cases, offline).
+
+§8.1(1) made the self-dev credentials a script instead of a memory. It did not
+make them a **name**. Deploy keys grant **access** and confer no **identity**: a
+deploy-key push is attributed to whatever author string the commit carries, so
+agent work and human work are indistinguishable in `git log` and in the GitHub
+UI. Every rule in `CLAUDE.md` about an unattributable push, or an autocommit
+adopting an agent's edit *"under a human's name"*, is downstream of that one
+missing distinction. A GitHub App installation has its own actor —
+`<slug>[bot]` — and **GitHub** makes the attribution, so it cannot be spoofed by
+setting `user.email`.
+
+**The App that exists.** `monkey self-dev`, owned by `@hf7y`, **App ID
+4520255**, registered 2026-08-07. Registration is not installation and neither
+is capability: as of this writing it has **no private key and is installed
+nowhere**, so none of this is live. `--check` reports that rather than calling a
+configured-but-inert App wired.
+
+**What it does not solve.** App permissions are per-**App**, not per-repo. One
+App cannot be read-write on a project's own repo and read-only on
+`realisateur` — deploy keys can express that and this cannot. So this is an
+**addition** to `wire-selfdev-git.sh`, not a replacement, and the shape is **two
+Apps**: a *writer* (Contents RW, Pull requests RW, Issues RW, Metadata R)
+installed on the account's own repos, and a *reader/filer* (Contents R, Issues
+RW, Metadata R) installed on `realisateur`, `scheduler` and `senechal`. That
+preserves exactly the privilege split ecosim was given by hand on 2026-08-03.
+Inside one App, `--repos a,b` narrows a single mint below the installation's
+repo list; it is the only least-privilege lever available there.
+
+**Setup.** Steps 1–3 are on github.com and cannot be scripted.
+
+1. *Permissions & events* → Repository permissions, per the split above. Set
+   them **before** installing; adding one later leaves the installation pending
+   a human approval.
+2. *Private keys* → *Generate a private key*. The `.pem` downloads **once**:
+   `install -m 600 -D <downloaded>.pem ~/.config/selfdev/monkey-self-dev.pem`,
+   then delete the download. It is a bearer credential and must never reach a
+   tracked file. Same class of hazard as §9.3(j)'s plaintext OAuth token, and it
+   is worth not repeating that one.
+3. *Install App* → `@hf7y` → **Only select repositories**. Not "All
+   repositories": the installation's repo list is an App's only per-repo scoping.
+4. `~/.config/selfdev/gh-app.conf` on the self-dev account —
+   `SELFDEV_APP_ID`, `SELFDEV_APP_KEY`, `SELFDEV_GH_OWNER`. Environment
+   variables of the same name **win over the file**, so a scheduler job can carry
+   a different App without editing anything.
+5. `selfdev-gh-app.sh --check` — authenticates the App, resolves the
+   installation, mints a real token, counts the repos in scope, prints the bot
+   identity. This is the line that proves GitHub answers.
+6. `selfdev-gh-app.sh --wire` — git credential helper plus the bot's
+   `user.name` / `user.email`.
+
+**The trap in step 6.** `wire-selfdev-git.sh` writes `url.insteadOf` rules
+rewriting `github.com` onto per-repo **ssh aliases**. Where both are wired,
+**ssh wins and the credential helper is never consulted** — silently, so pushes
+keep working and keep landing under the old attribution. `--wire` detects the
+rewrites and says so. Switching a repo means removing its rewrite by hand
+(`git config --global --unset-all url."git@github-<repo>:hf7y/<repo>.git".insteadOf`),
+per repo, deliberately: a repo that should stay on a read-only deploy key keeps
+its rewrite.
+
+**Tokens.** One hour, minted on demand from the private key, cached mode-600
+under `$XDG_CACHE_HOME/selfdev-gh-app` keyed by App and repo scope and expired
+five minutes early (git invokes a credential helper on *every* remote
+operation). Nothing long-lived is stored. `--jwt` prints the App JWT alone,
+because GitHub answers a malformed JWT with a bare 401 that is indistinguishable
+from a revoked key.
+
+**Open.** §8.1(2) recorded `installe` exiting **8** on self-dev accounts because
+`notify-senechal` needed a push to `hf7y/senechal` and self-dev holds a
+read-only key there. That script has since moved to `scheduler -i` and no longer
+pushes, which is why the reader App above grants Issues RW mostly for the
+request queues. **Re-probe the exit code on a self-dev account before claiming
+this is fixed** — it is quoted here, not verified.

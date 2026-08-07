@@ -30,6 +30,11 @@
 #   install-shims.test.sh  passes BIN_DEST / CMD_DEST into a temp dir.
 #   focus-commit.test.sh   builds bare remotes and clones in a temp dir.
 #   markdown-cost.test.sh  builds a throwaway repo per case.
+#   selfdev-gh-app.test.sh overrides HOME and XDG_CACHE_HOME into a temp dir,
+#                          generates its own throwaway RSA keypair, and points
+#                          SELFDEV_GH_API at 127.0.0.1:1 -- a closed port, so
+#                          the witness path is exercised and provably FAILS
+#                          rather than being skipped. No network, no real key.
 #
 # All nine are therefore wired. If any of them ever needs a real ~/.local/bin,
 # a real scheduler registry or a real network, the honest fix is to give it a
