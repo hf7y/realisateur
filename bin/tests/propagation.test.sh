@@ -396,6 +396,60 @@ has "the unreachable survey says nothing was verified" "$O" "Nothing was verifie
 
 # ===========================================================================
 echo
+echo "-- 6b. EVERY ARTIFACT RECORDS THE BUILD THAT PRODUCED IT ---------------"
+# ===========================================================================
+# "What was ecosim running when it did that?" has to be answerable from the
+# artifact alone, later, by someone who was not there. The value already
+# existed (the pin); nothing recorded it at the moment work was created.
+#
+# THE DISTINCTION THE WHOLE MECHANISM RESTS ON: an artifact with NO trailer
+# (nothing stamped it) and one stamped `unknown` (the stamper ran and told
+# the truth) mean opposite things. A guess -- "the latest build", "the one in
+# the manifest" -- destroys that while looking like an improvement.
+
+BR="$T/pinned/.local/share/verb-builds"     # has current -> 2026-08-06T043915Z
+O="$(VERB_BUILD_ROOT="$BR" bash -c '. '"$SET_LIB"'; prop_build_trailer')"
+has "a host with an adopted build stamps the build id" "$O" "Verb-Build: 2026-08-06T043915Z"
+
+O="$(VERB_BUILD_ROOT="$T/no-such-build-root" bash -c '. '"$SET_LIB"'; prop_build_trailer')"
+has "a host with NO build adopted stamps 'unknown', honestly" "$O" "Verb-Build: unknown"
+hasnt "...and never invents a plausible build id" "$O" "2026-"
+
+# The trailer must be emitted unconditionally: a stamper that emits nothing
+# when it does not know produces an artifact indistinguishable from an
+# unstamped one, which is the failure this exists to prevent.
+[ -n "$O" ] && ok "the trailer is emitted even when the build is unknown" \
+            || bad "an unknown build produced NO trailer -- unstamped and stamped-unknown are now identical"
+
+# ONE READER, with a NAMED exemption list rather than a loose rule.
+#
+# Three scripts legitimately resolve the pin path because they OWN the build
+# layout -- they create it, repoint it, or read a payload out of it. They are
+# listed here by name so that adding a fourth is a visible review event and
+# not a quiet convenience. Everything that merely wants to KNOW the build id
+# must call prop_build_trailer(), or the ecosystem acquires a second answer
+# to "which build am I on" -- the one-fact-two-readers shape MONKEY.md 10
+# found five times in one day.
+PIN_OWNERS="install-verb-build.sh relink-verbs-to-build.sh ecosim-sensor-tick.sh"
+strays=""
+for f in "$REPO"/bin/*.sh; do
+  n="$(basename "$f")"
+  case " $PIN_OWNERS " in *" $n "*) continue ;; esac
+  grep -q 'verb-builds/current' "$f" 2>/dev/null && strays="$strays $n"
+done
+[ -z "$strays" ] && ok "only the $(echo $PIN_OWNERS | wc -w) layout-owning scripts resolve the pin path directly" \
+                 || bad "these read the pin path instead of calling prop_build_trailer():$strays"
+
+# And it is WIRED: focus-commit.sh is the mandated committer for FOCUS.md and
+# QUESTIONS.md across every project, so stamping there stamps the ecosystem's
+# highest-volume artifact with no hand maintenance.
+FC="$(cat "$REPO/bin/focus-commit.sh")"
+has "focus-commit.sh stamps the commits it makes" "$FC" "prop_build_trailer"
+has "...and does not double-stamp a message that already carries one" "$FC" "Verb-Build:"
+hasnt "...and does not rewrite the caller's message file in place" "$FC" 'prop_build_trailer >> "$msgfile"'
+
+# ===========================================================================
+echo
 echo "-- 7. THE ARGUMENT CONTRACT --------------------------------------------"
 # ===========================================================================
 "$TICK" --not-a-real-flag >/dev/null 2>&1; rc "unknown flag exits 2" 2 $?

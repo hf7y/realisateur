@@ -127,6 +127,55 @@ PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
 # archaeology.
 PROP_PIN_PATH=".local/share/verb-builds/current"
 
+# ============================================================================
+# STAMPING: WHICH BUILD PRODUCED THIS ARTIFACT
+# ============================================================================
+#
+# Zach, 2026-08-07: every artifact an agent produces should record which verb
+# build produced it. The value already exists -- it is the pin above. What was
+# missing is that nothing records it AT THE MOMENT WORK IS CREATED, so
+# "what was ecosim running when it did that?" is unanswerable afterwards,
+# which is the entire point of asking.
+#
+# ONE READER, HERE. Every stamper calls prop_build_trailer(); none of them
+# reads the pin path themselves. Two readers of one fact is the shape
+# MONKEY.md 10 found five times in a day.
+#
+# THREE STATES, NEVER TWO. The distinction the mechanism lives or dies on:
+#
+#   Verb-Build: 2026-08-07T040739Z   stamped, and the build is known
+#   Verb-Build: unknown              stamped, and the producer honestly did
+#                                    not know -- no build is adopted on this
+#                                    host, or the pin is unreadable
+#   (no trailer at all)              UNSTAMPED: produced by something that
+#                                    predates or bypasses the mechanism
+#
+# An unstamped artifact must remain distinguishable from one stamped
+# "unknown", because they mean opposite things about the mechanism: the
+# second proves the stamper ran and told the truth; the first proves nothing
+# ran. Guessing a plausible build id -- "the latest one", "the one in the
+# manifest" -- would destroy exactly that distinction, so it is never done.
+#
+# WHY A GIT TRAILER. It survives the artifact being read later out of
+# context, which is the requirement: the commit carries it forever, it
+# travels with a clone, a cherry-pick and a patch, `git log
+# --format='%(trailers:key=Verb-Build)'` reads it in bulk, and no human
+# maintains it. A line in a report file satisfies none of those.
+
+# prop_current_pin -- the adopted build id, or nothing. Never a guess.
+prop_current_pin() {
+  local p="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}/current"
+  local t; t="$(readlink "$p" 2>/dev/null)" || return 1
+  [ -n "$t" ] || return 1
+  basename "$t"
+}
+
+# prop_build_trailer -- the trailer line, always emitted, honest when unknown.
+prop_build_trailer() {
+  local pin; pin="$(prop_current_pin 2>/dev/null)"
+  printf 'Verb-Build: %s\n' "${pin:-unknown}"
+}
+
 # --- BOOTSTRAP: small, near-immutable, installed once per account -----------
 # Every entry here is a file a consumer must hold BEFORE any payload can
 # arrive. Adding one is a review event, not a convenience -- see the bound
