@@ -30,6 +30,13 @@
 #   install-shims.test.sh  passes BIN_DEST / CMD_DEST into a temp dir.
 #   focus-commit.test.sh   builds bare remotes and clones in a temp dir.
 #   markdown-cost.test.sh  builds a throwaway repo per case.
+#   selfdev-gh-app-register.test.sh
+#                          overrides HOME and TMPDIR, and stands a local stub
+#                          up on 127.0.0.1 for the manifest-conversion call via
+#                          SELFDEV_GH_API -- so the one step that ever handles a
+#                          private key is exercised without a real one. It also
+#                          plays the browser by curling its own callback port.
+#                          Skips (exit 0) if python3 is absent.
 #   selfdev-gh-app.test.sh overrides HOME and XDG_CACHE_HOME into a temp dir,
 #                          generates its own throwaway RSA keypair, and points
 #                          SELFDEV_GH_API at 127.0.0.1:1 -- a closed port, so

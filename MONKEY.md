@@ -905,15 +905,67 @@ configured-but-inert App wired.
 **What it does not solve.** App permissions are per-**App**, not per-repo. One
 App cannot be read-write on a project's own repo and read-only on
 `realisateur` — deploy keys can express that and this cannot. So this is an
-**addition** to `wire-selfdev-git.sh`, not a replacement, and the shape is **two
-Apps**: a *writer* (Contents RW, Pull requests RW, Issues RW, Metadata R)
-installed on the account's own repos, and a *reader/filer* (Contents R, Issues
-RW, Metadata R) installed on `realisateur`, `scheduler` and `senechal`. That
-preserves exactly the privilege split ecosim was given by hand on 2026-08-03.
-Inside one App, `--repos a,b` narrows a single mint below the installation's
+**addition** to `wire-selfdev-git.sh`, not a replacement. In particular
+*"one App per account, read-write on its own repo, read everywhere else"* is
+**not expressible**: an App installed across all the repos with `contents:write`
+is write on **all** of them. The permission is a property of the App, and the
+installation only chooses which repos it applies to.
+
+**The play (recommended).** One **writer** App per self-dev account — Contents
+RW, Pull requests RW, Issues RW, Metadata R — installed on **that account's own
+repo only**. Then *keep the existing read-only deploy keys* for `realisateur`,
+`scheduler` and `senechal`. Universal read is already solved, correctly and
+per-repo, by wiring that is already live and already tested; an App cannot
+express it better and a second shared App would mean one key copied across
+every account. This also turns the §11 rewrite trap into a lever: remove the
+`url.insteadOf` rewrite for the account's **own** repo only, and leave the
+read-only ones on ssh, which is exactly where they belong. Cost: N Apps for N
+accounts, no shared key, per-account attribution, and the privilege split
+ecosim was given by hand on 2026-08-03 preserved unchanged.
+
+The alternative — a single App, RW everywhere — is defensible if every account
+is equally trusted (least privilege here guards against an agent going wrong,
+not an attacker). It costs per-account attribution: every account pushes as the
+same bot. A *reader/filer* App (Contents R, Issues RW) is only worth registering
+if the deploy keys are being retired outright.
+
+Inside any one App, `--repos a,b` narrows a single mint below the installation's
 repo list; it is the only least-privilege lever available there.
 
-**Setup.** Steps 1–3 are on github.com and cannot be scripted.
+**How much of this automates.** Re-probed against GitHub's REST docs
+2026-08-07, not remembered:
+
+| step | automatable? |
+|---|---|
+| create the App, obtain the `.pem` | **yes** — manifest flow, one human click |
+| install it on repos | **no** — no endpoint creates an installation; one human click |
+| key placement, `gh-app.conf`, `--wire`, `--check` | yes |
+
+**Two browser clicks per account, and no more.** `bin/selfdev-gh-app-register.sh`
+does the first: it builds the manifest, serves a local callback, and exchanges
+the returned code for the App id, slug and private key, writing the `.pem` at
+mode 600 and the `gh-app.conf` beside it. Witness:
+`bin/tests/selfdev-gh-app-register.test.sh` (25 cases, offline, stubbed API).
+
+The manifest flow is also the **only** way to obtain a private key
+programmatically — no endpoint mints one for an App that already exists. An App
+registered by hand can therefore never have its key scripted, which is why App
+4520255 is best deleted and re-created through this script rather than kept.
+
+The manifest code is **single-use and expires in one hour**. If the exchange
+fails, the App exists on GitHub with a key nobody holds: delete it and re-run.
+The script says so on that path rather than exiting quietly.
+
+Run it where the **browser** is (mandark), then carry the `.pem` to the
+account — GitHub redirects the browser, so the callback must be reachable from
+it. `--manifest-only` writes the form and stops, for a host with no browser.
+
+```sh
+bin/selfdev-gh-app-register.sh ecosim --repo ecosim     # writer, one per account
+```
+
+**Setup, by hand.** Only needed if not using the register script above. Steps
+1–3 are on github.com and cannot be scripted.
 
 1. *Permissions & events* → Repository permissions, per the split above. Set
    them **before** installing; adding one later leaves the installation pending
