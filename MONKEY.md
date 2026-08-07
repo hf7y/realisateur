@@ -911,6 +911,24 @@ App cannot be read-write on a project's own repo and read-only on
 is write on **all** of them. The permission is a property of the App, and the
 installation only chooses which repos it applies to.
 
+**The roster, decided 2026-08-07 (Zach).** One App **per account**, four of
+them, in this order: `ecosim` (uid 3001) first, then `bibliothecaire` (3002),
+`chezz`, `vim-arcade` (3000). Per-account Apps are the whole point — a single
+shared App collapses all four into one bot name, and "which agent pushed this"
+becomes unanswerable again, which is the question §11 exists to answer.
+
+**App 4520255 (`monkey self-dev`) is ecosim's**, renamed. It was registered
+2026-08-07 under the one-App assumption, and a name that says `monkey` fits a
+host, not an account. Renaming is free **only while it has no key and no
+installation**: the rename changes the slug, and the slug is the bot login and
+the noreply email that every commit is attributed through. Rename it after a
+single commit exists and that history is orphaned from the actor. So: rename
+now, or never.
+
+GitHub App names are **globally unique across all of GitHub**, not per-owner —
+`ecosim self-dev` may simply be taken, and the fallback is a qualified form
+like `hf7y ecosim self-dev`. The slug follows the name, so pick it once.
+
 **The play (recommended).** One **writer** App per self-dev account — Contents
 RW, Pull requests RW, Issues RW, Metadata R — installed on **that account's own
 repo only**. Then *keep the existing read-only deploy keys* for `realisateur`,
