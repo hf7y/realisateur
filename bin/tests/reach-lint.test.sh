@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# HERMETICITY: sets SCHED_ROOT at a fixture registry and points USER_CMD_DIR at
+# a directory that deliberately does not exist, so the reach check cannot see
+# the live ~/.local/bin.
+#
 # reach-lint.test.sh -- witness for bin/reach-lint.sh's --strict /
 # --strict-reach exit-code plumbing. reach-lint.sh's two checks (A scope
 # declaration, B reach) and their exit-code wiring were already correct

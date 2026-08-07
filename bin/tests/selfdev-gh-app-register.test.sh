@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+# HERMETICITY: overrides HOME and TMPDIR, and stands a local stub up on
+# 127.0.0.1 for the manifest-conversion call via SELFDEV_GH_API -- so the one
+# step that ever handles a private key is exercised without a real one. It also
+# plays the browser by curling its own callback port. Skips (exit 0) if python3
+# is absent. No network beyond loopback, and no real GitHub App is created.
+#
+# (Relocated verbatim from the per-suite ledger that used to live in
+# .github/workflows/tests.yml. It says the same thing; it now says it in the
+# one file that changes when this suite does.)
 # selfdev-gh-app-register.test.sh -- offline witness for
 # bin/selfdev-gh-app-register.sh, INCLUDING the exchange that handles the
 # private key. That step is the one worth testing hardest: it runs once per

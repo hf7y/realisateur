@@ -184,10 +184,39 @@ prop_build_trailer() {
 # account tells "no new build because nothing changed" from "no new build
 # because main is broken", and that question has to be answerable on a host
 # that has no payload installed at all.
+# selfdev-gh-app.sh SPENDS THE FOURTH AND LAST SLOT under the declared bound
+# of 4, so this addition is the "review event" the bound exists to force. The
+# argument for it, stated so a reviewer can reject it: the script is the git
+# CREDENTIAL HELPER. `--credential` is invoked by git on every fetch and push
+# the account makes, so it is not a stand-up-once script (that is its sibling
+# selfdev-gh-app-register.sh, filed under PROVISION below). And it answers the
+# decider's question the only way a credential helper can -- an account with no
+# payload installed cannot authenticate to git, and therefore cannot FETCH a
+# payload, so this must be present before anything else can arrive.
+#
+# THAT LAST STEP WAS PROBED, NOT ASSUMED, because it is the whole argument: if
+# the release repo were PUBLIC, an account could fetch the payload with no
+# credential at all and this would be payload, not bootstrap.
+#   # verified 2026-08-07 via `gh repo view hf7y/verbs --json visibility`
+#   -> {"isPrivate":true,"visibility":"PRIVATE"}
+# and bin/install-verb-build.sh:63 clones it over HTTPS
+# (https://github.com/hf7y/verbs.git), which git can only authenticate through
+# a credential helper. So the payload is unreachable until this file is already
+# on the account. Classifying it PAYLOAD would be circular -- the build
+# delivering the credential needed to fetch the build -- and would also push
+# PROP_PAYLOAD_PENDING to 11 against a PROP_LEAK_BOUND of 10 that only ever
+# goes down.
+#
+# It is also the file propagation.test.sh's own doctrine names as the motivating
+# case: written 2026-08-06 for accounts that had no way to receive it. Giving it
+# a channel is that finding being closed, not the bound being eroded. The bound
+# is now FULL: the next addition must retire one of these four or raise the
+# bound deliberately, which is exactly the conversation it was built to force.
 PROP_BOOTSTRAP_SCRIPTS="
 install-verb-build.sh
 selfdev-release-tick.sh
 release-ledger.sh
+selfdev-gh-app.sh
 "
 
 # Files the bootstrap scripts need alongside them. Named explicitly because
@@ -201,11 +230,28 @@ lib/propagation-set.sh
 
 # --- PROVISIONING: root-side, runs from a hands account, never on the -------
 # --- consumer's clock. Not bootstrap: these stand an account UP, once.
+#
+# selfdev-gh-app-register.sh is filed here and not LOCAL, which is a close call
+# worth naming: LOCAL also admits "operator scripts a human runs from a hands
+# account", and this is one. PROVISION wins because it is per-ACCOUNT and
+# stands one UP exactly once (two browser clicks per account, MONKEY.md 962) --
+# this list's literal definition, and what its neighbours land-selfdev.sh,
+# provision-selfdev-user.sh, setup-selfdev-project.sh and wire-selfdev-git.sh
+# all do. LOCAL's members are repo-wide CI gates and estate-wide surveys; a
+# script whose first argument is an account name does not belong among them.
+#
+# NOTE FOR ANY FUTURE EDITOR OF THESE LISTS: they are newline-separated strings
+# consumed by `for s in $LIST`, NOT shell code. A `#` comment placed INSIDE the
+# quotes does not comment anything -- it closes the string and the rest of the
+# list executes as commands. That is not hypothetical; it is what the first
+# draft of this very comment did, and `bin/tests/propagation.test.sh` caught it
+# as 20 lines of "command not found". Comments go ABOVE the assignment.
 PROP_PROVISION_SCRIPTS="
 land-selfdev.sh
 provision-selfdev-user.sh
 setup-selfdev-project.sh
 wire-selfdev-git.sh
+selfdev-gh-app-register.sh
 install-shims.sh
 install-silence-audit.sh
 install-verbs.sh
@@ -245,6 +291,7 @@ PROP_LEAK_BOUND=10
 # the release pipeline (GitHub Actions checks realisateur out to get them), not
 # on a consumer. An account never gates or publishes; it only reads the result.
 PROP_LOCAL_SCRIPTS="
+claim-drift.sh
 cut-verb-build.sh
 deploy-drift.sh
 release-gate.sh
@@ -257,6 +304,7 @@ markdown-cost.sh
 reach-lint.sh
 restamp-discipline.sh
 stamp-agent.sh
+suite-docs-lint.sh
 thermostat-wiring.sh
 "
 

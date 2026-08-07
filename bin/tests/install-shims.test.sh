@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
+# HERMETICITY: passes REPO / BIN_DEST / CMD_DEST / HOOK_DEST / CLAUDE_SETTINGS
+# into a temp dir, so every write lands in a fixture.
+#
+# WAS RED WHEN CI FIRST RAN IT (8/3, run 31217552355); CLOSED 2026-08-07, and
+# the one-line fix uncovered two more defects behind it. `run_shims` passed only
+# BIN_DEST and CMD_DEST, so REPO fell back to $HOME/Documents/Projects/
+# realisateur and section D audited the LIVE SHARED CHECKOUT instead of the
+# branch. Passing REPO then exposed: (1) install-shims.sh tested `-d "$REPO/
+# .git"`, but in a linked worktree .git is a FILE, so it refused every worktree
+# as "not a realisateur checkout" -- and every agent in this repo works in
+# .claude/worktrees/*. Now `-e`, with E4/E5 pinning it. (2) With REPO passed,
+# the run reaches the hook section, and HOOK_DEST/CLAUDE_SETTINGS were NOT
+# redirected -- so this suite would have written into the real ~/.claude/hooks.
+# Both overrides added. No assertion changed.
+#
 # install-shims.test.sh -- the symlink-at-install-target case.
 #
 # Regression test for the 2026-08-01 incident: a hand-made symlink at an

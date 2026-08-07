@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# HERMETICITY: offline, zero AI, no network. Every case builds a fixture
+# directory holding the two JSON documents the script reads (a `gh pr view`
+# payload and an issue timeline) and puts a fake `gh` at the front of PATH that
+# serves them, under one `mktemp -d`. Case F runs with a FAILING `gh` to pin
+# BLIND, and case G with `jq` absent -- so both unavailability paths are
+# exercised rather than inherited from whatever the runner happens to have.
+# No live PR, no live repository, no live tracker.
+#
 # claim-drift.test.sh -- witness for bin/claim-drift.sh.
 #
 # Offline, zero AI, no network. Every case builds a fixture directory holding

@@ -1,4 +1,16 @@
 #!/usr/bin/env bash
+# HERMETICITY: builds a throwaway scheduler repo per case, sets SCHED_ROOT at
+# it, and shims a FAILING `gh` ahead of the real one so the tracker probe is
+# deterministically BLIND. (The first draft set PATH=/usr/bin:/bin believing
+# that removed gh; gh lives in /usr/bin, so two cases were reading the live
+# tracker.)
+#
+# NOT WIRED TO CI: bin/thermostat-wiring.sh ITSELF. It probes the estate -- the
+# scheduler checkout, the issue tracker -- which a container cannot see, so
+# every ratcheted check would go BLIND and CI would be red for a reason that
+# says nothing about the branch. It is a HOST gate, run where the estate exists.
+# This suite is what CI can honestly assert about it.
+#
 # thermostat-wiring.test.sh -- witness for bin/thermostat-wiring.sh.
 #
 # Offline, zero AI, no network: every case builds a throwaway copy of the

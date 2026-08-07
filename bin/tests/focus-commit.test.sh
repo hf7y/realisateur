@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# HERMETICITY: builds bare remotes and clones in a temp dir, so the concurrent-
+# writer race it drives is a real one against fixtures and never touches origin.
+#
 # focus-commit.test.sh -- witness for bin/focus-commit.sh. Offline, zero AI,
 # no network: builds a throwaway bare remote + two clones in a temp dir and
 # drives a real concurrent-writer race through the script.

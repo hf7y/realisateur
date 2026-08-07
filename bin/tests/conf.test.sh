@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# HERMETICITY: overrides HOME and SCHED_ROOT into a temp dir, so nothing it
+# reads or writes is the live registry.
+#
 # conf.test.sh -- the defect that made propagation reach zero projects.
 #
 # THE LOAD-BEARING ASSERTIONS ARE A1 AND B1. A1: a conf written the way EVERY

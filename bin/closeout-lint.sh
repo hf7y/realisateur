@@ -213,17 +213,79 @@ while [ "$i" -lt "${#projects[@]}" ]; do
   # emit a symbol saying the domain was not read, rather than grow section A
   # to audit each worktree. A sensor that cannot represent "did not look"
   # reports it as "nothing there" -- see bin/silence-audit.sh.
+  # REVERSED 2026-08-07, and the measurement is why.
+  #
+  # Until today this emitted ONE `BLIND [worktrees]` line per repo and read
+  # nothing, per the 2026-07-28 decision (option b) to represent "did not look"
+  # rather than grow this section. On the real realisateur checkout that line
+  # covered THIRTEEN linked worktrees and sat directly above twelve loud FLAG
+  # lines that were all false (see the squash-merge note below). A guard whose
+  # entire purpose is finding stranded work was noisy about 12 resolved things
+  # and quiet about 13 places it had not looked -- and every agent in this
+  # estate works IN a worktree, so the unread domain is exactly where stranded
+  # work disproportionately lives. Signal-to-noise, precisely inverted.
+  #
+  # Probing all 13 for real: every one clean, none ahead. So reading them costs
+  # ZERO new FLAGs. The blindness was not protecting anyone from noise; it was
+  # not looking, and its remedy line was "run closeout-lint against them by
+  # hand" -- which is the "and then the human runs X" that Zach ruled out today.
+  #
+  # So: READ them. BLIND is kept for the case that actually earns it -- a
+  # worktree that cannot be read at all -- because trading "did not look" for a
+  # confident silence would be the same conflation pointed the other way.
   wt="$(git -C "$repo" worktree list --porcelain 2>/dev/null \
         | awk -v m="$repo" '/^worktree /{p=substr($0,10); if (p != m) print p}')"
   if [ -n "$wt" ]; then
-    n_wt="$(printf '%s\n' "$wt" | grep -c .)"
-    blind=$((blind+1))
-    echo "  BLIND [worktrees] $name: $n_wt linked worktree(s) NOT examined below"
-    printf '%s\n' "$wt" | while IFS= read -r w; do
-      printf '      %s [%s]\n' "$w" "$(git -C "$w" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
-    done
-    echo "      (their dirty/unpushed state is outside this check's domain --"
-    echo "       run closeout-lint against them by hand, or push them)"
+    while IFS= read -r w; do
+      [ -n "$w" ] || continue
+      # UNREADABLE is the only thing that still earns a BLIND: the directory is
+      # gone, or it is not a work tree any more. Nothing can be learned, and
+      # reporting that as "clean" is the "found nothing / nothing is wrong"
+      # conflation this whole script exists to refuse.
+      if [ ! -d "$w" ] || ! git -C "$w" rev-parse --git-dir >/dev/null 2>&1; then
+        blind=$((blind+1))
+        echo "  BLIND [worktree] $name: $w could not be read (directory gone or not a work tree)"
+        continue
+      fi
+      wbr="$(git -C "$w" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+      echo "  read [worktree] $name: $w [$wbr]"
+
+      # AN UNPUSHED COMMIT IS THE UNAMBIGUOUS FINDING, and the state the old
+      # code could not represent at all: work was committed and never
+      # published. Measured against the branch's own remote ref, never `@{u}`
+      # -- a branch pushed by explicit refspec has no upstream configured and
+      # is still safely on origin (BUILD-DISCIPLINE's settled definition; the
+      # `@{u}` form over-reported by two on the first propagation pass).
+      if git -C "$w" rev-parse --verify -q "origin/$wbr" >/dev/null 2>&1; then
+        wahead="$(git -C "$w" rev-list --count "origin/$wbr..HEAD" 2>/dev/null)"
+        if [ "${wahead:-0}" -gt 0 ]; then
+          echo "    FLAG [worktree-unpushed] $name: $wahead commit(s) on '$wbr' in $w not on origin/$wbr"
+          git -C "$w" log --oneline "origin/$wbr..HEAD" 2>/dev/null | head -5 | sed 's/^/      /'
+          flags=$((flags+1))
+        fi
+      fi
+
+      # A DIRTY TREE IS REPORTED AND DOES NOT GATE, deliberately.
+      #
+      # A concurrent agent's worktree is dirty by construction for as long as
+      # it is running. FLAGging that would make this guard red during every
+      # parallel session, and a guard that is red by default is furniture --
+      # which is the exact failure the rest of this commit is undoing. It is
+      # also not this run's to resolve: the propagated concurrent-agents rule
+      # forbids acting on another agent's in-flight tree, and three subagents
+      # already spent real effort proving they were right to refuse.
+      #
+      # Never silent, though. "A dirty tree at exit is a failed run" is a real
+      # standard; a human reading a closing report must see it and decide.
+      wdirty="$(git -C "$w" status --porcelain 2>/dev/null | grep -c .)"
+      if [ "${wdirty:-0}" -gt 0 ]; then
+        echo "    note [worktree-dirty] $name: $wdirty uncommitted path(s) in $w"
+        echo "      (not a FLAG: a live concurrent agent's tree is dirty by"
+        echo "       construction, and it is that run's to resolve, not this one's)"
+      fi
+    done <<EOF
+$wt
+EOF
   fi
 
   ct="$(git -C "$repo" log -1 --format=%ct 2>/dev/null)"
@@ -290,14 +352,89 @@ while [ "$i" -lt "${#projects[@]}" ]; do
     [ -n "$sha" ] || return 1
     [ -n "$(git -C "$repo" branch -r --contains "$sha" 2>/dev/null | head -1)" ]
   }
+
+  # SQUASH-MERGE MAKES `on_a_remote` STRUCTURALLY BLIND (2026-08-07).
+  #
+  # THE NUMBERS. This section reported 12 [host-only-branch] FLAGs against the
+  # realisateur checkout -- "unmerged work at risk" -- and all 12 were PRs that
+  # had been squash-merged and had their upstream branch deleted. Zero true
+  # positives, 12 false. Reconciling that against the 26 local branches whose
+  # upstream is `gone`: 29 branches had no origin/<name> ref, of which 4 were
+  # skipped as other-worktree and 13 were downgraded by `on_a_remote` -- but
+  # downgraded BY COINCIDENCE, because some other still-existing remote branch
+  # happened to contain their tip, not because anything knew they had landed.
+  # So the old rule was wrong in BOTH directions: it exempted 13 by accident
+  # and flagged 12 by accident, over a set where all 25 were equally merged.
+  #
+  # THE CAUSE IS THAT SQUASH REWRITES. GitHub lands ONE new commit carrying the
+  # branch's content under a DIFFERENT sha, then deletes the branch. So the
+  # question `on_a_remote` asks -- "is this exact commit reachable from a
+  # remote ref?" -- is correctly answered NO for work that landed weeks ago.
+  # No amount of fetching fixes it. The question is unanswerable, not unasked.
+  #
+  # THE QUESTION THAT IS ANSWERABLE: "is this branch's CONTENT already on the
+  # default branch?" Reconstruct what GitHub's squash would have produced -- a
+  # single commit whose tree is the branch tip's tree, parented on the merge
+  # base -- and ask `git cherry` whether the default branch already carries a
+  # patch-identical commit. That is exactly the object GitHub created, so the
+  # patch-ids match.
+  #
+  # OFFLINE ON PURPOSE, AND THIS IS A DELIBERATE CHOICE. `gh pr list --head`
+  # would answer the same question from the authority, and it was rejected as
+  # the PRIMARY test: a guard that hard-requires the network goes BLIND on a
+  # plane, in a container, and on the read-only deploy-key accounts, and a
+  # BLIND guard that then FLAGs everything is the same noise by another route.
+  # This probe needs no remote it does not already have, so it works
+  # everywhere the old one did. Measured: it identifies all 12 offline. What it
+  # cannot see is a branch merged since this clone last fetched -- that still
+  # FLAGs, which is the honest answer for a clone that has not looked.
+  #
+  # IT WRITES ONE UNREFERENCED OBJECT per candidate branch. `git commit-tree`
+  # creates a loose commit that no ref points at; `git gc` prunes it and
+  # nothing reachable changes. Identity is supplied here rather than inherited,
+  # because a CI runner or a fresh container has no global git identity and
+  # commit-tree fails with "empty ident name" -- which would make this probe
+  # silently unavailable in exactly the environment the workflow runs in.
+  default_remote="$(git -C "$repo" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null)"
+  if [ -z "$default_remote" ]; then
+    for c in origin/main origin/master; do
+      git -C "$repo" rev-parse -q --verify "$c" >/dev/null 2>&1 && { default_remote="$c"; break; }
+    done
+  fi
+  landed() { # <branch> -> 0 if its content is already on the default branch
+    local br="$1" base tree basetree probe
+    [ -n "$default_remote" ] || return 1
+    base="$(git -C "$repo" merge-base "$default_remote" "$br" 2>/dev/null)" || return 1
+    [ -n "$base" ] || return 1
+    tree="$(git -C "$repo" rev-parse -q --verify "$br^{tree}" 2>/dev/null)" || return 1
+    basetree="$(git -C "$repo" rev-parse -q --verify "$base^{tree}" 2>/dev/null)"
+    # A branch whose tree already equals the merge base's adds nothing at all.
+    # `git cherry` on an empty patch is not defined to say so, and a branch
+    # with nothing in it has nothing to lose either way.
+    [ "$tree" = "$basetree" ] && return 0
+    probe="$(GIT_AUTHOR_NAME=closeout-lint GIT_AUTHOR_EMAIL=closeout-lint@invalid \
+             GIT_COMMITTER_NAME=closeout-lint GIT_COMMITTER_EMAIL=closeout-lint@invalid \
+             git -C "$repo" commit-tree "$tree" -p "$base" -m squash-probe 2>/dev/null)" || return 1
+    [ -n "$probe" ] || return 1
+    case "$(git -C "$repo" cherry "$default_remote" "$probe" 2>/dev/null)" in
+      -*) return 0 ;;
+    esac
+    return 1
+  }
   while IFS= read -r br; do
     [ -n "$br" ] || continue
     if [ -n "$wt_branches" ] && printf '%s\n' "$wt_branches" | grep -qxF "$br"; then
-      echo "    skip [other-worktree] $name: '$br' is checked out in a linked worktree (BLIND above -- not this run's to push)"
+      echo "    skip [other-worktree] $name: '$br' is checked out in a linked worktree (read above -- not this run's to push)"
       continue
     fi
     if ! git -C "$repo" rev-parse --verify -q "origin/$br" >/dev/null 2>&1 && on_a_remote "$br"; then
       echo "    note [stale-pointer] $name: '$br' has no origin/$br, but its tip is already reachable from a remote ref -- nothing unpushed"
+      continue
+    fi
+    # ...and the same for a branch that was SQUASH-merged, whose tip is on no
+    # remote by construction but whose content is on the default branch.
+    if ! git -C "$repo" rev-parse --verify -q "origin/$br" >/dev/null 2>&1 && landed "$br"; then
+      echo "    note [landed] $name: '$br' has no origin/$br, but its content is already on $default_remote (squash-merged) -- nothing unpushed"
       continue
     fi
     if git -C "$repo" rev-parse --verify -q "origin/$br" >/dev/null 2>&1; then
@@ -380,12 +517,23 @@ fi
 [ -n "$REPO_ARG" ] || session_wide_sections
 
 echo
+# BLIND LEADS. It used to be a trailing clause after the FLAG count, and on
+# 2026-08-07 that is exactly how "13 linked worktree(s) NOT examined" got
+# skipped: it was one quiet line above twelve loud FLAG lines that were all
+# false. An admission of not having looked is a weaker claim than a finding
+# but a WORSE result, because a finding is bounded and not-looking is not. It
+# goes first, in its own banner, or it gets read last and therefore never.
+if [ "$blind" -gt 0 ]; then
+  echo "!! BLIND: $blind domain(s) existed and were NOT read. This is NOT a clean"
+  echo "!! result -- an unread domain can hold anything, including the stranded"
+  echo "!! work this check exists to find."
+  echo
+fi
 if [ -n "$REPO_ARG" ]; then
   echo "== $flags FLAG(s) in $REPO_ARG; $blind BLIND =="
 else
   echo "== $flags FLAG(s) across $touched recently-touched repo(s); $blind BLIND =="
 fi
-[ "$blind" -gt 0 ] && echo "BLIND means a domain existed and was NOT read -- not a clean result."
 echo "FLAGs are candidates for the closing session to resolve before it ends;"
 echo "this script never edits, commits, or pushes anything."
 

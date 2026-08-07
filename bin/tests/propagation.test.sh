@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
+# HERMETICITY: reads this checkout's own bin/ and bin/lib/propagation-set.sh --
+# which is the point, since the classification it audits lives here -- and runs
+# every behavioural case against fixtures under one `mktemp -d`, with HOME,
+# TICK_STATE and TICK_INSTALLER redirected into it. No network: the endpoint
+# cases feed the real `curl` a `file://` URL, so the parse and grading paths
+# are the production ones with no host to be up. Sections that assert the tick
+# is push-free do it by reading the script's own text, not by running ssh or
+# sudo, and one case runs with PATH=/usr/bin:/bin to prove the grading survives
+# both being absent. Nothing reads the live estate or any other account.
+#
 # propagation.test.sh -- THE DEV/PROD DOCTRINE, AS A GUARD.
 #
 # Zach, 2026-08-07, directing this work: "creates a test script rather than
