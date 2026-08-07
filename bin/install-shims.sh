@@ -61,7 +61,19 @@ REPO="${REPO:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/realisateur}"
 # says ("a second host wants its own stable path here, set once"). What was
 # missing is that choosing a path nobody ever validated is indistinguishable
 # from choosing the right one, right up until nothing is installed.
-if [ ! -d "$REPO/bin" ] || [ ! -d "$REPO/.git" ]; then
+# `-e "$REPO/.git"`, NOT `-d`. In a linked worktree (and in a submodule)
+# `.git` is a FILE containing `gitdir: ...`, so the `-d` form this line used
+# until 2026-08-07 refused every worktree with "does not name a realisateur
+# checkout" -- which is false: a worktree is a checkout. That is not a
+# hypothetical: every agent in this repo works in .claude/worktrees/*, and
+# bin/tests/install-shims.test.sh now passes its own tree as REPO, so the
+# wrong predicate made the suite fail from the only place it is ever run.
+#
+# This does NOT reopen the worktree hazard the header above names. That hazard
+# is about DERIVING REPO from BASH_SOURCE, which this script still refuses to
+# do; reaching here at all means someone set REPO explicitly. E1/E2 still
+# refuse a directory that is no checkout at all.
+if [ ! -d "$REPO/bin" ] || [ ! -e "$REPO/.git" ]; then
   printf '%s: REPO does not name a realisateur checkout: %s\n' \
     "${0##*/}" "$REPO" >&2
   printf '%s: (need both %s/bin and %s/.git)\n' "${0##*/}" "$REPO" "$REPO" >&2

@@ -89,7 +89,16 @@ newrepo strictclean
 newrepo dirtyrepo && echo scratch >> "$T/dirtyrepo/f.txt"
 newrepo aheadrepo && { echo two > "$T/aheadrepo/g.txt"; git -C "$T/aheadrepo" add -A; \
                        git -C "$T/aheadrepo" commit -qm ahead; }
+# `orphan` MUST CARRY A COMMIT THAT IS ON NO REMOTE. Branching it at main's
+# tip -- which is what this fixture did until 2026-08-07 -- no longer builds a
+# host-only branch: 957b8b8 gave closeout-lint.sh an `on_a_remote` exemption
+# that correctly downgrades a branch whose tip is already reachable from a
+# remote ref to `note [stale-pointer]`, since there is nothing unpushed about
+# it. The script was right and the fixture had gone stale, so A4 failed
+# describing a state the fixture no longer produced.
 newrepo detached && git -C "$T/detached" checkout -q -B orphan
+echo host-only > "$T/detached/only-here.txt"; git -C "$T/detached" add -A
+git -C "$T/detached" commit -qm 'exists on no remote'
 newrepo oldrepo
 GIT_COMMITTER_DATE="2026-07-01T00:00:00" GIT_AUTHOR_DATE="2026-07-01T00:00:00" \
   git -C "$T/oldrepo" commit -q --amend --no-edit --date="2026-07-01T00:00:00" >/dev/null
@@ -239,6 +248,16 @@ rc    "E2 so a stale FOCUS.md cannot gate one tree"       0 "$RUN_RC"
 # The age gate answers "did this session touch it", which is the wrong
 # question when the caller named the tree. oldrepo's HEAD is 2026-07-01 and
 # HOURS=12, so registry mode never scans it; --repo must.
+#
+# The host-only branch E3 names has to be one closeout-lint will actually
+# examine. `oldside` is not: A9 above puts it in a LINKED WORKTREE, and
+# 957b8b8 made the branch audit `skip [other-worktree]` those -- correctly,
+# they are not this run's to push. So from 957b8b8 onward oldrepo's only
+# examined branch was `main`, which has an origin/main and reports
+# [unpushed], and E3 failed asking for a string the fixture no longer
+# produced. A plain branch at oldrepo's amended HEAD (not on any remote, not
+# checked out anywhere) is the state E3 has always been about.
+git -C "$T/oldrepo" branch -q oldhostonly
 out="$(run "$T/focus-ok.md" "$T/blockers-today.md" oldrepo)"
 has   "E3 registry mode skips a stale repo"    "$out" "no registered repo has a commit younger"
 run_rc "$T/focus-ok.md" "$T/blockers-today.md" --repo "$T/oldrepo"
