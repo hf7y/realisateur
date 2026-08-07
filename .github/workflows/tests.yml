@@ -43,7 +43,11 @@
 #                          the witness path is exercised and provably FAILS
 #                          rather than being skipped. No network, no real key.
 #
-# All nine are therefore wired. If any of them ever needs a real ~/.local/bin,
+# All of them are therefore wired -- 12 suites as of 2026-08-07, and the loop
+# below globs rather than lists, so a new suite gates the moment it lands. (The
+# count is stated here for orientation only; it said "nine" for two suites
+# longer than it was true, which is exactly why the RUNNER must never be a
+# hand-maintained list.) If any of them ever needs a real ~/.local/bin,
 # a real scheduler registry or a real network, the honest fix is to give it a
 # fixture -- NOT to drop it from this list, and never to weaken the assertion.
 #
