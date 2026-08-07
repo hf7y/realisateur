@@ -2,6 +2,12 @@
 # release-ledger.sh -- grade the release channel from the verdict it emits,
 # rather than from the builds it does or does not produce.
 #
+# GUARD: does tonight's silence mean nothing changed, or that main was broken?
+# RUNNER: bin/selfdev-release-tick.sh bin/tests/release-ledger.test.sh
+# GUARD-TEST: bin/tests/release-ledger.test.sh
+# GATE: none -- reads the published verdict endpoint; the fixture is in its own suite
+# VERIFIED: 2026-08-07 via bash bin/release-ledger.sh (refuses without --url/--ledger, exits non-zero) and its suite
+#
 # ============================================================================
 # THE PROBLEM THIS INVERTS
 # ============================================================================

@@ -1,14 +1,22 @@
 #!/usr/bin/env bash
-# precipitation-scan.sh -- offline-first PROMOTION-SIGNAL sense. Realisateur's
-# fourth survey alongside ecosystem-survey.sh, milestone-audit.sh and
-# hygiene-lint.sh; zero AI cost (plain bash/awk), same discipline as
-# scheduler's docs/offline-first-checks.md. Run at the top of every /ideate
-# and /nightly-batch pass, after ecosystem-survey.sh.
+# precipitation-scan.sh -- offline-first PROMOTION-SIGNAL sense. One of
+# realisateur's two surveys since 2026-08-07 -- this and hygiene-lint.sh;
+# ecosystem-survey.sh, milestone-audit.sh and steward-survey.sh were retired
+# as re-implementations of the same registry enumeration that nothing ran.
+# Zero AI cost (plain bash/awk), same discipline as scheduler's
+# docs/offline-first-checks.md. Run at the top of every /ideate and
+# /nightly-batch pass.
+#
+# GUARD: which backlog items have re-arrived in the same shape, i.e. are ready to build?
+# RUNNER: operator -- read at the top of an /ideate or /nightly-batch pass
+# GUARD-TEST: none -- no suite; it ranks signals and asserts nothing, which is why it is a readout and not a gate
+# GATE: default
+# VERIFIED: 2026-08-07 via bash bin/precipitation-scan.sh
 #
 # WHY THIS EXISTS
 # ---------------
-# ecosystem-survey.sh ranks the backlog OLDEST-FIRST -- one signal, and by
-# UNIVERSE.md's own account the weakest of the three: "re-arrival in the same
+# The retired ecosystem-survey.sh ranked the backlog OLDEST-FIRST -- one
+# signal, and by UNIVERSE.md's own account the weakest of the three: "re-arrival in the same
 # shape is a stronger 'ready to build' signal than age (oldest-first),
 # enthusiasm (newest-first), or any self-report of certainty."
 #
@@ -64,7 +72,13 @@ cli_guard "$@"
 
 SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 FOCUS_DIR="${FOCUS_DIR:-$SCHED_ROOT/focus}"   # overridable for fixture tests
-[ -d "$FOCUS_DIR" ] || { echo "FATAL: scheduler focus/ not found at $FOCUS_DIR" >&2; exit 2; }
+# BLIND, not FATAL -- reworded 2026-08-07. The exit code was already right;
+# the WORD was not, and the word is what a reader acts on. "FATAL" reads as
+# "this tool is broken"; the true statement is "I could not look, so I am
+# telling you nothing rather than telling you nothing is wrong". Found by
+# bin/tests/guard-estate.test.sh check D, which requires a non-zero exit with
+# no findings to say which of the three world-states it is in.
+[ -d "$FOCUS_DIR" ] || { echo "precipitation-scan: BLIND: scheduler focus/ not found at $FOCUS_DIR" >&2; echo "precipitation-scan: this is 'I cannot see', NOT 'nothing to report'." >&2; exit 2; }
 
 # Tunables -- printed below so any run is reproducible from its own output.
 # Jaccard over informative terms: shared / (|A| + |B| - shared). Deliberately

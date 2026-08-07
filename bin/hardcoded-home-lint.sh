@@ -2,6 +2,12 @@
 # hardcoded-home-lint.sh -- refuse an absolute path into a named user's home
 # in executable code.
 #
+# GUARD: does executable code carry an absolute path into a named user's home?
+# RUNNER: bin/tests/hardcoded-home-lint.test.sh
+# GUARD-TEST: bin/tests/hardcoded-home-lint.test.sh
+# GATE: default
+# VERIFIED: 2026-08-07 via bash bin/hardcoded-home-lint.sh (87 tracked files, clean) and its suite
+#
 # THE FAILURE THIS EXISTS FOR. `bashify/lib/coin.sh` carried
 # `SCHED="/home/zach/Documents/Projects/scheduler"` with no override. On every
 # account except zach that directory does not exist, so `coin` found no

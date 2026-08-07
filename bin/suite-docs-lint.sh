@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # suite-docs-lint.sh -- a suite documents ITSELF; the workflow names NO suite.
 #
+# GUARD: does every suite document its own hermeticity, and does the workflow name none?
+# RUNNER: bin/tests/suite-docs-lint.test.sh
+# GUARD-TEST: bin/tests/suite-docs-lint.test.sh
+# GATE: default
+# VERIFIED: 2026-08-07 via bash bin/suite-docs-lint.sh and bash bin/tests/suite-docs-lint.test.sh
+#
 # THE FAILURE THIS EXISTS FOR, with the numbers.
 #
 # .github/workflows/tests.yml carried a hand-maintained per-suite ledger in its

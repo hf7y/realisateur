@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 # hygiene-lint.sh -- offline-first (zero AI) build-hygiene scan across every
-# scheduler-registered project, realisateur's third mechanical survey
-# alongside bin/ecosystem-survey.sh (ecosystem health) and
-# bin/incubation-audit.sh (graduation signals). Same discipline as both and
-# as scheduler's docs/offline-first-checks.md: gather real signals with plain
+# scheduler-registered project. Since 2026-08-07 it is one of TWO surveys, not
+# five: ecosystem-survey.sh, milestone-audit.sh and steward-survey.sh were
+# retired as re-implementations of the same registry enumeration that nothing
+# ran (bin/tests/guard-estate.test.sh records what that gave up), leaving this
+# and precipitation-scan.sh. Same discipline as scheduler's
+# docs/offline-first-checks.md: gather real signals with plain
 # git/grep, surface them, and leave the JUDGMENT to a human or an AI reading
 # the output -- this script never fixes anything and never decides a finding
 # is real; a secret-looking string or a tracked binary might be intentional.
+#
+# GUARD: do the recurring build/deploy failure patterns appear in any registered project?
+# RUNNER: bin/tests/hygiene-lint.test.sh
+# GUARD-TEST: bin/tests/hygiene-lint.test.sh
+# GATE: strict
+# VERIFIED: 2026-08-07 via bash bin/hygiene-lint.sh (110 FLAGs over 13 projects) and its suite
 #
 # It checks for the recurring build/deploy failure patterns distilled in
 # realisateur's BUILD-DISCIPLINE.md (itself generalized from
@@ -39,7 +47,7 @@
 # a documented recurring FLAG beats a special case that could hide a real one.
 #
 # Exit status is 0 by default -- findings are signals, not build failures
-# (same stance as ecosystem-survey.sh). Grep for "FLAG" in the output to
+# (grep for "FLAG" in the output to
 # gate on it, or pass --strict for a hard exit 1 when any FLAG was printed
 # (exit 2, via lib/cli-guard.sh, is already "usage error" -- so --strict
 # uses 1, matching reach-lint.sh/silence-audit.sh).
@@ -74,7 +82,7 @@ for a in "$@"; do
   esac
 done
 
-# --- discover registered projects (same loop as ecosystem-survey.sh) --------
+# --- discover registered projects -----------------------------------------
 projects=()
 for conf in "$SCHED_ROOT"/schedule/*.conf; do
   name="$(basename "$conf" .conf)"
@@ -95,6 +103,25 @@ echo " decides what's real. See realisateur/BUILD-DISCIPLINE.md for the rules."
 echo " Grep 'FLAG' to count; this script never edits or fixes anything.)"
 echo
 echo "== scanning ${#projects[@]} project(s): $(printf '%s,' "${projects[@]}" | sed 's/,$//') =="
+
+# BLIND, ADDED 2026-08-07. Until this existed, an unreadable or absent registry
+# produced "== scanning 0 project(s) ==", a full run of every section over
+# nothing, and exit 0. Found by bin/tests/guard-estate.test.sh check D, which
+# pointed this script at an empty SCHED_ROOT and got `1 total FLAG(s) across 0
+# project(s)` with exit 0 -- so it was simultaneously (a) exiting clean having
+# looked at nothing and (b) printing section 12's FLAG accusing SILENCE-AUDIT
+# of exactly that defect. The null-discriminator was itself undiscriminating.
+#
+# Exit 3, matching bin/silence-audit.sh's BLIND code. Not 2: 2 is a usage
+# error via lib/cli-guard.sh, and "you typed the command wrong" and "the
+# registry is not where I was told to look" are different answers.
+if [ "${#projects[@]}" -eq 0 ]; then
+  echo
+  echo "  BLIND: no registered project was readable under $SCHED_ROOT/schedule/"
+  echo "  This is 'I could not look', NOT 'nothing to report'. Scanning nothing"
+  echo "  and reporting clean is the defect section 12 below exists to detect."
+  exit 3
+fi
 
 total_flags=0
 
@@ -229,7 +256,7 @@ for name in "${projects[@]}"; do
   # editing, missing from the one that actually runs unattended.
   #
   # Live case 2026-07-26: precipitation-scan.sh was wired into
-  # ecosystem-survey.sh and documented in .claude/commands/ideate.md, but NOT
+  # documented in .claude/commands/ideate.md, but NOT
   # in nightly-batch.md -- so every unattended pass printed promotion-signal
   # reports with no doctrine attached, which is exactly the run with no human
   # present to catch a false positive. Same shape as the .claude/->.scheduler/

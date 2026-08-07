@@ -5,6 +5,12 @@
 # see: not "which command files name this script", but "can the executor
 # reading this file actually reach what it names".
 #
+# GUARD: can the executor reading a command file actually reach what that file names?
+# RUNNER: bin/tests/reach-lint.test.sh
+# GUARD-TEST: bin/tests/reach-lint.test.sh
+# GATE: strict
+# VERIFIED: 2026-08-07 via bash bin/reach-lint.sh (0 FLAGs) and its suite
+#
 # The 2026-07-27 failure it exists to prevent: /ideate and /cloture lived in
 # realisateur/.claude/commands only, and six of the nine scripts they told a
 # session to run had no PATH shim. Nothing flagged it, because a
