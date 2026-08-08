@@ -5,7 +5,7 @@
 # RUNNER: bin/tests/ownership-audit.test.sh
 # GUARD-TEST: bin/tests/ownership-audit.test.sh
 # GATE: strict --repo $TREE
-# VERIFIED: 2026-08-08 via bash bin/ownership-audit.sh --strict (21272 of 25912 lines foreign = 82.0%, 0 unclassified, exit 3) and bash bin/tests/ownership-audit.test.sh
+# VERIFIED: 2026-08-08 via bash bin/ownership-audit.sh --strict (21273 of 26663 lines foreign = 79.7%, 0 unclassified, exit 3) and bash bin/tests/ownership-audit.test.sh
 #
 # ---------------------------------------------------------------------------
 # THE QUESTION, AND THE ORDER IT HAS TO BE ASKED IN
@@ -146,6 +146,13 @@ add_recv() {
 while IFS= read -r f; do
   [ -n "$f" ] || continue
   [ -f "$TREE/$f" ] || continue
+  # A .ratchet is a RECORD, not mechanism, and this one is a record of its own
+  # measurement: it holds one line per foreign file, so counting it makes the
+  # total a function of the answer. Measured while writing this: --accept
+  # recorded 79.7% and the next run of the same tree reported 79.3%, purely
+  # because the file had grown by 140 lines between the two. A number that
+  # moves when nothing moved is not a measurement.
+  case "$f" in *.ratchet) continue ;; esac
   n="$(wc -l < "$TREE/$f" 2>/dev/null)" || n=0
   n="${n// /}"
   total=$((total + n))

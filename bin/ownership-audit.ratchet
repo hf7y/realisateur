@@ -1,8 +1,8 @@
 # ownership-audit.ratchet -- the foreign surface when last accepted.
 # Lowered by --accept, never raised by any flag. See bin/ownership-audit.sh.
-# accepted 2026-08-07T20:30:37-05:00
-foreignlines 21272
-foreignshare 820
+# accepted 2026-08-07T20:40:27-05:00
+foreignlines 21273
+foreignshare 797
 file .claude/commands/bashify.md
 file .claude/commands/cloture.md
 file .github/workflows/claim-drift.yml

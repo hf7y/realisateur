@@ -145,8 +145,6 @@ bin/restamp-discipline.sh          realisateur propagates the realisateur baseli
 bin/make-bootstrap-branch.sh       realisateur rebuilds THE PLAY's starting line. THE PLAY is realisateur's own experiment about whether a FOCUS.md can direct an agent.
 bin/ownership-audit.sh             realisateur this audit. Sense over what this repo owns; the organ examining itself.
 bin/lib/ownership-set.sh           realisateur this ledger.
-bin/ownership-audit.ratchet        realisateur this ledger's baseline.
-bin/thermostat-wiring.ratchet      realisateur baseline for a mission-unique guard.
 bin/tests/guard-estate.test.sh     realisateur a test over the guard POPULATION. The population is realisateur's senses; no one project owns it.
 .github/workflows/tests.yml        realisateur this repo's own CI.
 .claude/commands/ideate.md         realisateur the interactive triage pass. README.md 2 and UNIVERSE.md Law 1's enforcement point.
