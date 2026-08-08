@@ -5,7 +5,7 @@
 # RUNNER: provision/verbs-meta/build-verbs.yml bin/tests/release-gate.test.sh
 # GUARD-TEST: bin/tests/release-gate.test.sh
 # GATE: none -- calls `gh` against live default branches; the fixture is in its own suite
-# VERIFIED: 2026-08-07 via bash bin/release-gate.sh --projects realisateur (RED, release BLOCKED -- correct, main is red)
+# VERIFIED: 2026-08-07 via bash bin/release-gate.sh --owner hf7y --projects "<all 12 bashified projects>" -> "3 green, 0 red, 0 pending, 9 ungated, 0 blind", GATE OPEN (was "0 green, 0 red, 0 pending, 1 ungated, 11 blind" on the check-runs endpoint) and bash bin/tests/release-gate.test.sh (71 passed, 0 failed)
 #
 # ============================================================================
 # WHY THIS EXISTS
@@ -47,7 +47,93 @@
 #      precisely the stale-evidence bug the directive named, and it is worse
 #      than no gate because it reports a verdict it did not earn.
 #
-# So: default branch HEAD, check runs for that sha, nothing inferred.
+# So: default branch HEAD, CI evidence for that sha, nothing inferred.
+#
+# ============================================================================
+# WHICH ENDPOINT THE EVIDENCE COMES FROM, AND WHY IT IS NOT THE OBVIOUS ONE
+# ============================================================================
+#
+# This file used to ask ONE endpoint:
+#
+#     GET /repos/{owner}/{repo}/commits/{sha}/check-runs
+#
+# and on the first real gated cut (2026-08-07) it returned
+# `check-runs query failed` for ELEVEN of twelve projects. The gate reported
+#
+#     0 green, 0 red, 0 pending, 1 ungated, 11 blind
+#
+# on a `main` that was green. It read as a public-vs-private partition, and it
+# was not: the one project that came back was simply the only PUBLIC one, so it
+# was readable without the permission the others needed.
+#
+# THE CAUSE. `/check-runs` requires the fine-grained permission **Checks:
+# Read**. `VERBS_READ_TOKEN` holds "Read access to actions, code, commit
+# statuses, and metadata" -- and Checks is not among them. Worse, when Zach
+# went to grant it, THERE IS NO "Checks" CATEGORY OFFERED on that token's
+# settings page. So the permission is not merely unset; it is not available to
+# set, and waiting for it is waiting for something that will not arrive.
+#
+# THE FIX USES WHAT THE TOKEN ALREADY HOLDS. The same evidence is readable
+# through two endpoints this token can already reach, and the gate now asks
+# BOTH:
+#
+#   GET /repos/{o}/{r}/actions/runs?head_sha=<sha>   (needs `actions: read`)
+#       -> .workflow_runs[] | status, conclusion
+#   GET /repos/{o}/{r}/commits/{sha}/status          (needs `statuses: read`)
+#       -> .total_count, .statuses[].state
+#
+# WHY BOTH, rather than quietly covering one and calling the other absent.
+# They are DIFFERENT SURFACES carrying different producers' results:
+#
+#   GitHub Actions  creates workflow runs AND check runs. Visible in the
+#                   first endpoint. This is all of this estate's CI today.
+#   External CI     (Travis, CircleCI, a webhook, a bot) posts COMMIT
+#                   STATUSES. Visible only in the second.
+#
+# Reading only Actions would grade a project whose CI is external as UNGATED
+# -- "no evidence" when evidence exists and might be RED. That is a false
+# absence, and a false absence here ALLOWS THE CUT. Reading only statuses
+# would miss every project in this org. So: both, unioned.
+#
+# THE GAP THIS LEAVES, named rather than hidden: a GitHub App that creates
+# CHECK RUNS but neither a workflow run nor a commit status is invisible to
+# both endpoints, and such a project grades UNGATED. Nothing in this org does
+# that today (probed below), and UNGATED is counted and printed rather than
+# folded into GREEN, so the blind spot shows up in the ratchet rather than
+# passing as a green. If a Checks-reading credential ever becomes available,
+# adding it as a third surface is the fix; widening the other two is not.
+#
+# VERIFIED EQUIVALENT, 2026-08-07, six projects, all three endpoints at the
+# same default-branch HEAD -- the new pair reproduces the old endpoint exactly,
+# including on the projects that have no CI at all:
+#
+#   project         actions/runs      commits/status   check-runs (old)
+#   --------------  ----------------  ---------------  ----------------
+#   senechal        success,success   0 statuses       success,success
+#   vim-arcade      success           0 statuses       success
+#   scheduler       (none)            0 statuses       (none)
+#   ecosim          (none)            0 statuses       (none)
+#   crt             (none)            0 statuses       (none)
+#   bibliothecaire  (none)            0 statuses       (none)
+#
+# ============================================================================
+# THE `state: "pending"` TRAP IN THE COMBINED STATUS ENDPOINT
+# ============================================================================
+#
+# `/commits/{sha}/status` returns a rolled-up `.state` field, and reaching for
+# it is the obvious thing to do. It is wrong, and it fails in the direction
+# that stops every release:
+#
+#   $ gh api repos/hf7y/realisateur/commits/$SHA/status \
+#       --jq '{state, total_count}'
+#   {"state":"pending","total_count":0}          # verified 2026-08-07
+#
+# A commit with NO statuses at all reports `state: "pending"` -- not "success",
+# not empty. Every project in this org has zero commit statuses, so a gate
+# keyed on `.state` would report PENDING for all twelve, every night, forever,
+# and defer every cut. So PRESENCE is decided by `.total_count`, never by
+# `.state`, and `.state` is not read at all. bin/tests/release-gate.test.sh
+# pins this with a fixture that returns exactly the shape above.
 #
 # ============================================================================
 # FOUR STATES, NOT TWO. UNGATED IS THE ONE THAT MATTERS.
@@ -71,13 +157,21 @@
 # green" is the found-nothing/nothing-is-wrong conflation that MONKEY.md 5's
 # `garde` already cost this estate once.
 #
-#   GREEN    checks exist for HEAD and all concluded success/neutral/skipped
-#   RED      any check for HEAD concluded failure/timed_out/cancelled/
-#            action_required                      -> REFUSE, exit 1
-#   PENDING  any check for HEAD is queued or in_progress
+#   GREEN    evidence exists for HEAD and all of it concluded success/
+#            neutral/skipped
+#   RED      any evidence for HEAD concluded failure/timed_out/cancelled/
+#            action_required/error                 -> REFUSE, exit 1
+#   PENDING  any evidence for HEAD is queued or in_progress
 #                                                  -> REFUSE, exit 4
-#   UNGATED  zero checks exist for HEAD -- the project has no CI
-#                                                  -> ALLOW, but counted
+#   UNGATED  BOTH surfaces answered and neither has anything for HEAD --
+#            the project has no CI                 -> ALLOW, but counted
+#   BLIND    a surface could not be asked at all   -> REFUSE, exit 3
+#
+# UNGATED and BLIND are deliberately not the same state, and the difference is
+# the whole lesson of 2026-08-07: "both endpoints answered, there is nothing
+# there" ALLOWS the cut, while "an endpoint refused to answer" must not. A
+# design that collapsed them would have turned that night's permission failure
+# into a silent GREEN across eleven projects instead of a loud refusal.
 #
 # PENDING gets its own exit code because the operator's action differs and
 # nothing else in the output would tell them: RED means go fix a tree,
@@ -191,29 +285,72 @@ for p in $PROJECTS; do
     blind=$((blind+1)); continue
   fi
 
-  # Conclusions for THIS sha only. A run against any other commit is not
-  # evidence about this one and is not returned here.
-  concl="$("$GH" api "repos/$OWNER/$p/commits/$sha/check-runs" \
-            --jq '[.check_runs[] | (.conclusion // ("!" + .status))] | join(",")' 2>/dev/null)"
-  rcgh=$?
-  if [ "$rcgh" != 0 ]; then
-    printf '  %-20s %-9.7s %-8s %s\n' "$p" "$sha" 'BLIND' 'check-runs query failed'
+  # ------------------------------------------------------------------------
+  # SURFACE 1: GitHub Actions workflow runs, for THIS sha only. A run against
+  # any other commit is not evidence about this one, and `?head_sha=` is what
+  # keeps it that way -- the rejected alternative 2 above is precisely what
+  # dropping that filter would produce.
+  #
+  # Workflow-run level, not job level: a run's `.conclusion` already
+  # aggregates its jobs, so a failed job is a failed run. One row per
+  # workflow instead of one per job, carrying the same verdict.
+  # ------------------------------------------------------------------------
+  runs="$("$GH" api "repos/$OWNER/$p/actions/runs?head_sha=$sha&per_page=100" \
+            --jq '[.workflow_runs[] | (.conclusion // ("!" + .status))] | join(",")' 2>/dev/null)"
+  rc_runs=$?
+
+  # ------------------------------------------------------------------------
+  # SURFACE 2: commit statuses, where external CI reports.
+  #
+  # `.total_count` decides PRESENCE. `.state` is NEVER read -- it returns
+  # "pending" for a commit with zero statuses, which is every commit in this
+  # org, and a gate keyed on it defers every cut forever. See the header.
+  # `pending` is mapped into the same `!`-prefixed vocabulary the Actions
+  # surface uses so there is ONE state machine below, not two.
+  # ------------------------------------------------------------------------
+  stat="$("$GH" api "repos/$OWNER/$p/commits/$sha/status" \
+            --jq 'if (.total_count // 0) == 0 then ""
+                  else [.statuses[] | (if .state == "pending" then "!pending" else .state end)] | join(",")
+                  end' 2>/dev/null)"
+  rc_stat=$?
+
+  # A QUERY THAT FAILED IS NOT A QUERY THAT RETURNED NOTHING. Tonight's bug
+  # presented as BLIND, which was honest and correct; collapsing "could not
+  # ask" into "nothing found" would have turned it into a silent GREEN. The
+  # surface that failed is named, because "which permission is missing" is
+  # the only question worth asking when this fires.
+  if [ "$rc_runs" != 0 ] || [ "$rc_stat" != 0 ]; then
+    failed_surface=''
+    [ "$rc_runs"  != 0 ] && failed_surface="actions/runs (needs actions:read)"
+    [ "$rc_stat"  != 0 ] && failed_surface="${failed_surface:+$failed_surface + }commits/status (needs statuses:read)"
+    printf '  %-20s %-9.7s %-8s %s\n' "$p" "$sha" 'BLIND' "query failed: $failed_surface"
     blind=$((blind+1)); continue
   fi
 
+  # The union. Both surfaces answered; either may legitimately be empty.
+  concl="$runs"
+  [ -n "$stat" ] && concl="${concl:+$concl,}$stat"
+
+  # ZERO EVIDENCE IS UNGATED, NEVER GREEN. Both endpoints answered and
+  # neither had anything to say about this sha, so nothing tested it. This is
+  # the direction that ALLOWS the cut, which is exactly why it is counted and
+  # printed rather than folded into the green tally.
   if [ -z "$concl" ]; then
-    printf '  %-20s %-9.7s %-8s %s\n' "$p" "$sha" 'UNGATED' 'no CI on this project'
+    printf '  %-20s %-9.7s %-8s %s\n' "$p" "$sha" 'UNGATED' 'no workflow run and no commit status for this sha'
     ungated=$((ungated+1)); ungated_names="$ungated_names $p"; continue
   fi
 
-  # A status prefixed `!` is a run that has not concluded. Unknown is not
+  # A conclusion prefixed `!` is a run that has not concluded. Unknown is not
   # green; it is a reason to come back.
   state=GREEN
   case ",$concl," in
     *,'!'*) state=PENDING ;;
   esac
+  # `error` is here for the statuses surface: it is the commit-status
+  # vocabulary's word for a failed check, and omitting it would grade an
+  # errored external build GREEN.
   case ",$concl," in
-    *,failure,*|*,timed_out,*|*,cancelled,*|*,action_required,*|*,startup_failure,*|*,stale,*) state=RED ;;
+    *,failure,*|*,timed_out,*|*,cancelled,*|*,action_required,*|*,startup_failure,*|*,stale,*|*,error,*) state=RED ;;
   esac
 
   printf '  %-20s %-9.7s %-8s %s\n' "$p" "$sha" "$state" "$concl"
