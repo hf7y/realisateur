@@ -63,8 +63,14 @@ mkrepo() {
     rm -rf "$d"; mkdir -p "$d/bin" "$d/man" "$d/lib"
     printf 'verb_fixture_lib_loaded=1\n' > "$d/lib/verb.sh"
     for v in "$@"; do
+        # `# KIND: verb` is part of the fixture because it is part of the
+        # declaration contract: bin/verb-kind-lint.sh runs over the
+        # assembled tree in section 6a and refuses a build containing a
+        # command that declares no channel. A fixture without it would test
+        # a build shape the cutter no longer accepts.
         cat > "$d/bin/$v" <<EOF
 #!/usr/bin/env bash
+# KIND: verb
 . "\$(dirname "\$0")/../lib/verb.sh"
 printf '%s -- fixture verb from $repo\n' "$v"
 EOF
@@ -254,6 +260,47 @@ esac
 : > "$TMP/repolist"
 cut >/dev/null 2>&1
 check "no readable repositories is BLIND, not a zero-verb build" "$?" "1"
+
+# --- 10. the channel check is WIRED, not merely present -----------------
+# Section 6a runs bin/verb-kind-lint.sh over the assembled tree. Asserted
+# here rather than only in that lint's own suite, because the failure this
+# guards against is not a broken lint -- it is a correct lint nothing calls.
+# Six of the guards surveyed on 2026-08-07 were hand-run only, and
+# guard-estate.test.sh check B exists because a guard nothing runs is
+# documentation with an exit code.
+#
+# 10a. A PRODUCT must not ride the workchain cut.
+mkrepo epsilon zz
+printf '#!/usr/bin/env bash\n# KIND: product\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "zz\\n"\n' \
+    > "$FIX/epsilon.git/bin/zz"
+chmod +x "$FIX/epsilon.git/bin/zz"
+g -C "$FIX/epsilon.git" add -A
+g -C "$FIX/epsilon.git" commit -m 'zz declares itself a product'
+printf 'epsilon\n' > "$TMP/repolist"
+cut --assemble "$TMP/asm10" >/dev/null 2>"$TMP/e10"
+check "a command declaring KIND: product is refused a place in the cut" "$?" "1"
+case "$(cat "$TMP/e10")" in
+    *PRODUCT*epsilon/zz*) ok "...and the refusal names the product and its project" ;;
+    *) bad "the refusal names the product" "got: $(cat "$TMP/e10")" ;;
+esac
+
+# 10b. A command that declares NOTHING and is not grandfathered is refused
+# on its first night. This is the arrival path the whole guard exists for:
+# the next product to ship down the workchain will be a new name, and the
+# ratchet in bin/verb-kind-lint.ratchet names only the 31 that predate it.
+mkrepo zeta qq
+printf '#!/usr/bin/env bash\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "qq\\n"\n' \
+    > "$FIX/zeta.git/bin/qq"
+chmod +x "$FIX/zeta.git/bin/qq"
+g -C "$FIX/zeta.git" add -A
+g -C "$FIX/zeta.git" commit -m 'qq declares no channel at all'
+printf 'zeta\n' > "$TMP/repolist"
+cut --assemble "$TMP/asm10b" >/dev/null 2>"$TMP/e10b"
+check "a new command declaring no channel is refused" "$?" "1"
+case "$(cat "$TMP/e10b")" in
+    *UNDECLARED*zeta/qq*) ok "...and the refusal names it" ;;
+    *) bad "the refusal names the undeclared command" "got: $(cat "$TMP/e10b")" ;;
+esac
 
 echo
 printf 'cut-verb-build: %d passed, %d failed\n' "$PASS" "$FAIL"

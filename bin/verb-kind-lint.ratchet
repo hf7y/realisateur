@@ -33,7 +33,8 @@
 # So it is listed, ONCE, with a date and a reason, which is the difference
 # between a concession and an omission. The lint still prints it as OWED on
 # every run. Removing this line is the LAST step of the migration, after the
-# product channel exists (see PRODUCT-CHANNEL.md) -- and at that point
+# product channel exists (filed with `defere`; see the DEFERRED block on the
+# pull request that introduced this file) -- and at that point
 # vim-arcade will declare `# KIND: product`, drop out of the workchain
 # manifest, and this entry will be stale and dropped by --accept.
 #

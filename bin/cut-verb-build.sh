@@ -461,6 +461,43 @@ if [ -n "$ASSEMBLE" ]; then
     esac
   done < <(grep -v '^#' "$manifest")
   [ "$bad" -eq 0 ] || die "$bad verb(s) did not assemble runnably. Refusing."
+
+  # --- 6a. every command declares which CHANNEL it belongs to -------------
+  # bin/verb-kind-lint.sh, run against the tree that was just assembled --
+  # which is the only place in this pipeline where the files are on local
+  # disk and their headers can be read for free. Section 2 reads the git
+  # TREE listing (paths and modes), not blobs, so asking this question there
+  # would cost one extra API call per verb inside the loop whose flakes
+  # already produce the BLIND refusals above.
+  #
+  # WHAT IT REFUSES. A product declaring `# KIND: product` must not ride the
+  # nightly workchain cut: this build is deliberately built NOT to move
+  # between cuts (see provision/verbs-meta/build-verbs.yml, "that stability
+  # is the feature"), and a product wants the opposite. And a command that
+  # declares NOTHING and was not in the build when the grandfather ratchet
+  # was seeded is refused on its first night, which is what stops the next
+  # product entering the same way this one did.
+  #
+  # NOT run under --dry-run: a dry run's read is short by an unknown amount
+  # by construction, so its manifest is the wrong population to grade.
+  #
+  # This lint lives in realisateur beside this script, so it is found
+  # relative to THIS file rather than looked up on PATH -- CI stages this
+  # repository at a path of its own choosing and there is no `verb-kind-lint`
+  # on a runner's PATH.
+  kindlint="$(dirname "${BASH_SOURCE[0]}")/verb-kind-lint.sh"
+  if [ ! -f "$kindlint" ]; then
+    # A missing guard is a finding, not an inconvenience.
+    die "cannot find verb-kind-lint.sh beside this script. Refusing to cut a build whose channel declarations were never checked."
+  fi
+  krc=0
+  bash "$kindlint" --build "$ASSEMBLE" >&2 || krc=$?
+  case "$krc" in
+    0) : ;;
+    2) die 'verb-kind-lint could not read the assembled build. That is BLIND, not clean -- refusing.' ;;
+    *) die 'the assembled build carries a command in the wrong channel, or one that declares no channel at all. See the lines above. Refusing.' ;;
+  esac
+
   say "assembled $verb_count verb(s) under $ASSEMBLE"
 fi
 
