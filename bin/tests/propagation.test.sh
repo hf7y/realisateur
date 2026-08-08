@@ -433,14 +433,17 @@ hasnt "...and never invents a plausible build id" "$O" "2026-"
 
 # ONE READER, with a NAMED exemption list rather than a loose rule.
 #
-# Three scripts legitimately resolve the pin path because they OWN the build
-# layout -- they create it, repoint it, or read a payload out of it. They are
+# Two scripts legitimately resolve the pin path because they OWN the build
+# layout -- they create it, repoint it, or read a payload out of it. (It was
+# three until 2026-08-08, when relink-verbs-to-build.sh was retired to the
+# vault: zero `bashified` worktrees remained to migrate off. See
+# ecosystem1/realisateur/RETIRED-2026-08-08.md.) They are
 # listed here by name so that adding a fourth is a visible review event and
 # not a quiet convenience. Everything that merely wants to KNOW the build id
 # must call prop_build_trailer(), or the ecosystem acquires a second answer
 # to "which build am I on" -- the one-fact-two-readers shape MONKEY.md 10
 # found five times in one day.
-PIN_OWNERS="install-verb-build.sh relink-verbs-to-build.sh ecosim-sensor-tick.sh"
+PIN_OWNERS="install-verb-build.sh ecosim-sensor-tick.sh"
 strays=""
 for f in "$REPO"/bin/*.sh; do
   n="$(basename "$f")"
