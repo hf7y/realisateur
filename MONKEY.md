@@ -917,6 +917,11 @@ them, in this order: `ecosim` (uid 3001) first, then `bibliothecaire` (3002),
 shared App collapses all four into one bot name, and "which agent pushed this"
 becomes unanswerable again, which is the question §11 exists to answer.
 
+> **SUPERSEDED later the same day — see §11.1.** Zach reversed this to *one
+> App, fleet-wide* (`unattended-monkey`, App **4521586**). Read §11.1 before
+> acting on the per-account roster above; it is kept here for the reasoning,
+> not as a live instruction.
+
 **App 4520255 (`monkey self-dev`) is ecosim's**, renamed. It was registered
 2026-08-07 under the one-App assumption, and a name that says `monkey` fits a
 host, not an account. Renaming is free **only while it has no key and no
@@ -1027,3 +1032,70 @@ read-only key there. That script has since moved to `scheduler -i` and no longer
 pushes, which is why the reader App above grants Issues RW mostly for the
 request queues. **Re-probe the exit code on a self-dev account before claiming
 this is fixed** — it is quoted here, not verified.
+
+## 11.1 One App, fleet-wide — decided and installed 2026-08-07 (Zach)
+
+This supersedes the per-account roster in §11. **One App**, `unattended-monkey`,
+App id **4521586**, bot `unattended-monkey[bot]`, owner `@hf7y`, installation
+**152065281**. Every self-dev account holds the same key, and therefore **every
+repo with a user on monkey is writable by every account**. That is the accepted
+trade, not an oversight.
+
+**Why the reversal.** Per-App identity buys **cryptographic** attribution —
+GitHub itself asserts which App pushed, and it cannot be spoofed. But the
+question actually being asked here is only ever bookkeeping: *"which agent did
+this?"* A per-agent **commit author** answers that for free, in `git log`, with
+no second App, no second key, and no second installation click. Paying N Apps
+for a property nobody is relying on is the wrong trade. Zach, verbatim: *"every
+repo writable, anything with a user on monkey, which will eventually be the
+entire ecosystem of verbs and more. I'll keep adding self-dev repos to this
+App... In theory they don't need to be able to build the toolchain. agree."*
+
+**In scope as of 2026-08-07** — 10 repos, verified from the App's own side by
+minting an installation token and reading `GET /installation/repositories`
+(count and names below are that response, not the `204`s that produced it):
+
+`hf7y/baudin`, `hf7y/bibliothecaire`, `hf7y/chezz`, `hf7y/crt`, `hf7y/ecosim`,
+`hf7y/gardien`, `hf7y/groc-mangr`, `hf7y/nine-speakers`, `hf7y/sequestria`,
+`hf7y/vim-arcade`
+
+One per uid 3000–3099 account on monkey. Every account had a matching
+`hf7y/<name>` repo; none was missing, and none was invented.
+
+**Deliberately out of scope, and to stay that way:**
+
+- **The toolchain** — `realisateur`, `scheduler`, `senechal`. Explicit
+  decision: agents do not need to build the toolchain. Read access to these is
+  already solved, per-repo and correctly, by the read-only deploy keys
+  (§11, "The play"), and that wiring is unchanged.
+- **`hf7y/verbs`** — public (`private=false`), so its payload needs no
+  credential at all, and the cut is performed by GitHub Actions **inside that
+  repo**, not by any agent holding this key.
+
+**Adding the next repo requires a *classic* PAT.** `PUT
+/user/installations/152065281/repositories/{repository_id}` → `204`. Get the id
+from `gh api /repos/hf7y/<name> --jq .id`. It needs admin on the repo. The trap,
+**measured 2026-08-07**: an **OAuth-app token — which is what `gh auth login`
+yields — gets `403` from this endpoint even while carrying `repo` scope**, with
+the message `You do not have permission to modify this app on hf7y.` That
+message reads like a missing-admin problem and is not; it is the token *class*.
+Whoever onboards the next repo needs to know this or they will conclude the
+endpoint is broken and go looking for a permission that is already granted. Use
+a classic PAT with `repo` scope; Zach keeps one at `~/.config/selfdev/pat`
+(mode 600, never to be copied, never to reach monkey or a tracked file). Pass it
+by environment, never as an argv token.
+
+Adding is reversible: `DELETE` the same endpoint.
+
+**Revisit triggers.** A decision with no trip-wire is a decision nobody
+revisits. Reopen the one-App-vs-per-App question when **either** of these is
+true:
+
+1. **verb-class self-dev and end-user self-dev become meaningfully different —
+   *and there is a problem*.** The divergence alone is not the trigger; the
+   trigger is divergence that costs something. Blanket write across both classes
+   is fine while the classes are interchangeable.
+2. **`realisateur` itself starts self-developing on monkey.** At that moment the
+   toolchain exclusion above stops being free, and "every account can write
+   every repo" would mean an agent can rewrite the tooling that constrains it.
+   That is a different risk from the one this decision accepted.
