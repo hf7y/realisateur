@@ -1,0 +1,72 @@
+# verb-kind-lint.ratchet -- commands that were already in the verb build when
+# the declaration rule landed, and are forgiven until their own project adds
+# `# KIND: verb` to its bin/<name>. See bin/verb-kind-lint.sh.
+#
+# SHRINKS ONLY. `--accept` drops entries whose command has declared itself or
+# left the build; it will NOT add one. Growing this file is a hand edit, on
+# purpose, so that it is reviewed. A command that is not listed here and
+# declares nothing fails on its first night -- which is the whole requirement,
+# since the next product to ship down the workchain will be a NEW arrival and
+# not one of these thirty-two.
+#
+# seeded 2026-08-08 via bash bin/verb-kind-lint.sh --build ~/.local/share/verb-builds/current
+# against build 2026-08-06T003928Z (32 commands, 12 projects)
+#
+# ---------------------------------------------------------------------------
+# THE ONE ENTRY BELOW THAT IS NOT AN ORDINARY GRANDFATHER, AND WHY IT IS HERE
+# ---------------------------------------------------------------------------
+#
+# `vim-arcade/vim-arcade` is the product this guard was written to find. The
+# first draft of this file deliberately left it out, so that the finding
+# stayed a finding. Measured before shipping: with it absent, the lint exits
+# 1 against the live build, and bin/cut-verb-build.sh section 6a turns that
+# into a refusal -- which would have stopped the NIGHTLY CUT and frozen verb
+# distribution for all twelve projects and every account, over a violation
+# whose only fix lives in another repository's unmerged PR.
+#
+# That is the precise failure this repository keeps paying for, and
+# bin/verb-kind-lint.sh's own header argues against it two screens up: a
+# check nobody can make green gets deleted, not satisfied. Arming a
+# fleet-wide freeze unattended, at night, to make a point about a violation
+# that is already written down, is not a ratchet -- it is an outage.
+#
+# So it is listed, ONCE, with a date and a reason, which is the difference
+# between a concession and an omission. The lint still prints it as OWED on
+# every run. Removing this line is the LAST step of the migration, after the
+# product channel exists (see PRODUCT-CHANNEL.md) -- and at that point
+# vim-arcade will declare `# KIND: product`, drop out of the workchain
+# manifest, and this entry will be stale and dropped by --accept.
+#
+# DO NOT add a second entry of this kind without the same paragraph.
+undeclared vim-arcade/vim-arcade
+undeclared baudin/loge
+undeclared bibliothecaire/accroche
+undeclared bibliothecaire/cueille
+undeclared bibliothecaire/fonde
+undeclared bibliothecaire/glane
+undeclared bibliothecaire/range
+undeclared bibliothecaire/trie
+undeclared bibliothecaire/verse
+undeclared crt/sonne
+undeclared ecosim/sonde
+undeclared gardien/fauche
+undeclared gardien/garde
+undeclared gardien/transplante
+undeclared groc-mangr/mange
+undeclared nine-speakers/chante
+undeclared realisateur/arpente
+undeclared realisateur/epluche
+undeclared realisateur/juge
+undeclared scheduler/arme
+undeclared scheduler/dose
+undeclared scheduler/jauge
+undeclared scheduler/rapporte
+undeclared scheduler/relis
+undeclared senechal/ausculte
+undeclared senechal/debarrasse
+undeclared senechal/installe
+undeclared senechal/lance
+undeclared senechal/recense
+undeclared senechal/veille
+undeclared sequestria/capte
+undeclared vim-arcade/entraine

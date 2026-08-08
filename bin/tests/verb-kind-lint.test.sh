@@ -1,0 +1,400 @@
+#!/usr/bin/env bash
+# verb-kind-lint.test.sh -- the suite for bin/verb-kind-lint.sh.
+#
+# HERMETICITY: every case builds a throwaway BUILD TREE under mktemp -- a
+# manifest.tsv plus <project>/bin/<verb> files this script writes itself --
+# and points the lint at it with --build. Nothing here reads
+# ~/.local/share/verb-builds, nothing reaches the network, and no case
+# depends on which build happens to be current on the machine running it.
+# The one place a real number appears is case 10, and that number is baked
+# into a FIXTURE transcribed from the 2026-08-06T003928Z manifest, not read
+# from the host.
+#
+# WHY THE FIXTURES ARE BUILD TREES AND NOT MOCK FUNCTIONS
+# The lint's whole subject is the relationship between a manifest row and
+# the file that row points at. A mock that returns "declared" or
+# "undeclared" would test the arithmetic and skip the only part that has
+# ever been wrong here: which bytes on disk count as a declaration.
+#
+# usage: ./bin/tests/verb-kind-lint.test.sh
+set -uo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+LINT="$REPO/bin/verb-kind-lint.sh"
+
+pass=0; fail=0
+ok()  { printf '  ok   %s\n' "$*"; pass=$((pass+1)); }
+bad() { printf '  FAIL %s\n' "$*"; fail=$((fail+1)); }
+
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+# --- fixture helpers --------------------------------------------------------
+
+# new_build <name> -- an empty build tree; prints its path.
+new_build() {
+  local d="$WORK/$1"
+  rm -rf "$d"; mkdir -p "$d"
+  {
+    printf '# verb build %s\n' "$1"
+    printf '# fixture\n'
+    printf '# project\tverb\tsha\trepo_url\n'
+  } > "$d/manifest.tsv"
+  printf '%s\n' "$d"
+}
+
+# add_cmd <build> <project> <verb> <kind-marker-or-empty> [--deep]
+# Writes the manifest row AND the executable it names. --deep puts the
+# marker far below the header window, which must NOT count.
+add_cmd() {
+  local d="$1" p="$2" v="$3" marker="${4:-}" deep="${5:-}"
+  local sha='0123456789abcdef0123456789abcdef01234567'
+  printf '%s\t%s\t%s\thttps://github.com/hf7y/%s.git\n' "$p" "$v" "$sha" "$p" >> "$d/manifest.tsv"
+  mkdir -p "$d/$p/bin"
+  {
+    printf '#!/usr/bin/env bash\n'
+    printf '# %s -- a fixture command\n' "$v"
+    if [ -n "$marker" ] && [ -z "$deep" ]; then printf '%s\n' "$marker"; fi
+    local i
+    if [ -n "$deep" ]; then
+      for i in $(seq 1 120); do printf '# padding line %s\n' "$i"; done
+      printf '%s\n' "$marker"
+    fi
+    printf 'exit 0\n'
+  } > "$d/$p/bin/$v"
+  chmod +x "$d/$p/bin/$v"
+}
+
+# ratchet <path> <line>... -- write a ratchet file for the lint to read.
+write_ratchet() {
+  local f="$1"; shift
+  { printf '# fixture ratchet\n'; for l in "$@"; do printf '%s\n' "$l"; done; } > "$f"
+}
+
+# run_lint <build> [args...] -- sets OUT and RC. Not a subshell: an rc
+# assigned inside `$( )` never reaches the caller, which is the bug
+# guard-estate.test.sh records having died on.
+run_lint() {
+  local d="$1"; shift
+  OUT="$(VERB_KIND_RATCHET="${RATCHET_FILE:-$WORK/empty.ratchet}" \
+         timeout 60 bash "$LINT" --build "$d" "$@" 2>&1)"
+  RC=$?
+}
+
+: > "$WORK/empty.ratchet"
+
+# expect <label> <want-rc> <build> [args...]
+expect() {
+  local label="$1" want="$2" d="$3"; shift 3
+  run_lint "$d" "$@"
+  if [ "$RC" -eq "$want" ]; then ok "$label (rc=$RC)"
+  else bad "$label: wanted rc=$want, got rc=$RC"; printf '%s\n' "$OUT" | sed 's/^/       | /'; fi
+}
+
+# --- 1. the clean case ------------------------------------------------------
+echo "== 1. A BUILD IN WHICH EVERY COMMAND DECLARES ITSELF A VERB =="
+b="$(new_build clean)"
+add_cmd "$b" scheduler arme  '# KIND: verb'
+add_cmd "$b" scheduler dose  '# KIND: verb'
+add_cmd "$b" senechal  lance '# KIND: verb'
+expect "a fully-declared workchain build passes" 0 "$b"
+
+# --- 2. THE VIOLATION THIS GUARD EXISTS FOR ---------------------------------
+echo
+echo "== 2. A PRODUCT RIDING THE WORKCHAIN BUILD =="
+# This is the shape found on 2026-08-08: vim-arcade declares `entraine` (a
+# workchain verb, correctly in the build) and `vim-arcade` (the product,
+# distributed as a verb because the verb build was the only channel that
+# reached PATH). The product row is the violation; `entraine` is not.
+b="$(new_build product)"
+add_cmd "$b" scheduler  arme       '# KIND: verb'
+add_cmd "$b" vim-arcade entraine   '# KIND: verb'
+add_cmd "$b" vim-arcade vim-arcade '# KIND: product'
+expect "a command declaring KIND: product is refused a place in the workchain build" 1 "$b"
+run_lint "$b"
+if printf '%s\n' "$OUT" | grep -q 'vim-arcade/vim-arcade'; then
+  ok "the refusal names the offending command"
+else
+  bad "the refusal does not name vim-arcade/vim-arcade"; printf '%s\n' "$OUT" | sed 's/^/       | /'
+fi
+# Not "entraine is absent from the output" -- it is present, as an `ok` line,
+# and it should be. The assertion is that it never appears on a FINDING line.
+if printf '%s\n' "$OUT" | grep -E '^  (FLAG|PRODUCT|UNDECLARED|OWED)' | grep -q 'entraine'; then
+  bad "it flagged entraine, which is a legitimate workchain verb"
+else
+  ok "the sibling workchain verb entraine is NOT flagged"
+fi
+n="$(printf '%s\n' "$OUT" | grep -cE '^  (FLAG|PRODUCT|UNDECLARED)')"
+if [ "$n" -eq 1 ]; then ok "exactly one violation, not a project-wide sweep"
+else bad "expected exactly 1 violation line, got $n"; printf '%s\n' "$OUT" | sed 's/^/       | /'; fi
+
+# --- 3. undeclared is a failure, never a default ----------------------------
+echo
+echo "== 3. A COMMAND THAT DECLARES NOTHING FAILS; IT DOES NOT DEFAULT =="
+b="$(new_build undeclared)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" mystery   thing ''
+expect "an undeclared command is refused" 1 "$b"
+run_lint "$b"
+printf '%s\n' "$OUT" | grep -q 'mystery/thing' \
+  && ok "the refusal names the undeclared command" \
+  || bad "the refusal does not name mystery/thing"
+
+# The dodge: a marker that exists but is not a kind.
+b="$(new_build badkind)"
+add_cmd "$b" scheduler arme  '# KIND: verb'
+add_cmd "$b" scheduler dose  '# KIND: yes'
+expect "'# KIND: yes' is not a declaration -- refused, not accepted" 1 "$b"
+
+# The other dodge: a bare marker with nothing after it.
+b="$(new_build emptykind)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler dose '# KIND:'
+expect "a bare '# KIND:' with no value is refused" 1 "$b"
+
+# And a marker buried below the header window is not a header declaration.
+b="$(new_build deepkind)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler dose '# KIND: verb' --deep
+expect "a KIND marker below the header window does not count" 1 "$b"
+
+# --- 4. the ratchet ---------------------------------------------------------
+echo
+echo "== 4. THE GRANDFATHER RATCHET SHRINKS AND NEVER GROWS =="
+# The 32 commands already in the build predate the declaration rule. A
+# count-based bound would let a new undeclared command in whenever an old
+# one was declared in the same pass; the ratchet therefore names the exact
+# pairs it forgives, so a NEW undeclared name is refused on its first night
+# regardless of how the count moved.
+b="$(new_build grandfathered)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" legacy    old  ''
+RATCHET_FILE="$WORK/r1"; write_ratchet "$RATCHET_FILE" 'undeclared legacy/old'
+expect "an undeclared command NAMED in the ratchet is tolerated" 0 "$b"
+run_lint "$b"
+printf '%s\n' "$OUT" | grep -q 'legacy/old' \
+  && ok "it is still printed every run, not silently forgiven" \
+  || bad "the grandfathered command is not reported at all"
+
+add_cmd "$b" newcomer fresh ''
+expect "a NEW undeclared command is refused even though an old one is forgiven" 1 "$b"
+run_lint "$b"
+printf '%s\n' "$OUT" | grep -q 'newcomer/fresh' \
+  && ok "the refusal names the new arrival" \
+  || bad "the refusal does not name newcomer/fresh"
+
+# A ratchet entry for a command that now declares itself is stale, and
+# leaving it there would silently re-forgive the name if it regressed.
+b="$(new_build ratchet-stale)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" legacy    old  '# KIND: verb'
+RATCHET_FILE="$WORK/r1"
+expect "a ratchet entry whose command now declares itself does not fail the build" 0 "$b"
+run_lint "$b"
+printf '%s\n' "$OUT" | grep -qi 'stale\|no longer' \
+  && ok "the now-declared entry is reported as retirable" \
+  || bad "nothing said the ratchet entry can be dropped"
+RATCHET_FILE=""
+
+# A product is NOT ratchetable: the ratchet forgives silence, never a
+# declared product sitting in the workchain channel.
+b="$(new_build product-not-ratchetable)"
+add_cmd "$b" scheduler  arme       '# KIND: verb'
+add_cmd "$b" vim-arcade vim-arcade '# KIND: product'
+RATCHET_FILE="$WORK/r2"; write_ratchet "$RATCHET_FILE" 'undeclared vim-arcade/vim-arcade'
+expect "the ratchet cannot forgive a declared product in the workchain build" 1 "$b"
+RATCHET_FILE=""
+
+# --- 5. BLIND never grades clean --------------------------------------------
+echo
+echo "== 5. BLIND IS NOT CLEAN =="
+expect "a build directory that does not exist is BLIND, not clean" 2 "$WORK/nope"
+
+b="$(new_build nomanifest)"
+rm -f "$b/manifest.tsv"
+expect "a build tree with no manifest is BLIND, not clean" 2 "$b"
+
+b="$(new_build emptymanifest)"
+expect "a manifest with no rows is BLIND, not clean" 2 "$b"
+
+# The row points at a file that is not there. That is not "declared
+# nothing" -- it is a build this lint could not read, and it must not be
+# graded either way.
+b="$(new_build missingfile)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler dose '# KIND: verb'
+rm -f "$b/scheduler/bin/dose"
+expect "a manifest row whose executable is absent is BLIND, not undeclared" 2 "$b"
+run_lint "$b"
+printf '%s\n' "$OUT" | grep -q 'BLIND' \
+  && ok "it says BLIND out loud" \
+  || bad "exit 2 with no BLIND in the output"
+
+# E from guard-estate: the admission must come BEFORE the findings.
+b="$(new_build blindfirst)"
+add_cmd "$b" mystery   thing ''
+add_cmd "$b" scheduler dose  '# KIND: verb'
+rm -f "$b/scheduler/bin/dose"
+run_lint "$b"
+fb="$(printf '%s\n' "$OUT" | grep -nE '^[[:space:]]*BLIND[[:space:]:[]' | head -1 | cut -d: -f1)"
+ff="$(printf '%s\n' "$OUT" | grep -nE '^[[:space:]]*(FLAG|UNDECLARED|PRODUCT)[[:space:]:[]' | head -1 | cut -d: -f1)"
+if [ -z "$fb" ]; then
+  bad "no BLIND line at all when a row could not be read"
+elif [ -n "$ff" ] && [ "$fb" -gt "$ff" ]; then
+  bad "the BLIND admission (line $fb) is buried under the first finding (line $ff)"
+else
+  ok "the BLIND admission is printed above the findings"
+fi
+
+# --- 6. exit code tracks findings -------------------------------------------
+echo
+echo "== 6. THE EXIT CODE TRACKS THE FINDINGS IT PRINTED =="
+# The property guard-estate calls D, asserted here directly rather than only
+# through the sandbox, because this is the guard's own suite and it can
+# arrange both sides of the implication.
+b="$(new_build tracks-clean)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+run_lint "$b"
+c="$(printf '%s\n' "$OUT" | grep -oE '[0-9]+ violation' | grep -oE '^[0-9]+' | head -1)"; c="${c:-0}"
+if [ "$RC" -eq 0 ] && [ "$c" -eq 0 ]; then ok "rc=0 with zero violations reported"
+else bad "rc=$RC with $c violation(s) reported -- inconsistent"; fi
+
+b="$(new_build tracks-dirty)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" a b ''
+add_cmd "$b" c d ''
+run_lint "$b"
+c="$(printf '%s\n' "$OUT" | grep -oE '[0-9]+ violation' | grep -oE '^[0-9]+' | head -1)"; c="${c:-0}"
+if [ "$RC" -ne 0 ] && [ "$c" -eq 2 ]; then ok "rc=$RC and it reported exactly the 2 violations it found"
+else bad "rc=$RC, reported $c violation(s), expected 2 and a non-zero rc"; printf '%s\n' "$OUT" | sed 's/^/       | /'; fi
+
+# --- 7. the tree it is pointed at -------------------------------------------
+echo
+echo "== 7. IT HONOURS THE BUILD IT IS POINTED AT =="
+b="$(new_build honours)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+run_lint "$b"
+if printf '%s\n' "$OUT" | grep -qE '/home/[a-z][a-z0-9_-]*/\.local/share/verb-builds'; then
+  bad "pointed at a temp build, it reported on the host's real build root"
+  printf '%s\n' "$OUT" | sed 's/^/       | /'
+else
+  ok "no path under the host's real build root appears in the output"
+fi
+
+# --- 8. --accept may only shrink the ratchet --------------------------------
+echo
+echo "== 8. --accept LOWERS THE RATCHET OR REFUSES =="
+b="$(new_build accept)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" legacy    old  ''
+RATCHET_FILE="$WORK/r3"; write_ratchet "$RATCHET_FILE" 'undeclared legacy/old' 'undeclared gone/away'
+run_lint "$b" --accept
+if [ "$RC" -eq 0 ] && ! grep -q 'gone/away' "$RATCHET_FILE"; then
+  ok "--accept dropped the entry whose command left the build"
+else
+  bad "--accept did not drop the stale entry (rc=$RC)"; cat "$RATCHET_FILE" | sed 's/^/       | /'
+fi
+grep -q 'legacy/old' "$RATCHET_FILE" \
+  && ok "--accept kept the entry that is still needed" \
+  || bad "--accept dropped an entry that is still undeclared -- that is a raise in disguise"
+
+# The move a ratchet exists to refuse.
+b="$(new_build accept-grow)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" brandnew  cmd  ''
+RATCHET_FILE="$WORK/r4"; write_ratchet "$RATCHET_FILE" 'undeclared legacy/old'
+run_lint "$b" --accept
+if [ "$RC" -eq 0 ] && grep -q 'brandnew/cmd' "$RATCHET_FILE"; then
+  bad "--accept ADDED a new undeclared command to the ratchet -- the ratchet can be grown by running the tool"
+else
+  ok "--accept refuses to enrol a newly-undeclared command (rc=$RC)"
+fi
+RATCHET_FILE=""
+
+# --- 9. the real manifest, transcribed --------------------------------------
+echo
+echo "== 9. THE 2026-08-06T003928Z MANIFEST, WITH ITS ONE PRODUCT DECLARED =="
+# Every project/verb pair below is transcribed from the real build's
+# manifest.tsv (32 verbs, 12 projects). All 32 are given `# KIND: verb`
+# except vim-arcade/vim-arcade, which is given `# KIND: product` -- the
+# declaration the project's own header prose has made in English since
+# 2026-08-05 ("It is named `vim-arcade` now because it is not a verb")
+# without anything mechanical being able to read it.
+#
+# The assertion is that this build produces EXACTLY ONE violation. Not
+# zero (the product is in the wrong channel) and not thirty-two (a
+# French-name detector or a project-level rule would sweep entraine in with
+# it, and entraine belongs exactly where it is).
+b="$(new_build real)"
+while read -r p v; do
+  [ -n "$p" ] || continue
+  if [ "$p/$v" = "vim-arcade/vim-arcade" ]; then
+    add_cmd "$b" "$p" "$v" '# KIND: product'
+  else
+    add_cmd "$b" "$p" "$v" '# KIND: verb'
+  fi
+done <<'ROWS'
+baudin loge
+bibliothecaire accroche
+bibliothecaire cueille
+bibliothecaire fonde
+bibliothecaire glane
+bibliothecaire range
+bibliothecaire trie
+bibliothecaire verse
+crt sonne
+ecosim sonde
+gardien fauche
+gardien garde
+gardien transplante
+groc-mangr mange
+nine-speakers chante
+realisateur arpente
+realisateur epluche
+realisateur juge
+scheduler arme
+scheduler dose
+scheduler jauge
+scheduler rapporte
+scheduler relis
+senechal ausculte
+senechal debarrasse
+senechal installe
+senechal lance
+senechal recense
+senechal veille
+sequestria capte
+vim-arcade entraine
+vim-arcade vim-arcade
+ROWS
+rows="$(grep -cv '^#' "$b/manifest.tsv")"
+[ "$rows" -eq 32 ] && ok "the fixture carries all 32 rows" || bad "fixture has $rows rows, expected 32"
+run_lint "$b"
+if [ "$RC" -eq 1 ]; then ok "the real manifest FAILS (rc=1)"
+else bad "the real manifest did not fail: rc=$RC"; printf '%s\n' "$OUT" | sed 's/^/       | /'; fi
+c="$(printf '%s\n' "$OUT" | grep -oE '[0-9]+ violation' | grep -oE '^[0-9]+' | head -1)"; c="${c:-0}"
+if [ "$c" -eq 1 ]; then ok "exactly 1 violation over 32 commands in 12 projects"
+else bad "expected exactly 1 violation, got $c"; printf '%s\n' "$OUT" | sed 's/^/       | /'; fi
+printf '%s\n' "$OUT" | grep -q 'vim-arcade/vim-arcade' \
+  && ok "the violation is vim-arcade/vim-arcade" \
+  || bad "the single violation is not the product row"
+
+# --- 10. the guard declares itself ------------------------------------------
+echo
+echo "== 10. THE GUARD SATISFIES THE ESTATE'S OWN CONTRACT =="
+# guard-estate.test.sh derives its population by name shape and would pick
+# `verb-kind-lint.sh` up on its own. Asserted here as well so a broken
+# header fails the guard's OWN suite first, where the message is specific,
+# rather than only in the estate sweep where it is one line among many.
+for k in GUARD RUNNER GUARD-TEST GATE VERIFIED; do
+  if head -n 90 "$LINT" | grep -qE "^#[[:space:]]*$k:[[:space:]]*[^[:space:]]"; then
+    ok "declares '# $k:'"
+  else
+    bad "no '# $k:' line in the first 90 lines"
+  fi
+done
+
+echo
+echo "verb-kind-lint.test: $pass ok, $fail FAIL"
+[ "$fail" -eq 0 ] || exit 1
+exit 0
