@@ -162,6 +162,25 @@ MD
 
 : > "$TMP/L11.md"; run "$TMP/L11.md"; is L11a "$RC" 1; has L11b "$OUT" "UNLEDGERED"
 
+# L12 -- FOUND BY DOGFOODING, and it is the most embarrassing possible bug for
+# this particular guard. The pull request that INTRODUCED it explains the
+# mechanism in prose, and that prose says the words `<!-- DEFERRED -->` inline
+# in a sentence. The first cut counted markers anywhere on a line, so it read
+# that sentence as a second block and reported "2 DEFERRED blocks -- a reader
+# cannot tell which is current" about a body with exactly one. A guard whose
+# own PR body trips it is a guard that gets deleted in a week. Markers are now
+# anchored to a whole line; a marker mentioned inside a sentence is prose.
+p="$(body L12 <<'MD'
+A body must carry a `<!-- DEFERRED -->` block, and the closing
+`<!-- /DEFERRED -->` marker must be there too, or nothing is bounded.
+
+<!-- DEFERRED -->
+- hf7y/chezz#12 -- a real entry
+<!-- /DEFERRED -->
+MD
+)"; run "$p"; is L12a "$RC" 0
+hasnt L12b "$OUT" "DEFERRED blocks"
+
 echo
 echo "P. reading markdown, not text"
 

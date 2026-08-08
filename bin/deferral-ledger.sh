@@ -343,7 +343,7 @@ audit_body() {
   # deferral-shaped heading can sit over pure scope statements), a table row
   # is a comparison, a quote is somebody else's words.
   scan="$(strip_fences "$path" \
-    | sed '/<!--[[:space:]]*DEFERRED[[:space:]]*-->/,/<!--[[:space:]]*\/DEFERRED[[:space:]]*-->/d')"
+    | sed '/^[[:space:]]*<!--[[:space:]]*DEFERRED[[:space:]]*-->[[:space:]]*$/,/^[[:space:]]*<!--[[:space:]]*\/DEFERRED[[:space:]]*-->[[:space:]]*$/d')"
   local blk=''
   flush_blk() {
     [ -n "$blk" ] || return 0
@@ -365,8 +365,8 @@ audit_body() {
   flush_blk
 
   # --- detector 1: the declaration ------------------------------------------
-  nopen="$(printf '%s\n' "$body" | grep -c '<!--[[:space:]]*DEFERRED[[:space:]]*-->')"
-  nclose="$(printf '%s\n' "$body" | grep -c '<!--[[:space:]]*/DEFERRED[[:space:]]*-->')"
+  nopen="$(printf '%s\n' "$body" | grep -cE '^[[:space:]]*<!--[[:space:]]*DEFERRED[[:space:]]*-->[[:space:]]*$')"
+  nclose="$(printf '%s\n' "$body" | grep -cE '^[[:space:]]*<!--[[:space:]]*/DEFERRED[[:space:]]*-->[[:space:]]*$')"
 
   if [ "$nopen" -eq 0 ]; then
     note_find "$label: UNLEDGERED -- no <!-- DEFERRED --> block. Silence and nothing-was-deferred are indistinguishable; say which."
@@ -386,8 +386,8 @@ audit_body() {
   fi
 
   block="$(printf '%s\n' "$body" \
-    | sed -n '/<!--[[:space:]]*DEFERRED[[:space:]]*-->/,/<!--[[:space:]]*\/DEFERRED[[:space:]]*-->/p' \
-    | grep -v '<!--[[:space:]]*/\?DEFERRED[[:space:]]*-->')"
+    | sed -n '/^[[:space:]]*<!--[[:space:]]*DEFERRED[[:space:]]*-->[[:space:]]*$/,/^[[:space:]]*<!--[[:space:]]*\/DEFERRED[[:space:]]*-->[[:space:]]*$/p' \
+    | grep -vE '^[[:space:]]*<!--[[:space:]]*/?DEFERRED[[:space:]]*-->[[:space:]]*$')"
 
   # Continuation lines fold into their bullet, so a NO-OWNER reason may wrap.
   entry=''
