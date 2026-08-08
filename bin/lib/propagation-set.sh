@@ -322,6 +322,7 @@ floor-check.sh
 hardcoded-home-lint.sh
 make-bootstrap-branch.sh
 markdown-cost.sh
+ownership-audit.sh
 reach-lint.sh
 restamp-discipline.sh
 stamp-agent.sh
