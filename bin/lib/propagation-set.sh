@@ -197,7 +197,7 @@ prop_build_trailer() {
 # THAT LAST STEP WAS PROBED, NOT ASSUMED, because it is the whole argument: if
 # the release repo were PUBLIC, an account could fetch the payload with no
 # credential at all and this would be payload, not bootstrap.
-#   # verified 2026-08-07 via `gh repo view hf7y/verbs --json visibility`
+#   # verified 2026-08-07 23:20Z via `gh repo view hf7y/verbs --json visibility`
 #   -> {"isPrivate":true,"visibility":"PRIVATE"}
 # and bin/install-verb-build.sh:63 clones it over HTTPS
 # (https://github.com/hf7y/verbs.git), which git can only authenticate through
@@ -206,6 +206,31 @@ prop_build_trailer() {
 # delivering the credential needed to fetch the build -- and would also push
 # PROP_PAYLOAD_PENDING to 11 against a PROP_LEAK_BOUND of 10 that only ever
 # goes down.
+#
+# >>> THAT STAMP WENT FALSE THE SAME NIGHT, AND THE ARGUMENT ABOVE WENT WITH
+# >>> IT. `hf7y/verbs` was flipped to PUBLIC at ~23:30Z on 2026-08-07.
+#   # verified 2026-08-07 23:52Z via `gh repo view hf7y/verbs --json visibility,isPrivate`
+#   -> {"isPrivate":false,"visibility":"PUBLIC"}
+#
+# The stamp is corrected rather than deleted BECAUSE the reasoning downstream
+# of it is now wrong, and a corrected stamp with the old text struck through it
+# is the only version of this comment that shows a reader why. The argument for
+# selfdev-gh-app.sh occupying the fourth and last bootstrap slot was ITS OWN
+# probe: a private release repo makes the credential helper a precondition for
+# fetching anything, so it cannot travel as payload. A PUBLIC release repo
+# removes that precondition entirely -- `git clone https://github.com/hf7y/verbs.git`
+# now needs no credential at all -- so the circularity is gone and with it the
+# only thing that made this file bootstrap rather than payload.
+#
+# THE SLOT IS NOT FREED IN THIS COMMIT, DELIBERATELY. Reclassifying a bootstrap
+# entry changes what four live accounts hold before they can fetch anything,
+# and that is its own review with its own probe of what is already staged on
+# each account. It is reported as a finding, not acted on here. Note before
+# anyone acts on it: the helper is still needed to PUSH as the App identity and
+# to reach the account's own PRIVATE project repo, so the question is not "is
+# it still needed" (it is) but "must it be present BEFORE the first payload
+# arrives" (it need no longer be). Those are different questions and only the
+# second one decides the slot.
 #
 # It is also the file propagation.test.sh's own doctrine names as the motivating
 # case: written 2026-08-06 for accounts that had no way to receive it. Giving it

@@ -6,7 +6,7 @@
 # RUNNER: bin/selfdev-release-tick.sh bin/tests/release-ledger.test.sh
 # GUARD-TEST: bin/tests/release-ledger.test.sh
 # GATE: none -- reads the published verdict endpoint; the fixture is in its own suite
-# VERIFIED: 2026-08-07 via bash bin/release-ledger.sh (refuses without --url/--ledger, exits non-zero) and its suite
+# VERIFIED: 2026-08-07 via bash bin/tests/release-ledger.test.sh (68 passed, 0 failed, incl. rule 7 expiry) and bash bin/release-ledger.sh (refuses without --url/--ledger, exits non-zero)
 #
 # ============================================================================
 # THE PROBLEM THIS INVERTS
@@ -76,6 +76,33 @@
 #    conflation `deploy-drift.sh` exists to kill and the same one MONKEY.md 5
 #    records `garde` making: "found nothing" is not "nothing is wrong".
 #
+# 7. A STALE SUCCESS IS THE WORST ROW ON THE PAGE, AND THE PRODUCER SETS ITS
+#    EXPIRY. Added 2026-08-07, paid for the same day.
+#
+#    The publisher died on its own argument parser and published nothing. The
+#    endpoint went on serving the previous night's `CUT`, `blocked_streak: 0`.
+#    It was 19h old -- inside this script's window -- so this script printed
+#    `emitter alive` and selfdev-release-tick.sh printed `release channel
+#    healthy (verdict fresh, no blocked streak)`. ON THE ONE NIGHT THE GATE
+#    WAS BROKEN, THE CHANNEL SHOWED A CONFIDENT GREEN.
+#
+#    THE FIX IS NOT A SMALLER WINDOW, and that is the part worth writing
+#    down, because a smaller window is what everybody reaches for first. The
+#    emitter runs ONCE NIGHTLY. A consumer ticking at an arbitrary hour
+#    legitimately sees a verdict anywhere from 0 to 24 hours old. Any
+#    threshold under ~25h false-alarms EVERY DAY, and per
+#    bin/tests/guard-estate.test.sh's whole thesis, a guard that is wrong
+#    every day is a guard that gets ignored on the day it is right. 26h and
+#    30h are not laxness; they are the floor a nightly cadence imposes.
+#
+#    So the window stops being guessed. `valid_until` is written INTO the
+#    document by publish-release-verdict.sh from the emitter's own cadence,
+#    and a document past its own expiry is BAD here regardless of what
+#    `decision` says. One number, set where the cadence is known, instead of
+#    one constant per consumer drifting against a cron expression in another
+#    repository. The constant above survives only as the fallback for a
+#    schema-1 document, and is now the ONLY thing that guesses.
+#
 # 6. UNREADABLE IS NOT EMPTY. A ledger we could not fetch (exit 3, BLIND) and
 #    a ledger that is genuinely empty (exit 1, BAD) are different facts with
 #    different fixes, and this vocabulary is already load-bearing across
@@ -109,10 +136,19 @@ cli_guard "$@"
 # is -- which is the point of rule 1, not a bug in it.
 LEDGER_DECISIONS="CUT NO_CHANGE BLOCKED ERROR"
 
+# THE FALLBACK staleness window, used only when the document does not declare
+# its own `valid_until`. Read rule 7 below before touching it: it cannot be
+# tightened, and the reason is arithmetic rather than caution.
 MAX_VERDICT_AGE_H="${LEDGER_MAX_VERDICT_AGE_H:-30}"   # nightly + 6h slack
 STREAK_NOTE="${LEDGER_STREAK_NOTE:-1}"                # 1 blocked night: note
 STREAK_BAD="${LEDGER_STREAK_BAD:-3}"                  # 3 consecutive: outage
 NOW="${LEDGER_NOW:-$(date -u +%s)}"                   # overridable for tests
+
+# The producer-declared expiry, filled in by the --url path from the document
+# itself. Settable directly so the offline --ledger path can be graded against
+# one in a test without standing up an endpoint. Empty means the document did
+# not declare one (schema 1), and only then does MAX_VERDICT_AGE_H apply.
+VALID_UNTIL="${LEDGER_VALID_UNTIL:-}"
 
 LEDGER=''; APPEND=0; URL=''
 DECISION=''; REASON=''; MAIN_SHA='-'; CI_RUN='-'; BUILD_ID='-'
@@ -157,12 +193,20 @@ if [ -n "$URL" ]; then
   LEDGER="$_tmpdir/ledger.tsv"
   # The published history becomes the same TSV the offline path grades, so
   # every assertion in bin/tests/release-ledger.test.sh covers this path too.
-  python3 - "$_json" "$LEDGER" <<'PY' || { echo "BLIND: $URL is not a status document this consumer can parse." >&2; exit 3; }
+  # `valid_until` is a property of the DOCUMENT rather than of any row, so it
+  # travels beside the TSV in a sidecar rather than being smuggled into a
+  # column -- a seventh field would break every reader of the six-field shape
+  # this vocabulary already has.
+  _valid_until_file="$_tmpdir/valid_until"
+  python3 - "$_json" "$LEDGER" "$_valid_until_file" <<'PY' || { echo "BLIND: $URL is not a status document this consumer can parse." >&2; exit 3; }
 import json, sys
 d = json.load(open(sys.argv[1]))
 h = d.get("history")
 if not isinstance(h, list):
     raise SystemExit(1)
+vu = d.get("valid_until")
+if isinstance(vu, str) and vu:
+    open(sys.argv[3], "w").write(vu)
 with open(sys.argv[2], "w") as f:
     f.write("# date\tdecision\treason\tmain_sha\tci_run\tbuild_id\n")
     # Oldest first: the grader reads newest-last, same as an append-only file.
@@ -170,6 +214,7 @@ with open(sys.argv[2], "w") as f:
         f.write("\t".join(str(r.get(k) or "-").replace("\t", " ")
                 for k in ("at", "decision", "reason", "main_sha", "ci_run", "build_id")) + "\n")
 PY
+  [ -s "$_valid_until_file" ] && VALID_UNTIL="$(cat "$_valid_until_file")"
   echo "(graded live from $URL)"
 fi
 
@@ -260,7 +305,19 @@ if [ "$n_epoch" -eq 0 ]; then
   age_h=-1
 else
   age_h=$(( (NOW - n_epoch) / 3600 ))
-  if [ "$age_h" -gt "$MAX_VERDICT_AGE_H" ]; then
+  # RULE 7. The producer's own expiry outranks this consumer's constant. A
+  # document past `valid_until` is BAD whatever `decision` says -- the
+  # decision it carries is the LAST one recorded, not tonight's, and grading
+  # it as tonight's is exactly how a broken gate showed a confident green.
+  vu_epoch=0
+  [ -n "$VALID_UNTIL" ] && vu_epoch="$(date -u -d "$VALID_UNTIL" +%s 2>/dev/null || echo 0)"
+  if [ -n "$VALID_UNTIL" ] && [ "$vu_epoch" -eq 0 ]; then
+    bad "the document declares an UNPARSEABLE valid_until ('$VALID_UNTIL') -- the emitter is stating an expiry this consumer cannot read, so freshness is UNGRADED. Not 'fresh'."
+  elif [ "$vu_epoch" -gt 0 ] && [ "$NOW" -gt "$vu_epoch" ]; then
+    bad "VERDICT EXPIRED -- the emitter itself declared this verdict good until $VALID_UNTIL and no newer one has appeared (this one is ${age_h}h old, decision $n_dec). A stale verdict is not a fresh one: '$n_dec' is the LAST decision recorded, not tonight's. The nightly run is not running, or it is running and cannot publish."
+  elif [ "$vu_epoch" -gt 0 ]; then
+    ok "emitter alive -- newest verdict ${age_h}h old, valid until $VALID_UNTIL: $n_dec ($n_reason)"
+  elif [ "$age_h" -gt "$MAX_VERDICT_AGE_H" ]; then
     bad "EMITTER SILENT -- newest verdict is ${age_h}h old (limit ${MAX_VERDICT_AGE_H}h). The nightly run is not running: disabled, deleted, unbilled, or erroring before it can write. A producer cannot report its own absence, so this row is the only thing that can."
   else
     ok "emitter alive -- newest verdict ${age_h}h old: $n_dec ($n_reason)"

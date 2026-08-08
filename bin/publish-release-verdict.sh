@@ -74,6 +74,62 @@
 # Unknown values are refused here AND on the consumer, so "unrecognised" can
 # never quietly mean "probably fine".
 #
+# ============================================================================
+# THE VERDICT CARRIES ITS OWN EXPIRY, AND THE PRODUCER SETS IT
+# ============================================================================
+#
+# Added 2026-08-07, after the failure below.
+#
+# THE FAILURE. The publisher died on its own argument parser (`--build-id -`;
+# see bin/lib/cli-guard.sh) and published nothing. The endpoint kept serving
+# the previous night's `"decision": "CUT", "blocked_streak": 0`. Nineteen
+# hours old, inside the consumer's staleness window, so `release-ledger.sh`
+# graded it `release channel healthy (verdict fresh, no blocked streak)` on
+# the one night the gate was broken.
+#
+#   >>> THE CHANNEL'S FAILURE MODE IS SILENCE, AND SILENCE RENDERS AS THE
+#   >>> LAST GOOD VERDICT. A publisher that cannot publish leaves a stale
+#   >>> SUCCESS standing, which is worse than leaving nothing standing.
+#
+# This is bin/tests/guard-estate.test.sh's check E -- BLIND MUST NOT GRADE AS
+# CLEAN -- applied to the channel rather than to a guard. A consumer that
+# cannot see tonight's verdict is not looking at a healthy channel; it is not
+# looking at tonight at all.
+#
+# WHAT CANNOT BE THE FIX, stated first because it is the tempting one. This
+# does not close by tightening the consumer's staleness window. The emitter
+# runs ONCE NIGHTLY, so a consumer ticking at an arbitrary hour legitimately
+# sees a verdict anywhere from 0 to 24 hours old. Any threshold below ~25h
+# false-alarms every single day, and a guard that is wrong every day is a
+# guard nobody reads -- guard-estate.test.sh's whole thesis. 26h is not
+# slack; it is the FLOOR a nightly cadence imposes. The window was never the
+# defect, and shrinking it would have been a fix that made things worse.
+#
+# WHAT IS THE FIX. Two independent things, because either alone leaves a hole:
+#
+#   1. THE DOCUMENT DECLARES WHEN IT STOPS BEING EVIDENCE. `valid_until` is
+#      written HERE, by the producer, from the producer's own cadence -- not
+#      guessed by each consumer from a constant that must be kept in sync by
+#      hand with a cron expression in another repository. A consumer past
+#      `valid_until` grades BAD whatever the decision field says, and the
+#      human page renders EXPIRED rather than the last decision. Change the
+#      cadence and both halves move together, because there is ONE number.
+#      That is BUILD-DISCIPLINE's "config read from one source" applied to
+#      the one fact this channel's health depends on.
+#
+#   2. THE RUN THAT CANNOT PUBLISH TRIES AGAIN WITH LESS. build-verbs.yml
+#      captures this script's exit code and, on any failure, re-invokes it
+#      with a MINIMAL argv -- decision and reason only, no build id, no sha,
+#      no run id. That recovers the class of failure that actually happened:
+#      the verdict logic was correct and the ARGUMENT VECTOR was fatal, so a
+#      smaller vector publishes. If even that fails, the run goes red having
+#      said in the log that the channel is knowingly silent.
+#
+# Neither substitutes for the other: (1) cannot catch a publisher that fails
+# inside its own cadence, and (2) cannot catch a workflow that never ran at
+# all. Together they cover "the emitter broke" and "the emitter vanished".
+#
+# ============================================================================
 # EXIT CODES
 #   0  published (or --dry-run rendered)
 #   1  could not publish
@@ -97,6 +153,17 @@ STATUS_URL="${RELEASE_STATUS_URL:-https://zach.audio/verbs/status.json}"
 PAGE_URL="${RELEASE_STATUS_PAGE:-https://zach.audio/verbs/}"
 HISTORY_MAX="${PUBLISH_HISTORY_MAX:-60}"
 DECISIONS="CUT NO_CHANGE BLOCKED ERROR"
+
+# THE CADENCE, AND THE ONE PLACE IT IS WRITTEN DOWN. build-verbs.yml runs on
+# `cron: '30 1 * * *'` -- once every 24 hours. GRACE covers a slow assemble
+# plus a late runner; it is not a fudge factor for a channel that is behaving
+# badly, and widening it is a decision to be told about a dead emitter later.
+# Consumers derive their staleness verdict from `valid_until` below rather
+# than from a constant of their own, so this number and the cron expression
+# are the only two things that have to agree, instead of this number and one
+# constant per account.
+PUBLISH_CADENCE_H="${PUBLISH_CADENCE_H:-24}"
+PUBLISH_GRACE_H="${PUBLISH_GRACE_H:-4}"
 
 DECISION=''; REASON=''; MAIN_SHA='-'; CI_RUN='-'; BUILD_ID='-'
 APPLY=0; DRY=0; OUT=''
@@ -123,6 +190,11 @@ known "$DECISION" || {
 }
 
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+NOW_EPOCH="$(date -u +%s)"
+# The producer states when this document stops being evidence. A consumer past
+# it must refuse to grade the channel from it -- see the header.
+VALID_UNTIL="$(date -u -d "@$(( NOW_EPOCH + (PUBLISH_CADENCE_H + PUBLISH_GRACE_H) * 3600 ))" \
+  +%Y-%m-%dT%H:%M:%SZ)"
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 # --- previous history, from the publish repo itself -------------------------
@@ -174,8 +246,18 @@ for r in history:
         break
 last_cut = next((r for r in history if r.get("decision") == "CUT"), None)
 doc = {
-  "schema": 1,
+  # schema 2 adds valid_until/cadence_hours. Bumped rather than left at 1
+  # because a consumer that reads valid_until and one that does not are
+  # different consumers, and "which of them am I talking to" has to be
+  # answerable from the document.
+  "schema": 2,
   "generated": "$NOW",
+  # WHEN THIS DOCUMENT STOPS BEING EVIDENCE. Past it, a consumer must grade
+  # the channel BAD regardless of `decision` -- a stale success is the
+  # failure mode this field exists to close.
+  "valid_until": "$VALID_UNTIL",
+  "cadence_hours": $PUBLISH_CADENCE_H,
+  "grace_hours": $PUBLISH_GRACE_H,
   "decision": row["decision"],
   "reason": row["reason"],
   "main_sha": row["main_sha"],
@@ -187,7 +269,8 @@ doc = {
   "history": history,
 }
 json.dump(doc, open(sys.argv[1], "w"), indent=2)
-print(json.dumps({k: doc[k] for k in ("generated","decision","reason","blocked_streak")}, indent=2))
+print(json.dumps({k: doc[k] for k in
+  ("generated","valid_until","decision","reason","blocked_streak")}, indent=2))
 PY
 [ -s "$RENDER" ] || { echo "$CLI_NAME: could not render status.json" >&2; exit 1; }
 
@@ -241,10 +324,18 @@ const ago=(t)=>{const h=(Date.now()-new Date(t))/36e5;
 fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
   const known=["CUT","NO_CHANGE","BLOCKED","ERROR"];
   const cls={CUT:"ok",NO_CHANGE:"ok",BLOCKED:"bad",ERROR:"bad"}[d.decision]||"bad";
-  const stale=(Date.now()-new Date(d.generated))/36e5>30;
+  // STALENESS IS THE DOCUMENT'S OWN CLAIM, not this page's guess. It used to
+  // be a hardcoded `> 30` here and a separate constant on every consumer, so
+  // a cadence change had to be found in three places. `valid_until` is
+  // written by the publisher from its own cadence; the 30 h fallback is only
+  // for a document published before schema 2.
+  const until=d.valid_until?new Date(d.valid_until):null;
+  const stale=until?Date.now()>until:(Date.now()-new Date(d.generated))/36e5>30;
   let head=`<p class="verdict ${stale?"bad":cls}">${H(stale?"EMITTER SILENT":d.decision)}</p>`;
   head+=`<p class="sub">${H(stale
-      ? "No verdict for over 30 h — the nightly run is not running."
+      ? `This verdict expired at ${d.valid_until||"(no expiry published)"} and no newer one `
+        + "has appeared. The nightly run is not running, or it is running and cannot publish. "
+        + "The decision below is the LAST one recorded, not tonight's — do not read it as current."
       : d.reason)}</p>`;
   if(!known.includes(d.decision))
     head+=`<p class="sub bad">Unrecognised decision — this page is older than the channel.</p>`;
@@ -255,6 +346,7 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
   const lc=d.last_cut;
   head+=`<dl>
     <dt>verdict written</dt><dd>${H(d.generated)} <span class="sub">(${ago(d.generated)})</span></dd>
+    <dt>evidence until</dt><dd>${d.valid_until?`${H(d.valid_until)} <span class="sub">(${stale?"EXPIRED":"still valid"})</span>`:"<span class=\"sub\">not published (schema 1)</span>"}</dd>
     <dt>last build cut</dt><dd>${lc?`<code>${H(lc.build_id)}</code> <span class="sub">(${ago(lc.at)})</span>`:"never"}</dd>
     <dt>realisateur sha</dt><dd><code>${H(d.main_sha)}</code></dd>
     <dt>CI run</dt><dd><code>${H(d.ci_run)}</code></dd>

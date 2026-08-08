@@ -166,6 +166,89 @@ has "an unreadable channel is BLIND, not empty" "$LEDSRC" "BLIND"
 has "the decision enum is closed and default-deny" "$LEDSRC" "UNRECOGNISED decision"
 
 # ===========================================================================
+echo
+echo "-- G0. A PUBLISHER THAT CANNOT PUBLISH LEAVES NO STALE SUCCESS ---------"
+# ===========================================================================
+# THE 2026-08-07 FAILURE. The publish step died on `--build-id -` and emitted
+# nothing. The endpoint kept serving the previous night's CUT, 19h old, inside
+# every consumer's window, so the fleet read a broken gate as healthy. Two
+# mechanisms close that and BOTH are asserted here, because either alone
+# leaves a hole: the document declares when it stops being evidence, and the
+# run that cannot publish tries again with less before going red.
+
+# --- the document declares its own expiry ---------------------------------
+tmp=''; TG="$(mktemp -d)"; trap 'rm -rf "${tmp:-}" "$TG"' EXIT
+CUT_BUILD=''
+"$PUBLISH" --dry-run --decision BLOCKED --reason "a project's default branch is RED" \
+  --main-sha abc1234 --ci-run 99 --build-id "${CUT_BUILD:--}" --out "$TG" >/dev/null 2>&1
+prc=$?
+[ "$prc" -eq 0 ] && ok "the publisher renders a BLOCKED night's verdict (the argv the workflow builds)" \
+                 || bad "the publisher exited $prc on a BLOCKED night's argv -- this is the 2026-08-07 outage"
+
+if [ -s "$TG/status.json" ]; then
+  ok "it wrote a status.json"
+  SJ="$(cat "$TG/status.json")"
+  has "the document declares when it stops being evidence" "$SJ" '"valid_until"'
+  has "it publishes the cadence that expiry is derived from" "$SJ" '"cadence_hours"'
+  has "the schema is bumped so a consumer knows which shape it has" "$SJ" '"schema": 2'
+  has "it still carries the decision"  "$SJ" '"decision": "BLOCKED"'
+  # END TO END, through the consumer's real --url path rather than a
+  # paraphrase of it: the publisher's own output, graded by the real grader.
+  # This is the join the original bug slipped through -- both halves had
+  # suites and nothing ever ran one against the other.
+  O="$("$LEDGER" --url "file://$TG/status.json" 2>&1)"; R=$?
+  has "the consumer reads the publisher's own document without a fixture" "$O" "graded live from"
+  hasnt "...and does not call it unparseable" "$O" "not a status document"
+  # A verdict published a moment ago is inside its own expiry, so the only
+  # findings may be about the CHANNEL (one blocked night), never freshness.
+  hasnt "a just-published verdict is never graded EXPIRED" "$O" "VERDICT EXPIRED"
+  has "...and freshness is graded against the published deadline, not a guess" "$O" "valid until"
+  # Now age the same document past the expiry it published for itself. Nothing
+  # about the decision changes; only the producer's claim about it expires.
+  vu="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["valid_until"])' "$TG/status.json")"
+  future="$(date -u -d "$vu +1 hour" +%s)"
+  O="$(LEDGER_NOW="$future" "$LEDGER" --url "file://$TG/status.json" 2>&1)"; R=$?
+  [ "$R" != 0 ] && ok "past its published valid_until the same document grades non-zero" \
+                || bad "past its published valid_until the document still graded clean (rc=$R)"
+  has "...and is named EXPIRED rather than alive" "$O" "VERDICT EXPIRED"
+else
+  bad "the publisher wrote no status.json"
+  for m in "valid_until" "cadence_hours" "schema 2" "decision" "end-to-end grade"; do
+    bad "(skipped, no status.json): $m"
+  done
+fi
+
+# The human page must read the SAME field. A page with its own hardcoded
+# staleness threshold is a second answer to "is this current", and the two
+# drift the first time the cron expression moves.
+if [ -s "$TG/index.html" ]; then
+  IH="$(cat "$TG/index.html")"
+  has "the human page grades staleness from valid_until, not a hardcoded hour count" "$IH" "d.valid_until"
+  has "an expired page says the decision shown is not tonight's" "$IH" "not tonight"
+else
+  bad "the publisher wrote no index.html"
+fi
+
+# --- the run that cannot publish does not exit 0 over it -------------------
+# `set -uo pipefail` has no -e, so a publish invocation whose rc is neither
+# captured nor last-in-step is a silent failure by construction.
+has "the workflow captures the publisher's exit code" "$WFSRC" "prc=\$?"
+has "it retries with a minimal argv rather than giving up" "$WFSRC" "minimal fallback"
+has "a fallback-only publish still fails the run"          "$WFSRC" "MINIMAL FALLBACK"
+has "a total publish failure is named, not implied"        "$WFSRC" "NO VERDICT WAS PUBLISHED"
+has "...and says the endpoint is serving a previous night" "$WFSRC" "previous night"
+# Matched on the INVOCATION (`--apply`), not on every mention of the name: the
+# staging step legitimately carries `cp ... || true` because a run whose
+# assemble failed has no .realisateur to copy from, and that `|| true` is
+# checked one step later by the `-x` test. A grep that cannot tell those two
+# apart is the false alarm this whole estate is trying to stop producing.
+if printf '%s\n' "$WFSRC" | grep -- '--apply' | grep -q '|| true'; then
+  bad "the publisher's failure is swallowed by '|| true' -- the channel can go silent at exit 0"
+else
+  ok "the publisher's failure is not swallowed by '|| true'"
+fi
+
+# ===========================================================================
 if [ "$LIVE" != 1 ]; then
   echo
   echo "  (--live checks skipped: deployed-workflow drift and endpoint freshness)"
