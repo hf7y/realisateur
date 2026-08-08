@@ -311,8 +311,25 @@ PROP_LEAK_BOUND=7
 # release-gate.sh and publish-release-verdict.sh are LOCAL because they run in
 # the release pipeline (GitHub Actions checks realisateur out to get them), not
 # on a consumer. An account never gates or publishes; it only reads the result.
+#
+# deferral-ledger.sh is LOCAL for the same reason as its sibling
+# claim-drift.sh: it reads a pull request on this repository from a CI job. An
+# account never audits a PR body.
+#
+# defere.sh IS FILED HERE UNDER PROTEST, and the protest has an issue number
+# rather than being left as a sentence: hf7y/realisateur#115. It is a filing
+# front door, and the agents that most need it run on the ten uid 3000-3099
+# accounts, where LOCAL means it does not exist. It is not PAYLOAD today
+# because PROP_PAYLOAD_PENDING == PROP_PAYLOAD_SCRIPTS with PROP_LEAK_BOUND=7,
+# so an eighth entry would RAISE the leak bound -- and the correct fix is to
+# declare bin/defere + man/defere.1 on the bashified branch and add it to
+# PAYLOAD without adding it to PENDING, not to grow the bound. Doing that is
+# #115's job. Reclassifying it here without the man page would silently drop
+# it from every build (#85).
 PROP_LOCAL_SCRIPTS="
 claim-drift.sh
+defere.sh
+deferral-ledger.sh
 cut-verb-build.sh
 deploy-drift.sh
 release-gate.sh
