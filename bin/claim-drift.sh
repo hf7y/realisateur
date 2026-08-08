@@ -92,7 +92,7 @@ CLI_USAGE='  claim-drift.sh <pr-number>...        audit the named PRs
   claim-drift.sh --all                 audit every OPEN pull request
   claim-drift.sh --strict ...          exit 1 on drift, 6 on BLIND
   claim-drift.sh --repo <owner/name>   default: the checkout own remote'
-CLI_FLAGS='--all --strict --repo'
+CLI_FLAGS='--all --strict --repo --convention'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  audited; no --strict, or --strict and nothing drifted
   1  --strict and at least one PR has grown since it was claimed done
@@ -100,12 +100,73 @@ CLI_EXITS='  0  audited; no --strict, or --strict and nothing drifted
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 
+# THE CANONICAL TEXT. One place, printed on demand.
+#
+# Why a flag and not a paragraph in a brief: on 2026-08-07 this convention was
+# retyped from memory into eight agent briefs by one coordinator, who then
+# invented a SECOND, conflicting meaning ("draft = needs a decision") in a
+# throwaway answer an hour later. Nothing was wrong with any single retyping;
+# the defect is that retyping was the distribution mechanism. A spawner can now
+# reference this instead of recalling it, and the guard below enforces the same
+# text it prints -- so a brief that paraphrases it wrongly produces a red check
+# rather than silent drift.
+print_convention() {
+  cat <<'CONV'
+PULL REQUEST CONVENTION -- canonical. Reference this; do not paraphrase it.
+
+  COMPLETION axis (mechanized here, enforced by this script):
+    a DRAFT pull request claims nothing        -> it can never drift
+    marking it READY is the commitment point   -> that instant anchors the claim
+    a PR OPENED non-draft claims done at its opening
+    Growth after "done" is legal. Growth while STILL claiming done is not:
+    convert back to draft while you work, mark ready again when finished.
+
+  ATTENTION axis (decided 2026-08-08; enforced here and by branch protection):
+    NO decision -> ready + `gh pr merge --auto --squash`. It lands unattended
+                   when the required checks pass. Nobody reads it. This is the
+                   default and should be the common case.
+    A decision  -> ready, auto-merge OFF, and the FIRST non-empty line is:
+                     DECISION: <the one call the human must make>
+                   Optionally NO-DECISION: <why> when auto-merge is unavailable
+                   but no judgement is needed.
+    A DRAFT is exempt from both: it claims nothing, so it asks nothing.
+
+  Why PRs at all, when nobody reads most of them: the PR is what runs CI
+  against the MERGE RESULT. Four PRs on 2026-08-07 merged with zero textual
+  conflicts and broke each other's repository-wide invariants; `main` went red
+  twice. Dropping the PR would drop that gate. What was removed is the WAITING,
+  not the gate.
+
+  THE MECHANISM, live on hf7y/realisateur since 2026-08-08 -- cited so this
+  text cannot quietly become aspirational:
+    allow_auto_merge=true, delete_branch_on_merge=true
+    branch protection on main: required checks `suites` and `markdown-cost`
+    strict=false          -- deliberately NOT "require branches up to date":
+                             that forces every open PR to re-sync whenever main
+                             moves, the loop that broke #95/#96/#98 repeatedly.
+    enforce_admins=false  -- deliberate. The gate binds automation, not Zach;
+                             a wedged check must not lock him out.
+    no required reviews   -- the point. Green is sufficient; nobody has to look.
+  Before this, main was UNPROTECTED and allow_auto_merge was false: every check
+  was voluntary, which is how #102 was merged red.
+
+  Why the first line: the stated failure mode is "if it's a PR not a draft,
+  I'm just going to merge it without reading". A ready PR whose ask is buried
+  in prose cannot be triaged without opening it.
+
+  The classification is the AUTHOR's, declared. No guard can read intent.
+  This script does NOT re-implement the green gate -- branch protection owns
+  that. It only asks whether a PR that wants attention says what it wants.
+CONV
+}
+
 REPO=''
 ALL=0
 STRICT=0
 PRS=()
 while [ $# -gt 0 ]; do
   case "$1" in
+    --convention) print_convention; exit 0 ;;
     --repo)   REPO="${2:-}"; [ -n "$REPO" ] || cli_die '--repo needs owner/name'; shift 2 ;;
     --all)    ALL=1; shift ;;
     --strict) STRICT=1; shift ;;
@@ -123,7 +184,23 @@ if [ "$ALL" -eq 0 ] && [ "${#PRS[@]}" -eq 0 ]; then
   cli_die 'nothing to audit: give one or more PR numbers, or --all'
 fi
 
-drifted=0; current=0; unclaimed=0; settled=0; blind=0
+drifted=0; current=0; unclaimed=0; settled=0; blind=0; undecided=0
+
+# first non-empty line, stripped of markdown furniture, classified.
+# Returns 0 if the body declares itself, 1 if not.
+#
+# The word must OPEN the line. Matching it anywhere would let any PR that
+# merely mentions the convention exempt itself -- the false positive
+# guard-estate's check E hit and had to fix within ten minutes of being written.
+declares_itself() {
+  local first stripped
+  first="$(printf '%s\n' "$1" | grep -m1 -v '^[[:space:]]*$')" || return 1
+  stripped="$(printf '%s' "$first" | sed -e 's/^[[:space:]#>*_-]*//')"
+  case "$stripped" in
+    [Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*|[Nn][Oo]-[Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*) return 0 ;;
+  esac
+  return 1
+}
 
 note_blind() { blind=$((blind+1)); printf '  #%-4s BLIND     %s\n' "$1" "$2"; }
 
@@ -162,7 +239,7 @@ fi
 
 for n in "${PRS[@]}"; do
   pr="$(gh pr view "$n" --repo "$REPO" \
-        --json number,title,url,state,isDraft,createdAt,headRefOid,commits 2>/dev/null)" || pr=''
+        --json number,title,url,state,isDraft,createdAt,headRefOid,commits,body,autoMergeRequest 2>/dev/null)" || pr=''
   if [ -z "$pr" ]; then
     note_blind "$n" "could not read the pull request."
     continue
@@ -188,6 +265,20 @@ for n in "${PRS[@]}"; do
     unclaimed=$((unclaimed+1))
     printf '  #%-4s UNCLAIMED draft -- it claims nothing, so it cannot drift.\n' "$n"
     continue
+  fi
+
+  # THE ATTENTION AXIS. A ready PR either lands unattended or asks for a call.
+  # Auto-merge IS the no-decision declaration -- it is a live GitHub state, not
+  # a sentence someone wrote, so it cannot be stale. Only a PR that is ready,
+  # not auto-merging, and silent about why is asking for attention without
+  # saying what for.
+  automerge="$(printf '%s' "$pr" | jq -r '.autoMergeRequest // "" | if . == "" then "" else "on" end')"
+  if [ "$automerge" != on ] && ! declares_itself "$(printf '%s' "$pr" | jq -r '.body // ""')"; then
+    undecided=$((undecided+1))
+    printf '  #%-4s UNDECIDED ready, not auto-merging, and its first line does not say why.\n' "$n"
+    printf '                  Either `gh pr merge %s --auto --squash` (no decision needed),\n' "$n"
+    printf '                  or open the body with `DECISION: <the call>`.\n'
+    printf '                  See: claim-drift.sh --convention\n'
   fi
 
   # THE ANCHOR. Last time this PR was presented as finished.
@@ -229,11 +320,15 @@ for n in "${PRS[@]}"; do
   fi
 done
 
-printf '\n%d drifted, %d current, %d unclaimed, %d settled, %d blind.\n' \
-  "$drifted" "$current" "$unclaimed" "$settled" "$blind"
+printf '\n%d drifted, %d undecided, %d current, %d unclaimed, %d settled, %d blind.\n' \
+  "$drifted" "$undecided" "$current" "$unclaimed" "$settled" "$blind"
 
 if [ "$STRICT" -eq 1 ]; then
   [ "$blind" -gt 0 ] && exit 6
-  [ "$drifted" -gt 0 ] && exit 1
+  # Both are findings, so both must move the exit code -- `guard-estate.test.sh`
+  # asserts exit-code-tracks-findings over the whole population, and a verdict
+  # that prints but does not gate is the `silence-audit` defect (74 FLAGs,
+  # exit 0) this estate spent 2026-08-07 removing.
+  [ "$drifted" -gt 0 ] || [ "$undecided" -gt 0 ] && exit 1
 fi
 exit 0

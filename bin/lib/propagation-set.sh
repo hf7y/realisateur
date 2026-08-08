@@ -279,7 +279,6 @@ wire-selfdev-git.sh
 selfdev-gh-app-register.sh
 install-shims.sh
 install-verbs.sh
-relink-verbs-to-build.sh
 pivot.sh
 session-marker.sh
 "

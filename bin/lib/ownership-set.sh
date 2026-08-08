@@ -87,24 +87,23 @@ ecosim          hf7y/ecosim exists
 gardien         hf7y/gardien exists
 bibliothecaire  hf7y/bibliothecaire exists
 bashify         NO REPO -- see OWN_HOMELESS below
-office          NO REPO -- see OWN_HOMELESS below
 "
 
 # --- the receivers that do not exist yet ------------------------------------
-# Two foreign areas name a receiver that has no repository. That is not a
-# reason to call them realisateur's; it is the finding. `gh repo list hf7y`
-# on 2026-08-08 returned 45 repositories and neither of these was among them.
+# One foreign area names a receiver that has no repository. That is not a
+# reason to call it realisateur's; it is the finding. `gh repo list hf7y`
+# on 2026-08-08 returned 45 repositories and it was not among them.
 #
 #   bashify   28 commits, its own bin/, lib/, man/, skel/ and 7-file test
 #             suite, living as a subdirectory of another project. It is the
 #             generator every other project's verb surface is cut by.
-#   office    office-economy/ says so itself, in its own README's first
-#             sentence: "Staged by realisateur, 2026-07-30, FOR ADOPTION INTO
-#             THE OFFICE ON nomac." One commit ever. Nothing adopted it.
 #
-# A homeless receiver is counted FOREIGN, not exempt -- the number this audit
-# ratchets must not improve by declaring a receiver imaginary.
-OWN_HOMELESS="bashify office"
+# There were two. `office` is gone -- not by being reclassified, which is the
+# dodge R4 exists to close, but because office-economy/ LEFT THE TREE on
+# 2026-08-08 (vault: ecosystem1/realisateur/RETIRED-2026-08-08.md). A homeless
+# receiver disappears when its files do, and in no other way: the number this
+# audit ratchets must not improve by declaring a receiver imaginary.
+OWN_HOMELESS="bashify"
 
 # --- the areas the audit derives its population from ------------------------
 # Mechanism only. Root *.md, *.idea and archive/ are prose and are priced by
@@ -114,8 +113,6 @@ bin
 hooks
 provision
 bashify
-fable-like
-office-economy
 .github/workflows
 .claude/commands
 "
@@ -174,7 +171,6 @@ bin/selfdev-gh-app-register.sh     scheduler registers the App a dispatch accoun
 bin/cut-verb-build.sh              verbs cuts the build. provision/verbs-meta/README.md already says the workflow that calls it belongs at hf7y/verbs.
 bin/install-verbs.sh               verbs the declared verb surface and its installer.
 bin/install-verb-build.sh          verbs installs a pinned build from the meta-repo.
-bin/relink-verbs-to-build.sh       verbs migrates ~/.local/bin off bashified branches onto the build.
 bin/release-gate.sh                verbs decides whether tonight's build may be cut.
 bin/release-ledger.sh              verbs grades the release channel.
 bin/publish-release-verdict.sh     verbs publishes the release verdict.
@@ -183,6 +179,12 @@ bin/lib/verb-set.sh                verbs what verbs the ecosystem declares.
 bin/lib/propagation-set.sh         verbs the dev/prod contract for the verb release channel. Its own header is an argument about hf7y/verbs' visibility.
 provision/verbs-meta              verbs its own README says build-verbs.yml belongs at hf7y/verbs/.github/workflows/build-verbs.yml.
 bin/claim-drift.sh                 vim-arcade asks whether a pull request grew after being presented as done. PR tooling.
+bin/deferral-ledger.sh             vim-arcade asks whether a pull request declares its deferred work. PR tooling, same door as claim-drift.
+bin/tests/deferral-ledger.test.sh  vim-arcade follows its subject.
+.github/workflows/deferral-ledger.yml vim-arcade follows its subject.
+bin/defere.sh                      vim-arcade files an issue and prints the ledger line. Issue tooling; the estate's front door for routing a finding to an owner.
+bin/path-provenance-audit.sh       senechal asks whether every PATH entry has an owner and a source. senechal owns knowing what exists on a machine -- Zach reassigned this class explicitly on 2026-08-07.
+bin/tests/path-provenance-audit.test.sh senechal follows its subject.
 bin/closeout-lint.sh               bashify generic session-durability lint. Nothing in it is about ideas, inboxes or scaffolding; every repo in the estate wants it, which is the definition of a verb.
 bin/hardcoded-home-lint.sh         bashify generic shell lint. Same test.
 bin/markdown-cost.sh               bashify generic diff-shape gate. Same test.
@@ -191,8 +193,6 @@ bin/lib/cli-guard.sh               bashify the argument contract every bashified
 hooks                              bashify a generic SubagentStop harness hook wrapping a generic lint.
 bashify                            bashify a whole project -- generator, runtime, man page, skel and a seven-file suite -- living as a subdirectory. 28 commits. hf7y/bashify does not exist.
 bin/ecosim-sensor-tick.sh          ecosim runs ecosim's sensors on a tick. Named for the project it serves.
-office-economy                     office its own README: staged by realisateur for adoption into the office on nomac. One commit, 2026-07-30, never adopted.
-fable-like                         bibliothecaire a read-only exhibit of a proposed file structure, dead since 2026-08-01. An archived artifact; the receiving archive UNIVERSE.md names is bibliothecaire.
 .claude/commands/bashify.md        bashify the front door of the bashify generator.
 .claude/commands/cloture.md        bashify the session-closing ritual, whose deterministic half is closeout-lint.sh. It travels with the lint.
 .github/workflows/claim-drift.yml  vim-arcade CI for PR-drift tooling.

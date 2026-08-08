@@ -116,9 +116,17 @@ commits() {
   printf '[%s]' "${out%,}"
 }
 
-pr_json() { # <number> <state> <isDraft> <createdAt> <headRefOid> <commits-json>
-  printf '{"number":%s,"title":"t","url":"https://x/pull/%s","state":"%s","isDraft":%s,"createdAt":"%s","headRefOid":"%s","commits":%s}' \
-    "$1" "$1" "$2" "$3" "$4" "$5" "$6"
+pr_json() { # <number> <state> <isDraft> <createdAt> <headRefOid> <commits-json> [body]
+  # The body defaults to a CONFORMING first line so the drift cases above keep
+  # testing drift and nothing else. Section J supplies its own bodies; if the
+  # default were non-conforming, every case would fail for two reasons at once
+  # and neither verdict would be evidence about the other.
+  # `${7-...}` and NOT `${7:-...}`: the colon form substitutes the default for
+  # an EMPTY argument as well as an unset one, so case J5 -- the empty body --
+  # silently received the conforming default and passed by testing nothing.
+  local body="${7-DECISION: merge this, it is a clean fix.}"
+  printf '{"number":%s,"title":"t","url":"https://x/pull/%s","state":"%s","isDraft":%s,"createdAt":"%s","headRefOid":"%s","commits":%s,"body":%s}' \
+    "$1" "$1" "$2" "$3" "$4" "$5" "$6" "$(printf '%s' "$body" | jq -Rs .)"
 }
 
 # run <fixture-dir> [args...]
@@ -246,6 +254,73 @@ else
   bad I1 "no workflow in .github/workflows/ invokes claim-drift.sh"
   bad I2a "(no workflow)"; bad I2b "(no workflow)"; bad I2c "(no workflow)"
 fi
+
+# --- J. the decision line -----------------------------------------------------
+# A READY pull request is a completion claim (section A). This asserts the
+# second half of the convention: a claim must also say what it asks of the
+# reader. Not a style rule -- Zach's stated failure mode is "if it's a PR not a
+# draft, I'm just going to merge it without reading", so a ready PR whose first
+# line does not classify itself is one he cannot triage without opening it.
+#
+# The classification is the AUTHOR's, declared, not inferred: no guard can read
+# intent. Both forms are one line and both are checkable.
+echo
+echo "J. a ready PR classifies itself in line one"
+
+J_TL='[{"event":"opened","created_at":"2026-01-01T00:00:00Z"}]'
+jcase() { # <name> <isDraft> <body> -> fixture dir
+  mkcase "$1" "$(pr_json 9 OPEN "$2" 2026-01-01T00:00:00Z aaaa "$(commits aaaa:2026-01-01T00:00:00Z)" "$3")" "$J_TL"
+}
+
+J1=$(jcase j1 false 'DECISION: adopt the ratchet as a build-blocking floor?')
+has J1 "$(run "$J1" 9)" 'CURRENT'
+hasnt  J1b "$(run "$J1" 9)" 'UNDECIDED'
+
+J2=$(jcase j2 false '**DECISION:** bolded is still a decision.')
+hasnt  J2 "$(run "$J2" 9)" 'UNDECIDED'
+
+J3=$(jcase j3 false 'NO-DECISION: green fix, nothing to weigh.')
+hasnt  J3 "$(run "$J3" 9)" 'UNDECIDED'
+
+# The failure this closes: a wall of prose with the ask buried in it.
+J4=$(jcase j4 false 'This PR reworks the gate and also touches the ledger. Merging it
+would make the ratchet blocking, which you may or may not want.')
+has J4 "$(run "$J4" 9)" 'UNDECIDED'
+is  J4b "$(rc_of "$J4" --strict 9)" 1
+
+J5=$(jcase j5 false '')
+has J5 "$(run "$J5" 9)" 'UNDECIDED'
+
+# Leading blank lines and markdown furniture must not defeat it -- the rule is
+# the first NON-EMPTY line, stripped of emphasis, not literally byte one.
+J6=$(jcase j6 false '
+
+## DECISION: still counts after a heading and blank lines.')
+hasnt J6 "$(run "$J6" 9)" 'UNDECIDED'
+
+# A DRAFT claims nothing (section A), so it is exempt. Requiring a decision of
+# a draft would make the convention self-contradictory: draft is precisely the
+# state for work that is not yet asking anything of anyone.
+J7=$(jcase j7 true 'no decision here at all, and that is fine')
+has J7 "$(run "$J7" 9)" 'UNCLAIMED'
+hasnt  J7b "$(run "$J7" 9)" 'UNDECIDED'
+is  J7c "$(rc_of "$J7" --strict 9)" 0
+
+# The word must open the line, not merely appear in it. Otherwise any PR that
+# mentions the convention in passing exempts itself -- the exact false positive
+# guard-estate's check E hit and had to fix.
+J8=$(jcase j8 false 'We should probably add a DECISION: line to this one day.')
+has J8 "$(run "$J8" 9)" 'UNDECIDED'
+
+echo
+echo "K. the convention is single-sourced"
+convout=$(bash "$SUT" --convention 2>&1); rcK=$?
+is  K1 "$rcK" 0
+has K2 "$convout" 'draft'
+has K3 "$convout" 'DECISION:'
+# The canonical text must be reachable without reading the source, or spawners
+# will keep retyping it from memory -- which is how it drifted in the first place.
+has K4 "$convout" 'NO-DECISION:'
 
 echo
 printf 'claim-drift.test.sh: %d passed, %d failed\n' "$pass" "$fail"
