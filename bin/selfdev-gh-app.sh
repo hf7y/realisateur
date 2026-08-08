@@ -4,7 +4,10 @@
 #
 #   selfdev-gh-app.sh --check              probe the wiring, write nothing (default)
 #   selfdev-gh-app.sh --token [--repos a,b]  print an installation token to stdout
-#   selfdev-gh-app.sh --identity           print the bot's git user.name / user.email
+#   selfdev-gh-app.sh --identity           print the App actor -- the PUSHER, not
+#                                          the author. See "AUTHOR AND PUSHER"
+#                                          below: --wire no longer writes this
+#                                          into git's author fields.
 #   selfdev-gh-app.sh --jwt                print the App JWT only (401 debugging)
 #   selfdev-gh-app.sh --adopt --account <name> --key <file.pem> --app-id <id>
 #                                          install a freshly downloaded key at
@@ -12,7 +15,11 @@
 #   selfdev-gh-app.sh --credential <op>    git credential helper. Git appends the
 #                                          operation itself: `get` mints, and
 #                                          `store`/`erase` are no-ops that exit 0.
-#   selfdev-gh-app.sh --wire               write git config so push/gh use the App
+#   selfdev-gh-app.sh --wire               write git config: the credential helper
+#                                          (PUSHER = the App) and the git author
+#                                          (AUTHOR = this account, from `id -un`).
+#                                          Never clobbers an existing identity
+#                                          silently -- it preserves and reports it.
 #
 # WHY THIS EXISTS. bin/wire-selfdev-git.sh gives a self-dev account per-repo
 # deploy keys. Those grant ACCESS and confer no IDENTITY: a deploy-key push is
@@ -199,10 +206,70 @@ mint_token() {
   printf '%s' "$tok"
 }
 
-# --- the bot identity --------------------------------------------------------
-# The email is not a convention this script invents -- it is the only address
-# GitHub links back to the bot actor, so a commit made with anything else shows
-# as an unlinked author even though the PUSH was the App's.
+# ============================================================================
+# AUTHOR AND PUSHER ARE TWO LAYERS, AND --wire USED TO CONFLATE THEM
+# ============================================================================
+#
+# Found live 2026-08-07: `--wire` had set ecosim@monkey's GLOBAL git identity
+# to `unattended-monkey[bot] <314444911+unattended-monkey[bot]@users.noreply.
+# github.com>`. Under the ORIGINAL design -- one App per account -- that was
+# correct, because the bot WAS the account. Under the fleet model chosen the
+# same day -- ONE App across all ten accounts -- it makes every account author
+# identically, and `git log` can no longer answer which agent did anything.
+#
+# That is not cosmetic. The argument for one App over ten was: a per-App
+# identity buys CRYPTOGRAPHIC attribution, we only need BOOKKEEPING
+# attribution, and a per-agent commit author gives that for free. Setting the
+# author to the bot deletes the free half and leaves the fleet with neither.
+#
+# THE MODEL, stated once so neither layer gets rebuilt out of the other:
+#
+#   AUTHOR   who wrote the commit. PURELY LOCAL GIT CONFIG. GitHub has no say
+#            in it and only displays it. Must be the ACCOUNT -- ecosim, chezz,
+#            crt -- because that is the fact nothing else records.
+#   PUSHER   what credential delivered it. The App installation token. GitHub
+#            attributes the push event to `<app-slug>[bot]` REGARDLESS OF
+#            AUTHOR, automatically, with no configuration at all.
+#
+# Both are available at once, and that is the whole point: `git log` answers
+# "which agent did this", GitHub's push event answers "did this come from the
+# fleet". Setting the author to the bot threw away the first in order to
+# duplicate the second.
+#
+# --- the ACCOUNT identity: the AUTHOR half ----------------------------------
+#
+# NAME: `id -un`, deliberately, and NOT `$USER`. $USER is an ordinary
+# environment variable inherited across `sudo -u` and `su` without `-`, which
+# is exactly how these uid-3000 accounts are stood up -- so it can name the
+# provisioning operator while running as the account, and the failure is
+# silent and permanent (it lands in every commit). `id -un` asks the kernel
+# about the effective uid and cannot be inherited from anywhere.
+#
+# EMAIL: `<account>@selfdev.invalid`. `.invalid` is reserved by RFC 2606
+# precisely so it can never resolve, which makes the address HONEST -- it does
+# not pretend to be a mailbox, and nothing will ever try to deliver to it. It
+# is greppable, it sorts, and it says what the identity is.
+#
+# THE TRADEOFF, stated rather than buried: this address does NOT link to a
+# GitHub profile. A `<id>+<name>@users.noreply.github.com` address would, and
+# is the reason bot_identity() below uses one. But the only such address
+# available here is the BOT's, and using it would make every commit claim to
+# be authored by an identity that did not act -- buying a clickable avatar at
+# the cost of a true record. These are machine identities; the record is worth
+# more than the avatar. Overridable for anyone who weighs it the other way.
+SELFDEV_EMAIL_DOMAIN="${SELFDEV_EMAIL_DOMAIN:-selfdev.invalid}"
+
+account_identity() {
+  local acct; acct="$(id -un)" || return 1
+  [ -n "$acct" ] || return 1
+  printf '%s\n%s@%s\n' "$acct" "$acct" "$SELFDEV_EMAIL_DOMAIN"
+}
+
+# --- the BOT identity: the PUSHER half, printed by --identity ----------------
+# Still resolved and still correct for what it IS -- the actor GitHub will
+# attribute the PUSH to. It is no longer written into git's author fields.
+# The email here is the only address GitHub links back to the bot actor, which
+# is why it has that shape and why it is not the shape used above.
 bot_identity() {
   local jwt slug uid
   jwt="$(app_jwt)" || return 1
@@ -313,12 +380,68 @@ case "$MODE" in
     git config --global credential."https://github.com".helper "!'$self' --credential"
     git config --global credential."https://github.com".useHttpPath false
     ok "git credential helper -> $self --credential"
-    if ident="$(bot_identity)"; then
-      git config --global user.name  "$(printf '%s' "$ident" | sed -n 1p)"
-      git config --global user.email "$(printf '%s' "$ident" | sed -n 2p)"
-      ok "git identity -> $(printf '%s' "$ident" | sed -n 1p) <$(printf '%s' "$ident" | sed -n 2p)>"
+
+    # THE AUTHOR HALF. The account, not the bot -- see the model above.
+    if ident="$(account_identity)"; then
+      want_name="$(printf '%s' "$ident" | sed -n 1p)"
+      want_mail="$(printf '%s' "$ident" | sed -n 2p)"
+      have_name="$(git config --global --get user.name  || true)"
+      have_mail="$(git config --global --get user.email || true)"
+
+      # DO NOT CLOBBER SILENTLY. This already cost real information: the
+      # value --wire overwrote on ecosim@monkey was never captured and cannot
+      # be restored, because the previous version read nothing before writing.
+      # So the old value is READ, REPORTED, and PRESERVED in git's own config
+      # under a selfdev.* key before anything is written -- and the backup is
+      # written only ONCE, so re-running --wire can never overwrite the
+      # original with a value --wire itself set.
+      if [ -n "$have_name$have_mail" ] && \
+         { [ "$have_name" != "$want_name" ] || [ "$have_mail" != "$want_mail" ]; }; then
+        if [ -z "$(git config --global --get selfdev.previousUserName || true)" ] && \
+           [ -z "$(git config --global --get selfdev.previousUserEmail || true)" ]; then
+          git config --global selfdev.previousUserName  "$have_name"
+          git config --global selfdev.previousUserEmail "$have_mail"
+          git config --global selfdev.previousUserSavedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          ok "preserved the previous identity: git config --global selfdev.previousUserName/Email"
+        else
+          ok "a previous identity was already preserved; not overwriting the backup"
+        fi
+        # Loud, and it names both values. A replacement an operator cannot see
+        # in the output is a replacement they will find out about from a
+        # `git log` six weeks later.
+        gap "REPLACING the global git identity on $(id -un)@$(hostname -s 2>/dev/null || echo '?'):"
+        gap "  was:  ${have_name:-<unset>} <${have_mail:-<unset>}>"
+        gap "  now:  $want_name <$want_mail>"
+        case "$have_name" in
+          *'[bot]') gap "  the previous value was an App bot slug -- this is the fleet-identity"
+                    gap "  bug being corrected: one App across ten accounts made every account"
+                    gap "  author identically, so 'which agent did this' had no answer." ;;
+        esac
+        gap "  restore with: git config --global user.name \"\$(git config --global selfdev.previousUserName)\""
+      fi
+
+      git config --global user.name  "$want_name"
+      git config --global user.email "$want_mail"
+      # WITNESS: read it back out of git, not out of the variable just written.
+      got_name="$(git config --global --get user.name  || true)"
+      got_mail="$(git config --global --get user.email || true)"
+      if [ "$got_name" = "$want_name" ] && [ "$got_mail" = "$want_mail" ]; then
+        ok "git AUTHOR -> $got_name <$got_mail>   (the account: git log answers 'which agent')"
+      else
+        bad "git config accepted the write but re-reading gives '$got_name <$got_mail>'"
+      fi
     else
-      bad "could not resolve the bot identity -- credential helper is wired, git author is NOT"
+      bad "could not resolve the account identity from \`id -un\` -- credential helper is wired, git author is NOT"
+    fi
+
+    # THE PUSHER HALF. Nothing to configure: GitHub attributes the push to the
+    # App actor because of the CREDENTIAL, not because of any git setting.
+    # Resolved here only so the operator can see both layers in one output and
+    # confirm they are different on purpose.
+    if bident="$(bot_identity 2>/dev/null)"; then
+      ok "git PUSHER -> $(printf '%s' "$bident" | sed -n 1p)   (the App: GitHub attributes the push, no config needed)"
+    else
+      gap "git PUSHER -> could not resolve the App actor for display. This does NOT affect pushes: GitHub attributes them from the CREDENTIAL, not from any git setting, so the pusher layer is wired whether or not this line can name it."
     fi
     # url.insteadOf from wire-selfdev-git.sh rewrites github.com onto per-repo
     # ssh aliases. Where both are wired, ssh WINS and this helper is never

@@ -241,6 +241,103 @@ has "J ...and says why"  "$outL" "only accepted after --credential"
 outW="$(grep -o 'credential\.\"https://github\.com\".helper.*' "$SCRIPT" | head -1)"
 has "J --wire writes a helper git will call as '<self> --credential <op>'" "$outW" "--credential"
 
+# --- K: --wire writes the ACCOUNT as author, never the App bot -----------------
+# THE BUG THIS CASE EXISTS FOR, found live on ecosim@monkey 2026-08-07:
+#
+#   user.name  = unattended-monkey[bot]
+#   user.email = 314444911+unattended-monkey[bot]@users.noreply.github.com
+#
+# Correct under the ORIGINAL one-App-per-account design, where the bot WAS the
+# account. Wrong under the fleet model chosen the same day -- ONE App across
+# ten accounts -- because it makes every account author identically and
+# `git log` stops being able to answer which agent did anything.
+#
+# THE SHAPE OF THE MISS, which is the reason this section is written the way it
+# is: the suite already exercised --wire and passed. It never asserted anything
+# about WHICH identity was written, so a wrong-but-present value sailed through.
+# Every assertion below therefore names a VALUE, not a presence.
+#
+# AUTHOR and PUSHER are two layers: author is purely local git config and must
+# be the account; pusher is the App token and GitHub attributes it with no
+# configuration at all. Both are obtainable at once, and the old code threw the
+# first away to duplicate the second.
+echo
+echo "-- K: --wire sets AUTHOR=account, PUSHER=App -----------------------------"
+
+# --wire writes GLOBAL git config, so it needs its own HOME *and* its own
+# GIT_CONFIG_GLOBAL -- $HOME alone is not enough if the environment carries one.
+WHOME="$T/wire-home"; mkdir -p "$WHOME"
+GC="$WHOME/.gitconfig"
+wire() { env HOME="$WHOME" XDG_CACHE_HOME="$T/cache" GIT_CONFIG_GLOBAL="$GC" \
+             SELFDEV_APP_CONF="$T/none.conf" SELFDEV_GH_API="http://127.0.0.1:1" \
+             "$SCRIPT" --wire "$@" 2>&1; }
+gcfg() { git config --file "$GC" --get "$1" 2>/dev/null || true; }
+
+ACCT="$(id -un)"
+: > "$GC"
+outK="$(wire)"
+
+eq "K user.name is this ACCOUNT"  "$(gcfg user.name)"  "$ACCT"
+eq "K user.email is the account at the reserved domain" \
+   "$(gcfg user.email)" "$ACCT@selfdev.invalid"
+# The negative assertion, which is the one that actually encodes the bug.
+case "$(gcfg user.name)$(gcfg user.email)" in
+  *'[bot]'*) bad "K the author is an App bot slug -- every account would author identically" ;;
+  *)         ok  "K the author is NOT an App bot slug" ;;
+esac
+case "$(gcfg user.email)" in
+  *users.noreply.github.com*) bad "K the author email claims a GitHub identity that did not act" ;;
+  *)                          ok  "K the author email does not impersonate a GitHub profile" ;;
+esac
+has "K it names the author as the account, and says why" "$outK" "which agent"
+has "K it names the pusher as a separate layer"          "$outK" "PUSHER"
+# The credential helper half of --wire is correct and must survive the change.
+has "K the credential helper is still wired" "$(gcfg 'credential.https://github.com.helper')" "--credential"
+
+# The email domain is a decision, not a hardcode -- overridable for anyone who
+# weighs the linkability tradeoff the other way.
+: > "$GC"
+env HOME="$WHOME" XDG_CACHE_HOME="$T/cache" GIT_CONFIG_GLOBAL="$GC" \
+    SELFDEV_APP_CONF="$T/none.conf" SELFDEV_GH_API="http://127.0.0.1:1" \
+    SELFDEV_EMAIL_DOMAIN="example.test" "$SCRIPT" --wire >/dev/null 2>&1
+eq "K the email domain is overridable" "$(gcfg user.email)" "$ACCT@example.test"
+
+# --- K2: an existing identity is preserved and reported, never silently lost ---
+# It already cost real information: the value --wire overwrote on ecosim was
+# never captured and cannot be restored, because nothing read it before writing.
+: > "$GC"
+git config --file "$GC" user.name  "A Human"
+git config --file "$GC" user.email "human@example.com"
+outK2="$(wire)"
+
+eq "K2 the previous name is preserved in git's own config" \
+   "$(gcfg selfdev.previousUserName)"  "A Human"
+eq "K2 the previous email is preserved too" \
+   "$(gcfg selfdev.previousUserEmail)" "human@example.com"
+[ -n "$(gcfg selfdev.previousUserSavedAt)" ] \
+  && ok "K2 the backup is dated" || bad "K2 the backup is dated"
+has "K2 the replacement is announced, not silent" "$outK2" "REPLACING the global git identity"
+has "K2 ...naming the value it replaced"          "$outK2" "A Human"
+has "K2 ...and the value it wrote"                "$outK2" "$ACCT@selfdev.invalid"
+has "K2 ...and how to restore it"                 "$outK2" "selfdev.previousUserName"
+eq  "K2 the new identity is still the account"    "$(gcfg user.name)" "$ACCT"
+
+# Re-running must NOT overwrite the backup with a value --wire itself wrote.
+# Without this, one extra --wire destroys the only copy of the original.
+wire >/dev/null
+eq "K2 a second --wire does not clobber the preserved original" \
+   "$(gcfg selfdev.previousUserName)" "A Human"
+
+# The bot-slug case gets its own sentence, because that is the live wrong state
+# on the fleet right now and an operator needs to recognise it in the output.
+: > "$GC"
+git config --file "$GC" user.name  "unattended-monkey[bot]"
+git config --file "$GC" user.email "314444911+unattended-monkey[bot]@users.noreply.github.com"
+outK3="$(wire)"
+has "K3 an App bot slug is named as the fleet-identity bug" "$outK3" "fleet-identity"
+eq  "K3 ...and it is corrected to the account"              "$(gcfg user.name)" "$ACCT"
+eq  "K3 ...with the bot value preserved"                    "$(gcfg selfdev.previousUserName)" "unattended-monkey[bot]"
+
 echo
 printf '%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ] || exit 1
