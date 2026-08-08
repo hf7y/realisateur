@@ -1,0 +1,47 @@
+# deferral-ledger.yml -- the surfacing half of bin/deferral-ledger.sh.
+#
+# WHY A SEPARATE WORKFLOW, and not a job in tests.yml: tests.yml globs
+# bin/tests/*.sh and runs suites against the CHECKOUT. This runs against the
+# live pull request's BODY, which is not in the checkout and does not change
+# when the checkout does. Different subject, different trigger.
+#
+# THE EVENT LIST IS LOAD-BEARING, and differently from claim-drift's.
+# `edited` is NOT in the default `pull_request` set, and it is the single most
+# important event here: a PR body changes with no commit, no push and no
+# `synchronize`. Adding the ledger -- the one act that turns this check green
+# -- emits `edited` and nothing else. Without it the author would fix the
+# finding and watch the check stay red, which is how a guard gets ignored and
+# then deleted. bin/tests/deferral-ledger.test.sh case I2 pins it.
+#
+# `ready_for_review` is here for the opposite reason to claim-drift's: a draft
+# is allowed to be incomplete, but marking ready IS the completion claim, and
+# "I am done" while deferring unfiled work is precisely the claim this
+# repository spent 2026-08-07 making ten times.
+#
+# IT SURFACES; IT DOES NOT BLOCK. Private repo, plan where branch-protection
+# and rulesets both answer 403 (probed 2026-08-07), so a red check prevents
+# nothing. It is a light.
+
+name: deferral-ledger
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # --strict so an unfiled deferral is a red check rather than a line in a
+      # log nobody opens. Exit 6 (BLIND) is red too: a run that could not read
+      # the body has not established that nothing was left behind.
+      - name: Does this PR say where the work it deferred went?
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash bin/deferral-ledger.sh --strict --repo "$GITHUB_REPOSITORY" "${{ github.event.number }}"
