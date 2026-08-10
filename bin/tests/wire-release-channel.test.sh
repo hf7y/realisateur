@@ -88,7 +88,33 @@ install-verb-build.sh
 selfdev-release-tick.sh'
 
 echo
-echo "== 5. AN EMPTY UID BAND IS A FINDING ===================================="
+echo "== 5. THE STAGGER IS STABLE ============================================="
+# The tick's own default is a fixed `41 5 * * *`. Wiring ten accounts with it
+# would put ten clones of hf7y/verbs and ten symlink switches in one minute on
+# one VM guest, nightly. Lift the real function rather than restating it -- a
+# reimplementation here would pass while the script did something else.
+eval "$(sed -n '/^cron_spec_for()/,/^}/p' "$SCRIPT")"
+A1="$(cron_spec_for ecosim)"; A2="$(cron_spec_for ecosim)"
+eq "same account, same minute on a re-run (no crontab churn)" "$A1" "$A2"
+if [ "$(cron_spec_for ecosim)" != "$(cron_spec_for vim-arcade)" ]; then
+  ok "different accounts get different minutes"
+else
+  bad "ecosim and vim-arcade collide on '$A1' -- the herd is not spread"
+fi
+# Derived from the NAME, not a position: an eleventh account must not renumber
+# the ten already installed.
+B1="$(cron_spec_for chezz)"
+eq "a name's minute does not depend on who else exists" "$B1" "$(cron_spec_for chezz)"
+case "$(cron_spec_for anything)" in
+  *' 5 * * *') ok "the spec is a daily 05:xx cron 5-field line" ;;
+  *) bad "unexpected cron spec shape: $(cron_spec_for anything)" ;;
+esac
+O="$(TICK_CRON_SPEC='7 3 * * *' cron_spec_for ecosim)"
+eq "TICK_CRON_SPEC overrides the derivation" "$O" '7 3 * * *'
+has "and the override is passed to the tick, not baked into it" "$CODE" 'TICK_CRON_SPEC='
+
+echo
+echo "== 6. AN EMPTY UID BAND IS A FINDING ===================================="
 # "0 wired, 0 failed, exit 0" on a host with no self-dev accounts would be the
 # found-nothing/nothing-is-wrong conflation this estate keeps paying for.
 has "an empty band is named as a finding" "$SRC" 'that is a finding'
