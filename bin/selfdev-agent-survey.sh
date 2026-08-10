@@ -81,6 +81,10 @@ UID_MIN="${SELFDEV_UID_MIN:-3000}"
 UID_MAX="${SELFDEV_UID_MAX:-3099}"
 GH_OWNER="${SELFDEV_GH_OWNER:-hf7y}"
 LOG_TAIL="${SELFDEV_SURVEY_LOG_LINES:-400}"
+# Evidence older than this is reported and then ignored. 3 days: the armed
+# tick is `0 */6`, so a working account writes 4 entries a day and anything
+# past 3 days means it has missed a dozen consecutive dispatches.
+LOG_MAX_AGE_DAYS="${SELFDEV_SURVEY_LOG_MAX_AGE_DAYS:-3}"
 DUP_LINE_THRESHOLD="${SELFDEV_SURVEY_DUP_THRESHOLD:-15}"
 
 # --- pure classification: given a blob of text, which of the four behaviors
@@ -229,12 +233,45 @@ $(cat "$f")"
   [ -n "$prompt_text" ] && echo "  PROMPT     source: $prompt_source"
   PROMPTS["$acct"]="$prompt_text"
 
-  # -- recent evidence: the account's own dispatch log, whichever job dir it lands in
-  for f in "$home"/.local/share/*-nightly-batch/sweep.log "$home"/.local/share/*-nightly-batch/run.log "$home"/reports/*/LATEST.md; do
-    [ -f "$f" ] && log_text="$log_text
+  # -- recent evidence: the account's own dispatch log, whichever job dir it
+  # lands in. TWO CORRECTIONS, both found 2026-08-10 by checking this
+  # script's own reads against the fleet rather than trusting its columns:
+  #
+  # 1. WRONG DIR, for exactly the accounts that matter. The glob was
+  #    `*-nightly-batch/{sweep,run}.log`. The three ARMED accounts dispatch
+  #    through `usage-paced-runner.sh`, which writes
+  #    `.local/share/scheduler-paced-runner/run.log` -- a name that does not
+  #    end in `-nightly-batch` and so was never read. bibliothecaire, which
+  #    had run that very morning, reported "no log found" and therefore
+  #    `issues claims=yes evidence=no <- claims it, no recent evidence`: a
+  #    GAP manufactured by the instrument. Match ANY job dir; the job's name
+  #    is the scheduler's to choose and this script does not get to assume it.
+  #
+  # 2. NO RECENCY WINDOW. chezz, crt and baudin were paused on 2026-08-06
+  #    (hf7y/scheduler@9006134) and their last log is from that day, so four
+  #    days later they still read `evidence=yes` off work that has not
+  #    happened since. That is the inverse of the caveat this script already
+  #    prints: a quiet night can look like a blind spot, and a STOPPED
+  #    account looks exactly like a working one. Evidence older than the
+  #    window is reported and then NOT counted -- an account that stopped
+  #    should read as stopped.
+  local newest_log_age="" f_age
+  for f in "$home"/.local/share/*/sweep.log "$home"/.local/share/*/run.log "$home"/reports/*/LATEST.md; do
+    [ -f "$f" ] || continue
+    f_age=$(( ( $(date +%s) - $(stat -c %Y "$f" 2>/dev/null || echo 0) ) / 86400 ))
+    if [ "$f_age" -gt "$LOG_MAX_AGE_DAYS" ]; then
+      echo "  LOG        STALE ${f_age}d: ${f#$home/} -- not counted as evidence (window ${LOG_MAX_AGE_DAYS}d)"
+      continue
+    fi
+    if [ -z "$newest_log_age" ] || [ "$f_age" -lt "$newest_log_age" ]; then newest_log_age="$f_age"; fi
+    log_text="$log_text
 $(tail -n "$LOG_TAIL" "$f")"
   done
-  [ -z "$log_text" ] && echo "  LOG        no sweep.log/run.log/LATEST.md found under $home"
+  if [ -z "$log_text" ]; then
+    echo "  LOG        no dispatch log under $home newer than ${LOG_MAX_AGE_DAYS}d -- every evidence=no below is ABSENCE OF A LOG, not absence of the behavior"
+  else
+    echo "  LOG        newest ${newest_log_age}d old"
+  fi
 
   local dim claims evidence
   for dim in reconcile issues prs works; do
