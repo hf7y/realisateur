@@ -104,6 +104,18 @@ classify_works() {
 # all, the exact word lib/autonomy-merge.sh's own engine never checks for.
 classify_draft_aware() { grep -qiE '\bdraft\b' <<<"$1" && echo yes || echo no; }
 
+# Count objects in a `gh ... --json <field>` response, which is ONE LINE of
+# JSON regardless of how many records it holds. Pure, offline-testable, and
+# extracted for exactly that reason: this was `grep -c '"number"'` until
+# 2026-08-10, and `grep -c` counts LINES, not matches. Every account in the
+# fleet therefore reported `ISSUES open=1` -- ecosim's real 3, chezz's real
+# 11 and gardien's real 7 all rendered as the same digit, and the survey read
+# as a fleet with a uniform one-issue backlog. A survey whose headline number
+# is a boolean wearing a count's clothes is worse than one that prints
+# nothing. Same `grep -o | wc -l` idiom the PR counts below already used
+# correctly; no jq dependency added.
+json_field_count() { grep -o "\"$2\"" <<<"$1" | wc -l | tr -d ' '; }
+
 # Pure two-blob comparator for the cross-account duplication check: count of
 # distinct lines (>=20 chars, to skip trivial/boilerplate matches like blank
 # lines or a bare "STANDING RULES.") that appear verbatim in both blobs.
@@ -180,9 +192,10 @@ survey_account() {
   # -- 2/3. issues and PRs, live from GitHub, as the account's own token
   local issues_n="unknown" prs_ready="unknown" prs_draft="unknown"
   if sudo -u "$acct" gh auth status >/dev/null 2>&1; then
-    issues_n="$(sudo -u "$acct" gh issue list --repo "$GH_OWNER/$acct" --state open --json number 2>/dev/null | grep -c '"number"' || echo 0)"
-    local pr_json
-    pr_json="$(sudo -u "$acct" gh pr list --repo "$GH_OWNER/$acct" --state open --json number,isDraft 2>/dev/null)"
+    local issue_json pr_json
+    issue_json="$(sudo -u "$acct" gh issue list --repo "$GH_OWNER/$acct" --state open --limit 200 --json number 2>/dev/null)"
+    issues_n="$(json_field_count "$issue_json" number)"
+    pr_json="$(sudo -u "$acct" gh pr list --repo "$GH_OWNER/$acct" --state open --limit 200 --json number,isDraft 2>/dev/null)"
     prs_ready="$(grep -o '"isDraft":false' <<<"$pr_json" | wc -l | tr -d ' ')"
     prs_draft="$(grep -o '"isDraft":true'  <<<"$pr_json" | wc -l | tr -d ' ')"
   fi

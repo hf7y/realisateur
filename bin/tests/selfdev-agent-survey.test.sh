@@ -87,6 +87,20 @@ Work the issue queue starting with #75."
 dup_count="$(duplicated_line_count "$PROMPT_A" "$PROMPT_B")"
 if [ "$dup_count" -ge 5 ]; then ok "duplication: shared STANDING RULES block detected ($dup_count lines)"; else bad "duplication: expected >=5 shared lines, got $dup_count"; fi
 
+# --- json_field_count: the headline COUNT, on gh's real one-line output --
+# The regression this pins: `grep -c '"number"'` counts LINES, and gh emits
+# the whole array on one, so every account in the 2026-08-10 fleet run
+# reported `ISSUES open=1` -- chezz's real 11 and gardien's real 7 included.
+# A count that saturates at 1 reads as a finding ("uniform backlog") rather
+# than as a broken instrument, so it must be exercised on MULTI-record
+# single-line JSON specifically; a fixture with one record per line would
+# pass against the very bug it is meant to catch.
+GH_ISSUES_ONELINE='[{"number":12},{"number":9},{"number":7},{"number":3}]'
+eq "json count: 4 issues on one line" "$(json_field_count "$GH_ISSUES_ONELINE" number)" 4
+eq "json count: empty list is 0"      "$(json_field_count '[]' number)" 0
+eq "json count: no response is 0"     "$(json_field_count '' number)" 0
+eq "json count: single record is 1"   "$(json_field_count '[{"number":5}]' number)" 1
+
 PROMPT_C='You are baudin. Nobody has decided what you are for yet.'
 PROMPT_D='You are crt. A Playwright dependency is missing on this host.'
 dup_count2="$(duplicated_line_count "$PROMPT_C" "$PROMPT_D")"
