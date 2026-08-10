@@ -1,0 +1,34 @@
+.TH CONSIGNE 1 "2026-08-10" "realisateur" "draft, not yet bashified"
+.SH NAME
+consigne \- the vault-consign step of PROSE-REAPING.md
+.SH SYNOPSIS
+.B consigne
+--from <project> --file <path> [--file <path> ...] -m <message-file> [--apply]
+.br
+.B consigne
+--from <project> --diff <treeish> -m <message-file> [--apply]
+.SH DESCRIPTION
+Copies the named files out of a project repo
+(\fI$HOME/Documents/Projects/<project>\fR) into the Obsidian vault
+(\fI$HOME/ecosystem1/ecosystem1/<project>/\fR) and commits them there with a
+caller-supplied message in the vault's established "consign: ..." convention.
+Dry run by default; \fB\-\-apply\fR is required to actually copy and commit.
+.PP
+Never pushes. No code path in the implementation runs
+.B git push
+against the vault remote -- see PROSE-REAPING.md for why (Zach's IP/licensing
+note, standing until ethics guards around IP exist).
+.PP
+This tool does not decide WHAT is narrative. PROSE-REAPING.md's per-paragraph
+criterion is a judgement call for a human or an agent; this is the mechanical
+back half once that judgement has produced a drafted vault file and a
+commit message.
+.SH STATUS
+DRAFT. Ships today as a plain script at \fBbin/consigne.sh\fR, not yet run
+through the bashify pipeline into a VERB_NAME-based verb -- see the PR that
+introduced it for what graduation needs (subcommand split if warranted,
+DEPENDS.tsv rows, a bashified branch, CONTRACT.md entry).
+.SH "EXIT STATUS"
+0 ok (dry run completed, or commit made); 2 usage; 4 GAP (missing source or
+vault repo, or the source project is BUSY); 5 BROKEN (copy or git operation
+failed after files were already touched).
