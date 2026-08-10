@@ -276,6 +276,7 @@ land-selfdev.sh
 provision-selfdev-user.sh
 setup-selfdev-project.sh
 wire-selfdev-git.sh
+wire-release-channel.sh
 selfdev-gh-app-register.sh
 install-shims.sh
 install-verbs.sh
@@ -345,7 +346,28 @@ stamp-agent.sh
 suite-docs-lint.sh
 thermostat-wiring.sh
 path-provenance-audit.sh
+selfdev-agent-survey.sh
 "
+# selfdev-agent-survey.sh is LOCAL for the same reason as thermostat-wiring.sh:
+# an estate-wide, root-only, read-only survey a human runs from a hands account
+# against the live fleet. It walks the whole uid 3000-3099 band and shells out
+# `sudo -u <each account>`, so it is not a thing any single account runs about
+# itself -- an account has no view of its nine neighbours, and the cross-account
+# duplication check is a property of the FLEET that no per-account run can see.
+#
+# It arrived UNCLASSIFIED in c226afd on 2026-08-10 and this suite went red on
+# exactly that, which is the gate working: a script with no propagation path
+# reaches no account by any route.
+#
+# WORTH RECORDING IS WHERE THE RED SAT. `.github/workflows/tests.yml` runs every
+# suite in bin/tests/ on every pull request, so CI caught this immediately and
+# said so. The commit is on the branch of PR #126 -- which was marked READY,
+# with auto-merge enabled, while three of its four checks were failing. The
+# convention in CLAUDE.md is that marking a PR ready IS the completion claim,
+# and `gh pr merge --auto` is what makes an unattended landing safe; both held
+# here (mergeStateStatus BLOCKED, nothing landed). What did not happen is anyone
+# reading the red. The gate was never the missing piece.
+#
 # path-provenance-audit.sh is LOCAL and that is uncomfortable on purpose. It
 # is an estate-wide survey, like thermostat-wiring.sh above it, so LOCAL is
 # the correct list -- but the account class it most wants to measure is the

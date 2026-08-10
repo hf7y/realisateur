@@ -1,151 +1,129 @@
 ---
 scope: user
-description: Session-closing rite -- run the closeout lint, name the philosophy delta, report cross-project writes, make insights durable, surface decisions. Does not build.
+description: Session-closing rite -- reconcile every branch against the remote, run the closeout lint, file residue as issues/PRs (never repo prose), surface decisions. Does not build.
 ---
 
 `/cloture` is the closing counterpart to `/ideate`'s opening posture: a
 general rhythm to run after a big job, so a session ends "clear to clear"
 instead of trailing off. Designed 2026-07-26 (name Zach's own call);
-layer 1 is `bin/closeout-lint.sh`, this file is layer 2.
+revised 2026-08-10 on two counts: a session can end with local branches
+that reconcile cleanly on lint yet still have no PR/draft PR at all (the
+lint checks "is the content safe", not "can the next reader find it
+without asking"), and repo prose (FOCUS.md/BLOCKERS.md/QUESTIONS.md rows)
+had become the default residue channel when GitHub issues and PR bodies
+already are one, are searchable, and don't need this repo (or a sibling
+repo) to keep growing to hold them.
 
 **Posture: report, route, and surface — do NOT build.** If closing
-reveals unfinished work, the answer is to file it where something
-dispatches from (a `[batch]` row in `.scheduler/FOCUS.md`, a
-`> `-answerable line in scheduler's `BLOCKERS.md`), not to start
-building it at the end of a session. The one exception is finishing what
-the lint flags as *undurable* — committing and pushing work this session
-already did. That isn't new work; it's the session not having landed yet.
+reveals unfinished work, file it where something dispatches from (a
+GitHub issue in the owning repo) or land it as a PR/draft PR — never
+start building it at the end of a session, and never park it only in
+this conversation. The one exception is finishing what the lint flags as
+*undurable*: committing and pushing work this session already did isn't
+new work, it's the session not having landed yet.
 
-**What it retires:** the ad-hoc prose session summary as the SOLE
-reporting channel. A summary is still fine — this is what it must cover
-before it counts as one.
+## 1. Branch reconciliation — no dangling branches for later discovery
 
-## 1. Run the lint first (offline, zero AI)
+**Every local branch this session touched or leaves behind must resolve
+to one of three states, checked directly against the remote, not
+asserted:**
+
+- **Reflects `main`** — merged (`git cherry` against `origin/main` shows
+  nothing new) or its tip is reachable from a remote ref already. Nothing
+  to do.
+- **Has an open PR** — pushed, and `gh pr view` finds it. Draft is fine
+  if the work or the decision isn't finished; ready (with or without
+  `DECISION:`, per `claim-drift.sh --convention`) if it is. This is what
+  makes the remote the source of truth for "what's outstanding" instead
+  of this checkout.
+- **Documented as an intentional exception** — a repo whose registration
+  is itself missing/stale (`bin/closeout-lint.sh`'s `[missing-repo]`
+  row), a branch deliberately parked mid-experiment, etc. Say so in the
+  session close (step 4) with the branch name and why — not as a new
+  repo file, just in what you tell Zach.
+
+Run:
 
 ```
 bin/closeout-lint.sh
 ```
 
-Deterministic half before any judgment, per
-`scheduler/docs/offline-first-checks.md`. It reports:
+first (offline, zero AI) — it already does the hard part: distinguishing
+a genuinely unpushed branch from one that's squash-merged, stale-pointer,
+or checked out in someone else's worktree (`note`/`skip`, not `FLAG`).
+Then, for anything it does NOT already clear:
 
-- **A** every registered repo with a commit younger than 12h that has a
-  dirty tree, unpushed commits, or no upstream at all;
-- **B** whether this repo's `.scheduler/FOCUS.md` has an entry dated
-  today citing at least one commit sha;
-- **C** whether scheduler's `BLOCKERS.md` carries anything dated today
-  (a NOTE, never a FLAG — see step 5).
+- **Uncommitted changes** → commit (per `CLAUDE.md`'s commit-message-via-
+  file rule) or discard deliberately, never leave sitting.
+- **Committed but unpushed, no PR** → push and open one. Even a one-line
+  draft PR beats a branch only this host knows exists.
+- **Pushed with an open PR already** → re-read the PR body against
+  `claim-drift.sh --convention` before closing: does it still say what's
+  actually true right now (draft vs. ready, `DECISION:` vs. no-decision)?
+  A PR that drifted out of sync with its own claim during this session is
+  exactly what `claim-drift.sh <n>` checks — run it on anything you
+  touched.
 
-Its FLAGs are **signals, not verdicts**, same as the other surveys —
-except the durability ones, which are close to verdicts by construction:
-an unpushed commit genuinely has not reached the ref the nightly clones.
-Resolve those before closing, and say in the summary what you pushed.
-
-Run `bin/hygiene-lint.sh <project>` too for any project this session
-touched — the two overlap deliberately little.
+`bin/hygiene-lint.sh <project>` too, for any project this session
+touched — it overlaps deliberately little with the above.
 
 ## 2. Name the philosophy delta, or say "none"
 
 Did this session change what this ecosystem *believes* — a rule, a
 doctrine file (`UNIVERSE.md`, `BUILD-DISCIPLINE.md`, `PRECIPITATION.md`,
-`STABILITY-MILESTONES.md`, `PLAYBOOK.md`, `FOCUS-FORMAT.md`)? If yes,
-name the delta in one sentence and confirm the file itself was edited,
-not just the chat. If no, **say "philosophy delta: none" explicitly.**
+`STABILITY-MILESTONES.md`, `PLAYBOOK.md`, `FOCUS-FORMAT.md`, `CLAUDE.md`
+itself)? If yes, name the delta in one sentence and confirm the file was
+actually edited and is part of a commit/PR from step 1 — not just
+described in chat. If no, **say "philosophy delta: none" explicitly.**
 Silence here is indistinguishable from forgetting to look.
 
-## 3. List every cross-project write, with repo + sha
+## 3. Every cross-project write, and every piece of residue, is a GitHub issue or a PR — not repo prose
 
-One line each: `<repo> <sha> <what>`. Includes writes that were
-**reverted** and any second account or host touched — the CLAUDE.md
-subagent rule, applied to yourself. A cross-write nobody listed is how a
-project acquires an entry its own nightly can't explain.
+**Nothing from this session gets appended to `.scheduler/FOCUS.md`,
+`BLOCKERS.md`, or `QUESTIONS.md` as a session-log row.** Those files stay
+for genuinely stable, load-bearing state (per `PROSE-REAPING.md`'s own
+criterion: "does this describe a premise that still holds"), not as
+where a session dumps what it did. That is what made them grow
+unboundedly in the first place. Prose lives in issues and PRs now,
+per Zach's own reply establishing this paradigm — searchable, closeable,
+and not something every project's clone has to carry forever.
 
-### Deferred cross-writes — file them HERE, not by pointer
+For each of the following, file a GitHub issue in the **owning** repo
+(the repo the write/finding/decision is actually about — run
+`check-project-busy.sh <target>` first if you're about to write into a
+repo that isn't this one) rather than a row in a file:
 
-If a cross-write was **deferred** because `bin/check-project-busy.sh`
-said BUSY, it is BUILD-DISCIPLINE pattern 16 (*a correct refusal that
-nothing retries*) until it is written down. The refusal was right. The
-refusal is not the end of your obligation.
+- **A cross-project write** (including reverted ones, and any second
+  account/host touched) — the CLAUDE.md subagent rule, applied to
+  yourself. One issue (or a comment on the relevant PR) per write, with
+  repo + sha, so a run that can't see this conversation can still act on
+  it.
+- **A deferred write** because `check-project-busy` said BUSY — same
+  destination. Re-check before filing: locks are short, and if it now
+  reports `free`, do the write for real instead of filing about it.
+  Carry the actual payload in the issue body, not a pointer back to this
+  chat — an issue nobody but you can decode is a second dropped write
+  wearing a filed one's clothes.
+- **A decision blocked on Zach** — an issue, titled as the question,
+  in the repo it's about. He answers by commenting and closing (per
+  standing convention) — not by editing a file back.
+- **An insight true beyond this session** — if it's a *rule*, it goes in
+  a doctrine file for real (step 2). If it's a fact or a finding rather
+  than a rule, it's an issue. If it's neither — just interesting — it
+  does not need a durable home at all.
 
-This step used to say "file it, per step 5." That routing is what
-failed — twice, on 2026-07-27 and again on 2026-07-28, the second time
-by a session that had read the convention minutes earlier and still lost
-the writes until Zach asked. Step 5 is for **decisions**; a deferred
-write is **work**, so step 5 correctly declined it and named no
-destination. So the destination is named here instead, and it is not
-optional:
+**Retire check, run it every time:** grep the session for "deferred",
+"BUSY", "left undone", "next session should". Every hit needs either an
+issue URL or a PR URL from this step. A hit with neither exists only in
+the chat, and the chat is about to end.
 
-```
-focus-commit <THIS repo> <msgfile> .scheduler/FOCUS.md
-```
+## 4. Close
 
-appending a row that begins literally:
-
-```
-  [batch] DEFERRED CROSS-WRITE, <target> was BUSY: <payload>
-```
-
-Three requirements, because a stub that omits any of them is a second
-dropped write wearing a filed one's clothes:
-
-- **Carry the payload, not a pointer to it.** The row must be usable by
-  a run that cannot see this conversation. Findings, shas, and what the
-  target repo is supposed to do — not "see the summary above."
-- **Re-check before you assume it's still blocked.** Locks are short.
-  Re-run `check-project-busy <target>` at close; if it now reports
-  `free`, do the real write and skip the stub. Verify *whose* lock it is
-  — an interactive session's own pid looks identical to a foreign one in
-  the output, so compare against your own before deferring to yourself.
-- **A deferral with no named reader is not filed.** Say which run picks
-  it up. If nothing does, that is the finding, and it goes to step 5 as
-  a decision.
-
-**Retire check, run it every time:** grep the session for the words
-"deferred", "BUSY", "left undone", and "next session should" — every hit
-must correspond to a sha from this step or a sha from step 5. Any hit
-that corresponds to neither exists only in the chat, and the chat is
-about to end.
-
-## 4. Route the insights out of the chat
-
-Anything learned this session that is true beyond it goes to a durable
-home *now*: a doctrine file (a rule), `.scheduler/FOCUS.md` (a dated
-record of what happened and why), or memory (a standing preference).
-Prose decays and chat evaporates — this repo's own doctrine. An insight
-still sitting only in the conversation at closing time is lost.
-
-## 5. Surface decision-shaped residue
-
-Anything that needs Zach's own judgment goes to one of two places, and
-saying it in the summary is not one of them:
-
-- **a question about a project** → that project's
-  `.scheduler/QUESTIONS.md`, with a `  > (answer inline here)` slot;
-- **a decision blocked on him** → scheduler's `BLOCKERS.md`, under the
-  filing project's `##` section, as a `> `-answerable one-liner.
-
-`BLOCKERS.md` is **not a work queue** — a task-shaped entry filed there
-with no dispatch pointer is BUILD-DISCIPLINE failure pattern 13, and
-`hygiene-lint.sh`'s `[blockers-task]` row will find it. If the residue is
-work rather than a decision, file it where its owner dispatches from —
-and if it is work deferred by a BUSY lock, step 3 names the exact
-destination; do not leave it here.
-
-This is why lint check C never FLAGs: only this session knows whether it
-had any decision-shaped residue at all. Answer that question deliberately
-here rather than letting the empty check read as "nothing to file."
-
-## 6. Close
-
-State plainly: what was pushed and where (with revert shas, per
-`CLAUDE.md`'s push permission), what was deliberately left undone and
-why, and what the next session should pick up.
-
-**Every item in the "left undone" and "next session" lists carries a
-sha** — the commit that filed it, from step 3 or step 5. An item with no
-sha is not left undone, it is dropped, and saying it here is what a
-dropped write looks like from the inside. If you cannot produce a sha,
-go back and file it before writing the close. Zach should never have to
-ask whether a deferral landed; the answer is in the sentence. If `closeout-lint.sh` is
-still reporting FLAGs you chose not to resolve, name them and say why —
-an unmentioned FLAG at close reads as an unseen one.
+State plainly, with **links, not descriptions**: which branches got a PR
+and which URL, which issues got filed and which URL, what was pushed and
+where (with revert shas per `CLAUDE.md`'s push-permission clause), and
+what was deliberately left as a documented exception from step 1 and
+why. Zach should never have to ask whether something landed — the answer
+is a URL in the close, not a sentence promising one exists. If
+`closeout-lint.sh` is still reporting anything you chose not to resolve,
+name it and say why; an unmentioned FLAG at close reads as an unseen one.
