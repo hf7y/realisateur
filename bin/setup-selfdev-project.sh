@@ -167,40 +167,14 @@ say "4/5 land"
 run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
 
 # --- 5. the release bootstrap, and the account's own clock -------------------
-# The set is DERIVED from bin/lib/propagation-set.sh, never typed here. A
-# second list of "what the bootstrap is" would drift from the one the test
-# suite enforces, which is exactly the one-fact-two-readers shape MONKEY.md
-# 10 found five times in a day.
+# DELEGATED to bin/wire-release-channel.sh since 2026-08-10, not reimplemented.
+# It was inline here, which meant the only way to give an account a clock was
+# to run account creation at it -- so nine of monkey's ten accounts never got
+# one and the release channel sat at one consumer for five days. That script
+# has the whole argument; this is the same code with a second caller.
 say "5/5 release bootstrap + clock"
-# shellcheck source=lib/propagation-set.sh
-. "$HERE/lib/propagation-set.sh"
-BOOT="$HOME_DIR/.local/libexec/selfdev"
-install -d -m 755 -o "$PROJECT" -g "$PROJECT" "$BOOT" "$BOOT/lib"
-boot_ok=1
-for f in $PROP_BOOTSTRAP_SCRIPTS $PROP_BOOTSTRAP_SUPPORT; do
-  if [ -f "$HERE/$f" ]; then
-    install -m 755 -o "$PROJECT" -g "$PROJECT" "$HERE/$f" "$BOOT/$f"
-    echo "  OK      $BOOT/$f"
-  else
-    echo "  BAD     $HERE/$f is missing -- the bootstrap is incomplete and this account cannot obtain a build"
-    boot_ok=0
-  fi
-done
-
-if [ "$boot_ok" -eq 1 ]; then
-  # Installed by the ACCOUNT, into the ACCOUNT'S crontab. run_as gives it a
-  # login-shaped PATH; the tick needs nothing else.
-  run_as "'$BOOT/selfdev-release-tick.sh' --install-cadence --apply" 2>&1 | sed 's/^/     /'
-  # WITNESS: read the crontab back, as the account, rather than trusting the
-  # installer's own report of itself.
-  if sudo -u "$PROJECT" crontab -l 2>/dev/null | grep -q 'selfdev-release:TICK'; then
-    echo "  OK      clock verified in $PROJECT's crontab (re-read, not asserted)"
-    echo "  DO      notify-senechal 'realisateur selfdev-release-tick cron in $PROJECT@$HOST crontab, owned by realisateur'"
-  else
-    echo "  BAD     the clock is NOT in $PROJECT's crontab -- this account will never advance past the build it has"
-  fi
-  echo "  ..      first adoption is a separate act: sudo -u $PROJECT $BOOT/selfdev-release-tick.sh --apply"
-fi
+"$HERE/wire-release-channel.sh" "$PROJECT" --apply
+echo "  DO      notify-senechal 'realisateur selfdev-release-tick cron in $PROJECT@$HOST crontab, owned by realisateur'"
 
 cat <<EOF
 

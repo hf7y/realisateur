@@ -2,6 +2,15 @@
 # selfdev-agent-survey.sh -- what does each self-dev account ACTUALLY do on
 # its own dispatch run, vs. what its own prompt claims it does?
 #
+# GUARD: no -- the `-survey` name matches guard-estate.test.sh's shape rule,
+# and this is the opt-out it provides for a name that is not a gate. It cannot
+# be one: it needs root on the self-dev host, a live `gh` token per account,
+# and ten accounts to walk, so no CI job and no hook can ever run it. Its own
+# header says the rest -- signals, not verdicts; a GAP here is something to
+# look at, not a proven bug. What it does instead of gating is exit non-zero
+# when it found something, so a human's shell can branch on it without
+# scraping the text.
+#
 # RUN ON THE SELF-DEV HOST, AS ROOT (or via sudo):
 #   sudo bash bin/selfdev-agent-survey.sh
 #
@@ -309,6 +318,7 @@ $(tail -n "$LOG_TAIL" "$f")"
 
   if [ -n "$verdict_gaps" ]; then
     echo "  VERDICT    GAP --$verdict_gaps (signal, not proof -- a quiet night looks identical to a blind spot)"
+    FOUND=$((FOUND + 1))
   else
     echo "  VERDICT    no gap seen this pass"
   fi
@@ -331,11 +341,19 @@ check_cross_account_duplication() {
       if [ "$shared" -ge "$DUP_LINE_THRESHOLD" ]; then
         echo "  FAIL  $a and $b share $shared near-identical prompt line(s) -- duplicated prose, not a shared source: an edit to one silently stops applying to the other"
         found=1
+        FOUND=$((FOUND + 1))
       fi
     done
   done
   [ "$found" -eq 0 ] && echo "  ok    no cross-account prompt duplication at or above threshold"
 }
+
+# Findings this run. The exit code tracks it -- see the GUARD: no note at the
+# top for why this is not a gate and why it reports honestly anyway. A script
+# that prints FAIL and exits 0 is BUILD-DISCIPLINE.md's archetype defect
+# (silence-audit printing 74 FLAGs and exiting 0), and "it is only a survey"
+# is not a reason to reproduce it.
+FOUND=0
 
 main() {
   [ "$(id -u)" -eq 0 ] || echo "$CLI_NAME: not running as root -- sudo -u <account> calls below will mostly fail" >&2
@@ -354,6 +372,13 @@ main() {
   done <<<"$accounts"
 
   check_cross_account_duplication
+
+  echo
+  if [ "$FOUND" -gt 0 ]; then
+    echo "selfdev-agent-survey: $FOUND finding(s) -- exit 1"
+    return 1
+  fi
+  echo "selfdev-agent-survey: no findings this pass -- exit 0"
 }
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then main; fi
