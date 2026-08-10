@@ -763,6 +763,19 @@ finding, not an inconvenience.
   staged and uncommitted on a clone for two days, because the account
   that wanted to ask held no credential for bibliothecaire and there was
   no door that did not need one.
+
+- **A judgement call `.scheduler/QUESTIONS.md` can't resolve async** — that
+  channel is for questions a human answers whenever they next look, which is
+  right for most of them but not for one blocking a run right now. For that
+  case, reach Zach directly through `zaxon`'s `ask_zach` MCP tool (contract:
+  `realisateur/ZAXON.md`) — streamable-http, returns a `ticket_id`
+  immediately, no polling loop, poll `check_zach_reply(ticket_id)` every
+  30-60s if you need the answer before continuing. Set `from_agent` to
+  something Zach will recognise (`"<project>-claude-code"`, not `"agent"`).
+  This is a relay to a human, not a delegation channel — it does not replace
+  `consulte` (research) or `QUESTIONS.md` (non-blocking judgement calls), and
+  an unanswered ticket is not a failure: park and move on rather than
+  busy-loop.
 <!-- <<< realisateur-baseline -->
 ```
 
