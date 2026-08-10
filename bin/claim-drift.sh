@@ -161,10 +161,27 @@ PULL REQUEST CONVENTION -- canonical. Reference this; do not paraphrase it.
   thing does? If every file is new or a doc trim, it probably doesn't, and
   the default (no decision, auto-merge) is very likely the right one.
 
+  THE CHEAPER QUESTION, AND THE ONE THE SCRIPT CANNOT ASK FOR YOU. Same day,
+  same repository: PR #124 (this very check) STILL got a DECISION line, and
+  the mechanized OVERCAUTIOUS test above correctly stayed silent about it --
+  #124 edits an existing file, so the diff-shape heuristic has nothing to
+  say. The actual defect was one line up the stack: the user had ALREADY,
+  in plain language earlier in the same conversation, asked for exactly
+  this mechanism, and it had ALREADY been verified doing exactly that
+  (tests passing, dogfooded live against the real incident). Nothing was
+  open. "Did the user already explicitly ask for this, and is there
+  evidence it does what was asked" is not readable from a diff -- it is
+  readable from the conversation, by the one party who was in it. No
+  amount of diff-shape cleverness closes that gap; a script that tried
+  would be guessing at intent from the wrong side of the wall. Before
+  writing DECISION, an agent must ask that cheaper question itself, in
+  the room, before the diff-shape heuristic ever gets a turn.
+
   The classification is the AUTHOR's, declared. No guard can read intent.
   This script does NOT re-implement the green gate -- branch protection owns
   that. It only asks whether a PR that wants attention says what it wants,
-  and now also whether a PR that wants attention needed to ask at all.
+  and now also whether a PR that wants attention needed to ask at all --
+  and even that second half only catches ONE shape of "didn't need to ask".
 CONV
 }
 
