@@ -124,9 +124,28 @@ run_as_acct() {
     bash -lc "$3"
 }
 
+# STAGGER, so ten accounts do not all fetch in the same minute.
+# selfdev-release-tick.sh's default CRON_SPEC is a fixed `41 5 * * *`, which is
+# right for the one account it was written for and wrong for a fleet: wiring
+# the band would put ten simultaneous clones of hf7y/verbs and ten symlink
+# switches into one minute on one VM guest, every night. The tick already
+# exposes TICK_CRON_SPEC for exactly this, so the fix is to pass it, not to
+# edit the tick.
+#
+# DERIVED FROM THE NAME, not from a counter, so it is STABLE: re-running this
+# script puts an account back on the same minute, and standing up an eleventh
+# account does not move the other ten. An index into the sorted band would
+# renumber everyone the first time a name sorted earlier than an existing one.
+cron_spec_for() {
+  [ -z "${TICK_CRON_SPEC:-}" ] || { printf '%s' "$TICK_CRON_SPEC"; return; }
+  local m; m=$(( $(cksum <<<"$1" | cut -d' ' -f1) % 60 ))
+  printf '%d 5 * * *' "$m"
+}
+
 wire_one() {
-  local acct="$1" home="$2" boot f boot_ok=1
+  local acct="$1" home="$2" boot f boot_ok=1 spec
   boot="$home/.local/libexec/selfdev"
+  spec="$(cron_spec_for "$acct")"
 
   if [ "$MODE" = --check ]; then
     local n; n="$(set -- $PROP_BOOTSTRAP_SCRIPTS $PROP_BOOTSTRAP_SUPPORT; echo $#)"
@@ -134,7 +153,7 @@ wire_one() {
     if sudo -u "$acct" crontab -l 2>/dev/null | grep -q 'selfdev-release:TICK'; then
       echo "  ok      $acct already has the clock in its own crontab"
     else
-      echo "  would   have $acct install the tick into its OWN crontab (arms no dispatch)"
+      echo "  would   have $acct install the tick into its OWN crontab at '$spec' (arms no dispatch)"
     fi
     return 0
   fi
@@ -151,7 +170,7 @@ wire_one() {
   done
   [ "$boot_ok" -eq 1 ] || return 1
 
-  run_as_acct "$acct" "$home" "'$boot/selfdev-release-tick.sh' --install-cadence --apply" 2>&1 | sed 's/^/     /'
+  run_as_acct "$acct" "$home" "TICK_CRON_SPEC='$spec' '$boot/selfdev-release-tick.sh' --install-cadence --apply" 2>&1 | sed 's/^/     /'
   # WITNESS: read the crontab back, as the account, rather than believing the
   # installer's own report of itself. "crontab - exited 0" is not evidence that
   # a line is scheduled.
