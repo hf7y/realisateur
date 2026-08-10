@@ -154,9 +154,17 @@ PULL REQUEST CONVENTION -- canonical. Reference this; do not paraphrase it.
   I'm just going to merge it without reading". A ready PR whose ask is buried
   in prose cannot be triaged without opening it.
 
+  OVERCAUTIOUS (mechanized here, 2026-08-10, non-blocking): the mirror
+  failure -- a DECISION line on a diff that touched no existing file's
+  behavior (every changed file is new, or a shrinking .md edit). Before
+  reaching for DECISION, ask: does this diff change what any ALREADY-RUNNING
+  thing does? If every file is new or a doc trim, it probably doesn't, and
+  the default (no decision, auto-merge) is very likely the right one.
+
   The classification is the AUTHOR's, declared. No guard can read intent.
   This script does NOT re-implement the green gate -- branch protection owns
-  that. It only asks whether a PR that wants attention says what it wants.
+  that. It only asks whether a PR that wants attention says what it wants,
+  and now also whether a PR that wants attention needed to ask at all.
 CONV
 }
 
@@ -184,7 +192,7 @@ if [ "$ALL" -eq 0 ] && [ "${#PRS[@]}" -eq 0 ]; then
   cli_die 'nothing to audit: give one or more PR numbers, or --all'
 fi
 
-drifted=0; current=0; unclaimed=0; settled=0; blind=0; undecided=0
+drifted=0; current=0; unclaimed=0; settled=0; blind=0; undecided=0; overcautious=0
 
 # first non-empty line, stripped of markdown furniture, classified.
 # Returns 0 if the body declares itself, 1 if not.
@@ -200,6 +208,68 @@ declares_itself() {
     [Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*|[Nn][Oo]-[Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*) return 0 ;;
   esac
   return 1
+}
+
+# decision | no-decision | none -- which of the two declares_itself() accepts
+# this body opened with. Kept separate from declares_itself() because the
+# OVERCAUTIOUS check below only cares about the DECISION case: a NO-DECISION
+# line already says "no judgement needed" and asks for nothing.
+declaration_kind() {
+  local first stripped
+  first="$(printf '%s\n' "$1" | grep -m1 -v '^[[:space:]]*$')" || { echo none; return; }
+  stripped="$(printf '%s' "$first" | sed -e 's/^[[:space:]#>*_-]*//')"
+  case "$stripped" in
+    [Nn][Oo]-[Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*) echo no-decision ;;
+    [Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*)          echo decision ;;
+    *)                                            echo none ;;
+  esac
+}
+
+# THE OVERCAUTIOUS CHECK. UNDECIDED (below) catches a ready PR that asks for
+# nothing while silently wanting attention. This is the mirror failure: a
+# ready PR that raises a DECISION nobody needs to make. Both are the same
+# defect from opposite sides -- the classification not matching what the
+# diff actually needs -- and 2026-08-10 supplied a live instance: a
+# read-only survey script plus a prose-to-vault move (already sanctioned by
+# PROSE-REAPING.md) got a `DECISION:` line and blocked auto-merge for a
+# change that altered no running account's behavior at all.
+#
+# "No guard can read intent" (this file's own convention text) still holds --
+# this does not decide whether a decision is warranted. It flags the one
+# shape that is mechanically checkable without reading intent: EVERY changed
+# file is either brand new, or an existing `.md` file whose diff removes at
+# least as many lines as it adds (a prose trim/reap, not new prose). A diff
+# shaped entirely like that cannot have changed any EXISTING script's or
+# config's behavior, because nothing existing was touched except to shrink
+# documentation. That is a necessary condition for "no decision was really
+# needed", not a sufficient one -- so this prints a FLAG, never gates
+# --strict, and never overrides the author's own classification.
+is_additive_only_diff() {
+  local file='' is_new=0 adds=0 dels=0 saw_file=0
+  judge() {
+    [ "$saw_file" -eq 0 ] && return 0
+    [ "$is_new" -eq 1 ] && return 0
+    case "$file" in
+      *.md) [ "$dels" -ge "$adds" ] && return 0 ;;
+    esac
+    return 1
+  }
+  while IFS= read -r line; do
+    case "$line" in
+      'diff --git '*)
+        if [ "$saw_file" -eq 1 ]; then judge || return 1; fi
+        file="${line#diff --git a/}"; file="${file%% b/*}"
+        is_new=0; adds=0; dels=0; saw_file=1
+        ;;
+      'new file mode'*) is_new=1 ;;
+      '+++'*) : ;;
+      '---'*) : ;;
+      '+'*) adds=$((adds+1)) ;;
+      '-'*) dels=$((dels+1)) ;;
+    esac
+  done <<<"$1"
+  [ "$saw_file" -eq 1 ] && { judge || return 1; }
+  return 0
 }
 
 note_blind() { blind=$((blind+1)); printf '  #%-4s BLIND     %s\n' "$1" "$2"; }
@@ -273,12 +343,28 @@ for n in "${PRS[@]}"; do
   # not auto-merging, and silent about why is asking for attention without
   # saying what for.
   automerge="$(printf '%s' "$pr" | jq -r '.autoMergeRequest // "" | if . == "" then "" else "on" end')"
-  if [ "$automerge" != on ] && ! declares_itself "$(printf '%s' "$pr" | jq -r '.body // ""')"; then
+  body="$(printf '%s' "$pr" | jq -r '.body // ""')"
+  if [ "$automerge" != on ] && ! declares_itself "$body"; then
     undecided=$((undecided+1))
     printf '  #%-4s UNDECIDED ready, not auto-merging, and its first line does not say why.\n' "$n"
     printf '                  Either `gh pr merge %s --auto --squash` (no decision needed),\n' "$n"
     printf '                  or open the body with `DECISION: <the call>`.\n'
     printf '                  See: claim-drift.sh --convention\n'
+  fi
+
+  # THE MIRROR CHECK: a DECISION nobody needs to make. See is_additive_only_diff
+  # above for exactly what "nobody needs to make" means here and why it stops
+  # at a FLAG rather than a verdict.
+  if [ "$(declaration_kind "$body")" = decision ]; then
+    prdiff="$(gh pr diff "$n" --repo "$REPO" 2>/dev/null)" || prdiff=''
+    if [ -n "$prdiff" ] && is_additive_only_diff "$prdiff"; then
+      overcautious=$((overcautious+1))
+      printf '  #%-4s OVERCAUTIOUS DECISION line, but every changed file is new or a\n' "$n"
+      printf '                  shrinking .md edit -- nothing existing was touched. Re-check\n'
+      printf '                  whether this really needs the human'"'"'s call, or downgrade to\n'
+      printf '                  plain ready + auto-merge (no decision) or a NO-DECISION line.\n'
+      printf '                  See: claim-drift.sh --convention\n'
+    fi
   fi
 
   # THE ANCHOR. Last time this PR was presented as finished.
@@ -320,11 +406,14 @@ for n in "${PRS[@]}"; do
   fi
 done
 
-printf '\n%d drifted, %d undecided, %d current, %d unclaimed, %d settled, %d blind.\n' \
-  "$drifted" "$undecided" "$current" "$unclaimed" "$settled" "$blind"
+printf '\n%d drifted, %d undecided, %d overcautious, %d current, %d unclaimed, %d settled, %d blind.\n' \
+  "$drifted" "$undecided" "$overcautious" "$current" "$unclaimed" "$settled" "$blind"
 
 if [ "$STRICT" -eq 1 ]; then
   [ "$blind" -gt 0 ] && exit 6
+  # overcautious never gates: it's a suggestion to reduce friction, and a
+  # mechanism that BLOCKS on "you asked for review when you maybe didn't need
+  # to" would just add the friction it exists to catch, one level up.
   # Both are findings, so both must move the exit code -- `guard-estate.test.sh`
   # asserts exit-code-tracks-findings over the whole population, and a verdict
   # that prints but does not gate is the `silence-audit` defect (74 FLAGs,
