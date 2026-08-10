@@ -59,6 +59,39 @@ eq "log: prs evidence (list, not act)" "$(classify_prs "$LOG_WITH_EVIDENCE")" ye
 LOG_IDLE='No commits, no pushes, no opened/closed issues this run -- tree is clean.'
 eq "log idle: works=no" "$(classify_works "$LOG_IDLE")" no
 
+# --- classify_draft_aware: distinct from classify_prs (prs fires on any
+# "gh pr list" mention; draft-aware requires the word itself) -----------
+PROMPT_PRS_NO_DRAFT='Check gh pr list for anything ready to merge.'
+eq "draft-aware: prs claimed"       "$(classify_prs         "$PROMPT_PRS_NO_DRAFT")" yes
+eq "draft-aware: draft not claimed" "$(classify_draft_aware "$PROMPT_PRS_NO_DRAFT")" no
+PROMPT_DRAFT='Check gh pr list. Skip anything still in draft state.'
+eq "draft-aware: draft claimed" "$(classify_draft_aware "$PROMPT_DRAFT")" yes
+
+# --- duplicated_line_count: the fleet-wide check's pure comparator ------
+# Two accounts whose prompts share a long identical block (the
+# hf7y/scheduler@9cfd130 shape: one STANDING RULES block hand-typed into
+# multiple BATCH_PROMPT strings) vs. two whose prompts are genuinely
+# unrelated project-specific text.
+STANDING_RULES='0. MECHANISM FIRST. Talking is not dev, fix it in this run.
+1. CLOSE WHAT YOU RESOLVED, in the same run that resolved it.
+2. DEBT RULE: you may not open more issues than you close.
+3. IF YOU ARE BLOCKED, name what you TRIED and the EXACT wall.
+4. LAND YOUR WORK. Commits on a branch nobody merges are not delivered.
+5. NO NEW MARKDOWN FILES. Prose is not a deliverable.'
+PROMPT_A="You are ecosim, the monitoring project.
+$STANDING_RULES
+Work the issue queue starting with #34."
+PROMPT_B="You are vim-arcade, the display project.
+$STANDING_RULES
+Work the issue queue starting with #75."
+dup_count="$(duplicated_line_count "$PROMPT_A" "$PROMPT_B")"
+if [ "$dup_count" -ge 5 ]; then ok "duplication: shared STANDING RULES block detected ($dup_count lines)"; else bad "duplication: expected >=5 shared lines, got $dup_count"; fi
+
+PROMPT_C='You are baudin. Nobody has decided what you are for yet.'
+PROMPT_D='You are crt. A Playwright dependency is missing on this host.'
+dup_count2="$(duplicated_line_count "$PROMPT_C" "$PROMPT_D")"
+eq "duplication: unrelated prompts share nothing" "$dup_count2" 0
+
 echo
 echo "selfdev-agent-survey.test.sh: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
