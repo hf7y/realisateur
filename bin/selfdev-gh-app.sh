@@ -276,7 +276,7 @@ bot_identity() {
   slug="$(api GET /app "$jwt" | jq -r '.slug // empty')" || return 1
   [ -n "$slug" ] || return 1
   uid="$(curl -sS -H "Accept: application/vnd.github+json" "$API/users/$slug%5Bbot%5D" | jq -r '.id // empty')"
-  [ -n "$uid" ] || { echo "could not resolve the bot user id for $slug[bot]" >&2; return 1; }
+  [ -n "$uid" ] || { echo "could not resolve the bot user id for ${slug}[bot]" >&2; return 1; }
   printf '%s[bot]\n%s+%s[bot]@users.noreply.github.com\n' "$slug" "$uid" "$slug"
 }
 
