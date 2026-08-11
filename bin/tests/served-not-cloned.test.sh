@@ -91,7 +91,11 @@ R
 
 echo "== 1. BEFORE THE REDESIGN: RED, AND SPECIFIC ABOUT WHY ==================="
 BEFORE="$TMP/before"; make_scheduler "$BEFORE" before
-printf '0 */6 * * * /home/alpha/Documents/Projects/scheduler/bin/scheduler-run alpha batch\n' > "$TMP/crontabs-before"
+# The load-bearing part of this fixture is the `Documents/Projects/scheduler/bin`
+# substring the probe greps for -- NOT the home prefix, which is written from
+# $TMP so bin/hardcoded-home-lint.sh has nothing to flag. A path under one
+# named user's home is not a default even in a fixture.
+printf '0 */6 * * * %s/alpha/Documents/Projects/scheduler/bin/scheduler-run alpha batch\n' "$TMP" > "$TMP/crontabs-before"
 rc=0
 O="$(SERVED_SCHEDULER_REPO="$BEFORE" SERVED_FLEET_CRONTABS="$TMP/crontabs-before" \
      SERVED_SUNSET=2099-01-01 bash "$SCRIPT" 2>&1)" || rc=$?
