@@ -16,8 +16,8 @@
 #
 # One endpoint, fetched live on every tick, no local copy to rot:
 #
-#     https://zach.audio/verbs/status.json      machine
-#     https://zach.audio/verbs/                 human
+#     https://hf7y.com/verbs/status.json      machine
+#     https://hf7y.com/verbs/                 human
 #
 # ============================================================================
 # WHY THIS ENDPOINT, CHOSEN BY PROBING RATHER THAN PREFERENCE
@@ -34,7 +34,7 @@
 #   hf7y (account)        type: User, free -- Pages on a PRIVATE repo needs a
 #                         paid plan, so publishing from `verbs` is not
 #                         available at any amount of configuration.
-#   hf7y/hf7y.github.io   public: true     Pages: built, https://zach.audio/
+#   hf7y/hf7y.github.io   public: true     Pages: built, https://hf7y.com/
 #                         (200 over HTTPS, custom domain, already live)
 #
 # So the endpoint is an existing, already-live, credential-free public site,
@@ -149,8 +149,8 @@ cli_guard "$@"
 
 PUBLISH_REPO="${PUBLISH_REPO:-hf7y/hf7y.github.io}"
 PUBLISH_DIR="${PUBLISH_DIR:-verbs}"
-STATUS_URL="${RELEASE_STATUS_URL:-https://zach.audio/verbs/status.json}"
-PAGE_URL="${RELEASE_STATUS_PAGE:-https://zach.audio/verbs/}"
+STATUS_URL="${RELEASE_STATUS_URL:-https://hf7y.com/verbs/status.json}"
+PAGE_URL="${RELEASE_STATUS_PAGE:-https://hf7y.com/verbs/}"
 HISTORY_MAX="${PUBLISH_HISTORY_MAX:-60}"
 DECISIONS="CUT NO_CHANGE BLOCKED ERROR"
 

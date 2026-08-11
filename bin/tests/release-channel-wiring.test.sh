@@ -3,7 +3,7 @@
 # reason to exist -- see "WHY THIS FILE IS DIFFERENT" below. It is the one
 # suite here that asks the real world whether the channel is WIRED: it queries
 # GitHub for the build-verbs schedule and `curl`s the live verdict endpoint
-# (https://zach.audio/verbs/status.json and the human page). A hermetic version
+# (https://hf7y.com/verbs/status.json and the human page). A hermetic version
 # of these cases would pass on a machine where nothing is scheduled and nothing
 # is published, which is the failure it is built to catch.
 #
@@ -281,7 +281,7 @@ sched="$(gh api repos/hf7y/verbs/actions/workflows --jq '.workflows[]|select(.na
 echo
 echo "-- H. LIVE: THE ENDPOINT IS REACHABLE, FRESH AND WELL-FORMED -----------"
 # ===========================================================================
-URL="${RELEASE_STATUS_URL:-https://zach.audio/verbs/status.json}"
+URL="${RELEASE_STATUS_URL:-https://hf7y.com/verbs/status.json}"
 body="$(curl -fsS --max-time 20 "$URL" 2>/dev/null)"; crc=$?
 if [ "$crc" != 0 ] || [ -z "$body" ]; then
   bad "the verdict endpoint $URL is not reachable -- consumers are BLIND"
@@ -299,7 +299,7 @@ else
   esac
 fi
 
-HUMAN="${RELEASE_STATUS_PAGE:-https://zach.audio/verbs/}"
+HUMAN="${RELEASE_STATUS_PAGE:-https://hf7y.com/verbs/}"
 hbody="$(curl -fsS --max-time 20 "$HUMAN" 2>/dev/null)"
 [ -n "$hbody" ] && ok "the human-readable page is reachable: $HUMAN" \
                 || bad "the human-readable page $HUMAN is not reachable"
