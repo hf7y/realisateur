@@ -84,7 +84,20 @@ else bad "B4b and says so in words, not only in a code"; fi
 # SHAPE, tree-wide. Coarse on purpose: hygiene-lint.sh and closeout-lint.sh
 # expand with their own open-coded `case` blocks and pass, because this tests
 # for the defect, not for one particular caller.
-printf '\nC. no script in bin/ extracts PROJECT_REPO_PATH without expanding it\n'
+#
+# THE POPULATION IS WHY THIS ONLY HALF-WORKED. Until 2026-08-11 the scan read
+# `bin/*.sh` and `bin/lib/*.sh` and nothing else, so it was green all the while
+# SIX readers in bashify/ carried the raw grep -- hf7y/realisateur#143, open
+# since 2026-08-09 and describing them exactly. One of the six was
+# bashify/lib/coin.sh, the ONLY door for a new verb in this ecosystem, which
+# meant no new verb could be cut from any host by anyone; `bin/consigne` merged
+# in #121 and reached no host's PATH for that reason (#162).
+#
+# A ratchet is only as good as its population, and a population that stops at a
+# directory boundary is a list wearing a ratchet's clothes. bashify/ is in the
+# glob now. Any future tree of scripts that reads the registry belongs here too
+# -- the cost of forgetting is not a red test, it is a green one.
+printf '\nC. no script in bin/ or bashify/ extracts PROJECT_REPO_PATH without expanding it\n'
 c_bad=""
 c_scanned=0
 while IFS= read -r f; do
@@ -104,7 +117,10 @@ while IFS= read -r f; do
   # QUOTES the raw grep in a fixture (deferral-ledger.test.sh does, verbatim,
   # as its example of a well-formed deferral) documents the defect rather than
   # committing it. The population is the scripts that run against the registry.
-done < <(cd "$REPO" && git ls-files ':(glob)bin/*.sh' ':(glob)bin/lib/*.sh' 2>/dev/null)
+done < <(cd "$REPO" && git ls-files \
+           ':(glob)bin/*.sh' ':(glob)bin/lib/*.sh' \
+           ':(glob)bashify/*.sh' ':(glob)bashify/lib/*.sh' ':(glob)bashify/bin/*' \
+           2>/dev/null)
 
 if [ "$c_scanned" -eq 0 ]; then
   bad "C0  the scan found files to scan" "git ls-files matched nothing -- this checked NOTHING"

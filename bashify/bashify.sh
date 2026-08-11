@@ -21,6 +21,9 @@ SKEL="$(cd "$(dirname "${BASH_SOURCE[0]}")/skel" && pwd)"
 # content guard below and not to the path guard, because they were two copies.
 # shellcheck source=lib/surface.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/lib" && pwd)/surface.sh"
+# ONE reader for PROJECT_REPO_PATH, shared with bin/'s scripts. See its header;
+# the raw grep returns a literal unexpanded $HOME. hf7y/realisateur#143.
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/bin/lib/conf.sh"
 # Overridable so this generator can be run against a throwaway registry. It
 # was not testable before: `emit` does `git branch -D bashified` on the real
 # repo, so the only way to exercise it was to destroy a live branch, and the
@@ -32,7 +35,7 @@ PROJ="${1:?project}"; VERB="${2:?verb}"; SUMMARY="${3:?summary}"
 
 conf="$SCHED/schedule/$PROJ.conf"
 [ -f "$conf" ] || { echo "bashify: no scheduler conf for $PROJ" >&2; exit 1; }
-REPO="$(grep -oP '^PROJECT_REPO_PATH=\K.*' "$conf" | tr -d '"'"'"'')"
+REPO="$(conf_repo_path "$conf" || true)"
 
 # A project may live INSIDE a monorepo rather than owning a repo. aedile is a
 # subdirectory of `wavebucks`, co-owned with another person, so its conf path

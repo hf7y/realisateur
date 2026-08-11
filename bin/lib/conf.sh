@@ -53,9 +53,31 @@
 # anything, and a conf is a file this repo does not own on a host it may not
 # own either; command substitution inside one must not become code this script
 # runs. If a conf ever needs a second variable, add it here by name.
+#
+# QUOTING: double, single, or none. The first version required a double quote
+# -- `(?<=PROJECT_REPO_PATH=")` -- which is true of every conf in scheduler's
+# registry today and therefore looked complete. It was the reason
+# hf7y/realisateur#143 could not be closed: bashify's six readers could not be
+# routed through this function while it would silently return 1 for an
+# unquoted value, and "returned nothing" is indistinguishable here from "the
+# conf has no such field". A shared reader that cannot represent a legal input
+# is not shared -- it is a sixth private reader with better manners.
 conf_repo_path() {
   local conf="$1" p
-  p="$(grep -oP '(?<=PROJECT_REPO_PATH=")[^"]*' "$conf" 2>/dev/null | head -1)"
+  # The value is everything after the first `=`, minus a trailing comment and
+  # surrounding whitespace, minus one matched pair of quotes. Deliberately NOT
+  # three lookbehinds for three quote styles: one regex per shape is how the
+  # readers multiplied in the first place.
+  p="$(grep -E '^[[:space:]]*PROJECT_REPO_PATH=' "$conf" 2>/dev/null | head -1)"
+  [ -n "$p" ] || return 1
+  p="${p#*=}"
+  p="${p%%[[:space:]]#*}"
+  p="${p#"${p%%[![:space:]]*}"}"
+  p="${p%"${p##*[![:space:]]}"}"
+  case "$p" in
+    '"'*'"') p="${p#\"}"; p="${p%\"}" ;;
+    "'"*"'") p="${p#\'}"; p="${p%\'}" ;;
+  esac
   [ -n "$p" ] || return 1
   p="${p//\$\{HOME\}/$HOME}"
   p="${p//\$HOME/$HOME}"
