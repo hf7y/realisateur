@@ -347,6 +347,7 @@ suite-docs-lint.sh
 thermostat-wiring.sh
 path-provenance-audit.sh
 selfdev-agent-survey.sh
+selfdev-credentials.sh
 served-not-cloned.sh
 shellcheck-lint.sh
 verb-kind-lint.sh
@@ -397,6 +398,17 @@ no-worktree-lint.sh
 # It arrived UNCLASSIFIED in c226afd on 2026-08-10 and this suite went red on
 # exactly that, which is the gate working: a script with no propagation path
 # reaches no account by any route.
+#
+# selfdev-credentials.sh is LOCAL for the identical reason, one paragraph up:
+# it needs `ssh <host>` and passwordless `sudo -n -u <account>` across the
+# whole uid 3000-3099 fleet to audit them side by side, and the comparison
+# across accounts (which one diverged) is a property of the FLEET no single
+# account's own dispatch run could see about itself. --apply narrows to one
+# named account but still runs from a hands account over ssh, never from the
+# account's own crontab -- the opposite shape of the PULL doctrine section 5
+# states for the release channel, and correctly so: converging a CREDENTIAL
+# is a provisioning act with a human-reviewed trigger (an operator running
+# --apply), not a clock an account winds on itself.
 #
 # WORTH RECORDING IS WHERE THE RED SAT. `.github/workflows/tests.yml` runs every
 # suite in bin/tests/ on every pull request, so CI caught this immediately and
