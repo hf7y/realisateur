@@ -19,6 +19,22 @@
 # file is how a project says "that one is not a verb" once, instead of being
 # nagged about it every night.
 #
+# THE TEST, Zach 2026-08-11, when this file blocked every nightly build:
+#
+#     "would another agent or Zach ever call one of those?"
+#
+# That is the question, and it is not the one the mechanical rule asks. The
+# rule asks whether `bin/<name>` and `man/<name>.1` both exist -- a fact about
+# the tree. This asks whether the name is a FRONT DOOR: something a person or
+# another project types. Everything else is an internal that happens to be
+# executable, and an internal does not stop being one by acquiring a man page.
+#
+# Applied, the test is usually obvious and usually already answered by the
+# project's own shape: ecosim declares `sonde`, so `sonde` is the door and its
+# instruments are behind it. When the answer is genuinely unclear, that IS the
+# finding -- write down which way you decided and why, which is what every row
+# below does.
+#
 # WHAT A ROW IS, AND IS NOT
 #   IS      an executable that does a job of its own -- an installer, a cron
 #           wrapper, a scraper, an archiver -- and would gain nothing from a
@@ -59,3 +75,5 @@ ecosim	silence-audit.sh	the ecosystem's null-discriminator lint, run by realisat
 ecosim	migration-watch.py	a one-purpose instrument for the mandark -> dexter migration: "OBSERVER ONLY ... writes nothing outside this repo, and cannot halt, gate or block a move"
 gardien	ecosystem-archive.sh	archives the mandark agent-ecosystem set onto one removable exFAT drive; a hand-run operation with a restore-and-diff witness, not a name anyone types expecting a verb
 scheduler	dose-project.sh	the implementation `bin/dose` execs for its project form, not a name anyone types: `dose ecosim`, never `dose-project.sh ecosim`. It travels on bashified only so the build carries it BESIDE bin/dose, which is what lets $SELF find it with no scheduler checkout and no exposure to hf7y/scheduler#99 -- see the dispatch comment in bin/dose. A man page would put it on PATH as a verb, which is precisely what it must not be.
+ecosim	ecosim-sensor	an instrument behind ecosim's actual verb `sonde`, not a door of its own -- Zach, 2026-08-11: "ecosim-sensor and ecosim-sweep are not verbs. ecosim's verb is sonde." It is machine-facing by construction: data on stdout, status-first lines so `grep '^BLIND'` works, stable fields so `awk` works, and Monitoring Plugins exit codes in which `--help` EXITS 3, not 0. A verb whose --help exits 3 fails the verb contract outright, which is mechanical confirmation of the judgement rather than a second opinion about it.
+ecosim	ecosim-sweep	the unattended one-pass driver over those instruments, run by a clock and read by a log, never typed -- same Zach ruling of 2026-08-11. Its contract is an aggregated severity (0 clean / 1 warn / 2 crit / 3 blind, BLIND beating CRIT), which is a thing a cron line consumes, not a thing a person asks for. `sonde` remains ecosim's one door.
