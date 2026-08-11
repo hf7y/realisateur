@@ -78,6 +78,7 @@ cat > "$TMP/shim/gh" <<'SHIM'
 case "$1 $2" in
   "pr view") cat "$GH_FIXTURE/pr.json" ;;
   "pr list") cat "$GH_FIXTURE/list.json" ;;
+  "pr diff") cat "$GH_FIXTURE/diff.txt" 2>/dev/null ;;
   "api "*|"api") cat "$GH_FIXTURE/timeline.json" ;;
   *) echo "fake gh: unexpected invocation: $*" >&2; exit 3 ;;
 esac
@@ -311,6 +312,59 @@ is  J7c "$(rc_of "$J7" --strict 9)" 0
 # guard-estate's check E hit and had to fix.
 J8=$(jcase j8 false 'We should probably add a DECISION: line to this one day.')
 has J8 "$(run "$J8" 9)" 'UNDECIDED'
+
+echo
+echo "L. OVERCAUTIOUS -- a DECISION line nobody needed to write"
+# Real incident, 2026-08-10: a read-only survey script (new file) plus a
+# prose-to-vault move (existing .md, net line-count DOWN) got a DECISION
+# line and blocked auto-merge for a change that altered no running thing.
+
+DIFF_NEW_ONLY='diff --git a/bin/new-thing.sh b/bin/new-thing.sh
+new file mode 100755
+index 0000000..1111111
+--- /dev/null
++++ b/bin/new-thing.sh
++#!/usr/bin/env bash
++echo hi
+'
+DIFF_MD_SHRINK='diff --git a/NOTES.md b/NOTES.md
+index 2222222..3333333 100644
+--- a/NOTES.md
++++ b/NOTES.md
+@@ -1,5 +1,1 @@
+-line one
+-line two
+-line three
+-line four
++one line left
+'
+DIFF_SCRIPT_CHANGED='diff --git a/bin/sync-crontab.sh b/bin/sync-crontab.sh
+index 4444444..5555555 100644
+--- a/bin/sync-crontab.sh
++++ b/bin/sync-crontab.sh
+@@ -10,3 +10,4 @@
+ existing line
++one new line in an EXISTING script
+'
+
+L1=$(jcase l1 false 'DECISION: does this survey shape look right?')
+printf '%s' "$DIFF_NEW_ONLY$DIFF_MD_SHRINK" > "$L1/diff.txt"
+has L1 "$(run "$L1" 9)" 'OVERCAUTIOUS'
+
+# NO-DECISION already says "no judgement needed" -- must not double-flag.
+L2=$(jcase l2 false 'NO-DECISION: green fix, nothing to weigh.')
+printf '%s' "$DIFF_NEW_ONLY" > "$L2/diff.txt"
+hasnt L2 "$(run "$L2" 9)" 'OVERCAUTIOUS'
+
+# A real behavior change (an EXISTING script edited, not just new/doc files)
+# must NOT be flagged -- this is the guard against false positives, and the
+# whole reason it stops at new-file-or-shrinking-.md rather than "small diff".
+L3=$(jcase l3 false 'DECISION: does the new cron cadence look right?')
+printf '%s' "$DIFF_SCRIPT_CHANGED" > "$L3/diff.txt"
+hasnt L3 "$(run "$L3" 9)" 'OVERCAUTIOUS'
+
+# --strict must never gate on it -- it is a suggestion, not a verdict.
+is L4 "$(rc_of "$L1" --strict 9)" 0
 
 echo
 echo "K. the convention is single-sourced"
