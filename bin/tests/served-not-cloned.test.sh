@@ -55,6 +55,10 @@ R
     printf 'BATCH_PROMPT="You are beta.\n%s\n"\n' "$block" > "$d/schedule/beta.conf"
     mkdir -p "$d/focus"; echo "generated" > "$d/focus/alpha.md"
     echo "blocked on things" > "$d/BLOCKERS.md"
+    # liveness spread across the files a single roster is meant to replace
+    printf 'EXEMPT: alpha@monkey\n' > "$d/schedule/FREEZE"
+    printf 'alpha|1|1|/x/scheduler-run alpha batch\n' > "$d/schedule/_paced.conf"
+    printf 'RUNNER_CRON="0 */6 * * *"\n' > "$d/schedule/_runner.conf"
   else
     # the redesign: no monolith, no runner, DONE brakes, distinct live briefs,
     # no generated markdown, no BLOCKERS.md
@@ -69,13 +73,19 @@ if [ "$vrc" -eq 0 ]; then echo "DONE brakes here"; fi
 R
     printf 'BATCH_PROMPT="You are alpha. Your queue is generated live."\n' > "$d/schedule/alpha.conf"
     printf 'BATCH_PROMPT="You are beta. Something else entirely, no overlap."\n' > "$d/schedule/beta.conf"
+    # ONE roster, and nothing else left deciding. Written as the redesign
+    # would leave it: the files it replaces are gone, not merely outvoted.
+    printf '# project | account@host | rate | state\nalpha | alpha@monkey | 1h | live\n' > "$d/schedule/ROSTER"
   fi
 
   # a real origin/bashified ref -- the one thing that cannot be faked with a
   # plain file, since the probe uses `git ls-tree`.
   mkdir -p "$d/.bashified-stage/bin"
   echo '#!/usr/bin/env bash' > "$d/.bashified-stage/bin/arme"
-  [ "$era" = after ] && echo '#!/usr/bin/env bash' > "$d/.bashified-stage/bin/dose"
+  # The `after` dose is a PROJECT-shaped dose: it resolves its argument against
+  # schedule/ROSTER. A dose that only execs bin/*.sh is the one that exists
+  # today and is what probe_selfserve reports UNMET.
+  [ "$era" = after ] && printf '#!/usr/bin/env bash\n# resolve <project> against ROSTER\n' > "$d/.bashified-stage/bin/dose"
   ( cd "$d" && git add -A >/dev/null 2>&1 && git commit -qm x >/dev/null 2>&1 ) || true
   ( cd "$d" && git rm -rq --cached .bashified-stage >/dev/null 2>&1 ) || true
   # build a tree object containing bin/ from the stage, and point
@@ -118,7 +128,7 @@ rc=0
 O="$(SERVED_SCHEDULER_REPO="$AFTER" SERVED_FLEET_CRONTABS="$TMP/crontabs-after" \
      SERVED_SUNSET=2099-01-01 bash "$SCRIPT" 2>&1)" || rc=$?
 eq "the met vision exits 0" "$rc" 0
-has "and it says so" "$O" "7/7 met"
+has "and it says so" "$O" "9/9 met"
 has "and it asks to be deleted" "$O" "git rm"
 
 echo

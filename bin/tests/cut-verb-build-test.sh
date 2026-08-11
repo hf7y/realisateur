@@ -32,6 +32,15 @@
 #   * --dry-run cannot produce an artifact, because its read is short by
 #     construction.
 #   * a verb name declared by two projects is still refused.
+#   * a HALF-declared name -- an executable bin/<n> with no man/<n>.1, or a
+#     man/<n>.1 with no executable bin/<n> -- is NAMED and REFUSES the cut.
+#                                                              <- was broken
+#     It was omitted from every build in silence, which is how ecosim's
+#     `ecosim-sensor` missed every build ever cut and surfaced weeks later,
+#     on another host, as a wrapper failing on a path that never existed.
+#   * the genuinely-not-a-verb case opts out by NAME in lib/not-a-verb.tsv,
+#     and every such decision -- exempted or unresolved -- is written into the
+#     MANIFEST, because the build is what travels to the accounts.
 set -uo pipefail
 
 PASS=0; FAIL=0
@@ -83,6 +92,23 @@ EOF
     g -C "$d" config uploadpack.allowReachableSHA1InWant true
 }
 
+# HALF a declaration, both directions. The rule is a conjunction, so it has a
+# difference as well as an intersection, and the difference is what used to be
+# computed and thrown away in the same awk statement.
+add_half_exec() {   # executable bin/<n>, no man page
+    local repo="$1" n="$2" d="$FIX/$1.git"
+    printf '#!/usr/bin/env bash\nprintf %%s\\\\n %s\n' "$n" > "$d/bin/$n"
+    chmod +x "$d/bin/$n"
+    g -C "$d" add -A
+    g -C "$d" commit -m "half: bin/$n with no page"
+}
+add_half_page() {   # man/<n>.1, no executable
+    local repo="$1" n="$2" d="$FIX/$1.git"
+    printf '.TH %s 1\n' "$n" > "$d/man/$n.1"
+    g -C "$d" add -A
+    g -C "$d" commit -m "half: man/$n.1 with no executable"
+}
+
 # --- the fake gh ---------------------------------------------------------
 # It reads $TMP/repolist, so a test can retire a project between runs simply
 # by rewriting that file -- which is what archiving a repo looks like to
@@ -114,9 +140,16 @@ cat > "$TMP/gitconfig" <<EOF
     insteadOf = https://github.com/$OWNER/
 EOF
 
+# The not-a-verb opt-out is pointed at a FIXTURE file, never the repository's
+# own bin/lib/not-a-verb.tsv: a suite that read the shipped exemptions would
+# change its own answers whenever a project earned a row, which is the hermetic
+# equivalent of testing against production. Empty here means nothing is exempt.
+printf '#project\tname\twhy\n' > "$TMP/not-a-verb.tsv"
+
 cut() {
     PATH="$TMP/stub:$PATH" \
     FIXTURE_REPOLIST="$TMP/repolist" FIXTURE_DIR="$FIX" \
+    VERB_NOT_A_VERB_FILE="$TMP/not-a-verb.tsv" \
     GIT_CONFIG_GLOBAL="$TMP/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
     bash "$CUT" --owner "$OWNER" --build-root "$TMP/no-such-build-root" "$@"
 }
@@ -254,6 +287,85 @@ esac
 : > "$TMP/repolist"
 cut >/dev/null 2>&1
 check "no readable repositories is BLIND, not a zero-verb build" "$?" "1"
+
+# --- 10. a HALF-declaration is named, and refuses -----------------------
+# The defect this pair of cases exists for: `ecosim-sensor` was an executable
+# with no page on a bashified branch, so it fell out of the END loop, then
+# `[ -n "$verbs" ] || continue` skipped the project, and no count, name or
+# manifest row said anything. It was missing from every build ever cut, and
+# what a host saw instead was `WRAPPER_NO_SENSOR` -- a symptom that reads as a
+# stale build (realisateur#66) and is nothing of the kind.
+mkrepo epsilon ea
+add_half_exec epsilon ee
+printf 'epsilon\n' > "$TMP/repolist"
+cut >"$TMP/m10" 2>"$TMP/e10"
+check "an executable with no man page refuses the build" "$?" "1"
+case "$(cat "$TMP/e10")" in
+    *"HALF-DECLARED  epsilon/ee"*) ok "...and NAMES the project and the executable" ;;
+    *) bad "the half-declaration is named" "got: $(cat "$TMP/e10")" ;;
+esac
+case "$(cat "$TMP/e10")" in
+    *"no man/ee.1"*) ok "...and says which half is missing" ;;
+    *) bad "the half-declaration says which half" "got: $(cat "$TMP/e10")" ;;
+esac
+check "...and no manifest was emitted at all" \
+      "$([ -s "$TMP/m10" ] && echo "wrote $(wc -l < "$TMP/m10") line(s)" || echo empty)" "empty"
+
+# The inverse is equally a half-declaration and was equally silent.
+add_half_page epsilon pp
+cut >/dev/null 2>"$TMP/e10b"
+check "a man page with no executable also refuses" "$?" "1"
+case "$(cat "$TMP/e10b")" in
+    *"HALF-DECLARED  epsilon/pp: man/pp.1 with no executable bin/pp"*)
+        ok "...naming the missing executable half" ;;
+    *) bad "the inverse half-declaration is named" "got: $(cat "$TMP/e10b")" ;;
+esac
+case "$(cat "$TMP/e10b")" in
+    *"2 HALF-declared name(s)"*) ok "...and both halves are counted, not just the first" ;;
+    *) bad "every half-declaration is counted" "got: $(cat "$TMP/e10b")" ;;
+esac
+
+# --- 11. the opt-out, and the decision travelling in the manifest -------
+# An installer is not a verb and must not be nagged about forever; a row in
+# lib/not-a-verb.tsv is how a project says so ONCE. The row is not a silence:
+# what it buys is a line in the manifest instead of a refusal, because "what
+# did this build decide not to include, and why" belongs with the artifact
+# every account consumes, not on the terminal of whoever ran the cut.
+printf 'epsilon\tee\tfixture installer, not a verb\nepsilon\tpp\tfixture stray page\n' \
+    > "$TMP/not-a-verb.tsv"
+cut >"$TMP/m11" 2>"$TMP/e11"
+check "an exempted name does not refuse the build" "$?" "0"
+case "$(grep '^#' "$TMP/m11")" in
+    *"NOT-A-VERB	epsilon	ee"*) ok "...and the MANIFEST records what was left out" ;;
+    *) bad "the manifest carries the decision" "got: $(grep '^#' "$TMP/m11")" ;;
+esac
+case "$(grep '^#' "$TMP/m11")" in
+    *"fixture installer, not a verb"*) ok "...with the recorded reason, not only the name" ;;
+    *) bad "the manifest carries the reason" "got: $(grep '^#' "$TMP/m11")" ;;
+esac
+check "...and the project's real verb is still derived" "$(body "$TMP/m11")" "1"
+
+# --- 12. --allow-half-declared cuts, and still tells the consumer -------
+# The same shape as --allow-shrink: the operator who has already filed the
+# defect can cut tonight's build. What it must NOT buy is silence.
+printf '#project\tname\twhy\n' > "$TMP/not-a-verb.tsv"
+cut --allow-half-declared >"$TMP/m12" 2>"$TMP/e12"
+check "--allow-half-declared cuts despite the half-declarations" "$?" "0"
+case "$(grep '^#' "$TMP/m12")" in
+    *"HALF-DECLARED	epsilon	ee"*) ok "...and the manifest still names the unresolved defect" ;;
+    *) bad "an overridden half-declaration still travels" "got: $(grep '^#' "$TMP/m12")" ;;
+esac
+check "...and the verb rows are unaffected by the comment rows" "$(body "$TMP/m12")" "1"
+
+# --- 13. the SHIPPED opt-out file is data the build reads every night ---
+# A row missing its reason column is an exemption nobody can review, and it
+# would be read on a live cut, not here.
+REAL_NAV="$HERE/../lib/not-a-verb.tsv"
+check "the shipped lib/not-a-verb.tsv exists" \
+      "$([ -f "$REAL_NAV" ] && echo present || echo absent)" "present"
+check "...and every row is <project><TAB><name><TAB><why>" \
+      "$(awk -F'\t' '!/^[[:space:]]*#/ && $0 != "" && (NF < 3 || $1 == "" || $2 == "" || $3 == "") {n++} END {print n+0}' "$REAL_NAV")" \
+      "0"
 
 echo
 printf 'cut-verb-build: %d passed, %d failed\n' "$PASS" "$FAIL"

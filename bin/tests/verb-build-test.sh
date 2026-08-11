@@ -38,7 +38,7 @@ g() { git -c init.defaultBranch=main -c user.email=t@t -c user.name=t "$@" >/dev
 # A fixture meta-repo with two builds, exactly as CI would leave it.
 mk_build() {
     local id="$1" verbs="$2"
-    rm -rf "$META"/*/ 2>/dev/null || true
+    rm -rf "${META:?}"/*/ 2>/dev/null || true
     : > "$META/manifest.tsv"
     printf '# verb build %s\n' "$id" >> "$META/manifest.tsv"
     for spec in $verbs; do

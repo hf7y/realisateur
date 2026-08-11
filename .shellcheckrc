@@ -1,0 +1,66 @@
+# .shellcheckrc -- what shellcheck means in THIS tree.
+#
+# Read by shellcheck itself from the repository root, so `shellcheck <file>`
+# typed by hand, `bin/shellcheck-lint.sh`, and CI all get the same answer.
+# ONE source, not a flag list retyped into three callers -- the build-
+# discipline row about config read from one place is the whole reason this
+# file exists rather than an `-e` string inside the guard.
+#
+# EVERY DISABLE BELOW NAMES ITS EVIDENCE. A suppression without a reason is
+# indistinguishable from a suppression nobody re-examined, and this tree has
+# already paid for that once: bin/markdown-cost.sh:71 carried
+# `# shellcheck disable=SC2254 -- the pattern is meant to glob`, which
+# shellcheck cannot parse (it wants `# comment`, not `-- comment`). The
+# directive was MALFORMED, so SC2254 was never actually suppressed and two
+# parse errors were emitted instead. A suppression that does not suppress is
+# worse than none, because it reads as handled.
+
+# SC1091 -- "not following: file not found". 29 hits, every one a `.` of a
+# sibling lib resolved at runtime from a path shellcheck cannot evaluate
+# statically. Following them needs -x plus a source-path, which makes the
+# check depend on cwd; the `# shellcheck source=` directives already in the
+# tree are the honest form and they are kept.
+disable=SC1091
+
+# SC2016 -- "expressions don't expand in single quotes". 84 hits, and single
+# quotes are correct in all of them: awk programs, jq filters, printf format
+# strings, and prompt text that must reach an agent verbatim. Enabling it
+# would flag the correct spelling of every awk call in the tree.
+disable=SC2016
+
+# SC2034 -- "appears unused". 119 hits, dominated by the verb contract:
+# VERB_NAME / VERB_SUMMARY / VERB_USAGE / VERB_CAN_SUMMON are set by a verb
+# and consumed by lib/verb.sh AFTER it is sourced, which shellcheck cannot
+# see across the source boundary. Same shape for CLI_NAME / CLI_SUMMARY /
+# CLI_USAGE and bin/lib/*.sh's exported sets.
+disable=SC2034
+
+# THREE DISABLES, AND NO MORE. The list above is global -- it silences a code
+# in every file, forever, including files nobody has written yet. That is only
+# honest for classes that are STRUCTURAL here (a language idiom or a limit of
+# static analysis), never for classes that merely happen to have no live bug.
+#
+# Everything else with hits today goes in bin/shellcheck-lint.ratchet instead.
+# The difference is the whole design: a global disable makes the NEXT
+# occurrence invisible too, while a baseline records the ones that exist and
+# fails on the next one. Two classes that read as "obviously deliberate" are
+# baselined rather than disabled for exactly that reason:
+#
+#   SC2088  tilde-in-quotes, 7 hits -- all human-facing message text
+#           (`ok "~/.local/bin exists"`) or ssh_config literals that ssh
+#           expands itself. Deliberate HERE. A tilde in a path being handed to
+#           `mkdir` would be a real bug, and disabling the code globally is
+#           what would hide it.
+#   SC2087  unquoted here-doc delimiter, 2 hits -- bin/deploy-drift.sh and
+#           bin/selfdev-release-tick.sh send `bash -s` over ssh with `\$uid`
+#           escaped for the remote and `$UID_MIN` interpolated locally, on
+#           purpose. Quoting EOF would break the local half. A THIRD such
+#           heredoc should still have to argue for itself.
+#
+# NOT disabled and NOT forgiven -- these are the classes that have actually
+# cost this estate something, so they stay loud and live in the ratchet where
+# they can only go down:
+#   SC2164  cd without || exit      -- a test that cd-fails runs somewhere else
+#   SC2115  rm -rf "$var/"          -- an empty var makes that `rm -rf /`
+#   SC2086  unquoted expansion      -- the classic word-split
+#   SC2181  $? instead of `if cmd`  -- the exit-0-no-op shape, in miniature

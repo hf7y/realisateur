@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# reach-lint.sh -- offline-first (zero AI), writes nothing, always exits 0
-# except for its own --strict mode. The mechanization of BUILD-DISCIPLINE.md
+# reach-lint.sh -- offline-first (zero AI), writes nothing, and exits 0 except
+# for its own --strict mode and the BLIND case (exit 3) where it could not
+# reach a single registered repo. The mechanization of BUILD-DISCIPLINE.md
 # pattern 13b along the axis hygiene-lint's [dispatch-parity] NOTE cannot
 # see: not "which command files name this script", but "can the executor
 # reading this file actually reach what it names".
@@ -53,9 +54,13 @@ CLI_USAGE='  reach-lint.sh                scan every registered project + ~/.cla
   reach-lint.sh --strict-reach exit 1 only if the reach check (B) FLAGged'
 CLI_FLAGS='--strict --strict-reach'
 CLI_EXITS='  0  scanned; no FLAGs, or FLAGs found but no --strict mode asked for
-  1  --strict/--strict-reach was given and the corresponding check FLAGged'
+  1  --strict/--strict-reach was given and the corresponding check FLAGged
+  3  BLIND: no registered project resolved to a directory that exists, so
+     nothing was scanned. Never reported as 0.'
 CLI_POSITIONAL=none
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+# shellcheck source=lib/conf.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib/conf.sh"
 cli_guard "$@"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -137,18 +142,53 @@ echo " BUILD-DISCIPLINE.md pattern 13b on the reach axis -- see the header"
 echo " of this script for the failure it was written after.)"
 
 # --- collect command files --------------------------------------------------
+# Read through lib/conf.sh: the raw `grep -oP` this replaces returned the
+# LITERAL `$HOME/Documents/Projects/<name>`, so `[ -d "$repo" ]` was false for
+# every project on every host and this loop collected NOTHING -- after which
+# check A printed "(no project command files found)" and the script exited 0.
+# A lint that scanned zero files and reported clean. Same defect as #73's
+# named scripts; this one the issue never named, found by sweeping for the
+# shape instead of working from the list.
 cmd_files=()
+confs=0    # confs that carry a PROJECT_REPO_PATH at all
+repos=0    # ...of those, how many name a directory that exists
 for conf in "$SCHED_ROOT"/schedule/*.conf; do
+  [ -f "$conf" ] || continue
   name="$(basename "$conf" .conf)"
   case "$name" in _*) continue ;; esac
-  repo="$(grep -oP '(?<=PROJECT_REPO_PATH=")[^"]*' "$conf" 2>/dev/null)"
-  [ -n "$repo" ] && [ -d "$repo" ] || continue
+  repo="$(conf_repo_path "$conf")" || continue
+  confs=$((confs + 1))
+  [ -d "$repo" ] || continue
+  repos=$((repos + 1))
   for d in "$repo/.claude/commands" "$repo/.scheduler/commands"; do
     [ -d "$d" ] || continue
     while IFS= read -r f; do [ -n "$f" ] && cmd_files+=("$f"); done \
       < <(find "$d" -maxdepth 1 -name '*.md' | sort)
   done
 done
+
+# BLIND, and exit 3 rather than 0 -- but ONLY on `confs>0 && repos==0`, which
+# is the #73 shape exactly: every conf readable, every path a literal, every
+# match impossible. Two neighbouring states are deliberately NOT blind:
+#   confs==0  no scheduler registry on this host at all. install-shims.sh runs
+#             this on such hosts (and CI is one), where check B still means
+#             something because it reads ~/.claude/commands, not the registry.
+#             Calling that blind broke install-shims.test.sh D5 -- caught in CI
+#             by the first version of this guard, which tested `repos==0` alone.
+#   repos>0, no command files
+#             a real, clean answer about a real set; check A below says so.
+#
+# 3 matches bin/hygiene-lint.sh and bin/silence-audit.sh. Deliberately not 1
+# (which means "--strict and something FLAGged") and not 2 (lib/cli-guard.sh's
+# usage error): "I could not look" is a third answer and needs a third code.
+if [ "$confs" -gt 0 ] && [ "$repos" -eq 0 ]; then
+  echo
+  echo "  BLIND: $confs registered project(s) under $SCHED_ROOT/schedule/ carry a"
+  echo "  PROJECT_REPO_PATH and NOT ONE resolves to a directory that exists, so"
+  echo "  there was nothing to scan. This is 'I could not look', NOT 'nothing"
+  echo "  to report'."
+  exit 3
+fi
 
 echo
 echo "== A. SCOPE DECLARATION =="
