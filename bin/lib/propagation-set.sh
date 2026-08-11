@@ -349,6 +349,7 @@ path-provenance-audit.sh
 selfdev-agent-survey.sh
 served-not-cloned.sh
 shellcheck-lint.sh
+verb-kind-lint.sh
 repo-settings-provision.sh
 no-worktree-lint.sh
 "
@@ -417,6 +418,16 @@ no-worktree-lint.sh
 # handed to the project whose job it is (hf7y/senechal): a sweep senechal runs
 # from senechal/health/ reaches every account it has a view of, which is the
 # real answer and is not realisateur's to install.
+#
+# verb-kind-lint.sh is LOCAL for the same reason cut-verb-build.sh above it
+# is: it runs INSIDE the release pipeline, over the tree that pipeline just
+# assembled, from a checkout GitHub Actions makes of this repository
+# (build-verbs.yml checks realisateur out to .realisateur and runs it from
+# there). An account never grades a build's channel declarations -- it
+# receives a build that has already been graded, or it receives nothing
+# because the cut refused. Shipping it as PAYLOAD would also be circular in
+# the same way selfdev-gh-app.sh's note describes: the guard that decides
+# whether a build may be cut cannot arrive inside that build.
 
 # prop_channel <script-basename> -- prints bootstrap|provision|payload|local,
 # or nothing (rc 1) when the script is unclassified. Callers MUST treat rc 1

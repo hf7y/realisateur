@@ -41,6 +41,10 @@
 #   * the genuinely-not-a-verb case opts out by NAME in lib/not-a-verb.tsv,
 #     and every such decision -- exempted or unresolved -- is written into the
 #     MANIFEST, because the build is what travels to the accounts.
+#   * every command in the ASSEMBLED tree declares its channel, and a
+#     `# KIND: product` is refused a place in the workchain cut. That check
+#     is bin/verb-kind-lint.sh and it is asserted here because the failure
+#     mode is a correct lint nothing calls.
 set -uo pipefail
 
 PASS=0; FAIL=0
@@ -72,8 +76,14 @@ mkrepo() {
     rm -rf "$d"; mkdir -p "$d/bin" "$d/man" "$d/lib"
     printf 'verb_fixture_lib_loaded=1\n' > "$d/lib/verb.sh"
     for v in "$@"; do
+        # `# KIND: verb` is part of the fixture because it is part of the
+        # declaration contract: bin/verb-kind-lint.sh runs over the
+        # assembled tree in section 6a and refuses a build containing a
+        # command that declares no channel. A fixture without it would test
+        # a build shape the cutter no longer accepts.
         cat > "$d/bin/$v" <<EOF
 #!/usr/bin/env bash
+# KIND: verb
 . "\$(dirname "\$0")/../lib/verb.sh"
 printf '%s -- fixture verb from $repo\n' "$v"
 EOF
@@ -146,10 +156,18 @@ EOF
 # equivalent of testing against production. Empty here means nothing is exempt.
 printf '#project\tname\twhy\n' > "$TMP/not-a-verb.tsv"
 
+# And the channel guard's grandfather ratchet, for the same reason. Section
+# 6a runs bin/verb-kind-lint.sh over the assembled tree, and that lint reads
+# bin/verb-kind-lint.ratchet -- 33 real commands this suite knows nothing
+# about. Empty here means nothing is grandfathered, so every fixture verb
+# must declare its channel exactly as a real one must.
+: > "$TMP/verb-kind.ratchet"
+
 cut() {
     PATH="$TMP/stub:$PATH" \
     FIXTURE_REPOLIST="$TMP/repolist" FIXTURE_DIR="$FIX" \
     VERB_NOT_A_VERB_FILE="$TMP/not-a-verb.tsv" \
+    VERB_KIND_RATCHET="$TMP/verb-kind.ratchet" \
     GIT_CONFIG_GLOBAL="$TMP/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
     bash "$CUT" --owner "$OWNER" --build-root "$TMP/no-such-build-root" "$@"
 }
@@ -366,6 +384,68 @@ check "the shipped lib/not-a-verb.tsv exists" \
 check "...and every row is <project><TAB><name><TAB><why>" \
       "$(awk -F'\t' '!/^[[:space:]]*#/ && $0 != "" && (NF < 3 || $1 == "" || $2 == "" || $3 == "") {n++} END {print n+0}' "$REAL_NAV")" \
       "0"
+
+# --- 14. the CHANNEL check is WIRED, not merely present -----------------
+# Section 6a runs bin/verb-kind-lint.sh over the tree this script just
+# assembled. Asserted here rather than only in that lint's own suite,
+# because the failure being guarded against is not a broken lint -- it is a
+# correct lint nothing calls. guard-estate.test.sh check B exists for
+# exactly that, and six of the guards surveyed on 2026-08-07 were hand-run
+# only.
+#
+# The population is DISJOINT from sections 10-13 above and that is the whole
+# relationship between the two files. lib/not-a-verb.tsv exempts a HALF
+# declaration -- bin/<n> with no man/<n>.1 -- which by construction never
+# reaches the manifest. verb-kind-lint grades manifest rows, i.e. names that
+# carried BOTH halves. No name can be in both populations, so the channel
+# check reads no exemption file: there is nothing in one for it to find.
+#
+# 14a. A PRODUCT must not ride the workchain cut.
+mkrepo theta tv
+printf '#!/usr/bin/env bash\n# KIND: product\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "tv\\n"\n' \
+    > "$FIX/theta.git/bin/tv"
+chmod +x "$FIX/theta.git/bin/tv"
+g -C "$FIX/theta.git" add -A
+g -C "$FIX/theta.git" commit -m 'tv declares itself a product'
+printf 'theta\n' > "$TMP/repolist"
+cut --assemble "$TMP/asm14a" >/dev/null 2>"$TMP/e14a"
+check "a command declaring KIND: product is refused a place in the cut" "$?" "1"
+case "$(cat "$TMP/e14a")" in
+    *PRODUCT*theta/tv*) ok "...and the refusal names the product and its project" ;;
+    *) bad "the refusal names the product" "got: $(cat "$TMP/e14a")" ;;
+esac
+
+# 14b. A command that declares NOTHING and is not grandfathered is refused
+# on its first night. This is the arrival path the whole guard exists for:
+# the next product to ship down the workchain will be a NEW name, and the
+# ratchet in bin/verb-kind-lint.ratchet names only the ones that predate it.
+mkrepo iota iq
+printf '#!/usr/bin/env bash\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "iq\\n"\n' \
+    > "$FIX/iota.git/bin/iq"
+chmod +x "$FIX/iota.git/bin/iq"
+g -C "$FIX/iota.git" add -A
+g -C "$FIX/iota.git" commit -m 'iq declares no channel at all'
+printf 'iota\n' > "$TMP/repolist"
+cut --assemble "$TMP/asm14b" >/dev/null 2>"$TMP/e14b"
+check "a new command declaring no channel is refused" "$?" "1"
+case "$(cat "$TMP/e14b")" in
+    *UNDECLARED*iota/iq*) ok "...and the refusal names it" ;;
+    *) bad "the refusal names the undeclared command" "got: $(cat "$TMP/e14b")" ;;
+esac
+
+# 14c. ...and the grandfather ratchet is honoured THROUGH the wiring, not
+# only when the lint is run by hand. Every one of the commands in tonight's
+# build predates this rule; if the ratchet did not reach section 6a the
+# nightly cut would refuse the whole ecosystem on the first night, which is
+# how a check nobody can make green gets deleted instead of satisfied.
+printf 'undeclared iota/iq\n' > "$TMP/verb-kind.ratchet"
+cut --assemble "$TMP/asm14c" >/dev/null 2>"$TMP/e14c"
+check "a grandfathered undeclared command does not refuse the cut" "$?" "0"
+case "$(cat "$TMP/e14c")" in
+    *OWED*iota/iq*) ok "...and it is still printed as OWED on every cut" ;;
+    *) bad "a forgiven entry stays visible" "got: $(cat "$TMP/e14c")" ;;
+esac
+: > "$TMP/verb-kind.ratchet"
 
 echo
 printf 'cut-verb-build: %d passed, %d failed\n' "$PASS" "$FAIL"
