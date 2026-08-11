@@ -1,3 +1,15 @@
+RESOLVED 2026-08-11: both files below are gone from disk (removed out of
+band, not by any run reported here). The dirty-tree gate they describe no
+longer fires on them. What is NOT resolved is the directive quoted in item
+2 -- its text existed only in that untracked file, so deleting the file
+without keeping the text would repeat the exact buried-finding pattern
+this note exists to name. Preserved verbatim below. sweep-loop-common.sh
+(scheduler) still exists; the BLOCKERS-retirement/redesign thread is
+tracked at hf7y/scheduler#34 and #66, but "vim-arcade needs its deploy
+key fixed" and "ensure sonde is what we use, write a wiring test" do not
+have an obvious open issue as of this update -- worth confirming rather
+than assuming either landed.
+
 CLOSEOUT GATE: two stray untracked files in realisateur block EVERY subagent closeout, and one of them is an unread human directive.
 
 Found 2026-08-11 by a subagent whose own work was in hf7y/scheduler (PR #95); subagent-closeout.sh FLAGged realisateur dirty-tree for files that run never touched.
