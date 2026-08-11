@@ -129,7 +129,28 @@ BUILD_ROOT="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}
 INSTALLER="${TICK_INSTALLER:-}"
 CRON_TAG='# realisateur:selfdev-release:TICK'
 CRON_SPEC="${TICK_CRON_SPEC:-41 5 * * *}"
+# Environment the cron line carries, in `VAR=val` form, ahead of the command.
+# Empty for a per-account tick: its defaults ARE the account's own paths.
+#
+# The host-scoped tick needs it, because every path it works on is deliberately
+# NOT this process's default -- and cron does not inherit the shell that
+# installed the entry. The alternative is a second copy of this script with
+# different constants baked in, which is one fact with two readers. `VAR=val
+# cmd` in the command field is already this estate's idiom: the paced runner's
+# own line reads `0 */6 * * * PACED_MAX_PER_TICK=1 .../usage-paced-runner.sh`.
+CRON_ENV="${TICK_CRON_ENV:-}"
 RELEASE_STATUS_URL="${RELEASE_STATUS_URL:-https://hf7y.com/verbs/status.json}"
+# Whether adoption also writes the bin links. OFF by default and it stays off
+# for a per-ACCOUNT tick, because `installe` owns that account's ~/.local/bin
+# and install-verb-build.sh's --link exists to not clobber it.
+#
+# It is ON for the HOST-scoped tick wire-release-channel.sh --host installs,
+# where the link directory is /usr/local/bin -- a directory installe does not
+# manage, on the only PATH entry a non-interactive `ssh <host> <verb>` sees.
+# Adopting a build nothing links is a pin that moves and a PATH that does not,
+# which is a channel with a clock and no consumer: the exact shape
+# propagation-set.sh was written about.
+TICK_LINK="${TICK_LINK:-0}"
 SURVEY_HOST="${TICK_SURVEY_HOST:-monkey}"
 SURVEY_PASSWD="${TICK_SURVEY_PASSWD:-/etc/passwd}"
 UID_MIN="${TICK_UID_MIN:-3000}"
@@ -237,24 +258,35 @@ check_pin() {
 install_cadence() {
   local self line
   self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
-  line="$CRON_SPEC $self --apply $CRON_TAG"
+  line="$CRON_SPEC ${CRON_ENV:+$CRON_ENV }$self --apply $CRON_TAG"
   echo "-- cadence entry (account $(id -un)) ----------------------------------"
   printf '  %s\n' "$line"
   if [ "$MODE" != apply ]; then
     act "not installed (--check). Re-run with --apply."
     return 0
   fi
-  local cur new
-  cur="$(crontab -l 2>/dev/null || true)"
+  local cur new back
+  # stderr KEPT, merged into stdout, rather than sent to /dev/null. An empty
+  # crontab writes "no crontab for <user>" there and exits 1 -- that is the
+  # answer, not an error -- but so does a permission failure, and silencing
+  # both makes them one event. That conflation is bin/silence-audit.sh's
+  # [stderr-silenced] rule ("turns permission denied into clean"), and here it
+  # would be load-bearing: `cur` is what gets written BACK, so reading it as
+  # empty when it is merely unreadable would erase every other entry in the
+  # crontab. The grep -vF below removes the noise line either way, because a
+  # message from cron does not carry our tag.
+  cur="$(crontab -l 2>&1 || true)"
+  case "$cur" in *"no crontab for"*) cur="" ;; esac
   new="$(printf '%s\n' "$cur" | grep -vF "$CRON_TAG")"
   printf '%s\n%s\n' "$new" "$line" | grep -v '^[[:space:]]*$' | crontab -
   # WITNESS: read it back out of cron, not out of the variable just written.
   # "crontab - exited 0" is not evidence that the line is scheduled.
-  if crontab -l 2>/dev/null | grep -qF "$CRON_TAG"; then
+  back="$(crontab -l 2>&1)"
+  if printf '%s\n' "$back" | grep -qF "$CRON_TAG"; then
     ok "cadence installed in $(id -un)'s crontab, verified by re-reading crontab -l"
     act "machine-wide config changed. Run: notify-senechal 'realisateur selfdev-release-tick cron in $(id -un)@$(hostname -s) crontab, owned by realisateur'"
   else
-    bad "crontab accepted the write but the entry is absent on re-read"
+    bad "crontab accepted the write but the entry is absent on re-read. crontab -l said: $(printf '%s' "$back" | head -3 | tr '\n' ' ')"
   fi
 }
 
@@ -364,7 +396,13 @@ if [ "$MODE" = apply ] && [ "$pin_rc" = 1 ]; then
   # DELEGATED. This script has no switching logic: install-verb-build.sh
   # verifies every verb the manifest promises and discards an incomplete
   # build rather than switching to it. Fail-CLOSED, here, deliberately.
-  if "$inst" --latest --apply 2>&1 | sed 's/^/        /'; then
+  # The optional flag is an ARRAY appended after the literal call, not folded
+  # into it: bin/tests/propagation.test.sh 5b asserts delegation by matching
+  # `"$inst" --latest --apply` in this file, and a refactor that spelled the
+  # same call a different way would silently retire that check rather than
+  # fail it. Keeping the literal intact is the cheaper half of the bargain.
+  link_arg=(); [ "$TICK_LINK" = 1 ] && link_arg=(--link)
+  if "$inst" --latest --apply "${link_arg[@]}" 2>&1 | sed 's/^/        /'; then
     after="$(current_pin)"
     ok "adopted build $after (pin re-read after the switch, not inferred from an exit code)"
     GAPS=$((GAPS-1))
