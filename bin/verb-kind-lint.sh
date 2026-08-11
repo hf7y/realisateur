@@ -305,7 +305,15 @@ blind() { printf 'BLIND: %s\n' "$*" >&2
 [ -d "$BUILD" ] || blind "no build tree at $BUILD"
 MANIFEST="$BUILD/manifest.tsv"
 [ -f "$MANIFEST" ] || blind "$BUILD carries no manifest.tsv -- it is not a build"
-rows="$(grep -cv '^#' "$MANIFEST" 2>/dev/null || echo 0)"
+# `grep -c` PRINTS 0 and EXITS 1 when it matches nothing, so the obvious
+# `|| echo 0` fallback appends a SECOND zero and rows becomes "0\n0". The
+# empty-manifest case still reached BLIND, but by accident: `[ "0\n0" -gt 0 ]`
+# is an integer-expression ERROR, and bash's own diagnostic printed above the
+# admission. Right verdict, wrong mechanism, and a reader had to decode a
+# shell error to see it. `|| true` swallows the exit status without adding
+# output; the empty guard covers grep failing to print at all.
+rows="$(grep -cv '^#' "$MANIFEST" 2>/dev/null || true)"
+[ -n "$rows" ] || rows=0
 [ "$rows" -gt 0 ] || blind "$MANIFEST has no rows. A build with no commands is an unreadable build, not an ecosystem with none."
 
 # --- the ratchet ------------------------------------------------------------
@@ -453,6 +461,22 @@ if [ "$violations" -gt 0 ]; then
   loud "$CLI_NAME: $violations violation(s) over $rows command(s) in $(awk -F'\t' '!/^#/{print $1}' "$MANIFEST" | sort -u | wc -l | tr -d ' ') project(s)."
   exit 1
 fi
-say "$CLI_NAME: $rows command(s), each declaring its channel; no product in the workchain build."
-[ "${#GRANDFATHERED[@]}" -eq 0 ] || loud "$CLI_NAME: ${#GRANDFATHERED[@]} command(s) still owed a declaration, held by the ratchet."
+# THE CLEAN LINE MAY NOT OVERSTATE WHAT WAS VERIFIED, and the unconditional
+# version of it did. It read "$rows command(s), each declaring its channel"
+# whatever the ratchet was holding, so on the day this landed -- 33 rows, all
+# 33 grandfathered, none declaring anything -- it printed
+#
+#   verb-kind-lint.sh: 33 command(s), each declaring its channel; ...
+#   verb-kind-lint.sh: 33 command(s) still owed a declaration, held by the ratchet.
+#
+# two contradictory sentences, the false one first. A summary that claims the
+# property the OWED lines directly above it deny is the same defect those OWED
+# lines exist to prevent: a guard exiting 0 while saying something untrue about
+# what it found. So the sentence is only spoken when it is true, and otherwise
+# the counts are split and the debt is named in the same breath.
+if [ "${#GRANDFATHERED[@]}" -eq 0 ]; then
+  say "$CLI_NAME: $rows command(s), each declaring its channel; no product in the workchain build."
+else
+  loud "$CLI_NAME: $rows command(s) -- ${#DECLARED_VERBS[@]} declaring their channel, ${#GRANDFATHERED[@]} still OWED and held by the ratchet. No product in the workchain build."
+fi
 exit 0

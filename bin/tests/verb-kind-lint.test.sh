@@ -218,6 +218,13 @@ expect "a build tree with no manifest is BLIND, not clean" 2 "$b"
 
 b="$(new_build emptymanifest)"
 expect "a manifest with no rows is BLIND, not clean" 2 "$b"
+# ...and it reaches that verdict by its OWN logic. `grep -c` prints 0 and
+# exits 1 on no match, so a `|| echo 0` fallback made rows "0\n0" and the
+# guard arrived at BLIND through a bash integer-expression error printed
+# above its own admission. run_lint folds stderr in, so this sees it.
+printf '%s\n' "$OUT" | grep -qE 'integer expression|line [0-9]+:' \
+  && bad "BLIND on an empty manifest is reached via a shell error, not the check: $(printf '%s\n' "$OUT" | grep -E 'integer expression|line [0-9]+:' | head -1)" \
+  || ok "the empty-manifest BLIND carries no shell error of its own"
 
 # The row points at a file that is not there. That is not "declared
 # nothing" -- it is a build this lint could not read, and it must not be
@@ -269,6 +276,37 @@ run_lint "$b"
 c="$(printf '%s\n' "$OUT" | grep -oE '[0-9]+ violation' | grep -oE '^[0-9]+' | head -1)"; c="${c:-0}"
 if [ "$RC" -ne 0 ] && [ "$c" -eq 2 ]; then ok "rc=$RC and it reported exactly the 2 violations it found"
 else bad "rc=$RC, reported $c violation(s), expected 2 and a non-zero rc"; printf '%s\n' "$OUT" | sed 's/^/       | /'; fi
+
+# A PASSING RUN MAY NOT CLAIM MORE THAN IT CHECKED. The summary line used to
+# say "N command(s), each declaring its channel" unconditionally -- including
+# the live case where every row was grandfathered and NONE declared anything,
+# printing that one line above "N command(s) still owed a declaration".
+b="$(new_build honest-summary)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" legacy    old  ''
+RATCHET_FILE="$WORK/honest.ratchet"
+write_ratchet "$RATCHET_FILE" 'undeclared legacy/old'
+run_lint "$b"
+unset RATCHET_FILE
+if [ "$RC" -ne 0 ]; then
+  bad "the grandfathered build did not exit 0 (rc=$RC)"
+elif printf '%s\n' "$OUT" | grep -q 'each declaring its channel'; then
+  bad "rc=0 with an entry still OWED, but the summary claims each command declares its channel"
+else
+  ok "with an entry still OWED, the summary does not claim every command declared"
+fi
+printf '%s\n' "$OUT" | grep -qE '1 (still )?OWED|1 command\(s\) still owed' \
+  && ok "...and it still says how many are owed" \
+  || bad "the summary dropped the owed count entirely: $(printf '%s\n' "$OUT" | tail -1)"
+
+# The true form is still spoken when it IS true.
+b="$(new_build honest-summary-clean)"
+add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler dose '# KIND: verb'
+run_lint "$b"
+printf '%s\n' "$OUT" | grep -q 'each declaring its channel' \
+  && ok "when every command really does declare, the summary says so" \
+  || bad "a genuinely clean build lost its summary line: $(printf '%s\n' "$OUT" | tail -1)"
 
 # --- 7. the tree it is pointed at -------------------------------------------
 echo
