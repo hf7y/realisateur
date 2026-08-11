@@ -71,6 +71,7 @@ CLI_EXITS='  0  every branch still keeps its promise (or is exempt, with a reaso
 SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"   # bashify/
 ROOT="$(cd "$SELF/.." && pwd)"                                             # realisateur/
 
+. "$ROOT/bin/lib/conf.sh"
 . "$ROOT/bin/lib/cli-guard.sh"
 cli_guard "$@"
 . "$SELF/lib/surface.sh"
@@ -105,7 +106,7 @@ for conf in "$SCHED"/schedule/*.conf; do
   if [ "${#WANT[@]}" -gt 0 ]; then
     printf '%s\n' "${WANT[@]}" | grep -qxF "$proj" || continue
   fi
-  repo="$(grep -oP '^PROJECT_REPO_PATH=\K.*' "$conf" 2>/dev/null | tr -d '"'"'"'')"
+  repo="$(conf_repo_path "$conf" || true)"
   [ -n "$repo" ] && [ -d "$repo/.git" ] || continue
   git -C "$repo" rev-parse --verify -q bashified >/dev/null 2>&1 || continue
   branches=$((branches+1))

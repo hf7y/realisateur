@@ -16,7 +16,9 @@
 
 set -uo pipefail
 
-SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"   # bashify/
+# ONE reader for PROJECT_REPO_PATH, shared with bin/'s scripts (#143).
+. "$(cd "$SELF/.." && pwd)/bin/lib/conf.sh"
 CHECK_IMPL="$SELF/lib/check.sh"
 SCHED="${BASHIFY_SCHED:-${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}}"
 
@@ -105,7 +107,7 @@ else
     [ -e "$conf" ] || continue
     proj="$(basename "$conf" .conf)"
     case "$proj" in _*) continue ;; esac
-    path="$(grep -h '^PROJECT_REPO_PATH=' "$conf" 2>/dev/null | head -1 | cut -d'"' -f2)"
+    path="$(conf_repo_path "$conf" || true)"
     [ -n "$path" ] && [ -d "$path/.git" ] || { UNREADABLE=$((UNREADABLE+1)); continue; }
     git -C "$path" rev-parse --verify -q origin/bashified >/dev/null 2>&1 || continue
     # Skip the project that OWNS the verb. Its own implementation, its own

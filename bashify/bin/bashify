@@ -8,7 +8,9 @@
 #
 # Read the page, not this header: `man -l man/bashify.1`.
 
-SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"   # bashify/
+# ONE reader for PROJECT_REPO_PATH, shared with bin/'s scripts (#143).
+. "$(cd "$SELF/.." && pwd)/bin/lib/conf.sh"
 
 VERB_NAME=bashify
 VERB_SUMMARY="state a project's promise as a contract a shell can hold"
@@ -146,7 +148,7 @@ case "$cmd" in
     # the act that does apply. Counted from the branch, never assumed: one
     # verb is what emit itself leaves behind, so only more than one is
     # evidence of hand-evolution.
-    repo="$(grep -oP '^PROJECT_REPO_PATH=\K.*' "$SCHEDULE_DIR/$proj.conf" | tr -d '"'"'"'')"
+    repo="$(conf_repo_path "$SCHEDULE_DIR/$proj.conf" || true)"
     repo="${BASHIFY_REPO:-$repo}"
     if [ -n "$repo" ] && git -C "$repo" rev-parse --verify -q bashified >/dev/null 2>&1; then
       existing="$(git -C "$repo" ls-tree --name-only bashified bin/ 2>/dev/null | grep -c .)"

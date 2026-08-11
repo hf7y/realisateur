@@ -27,7 +27,8 @@
 
 set -uo pipefail
 
-SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"   # bashify/
+ROOT="$(cd "$SELF/.." && pwd)"                                            # realisateur/
 # Resolved, not hardcoded. This was `/home/zach/Documents/Projects/scheduler`
 # with no override, so `coin` could not see the registry from ANY other
 # account -- including the uid 3000-3099 accounts the monkey dispatch runs
@@ -66,8 +67,21 @@ conf="$SCHEDULE_DIR/$PROJ.conf"
 [ -d "$SCHEDULE_DIR" ] \
   || blind "no registry directory at $SCHEDULE_DIR -- I read nothing, which is not the same as '$PROJ is unregistered'. Set SCHEDULE_DIR or SCHED_ROOT."
 [ -f "$conf" ] || die "no registered project named '$PROJ'"
-REPO="$(grep -oP '^PROJECT_REPO_PATH=\K.*' "$conf" | tr -d '"'"'"'')"
-REPO="${BASHIFY_REPO:-$REPO}"
+# THE PATH IS EXPANDED, and that is not a detail. Until 2026-08-11 this read
+# `grep -oP '^PROJECT_REPO_PATH=\K.*' | tr -d '"'`, which returns the LITERAL
+# characters `$HOME/Documents/...`: grep does not expand shell variables and
+# nothing downstream did either. So the very next check, `[ -d "$REPO/.git" ]`,
+# was false for every project on every host, and coin answered
+#
+#     coin: BLIND: scheduler has no git repository at $HOME/Documents/Projects/scheduler
+#
+# A path with a literal `$HOME` in it is not a path anyone typed. `bashify
+# coin` is the ONLY door for a new verb here, so for as long as this line stood
+# no new verb could be cut, from any host, by anyone -- which is why bin/consigne
+# merged in #121 and reached no host's PATH (#162 asks for exactly this command).
+# ONE reader, shared with bin/'s scripts: bin/lib/conf.sh. hf7y/realisateur#143.
+. "$ROOT/bin/lib/conf.sh"
+REPO="${BASHIFY_REPO:-$(conf_repo_path "$conf" || true)}"
 [ -n "$REPO" ] || blind "$PROJ names no PROJECT_REPO_PATH and BASHIFY_REPO is unset"
 [ -d "$REPO/.git" ] || blind "$PROJ has no git repository at $REPO"
 
@@ -108,27 +122,54 @@ fi
 git -C "$REPO" rev-parse --verify -q bashified >/dev/null 2>&1 \
   || refuse "$PROJ has no 'bashified' branch to add to. Bootstrap it first: bashify emit $PROJ <verb> <summary>"
 
-# ---- locate the branch's working copy --------------------------------------
-# The branch is normally checked out as a worktree (that is how emit leaves
-# it). Writing into the existing checkout is correct: it is where the verbs
-# that already exist live, and where their runtime lives.
-WT="$(git -C "$REPO" worktree list --porcelain \
-      | awk '/^worktree /{p=$2} /^branch refs\/heads\/bashified$/{print p; exit}')"
-[ -n "$WT" ] \
-  || blind "the 'bashified' branch exists but is not checked out in any worktree; coin writes into a working copy, and none was found"
-[ -d "$WT" ] || blind "the recorded worktree for 'bashified' is not a directory: $WT"
+# ---- a working copy of the branch, in a THROWAWAY CLONE --------------------
+# This was `git worktree list ... | awk` for the worktree holding
+# refs/heads/bashified, and it is the second reason coin was dead estate-wide
+# on 2026-08-11: PR #156 removed all 30 worktrees that morning and added
+# bin/no-worktree-lint.sh so a thirty-first cannot appear. Nothing recreates
+# them, so the awk returned empty and coin exited BLIND for every project on
+# every host -- with a message that was true, permanent and unactionable.
+#
+# A CLONE, exactly as `bashify emit` was converted on the same day (see
+# bashify.sh's "WHY A CLONE AND NOT A WORKTREE"). It keeps the property the
+# worktree was chosen for -- the human's working tree and index untouched even
+# mid-session -- and drops the one that caused the growth: it registers nothing
+# in $REPO.
+#
+# THE PUBLISH BELOW IS NOT NEW BEHAVIOUR, it is the same behaviour ported.
+# Under a worktree the coin landed in a working copy sharing $REPO's ref store,
+# so it was already reachable from $REPO. A clone has its own ref store, so the
+# same reachability must be an explicit push -- to $REPO, the LOCAL repository,
+# never to a remote. `git show bashified:bin/<verb>` reads it and
+# `git update-ref` undoes it, so "read it before it becomes history" survives
+# the change. Leaving it uncommitted in a temp clone instead would be strictly
+# worse than the worktree it replaces: a change nobody can find is not a change
+# anyone can review.
+WORK="${BASHIFY_WORK:-${TMPDIR:-/tmp}/bashify-coin}"
+WT="$WORK/$PROJ"
+rm -rf "$WT"; mkdir -p "$WORK"
+git clone -q --branch bashified --single-branch "$REPO" "$WT" 2>/dev/null \
+  || broke "could not clone $PROJ's bashified branch from $REPO into $WT"
+[ -d "$WT/.git" ] || broke "cloned $REPO into $WT but it has no .git"
 
 # ---- REFUSAL 2: never overwrite a verb that already exists ------------------
 [ -e "$WT/bin/$VERB" ] \
   && refuse "$WT/bin/$VERB already exists. Coining is adding, never replacing; amend the verb in place, or coin a different name."
 
-# ---- REFUSAL 3: a dirty branch is not a branch to add to -------------------
-# A coin that lands on top of uncommitted work makes the two indistinguishable
-# in the commit, which is the reported failure signature this ecosystem keeps
-# recording. Checked before anything is written.
-if [ -n "$(git -C "$WT" status --porcelain 2>/dev/null)" ]; then
-  refuse "$WT has uncommitted changes. Commit or clear them first -- a coin on a dirty tree cannot be told apart from the work already there."
-fi
+# ---- REFUSAL 3 is RETIRED, because the clone made it unrepresentable -------
+# It read: refuse if `git -C "$WT" status --porcelain` is non-empty, because a
+# coin landing on top of uncommitted work makes the two indistinguishable in
+# the commit. That was a real hazard when $WT was a long-lived worktree
+# somebody might have been editing. $WT is now a clone made twenty lines ago
+# and discarded at the end, so it is pristine by construction and the check
+# could never fire again.
+#
+# Deleted rather than kept: "a check nobody expects to be green is a document
+# with an exit code" (bin/thermostat-wiring.sh), and the inverse is as true --
+# a check nobody expects to be RED is a comment pretending to be a guard, and
+# the next reader has to disprove it before trusting anything near it. The
+# hazard is gone because the shape changed. That is worth a paragraph, not a
+# branch.
 
 # ---- the runtime the coined verb will source -------------------------------
 # It sources the BRANCH'S OWN lib/verb.sh, not the skeleton's. The runtimes
@@ -152,7 +193,21 @@ cat <<EOF
 #!/usr/bin/env bash
 # $VERB -- $SUMMARY
 #
-# Coined 2026-08-01 by \`bashify coin\` onto a branch that already carried
+# KIND: verb
+# A coined name is a thing you tell the machine to do, which is this estate's
+# own criterion (bin/verb-kind-lint.sh: "a VERB is a thing you tell the machine
+# to do, a PRODUCT is a thing with a name of its own"). If what gets built here
+# turns out to be a product -- its own name, its own cadence, like vim-arcade --
+# change this to \`# KIND: product\` and keep it out of the workchain manifest.
+#
+# THIS LINE IS LOAD-BEARING, not decoration. bin/cut-verb-build.sh runs
+# verb-kind-lint against the assembled build and dies the whole cut on any
+# undeclared command, and bin/verb-kind-lint.ratchet grandfathers exactly the
+# 33 commands present on 2026-08-11 under "THIS IS THE LAST FREE RE-SEED". So a
+# verb coined without it does not fail its own project -- it fails that night's
+# build for all twelve. The template emits it so nobody has to remember.
+#
+# Coined $(date +%Y-%m-%d) by \`bashify coin\` onto a branch that already carried
 # verbs. It costs nothing to run and reaches no paid service.
 #
 # This is a COINED verb, not a discovered one: it wraps no legacy script,
@@ -207,6 +262,28 @@ printf 'coin:   verbs now on this branch: %s\n' \
   "$(cd "$WT/bin" && printf '%s ' * 2>/dev/null)"
 printf 'coin: NO man page was written. That is `bashify page %s <command>`,\n' "$VERB"
 printf 'coin: against the live command, which is the page-first order.\n'
-printf 'coin: NOTHING WAS COMMITTED. The coin is in the working tree so it can\n'
-printf 'coin: be read before it becomes history.\n'
+
+# ---- publish the branch back into $REPO ------------------------------------
+# See "THE PUBLISH IS NOT NEW BEHAVIOUR" above. A fast-forward push, never
+# --force: coin ADDS to a branch that already carries verbs, and emit is the
+# one that regenerates. If this is not a fast-forward, the branch moved under
+# us between the clone and now, and the honest answer is to say so and leave
+# both sides alone rather than to pick a winner unattended.
+git -C "$WT" add "bin/$VERB" >/dev/null 2>&1 \
+  || broke "could not stage bin/$VERB in $WT"
+git -C "$WT" -c user.name='bashify coin' -c user.email='coin@localhost' \
+    commit -q -m "coin $VERB onto $PROJ: $SUMMARY" >/dev/null 2>&1 \
+  || broke "could not commit bin/$VERB in $WT"
+COINED_SHA="$(git -C "$WT" rev-parse --short HEAD 2>/dev/null)"
+git -C "$WT" push -q origin "bashified:refs/heads/bashified" 2>/dev/null \
+  || broke "coined $VERB and committed it in $WT, but could not fast-forward $REPO's bashified branch. The branch moved since the clone; nothing in $REPO was changed. Re-run coin, or push $WT by hand once you have looked at both."
+
+printf 'coin:   committed %s onto %s bashified in %s\n' "$COINED_SHA" "$PROJ" "$REPO"
+printf 'coin: READ IT BEFORE IT GOES ANYWHERE. It is on the LOCAL branch only --\n'
+printf 'coin: no remote has seen it:\n'
+printf 'coin:     git -C %s show bashified:bin/%s\n' "$REPO" "$VERB"
+printf 'coin: To undo:\n'
+printf 'coin:     git -C %s update-ref refs/heads/bashified %s^\n' "$REPO" "$COINED_SHA"
+printf 'coin: To ship it, push bashified and let tonight'"'"'s verb build cut it.\n'
+rm -rf "$WT"
 exit 0
