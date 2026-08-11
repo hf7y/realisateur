@@ -202,6 +202,20 @@ cron_spec_for() {
   printf '%d 5 * * *' "$m"
 }
 
+# Read a crontab and KEEP its stderr, merged into stdout.
+#
+# Not `2>/dev/null`. An empty crontab writes "no crontab for <user>" to stderr
+# and exits 1 -- that is the ANSWER, not an error. But a permission failure
+# writes there too, and silencing both makes them the same event. That is
+# precisely what bin/silence-audit.sh's [stderr-silenced] rule is about: "turns
+# permission denied into clean". The grep below is unaffected either way (no
+# error message contains the tag), so the only thing the silence bought was
+# hiding the reason from the branch whose whole job is to report it.
+crontab_of() { # crontab_of [account] -- the crontab, or why it could not be read
+  if [ -n "${1:-}" ]; then sudo -u "$1" crontab -l 2>&1; else crontab -l 2>&1; fi
+}
+has_tick() { crontab_of "${1:-}" | grep -q 'selfdev-release:TICK'; }
+
 wire_one() {
   local acct="$1" home="$2" boot f boot_ok=1 spec
   boot="$home/.local/libexec/selfdev"
@@ -210,7 +224,7 @@ wire_one() {
   if [ "$MODE" = --check ]; then
     local n; n="$(set -- $PROP_BOOTSTRAP_SCRIPTS $PROP_BOOTSTRAP_SUPPORT; echo $#)"
     echo "  would   install $n bootstrap file(s) into $boot"
-    if sudo -u "$acct" crontab -l 2>/dev/null | grep -q 'selfdev-release:TICK'; then
+    if has_tick "$acct"; then
       echo "  ok      $acct already has the clock in its own crontab"
     else
       echo "  would   have $acct install the tick into its OWN crontab at '$spec' (arms no dispatch)"
@@ -234,10 +248,11 @@ wire_one() {
   # WITNESS: read the crontab back, as the account, rather than believing the
   # installer's own report of itself. "crontab - exited 0" is not evidence that
   # a line is scheduled.
-  if sudo -u "$acct" crontab -l 2>/dev/null | grep -q 'selfdev-release:TICK'; then
+  if has_tick "$acct"; then
     echo "  OK      clock verified in $acct's crontab (re-read, not asserted)"
   else
     echo "  BAD     the clock is NOT in $acct's crontab -- $acct will never advance past the build it has"
+    echo "  BAD     crontab -l said: $(crontab_of "$acct" | head -3 | tr '\n' ' ')"
     return 1
   fi
   echo "  ..      first adoption is a separate act: sudo -u $acct $boot/selfdev-release-tick.sh --apply"
@@ -272,7 +287,7 @@ wire_host() {
     local n; n="$(set -- $PROP_BOOTSTRAP_SCRIPTS $PROP_BOOTSTRAP_SUPPORT; echo $#)"
     echo "  would   install $n bootstrap file(s) into $HOST_LIBEXEC"
     echo "  would   adopt the latest build into $HOST_BUILD_ROOT and link it into $HOST_BIN"
-    if crontab -l 2>/dev/null | grep -q 'selfdev-release:TICK'; then
+    if has_tick; then
       echo "  ok      root already has the host clock in its own crontab"
     else
       echo "  would   install the host tick into ROOT's crontab at '$spec' (arms no dispatch)"
@@ -339,10 +354,11 @@ wire_host() {
   # shape as the per-account tick, with one consumer per host for an artifact
   # that is now per host. The tick re-reads crontab -l as its own witness.
   TICK_CRON_SPEC="$spec" TICK_CRON_ENV="${TICK_ENV[*]}" "$tick" --install-cadence --apply 2>&1 | sed 's/^/     /'
-  if crontab -l 2>/dev/null | grep -q 'selfdev-release:TICK'; then
+  if has_tick; then
     echo "  OK      host clock verified in root's crontab (re-read, not asserted)"
   else
     echo "  BAD     the clock is NOT in root's crontab -- $HOST will never advance past $after"
+    echo "  BAD     crontab -l said: $(crontab_of | head -3 | tr '\n' ' ')"
     return 1
   fi
 }

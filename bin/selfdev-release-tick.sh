@@ -265,17 +265,28 @@ install_cadence() {
     act "not installed (--check). Re-run with --apply."
     return 0
   fi
-  local cur new
-  cur="$(crontab -l 2>/dev/null || true)"
+  local cur new back
+  # stderr KEPT, merged into stdout, rather than sent to /dev/null. An empty
+  # crontab writes "no crontab for <user>" there and exits 1 -- that is the
+  # answer, not an error -- but so does a permission failure, and silencing
+  # both makes them one event. That conflation is bin/silence-audit.sh's
+  # [stderr-silenced] rule ("turns permission denied into clean"), and here it
+  # would be load-bearing: `cur` is what gets written BACK, so reading it as
+  # empty when it is merely unreadable would erase every other entry in the
+  # crontab. The grep -vF below removes the noise line either way, because a
+  # message from cron does not carry our tag.
+  cur="$(crontab -l 2>&1 || true)"
+  case "$cur" in *"no crontab for"*) cur="" ;; esac
   new="$(printf '%s\n' "$cur" | grep -vF "$CRON_TAG")"
   printf '%s\n%s\n' "$new" "$line" | grep -v '^[[:space:]]*$' | crontab -
   # WITNESS: read it back out of cron, not out of the variable just written.
   # "crontab - exited 0" is not evidence that the line is scheduled.
-  if crontab -l 2>/dev/null | grep -qF "$CRON_TAG"; then
+  back="$(crontab -l 2>&1)"
+  if printf '%s\n' "$back" | grep -qF "$CRON_TAG"; then
     ok "cadence installed in $(id -un)'s crontab, verified by re-reading crontab -l"
     act "machine-wide config changed. Run: notify-senechal 'realisateur selfdev-release-tick cron in $(id -un)@$(hostname -s) crontab, owned by realisateur'"
   else
-    bad "crontab accepted the write but the entry is absent on re-read"
+    bad "crontab accepted the write but the entry is absent on re-read. crontab -l said: $(printf '%s' "$back" | head -3 | tr '\n' ' ')"
   fi
 }
 
