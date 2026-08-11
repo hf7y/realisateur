@@ -1,0 +1,381 @@
+#!/usr/bin/env bash
+# consigne -- the front door for depositing prose into the Obsidian vault,
+# and the only place that reports what a deposit left behind.
+#
+# ===========================================================================
+# WHAT THIS IS, AND WHAT IT IS NOT
+# ===========================================================================
+#
+# It is NOT a second implementation of `fonde consign`. It runs THE SAME
+# mechanism -- bibliothecaire's `lib/consign-prose.sh`, itself vendored from
+# basheur's `impl/consign-prose` -- located at runtime, never copied. There is
+# one implementation and two doors:
+#
+#     fonde consign <path>...     the OLD door. Still works; says it is old.
+#     consigne <path>...          this one.
+#
+# Zach, 2026-08-10: "make consigne equivalent or backwards compatible with
+# fonde consign and have fonde consign loudly point to consigne as the new
+# correct approach." The equivalence is literal and mechanical, not a promise
+# in prose: `fonde`'s own do_consign runs
+#
+#     bash "$ROOT/lib/consign-prose.sh" "$VAULT" "$@"
+#
+# and so does this, with the same $VAULT resolved from the same environment
+# variable and the same default. Same argv, same deposit, same exit codes.
+# bin/tests/consigne.test.sh case B pins that call shape against a recording
+# stub, so the two doors cannot drift into two behaviours without a red suite.
+#
+# A SECOND COPY WAS THE OBVIOUS DESIGN AND IT IS THE WRONG ONE. `bin/fonde`
+# says so in its own header, about itself: "If a contract store returns to
+# PATH ... this file holds a SECOND COPY of an impl that store also holds, and
+# two copies drift." The first draft of this verb (hf7y/realisateur#121, commit
+# b81de52) did exactly that -- it reimplemented the deposit as a flat `cp` plus
+# a `git commit`, with no frontmatter, no provenance, no read-back gate and no
+# overwrite refusal. It was not backwards compatible with `fonde consign` in
+# any respect: different argv, different vault layout, different exit codes,
+# and a note the DUPLICATED report below cannot even see, because that report
+# reads the `source_sha256` the real mechanism writes and the flat copy does
+# not. That draft is what this replaces.
+#
+# ===========================================================================
+# WHY IT EXISTS AT ALL, IF IT ONLY FORWARDS
+# ===========================================================================
+#
+# Because the deposit is HALF a reaping pass, and the other half has never
+# been visible anywhere. hf7y/scheduler#86, measured 2026-08-10:
+#
+#     2,391 lines sitting in the repo and in the vault at once, byte-for-byte.
+#     All deposited by one commit -- fbdbae9, 2026-08-01. Nine days later
+#     every one of them is still here.
+#
+# `consign-prose.sh` is explicit that it deletes nothing; it deposits, then
+# reports what is now safe to remove. That is the right call -- removal needs a
+# judgement the depositor cannot make. The defect is that NOTHING CONSUMES THAT
+# REPORT. It is printed once, to a terminal, and then the queue it describes
+# does not exist anywhere. `fauche` refuses to clear a repo whose prose has no
+# vault note and prints `fonde consign` as the remedy, so the incentive is to
+# deposit everything and stop: that satisfies `fauche`, satisfies nothing else,
+# and leaves the repo exactly as prose-heavy as before.
+#
+# scheduler#86 asks for that half to be "countable and prompted, not
+# remembered", and names this shape first:
+#
+#     1. `fonde consign --report` / a `consigne status` that lists DUPLICATED
+#        files, so the second half is visible as a queue rather than as nothing.
+#
+# `consigne status` is that. It is the whole reason this is a new door and not
+# a rename: the deposit half already worked.
+#
+# ===========================================================================
+# WHAT IT DOES NOT DO
+# ===========================================================================
+#
+# IT DELETES NOTHING, EVER -- not even a file it has just reported DUPLICATED.
+# Removing a source file is the judgement `consign-prose.sh` declines to make
+# and this declines for the same reason: "does this paragraph describe a
+# premise that still holds?" (PROSE-REAPING.md 1) is not answerable by hashing.
+# What changes is that the queue is now countable, so the judgement has
+# somewhere to be applied instead of being remembered.
+#
+# IT NEVER PUSHES, and it never commits either. The deposit mechanism writes
+# files into the vault working tree and stops; the vault has a GitHub remote
+# and is deliberately left unpushed (PROSE-REAPING.md 2, Zach's 2026-08-06
+# licensing/IP note). No code path here runs `git push` or `git commit`.
+#
+# exit: 0 kept  2 usage  5 broken  6 blind  7 refused
+#       -- byte-identical to `fonde`'s own VERB_EXITS, because for the deposit
+#       path they are literally the same process's exit code, unwrapped.
+
+set -uo pipefail
+
+SELF_NAME='consigne'
+
+# ---- config, read here and nowhere else ------------------------------------
+# THE SAME VARIABLE AND THE SAME DEFAULT AS `fonde`, deliberately. This is the
+# "config read from one source, not retyped per file" row of BUILD-DISCIPLINE
+# applied across a project boundary: a caller who has exported
+# BIBLIOTHECAIRE_VAULT to point the old door somewhere must not have to learn
+# a second name to point the new one at the same place, and a `consigne` that
+# invented CONSIGNE_VAULT would deposit into a different tree than
+# `fonde consign` for the same caller, silently.
+VAULT="${BIBLIOTHECAIRE_VAULT:-$HOME/ecosystem1/ecosystem1}"
+
+die()    { printf '%s: %s\n' "$SELF_NAME" "$*" >&2; exit 2; }
+blind()  { printf '%s: BLIND: %s\n' "$SELF_NAME" "$*" >&2; exit 6; }
+
+usage() {
+  cat <<'EOF'
+consigne -- deposit prose into the Obsidian vault, and report what a deposit
+            left behind.
+
+usage:
+  consigne <path>...              deposit each path into the vault as linked
+                                  data. Identical to `fonde consign <path>...`
+                                  -- same mechanism, same deposit, same codes.
+  consigne status [<project>...]  what is deposited AND still in the repo.
+                                  No argument: every project in the vault.
+  consigne --help                 this text
+
+flags:
+  --summon      accepted and buys nothing. The deposit is mechanized and
+                reaches no agent, so this spends zero and says so -- exactly
+                as `fonde consign --summon` does, which is the remedy `fauche`
+                prints for unconsigned prose.
+  -h, --help    this text
+
+exit:
+  0  kept     -- deposited, or status read cleanly
+  2  usage    -- bad arguments, or a path that does not exist
+  5  broken   -- a note was written and read back with a different body
+  6  blind    -- could not read the vault, a source, or the mechanism itself
+  7  refused  -- would have overwritten an existing note, or the vault is not
+                 under version control
+
+environment:
+  BIBLIOTHECAIRE_VAULT   the vault (default $HOME/ecosystem1/ecosystem1).
+                         The same variable `fonde` reads, on purpose.
+  CONSIGNE_IMPL          path to lib/consign-prose.sh, if it should not be
+                         found automatically. Resolution order otherwise:
+                         the installed `fonde`'s own tree, then `installe
+                         list`'s row for `fonde`, then bibliothecaire's
+                         checkout under $INSTALLE_PROJECTS.
+
+THIS TOOL DELETES NOTHING. `status` reports a queue; acting on it is a
+judgement (PROSE-REAPING.md 1), and it is still yours to make.
+
+NEVER PUSHES, NEVER COMMITS. The vault is committed by hand and deliberately
+left unpushed -- PROSE-REAPING.md 2, Zach's 2026-08-06 licensing/IP note.
+
+see: man consigne; hf7y/scheduler#86 for the half `status` makes countable.
+EOF
+}
+
+# ---- resolving the ONE implementation --------------------------------------
+# Four candidates, tried in order, each PROBED rather than assumed -- a path
+# that exists but is unreadable is not a resolution. If none answers, that is
+# BLIND (6) and it is loud: a front door that silently did nothing because it
+# could not find its own mechanism is the exit-0 no-op this estate keeps
+# paying for.
+#
+# NOTE ON WHAT IS DELIBERATELY ABSENT: no candidate here spells
+# `verb-builds/current`. bin/lib/propagation-set.sh reserves resolving the pin
+# path to the two layout-owning scripts, so this asks `fonde` and `installe`
+# where they already are instead of re-deriving the layout they live in.
+resolve_impl() {
+  local c fonde_bin root
+
+  if [ -n "${CONSIGNE_IMPL:-}" ]; then
+    [ -r "$CONSIGNE_IMPL" ] \
+      || blind "CONSIGNE_IMPL is set to $CONSIGNE_IMPL, which is not readable"
+    printf '%s' "$CONSIGNE_IMPL"
+    return 0
+  fi
+
+  # 1. The installed `fonde` carries it, one directory up from its own bin/.
+  if fonde_bin="$(command -v fonde 2>/dev/null)" && [ -n "$fonde_bin" ]; then
+    root="$(cd "$(dirname "$(readlink -f "$fonde_bin")")/.." 2>/dev/null && pwd)" || root=''
+    if [ -n "$root" ] && [ -r "$root/lib/consign-prose.sh" ]; then
+      printf '%s' "$root/lib/consign-prose.sh"
+      return 0
+    fi
+  fi
+
+  # 2. `installe list` knows where every verb resolves to, including on a host
+  #    whose PATH has not been re-exported since the last install.
+  if command -v installe >/dev/null 2>&1; then
+    while IFS=$'\t' read -r n p; do
+      [ "$n" = fonde ] || continue
+      [ -n "$p" ] || continue
+      root="$(cd "$(dirname "$(readlink -f "$p")")/.." 2>/dev/null && pwd)" || continue
+      [ -r "$root/lib/consign-prose.sh" ] || continue
+      printf '%s' "$root/lib/consign-prose.sh"
+      return 0
+    done < <(installe list 2>/dev/null)
+  fi
+
+  # 3. A development checkout of bibliothecaire, for a host with no build.
+  c="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/bibliothecaire/lib/consign-prose.sh"
+  if [ -r "$c" ]; then
+    printf '%s' "$c"
+    return 0
+  fi
+
+  blind "cannot find lib/consign-prose.sh -- the deposit mechanism lives in
+       bibliothecaire and is reached through the installed \`fonde\`, through
+       \`installe list\`, or through a bibliothecaire checkout under
+       \${INSTALLE_PROJECTS:-\$HOME/Documents/Projects}. None answered. Set
+       CONSIGNE_IMPL to point at it directly, or install the verb build.
+       Nothing was deposited."
+}
+
+# ---- status: the half nothing consumed -------------------------------------
+# Reads the vault's own notes, not a list. Every note written by
+# consign-prose.sh carries the three fields this needs in its frontmatter --
+# source_repo, source_path, source_sha256 -- so the comparison is against what
+# the deposit ITSELF recorded, and a note this cannot classify is reported as
+# UNREADABLE rather than counted as clean.
+#
+#   DUPLICATED  the source file is still there and still byte-identical.
+#               The reaping pass deposited and stopped. This is the queue.
+#   DIVERGED    still there, and no longer the same bytes. Worse than
+#               DUPLICATED: the vault note is now a stale fork of a file
+#               somebody has since edited, and neither copy says so.
+#               scheduler#86 measured BLOCKERS.md already in this state.
+#   REAPED      the source file is gone. The pass finished. Nothing to do.
+#   UNREADABLE  the note has no usable provenance, or its source repo is not
+#               on this host. Named, never silently skipped.
+status_field() { # <file> <field> -- first frontmatter value, or empty
+  sed -n "1,60{s/^$2: //p;}" "$1" 2>/dev/null | head -1
+}
+
+do_status() {
+  [ -d "$VAULT" ] || blind "no vault at $VAULT (set BIBLIOTHECAIRE_VAULT)"
+
+  local -a projects=()
+  if [ $# -gt 0 ]; then
+    projects=("$@")
+  else
+    local d
+    for d in "$VAULT"/*/; do
+      [ -d "$d" ] || continue
+      d="${d%/}"; d="${d##*/}"
+      case "$d" in .*) continue ;; esac
+      projects+=("$d")
+    done
+  fi
+  [ "${#projects[@]}" -gt 0 ] && [ -n "${projects[0]}" ] \
+    || blind "no project directories under $VAULT -- nothing has been consigned here"
+
+  printf 'consigne status -- %s\n\n' "$VAULT"
+
+  local n_dup=0 n_div=0 n_reap=0 n_bad=0 lines_dup=0
+
+  # ARCHIVED REPOS ARE COLLAPSED, NOT DROPPED. On mandark most vault notes name
+  # a source repo that is no longer on the host -- crt, chezz, basheur and
+  # abletim alone account for hundreds. Printing one line each buries the
+  # handful of DUPLICATED rows that are the entire point of this report, which
+  # is how a report stops being read; and dropping them silently would be the
+  # BLIND-graded-as-clean conflation this estate keeps paying for. So each
+  # missing repo is named once, with its count, after the actionable rows.
+  local -a gone_repo=() gone_n=()
+  note_gone() { # <repo>
+    local i
+    for i in "${!gone_repo[@]}"; do
+      if [ "${gone_repo[$i]}" = "$1" ]; then
+        gone_n[i]=$(( ${gone_n[$i]} + 1 )); return 0
+      fi
+    done
+    gone_repo+=("$1"); gone_n+=(1)
+  }
+
+  local proj note repo rel want got live n
+  for proj in "${projects[@]}"; do
+    if [ ! -d "$VAULT/$proj" ]; then
+      printf '  UNREADABLE  %s -- no such directory in the vault\n' "$proj"
+      n_bad=$((n_bad + 1))
+      continue
+    fi
+    while IFS= read -r note; do
+      [ -n "$note" ] || continue
+      repo="$(status_field "$note" source_repo)"
+      rel="$(status_field "$note"  source_path)"
+      want="$(status_field "$note" source_sha256)"
+      if [ -z "$repo" ] || [ -z "$rel" ] || [ -z "$want" ]; then
+        printf '  UNREADABLE  %s -- no source_repo/source_path/source_sha256 frontmatter\n' \
+          "${note#"$VAULT"/}"
+        n_bad=$((n_bad + 1)); continue
+      fi
+      live="$repo/$rel"
+      if [ ! -d "$repo" ]; then
+        note_gone "$repo"
+        n_bad=$((n_bad + 1)); continue
+      fi
+      if [ ! -f "$live" ]; then
+        n_reap=$((n_reap + 1)); continue
+      fi
+      got="$(sha256sum "$live" 2>/dev/null | cut -d' ' -f1)"
+      n="$(wc -l < "$live" 2>/dev/null | tr -d ' ')"
+      case "$n" in ''|*[!0-9]*) n=0 ;; esac
+      if [ "$got" = "$want" ]; then
+        printf '  DUPLICATED  %-52s (%s lines)\n' "$proj/$rel" "$n"
+        n_dup=$((n_dup + 1)); lines_dup=$((lines_dup + n))
+      else
+        printf '  DIVERGED    %-52s -- the vault copy is a stale fork\n' "$proj/$rel"
+        n_div=$((n_div + 1))
+      fi
+    done < <(find "$VAULT/$proj" -type f -name '*.md' 2>/dev/null | sort)
+  done
+
+  local i
+  for i in "${!gone_repo[@]}"; do
+    printf '  UNREADABLE  %s note(s) whose source repo is not on this host: %s\n' \
+      "${gone_n[$i]}" "${gone_repo[$i]}"
+  done
+
+  printf '\n  %d DUPLICATED (%d lines in both places), %d DIVERGED, %d REAPED, %d UNREADABLE\n' \
+    "$n_dup" "$lines_dup" "$n_div" "$n_reap" "$n_bad"
+
+  # THE PROMPT. scheduler#86 asked for this half to be "countable AND
+  # prompted". The count above is the countable half; this is the prompt, and
+  # it names the judgement rather than offering to make it -- there is no
+  # --remove flag here and there is not going to be one.
+  if [ "$n_dup" -gt 0 ] || [ "$n_div" -gt 0 ]; then
+    printf '\n  These are deposited and STILL IN THE REPO. A deposit is half a reaping\n'
+    printf '  pass; the other half is per-file and is a judgement -- PROSE-REAPING.md 1:\n'
+    printf '  "does this paragraph describe a premise that STILL HOLDS?". Nothing here\n'
+    printf '  removes anything. A DIVERGED row is the more urgent one: the vault note\n'
+    printf '  is already a stale fork and neither copy says so.\n'
+  else
+    printf '\n  Nothing is sitting in both places. (A REAPED row means the deposit was\n'
+    printf '  made and the source is gone -- the pass finished.)\n'
+  fi
+  return 0
+}
+
+# ---- dispatch ---------------------------------------------------------------
+SUMMON=0
+ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help) usage; exit 0 ;;
+    --summon)  SUMMON=1 ;;
+    # A near-miss on the only flag that has ever meant "may spend money" must
+    # fail rather than be swallowed as an unknown -- bin/lib/cli-guard.sh's
+    # rule, restated here because a verb-shaped front door does not source it.
+    -s|-S)     die "'$1' rejected as a near-miss on --summon (the cost flag is long-form only)." ;;
+    --)        die "'--' is not accepted." ;;
+    -*)        die "unknown flag: $1 (try --help)" ;;
+    *)         ARGS+=("$1") ;;
+  esac
+  shift
+done
+
+if [ "${#ARGS[@]}" -eq 0 ]; then
+  die "needs at least one path, or \`status\` (try --help)"
+fi
+
+if [ "${ARGS[0]}" = status ]; then
+  [ "$SUMMON" -eq 0 ] \
+    || die "status never spends, so --summon requests nothing here."
+  do_status "${ARGS[@]:1}"
+  exit $?
+fi
+
+# ---- the deposit: forwarded, not reimplemented ------------------------------
+IMPL="$(resolve_impl)" || exit $?
+
+# `--summon` is accepted, buys nothing, and SAYS so rather than passing in
+# silence -- the same sentence `fonde consign --summon` prints, for the same
+# reason. `fauche` names that command as the remedy for unconsigned prose, so
+# the flag must not have become a usage error the day the work it authorised
+# became free.
+[ "$SUMMON" -eq 1 ] && printf '%s: the deposit is mechanized; --summon buys nothing here and nothing was spent.\n' \
+  "$SELF_NAME" >&2
+
+# Foreground, output unswallowed, exit code unwrapped. The impl prints each
+# DEPOSITED path and what is now safe to remove, and that report is the
+# caller's whole basis for deciding anything afterwards. Capturing it to
+# inspect the exit code first is how it went missing.
+bash "$IMPL" "$VAULT" "${ARGS[@]}"
+exit $?
