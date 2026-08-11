@@ -24,6 +24,11 @@
 #   4. bin/land-selfdev.sh --land                  (as <p>) clones + verbs
 #   5. the RELEASE BOOTSTRAP + its clock            (as <p>) see below
 #
+# Step 3 is a GATE, not a sequence point: every repo that fails to wire is
+# named and the run stops there rather than landing an account on credentials
+# that were already proven not to work. See the comment at "3/4" for what that
+# cost before it did.
+#
 # WHY STEP 5 IS HERE AND NOWHERE ELSE. The account consumes tooling from the
 # verb release channel (`hf7y/verbs` build tags), not from a clone of any
 # repo's `main` -- see bin/lib/propagation-set.sh for that decision and why
@@ -155,13 +160,46 @@ install -m 700 -o "$PROJECT" -g "$PROJECT" \
   "$HERE/wire-selfdev-git.sh" "$HERE/land-selfdev.sh" "$STAGE/"
 
 say "3/4 git credentials, per repo"
+# THE PIPE USED TO EAT THE ANSWER. wire-selfdev-git.sh already fails loud on
+# its own: its "6. the witness" section runs `git ls-remote` against the freshly
+# wired alias and exits 5 on `BAD WITNESS FAILED: ... the wiring is not live`.
+# That exit went into `| sed`, and this script sets `set -uo pipefail` but never
+# `set -e` and read neither $? nor PIPESTATUS -- so a repo whose credentials
+# demonstrably did NOT work was indistinguishable from one that wired cleanly,
+# and provisioning walked on to "4/5 land" and "5/5 release bootstrap".
+#
+# Not theoretical: account #4 (vim-arcade) provisioned "successfully" on
+# 2026-08-04 with one repo's wiring broken by the 0700 sibling-staging bug
+# fixed the same day in 05be4fc. Nothing said so at provisioning time; it
+# surfaced on that account's first scheduled run. realisateur#120, from
+# vim-arcade#74, which twice concluded the fix belongs here.
+#
+# EVERY failing repo, not the first. The loop runs all four and refuses
+# afterwards, because "senechal failed" and "senechal and scheduler failed" are
+# different amounts of re-work and stopping early hides the difference. rc is
+# read IMMEDIATELY after the pipeline: any command in between -- an echo, a
+# test -- replaces PIPESTATUS.
+wire_failed=""
 for repo in realisateur scheduler senechal "$PROJECT"; do
   access=""
   # READ-WRITE only for the account's own repo; read-only for the three shared.
   [ "$repo" = "$PROJECT" ] && access="--rw"
   echo "  -- $repo ${access:---read-only}"
   run_as "'$STAGE/wire-selfdev-git.sh' '$repo' --apply $access" 2>&1 | sed 's/^/     /'
+  rc="${PIPESTATUS[0]}"
+  if [ "$rc" -ne 0 ]; then
+    echo "     FAILED  wire-selfdev-git.sh $repo exited $rc -- $repo is NOT wired for $PROJECT"
+    wire_failed="$wire_failed $repo(rc=$rc)"
+  fi
 done
+[ -z "$wire_failed" ] || die "git wiring FAILED for:$wire_failed
+Stopping at 3/4: landing and the release bootstrap both assume every repo above
+is reachable, and an account landed on broken credentials fails later, on its
+first unattended run, as something else. Read the rows above (a WITNESS FAILED
+line means the key exists and GitHub did not accept it), then re-run:
+    sudo -u $PROJECT -H $STAGE/wire-selfdev-git.sh <repo> --apply [--rw]
+and re-run this script when every repo wires clean; the steps before this one
+are idempotent."
 
 say "4/5 land"
 run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
