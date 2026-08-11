@@ -4,8 +4,8 @@
 # GUARD: can a sensor tell nothing-there from could-not-look from did-not-look?
 # RUNNER: operator -- surveys every registered project's working checkout
 # GUARD-TEST: none -- it carries its own --self-test with fixtures, which is not a suite CI globs; closing this is the next repaint due
-# GATE: strict
-# VERIFIED: 2026-08-07 via bash bin/silence-audit.sh --self-test (PASS) and a live run (74 FLAGs, 15 after retiring [retirement-open])
+# GATE: strict --target $TREE
+# VERIFIED: 2026-08-11 via bash bin/silence-audit.sh --self-test (PASS) and a live run (13 FLAGs, 12 after widening [unwired] to the whole repo)
 #
 # Offline-first (zero AI), writes nothing, exits 0 unless --strict.
 #
@@ -86,8 +86,29 @@
 # Usage:
 #   silence-audit.sh                  audit the whole ecosystem
 #   silence-audit.sh <project>        audit one registered project
+#   silence-audit.sh --target <dir>   audit THAT TREE, ignoring the registry
 #   silence-audit.sh --strict         exit 1 if any FLAG (for hooks/CI)
 #   silence-audit.sh --self-test      run the built-in fixtures, exit 1 on fail
+#
+# --target EXISTS BECAUSE THE DEFAULT CANNOT ANSWER "IS MY BRANCH CLEAN?".
+# Without it every mode above resolves its subjects through the REGISTRY --
+# scheduler's schedule/*.conf, whose PROJECT_REPO_PATH is each project's live
+# shared checkout. So `silence-audit --strict`, run from a branch checkout by
+# an author asking whether their change is clean, read ~/Documents/Projects/*
+# and never opened the tree it was invoked in: it answered a question nobody
+# asked, in the voice of the one they did. Measured 2026-08-10 from a mktemp
+# tree: every path in the report was under the live checkout, and three
+# consecutive runs disagreed with each other because other agents were
+# writing to those checkouts while it read them. That is guard-estate check F
+# (a guard must honour the tree it is pointed at), and CLAUDE.md has required
+# `silence-audit --strict` clean since the day it was written -- against a
+# tree the author may not have touched. hf7y/realisateur#107.
+#
+# The registry default is KEPT, because the estate survey is what this script
+# is for and what bin/hygiene-lint.sh section 12 dispatches. The scope knob is
+# a flag, and the `# GATE:` line above declares it, which is exactly the
+# convention bin/tests/guard-estate.test.sh reads for guards whose scope is
+# not cwd (bin/ownership-audit.sh: `# GATE: strict --repo $TREE`).
 #
 # Exit codes: 0 clean-or-advisory, 1 --strict with FLAGs or self-test fail,
 #             3 BLIND (parsed zero mechanisms -- see below).
@@ -105,26 +126,66 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)" || REPO=""
 
 STRICT=0
 ONLY=""
+TARGET=""       # resolved absolute path of --target, "" if it did not resolve
+TARGET_GIVEN="" # what the caller actually typed. Kept SEPARATELY so that a
+                # --target that does not resolve is reported as the thing the
+                # caller asked for, and so "no --target" and "a --target that
+                # names nothing" stay distinguishable -- collapsing those two
+                # onto one empty string is how a pointed run would silently
+                # fall back to surveying the estate, which is #107 again.
 SELFTEST=0   # deliberately NOT read from the environment. It used to be, and
              # the self-test's own child invocations inherited it and recursed
              # until the harness killed them -- a mute hang, found 2026-07-28
              # while building this. An env-readable mode flag is the same
              # class of defect this script audits: a state the caller cannot
              # see from the outside.
-case "${1:-}" in
-  --strict)    STRICT=1 ;;
-  --self-test) SELFTEST=1 ;;
-  -h|--help)   sed -n '2,60p' "${BASH_SOURCE[0]}"; exit 0 ;;
-  "")          ;;
-  --*)         echo "unknown flag: $1" >&2; exit 2 ;;
-  # A SHORT flag fell through to the project-name branch. `silence-audit -s`
-  # audited a project literally named "-s" and printed a full, confident
-  # report (measured 2026-07-30) -- the misparse this script exists to catch,
-  # in this script. -s/-S specifically are near-misses on --summon, the only
-  # flag in this ecosystem that spends money, and must never be swallowed.
-  -*)          echo "unknown flag: $1 (short flags are not accepted; the cost flag --summon is long-form only)" >&2; exit 2 ;;
-  *)           ONLY="$1" ;;
-esac
+# A LOOP, not a `case "${1:-}"`. The single-argument form could not express
+# `--strict --target <dir>` -- it read argument one and dropped the rest in
+# silence, so the gating mode and the scope knob were mutually exclusive and
+# nothing said so.
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --strict)    STRICT=1 ;;
+    --self-test) SELFTEST=1 ;;
+    --target)    shift
+                 [ $# -gt 0 ] || { echo "--target needs a directory" >&2; exit 2; }
+                 TARGET_GIVEN="$1" ;;
+    --target=*)  TARGET_GIVEN="${1#--target=}"
+                 [ -n "$TARGET_GIVEN" ] || { echo "--target needs a directory" >&2; exit 2; } ;;
+    # The thesis, THEN the usage block. `2,60p` alone stops 26 lines above
+    # `# Usage:`, so --help has never printed a single invocation form -- it
+    # would have introduced --target to nobody. Anchored on the text, not on
+    # line numbers, because a line number is what rotted in the first place.
+    -h|--help)   sed -n '2,60p' "${BASH_SOURCE[0]}"
+                 sed -n '/^# Usage:/,/^#             3 BLIND/p' "${BASH_SOURCE[0]}"
+                 exit 0 ;;
+    "")          ;;
+    --*)         echo "unknown flag: $1" >&2; exit 2 ;;
+    # A SHORT flag fell through to the project-name branch. `silence-audit -s`
+    # audited a project literally named "-s" and printed a full, confident
+    # report (measured 2026-07-30) -- the misparse this script exists to catch,
+    # in this script. -s/-S specifically are near-misses on --summon, the only
+    # flag in this ecosystem that spends money, and must never be swallowed.
+    -*)          echo "unknown flag: $1 (short flags are not accepted; the cost flag --summon is long-form only)" >&2; exit 2 ;;
+    *)           ONLY="$1" ;;
+  esac
+  shift
+done
+
+# Two scope knobs at once is a question with two subjects. A registry name and
+# a directory are different domains, and picking one for the caller is the
+# silent-misparse behaviour this script exists to detect.
+if [ -n "$TARGET_GIVEN" ] && [ -n "$ONLY" ]; then
+  echo "--target <dir> and <project> name different domains (a tree vs a registry entry); pass one" >&2
+  exit 2
+fi
+
+# Resolve to an absolute path ONCE, here, so every message below names the
+# same thing. A failure to resolve leaves TARGET empty and is reported as
+# BLIND at the end -- never as a clean audit of nothing.
+if [ -n "$TARGET_GIVEN" ]; then
+  TARGET="$(cd "$TARGET_GIVEN" 2>/dev/null && pwd)" || TARGET=""
+fi
 
 flags=0
 mechanisms=0
@@ -154,6 +215,16 @@ read_crontabs() {
 
 project_repos() {
   local conf name repo
+  # --target: the tree we were POINTED AT is the entire domain, and the
+  # registry is not consulted at all. Returning early rather than filtering
+  # the registry down is the point: a filter that matched nothing would fall
+  # through to surveying everything, which is the bug (#107).
+  if [ -n "$TARGET_GIVEN" ]; then
+    [ -n "$TARGET" ] || return 0            # unresolvable -> zero -> BLIND
+    [ -d "$TARGET/bin" ] || return 0        # not a project tree -> BLIND
+    printf '%s\t%s\n' "$(basename "$TARGET")" "$TARGET"
+    return 0
+  fi
   for conf in "$SCHED_ROOT"/schedule/*.conf; do
     [ -f "$conf" ] || continue
     name="$(basename "$conf" .conf)"
@@ -197,10 +268,22 @@ check_mute_null() {
       [ -f "$sh" ] || continue
       mechanisms=$((mechanisms+1))
       body="$(cat "$sh" 2>/dev/null)" || continue
+      # HERESTRINGS, NOT `echo "$body" | grep -q`. With `set -o pipefail` (top
+      # of this file) that pipeline returns 141, not 0, whenever grep -q finds
+      # its match and exits while echo is still writing -- so the WRITER's
+      # SIGPIPE death, not the reader's verdict, became the answer. Measured
+      # 2026-08-11 on byte-identical input: five consecutive evaluations of
+      # these two lines over the same three unmodified scripts returned 0 and
+      # 141 at random, and the whole audit's FLAG count flapped 13/14/16
+      # between runs seconds apart. Both directions were wrong -- a 141 on the
+      # first line skipped a scanner silently, a 141 on the second FLAGGED a
+      # script that does have an empty-domain branch. A guard whose verdict is
+      # a coin flip reports "nothing there" for "the pipe closed early", which
+      # is this script's own thesis, committed by this script.
       # does it scan a domain?
-      echo "$body" | grep -qE 'mapfile -t [A-Za-z_]+ < <\(|for [A-Za-z_]+ in .*\*|for [A-Za-z_]+ in \$\(' || continue
+      grep -qE 'mapfile -t [A-Za-z_]+ < <\(|for [A-Za-z_]+ in .*\*|for [A-Za-z_]+ in \$\(' <<<"$body" || continue
       # does it have any empty-domain signal at all?
-      echo "$body" | grep -qiE 'BLIND|NOT[- ]PROBEABLE|no .* found|nothing to |none found|-eq 0 \]|\[ -z "\$' && continue
+      grep -qiE 'BLIND|NOT[- ]PROBEABLE|no .* found|nothing to |none found|-eq 0 \]|\[ -z "\$' <<<"$body" && continue
       flag mute-null "$name: $(basename "$sh") scans a domain with no empty-domain branch"
     done < <(find "$repo/bin" -maxdepth 1 -name '*.sh' -type f 2>/dev/null)
   done < <(project_repos)
@@ -214,7 +297,7 @@ check_self_witness() {
     case "$line" in ''|\#*) continue ;; esac
     mechanisms=$((mechanisms+1))
     cmd="${line#*[0-9] }"
-    if echo "$line" | grep -qE '>[[:space:]]*/dev/null[[:space:]]*2>&1|>/dev/null 2>&1'; then
+    if grep -qE '>[[:space:]]*/dev/null[[:space:]]*2>&1|>/dev/null 2>&1' <<<"$line"; then
       flag self-witness "$acct: cron entry discards all output -- only self-written logs witness it: ${cmd:0:70}"
     fi
   done < <(read_crontabs)
@@ -259,9 +342,34 @@ check_stderr_silenced() {
 }
 
 check_unwired() {
-  # A mechanism nothing names. Domain read: this project's own bin/, every
-  # readable crontab, this project's command files, and every other script
-  # in the same repo.
+  # A mechanism nothing names. Domain read: every readable crontab, this
+  # project's command files, EVERY .sh ANYWHERE IN THE REPO, and the registry.
+  #
+  # "Anywhere in the repo" was "$repo/bin" until 2026-08-11, which left
+  # tests/ outside the domain -- so a script whose only caller is its own
+  # witness read as "named by no crontab, doc, conf, unit or sibling script"
+  # while tests/run-all.sh globbed that witness and ran it every pass. Live
+  # hit: hf7y/scheduler#85's bin/roster-target.sh, named on line 2 of
+  # tests/roster-target-witness.sh, flagged [unwired] anyway. That is the
+  # witness-backed pattern this estate keeps asking for, being told it is the
+  # broken one -- and the scripts that escaped did so by being mentioned in a
+  # README table, so the check was measuring a documentation habit.
+  #
+  # Widened rather than given a fifth grep for tests/ specifically (the two
+  # options hf7y/realisateur#138 offers). One domain is cheaper to read and
+  # picks up examples/ and hooks/ for free; the cost is that a mention in a
+  # script that never runs now counts as wiring. That cost is already paid --
+  # scheduler's bin/check-witness-lint.sh header is explicit that grep proves
+  # a check is MENTIONED, not that it RUNS, which is why it reads runtime
+  # witnesses instead of doing static analysis. So the distinction this grep
+  # would have to make is one the estate has already ruled statically
+  # undecidable, and the expensive direction of the error is the false alarm:
+  # these tools fail toward alarm, and alarm is routed to Zach's attention.
+  #
+  # .git is excluded for speed. worktrees/ is excluded because a worktree is a
+  # stale COPY of this repo, not a caller of it: counting it would let a
+  # deleted caller keep a dead script looking wired from nine directories at
+  # once (scheduler carries 9; the estate carries 21).
   local name repo sh base crontab_blob
   crontab_blob="$(read_crontabs)"
   while IFS=$'\t' read -r name repo; do
@@ -273,10 +381,10 @@ check_unwired() {
       grep -qF "$base" <<<"$crontab_blob" && continue
       grep -rqF "$base" "$repo" --include='*.md' --include='*.conf' \
         --include='*.service' --include='*.timer' 2>/dev/null && continue
-      grep -rqF "$base" "$repo/bin" --include='*.sh' \
-        --exclude="$base" 2>/dev/null && continue
+      grep -rqF "$base" "$repo" --include='*.sh' --exclude="$base" \
+        --exclude-dir=.git --exclude-dir=worktrees 2>/dev/null && continue
       grep -rqF "$base" "$SCHED_ROOT/schedule" 2>/dev/null && continue
-      flag unwired "$name: bin/$base is named by no crontab, doc, conf, unit or sibling script"
+      flag unwired "$name: bin/$base is named by no crontab, doc, conf, unit, registry entry, or any other .sh in the repo (tests/ included)"
     done < <(find "$repo/bin" -maxdepth 1 -name '*.sh' -type f 2>/dev/null)
   done < <(project_repos)
 }
@@ -369,6 +477,52 @@ EOF
   tn "conf with literal \$HOME is not reported BLIND" 'BLIND' "$out"
   tn "conf with literal \$HOME does not exit 3"       'rc=3'  "$out"
 
+  # --- #138: a script whose ONLY caller is its own witness is WIRED.
+  # tests/ was outside the reference domain, so the witness-backed pattern the
+  # estate asks for graded as the broken one. The negative case is the half
+  # that matters: widening the domain must not make [unwired] unfireable.
+  mkdir -p "$tmp/proj/tests"
+  printf '#!/usr/bin/env bash\necho hi\n'                     >"$tmp/proj/bin/witnessed.sh"
+  printf '#!/usr/bin/env bash\nTARGET=bin/witnessed.sh\n'     >"$tmp/proj/tests/witnessed-witness.sh"
+  printf '#!/usr/bin/env bash\necho nobody calls me\n'        >"$tmp/proj/bin/orphaned.sh"
+  out="$(SCHED_ROOT="$tmp/sched" bash "${BASH_SOURCE[0]}" 2>&1)"
+  tn "unwired quiet on a script named only by its own witness" 'unwired.*witnessed\.sh' "$out"
+  t  "unwired still fires on a script nothing names"           'unwired.*orphaned\.sh'  "$out"
+  rm -f "$tmp/proj/bin/witnessed.sh" "$tmp/proj/tests/witnessed-witness.sh" "$tmp/proj/bin/orphaned.sh"
+
+  # --- #107: --target must audit the tree it was POINTED AT and must not read
+  # the registry. The registry here is deliberately non-empty and points at a
+  # DECOY holding its own known-bad script: if the audit consults it, the
+  # decoy's name appears in the output. That is the assertion the old fixtures
+  # could not make, because they only ever varied the registry -- the audit had
+  # no other input to honour, so "reports on the registry" and "reports on what
+  # it was asked about" were indistinguishable by construction.
+  mkdir -p "$tmp/decoy/bin" "$tmp/reg/schedule" "$tmp/pointed/bin"
+  printf 'PROJECT_REPO_PATH="%s/decoy"\n' "$tmp" >"$tmp/reg/schedule/decoy.conf"
+  printf '#!/usr/bin/env bash\nfor f in /etc/*.conf; do echo "$f"; done\n' >"$tmp/decoy/bin/decoy-scan.sh"
+  printf '#!/usr/bin/env bash\nfor f in /etc/*.conf; do echo "$f"; done\n' >"$tmp/pointed/bin/pointed-scan.sh"
+  out="$(SCHED_ROOT="$tmp/reg" bash "${BASH_SOURCE[0]}" --target "$tmp/pointed" 2>&1)"
+  t  "--target reports on the tree it was pointed at" 'mute-null.*pointed-scan\.sh' "$out"
+  tn "--target does not read the registry"            'decoy-scan\.sh'              "$out"
+
+  # --strict and --target together. The old single-argument parser read
+  # argument one and dropped the rest in silence, so the gating mode and the
+  # scope knob could not be combined -- which is the exact invocation
+  # CLAUDE.md's checklist row needs.
+  out="$(SCHED_ROOT="$tmp/reg" bash "${BASH_SOURCE[0]}" --strict --target "$tmp/pointed" 2>&1; echo "rc=$?")"
+  # BOTH halves. `rc=1` alone is a vacuous pass: the old parser dropped
+  # --target, audited the registry, found the decoy's FLAG and exited 1 -- the
+  # right exit code for the wrong tree, which is #107 in one line.
+  t "--strict --target parses both and gates"          'rc=1'             "$out"
+  t "--strict --target gated on the TARGET's findings" 'pointed-scan\.sh' "$out"
+
+  # A --target that is not a project tree must fail LOUD. Falling back to the
+  # registry, or reporting clean, is how #107 survived a year of green runs.
+  out="$(SCHED_ROOT="$tmp/reg" bash "${BASH_SOURCE[0]}" --target "$tmp/no-such-tree" 2>&1; echo "rc=$?")"
+  t  "--target on a non-tree exits BLIND(3)"      'rc=3'          "$out"
+  t  "--target on a non-tree names what it wanted" 'no-such-tree' "$out"
+  tn "--target on a non-tree does not fall back to the registry" 'decoy-scan\.sh' "$out"
+
   # --- BLIND: zero mechanisms must exit 3, not 0
   mkdir -p "$tmp/empty/schedule"
   out="$(SCHED_ROOT="$tmp/empty" bash "${BASH_SOURCE[0]}" 2>&1; echo "rc=$?")"
@@ -394,7 +548,10 @@ if [ "$SELFTEST" = 1 ]; then self_test; exit $?; fi
 self_wiring_banner() {
   local me hits=0
   me="$(basename "${BASH_SOURCE[0]}")"
-  read_crontabs | grep -qF "$me" && hits=$((hits+1))
+  # Herestring for the same pipefail/SIGPIPE reason as check_mute_null, and it
+  # bites harder here: a 141 from a MATCHING grep would leave hits at 0 and
+  # print the NOT WIRED banner over a script that is, in fact, wired.
+  grep -qF "$me" <<<"$(read_crontabs)" && hits=$((hits+1))
   grep -rqF "$me" /etc/systemd/system ~/.config/systemd 2>/dev/null && hits=$((hits+1))
   [ -n "$REPO" ] && grep -rqF "$me" "$REPO/bin/hygiene-lint.sh" 2>/dev/null && hits=$((hits+1))
   if [ "$hits" -eq 0 ]; then
@@ -414,7 +571,11 @@ self_wiring_banner() {
 
 # ---------------------------------------------------------------- run
 echo "silence-audit -- $(date -Is)"
-echo "domain: schedule/*.conf under $SCHED_ROOT${ONLY:+ (project: $ONLY)}"
+if [ -n "$TARGET_GIVEN" ]; then
+  echo "domain: the tree this run was pointed at -- ${TARGET:-$TARGET_GIVEN} (registry NOT read)"
+else
+  echo "domain: schedule/*.conf under $SCHED_ROOT${ONLY:+ (project: $ONLY)}"
+fi
 echo
 self_wiring_banner
 
@@ -427,7 +588,14 @@ check_prose_only_rule
 
 echo
 if [ "${projects_seen:-0}" -eq 0 ]; then
-  echo "BLIND -- parsed ZERO registered projects from $SCHED_ROOT/schedule."
+  if [ -n "$TARGET_GIVEN" ]; then
+    # A pointed run that reached zero trees is the failure shape that let #107
+    # survive: it must be as loud as an unreadable registry, or "you pointed me
+    # at something I could not read" renders as "your tree is clean".
+    echo "BLIND -- --target $TARGET_GIVEN is not a readable project tree (no bin/ under it)."
+  else
+    echo "BLIND -- parsed ZERO registered projects from $SCHED_ROOT/schedule."
+  fi
   echo "This is not a clean result. Nothing was audited; the domain was"
   echo "unreadable or empty. Reporting clean here would be the exact defect"
   echo "this script exists to detect."

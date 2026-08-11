@@ -130,6 +130,28 @@ bashify
 # lines of "command not found".
 
 # ---- MISSION-UNIQUE: sense, triage, scaffold -------------------------------
+#
+# THE COUNTER-ARGUMENT FOR bashify, weighed and recorded rather than omitted,
+# because the rows above are a judgement and the next reader deserves the other
+# side. bin/hardcoded-home-lint.sh sits under `bashify` described as a "generic
+# shell lint", and running shellcheck over a tree is at least as generic --
+# hf7y/scheduler#77 asks for exactly this guard, which is the definition of a
+# verb by this ledger's own test.
+#
+# What settles it the other way: the portable part is about forty lines of the
+# two hundred. The VALUE is .shellcheckrc's disable list and the ratchet, and
+# both are a judgement about which codes are idiom in THIS codebase, argued
+# from THIS codebase's incidents. bin/lib/propagation-set.sh makes the same
+# call for the same reason and #77 is written as a PORTED COPY with a
+# re-derived list, not a propagated one. A file whose substance is one repo's
+# judgement is that repo's file.
+#
+# Noted because the ownership ratchet ALSO pushed this way -- `bashify` would
+# have added ~374 foreign lines against a bar that --accept can only lower, so
+# that classification would stand red indefinitely. That pressure is not the
+# reason given above, and if a reader decides the bashify case is stronger,
+# the honest move is to raise the bar deliberately, not to leave the row
+# wrong.
 OWN_MINE="
 bin/precipitation-scan.sh          realisateur PRECIPITATION.md's mechanism; ranks promotion signals across every project. Pure sense, and the doctrine names it.
 bin/silence-audit.sh               realisateur the null-discriminator. UNIVERSE.md's Ashby reading names proprioception as the third unregulated interface; this is the regulator.
@@ -137,6 +159,13 @@ bin/hygiene-lint.sh                realisateur BUILD-DISCIPLINE.md's own mechani
 bin/floor-check.sh                 realisateur THE-FLOOR.md's authority. An ecosystem-scoped readout whose whole value is being cross-project; no single project can hold it.
 bin/reach-lint.sh                  realisateur asks whether a scaffolded project's command files can reach what they name. The scaffold contract is realisateur's output.
 bin/thermostat-wiring.sh           realisateur measures whether the ecosystem matches a redesign or only describes it. Sense over the whole organism, which is this organ's definition.
+bin/shellcheck-lint.sh             realisateur mechanizes BUILD-DISCIPLINE.md's FIRST row -- fails loud, no exit-0 no-ops -- which is the same claim hygiene-lint.sh has and the same reason. SC2164, SC2181, SC2086 and SC2115 ARE the silent-failure class that document names; this is that row with an exit code. Auditing compliance is the half UNIVERSE.md assigned here.
+bin/tests/shellcheck-lint.test.sh  realisateur follows its subject.
+bin/selfdev-agent-survey.sh        realisateur asks whether each self-dev account does what its own dispatch prompt claims. Sense over the whole fleet, and realisateur owns the self-dev account contract that prompt is measured against.
+bin/served-not-cloned.sh           realisateur asks whether mechanism reaches an account by being served or copied. The release channel and the propagation contract are realisateur's, so the probe that says whether the estate actually uses them is too.
+bin/tests/served-not-cloned.test.sh realisateur follows its subject.
+bin/wire-release-channel.sh        realisateur installs the verb-build bootstrap and its clock on an existing account. realisateur owns the release channel end to end -- cut, install, tick and the propagation contract -- so the door onto it is realisateur's too.
+bin/tests/selfdev-agent-survey.test.sh realisateur follows its subject.
 bin/stamp-agent.sh                 realisateur writes a new project's bootstrap FOCUS.md. This IS the scaffolding step in README.md 3.
 bin/restamp-discipline.sh          realisateur propagates the realisateur baseline into scaffolded projects. Seeding, per BUILD-DISCIPLINE.md's opening paragraph.
 bin/make-bootstrap-branch.sh       realisateur rebuilds THE PLAY's starting line. THE PLAY is realisateur's own experiment about whether a FOCUS.md can direct an agent.
@@ -176,6 +205,7 @@ bin/release-ledger.sh              verbs grades the release channel.
 bin/publish-release-verdict.sh     verbs publishes the release verdict.
 bin/selfdev-release-tick.sh        verbs the consumer-side clock on the release channel.
 bin/lib/verb-set.sh                verbs what verbs the ecosystem declares.
+bin/lib/not-a-verb.tsv             verbs the recorded exceptions to that declaration rule, read by cut-verb-build.sh on every cut. It follows its subject.
 bin/lib/propagation-set.sh         verbs the dev/prod contract for the verb release channel. Its own header is an argument about hf7y/verbs' visibility.
 provision/verbs-meta              verbs its own README says build-verbs.yml belongs at hf7y/verbs/.github/workflows/build-verbs.yml.
 bin/claim-drift.sh                 vim-arcade asks whether a pull request grew after being presented as done. PR tooling.
@@ -211,19 +241,35 @@ bin/tests/verb-build-test.sh       verbs the verb build's own suite.
 # forget and would let a foreign script's tests be quietly re-homed here while
 # the script itself moved out. Suites whose name maps to nothing (a suite over
 # a whole population rather than one script) still need an explicit row.
-own_owner() {
-  local p="$1" best="" bestlen=0 pre owner rest
-
+#
+# own_derived_from <path> -- prints the path whose row gave <path> its owner,
+# when the owner was DERIVED rather than declared for <path> itself; rc 1 when
+# nothing derived it. Same rule as the branch below, and deliberately the ONLY
+# copy of the candidate list: bin/ownership-audit.sh has to ask which file a
+# derived one follows (a suite for a script already here is not a new foreign
+# path), and a second list over there would be a second answer to drift from.
+own_derived_from() {
+  local p="$1" b cand
   case "$p" in
-    bin/tests/*)
-      local b="${p#bin/tests/}"
-      b="${b%.test.sh}"; b="${b%-test.sh}"; b="${b%.sh}"
-      local cand
-      for cand in "bin/$b.sh" "bin/lib/$b.sh" "bin/lib/$b-set.sh"; do
-        [ "$cand" = "$p" ] && continue
-        if own_owner "$cand" >/dev/null 2>&1; then own_owner "$cand"; return 0; fi
-      done ;;
+    bin/tests/*) : ;;
+    *) return 1 ;;
   esac
+  b="${p#bin/tests/}"
+  b="${b%.test.sh}"; b="${b%-test.sh}"; b="${b%.sh}"
+  for cand in "bin/$b.sh" "bin/lib/$b.sh" "bin/lib/$b-set.sh"; do
+    [ "$cand" = "$p" ] && continue
+    if own_owner "$cand" >/dev/null 2>&1; then printf '%s\n' "$cand"; return 0; fi
+  done
+  return 1
+}
+
+own_owner() {
+  local p="$1" best="" bestlen=0 pre owner rest sub
+
+  # No recursion hazard: own_derived_from only ever answers for bin/tests/*,
+  # and every candidate it hands back is bin/*.sh or bin/lib/*.sh, which it
+  # refuses on sight.
+  if sub="$(own_derived_from "$p")"; then own_owner "$sub"; return 0; fi
 
   while read -r pre owner rest; do
     [ -n "$pre" ] || continue

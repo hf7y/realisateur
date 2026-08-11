@@ -1,0 +1,60 @@
+#project	name	why it is not a verb
+#
+# THE OPT-OUT for bin/cut-verb-build.sh's half-declaration refusal. Read by
+# that script and by nothing else. Every row is a WRITTEN JUDGEMENT that an
+# executable on a `bashified` branch was never meant to be a verb, so its
+# missing man page is not a defect and must stop being reported as one.
+#
+# THE RULE IT EXEMPTS FROM
+#   a project declares a verb  <=>  its `bashified` branch carries an
+#   executable `bin/<name>` AND a matching `man/<name>.1`   (lib/verb-set.sh)
+#
+# Half of that is a HALF-DECLARATION, and until 2026-08-11 it was discarded in
+# silence: the intersection was printed and the difference thrown away, so a
+# verb that was half-declared was omitted from every build with no count, no
+# name and no line in the manifest. `ecosim-sensor` sat in that hole for its
+# whole existence and surfaced instead as `ecosim-sensor-tick` reporting
+# WRAPPER_NO_SENSOR, which read as a stale build and cost the misdiagnosis in
+# realisateur#66. cut-verb-build.sh now REFUSES on a half-declaration. This
+# file is how a project says "that one is not a verb" once, instead of being
+# nagged about it every night.
+#
+# WHAT A ROW IS, AND IS NOT
+#   IS      an executable that does a job of its own -- an installer, a cron
+#           wrapper, a scraper, an archiver -- and would gain nothing from a
+#           man page or a slot on PATH.
+#   IS NOT  a verb whose man page has not been written yet. That is the defect
+#           this guard exists to surface, and a row here would bury it again
+#           permanently. Write the page; do not write a row.
+#
+# The distinguishing question, and it is not a matter of taste: would anyone
+# ever type this name at a shell expecting the ecosystem's verb contract --
+# `--help`, a page, a stable name on PATH? If yes it is a verb and it is
+# missing its page. If no it gets a row.
+#
+# A row states the evidence it was judged on, in the file's own words where
+# the file says so. `vim-arcade bin/sync-engine.sh` and `bibliothecaire
+# bin/page92.py` both declare it themselves; the rest were judged by reading
+# their headers on `bashified` on 2026-08-11, which is what the last column
+# quotes.
+#
+# STALENESS IS VISIBLE IN THE ARTIFACT, not enforced here. Every row that
+# ACTUALLY applies is written into the build manifest as a `# NOT-A-VERB` line,
+# so a row that never appears in any manifest is a row about a file that is no
+# longer there. Remove it when that happens: an exemption outliving its reason
+# is how a temporary judgement becomes a permanent blind spot.
+#
+# NOT EXEMPTED, on purpose, and the build refuses until they are resolved:
+#   ecosim  bin/ecosim-sensor   the original defect (realisateur#85, ecosim#34)
+#   ecosim  bin/ecosim-sweep    same shape, same branch
+# Both are commands with `--help`, an exit-code contract and a stated CLI --
+# i.e. verbs missing their page. ecosim writes the two pages, or ecosim adds
+# two rows here saying they are not verbs. Either is a decision; silence was
+# not.
+#
+bibliothecaire	page92.py	a bounded public-domain scraper and gallery builder; its own docstring is its interface, and lib/verb-set.sh + cut-verb-build.sh both already cite it as the canonical "executable, no page, correctly not a verb"
+vim-arcade	sync-engine.sh	says so in its own header: "NOT A VERB. It has no man/sync-engine.sh.1 and never will, so the declaration rule correctly does not count it"
+ecosim	ecosim-sensor-tick.sh	cron wrapper, owned by realisateur, not by ecosim: "Wiring, owned by realisateur ... for a sensor suite owned by ecosim". It exists so a bare cron line cannot get 2>&1 ordering wrong
+ecosim	silence-audit.sh	the ecosystem's null-discriminator lint, run by realisateur's own copy of it; "offline-first (zero AI), writes nothing, exits 0 unless --strict"
+ecosim	migration-watch.py	a one-purpose instrument for the mandark -> dexter migration: "OBSERVER ONLY ... writes nothing outside this repo, and cannot halt, gate or block a move"
+gardien	ecosystem-archive.sh	archives the mandark agent-ecosystem set onto one removable exFAT drive; a hand-run operation with a restore-and-diff witness, not a name anyone types expecting a verb

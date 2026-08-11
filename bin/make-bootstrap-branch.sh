@@ -42,6 +42,8 @@
 set -uo pipefail
 
 REALISATEUR_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/conf.sh
+. "$REALISATEUR_ROOT/bin/lib/conf.sh"
 SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 STAMP="$REALISATEUR_ROOT/bin/stamp-agent.sh"
 
@@ -132,11 +134,14 @@ ARGS
 PROJECTS=(scheduler realisateur)
 
 # Resolve a project's repo from its scheduler conf -- ONE source of truth,
-# the same one stamp-agent.sh reads. Never a path retyped here.
+# the same one stamp-agent.sh reads. Never a path retyped here, and read
+# through lib/conf.sh so $HOME is expanded: the raw grep this replaces
+# returned the literal `$HOME/...`, so both projects below took the
+# "repo path unresolvable" branch on every host, every time.
 repo_path() {
   local conf="$SCHED_ROOT/schedule/$1.conf"
   [ -f "$conf" ] || return 1
-  grep -oP '(?<=PROJECT_REPO_PATH=")[^"]*' "$conf" 2>/dev/null | head -1
+  conf_repo_path "$conf"
 }
 
 focus_rel() {
