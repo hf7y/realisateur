@@ -68,7 +68,7 @@ MD_ALLOW=( 'README.md' 'CLAUDE.md' 'man/*' )
 md_allowlisted() { # <path> -> 0 if the allowlist covers it
   local pat
   for pat in "${MD_ALLOW[@]}"; do
-    # shellcheck disable=SC2254 -- the pattern is meant to glob
+    # shellcheck disable=SC2254 # the pattern is meant to glob
     case "$1" in $pat) return 0 ;; esac
   done
   return 1

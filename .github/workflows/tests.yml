@@ -103,6 +103,25 @@ jobs:
           fi
           echo "all $ran suite(s) passed."
 
+  # SHELLCHECK. A separate job from `suites` on purpose: the suite above
+  # asserts that bin/shellcheck-lint.sh BEHAVES (its regression path fires, it
+  # goes BLIND rather than green), which is what a container can honestly say
+  # about a guard. THIS job runs the guard against the real tree, which is a
+  # different claim and deserves its own red/green line.
+  #
+  # ubuntu-latest ships shellcheck preinstalled, so there is no install step to
+  # rot. If that ever stops being true the guard exits 2 (BLIND) and this job
+  # goes red -- which is the correct outcome, and the reason it was built to
+  # distinguish "could not look" from "looked and found nothing".
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm the linter is actually present
+        run: shellcheck --version
+      - name: Ratchet -- fail only on a finding a file did not already have
+        run: bash bin/shellcheck-lint.sh
+
   markdown-cost:
     runs-on: ubuntu-latest
     steps:
