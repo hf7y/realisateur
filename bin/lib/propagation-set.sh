@@ -276,10 +276,10 @@ land-selfdev.sh
 provision-selfdev-user.sh
 setup-selfdev-project.sh
 wire-selfdev-git.sh
+wire-release-channel.sh
 selfdev-gh-app-register.sh
 install-shims.sh
 install-verbs.sh
-relink-verbs-to-build.sh
 pivot.sh
 session-marker.sh
 "
@@ -346,7 +346,42 @@ stamp-agent.sh
 suite-docs-lint.sh
 thermostat-wiring.sh
 path-provenance-audit.sh
+selfdev-agent-survey.sh
+served-not-cloned.sh
+shellcheck-lint.sh
 "
+# bin/shellcheck-lint.sh is LOCAL because it lints THIS REPOSITORY'S OWN SOURCE.
+# Its file selection is `git ls-files` against its own ROOT and its baseline is
+# bin/shellcheck-lint.ratchet, both of which describe realisateur's tree and
+# nothing else. Shipping it to a self-dev account would hand that account a
+# guard whose ratchet is about someone else's code -- it would either lint the
+# wrong tree or find no tree at all and report BLIND forever, which is the
+# ecosim-sensor failure this estate already has an open issue about.
+#
+# scheduler wanting the same guard is hf7y/scheduler#77, and the answer there
+# is a PORTED COPY with its own re-derived disable list, not a propagated one.
+# The disable list encodes a judgement about which shellcheck codes are idiom
+# in a specific codebase; propagating it would propagate the judgement.
+# selfdev-agent-survey.sh is LOCAL for the same reason as thermostat-wiring.sh:
+# an estate-wide, root-only, read-only survey a human runs from a hands account
+# against the live fleet. It walks the whole uid 3000-3099 band and shells out
+# `sudo -u <each account>`, so it is not a thing any single account runs about
+# itself -- an account has no view of its nine neighbours, and the cross-account
+# duplication check is a property of the FLEET that no per-account run can see.
+#
+# It arrived UNCLASSIFIED in c226afd on 2026-08-10 and this suite went red on
+# exactly that, which is the gate working: a script with no propagation path
+# reaches no account by any route.
+#
+# WORTH RECORDING IS WHERE THE RED SAT. `.github/workflows/tests.yml` runs every
+# suite in bin/tests/ on every pull request, so CI caught this immediately and
+# said so. The commit is on the branch of PR #126 -- which was marked READY,
+# with auto-merge enabled, while three of its four checks were failing. The
+# convention in CLAUDE.md is that marking a PR ready IS the completion claim,
+# and `gh pr merge --auto` is what makes an unattended landing safe; both held
+# here (mergeStateStatus BLOCKED, nothing landed). What did not happen is anyone
+# reading the red. The gate was never the missing piece.
+#
 # path-provenance-audit.sh is LOCAL and that is uncomfortable on purpose. It
 # is an estate-wide survey, like thermostat-wiring.sh above it, so LOCAL is
 # the correct list -- but the account class it most wants to measure is the

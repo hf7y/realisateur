@@ -32,6 +32,19 @@
 #   * --dry-run cannot produce an artifact, because its read is short by
 #     construction.
 #   * a verb name declared by two projects is still refused.
+#   * a HALF-declared name -- an executable bin/<n> with no man/<n>.1, or a
+#     man/<n>.1 with no executable bin/<n> -- is NAMED and REFUSES the cut.
+#                                                              <- was broken
+#     It was omitted from every build in silence, which is how ecosim's
+#     `ecosim-sensor` missed every build ever cut and surfaced weeks later,
+#     on another host, as a wrapper failing on a path that never existed.
+#   * the genuinely-not-a-verb case opts out by NAME in lib/not-a-verb.tsv,
+#     and every such decision -- exempted or unresolved -- is written into the
+#     MANIFEST, because the build is what travels to the accounts.
+#   * every command in the ASSEMBLED tree declares its channel, and a
+#     `# KIND: product` is refused a place in the workchain cut. That check
+#     is bin/verb-kind-lint.sh and it is asserted here because the failure
+#     mode is a correct lint nothing calls.
 set -uo pipefail
 
 PASS=0; FAIL=0
@@ -89,6 +102,23 @@ EOF
     g -C "$d" config uploadpack.allowReachableSHA1InWant true
 }
 
+# HALF a declaration, both directions. The rule is a conjunction, so it has a
+# difference as well as an intersection, and the difference is what used to be
+# computed and thrown away in the same awk statement.
+add_half_exec() {   # executable bin/<n>, no man page
+    local repo="$1" n="$2" d="$FIX/$1.git"
+    printf '#!/usr/bin/env bash\nprintf %%s\\\\n %s\n' "$n" > "$d/bin/$n"
+    chmod +x "$d/bin/$n"
+    g -C "$d" add -A
+    g -C "$d" commit -m "half: bin/$n with no page"
+}
+add_half_page() {   # man/<n>.1, no executable
+    local repo="$1" n="$2" d="$FIX/$1.git"
+    printf '.TH %s 1\n' "$n" > "$d/man/$n.1"
+    g -C "$d" add -A
+    g -C "$d" commit -m "half: man/$n.1 with no executable"
+}
+
 # --- the fake gh ---------------------------------------------------------
 # It reads $TMP/repolist, so a test can retire a project between runs simply
 # by rewriting that file -- which is what archiving a repo looks like to
@@ -120,9 +150,24 @@ cat > "$TMP/gitconfig" <<EOF
     insteadOf = https://github.com/$OWNER/
 EOF
 
+# The not-a-verb opt-out is pointed at a FIXTURE file, never the repository's
+# own bin/lib/not-a-verb.tsv: a suite that read the shipped exemptions would
+# change its own answers whenever a project earned a row, which is the hermetic
+# equivalent of testing against production. Empty here means nothing is exempt.
+printf '#project\tname\twhy\n' > "$TMP/not-a-verb.tsv"
+
+# And the channel guard's grandfather ratchet, for the same reason. Section
+# 6a runs bin/verb-kind-lint.sh over the assembled tree, and that lint reads
+# bin/verb-kind-lint.ratchet -- 33 real commands this suite knows nothing
+# about. Empty here means nothing is grandfathered, so every fixture verb
+# must declare its channel exactly as a real one must.
+: > "$TMP/verb-kind.ratchet"
+
 cut() {
     PATH="$TMP/stub:$PATH" \
     FIXTURE_REPOLIST="$TMP/repolist" FIXTURE_DIR="$FIX" \
+    VERB_NOT_A_VERB_FILE="$TMP/not-a-verb.tsv" \
+    VERB_KIND_RATCHET="$TMP/verb-kind.ratchet" \
     GIT_CONFIG_GLOBAL="$TMP/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
     bash "$CUT" --owner "$OWNER" --build-root "$TMP/no-such-build-root" "$@"
 }
@@ -261,46 +306,146 @@ esac
 cut >/dev/null 2>&1
 check "no readable repositories is BLIND, not a zero-verb build" "$?" "1"
 
-# --- 10. the channel check is WIRED, not merely present -----------------
-# Section 6a runs bin/verb-kind-lint.sh over the assembled tree. Asserted
-# here rather than only in that lint's own suite, because the failure this
-# guards against is not a broken lint -- it is a correct lint nothing calls.
-# Six of the guards surveyed on 2026-08-07 were hand-run only, and
-# guard-estate.test.sh check B exists because a guard nothing runs is
-# documentation with an exit code.
-#
-# 10a. A PRODUCT must not ride the workchain cut.
-mkrepo epsilon zz
-printf '#!/usr/bin/env bash\n# KIND: product\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "zz\\n"\n' \
-    > "$FIX/epsilon.git/bin/zz"
-chmod +x "$FIX/epsilon.git/bin/zz"
-g -C "$FIX/epsilon.git" add -A
-g -C "$FIX/epsilon.git" commit -m 'zz declares itself a product'
+# --- 10. a HALF-declaration is named, and refuses -----------------------
+# The defect this pair of cases exists for: `ecosim-sensor` was an executable
+# with no page on a bashified branch, so it fell out of the END loop, then
+# `[ -n "$verbs" ] || continue` skipped the project, and no count, name or
+# manifest row said anything. It was missing from every build ever cut, and
+# what a host saw instead was `WRAPPER_NO_SENSOR` -- a symptom that reads as a
+# stale build (realisateur#66) and is nothing of the kind.
+mkrepo epsilon ea
+add_half_exec epsilon ee
 printf 'epsilon\n' > "$TMP/repolist"
-cut --assemble "$TMP/asm10" >/dev/null 2>"$TMP/e10"
-check "a command declaring KIND: product is refused a place in the cut" "$?" "1"
+cut >"$TMP/m10" 2>"$TMP/e10"
+check "an executable with no man page refuses the build" "$?" "1"
 case "$(cat "$TMP/e10")" in
-    *PRODUCT*epsilon/zz*) ok "...and the refusal names the product and its project" ;;
-    *) bad "the refusal names the product" "got: $(cat "$TMP/e10")" ;;
+    *"HALF-DECLARED  epsilon/ee"*) ok "...and NAMES the project and the executable" ;;
+    *) bad "the half-declaration is named" "got: $(cat "$TMP/e10")" ;;
+esac
+case "$(cat "$TMP/e10")" in
+    *"no man/ee.1"*) ok "...and says which half is missing" ;;
+    *) bad "the half-declaration says which half" "got: $(cat "$TMP/e10")" ;;
+esac
+check "...and no manifest was emitted at all" \
+      "$([ -s "$TMP/m10" ] && echo "wrote $(wc -l < "$TMP/m10") line(s)" || echo empty)" "empty"
+
+# The inverse is equally a half-declaration and was equally silent.
+add_half_page epsilon pp
+cut >/dev/null 2>"$TMP/e10b"
+check "a man page with no executable also refuses" "$?" "1"
+case "$(cat "$TMP/e10b")" in
+    *"HALF-DECLARED  epsilon/pp: man/pp.1 with no executable bin/pp"*)
+        ok "...naming the missing executable half" ;;
+    *) bad "the inverse half-declaration is named" "got: $(cat "$TMP/e10b")" ;;
+esac
+case "$(cat "$TMP/e10b")" in
+    *"2 HALF-declared name(s)"*) ok "...and both halves are counted, not just the first" ;;
+    *) bad "every half-declaration is counted" "got: $(cat "$TMP/e10b")" ;;
 esac
 
-# 10b. A command that declares NOTHING and is not grandfathered is refused
-# on its first night. This is the arrival path the whole guard exists for:
-# the next product to ship down the workchain will be a new name, and the
-# ratchet in bin/verb-kind-lint.ratchet names only the 31 that predate it.
-mkrepo zeta qq
-printf '#!/usr/bin/env bash\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "qq\\n"\n' \
-    > "$FIX/zeta.git/bin/qq"
-chmod +x "$FIX/zeta.git/bin/qq"
-g -C "$FIX/zeta.git" add -A
-g -C "$FIX/zeta.git" commit -m 'qq declares no channel at all'
-printf 'zeta\n' > "$TMP/repolist"
-cut --assemble "$TMP/asm10b" >/dev/null 2>"$TMP/e10b"
-check "a new command declaring no channel is refused" "$?" "1"
-case "$(cat "$TMP/e10b")" in
-    *UNDECLARED*zeta/qq*) ok "...and the refusal names it" ;;
-    *) bad "the refusal names the undeclared command" "got: $(cat "$TMP/e10b")" ;;
+# --- 11. the opt-out, and the decision travelling in the manifest -------
+# An installer is not a verb and must not be nagged about forever; a row in
+# lib/not-a-verb.tsv is how a project says so ONCE. The row is not a silence:
+# what it buys is a line in the manifest instead of a refusal, because "what
+# did this build decide not to include, and why" belongs with the artifact
+# every account consumes, not on the terminal of whoever ran the cut.
+printf 'epsilon\tee\tfixture installer, not a verb\nepsilon\tpp\tfixture stray page\n' \
+    > "$TMP/not-a-verb.tsv"
+cut >"$TMP/m11" 2>"$TMP/e11"
+check "an exempted name does not refuse the build" "$?" "0"
+case "$(grep '^#' "$TMP/m11")" in
+    *"NOT-A-VERB	epsilon	ee"*) ok "...and the MANIFEST records what was left out" ;;
+    *) bad "the manifest carries the decision" "got: $(grep '^#' "$TMP/m11")" ;;
 esac
+case "$(grep '^#' "$TMP/m11")" in
+    *"fixture installer, not a verb"*) ok "...with the recorded reason, not only the name" ;;
+    *) bad "the manifest carries the reason" "got: $(grep '^#' "$TMP/m11")" ;;
+esac
+check "...and the project's real verb is still derived" "$(body "$TMP/m11")" "1"
+
+# --- 12. --allow-half-declared cuts, and still tells the consumer -------
+# The same shape as --allow-shrink: the operator who has already filed the
+# defect can cut tonight's build. What it must NOT buy is silence.
+printf '#project\tname\twhy\n' > "$TMP/not-a-verb.tsv"
+cut --allow-half-declared >"$TMP/m12" 2>"$TMP/e12"
+check "--allow-half-declared cuts despite the half-declarations" "$?" "0"
+case "$(grep '^#' "$TMP/m12")" in
+    *"HALF-DECLARED	epsilon	ee"*) ok "...and the manifest still names the unresolved defect" ;;
+    *) bad "an overridden half-declaration still travels" "got: $(grep '^#' "$TMP/m12")" ;;
+esac
+check "...and the verb rows are unaffected by the comment rows" "$(body "$TMP/m12")" "1"
+
+# --- 13. the SHIPPED opt-out file is data the build reads every night ---
+# A row missing its reason column is an exemption nobody can review, and it
+# would be read on a live cut, not here.
+REAL_NAV="$HERE/../lib/not-a-verb.tsv"
+check "the shipped lib/not-a-verb.tsv exists" \
+      "$([ -f "$REAL_NAV" ] && echo present || echo absent)" "present"
+check "...and every row is <project><TAB><name><TAB><why>" \
+      "$(awk -F'\t' '!/^[[:space:]]*#/ && $0 != "" && (NF < 3 || $1 == "" || $2 == "" || $3 == "") {n++} END {print n+0}' "$REAL_NAV")" \
+      "0"
+
+# --- 14. the CHANNEL check is WIRED, not merely present -----------------
+# Section 6a runs bin/verb-kind-lint.sh over the tree this script just
+# assembled. Asserted here rather than only in that lint's own suite,
+# because the failure being guarded against is not a broken lint -- it is a
+# correct lint nothing calls. guard-estate.test.sh check B exists for
+# exactly that, and six of the guards surveyed on 2026-08-07 were hand-run
+# only.
+#
+# The population is DISJOINT from sections 10-13 above and that is the whole
+# relationship between the two files. lib/not-a-verb.tsv exempts a HALF
+# declaration -- bin/<n> with no man/<n>.1 -- which by construction never
+# reaches the manifest. verb-kind-lint grades manifest rows, i.e. names that
+# carried BOTH halves. No name can be in both populations, so the channel
+# check reads no exemption file: there is nothing in one for it to find.
+#
+# 14a. A PRODUCT must not ride the workchain cut.
+mkrepo theta tv
+printf '#!/usr/bin/env bash\n# KIND: product\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "tv\\n"\n' \
+    > "$FIX/theta.git/bin/tv"
+chmod +x "$FIX/theta.git/bin/tv"
+g -C "$FIX/theta.git" add -A
+g -C "$FIX/theta.git" commit -m 'tv declares itself a product'
+printf 'theta\n' > "$TMP/repolist"
+cut --assemble "$TMP/asm14a" >/dev/null 2>"$TMP/e14a"
+check "a command declaring KIND: product is refused a place in the cut" "$?" "1"
+case "$(cat "$TMP/e14a")" in
+    *PRODUCT*theta/tv*) ok "...and the refusal names the product and its project" ;;
+    *) bad "the refusal names the product" "got: $(cat "$TMP/e14a")" ;;
+esac
+
+# 14b. A command that declares NOTHING and is not grandfathered is refused
+# on its first night. This is the arrival path the whole guard exists for:
+# the next product to ship down the workchain will be a NEW name, and the
+# ratchet in bin/verb-kind-lint.ratchet names only the ones that predate it.
+mkrepo iota iq
+printf '#!/usr/bin/env bash\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "iq\\n"\n' \
+    > "$FIX/iota.git/bin/iq"
+chmod +x "$FIX/iota.git/bin/iq"
+g -C "$FIX/iota.git" add -A
+g -C "$FIX/iota.git" commit -m 'iq declares no channel at all'
+printf 'iota\n' > "$TMP/repolist"
+cut --assemble "$TMP/asm14b" >/dev/null 2>"$TMP/e14b"
+check "a new command declaring no channel is refused" "$?" "1"
+case "$(cat "$TMP/e14b")" in
+    *UNDECLARED*iota/iq*) ok "...and the refusal names it" ;;
+    *) bad "the refusal names the undeclared command" "got: $(cat "$TMP/e14b")" ;;
+esac
+
+# 14c. ...and the grandfather ratchet is honoured THROUGH the wiring, not
+# only when the lint is run by hand. Every one of the commands in tonight's
+# build predates this rule; if the ratchet did not reach section 6a the
+# nightly cut would refuse the whole ecosystem on the first night, which is
+# how a check nobody can make green gets deleted instead of satisfied.
+printf 'undeclared iota/iq\n' > "$TMP/verb-kind.ratchet"
+cut --assemble "$TMP/asm14c" >/dev/null 2>"$TMP/e14c"
+check "a grandfathered undeclared command does not refuse the cut" "$?" "0"
+case "$(cat "$TMP/e14c")" in
+    *OWED*iota/iq*) ok "...and it is still printed as OWED on every cut" ;;
+    *) bad "a forgiven entry stays visible" "got: $(cat "$TMP/e14c")" ;;
+esac
+: > "$TMP/verb-kind.ratchet"
 
 echo
 printf 'cut-verb-build: %d passed, %d failed\n' "$PASS" "$FAIL"

@@ -37,12 +37,13 @@
 #   . "$(dirname "${BASH_SOURCE[0]}")/lib/conf.sh"
 #   repo="$(conf_repo_path "$conf")" || continue
 #
-# STILL ON THE RAW GREP, and each has the same defect: bin/milestone-audit.sh,
-# bin/install-silence-audit.sh, bin/session-marker.sh, bin/closeout-lint.sh.
-# Converting them is a separate pass against a repo another agent is working in
-# right now; it is filed rather than done here, and filed loudly, because four
-# scripts silently reporting on an empty project set is the same failure with
-# four more faces.
+# THE FOUR THIS HEADER USED TO NAME AS STILL BROKEN are settled (#73), two of
+# them by DELETION: milestone-audit.sh and install-silence-audit.sh were
+# RETIRED in b3fef3d, closeout-lint.sh was fixed in place, session-marker.sh
+# converted here. The sweep found three MORE the list never named --
+# reach-lint.sh, stamp-agent.sh, make-bootstrap-branch.sh -- which is the
+# argument for a ratchet over a list, so bin/tests/conf.test.sh section C now
+# scans the tree for the shape and no prose here has to be kept accurate.
 
 # conf_repo_path <conf-file> -- the checkout path, with $HOME expanded.
 # Returns 1 and prints nothing when the conf carries no PROJECT_REPO_PATH, so a

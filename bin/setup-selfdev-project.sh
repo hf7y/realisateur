@@ -24,6 +24,11 @@
 #   4. bin/land-selfdev.sh --land                  (as <p>) clones + verbs
 #   5. the RELEASE BOOTSTRAP + its clock            (as <p>) see below
 #
+# Step 3 is a GATE, not a sequence point: every repo that fails to wire is
+# named and the run stops there rather than landing an account on credentials
+# that were already proven not to work. See the comment at "3/4" for what that
+# cost before it did.
+#
 # WHY STEP 5 IS HERE AND NOWHERE ELSE. The account consumes tooling from the
 # verb release channel (`hf7y/verbs` build tags), not from a clone of any
 # repo's `main` -- see bin/lib/propagation-set.sh for that decision and why
@@ -155,52 +160,59 @@ install -m 700 -o "$PROJECT" -g "$PROJECT" \
   "$HERE/wire-selfdev-git.sh" "$HERE/land-selfdev.sh" "$STAGE/"
 
 say "3/4 git credentials, per repo"
+# THE PIPE USED TO EAT THE ANSWER. wire-selfdev-git.sh already fails loud on
+# its own: its "6. the witness" section runs `git ls-remote` against the freshly
+# wired alias and exits 5 on `BAD WITNESS FAILED: ... the wiring is not live`.
+# That exit went into `| sed`, and this script sets `set -uo pipefail` but never
+# `set -e` and read neither $? nor PIPESTATUS -- so a repo whose credentials
+# demonstrably did NOT work was indistinguishable from one that wired cleanly,
+# and provisioning walked on to "4/5 land" and "5/5 release bootstrap".
+#
+# Not theoretical: account #4 (vim-arcade) provisioned "successfully" on
+# 2026-08-04 with one repo's wiring broken by the 0700 sibling-staging bug
+# fixed the same day in 05be4fc. Nothing said so at provisioning time; it
+# surfaced on that account's first scheduled run. realisateur#120, from
+# vim-arcade#74, which twice concluded the fix belongs here.
+#
+# EVERY failing repo, not the first. The loop runs all four and refuses
+# afterwards, because "senechal failed" and "senechal and scheduler failed" are
+# different amounts of re-work and stopping early hides the difference. rc is
+# read IMMEDIATELY after the pipeline: any command in between -- an echo, a
+# test -- replaces PIPESTATUS.
+wire_failed=""
 for repo in realisateur scheduler senechal "$PROJECT"; do
   access=""
   # READ-WRITE only for the account's own repo; read-only for the three shared.
   [ "$repo" = "$PROJECT" ] && access="--rw"
   echo "  -- $repo ${access:---read-only}"
   run_as "'$STAGE/wire-selfdev-git.sh' '$repo' --apply $access" 2>&1 | sed 's/^/     /'
+  rc="${PIPESTATUS[0]}"
+  if [ "$rc" -ne 0 ]; then
+    echo "     FAILED  wire-selfdev-git.sh $repo exited $rc -- $repo is NOT wired for $PROJECT"
+    wire_failed="$wire_failed $repo(rc=$rc)"
+  fi
 done
+[ -z "$wire_failed" ] || die "git wiring FAILED for:$wire_failed
+Stopping at 3/4: landing and the release bootstrap both assume every repo above
+is reachable, and an account landed on broken credentials fails later, on its
+first unattended run, as something else. Read the rows above (a WITNESS FAILED
+line means the key exists and GitHub did not accept it), then re-run:
+    sudo -u $PROJECT -H $STAGE/wire-selfdev-git.sh <repo> --apply [--rw]
+and re-run this script when every repo wires clean; the steps before this one
+are idempotent."
 
 say "4/5 land"
 run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
 
 # --- 5. the release bootstrap, and the account's own clock -------------------
-# The set is DERIVED from bin/lib/propagation-set.sh, never typed here. A
-# second list of "what the bootstrap is" would drift from the one the test
-# suite enforces, which is exactly the one-fact-two-readers shape MONKEY.md
-# 10 found five times in a day.
+# DELEGATED to bin/wire-release-channel.sh since 2026-08-10, not reimplemented.
+# It was inline here, which meant the only way to give an account a clock was
+# to run account creation at it -- so nine of monkey's ten accounts never got
+# one and the release channel sat at one consumer for five days. That script
+# has the whole argument; this is the same code with a second caller.
 say "5/5 release bootstrap + clock"
-# shellcheck source=lib/propagation-set.sh
-. "$HERE/lib/propagation-set.sh"
-BOOT="$HOME_DIR/.local/libexec/selfdev"
-install -d -m 755 -o "$PROJECT" -g "$PROJECT" "$BOOT" "$BOOT/lib"
-boot_ok=1
-for f in $PROP_BOOTSTRAP_SCRIPTS $PROP_BOOTSTRAP_SUPPORT; do
-  if [ -f "$HERE/$f" ]; then
-    install -m 755 -o "$PROJECT" -g "$PROJECT" "$HERE/$f" "$BOOT/$f"
-    echo "  OK      $BOOT/$f"
-  else
-    echo "  BAD     $HERE/$f is missing -- the bootstrap is incomplete and this account cannot obtain a build"
-    boot_ok=0
-  fi
-done
-
-if [ "$boot_ok" -eq 1 ]; then
-  # Installed by the ACCOUNT, into the ACCOUNT'S crontab. run_as gives it a
-  # login-shaped PATH; the tick needs nothing else.
-  run_as "'$BOOT/selfdev-release-tick.sh' --install-cadence --apply" 2>&1 | sed 's/^/     /'
-  # WITNESS: read the crontab back, as the account, rather than trusting the
-  # installer's own report of itself.
-  if sudo -u "$PROJECT" crontab -l 2>/dev/null | grep -q 'selfdev-release:TICK'; then
-    echo "  OK      clock verified in $PROJECT's crontab (re-read, not asserted)"
-    echo "  DO      notify-senechal 'realisateur selfdev-release-tick cron in $PROJECT@$HOST crontab, owned by realisateur'"
-  else
-    echo "  BAD     the clock is NOT in $PROJECT's crontab -- this account will never advance past the build it has"
-  fi
-  echo "  ..      first adoption is a separate act: sudo -u $PROJECT $BOOT/selfdev-release-tick.sh --apply"
-fi
+"$HERE/wire-release-channel.sh" "$PROJECT" --apply
+echo "  DO      notify-senechal 'realisateur selfdev-release-tick cron in $PROJECT@$HOST crontab, owned by realisateur'"
 
 cat <<EOF
 
