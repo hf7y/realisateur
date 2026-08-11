@@ -161,6 +161,8 @@ bin/reach-lint.sh                  realisateur asks whether a scaffolded project
 bin/thermostat-wiring.sh           realisateur measures whether the ecosystem matches a redesign or only describes it. Sense over the whole organism, which is this organ's definition.
 bin/shellcheck-lint.sh             realisateur mechanizes BUILD-DISCIPLINE.md's FIRST row -- fails loud, no exit-0 no-ops -- which is the same claim hygiene-lint.sh has and the same reason. SC2164, SC2181, SC2086 and SC2115 ARE the silent-failure class that document names; this is that row with an exit code. Auditing compliance is the half UNIVERSE.md assigned here.
 bin/tests/shellcheck-lint.test.sh  realisateur follows its subject.
+bin/no-worktree-lint.sh            realisateur mechanizes a standing instruction -- no more worktrees after tonight, 2026-08-06 -- that three production scripts had quietly undone by the time it was five days old. Auditing compliance with a rule the human set is the same half of UNIVERSE.md that hygiene-lint.sh and shellcheck-lint.sh serve; the estate-wide subject -- realisateur's own bin/, bashify's generator, and scheduler's dev loop all created worktrees -- is what makes it no single consumer's.
+bin/tests/no-worktree-lint.test.sh realisateur follows its subject.
 bin/selfdev-agent-survey.sh        realisateur asks whether each self-dev account does what its own dispatch prompt claims. Sense over the whole fleet, and realisateur owns the self-dev account contract that prompt is measured against.
 bin/served-not-cloned.sh           realisateur asks whether mechanism reaches an account by being served or copied. The release channel and the propagation contract are realisateur's, so the probe that says whether the estate actually uses them is too.
 bin/tests/served-not-cloned.test.sh realisateur follows its subject.
@@ -168,6 +170,8 @@ bin/verb-kind-lint.sh              realisateur asks whether every command in a b
 bin/tests/verb-kind-lint.test.sh   realisateur follows its subject.
 bin/wire-release-channel.sh        realisateur installs the verb-build bootstrap and its clock on an existing account. realisateur owns the release channel end to end -- cut, install, tick and the propagation contract -- so the door onto it is realisateur's too.
 bin/tests/selfdev-agent-survey.test.sh realisateur follows its subject.
+bin/repo-settings-provision.sh     realisateur asks whether the estate matches a claim its own doctrine states as settled fact -- thermostat-wiring.sh's question, on a different claim. The SETTINGS are vim-arcade's subject, the way the scheduler redesign is scheduler's; measuring the whole registry against a stated claim, and naming where it is only described, is the sense-over-the-organism half UNIVERSE.md assigns here.
+bin/tests/repo-settings-provision.test.sh realisateur follows its subject.
 bin/stamp-agent.sh                 realisateur writes a new project's bootstrap FOCUS.md. This IS the scaffolding step in README.md 3.
 bin/restamp-discipline.sh          realisateur propagates the realisateur baseline into scaffolded projects. Seeding, per BUILD-DISCIPLINE.md's opening paragraph.
 bin/make-bootstrap-branch.sh       realisateur rebuilds THE PLAY's starting line. THE PLAY is realisateur's own experiment about whether a FOCUS.md can direct an agent.
