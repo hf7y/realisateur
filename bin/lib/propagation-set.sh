@@ -352,7 +352,11 @@ shellcheck-lint.sh
 repo-settings-provision.sh
 "
 # repo-settings-provision.sh is LOCAL for thermostat-wiring.sh's reason, not
-# shellcheck-lint.sh's. Its subject is the FLEET: it walks scheduler's whole
+# bin/shellcheck-lint.sh's. (The `bin/` is load-bearing: a comment line whose
+# FIRST word is `shellcheck` is parsed as a shellcheck directive, and this one
+# was -- SC1072/SC1073, a parse error on the whole file, which is why every
+# other note in this header spells the path out too.)
+# Its subject is the FLEET: it walks scheduler's whole
 # schedule/*.conf registry and asks GitHub about every registered repo at
 # once. A per-account copy would have each of ten accounts reconfiguring all
 # thirteen repositories on its own clock, which is not ten times the value --
