@@ -8,6 +8,7 @@
 # RUNNER: bin/tests/repo-settings-provision.test.sh
 # GUARD-TEST: bin/tests/repo-settings-provision.test.sh
 # GATE: strict
+# VERIFIED: 2026-08-11 via bash bin/tests/repo-settings-provision.test.sh (20/20) and a read-only run against the live registry (13 repos, 0 drift, 0 BLIND)
 #
 # WHY THIS EXISTS. claim-drift.sh --convention states, as settled ecosystem
 # fact: "allow_auto_merge=true, delete_branch_on_merge=true ... live on
@@ -55,9 +56,14 @@ CLI_USAGE='  repo-settings-provision.sh              report drift, change nothin
   repo-settings-provision.sh --apply [<name>...]   fix the drift found
   repo-settings-provision.sh --strict [<name>...]  exit 1 if drift found'
 CLI_FLAGS='--apply --strict'
-CLI_EXITS='  0  scanned; no --strict given, or --strict given and nothing drifted
+CLI_EXITS='  0  scanned at least one repo and saw all of them; no --strict given,
+     or --strict given and nothing drifted
   1  --strict was given and at least one repo had drift (before or after
-     --apply, if both are given -- --apply then --strict verifies the fix)'
+     --apply, if both are given -- --apply then --strict verifies the fix)
+  2  BLIND -- at least one repo could not be read, or the registry named no
+     project with a REPO_URL at all. NEVER 0: could-not-look is not clean,
+     and it is not gated behind --strict, because a run that saw nothing has
+     established nothing whether or not the caller asked it to gate.'
 CLI_POSITIONAL=any
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
@@ -148,5 +154,28 @@ done
 
 echo
 echo "== ${drifted} drifted, ${blind} BLIND, out of ${#names[@]} project(s) with a REPO_URL =="
+
+# BLIND IS NEVER 0, AND IS NEVER GATED BEHIND --strict.
+#
+# The first draft of this script exited 0 on both shapes of not-looking, and
+# bin/tests/guard-estate.test.sh case E1 caught it: "admitted BLIND and exited
+# 0 -- could-not-look graded as clean". It reached that verdict on the emptier
+# of the two shapes, which is the one worth naming: pointed at a SCHED_ROOT
+# with no schedule/*.conf in it at all, the loop below simply never ran, the
+# summary read "0 drifted, 0 BLIND, out of 0 project(s)", and the exit code
+# said the estate was compliant. It is the "a run that matched no suites is a
+# broken glob, not a clean tree" defect from .github/workflows/tests.yml, in a
+# second script.
+#
+# Ordering: a drift found under --strict outranks partial blindness, because
+# it is the more actionable of the two and the caller asked to gate on it; the
+# BLIND lines are still in the output above either way. What must never happen
+# is either one reaching exit 0.
+if [ "${#names[@]}" -eq 0 ]; then
+  echo "BLIND: no registered project with a REPO_URL under $SCHED_ROOT/schedule/ -- nothing was checked."
+  echo "repo-settings-provision: nothing was measured. This is NOT a clean result."
+  exit 2
+fi
 [ "$STRICT" = 1 ] && [ "$drifted" -gt 0 ] && exit 1
+[ "$blind" -gt 0 ] && exit 2
 exit 0

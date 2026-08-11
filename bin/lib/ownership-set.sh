@@ -166,6 +166,8 @@ bin/served-not-cloned.sh           realisateur asks whether mechanism reaches an
 bin/tests/served-not-cloned.test.sh realisateur follows its subject.
 bin/wire-release-channel.sh        realisateur installs the verb-build bootstrap and its clock on an existing account. realisateur owns the release channel end to end -- cut, install, tick and the propagation contract -- so the door onto it is realisateur's too.
 bin/tests/selfdev-agent-survey.test.sh realisateur follows its subject.
+bin/repo-settings-provision.sh     realisateur asks whether the estate matches a claim its own doctrine states as settled fact -- thermostat-wiring.sh's question, on a different claim. The SETTINGS are vim-arcade's subject, the way the scheduler redesign is scheduler's; measuring the whole registry against a stated claim, and naming where it is only described, is the sense-over-the-organism half UNIVERSE.md assigns here.
+bin/tests/repo-settings-provision.test.sh realisateur follows its subject.
 bin/stamp-agent.sh                 realisateur writes a new project's bootstrap FOCUS.md. This IS the scaffolding step in README.md 3.
 bin/restamp-discipline.sh          realisateur propagates the realisateur baseline into scaffolded projects. Seeding, per BUILD-DISCIPLINE.md's opening paragraph.
 bin/make-bootstrap-branch.sh       realisateur rebuilds THE PLAY's starting line. THE PLAY is realisateur's own experiment about whether a FOCUS.md can direct an agent.

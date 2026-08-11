@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
+# HERMETICITY: offline, zero AI, no network. Every invocation sets both
+# SCHED_ROOT (to a throwaway schedule/*.conf registry in $T) and GH_BIN (to a
+# stub in $T that answers from a fixture table), so no run reads the live
+# scheduler registry and none reaches github.com -- the stub resolves no
+# hostname and holds no credential. The one case that deliberately points at
+# an empty registry points at a fresh mktemp dir, never at $HOME.
+#
 # repo-settings-provision.test.sh -- witness for bin/repo-settings-provision.sh.
-# Offline, zero AI, no network: GH_BIN points at a stub that answers from a
-# tiny fixture table instead of the real GitHub API.
 #
 # Cases:
 #   A both settings already true            -> "ok", 0 drift
@@ -11,6 +16,18 @@
 #   E --apply calls gh repo edit with exactly the missing flag(s)
 #   F bare invocation (no --strict) exits 0 even with drift -- signal by
 #     default, same stance as hygiene-lint/closeout-lint
+#   G BLIND is never 0 and is never gated behind --strict: an unreadable repo
+#     exits 2 with or without the flag, and an EMPTY registry -- the shape
+#     that reads as "0 drifted, 0 BLIND, out of 0 project(s)" and looks like
+#     compliance -- exits 2 and says nothing was measured.
+#
+# ON F AND G TOGETHER, because the pair is the point. F's original assertion
+# ran bare against the whole fixture registry, which contains gone-proj, and
+# pinned exit 0 -- so it was pinning "reported a repo it could not read, and
+# graded that clean". bin/tests/guard-estate.test.sh case E1 is the authority
+# that says that is wrong, and it is what went red. F now runs against the
+# three READABLE projects, which is what it was always about (drift alone does
+# not gate without --strict); G asserts the half F was accidentally denying.
 #
 # Usage: bin/tests/repo-settings-provision.test.sh   (exit 0 = all pass)
 set -uo pipefail
@@ -78,12 +95,34 @@ has "B: dirty-proj reports DRIFT" "$out" "DRIFT dirty-proj"
 has "C: mixed-proj reports DRIFT" "$out" "DRIFT mixed-proj"
 has "D: gone-proj reports BLIND"  "$out" "BLIND gone-proj"
 hasnt "_ignored.conf never scanned" "$out" "should-not-appear"
-rc "bare invocation exits 0 despite drift" 0 "$rc_got"
 has "summary counts 2 drifted, 1 BLIND, 4 total" "$out" "2 drifted, 1 BLIND, out of 4"
+
+# --- F: drift alone does not gate without --strict --------------------------
+# Scoped to the three readable projects on purpose: the claim is about DRIFT,
+# and mixing gone-proj in would make a green here mean "blindness is fine too".
+run clean-proj dirty-proj mixed-proj >/dev/null 2>&1
+rc "bare invocation exits 0 despite drift" 0 "$?"
 
 # --- F/strict: --strict gates on drift --------------------------------------
 run --strict >/dev/null 2>&1; rc "--strict exits 1 when drift found" 1 "$?"
 run --strict clean-proj >/dev/null 2>&1; rc "--strict exits 0 on a clean-only filter" 0 "$?"
+
+# --- G: BLIND is never 0, with or without --strict --------------------------
+rc "bare invocation exits 2 when a repo could not be read" 2 "$rc_got"
+run clean-proj gone-proj >/dev/null 2>&1
+rc "an unreadable repo alone is BLIND, exit 2, no --strict needed" 2 "$?"
+run --strict clean-proj gone-proj >/dev/null 2>&1
+rc "...and --strict does not turn that blindness into clean either" 2 "$?"
+
+# An EMPTY registry is the shape guard-estate E1 actually caught: the loop
+# never runs, the summary reads "out of 0 project(s)", and exit 0 would say
+# the estate is compliant on the strength of having looked at nothing.
+EMPTY="$(mktemp -d)"; mkdir -p "$EMPTY/schedule"
+out="$(SCHED_ROOT="$EMPTY" GH_BIN="$T/gh" "$SCRIPT" --strict 2>&1)"; rc_empty=$?
+rc "an empty registry is BLIND, exit 2 -- not 'nothing drifted'" 2 "$rc_empty"
+has "...and says so in words" "$out" "BLIND: no registered project with a REPO_URL"
+has "...and says nothing was measured is not clean" "$out" "This is NOT a clean result"
+rm -rf "$EMPTY"
 
 # --- read-only by default: no gh repo edit call without --apply ------------
 : > "$GH_CALLS"
