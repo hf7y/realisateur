@@ -308,6 +308,82 @@ probe_headless() {
 #    scheduler clone. This is the probe the whole file is named for, and it is
 #    the only one that needs the host, so it is opt-in via --fleet and BLIND
 #    without it rather than quietly skipped.
+# 8. ONEROSTER -- "live" is ONE fact in ONE file, not an agreement between
+#    several. Zach, 2026-08-11: "it checks one source of truth. and that's
+#    maintained by me."
+#
+#    TODAY a project dispatches only if THREE files agree, and every one of
+#    them says so in its own header, in the imperative, because the trap has
+#    fired before:
+#      schedule/_paced.<host>.conf   the row's enabled flag is 1
+#      schedule/FREEZE               an UNCOMMENTED `EXEMPT: <p>@<host>` line
+#      schedule/<p>.conf             CRON_HOST/CRON_ACCOUNT name this host
+#    chezz's park needed edits in two of them -- "either one alone leaves it
+#    dark, which is the point of having two" -- and _paced.conf's own TRAP 1
+#    records the inverse: DELETING a row ARMS a fixed nightly cron rather than
+#    disarming it. Both directions of a two-key switch have now bitten.
+#
+#    A single roster cannot have a disagreement, which is the whole claim.
+probe_oneroster() {
+  [ -d "$SCHED/.git" ] || { row BLIND oneroster "no scheduler checkout at $SCHED"; return; }
+  local roster="$SCHED/schedule/ROSTER"
+  if [ ! -f "$roster" ]; then
+    local n=0
+    [ -f "$SCHED/schedule/FREEZE" ] && n=$((n+1))
+    ls "$SCHED"/schedule/_paced*.conf >/dev/null 2>&1 && n=$((n+1))
+    ls "$SCHED"/schedule/_runner*.conf >/dev/null 2>&1 && n=$((n+1))
+    row UNMET oneroster "no schedule/ROSTER; liveness still spread across $n file kind(s)"
+    return
+  fi
+  # Present is not enough. If the files it replaces still decide anything, it
+  # is a fourth opinion rather than the source -- which is strictly worse.
+  local stale=""
+  [ -f "$SCHED/schedule/FREEZE" ] && grep -qE '^[[:space:]]*EXEMPT:' "$SCHED/schedule/FREEZE" 2>/dev/null && stale="$stale FREEZE"
+  grep -qhE '^[a-z0-9-]+\|[01]\|' "$SCHED"/schedule/_paced*.conf 2>/dev/null && stale="$stale _paced"
+  if [ -n "$stale" ]; then
+    row UNMET oneroster "schedule/ROSTER exists but$stale still carries live rows -- a fourth opinion, not a source"
+  else
+    row MET oneroster "schedule/ROSTER is the only file deciding what dispatches"
+  fi
+}
+
+# 9. SELFSERVE -- `dose <project>` is reachable and self-installing on the
+#    self-dev host. Zach, 2026-08-11: "I should be able to ssh zach@monkey and
+#    run dose ecosim and the newest ecosim self-installs, updates, starts
+#    clearing issues."
+#
+#    TWO THINGS MAKE THIS FAIL TODAY and both are invisible from inside the
+#    repo, which is why this is a probe and not a paragraph:
+#      1. ~/.local/bin is NOT on monkey's non-interactive PATH, so
+#         `ssh monkey dose ...` cannot find a verb installed there even when
+#         it is installed correctly. Measured 2026-08-11: PATH over ssh is
+#         /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin plus
+#         games and snap. Nothing under $HOME.
+#      2. zach@monkey's scheduler checkout is on a FEATURE BRANCH
+#         (probe-after-runnability-20260806) five days behind main -- so a
+#         dose that read its truth from the local clone would read stale
+#         config on the very host the command is typed on. Reading the roster
+#         from GitHub is what makes it a bomb rather than a clone-follower.
+#
+#    Local half only (the repo half); the fleet half belongs to --fleet.
+probe_selfserve() {
+  [ -d "$SCHED/.git" ] || { row BLIND selfserve "no scheduler checkout at $SCHED"; return; }
+  local verbs
+  verbs="$(git -C "$SCHED" ls-tree --name-only origin/bashified bin/ 2>/dev/null)" \
+    || { row BLIND selfserve "cannot read origin/bashified"; return; }
+  grep -q '^bin/dose$' <<<"$verbs" || { row UNMET selfserve "origin/bashified declares no bin/dose"; return; }
+  # A project-shaped dose takes a PROJECT, not only a script name. The
+  # generated verb's subcommand table is the honest place to ask.
+  local dosefile
+  dosefile="$(git -C "$SCHED" show origin/bashified:bin/dose 2>/dev/null)" \
+    || { row BLIND selfserve "cannot read origin/bashified:bin/dose"; return; }
+  if grep -qE 'ROSTER|roster' <<<"$dosefile"; then
+    row MET selfserve "dose resolves a project against the roster"
+  else
+    row UNMET selfserve "dose dispatches to bin/*.sh only -- no project form, no roster read"
+  fi
+}
+
 probe_clonefree() {
   local out
   # SERVED_FLEET_CRONTABS: read the fleet's crontab content from a file
@@ -384,6 +460,8 @@ probe_livebrief
 probe_donebrakes
 probe_headless
 probe_clonefree
+probe_oneroster
+probe_selfserve
 
 total=$((met + unmet + blind))
 say
