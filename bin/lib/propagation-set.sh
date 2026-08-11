@@ -349,7 +349,20 @@ path-provenance-audit.sh
 selfdev-agent-survey.sh
 served-not-cloned.sh
 shellcheck-lint.sh
+repo-settings-provision.sh
 "
+# repo-settings-provision.sh is LOCAL for thermostat-wiring.sh's reason, not
+# bin/shellcheck-lint.sh's. (The `bin/` is load-bearing: a comment line whose
+# FIRST word is `shellcheck` is parsed as a shellcheck directive, and this one
+# was -- SC1072/SC1073, a parse error on the whole file, which is why every
+# other note in this header spells the path out too.)
+# Its subject is the FLEET: it walks scheduler's whole
+# schedule/*.conf registry and asks GitHub about every registered repo at
+# once. A per-account copy would have each of ten accounts reconfiguring all
+# thirteen repositories on its own clock, which is not ten times the value --
+# it is ten writers on one setting. It also needs a credential no provisioned
+# account holds or should: `gh repo edit` is admin on someone else's repo,
+# where the self-dev accounts are deliberately read-only deploy keys.
 # bin/shellcheck-lint.sh is LOCAL because it lints THIS REPOSITORY'S OWN SOURCE.
 # Its file selection is `git ls-files` against its own ROOT and its baseline is
 # bin/shellcheck-lint.ratchet, both of which describe realisateur's tree and
