@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # coin.sh -- add ONE verb to a bashified branch that already carries verbs.
 #
+# RUNNER: bin/tests/bashify-coin.test.sh
+#   It lives under bin/tests/ and not bashify/test/ because .github/workflows/
+#   tests.yml globs bin/tests/*.sh only -- bashify/test/verify-*.sh is run by
+#   no workflow at all (hf7y/realisateur#157). A suite for the estate's only
+#   new-verb door, filed where nothing executes it, would be the same failure
+#   tests/run-all.sh was written to end.
+#
 # Written 2026-08-01 at its own call site. The doctrine is now ONE NOUN, MANY
 # VERBS (RESEARCH-VERB-ECOSYSTEM-20260730.md): a project is a noun, a noun does
 # several things, and forcing each noun to expose exactly one verb was the
