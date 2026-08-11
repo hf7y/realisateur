@@ -13,7 +13,7 @@
 # GUARD: is any shell file in this tree carrying a shellcheck finding it did not carry when the ratchet was last accepted?
 # RUNNER: bin/tests/shellcheck-lint.test.sh
 # GUARD-TEST: bin/tests/shellcheck-lint.test.sh
-# GATE: .github/workflows/tests.yml (job `shellcheck`)
+# GATE: default
 # VERIFIED: 2026-08-11 via bash bin/shellcheck-lint.sh (0 new, 11 baselined, 98 files)
 #
 # ---------------------------------------------------------------------------
