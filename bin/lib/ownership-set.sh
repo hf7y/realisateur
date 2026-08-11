@@ -138,6 +138,8 @@ bin/floor-check.sh                 realisateur THE-FLOOR.md's authority. An ecos
 bin/reach-lint.sh                  realisateur asks whether a scaffolded project's command files can reach what they name. The scaffold contract is realisateur's output.
 bin/thermostat-wiring.sh           realisateur measures whether the ecosystem matches a redesign or only describes it. Sense over the whole organism, which is this organ's definition.
 bin/selfdev-agent-survey.sh        realisateur asks whether each self-dev account does what its own dispatch prompt claims. Sense over the whole fleet, and realisateur owns the self-dev account contract that prompt is measured against.
+bin/served-not-cloned.sh           realisateur asks whether mechanism reaches an account by being served or copied. The release channel and the propagation contract are realisateur's, so the probe that says whether the estate actually uses them is too.
+bin/tests/served-not-cloned.test.sh realisateur follows its subject.
 bin/wire-release-channel.sh        realisateur installs the verb-build bootstrap and its clock on an existing account. realisateur owns the release channel end to end -- cut, install, tick and the propagation contract -- so the door onto it is realisateur's too.
 bin/tests/selfdev-agent-survey.test.sh realisateur follows its subject.
 bin/stamp-agent.sh                 realisateur writes a new project's bootstrap FOCUS.md. This IS the scaffolding step in README.md 3.
