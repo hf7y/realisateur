@@ -6,9 +6,11 @@
 # and points the lint at it with --build. Nothing here reads
 # ~/.local/share/verb-builds, nothing reaches the network, and no case
 # depends on which build happens to be current on the machine running it.
-# The one place a real number appears is case 10, and that number is baked
+# The one place a real number appears is case 9, and that number is baked
 # into a FIXTURE transcribed from the 2026-08-06T003928Z manifest, not read
-# from the host.
+# from the host. Case 10 reads two files out of this repository -- the shipped
+# ratchet and lib/not-a-verb.tsv -- which is source, not host state: it says
+# the same thing on every machine and in CI.
 #
 # WHY THE FIXTURES ARE BUILD TREES AND NOT MOCK FUNCTIONS
 # The lint's whole subject is the relationship between a manifest row and
@@ -379,9 +381,45 @@ printf '%s\n' "$OUT" | grep -q 'vim-arcade/vim-arcade' \
   && ok "the violation is vim-arcade/vim-arcade" \
   || bad "the single violation is not the product row"
 
-# --- 10. the guard declares itself ------------------------------------------
+# --- 10. the two opt-outs do not overlap ------------------------------------
 echo
-echo "== 10. THE GUARD SATISFIES THE ESTATE'S OWN CONTRACT =="
+echo "== 10. THIS GUARD AND lib/not-a-verb.tsv GRADE DISJOINT POPULATIONS =="
+# #145 landed bin/lib/not-a-verb.tsv the night before this guard: a curated
+# list of executables that are deliberately not verbs. The reasonable review
+# question is whether this guard should honour it instead of holding a second
+# opinion about the same command. It cannot: not-a-verb.tsv exempts HALF
+# declarations, which cut-verb-build.sh omits from the manifest entirely, and
+# this guard grades manifest rows. The claim is checkable, so it is checked
+# here rather than asserted in a comment that would go quietly false the first
+# time either file changed shape.
+NAV="$REPO/bin/lib/not-a-verb.tsv"
+if [ ! -f "$NAV" ]; then
+  bad "bin/lib/not-a-verb.tsv is missing -- the file this guard's header reasons about"
+else
+  # A row is <project>\t<name>\t<why>; a ratchet entry is `undeclared
+  # <project>/<verb>`. An intersection means one of the two files is wrong:
+  # either an exemption is inert (the name is fully declared and IS in the
+  # build) or a grandfather entry names something no build can contain.
+  navkeys="$(awk -F'\t' '!/^[[:space:]]*#/ && NF>=2 && $1 != "" && $2 != "" {print $1 "/" $2}' "$NAV" | sort -u)"
+  ratkeys="$(sed -n 's/^[[:space:]]*undeclared[[:space:]]\+//p' "$REPO/bin/verb-kind-lint.ratchet" | sort -u)"
+  both="$(comm -12 <(printf '%s\n' "$navkeys") <(printf '%s\n' "$ratkeys") | tr '\n' ' ')"
+  both="$(printf '%s' "$both" | sed 's/[[:space:]]*$//')"
+  [ -z "$both" ] \
+    && ok "no name is both a not-a-verb exemption and a grandfathered command" \
+    || bad "these names are in BOTH lists, so one of the two files is wrong: $both"
+fi
+
+# And the shipped ratchet must still be a ratchet: every entry names a
+# <project>/<verb> pair, never a bare count and never a project.
+strays="$(sed -n 's/^[[:space:]]*undeclared[[:space:]]\+//p' "$REPO/bin/verb-kind-lint.ratchet" \
+          | grep -vE '^[^/]+/[^/]+$' | tr '\n' ' ')"
+[ -z "$strays" ] \
+  && ok "every ratchet entry names a <project>/<verb> pair" \
+  || bad "ratchet entries that are not <project>/<verb>: $strays"
+
+# --- 11. the guard declares itself ------------------------------------------
+echo
+echo "== 11. THE GUARD SATISFIES THE ESTATE'S OWN CONTRACT =="
 # guard-estate.test.sh derives its population by name shape and would pick
 # `verb-kind-lint.sh` up on its own. Asserted here as well so a broken
 # header fails the guard's OWN suite first, where the message is specific,

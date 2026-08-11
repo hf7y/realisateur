@@ -7,10 +7,39 @@
 # purpose, so that it is reviewed. A command that is not listed here and
 # declares nothing fails on its first night -- which is the whole requirement,
 # since the next product to ship down the workchain will be a NEW arrival and
-# not one of these thirty-two.
+# not one of these.
 #
-# seeded 2026-08-08 via bash bin/verb-kind-lint.sh --build ~/.local/share/verb-builds/current
-# against build 2026-08-06T003928Z (32 commands, 12 projects)
+# ---------------------------------------------------------------------------
+# RE-SEEDED 2026-08-11 FROM THE BUILD THAT IS CURRENT ON THE DAY IT LANDS
+# ---------------------------------------------------------------------------
+#
+# The first seed was taken on 2026-08-08 against build 2026-08-06T003928Z: 32
+# commands, 12 projects. This branch then sat unmerged for three days, and the
+# ecosystem shipped a verb in the meantime. Graded against the live build
+# 2026-08-11T031603Z the stale seed produced exactly one violation --
+# `bibliothecaire/consulte`, filed by hf7y/bibliothecaire on 2026-08-06 as the
+# research front door CLAUDE.md documents.
+#
+# That violation was an ARTEFACT OF THE SEED, not a finding, and the
+# distinction is the whole reason this file names pairs. A grandfather list
+# means "everything that predates the rule". `consulte` predates the rule --
+# the rule does not exist anywhere until this branch merges -- so it is a
+# grandfather, and reading it as a new arrival would have been the guard's
+# first live act being a false alarm that refused the nightly cut.
+#
+# So the seed is re-derived from the build that is current on the day the rule
+# lands, rather than the number being edited until a test passed:
+#
+#   # verified 2026-08-11 via
+#   #   grep -v '^#' ~/.local/share/verb-builds/current/manifest.tsv \
+#   #     | awk -F'\t' 'NF>=2 && $2 != "" {print "undeclared " $1 "/" $2}' | sort
+#   # against build 2026-08-11T031603Z (33 commands, 12 projects), every one of
+#   # which carries no `# KIND:` marker at all -- measured, not assumed.
+#
+# THIS IS THE LAST FREE RE-SEED. From here the list only shrinks: a verb that
+# appears in a build after today and declares nothing IS a new arrival, and is
+# refused on its first night. That is the property being bought, and re-seeding
+# again would be selling it back.
 #
 # ---------------------------------------------------------------------------
 # THE ONE ENTRY BELOW THAT IS NOT AN ORDINARY GRANDFATHER, AND WHY IT IS HERE
@@ -33,15 +62,21 @@
 # So it is listed, ONCE, with a date and a reason, which is the difference
 # between a concession and an omission. The lint still prints it as OWED on
 # every run. Removing this line is the LAST step of the migration, after the
-# product channel exists (filed with `defere`; see the DEFERRED block on the
-# pull request that introduced this file) -- and at that point
-# vim-arcade will declare `# KIND: product`, drop out of the workchain
-# manifest, and this entry will be stale and dropped by --accept.
+# product channel exists -- and note, because it is load-bearing and was
+# probed rather than assumed: THAT CHANNEL DOES NOT EXIST YET.
+# bin/wire-release-channel.sh installs the workchain build's bootstrap and its
+# clock and nothing else; there is one release repo estate-wide
+# (PROP_RELEASE_REPO, hf7y/verbs) and it carries the workchain. So this entry
+# cannot be retired by anyone today, which is exactly why it is written down
+# with a reason instead of left to be rediscovered. When the channel exists,
+# vim-arcade declares `# KIND: product`, drops out of the workchain manifest,
+# and this entry goes stale and is dropped by --accept.
 #
 # DO NOT add a second entry of this kind without the same paragraph.
 undeclared vim-arcade/vim-arcade
 undeclared baudin/loge
 undeclared bibliothecaire/accroche
+undeclared bibliothecaire/consulte
 undeclared bibliothecaire/cueille
 undeclared bibliothecaire/fonde
 undeclared bibliothecaire/glane

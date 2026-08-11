@@ -164,6 +164,8 @@ bin/tests/shellcheck-lint.test.sh  realisateur follows its subject.
 bin/selfdev-agent-survey.sh        realisateur asks whether each self-dev account does what its own dispatch prompt claims. Sense over the whole fleet, and realisateur owns the self-dev account contract that prompt is measured against.
 bin/served-not-cloned.sh           realisateur asks whether mechanism reaches an account by being served or copied. The release channel and the propagation contract are realisateur's, so the probe that says whether the estate actually uses them is too.
 bin/tests/served-not-cloned.test.sh realisateur follows its subject.
+bin/verb-kind-lint.sh              realisateur asks whether every command in a build says which channel it ships on. A close call, so the argument: bin/cut-verb-build.sh is verbs' because it CUTS -- it acts. This one reads a tree and reports, which is the sense/act line the mission test above draws, and it is the same shape as served-not-cloned.sh two rows up: the release channel's effectors are verbs', the probes over it are realisateur's.
+bin/tests/verb-kind-lint.test.sh   realisateur follows its subject.
 bin/wire-release-channel.sh        realisateur installs the verb-build bootstrap and its clock on an existing account. realisateur owns the release channel end to end -- cut, install, tick and the propagation contract -- so the door onto it is realisateur's too.
 bin/tests/selfdev-agent-survey.test.sh realisateur follows its subject.
 bin/stamp-agent.sh                 realisateur writes a new project's bootstrap FOCUS.md. This IS the scaffolding step in README.md 3.

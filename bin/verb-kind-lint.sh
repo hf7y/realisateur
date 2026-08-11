@@ -6,7 +6,13 @@
 # RUNNER: bin/tests/verb-kind-lint.test.sh bin/cut-verb-build.sh
 # GUARD-TEST: bin/tests/verb-kind-lint.test.sh
 # GATE: default --build $TREE
-# VERIFIED: 2026-08-08 via bash bin/verb-kind-lint.sh --build ~/.local/share/verb-builds/current and bash bin/tests/verb-kind-lint.test.sh
+# VERIFIED: 2026-08-11 via bash bin/tests/verb-kind-lint.test.sh and bash bin/tests/cut-verb-build-test.sh
+#
+# The run against the live build -- the one that produced the numbers in
+# bin/verb-kind-lint.ratchet -- is stamped in that file instead of here,
+# because it names a host-specific path and this file may not: see the
+# one-reader argument at BUILD= below, which propagation.test.sh enforces by
+# grepping every bin/*.sh for the pin path.
 #
 # ===========================================================================
 # THIS RULE IS NOT NEW. IT WAS DECIDED 2026-08-05 AND NEVER MECHANIZED.
@@ -133,6 +139,54 @@
 # which is the move BUILD-DISCIPLINE.md exists to refuse.
 #
 # ===========================================================================
+# WHY THIS READS NO OPT-OUT FILE, AND bin/lib/not-a-verb.tsv IN PARTICULAR
+# ===========================================================================
+#
+# #145 landed bin/lib/not-a-verb.tsv the night before this: a curated list,
+# in this repository, of executables that are deliberately not verbs. The
+# obvious question is whether this guard should honour it rather than have a
+# second opinion about the same thing. It should not, and the reason is that
+# the two files cannot both be about the same command.
+#
+# THE POPULATIONS ARE DISJOINT BY CONSTRUCTION.
+#
+#   lib/not-a-verb.tsv exempts a HALF declaration -- an executable bin/<n>
+#   with no man/<n>.1, or the inverse. cut-verb-build.sh omits every half
+#   declaration from the manifest, exempted or not; a row buys a
+#   `# NOT-A-VERB` line in the manifest instead of a refusal.
+#
+#   This guard grades MANIFEST ROWS. A manifest row is a name that carried
+#   BOTH halves.
+#
+# So no name is ever in both, and honouring the file here would be wiring up
+# a lookup that cannot match -- a mechanism built and never fired, which is
+# this estate's own recurring defect and not a reconciliation of anything.
+# bin/tests/verb-kind-lint.test.sh asserts the disjointness instead of this
+# comment asserting it, because a claim about two data files is checkable and
+# a paragraph is not.
+#
+# THEY ALSO ANSWER DIFFERENT QUESTIONS, which is why neither subsumes the
+# other:
+#
+#   not-a-verb.tsv   "nobody would ever type this name expecting the verb
+#                     contract" -- an installer, a cron wrapper, a scraper.
+#                    Its own header states that test.
+#   # KIND: product  "people DO type this, it has a name of its own, and it
+#                    needs a release cadence the workchain deliberately
+#                    refuses to have."
+#
+# `bibliothecaire/page92.py` is the first. `vim-arcade` is the second. A rule
+# that collapsed them would have to call vim-arcade "not a verb and therefore
+# not shipped", which is the opposite of what is wanted for it.
+#
+# AND THE MECHANISMS ARE CHOSEN FOR DIFFERENT CONTENTION. A curated list is
+# right for not-a-verb.tsv: the judgement is realisateur's to make ABOUT
+# another project's file, and the project may not agree it is not a verb. It
+# is wrong here, where the judgement is the project's own and the file it
+# belongs in is the project's own -- which is the argument two screens up, and
+# is why an omission from a list cannot defeat this check.
+#
+# ===========================================================================
 # THE GRANDFATHER RATCHET -- and why it names pairs rather than counting them
 # ===========================================================================
 #
@@ -179,10 +233,11 @@ set -uo pipefail
 
 CLI_NAME='verb-kind-lint.sh'
 CLI_SUMMARY='every command in a verb build declares its channel, and no product rides the workchain'
-CLI_USAGE='  verb-kind-lint.sh                      lint the current build
-  verb-kind-lint.sh --build <dir>        lint a build tree by path
-  verb-kind-lint.sh --accept             shrink the grandfather ratchet to what is still needed
-  verb-kind-lint.sh --quiet              violations only'
+CLI_USAGE='  verb-kind-lint.sh --build <dir>        lint the build tree at <dir> (REQUIRED)
+  verb-kind-lint.sh --build <dir> --accept
+                                         shrink the grandfather ratchet to what is still needed
+  verb-kind-lint.sh --build <dir> --quiet
+                                         violations only'
 CLI_FLAGS='--build --accept --quiet'
 CLI_POSITIONAL=any   # flag VALUES (--build <dir>) read as positionals to cli-guard.
 CLI_EXITS='  0  every command declares itself; no product in the workchain build
@@ -192,8 +247,32 @@ CLI_EXITS='  0  every command declares itself; no product in the workchain build
 cli_guard "$@"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUILD_ROOT="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"
-BUILD="$BUILD_ROOT/current"
+# --build IS REQUIRED. There is deliberately no default.
+#
+# This resolved the host's own adopted-build pin (the path PROP_PIN_PATH
+# names in bin/lib/propagation-set.sh), so a bare run graded "whatever this
+# machine happens to have adopted". Two things were wrong with it and only
+# one is cosmetic.
+#
+# That the sentence above cannot simply WRITE the path is the guard working:
+# propagation.test.sh greps every bin/*.sh for it, prose included, because a
+# second reader is a second reader whether or not it is reachable code.
+#
+# bin/lib/propagation-set.sh names the pin as a fact with ONE reader
+# (prop_current_pin), and lists by name the two scripts allowed to resolve
+# the layout directly because they own it: install-verb-build.sh and
+# ecosim-sensor-tick.sh. This guard owns no part of that layout -- it grades
+# a directory. Becoming a third reader would buy nothing and cost the
+# one-fact-one-reader property that file exists to hold.
+#
+# And every caller already names its tree: cut-verb-build.sh section 6a
+# passes the tree it JUST assembled (never the host's adopted build -- they
+# are different trees and grading the wrong one is the whole defect), the
+# GATE line above passes $TREE, and this guard's suite passes a fixture. The
+# default had no caller. It was a way to be pointed at something by accident,
+# which is what #140 took away from silence-audit for the same reason: honour
+# the tree you are pointed at, and refuse to guess one.
+BUILD=''
 RATCHET="${VERB_KIND_RATCHET:-$ROOT/bin/verb-kind-lint.ratchet}"
 ACCEPT=0
 QUIET=0
@@ -218,6 +297,11 @@ blind() { printf 'BLIND: %s\n' "$*" >&2
           exit 2; }
 
 # --- the build --------------------------------------------------------------
+# No --build is a USAGE error (2), not a verdict. It is the same exit code as
+# BLIND on purpose: both mean "this run graded nothing", and the one thing
+# neither may ever be mistaken for is clean.
+[ -n "$BUILD" ] || { printf '%s: --build <dir> is required; there is no default build.\n' "$CLI_NAME" >&2
+                     printf '%s\n' "$CLI_USAGE" >&2; exit 2; }
 [ -d "$BUILD" ] || blind "no build tree at $BUILD"
 MANIFEST="$BUILD/manifest.tsv"
 [ -f "$MANIFEST" ] || blind "$BUILD carries no manifest.tsv -- it is not a build"
@@ -327,14 +411,34 @@ if [ "$ACCEPT" -eq 1 ]; then
   # Only entries already in the ratchet AND still undeclared survive. A
   # command that is undeclared but was NOT in the ratchet is deliberately not
   # written: --accept is not a way to enrol today's mistake.
+  #
+  # THE EXISTING PROSE IS CARRIED OVER, and that is not a nicety. This block
+  # used to print a fixed six-line header and then the entries, which meant
+  # regenerating the file DELETED every hand-written justification in it --
+  # including the paragraph the file's own last line mandates ("DO NOT add a
+  # second entry of this kind without the same paragraph"). A ratchet whose
+  # only regeneration path silently erases the reasons its entries exist
+  # converts, on first use, into a bare list of names nobody can review. The
+  # reasons are the reviewable part; the names are derivable.
+  #
+  # Read BEFORE the redirect: `{ ...; } > "$RATCHET"` truncates the file
+  # before the block runs, so anything read inside it reads nothing.
+  header=''
+  if [ -f "$RATCHET" ]; then
+    header="$(grep -E '^[[:space:]]*(#|$)' "$RATCHET" | grep -vE '^# accepted ')"
+  fi
+  if [ -z "$header" ]; then
+    header="$(printf '%s\n' \
+      "# verb-kind-lint.ratchet -- commands in the build that predate the" \
+      "# declaration rule and are forgiven for now. See bin/verb-kind-lint.sh." \
+      "#" \
+      "# SHRINKS ONLY. --accept drops entries whose command has declared itself" \
+      "# or left the build, and will not add one. Growing this file is a hand" \
+      "# edit, on purpose, so that it is reviewed.")"
+  fi
   {
-    echo "# verb-kind-lint.ratchet -- commands in the build that predate the"
-    echo "# declaration rule and are forgiven for now. See bin/verb-kind-lint.sh."
-    echo "#"
-    echo "# SHRINKS ONLY. --accept drops entries whose command has declared itself"
-    echo "# or left the build, and will not add one. Growing this file is a hand"
-    echo "# edit, on purpose, so that it is reviewed."
-    echo "# accepted $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf '%s\n' "$header"
+    echo "# accepted $(date -u +%Y-%m-%dT%H:%M:%SZ) against a build of $rows command(s)"
     for g in ${GRANDFATHERED+"${GRANDFATHERED[@]}"}; do echo "undeclared $g"; done
   } > "$RATCHET" || { printf '%s: cannot write %s\n' "$CLI_NAME" "$RATCHET" >&2; exit 1; }
   n="${#GRANDFATHERED[@]}"
