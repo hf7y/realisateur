@@ -144,8 +144,14 @@ PULL REQUEST CONVENTION -- canonical. Reference this; do not paraphrase it.
     strict=false          -- deliberately NOT "require branches up to date":
                              that forces every open PR to re-sync whenever main
                              moves, the loop that broke #95/#96/#98 repeatedly.
-    enforce_admins=false  -- deliberate. The gate binds automation, not Zach;
-                             a wedged check must not lock him out.
+    enforce_admins=true    -- flipped from false on 2026-08-11: twelve
+                             self-dev accounts run tools this repo ships, so a
+                             bad merge here breaks all of them at once, and
+                             `--admin` routing around a wedged check (done
+                             once, on Zach's explicit authorization, for #123)
+                             is not a standing practice. A required check that
+                             an admin can route around on a bad day is not a
+                             gate, it is a suggestion.
     no required reviews   -- the point. Green is sufficient; nobody has to look.
   Before this, main was UNPROTECTED and allow_auto_merge was false: every check
   was voluntary, which is how #102 was merged red.
