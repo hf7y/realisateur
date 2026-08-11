@@ -340,6 +340,7 @@ hardcoded-home-lint.sh
 make-bootstrap-branch.sh
 markdown-cost.sh
 ownership-audit.sh
+port-markdown-cost.sh
 reach-lint.sh
 restamp-discipline.sh
 stamp-agent.sh
