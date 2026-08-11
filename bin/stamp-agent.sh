@@ -42,6 +42,9 @@
 # one-line diff every day and the reproducibility claim is untestable.
 set -uo pipefail
 
+# shellcheck source=lib/conf.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/conf.sh"
+
 SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 STAMP_MARK="BOOTSTRAP STAMP"
 # Bootstrap briefs are briefs. Past this many lines a file has stopped
@@ -51,11 +54,16 @@ MAX_BRIEF_LINES="${STAMP_MAX_LINES:-120}"
 die() { echo "stamp-agent: $*" >&2; exit 2; }
 
 # Resolve a project's working copy from its scheduler conf -- ONE source,
-# not a path retyped here (BUILD-DISCIPLINE: config read from one source).
+# not a path retyped here (BUILD-DISCIPLINE: config read from one source),
+# and read through lib/conf.sh so $HOME is EXPANDED. The raw grep this
+# replaces handed back the literal `$HOME/Documents/Projects/<name>`, and
+# every conf on every host writes exactly that -- so line 176's
+# `[ -d "$REPO" ] || die` fired for every project, always. Loud, at least,
+# unlike #73's other faces: this script could not stamp anything at all.
 repo_path() {
-  local p="$1" conf="$SCHED_ROOT/schedule/$1.conf"
+  local conf="$SCHED_ROOT/schedule/$1.conf"
   [ -f "$conf" ] || return 1
-  grep -oP '(?<=PROJECT_REPO_PATH=")[^"]*' "$conf" 2>/dev/null | head -1
+  conf_repo_path "$conf"
 }
 
 # Where a project's FOCUS.md lives. .scheduler/ is canonical since the
