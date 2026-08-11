@@ -54,10 +54,13 @@
 # HOW IT SURFACES. .github/workflows/claim-drift.yml runs this on every
 # pull_request event INCLUDING ready_for_review and converted_to_draft, which
 # are not in the default set. A drifted claim is a red check on the PR -- and
-# because this repository has no branch protection available (private repo on
-# a plan where the branch-protection and rulesets APIs both answer 403
-# "Upgrade to GitHub Pro", probed 2026-08-07), a red check here blocks nothing
-# at all. It is a light, which is exactly what was asked for.
+# it blocks nothing at all: branch protection on main (live since 2026-08-08,
+# see THE MECHANISM below) requires `suites` and `markdown-cost`, and this
+# job (`claim`) is not among the required contexts. That is deliberate, not
+# the leftover of an earlier "this repo cannot have branch protection at all"
+# state (true only briefly, probed 2026-08-07, obsolete a day later) -- a
+# drifted claim is a signal for the human reading the PR, not a build
+# failure. It is a light, which is exactly what was asked for.
 #
 # The CITABLE half falls out for free: for a claimed PR this prints the
 # IMMUTABLE sha the claim was made about. A report that says "done, PR #98 at
