@@ -205,6 +205,7 @@ bin/release-ledger.sh              verbs grades the release channel.
 bin/publish-release-verdict.sh     verbs publishes the release verdict.
 bin/selfdev-release-tick.sh        verbs the consumer-side clock on the release channel.
 bin/lib/verb-set.sh                verbs what verbs the ecosystem declares.
+bin/lib/not-a-verb.tsv             verbs the recorded exceptions to that declaration rule, read by cut-verb-build.sh on every cut. It follows its subject.
 bin/lib/propagation-set.sh         verbs the dev/prod contract for the verb release channel. Its own header is an argument about hf7y/verbs' visibility.
 provision/verbs-meta              verbs its own README says build-verbs.yml belongs at hf7y/verbs/.github/workflows/build-verbs.yml.
 bin/claim-drift.sh                 vim-arcade asks whether a pull request grew after being presented as done. PR tooling.
