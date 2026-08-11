@@ -131,6 +131,32 @@ rc  "D --strict exits 0"                     0 "$RUN_RC"
 run "$T/D/sched" --strict-reach
 rc  "D --strict-reach exits 0"               0 "$RUN_RC"
 
+echo "-- E. a registry whose paths resolve to NOTHING is BLIND, not clean"
+# The #73 shape: every conf readable, every path a literal `$HOME/...`, every
+# match impossible. Before this guard, that produced "(no project command
+# files found)", "== 0 FLAG(s) ==" and exit 0 -- a lint that scanned nothing
+# and reported clean.
+mkdir -p "$T/E/sched/schedule"
+printf 'PROJECT_REPO_PATH="%s/E/does-not-exist"\n' "$T" > "$T/E/sched/schedule/proj.conf"
+run "$T/E/sched"
+rc  "E1 exits 3 BLIND when no conf resolves"   3 "$RUN_RC"
+has "E2 and says BLIND in words, not only in a code" "$RUN_OUT" "BLIND"
+run "$T/E/sched" --strict-reach
+rc  "E3 --strict-reach is BLIND too, not 0"    3 "$RUN_RC"
+
+echo "-- F. no registry AT ALL is not blind -- install-shims.sh depends on it"
+# F is the negative that keeps E honest, and it is not hypothetical: the first
+# version of E's guard tested `repos == 0` alone, which made every host with no
+# scheduler registry blind. CI is such a host, and install-shims.sh runs
+# `reach-lint.sh --strict-reach` and flags on any nonzero -- so that version
+# turned install-shims.test.sh D5 red. Check B is still meaningful here: it
+# reads ~/.claude/commands, which has nothing to do with the registry.
+mkdir -p "$T/F/sched/schedule"     # exists, but holds no confs
+run "$T/F/sched"
+rc  "F1 a registry with no confs exits 0, not BLIND"  0 "$RUN_RC"
+run "$T/F/nonexistent-sched"
+rc  "F2 a missing registry directory exits 0 too"     0 "$RUN_RC"
+
 echo
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

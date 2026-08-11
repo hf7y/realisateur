@@ -150,12 +150,14 @@ echo " of this script for the failure it was written after.)"
 # named scripts; this one the issue never named, found by sweeping for the
 # shape instead of working from the list.
 cmd_files=()
-repos=0
+confs=0    # confs that carry a PROJECT_REPO_PATH at all
+repos=0    # ...of those, how many name a directory that exists
 for conf in "$SCHED_ROOT"/schedule/*.conf; do
   [ -f "$conf" ] || continue
   name="$(basename "$conf" .conf)"
   case "$name" in _*) continue ;; esac
   repo="$(conf_repo_path "$conf")" || continue
+  confs=$((confs + 1))
   [ -d "$repo" ] || continue
   repos=$((repos + 1))
   for d in "$repo/.claude/commands" "$repo/.scheduler/commands"; do
@@ -165,20 +167,26 @@ for conf in "$SCHED_ROOT"/schedule/*.conf; do
   done
 done
 
-# BLIND, and exit 3 rather than 0. "No registered repo exists" is not a clean
-# scan, it is a failure to look, and it is the state this script was ACTUALLY
-# in until the line above was fixed. Note what is NOT blind: repos that
-# resolve but carry no command files. That is a real, clean answer about a
-# real set, and check A below still says so.
+# BLIND, and exit 3 rather than 0 -- but ONLY on `confs>0 && repos==0`, which
+# is the #73 shape exactly: every conf readable, every path a literal, every
+# match impossible. Two neighbouring states are deliberately NOT blind:
+#   confs==0  no scheduler registry on this host at all. install-shims.sh runs
+#             this on such hosts (and CI is one), where check B still means
+#             something because it reads ~/.claude/commands, not the registry.
+#             Calling that blind broke install-shims.test.sh D5 -- caught in CI
+#             by the first version of this guard, which tested `repos==0` alone.
+#   repos>0, no command files
+#             a real, clean answer about a real set; check A below says so.
 #
 # 3 matches bin/hygiene-lint.sh and bin/silence-audit.sh. Deliberately not 1
 # (which means "--strict and something FLAGged") and not 2 (lib/cli-guard.sh's
 # usage error): "I could not look" is a third answer and needs a third code.
-if [ "$repos" -eq 0 ]; then
+if [ "$confs" -gt 0 ] && [ "$repos" -eq 0 ]; then
   echo
-  echo "  BLIND: no registered project under $SCHED_ROOT/schedule/ resolves to a"
-  echo "  directory that exists, so there was nothing to scan. This is 'I could"
-  echo "  not look', NOT 'nothing to report'."
+  echo "  BLIND: $confs registered project(s) under $SCHED_ROOT/schedule/ carry a"
+  echo "  PROJECT_REPO_PATH and NOT ONE resolves to a directory that exists, so"
+  echo "  there was nothing to scan. This is 'I could not look', NOT 'nothing"
+  echo "  to report'."
   exit 3
 fi
 
