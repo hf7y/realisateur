@@ -5,7 +5,7 @@
 # RUNNER: bin/tests/ownership-audit.test.sh
 # GUARD-TEST: bin/tests/ownership-audit.test.sh
 # GATE: strict --repo $TREE
-# VERIFIED: 2026-08-08 via bash bin/ownership-audit.sh --strict (21273 of 26663 lines foreign = 79.7%, 0 unclassified, exit 3) and bash bin/tests/ownership-audit.test.sh
+# VERIFIED: 2026-08-11 via bash bin/ownership-audit.sh --strict (21169 of 28740 lines foreign = 73.6%, 0 unclassified, 0 parked, exit 3) and bash bin/tests/ownership-audit.test.sh
 #
 # ---------------------------------------------------------------------------
 # THE QUESTION, AND THE ORDER IT HAS TO BE ASKED IN
@@ -34,13 +34,42 @@
 # runs on today. Demanding zero foreign lines by the next build would just get
 # the check disabled.
 #
-# The assertion is therefore: THE FOREIGN SURFACE IS NO LARGER THAN THE LAST
+# The assertion is therefore: THE FOREIGN FOOTPRINT IS NO LARGER THAN THE LAST
 # TIME SOMEONE LOOKED. A pull request that parks another project's mechanism
 # here is a failing build. A pull request that moves some out lowers the bar
 # permanently, because --accept only ever ratchets down.
 #
+# FOOTPRINT, NOT LINE COUNT, AND WHY THAT CHANGED (2026-08-11, #144)
+#
+# It used to be the line count, and the line count could not tell the two
+# things below apart:
+#
+#     PARKING       another project's mechanism arrives here. New maintenance,
+#                   new migration unit, exactly what this guard is for.
+#     MAINTENANCE   a foreign file ALREADY HERE gets repaired, documented or
+#                   tested. No new maintenance -- this repo already carries it
+#                   and carries the bug with it.
+#
+# 74% of this repo's mechanism is foreign, so the second is not a corner case;
+# it is most of the maintenance this repo can be asked to do. Measured on
+# #144: the ratchet stood 12 lines above HEAD, and a pull request fixing two
+# silently-discarded failures in two foreign scripts already recorded here
+# came to +533 foreign lines and was arithmetically unmergeable. --accept
+# could not resolve it either, by design.
+#
+# And the count was not merely blocking the wrong thing, it was MISSING the
+# right thing: park a new 30-line foreign file while deleting 40 lines
+# somewhere else and the total goes DOWN. The guard's own headline case walked
+# straight through it, silently, whenever the arithmetic happened to net out.
+#
+# So the bar moved onto the population the ratchet already records -- the FILE
+# LIST. A foreign path not in that list is PARKED and fails (R5). Growth
+# inside a path already in it is maintenance: reported, every run, by name,
+# and not a failure. See "WHAT STILL NOTICES" below -- the answer must not be
+# "nothing", or this would be a guard that cannot refuse.
+#
 # ---------------------------------------------------------------------------
-# THE TWO DODGES IT CLOSES, AND HOW
+# THE THREE DODGES IT CLOSES, AND HOW
 #
 # 1. ADD A FILE AND DON'T MENTION IT. The population is derived from the tree
 #    (git ls-files over OWN_AREAS), never from a list. An unmatched file is
@@ -52,6 +81,62 @@
 #    count: a path that was foreign may leave the tree (that is a migration,
 #    and it is what we want), but it may not stay in the tree and become
 #    realisateur's. That is R4 below, and it fails as a regression.
+#
+# 3. MENTION IT, CLASSIFY IT HONESTLY, AND PARK IT ANYWAY. Dodge 1 only makes
+#    a new foreign file DECLARED; declaring it was never the same as being
+#    allowed to add it. R5 is the bound: a foreign path that is not in the
+#    ratchet's file list fails, whatever the arithmetic says.
+#
+# ---------------------------------------------------------------------------
+# WHEN A NEW PATH IS NOT A NEW FOOTPRINT
+#
+# A file can be new to the tree and still not be new maintenance, when it
+# would LEAVE WITH a file already recorded -- the migration this guard exists
+# to keep possible carries it out in the same act. Two such relations, both
+# derived, neither a hand-kept exemption list:
+#
+#   FOLLOWS   the ledger did not classify it directly; it took its owner from
+#             another file (bin/lib/ownership-set.sh's "a suite follows its
+#             subject"), and that file is recorded foreign. A test for a
+#             foreign script already here is coverage of maintenance this repo
+#             already owns, and refusing it would mean "you may not test the
+#             foreign mechanism you are stuck with".
+#
+#   READ BY   a recorded foreign file OF THE SAME OWNER names it as a path.
+#             The reference must carry the last two path components, not the
+#             bare basename: `lib/not-a-verb.tsv` is a path, `README.md` is a
+#             coincidence. Same-owner, because a file goes to ONE repo when
+#             its reader does.
+#
+# Neither is silent. Every such path is printed, with its line count and with
+# the recorded file it claims to follow, so a false attachment is on the page
+# rather than inside the arithmetic.
+#
+# ---------------------------------------------------------------------------
+# WHAT STILL NOTICES, NOW THAT GROWTH IS PERMITTED
+#
+# Unbounded growth inside recorded files is a real way to accrete foreign
+# mechanism one line at a time, so this is the list, and it is not empty:
+#
+#   THE SHARE BAR, which is unchanged and still hard. Foreign lines may grow
+#   but the foreign FRACTION may not. Right after an --accept that bound is
+#   tight: any foreign growth not matched by realisateur growth fails. (Today
+#   it is loose -- 73.6% measured against 79.7% recorded, because the
+#   2026-08-08 migration was never banked. Slack in a bar is un-accepted
+#   improvement, and banking it is a human running --accept, not this script
+#   deciding for them.)
+#
+#   THE REPORT. Growth is printed as NOTE lines every run, decomposed into
+#   what grew inside recorded paths and what arrived in new ones, and
+#   bin/tests/ownership-audit.test.sh's witness section prints them into CI.
+#
+#   --strict, unchanged: exit 3 while any foreign mechanism remains at all.
+#
+#   AND THE NEXT --accept, which is where a human looks at the notes and
+#   decides. It cannot launder anything: a parked path or a reclassification
+#   is a regression and --accept refuses on a regression, so the recorded
+#   file list can only gain paths that follow one already in it, and the
+#   recorded SHARE can only go down.
 #
 # ---------------------------------------------------------------------------
 # WHAT IT DELIBERATELY DOES NOT MEASURE
@@ -69,8 +154,10 @@
 # doctrine rejects.
 #
 # usage:  ownership-audit.sh [--repo DIR] [--strict] [--accept] [--quiet]
-# exit:   0 no regression against the ratchet
-#         1 REGRESSION -- the foreign surface grew, or one was reclassified
+# exit:   0 no regression against the ratchet (growth inside recorded paths is
+#           reported as NOTE lines and is not a regression)
+#         1 REGRESSION -- a foreign path was parked here, the foreign share
+#           grew, or a recorded foreign file was reclassified realisateur's
 #         2 BLIND -- could not read a tree or a ledger. NEVER "all clear"
 #         3 --strict and foreign mechanism remains (but nothing regressed)
 set -uo pipefail
@@ -85,8 +172,9 @@ CLI_USAGE='  ownership-audit.sh              measure, report, fail only on regre
   ownership-audit.sh --accept     record today'"'"'s surface as the new bar
   ownership-audit.sh --repo DIR   audit DIR instead of the current directory'
 CLI_FLAGS='--strict --accept --quiet --repo'
-CLI_EXITS='  0  no regression
-  1  REGRESSION -- foreign surface grew, or a foreign file was reclassified mine
+CLI_EXITS='  0  no regression (growth inside recorded paths is a NOTE, not a finding)
+  1  REGRESSION -- a foreign path was PARKED here, the foreign share grew, or
+     a recorded foreign file was reclassified mine
   2  BLIND -- no tree or no ledger to read. NEVER "all clear"
   3  --strict, and foreign mechanism remains (but nothing regressed)'
 CLI_POSITIONAL='a directory (the value of --repo)'
@@ -120,6 +208,21 @@ LEDGER="$TREE/bin/lib/ownership-set.sh"
 # shellcheck source=/dev/null
 . "$LEDGER" || blind "bin/lib/ownership-set.sh could not be sourced"
 
+# --- the ratchet, read BEFORE the population ---------------------------------
+# It used to be read after, because it was only ever compared against the
+# finished totals. It is now the thing that says which paths are already
+# recorded, so each file has to be able to ask about itself as it is counted.
+r_lines=""; r_share=""; r_files=""
+if [ -r "$RATCHET" ]; then
+  while read -r k v; do
+    case "$k" in
+      foreignlines) r_lines="$v" ;;
+      foreignshare) r_share="$v" ;;
+      file)         r_files="$r_files $v" ;;
+    esac
+  done < "$RATCHET"
+fi
+
 # --- derive the population from the tree ------------------------------------
 FILES="$(git -C "$TREE" ls-files -- $OWN_AREAS 2>/dev/null)" || blind "git ls-files failed in the tree given"
 [ -n "$FILES" ] || blind "the tree given has no files under any of the declared areas ($(echo $OWN_AREAS | tr '\n' ' '))"
@@ -129,6 +232,13 @@ unclassified=""
 foreign_list=""
 mine_list=""
 recv_names=""; recv_lines=""
+# rec_now  lines held TODAY by paths the ratchet already records
+# rec_pairs "<owner>|<path>" for each of those, so the READ BY test below can
+#           ask only same-owner recorded files without re-deriving an owner
+# new_rows  "<path>|<lines>|<owner>" for each foreign path the ratchet does not
+#           record. `|` is safe: git does not track a path containing one here,
+#           and an owner is a single bare word by the ledger's own format.
+rec_now=0; rec_pairs=""; new_rows=""
 
 add_recv() {
   local name="$1" n="$2" i=0 out_n="" out_l="" found=0
@@ -167,6 +277,10 @@ while IFS= read -r f; do
     foreign=$((foreign + n)); nforeign=$((nforeign + 1))
     foreign_list="$foreign_list $f"
     add_recv "$owner" "$n"
+    case " $r_files " in
+      *" $f "*) rec_now=$((rec_now + n)); rec_pairs="$rec_pairs $owner|$f" ;;
+      *)        new_rows="$new_rows $f|$n|$owner" ;;
+    esac
     own_is_receiver "$owner" || say "FLAG [receiver] $f names owner '$owner', which is not declared in OWN_RECEIVERS"
   fi
 done <<EOF
@@ -211,24 +325,57 @@ if [ -n "$unclassified" ]; then
   done
 fi
 
-# --- the ratchet -------------------------------------------------------------
-r_lines=""; r_share=""; r_files=""
-if [ -r "$RATCHET" ]; then
-  while read -r k v; do
-    case "$k" in
-      foreignlines) r_lines="$v" ;;
-      foreignshare) r_share="$v" ;;
-      file)         r_files="$r_files $v" ;;
-    esac
-  done < "$RATCHET"
-fi
+# --- does a new foreign path FOLLOW one already recorded? --------------------
+# Prints the recorded path it follows and returns 0; returns 1 when nothing
+# does, which is what makes it PARKED. See "WHEN A NEW PATH IS NOT A NEW
+# FOOTPRINT" in the header for why these two relations and not a list.
+follows_recorded() {
+  local p="$1" o="$2" sub base pathref pair rp
+  # FOLLOWS -- asked of the ledger, which owns the rule. A ledger too old to
+  # answer simply does not grant this relation; inventing a second copy of the
+  # derivation here is how the two answers would drift apart.
+  if command -v own_derived_from >/dev/null 2>&1; then
+    if sub="$(own_derived_from "$p")" && [ -n "$sub" ]; then
+      case " $r_files " in *" $sub "*) printf 'follows %s\n' "$sub"; return 0 ;; esac
+    fi
+  fi
+  # READ BY -- the last two path components, so that a reference is a path and
+  # not a word that happens to collide.
+  base="${p##*/}"
+  pathref="${p%/*}"
+  if [ "$pathref" != "$p" ]; then pathref="${pathref##*/}/$base"; else pathref="$base"; fi
+  for pair in $rec_pairs; do
+    [ "${pair%%|*}" = "$o" ] || continue
+    rp="${pair#*|}"
+    if grep -qF -- "$pathref" "$TREE/$rp" 2>/dev/null; then
+      printf 'read by %s\n' "$rp"; return 0
+    fi
+  done
+  return 1
+}
 
 regression=0
+notes=0
 if [ -n "$r_lines" ]; then
-  if [ "$foreign" -gt "$r_lines" ]; then
-    say "FLAG [regression] foreign mechanism GREW: $foreign lines, bar is $r_lines. Something belonging to another project was parked here."
-    regression=1; findings=$((findings + 1))
-  fi
+  # R5 -- THE FOOTPRINT. A foreign path the ratchet does not record is parked
+  # here unless it follows one that it does. This is the assertion the line
+  # count used to stand in for, and it is both stricter (a parked file is
+  # caught even when the arithmetic nets out downwards) and narrower (it says
+  # nothing about a recorded file getting longer).
+  new_lines=0; att_lines=0; natt=0
+  for row in $new_rows; do
+    p="${row%%|*}"; rest="${row#*|}"; n="${rest%%|*}"; o="${rest##*|}"
+    if rel="$(follows_recorded "$p" "$o")"; then
+      att_lines=$((att_lines + n)); natt=$((natt + 1))
+      say "  NOTE [new path] $p ($n lines, $o) is not in the ratchet, and $rel, which is. It leaves with it, so it is not a new footprint."
+      notes=$((notes + 1))
+    else
+      new_lines=$((new_lines + n))
+      say "FLAG [parked] $p ($n lines) is $o's mechanism and is NOT in the ratchet's file list; no recorded file of $o's reads it and it is no recorded file's suite. Something belonging to another project was parked here."
+      regression=1; findings=$((findings + 1))
+    fi
+  done
+
   if [ "$share" -gt "$r_share" ]; then
     say "FLAG [regression] foreign SHARE grew: $((share/10)).$((share%10))%, bar is $((r_share/10)).$((r_share%10))%"
     regression=1; findings=$((findings + 1))
@@ -236,8 +383,10 @@ if [ -n "$r_lines" ]; then
   # R4 -- the reclassification dodge. A path recorded foreign may LEAVE (that
   # is the migration this whole guard is for). It may not stay and become
   # realisateur's.
+  gone=0; nrec=0
   for p in $r_files; do
-    [ -f "$TREE/$p" ] || continue
+    nrec=$((nrec + 1))
+    if [ ! -f "$TREE/$p" ]; then gone=$((gone + 1)); continue; fi
     if row="$(own_owner "$p")"; then
       o="${row%% *}"
       if [ "$o" = "realisateur" ]; then
@@ -246,18 +395,36 @@ if [ -n "$r_lines" ]; then
       fi
     fi
   done
-  say "  ratchet: bar is $r_lines lines / $((r_share/10)).$((r_share%10))%  (today: $foreign / $((share/10)).$((share%10))%)"
+
+  # Growth is a NOTE, not a finding -- but it is never silent, and it is
+  # decomposed, because "+533 lines" and "+533 lines in a file that was
+  # already here" are different facts about the same number.
+  if [ "$foreign" -gt "$r_lines" ]; then
+    say "  NOTE [growth] the foreign surface is $foreign lines, $((foreign - r_lines)) above the $r_lines recorded. Not a regression: every line of it is inside a path this ratchet records, or in a new path that follows one."
+    notes=$((notes + 1))
+  fi
+  say "  recorded paths hold $rec_now lines today (recorded at $r_lines across $nrec path(s), $gone of which have since left the tree)"
+  [ "$natt" -gt 0 ] && say "  new paths that follow a recorded one: $att_lines lines in $natt file(s)"
+  [ "$new_lines" -gt 0 ] && say "  PARKED: $new_lines lines in paths nothing here accounts for"
+  say "  ratchet: share bar is $((r_share/10)).$((r_share%10))% (today $((share/10)).$((share%10))%); line baseline $r_lines (today $foreign)"
 else
   say "  ratchet: none recorded yet -- run --accept to set the bar"
 fi
 
 say ""
-say "ownership-audit: $findings finding(s); $nforeign foreign file(s) remain"
+say "ownership-audit: $findings finding(s), $notes note(s); $nforeign foreign file(s) remain"
 
 # --- accept ------------------------------------------------------------------
 if [ "$ACCEPT" -eq 1 ]; then
+  # WHAT --accept CAN AND CANNOT DO, since growth is now permitted and the
+  # recorded LINE COUNT can therefore go up. The bars are the other two, and
+  # neither can be worsened by accepting: the share can only fall, because a
+  # risen share is a regression and this refuses on a regression; and the file
+  # list can only gain a path that FOLLOWS one already in it, because a parked
+  # path is a regression too. The line count is a baseline to measure growth
+  # from, not a bar -- see the header.
   if [ "$regression" -eq 1 ]; then
-    say "REFUSED: --accept never lowers the bar. Fix the regression first."
+    say "REFUSED: --accept does not record a parked path, a risen share or a reclassification as the new normal. Fix the regression first."
     exit 1
   fi
   if [ -n "$unclassified" ]; then
@@ -266,7 +433,9 @@ if [ "$ACCEPT" -eq 1 ]; then
   fi
   {
     printf '# ownership-audit.ratchet -- the foreign surface when last accepted.\n'
-    printf '# Lowered by --accept, never raised by any flag. See bin/ownership-audit.sh.\n'
+    printf '# The SHARE and the FILE LIST are bars and --accept only ever improves\n'
+    printf '# them; the line count is the baseline growth is measured from.\n'
+    printf '# See bin/ownership-audit.sh.\n'
     printf '# accepted %s\n' "$(date -Is)"
     printf 'foreignlines %s\n' "$foreign"
     printf 'foreignshare %s\n' "$share"

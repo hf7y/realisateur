@@ -241,19 +241,35 @@ bin/tests/verb-build-test.sh       verbs the verb build's own suite.
 # forget and would let a foreign script's tests be quietly re-homed here while
 # the script itself moved out. Suites whose name maps to nothing (a suite over
 # a whole population rather than one script) still need an explicit row.
-own_owner() {
-  local p="$1" best="" bestlen=0 pre owner rest
-
+#
+# own_derived_from <path> -- prints the path whose row gave <path> its owner,
+# when the owner was DERIVED rather than declared for <path> itself; rc 1 when
+# nothing derived it. Same rule as the branch below, and deliberately the ONLY
+# copy of the candidate list: bin/ownership-audit.sh has to ask which file a
+# derived one follows (a suite for a script already here is not a new foreign
+# path), and a second list over there would be a second answer to drift from.
+own_derived_from() {
+  local p="$1" b cand
   case "$p" in
-    bin/tests/*)
-      local b="${p#bin/tests/}"
-      b="${b%.test.sh}"; b="${b%-test.sh}"; b="${b%.sh}"
-      local cand
-      for cand in "bin/$b.sh" "bin/lib/$b.sh" "bin/lib/$b-set.sh"; do
-        [ "$cand" = "$p" ] && continue
-        if own_owner "$cand" >/dev/null 2>&1; then own_owner "$cand"; return 0; fi
-      done ;;
+    bin/tests/*) : ;;
+    *) return 1 ;;
   esac
+  b="${p#bin/tests/}"
+  b="${b%.test.sh}"; b="${b%-test.sh}"; b="${b%.sh}"
+  for cand in "bin/$b.sh" "bin/lib/$b.sh" "bin/lib/$b-set.sh"; do
+    [ "$cand" = "$p" ] && continue
+    if own_owner "$cand" >/dev/null 2>&1; then printf '%s\n' "$cand"; return 0; fi
+  done
+  return 1
+}
+
+own_owner() {
+  local p="$1" best="" bestlen=0 pre owner rest sub
+
+  # No recursion hazard: own_derived_from only ever answers for bin/tests/*,
+  # and every candidate it hands back is bin/*.sh or bin/lib/*.sh, which it
+  # refuses on sight.
+  if sub="$(own_derived_from "$p")"; then own_owner "$sub"; return 0; fi
 
   while read -r pre owner rest; do
     [ -n "$pre" ] || continue
