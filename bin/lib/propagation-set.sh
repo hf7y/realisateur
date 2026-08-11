@@ -347,6 +347,7 @@ suite-docs-lint.sh
 thermostat-wiring.sh
 path-provenance-audit.sh
 selfdev-agent-survey.sh
+served-not-cloned.sh
 "
 # selfdev-agent-survey.sh is LOCAL for the same reason as thermostat-wiring.sh:
 # an estate-wide, root-only, read-only survey a human runs from a hands account
