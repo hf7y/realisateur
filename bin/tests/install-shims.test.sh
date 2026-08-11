@@ -103,7 +103,7 @@ fi
 check "D5 install exits 0 once healed" "$rc" "0"
 
 # --- D6/D7: --check must REFUSE rather than heal, and must not write ---
-rm -rf "$WORK/bin" "$WORK/cmds"; mkdir -p "$WORK/bin" "$WORK/cmds"
+rm -rf "${WORK:?}/bin" "${WORK:?}/cmds"; mkdir -p "$WORK/bin" "$WORK/cmds"
 ln -sfn "$CANARY" "$WORK/bin/silence-audit"
 rc="$(run_shims --check)"
 

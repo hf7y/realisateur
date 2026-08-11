@@ -55,6 +55,34 @@
 # refusal unless --allow-shrink: losing a project's verbs because one API
 # call flaked is indistinguishable, in the manifest, from a project that
 # genuinely retired its verbs.
+#
+# AND FOR THE SAME REASON, A HALF-DECLARATION IS A REFUSAL.
+# ---------------------------------------------------------
+# The declaration rule is a conjunction, so it has a difference as well as an
+# intersection: an executable bin/<n> with no man/<n>.1, or a man/<n>.1 with
+# no executable bin/<n>. This script printed the intersection and DISCARDED
+# the difference -- no count, no name, no line in the manifest -- and then
+# `[ -n "$verbs" ] || continue` skipped the project entirely.
+#
+# What that cost, exactly: ecosim's `bin/ecosim-sensor` has been half-declared
+# for its whole existence, so it was excluded from EVERY BUILD EVER CUT. What
+# was visible instead was `ecosim-sensor-tick` reporting WRAPPER_NO_SENSOR on
+# a host, which reads as a stale build, and cost a diagnosis that concluded
+# "cut a new build" -- realisateur#66. A new build would have changed nothing.
+#
+# So a half-declaration is named, written into the manifest, and REFUSED. Not
+# warned about: this script already refuses on two weaker conditions (a tree
+# that did not read, a name declared twice), and a build that warns and
+# proceeds is a build whose warnings get skimmed.
+#
+# The genuinely-not-a-verb case -- an installer, a cron wrapper, a scraper --
+# opts out ONCE, by name, in bin/lib/not-a-verb.tsv, and every applied
+# exemption is written into the manifest so the decision travels with the
+# artifact every account consumes rather than living on the terminal of
+# whoever ran the cut. --allow-half-declared is the per-run escape, and it is
+# the same shape as --allow-shrink: the operator who has already filed the
+# defect can still cut tonight's build, loudly, with the finding recorded in
+# the manifest.
 set -uo pipefail
 
 CLI_NAME='cut-verb-build.sh'
@@ -63,12 +91,15 @@ CLI_USAGE='  cut-verb-build.sh                    derive and print the manifest 
   cut-verb-build.sh --write            also store it under the build root
   cut-verb-build.sh --assemble <dir>   lay every verb out under <dir> (what CI commits)
   cut-verb-build.sh --allow-shrink     accept a build with fewer verbs than the last
+  cut-verb-build.sh --allow-half-declared
+                                       accept a project that declares half a verb
   cut-verb-build.sh --dry-run          derive and check the manifest SHAPE only; never a build'
-CLI_FLAGS='--write --assemble --allow-shrink --dry-run --owner --build-root'
+CLI_FLAGS='--write --assemble --allow-shrink --allow-half-declared --dry-run --owner --build-root'
 CLI_POSITIONAL=any   # flag VALUES (--build <id>) read as positionals to cli-guard;
                      # the arg loop below rejects anything genuinely unknown.
 CLI_EXITS='  0  a complete manifest was derived
-  1  refused: BLIND (cannot read GitHub), empty, shrinking, or a name declared twice
+  1  refused: BLIND (cannot read GitHub), empty, shrinking, a name declared
+     twice, or a HALF-declared verb (bin/<n> with no man/<n>.1, or the inverse)
   2  usage error'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
@@ -77,6 +108,7 @@ OWNER="${VERB_BUILD_OWNER:-hf7y}"
 BUILD_ROOT="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"
 WRITE=0
 ALLOW_SHRINK=0
+ALLOW_HALF=0
 ASSEMBLE=''
 DRY_RUN=0
 
@@ -85,6 +117,7 @@ while [ $# -gt 0 ]; do
     --write)        WRITE=1 ;;
     --assemble)     ASSEMBLE="${2:?--assemble needs a directory}"; shift ;;
     --allow-shrink) ALLOW_SHRINK=1 ;;
+    --allow-half-declared) ALLOW_HALF=1 ;;
     --dry-run)      DRY_RUN=1 ;;
     --owner)        OWNER="${2:?--owner needs a value}"; shift ;;
     --build-root)   BUILD_ROOT="${2:?--build-root needs a value}"; shift ;;
@@ -95,6 +128,33 @@ done
 
 say() { printf '%s\n' "$*" >&2; }
 die() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
+
+# --- the not-a-verb opt-out, loaded from ONE file -----------------------
+# Rows are <project>\t<name>\t<why>. Read from a file rather than a case
+# statement in here so the judgement is reviewable next to the rule it bends
+# (lib/verb-set.sh states the rule; lib/not-a-verb.tsv states its exceptions),
+# and so adding one is a diff a reader can see rather than a line in a 470-line
+# script.
+#
+# ABSENT MEANS NOTHING IS EXEMPT, which fails toward the refusal rather than
+# away from it -- a broken checkout produces a loud build, never a quiet one.
+# It still says so, because "no exemptions apply" and "the file was not there"
+# are the two states this ecosystem keeps conflating.
+NOT_A_VERB="${VERB_NOT_A_VERB_FILE:-$(dirname "${BASH_SOURCE[0]}")/lib/not-a-verb.tsv}"
+exempt=''
+if [ -f "$NOT_A_VERB" ]; then
+  exempt="$(grep -v '^[[:space:]]*#' "$NOT_A_VERB" \
+            | awk -F'\t' 'NF>=2 && $1 != "" && $2 != "" {
+                            printf "%s\t%s\t%s\n", $1, $2, ($3 == "" ? "(no reason recorded)" : $3) }')"
+else
+  say "  note: $NOT_A_VERB not found -- no not-a-verb exemptions will apply"
+fi
+
+# exempt_reason <project> <name> -- prints the recorded reason, rc 0 if exempt.
+exempt_reason() {
+  printf '%s\n' "$exempt" \
+    | awk -F'\t' -v p="$1" -v n="$2" '$1 == p && $2 == n { print $3; f = 1; exit } END { exit !f }'
+}
 
 # --dry-run is for CI that has NO org credential -- see the smoke workflow.
 # It must therefore be incapable of producing anything a host could install,
@@ -150,7 +210,9 @@ repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].nam
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 rows="$tmp/rows"; : > "$rows"
+halves="$tmp/halves"; : > "$halves"
 blind=0
+half_bad=0
 projects=0
 
 for repo in $repos; do
@@ -204,12 +266,38 @@ for repo in $repos; do
 
   # The declaration rule, applied to the fetched tree. Same two conditions
   # as verb-set.sh: executable bin/<n> AND man/<n>.1. bibliothecaire's
-  # bin/page92.py is executable, has no page, and correctly is not a verb.
-  verbs="$(printf '%s\n' "$tree" | awk '
+  # bin/page92.py is executable, has no page, and correctly is not a verb --
+  # which is why it has a row in lib/not-a-verb.tsv and not a man page.
+  #
+  # BOTH HALVES COME OUT OF THE SAME PASS. The END block used to be one loop
+  # over the intersection; the difference was computed and thrown away in the
+  # same breath. Emitting it costs two more loops over data awk already has.
+  decl="$(printf '%s\n' "$tree" | awk '
       $1 == "100755" && $2 ~ /^bin\/[^\/]+$/ { n = substr($2, 5); exec_[n] = 1 }
       $2 ~ /^man\/[^\/]+\.1$/ { n = $2; sub(/^man\//, "", n); sub(/\.1$/, "", n); page[n] = 1 }
-      END { for (n in exec_) if (n in page) print n }
+      END {
+        for (n in exec_) if (n in page)     print "VERB\t" n
+        for (n in exec_) if (!(n in page))  print "HALF\t" n "\texecutable bin/" n " with no man/" n ".1"
+        for (n in page)  if (!(n in exec_)) print "HALF\t" n "\tman/" n ".1 with no executable bin/" n
+      }
     ' | sort)"
+  verbs="$(printf '%s\n' "$decl" | awk -F'\t' '$1 == "VERB" { print $2 }')"
+
+  # Recorded BEFORE the `continue` below. A project whose every executable is
+  # half-declared derives no verbs at all, and skipping it here for that reason
+  # is precisely how ecosim's whole bin/ went unmentioned for weeks.
+  # A here-string, not a pipe: half_bad has to survive the loop.
+  while IFS=$'\t' read -r tag name why; do
+    [ "$tag" = HALF ] || continue
+    if reason="$(exempt_reason "$repo" "$name")"; then
+      printf 'NOT-A-VERB\t%s\t%s\t%s\n' "$repo" "$name" "$reason" >> "$halves"
+    else
+      say "  HALF-DECLARED  $repo/$name: $why -- NOT declared, omitted from this build"
+      printf 'HALF-DECLARED\t%s\t%s\t%s\n' "$repo" "$name" "$why" >> "$halves"
+      half_bad=$((half_bad + 1))
+    fi
+  done <<< "$decl"
+
   [ -n "$verbs" ] || continue
 
   projects=$((projects + 1))
@@ -220,6 +308,21 @@ for repo in $repos; do
 done
 
 [ "$blind" -eq 0 ] || die "$blind repository tree(s) did not read. Refusing to cut a build that is short by an unknown amount."
+
+# --- 2a. half-declarations ----------------------------------------------
+# Same posture as the two refusals on either side of this line: a build that
+# is short by an unknown amount is refused, and so is one that is short by a
+# KNOWN amount it never mentioned. The names are already on stderr, one line
+# each, from the loop above.
+exempt_count="$(grep -c '^NOT-A-VERB' "$halves" || true)"
+[ "$exempt_count" -eq 0 ] || \
+  say "  $exempt_count executable(s) recorded as not-a-verb in $NOT_A_VERB -- each is named in the manifest"
+if [ "$half_bad" -gt 0 ]; then
+  if [ "$ALLOW_HALF" -eq 0 ]; then
+    die "$half_bad HALF-declared name(s), listed above. A project declares a verb only with BOTH an executable bin/<name> and a matching man/<name>.1; half of that is silently omitted, and the symptom surfaces later and somewhere else as a wrapper failing on a path that was never going to exist (realisateur#66). Fix the declaration in the project, or -- if it is genuinely not a verb -- give it a row in $NOT_A_VERB. --allow-half-declared cuts anyway and records the finding in the manifest."
+  fi
+  say "  --allow-half-declared: cutting with $half_bad half-declaration(s) UNFIXED. They are omitted from this build and named in its manifest."
+fi
 
 verb_count="$(wc -l < "$rows" | tr -d ' ')"
 [ "$verb_count" -gt 0 ] || die 'derived zero verbs. That is a BLIND read, not an ecosystem with no verbs.'
@@ -282,6 +385,19 @@ manifest="$tmp/manifest.tsv"
   printf '# cut by %s from github.com/%s on %s\n' "$CLI_NAME" "$OWNER" "$(hostname -s)"
   printf '# %d verb(s), %d project(s). Immutable: install this by id, never by branch.\n' \
          "$verb_count" "$projects"
+  # WHAT THIS BUILD DECIDED NOT TO INCLUDE, AND WHY -- in the artifact every
+  # account consumes, not only on the terminal of whoever ran the cut. A
+  # half-declaration's whole failure mode is that its consequence lands on a
+  # different host, weeks later, as a missing path; the manifest is the one
+  # thing that travels with it. Comment rows, so every consumer's
+  # `grep -v '^#'` and this script's own shape check are unaffected.
+  if [ -s "$halves" ]; then
+    printf '# %d name(s) on a bashified branch are NOT in this build. NOT-A-VERB rows\n' \
+           "$(wc -l < "$halves" | tr -d ' ')"
+    printf '# are recorded judgements (%s); HALF-DECLARED rows are unresolved defects.\n' \
+           "$(basename "$NOT_A_VERB")"
+    sed 's/^/# /' "$halves" | sort
+  fi
   printf '# project\tverb\tsha\trepo_url\n'
   sort "$rows"
 } > "$manifest"

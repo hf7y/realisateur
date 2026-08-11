@@ -30,14 +30,14 @@ check() { # <name> <expected-exit> <actual-exit>
   else echo "  FAIL $1 (expected exit $2, got $3)"; fail=$((fail+1)); fi
 }
 
-cd "$T"
+cd "$T" || exit 1
 git init -q --bare remote.git
 git clone -q remote.git a 2>/dev/null; git clone -q remote.git b 2>/dev/null
 for r in a b; do git -C $r config user.email t@test; git -C $r config user.name T; done
-cd a; git checkout -q -B main; mkdir archive
+cd a || exit 1; git checkout -q -B main; mkdir archive
 printf 'line1\n' > FOCUS.md; printf 'orig content\n' > archive/x.idea
 git add -A; git commit -qm init; git push -q origin main
-git branch -q --set-upstream-to=origin/main; cd ..
+git branch -q --set-upstream-to=origin/main; cd .. || exit 1
 git -C b fetch -q; git -C b checkout -q -B main origin/main; git -C b branch -q --set-upstream-to=origin/main
 printf 'test message\n' > "$T/msg.txt"
 
@@ -45,7 +45,7 @@ printf 'test message\n' > "$T/msg.txt"
 upstream_writes() { git -C b pull -q --rebase; ( cd b && eval "$2" && git add -A && git commit -qm "$1" && git push -q ); }
 
 echo "focus-commit.sh:"
-cd a
+cd a || exit 1
 printf 'line2\n' >> FOCUS.md
 "$SCRIPT" . "$T/msg.txt" FOCUS.md >/dev/null 2>&1; check "happy path pushes" 0 $?
 
@@ -55,21 +55,21 @@ printf 'sneaky\n' >> archive/x.idea; git add archive/x.idea; printf 'line3\n' >>
 "$SCRIPT" . "$T/msg.txt" FOCUS.md >/dev/null 2>&1; check "unrelated staged file refused" 1 $?
 git reset -q --hard
 
-cd ..; upstream_writes "other file" "printf 'other\n' > OTHER.md"; cd a
+cd .. || exit 1; upstream_writes "other file" "printf 'other\n' > OTHER.md"; cd a || exit 1
 printf 'line4\n' >> FOCUS.md
 "$SCRIPT" . "$T/msg.txt" FOCUS.md >/dev/null 2>&1; check "race on different file: rebase+push" 0 $?
 
-cd ..; upstream_writes "archive rewrite" "printf 'upstream rewrote\n' > archive/x.idea"; cd a
+cd .. || exit 1; upstream_writes "archive rewrite" "printf 'upstream rewrote\n' > archive/x.idea"; cd a || exit 1
 printf 'line5\n' >> FOCUS.md
 "$SCRIPT" . "$T/msg.txt" FOCUS.md >/dev/null 2>&1; check "race rewriting unnamed file: still clean" 0 $?
 
-cd ..; upstream_writes "upstream focus" "printf 'UPSTREAM\n' >> FOCUS.md"; cd a
+cd .. || exit 1; upstream_writes "upstream focus" "printf 'UPSTREAM\n' >> FOCUS.md"; cd a || exit 1
 printf 'line6\n' >> FOCUS.md
 "$SCRIPT" . "$T/msg.txt" FOCUS.md >/dev/null 2>&1; check "same-file conflict refused" 1 $?
 grep -q 'line6' FOCUS.md; check "  ...and our work survives" 0 $?
 git reset -q --hard origin/main
 
-cd ..; upstream_writes "upstream renames" "git mv FOCUS.md RENAMED.md"; cd a
+cd .. || exit 1; upstream_writes "upstream renames" "git mv FOCUS.md RENAMED.md"; cd a || exit 1
 git reset -q --hard; printf 'line7\n' >> FOCUS.md
 "$SCRIPT" . "$T/msg.txt" FOCUS.md >/dev/null 2>&1; check "rename-follow caught by manifest" 1 $?
 remote_tip="$(git -C "$T/remote.git" log --oneline -1 main | grep -c 'upstream renames')"

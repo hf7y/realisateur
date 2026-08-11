@@ -103,6 +103,53 @@ jobs:
           fi
           echo "all $ran suite(s) passed."
 
+  # SHELLCHECK. A separate job from `suites` on purpose: the suite above
+  # asserts that bin/shellcheck-lint.sh BEHAVES (its regression path fires, it
+  # goes BLIND rather than green), which is what a container can honestly say
+  # about a guard. THIS job runs the guard against the real tree, which is a
+  # different claim and deserves its own red/green line.
+  #
+  # ubuntu-latest ships shellcheck preinstalled, so there is no install step to
+  # rot. If that ever stops being true the guard exits 2 (BLIND) and this job
+  # goes red -- which is the correct outcome, and the reason it was built to
+  # distinguish "could not look" from "looked and found nothing".
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # PIN THE VERSION. The ratchet is a COMPARISON, and comparing findings
+      # across two shellcheck releases compares two different questions --
+      # releases add checks, retire them, and change directive parsing. Live
+      # example from the day this was written: 0.9.0 flags a comment line
+      # beginning `# shellcheck` as a malformed directive and 0.10.0 does not,
+      # so the same file is clean under one and carries two errors under the
+      # other.
+      #
+      # ubuntu-latest happens to ship 0.9.0 today. Depending on that means the
+      # baseline silently changes meaning the day GitHub bumps the image, and
+      # the failure would land on whoever's PR was open at the time, looking
+      # like their fault. So it is asserted, not assumed: if the runner drifts,
+      # THIS step fails with a message naming the cause, instead of the ratchet
+      # failing with a message about someone's branch.
+      - name: Confirm the linter is present AND is the pinned version
+        run: |
+          shellcheck --version
+          want="$(awk '/^# shellcheck-version /{print $3}' bin/shellcheck-lint.ratchet)"
+          got="$(shellcheck --version | awk '/^version:/{print $2}')"
+          if [ -z "$want" ]; then
+            echo "::error::bin/shellcheck-lint.ratchet records no shellcheck-version -- re-accept it"
+            exit 1
+          fi
+          if [ "$want" != "$got" ]; then
+            echo "::error::runner has shellcheck $got, ratchet was accepted with $want."
+            echo "The baseline is not comparable across versions. Either pin the runner"
+            echo "to $want, or re-accept the ratchet under $got and review what moved."
+            exit 1
+          fi
+          echo "shellcheck $got matches the ratchet."
+      - name: Ratchet -- fail only on a finding a file did not already have
+        run: bash bin/shellcheck-lint.sh
+
   markdown-cost:
     runs-on: ubuntu-latest
     steps:

@@ -61,6 +61,25 @@ Before marking anything done:
       conflicting meaning was invented an hour later — retyping was the
       distribution mechanism, and that is the defect. `claim-drift.sh` now
       enforces the same text it prints.)
+- [ ] **Before writing `DECISION:`, ask the cheaper question first: did the
+      human already explicitly ask for this exact change earlier in THIS
+      conversation, and is there verified evidence (tests, a live dogfooded
+      run) that it does what was asked?** If yes, there is no decision —
+      write nothing, or `NO-DECISION:` if auto-merge is unavailable. This is
+      not mechanically checkable: `claim-drift.sh`'s `OVERCAUTIOUS` check
+      only catches ONE narrow shape (a diff touching no existing file's
+      behavior) and cannot see the conversation at all — proven live on
+      2026-08-10 when realisateur#124, implementing that very check, carried
+      an unwarranted `DECISION:` line that the check itself could not flag
+      (its diff genuinely touches an existing file) and STILL got a second,
+      identical `DECISION:` on the very next commit fixing the first one.
+      There is no diff-shape or wording heuristic that reliably tells a
+      legitimate `DECISION:` from an illegitimate one — a real, correctly-
+      approved decision in this repo's own test suite
+      (`"DECISION: adopt the ratchet as a build-blocking floor?"`) is worded
+      in the identical closed-yes/no shape as the illegitimate #124 case.
+      The check is real and worth keeping for what it does catch; it is not
+      a substitute for this.
 
 ## Ecosystem protocols (realisateur baseline)
 The checklist above governs work inside this repo. These govern anything

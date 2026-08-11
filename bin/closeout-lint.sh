@@ -1,85 +1,32 @@
 #!/usr/bin/env bash
 # closeout-lint.sh -- the deterministic half of the `/cloture` session-closing
-# rite (design: realisateur .scheduler/FOCUS.md 2026-07-26). Offline-first,
-# zero AI, writes nothing. Bare invocation exits 0 always -- same
-# signals-not-verdicts stance as ecosystem-survey.sh / hygiene-lint.sh /
-# milestone-audit.sh -- FLAGs printed here are for a human/AI to triage.
-# `--strict` gates on them (exit 1) for a caller that wants a hard failure,
-# e.g. a pre-close hook. Exit 2 is already used (via lib/cli-guard.sh) for
-# usage errors, so --strict uses 1, matching reach-lint.sh/silence-audit.sh.
+# rite (design: realisateur .scheduler/FOCUS.md 2026-07-26). Zero AI, writes
+# nothing. A and C are offline; B asks GitHub whether this session left an
+# issue or a PR and reports a counted BLIND -- never a FLAG -- when it cannot,
+# and `--repo` skips B so the SubagentStop path stays fully offline. Signals,
+# not verdicts: see $CLI_EXITS below for what each code means.
 #
 # GUARD: is the work this session did actually durable, where its consumers read?
 # RUNNER: hooks/subagent-closeout.sh bin/tests/closeout-lint.test.sh
 # GUARD-TEST: bin/tests/closeout-lint.test.sh
 # GATE: strict --repo $TREE
-# VERIFIED: 2026-08-07 via bash bin/tests/closeout-lint.test.sh (post-#99, squash-merge and worktree blindness fixed)
+# VERIFIED: 2026-08-11 via bash bin/tests/closeout-lint.test.sh (post-#137/#106/#139: shared-checkout dirt, branch attribution, remote session record)
 #
-# It answers ONE question a session cannot answer about itself reliably:
-# "is the work this session did actually durable, where its consumers read?"
-# An overnight run that is not saved anywhere didn't happen -- and the three
-# recorded ways that goes wrong are a dirty tree at exit, a commit that never
-# left the local clone, and a session record with no commit shas in it.
+# An overnight run that is not saved anywhere didn't happen, and the recorded
+# ways that goes wrong are a dirty tree at exit, a commit that never left the
+# local clone, and a session that left no record where its readers look.
+# Sections A, B and C each carry their own header below; usage is $CLI_USAGE.
 #
-# What it checks (per the queued design's layer 1):
-#   A. RECENTLY TOUCHED REPOS -- every registered project whose HEAD is
-#      younger than $HOURS: dirty working tree, commits ahead of upstream,
-#      or no upstream at all. Complements hygiene-lint.sh's untracked-script-
-#      in-bin/ check rather than repeating it; run that one too (this script
-#      does not shell out to it, so each stays independently readable).
-#      Linked worktrees are reported BLIND, not audited: section A reads the
-#      registered path's HEAD only, and saying so is cheaper and more honest
-#      than growing it to audit branches it was never scoped to.
-#   B. TODAY'S SESSION RECORD -- realisateur's own .scheduler/FOCUS.md has an
-#      entry dated today, and that entry cites at least one commit sha in
-#      backticks. Mechanizes the standing "confirm every meaningful change
-#      has a real commit" rule, which is prose today and so decays.
-#   C. BLOCKERS.md TODAY -- whether scheduler's BLOCKERS.md carries a block
-#      dated today.
+# --repo audits ONE tree (no positional name reaches a linked worktree): no
+# registry, no age gate, B/C skipped as session-wide concerns. It is what a
+# SubagentStop hook needs, since a registry scan would block every subagent over
+# some unrelated project. BLIND GATES, exit 6 (Zach, 2026-08-02) -- a domain
+# that existed and was NOT read is not a pass, and 6 is what `garde` and
+# `ausculte` already use; its two-shaped override is at the gate below.
 #
-# Stated limit (check C): whether a session actually FILED any decision is
-# not mechanically detectable from outside the session, so C never FLAGs.
-# It reports the fact and leaves the judgment to the closing session, which
-# is the only party that knows whether it had decision-shaped residue.
-#
-# Usage:
-#   closeout-lint.sh              scan every registered project
-#   closeout-lint.sh <name>...    scan only the named project(s)
-#   closeout-lint.sh --strict [<name>...]   exit 1 if any FLAG was printed
-#   closeout-lint.sh --repo <path>          audit ONE working tree
-#   closeout-lint.sh --allow-blind          downgrade BLIND to a warning
-#
-# --repo exists because this script's own BLIND message says "run closeout-lint
-# against them by hand" -- and until now there was no way to do that. A linked
-# worktree is not a registered project, so no positional name reaches it. In
-# --repo mode the registry is not consulted, the $HOURS age gate does not
-# apply (the caller just worked in that tree; whether HEAD is old is not the
-# question), and sections B and C are skipped: they are session-wide concerns,
-# not properties of one directory. It is what a SubagentStop hook needs --
-# "is THIS tree durable" -- and running the full registry scan from a hook
-# would block every subagent because some unrelated project is dirty.
-#
-# BLIND GATES, and it exits 6 to do it. Decided 2026-08-02 (Zach). A domain
-# that existed and was NOT read is not a pass, so under --strict it must stop
-# the caller. 6 rather than 1 or 2 because the ecosystem already has a blind
-# code and this reuses it instead of inventing a third: `garde --help` states
-# "6 blind" in its own exit table, and `ausculte` exits 6 for the same
-# condition. 1 stays FLAG-only, and 2 belongs to lib/cli-guard.sh for usage
-# errors -- a hook that cannot tell "I called this wrong" from "a domain was
-# unreadable" is a hook that will be ignored.
-#
-# The override is deliberate and two-shaped: --allow-blind for unattended
-# callers (explicit, auditable, greppable in a crontab) and an interactive
-# y/N prompt when stdin AND stdout are both a TTY. The prompt can never fire
-# unattended, which is the property that matters -- a lint that blocks
-# forever waiting on an answer nobody is there to give is worse than one that
-# does not gate at all.
-#
-# Env overrides (used by bin/tests/closeout-lint.test.sh, not normally set):
-#   HOURS=12        age below which a repo counts as "touched by this session"
-#   SCHED_ROOT=...  scheduler repo (project registry lives in schedule/*.conf)
-#   FOCUS_MD=...    the FOCUS.md checked by B
-#   BLOCKERS_MD=... the BLOCKERS.md checked by C
-#   TODAY=YYYY-MM-DD  the date B and C treat as "today"
+# Env overrides (set by bin/tests/closeout-lint.test.sh, not normally): HOURS,
+# SCHED_ROOT, BLOCKERS_MD, TODAY, GH_BIN (the CLI B asks; the suite stubs it),
+# and SESSION_START (epoch or anything `date -d` parses; see below).
 set -uo pipefail
 
 CLI_NAME='closeout-lint.sh'
@@ -102,11 +49,11 @@ CLI_POSITIONAL=any
 cli_guard "$@"
 
 SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-FOCUS_MD="${FOCUS_MD:-$REPO_ROOT/.scheduler/FOCUS.md}"
 BLOCKERS_MD="${BLOCKERS_MD:-$SCHED_ROOT/BLOCKERS.md}"
 HOURS="${HOURS:-12}"
 TODAY="${TODAY:-$(date +%Y-%m-%d)}"
+SESSION_START="${SESSION_START:-}"
+GH_BIN="${GH_BIN:-gh}"
 
 # Mode flags are not project names -- strip them before building the
 # positional project-filter list (cli_guard validated them but never consumes
@@ -152,19 +99,10 @@ else
     case "$name" in _*) continue ;; esac
     p="$(sed -n 's/^PROJECT_REPO_PATH=["'\'']\?\([^"'\'']*\)["'\'']\?[[:space:]]*$/\1/p' "$conf" | head -1)"
     [ -n "$p" ] || continue
-    # Every conf writes PROJECT_REPO_PATH="$HOME/Documents/Projects/<name>",
-    # and sed hands back the LITERAL `$HOME`. Until 2026-08-06 that string was
-    # used as a path directly, so section A reported all thirteen registered
-    # repos as `FLAG [missing-repo] ... does not exist` -- from inside one of
-    # them -- and then concluded "no registered repo has a commit younger than
-    # 12h" while this very session's commits were minutes old. The gate that
-    # exists to catch work left un-durable was examining ZERO repos. The
-    # SubagentStop hook only escapes it by passing --repo, which bypasses this
-    # loop entirely. Same defect fixed the same day in bin/hygiene-lint.sh.
-    #
-    # Expanded by SUBSTITUTION, not eval: a conf is config, and eval-ing a
-    # path out of the registry would make a registry entry a code-execution
-    # surface. Unrecognized forms are left alone and still FLAG below.
+    # sed hands back the LITERAL `$HOME`, used as a path directly until
+    # 2026-08-06 -- section A reported all thirteen registered repos missing,
+    # from inside one of them. Expanded by SUBSTITUTION, not eval: eval-ing a
+    # registry path would make a conf a code-execution surface.
     case "$p" in
       '$HOME'/*)   p="$HOME/${p#\$HOME/}" ;;
       '${HOME}'/*) p="$HOME/${p#\$\{HOME\}/}" ;;
@@ -184,10 +122,15 @@ if [ -n "$REPO_ARG" ]; then
 else
   echo "closeout-lint -- $TODAY (repos touched in the last ${HOURS}h)"
 fi
-if [ "$STRICT" = 1 ]; then
-  echo "(offline-first: no claude calls, writes nothing. --strict: FLAG=1, BLIND=6."
+if [ -n "$REPO_ARG" ]; then
+  net="offline (--repo skips section B)"
 else
-  echo "(offline-first: no claude calls, writes nothing, exits 0 -- --strict to gate."
+  net="offline but for section B's $GH_BIN query"
+fi
+if [ "$STRICT" = 1 ]; then
+  echo "($net: no claude calls, writes nothing. --strict: FLAG=1, BLIND=6."
+else
+  echo "($net: no claude calls, writes nothing, exits 0 -- --strict to gate."
 fi
 echo " FLAGs are SIGNALS a closing session should look at, not verdicts."
 echo " Run alongside hygiene-lint.sh; see realisateur/BUILD-DISCIPLINE.md.)"
@@ -201,8 +144,73 @@ fi
 flags=0
 blind=0
 touched=0
+touched_names=()
+touched_paths=()
 now="$(date +%s)"
 cutoff=$(( HOURS * 3600 ))
+
+# --- WHEN DID THIS SESSION START (hf7y/realisateur#137) ----------------------
+#
+# The dirty-tree rule below assumed "uncommitted changes at close are this
+# run's unfinished work" -- true for a solo session, false for a shared
+# checkout, now the normal case. On 2026-08-11 a subagent was blocked at close
+# over two paths already in its session-start `git status` snapshot, and every
+# remedy offered was wrong: commit adopts another session's work under your name
+# (the 2026-07-25 incident CLAUDE.md's subagent rules exist for), revert
+# destroys it, and it had nothing to push. Mechanical test: does every dirty
+# path's mtime PREDATE the session?
+#
+# THE ANCHOR IS THE SESSION PROCESS, not session-marker.sh's marker file --
+# SessionEnd is not guaranteed to fire, so that file goes stale silently (this
+# box had one reading 2026-08-03 beside a session running since 19:59 that
+# evening) while a live process's start cannot. Same ancestor walk and
+# `claude|claude.exe` match session-marker.sh uses, and it finds the SESSION,
+# not the subagent (a Task subagent is not its own process): an earlier anchor,
+# so more paths count as this run's and the teeth stay. UNKNOWN IS NOT CLEAN --
+# no anchor (cron, CI) leaves the FLAG as it was before this change.
+session_start_epoch() { # -> epoch seconds on stdout, or nothing and exit 1
+  local raw="$SESSION_START" p="${PPID}" d=0 comm et
+  if [ -n "$raw" ]; then
+    case "$raw" in *[!0-9]*) date -d "$raw" +%s 2>/dev/null || return 1 ;;
+                   *)        printf '%s\n' "$raw" ;; esac
+    return 0
+  fi
+  while [ "${p:-0}" -gt 1 ] 2>/dev/null && [ "$d" -lt 12 ]; do
+    comm="$(ps -p "$p" -o comm= 2>/dev/null | tr -d '[:space:]')"
+    et="$(ps -p "$p" -o etimes= 2>/dev/null | tr -d '[:space:]')"
+    case "$comm" in claude|claude.exe)
+      case "$et" in ''|*[!0-9]*) ;; *) printf '%s\n' "$(( now - et ))"; return 0 ;; esac ;;
+    esac
+    p="$(ps -p "$p" -o ppid= 2>/dev/null | tr -d '[:space:]')"; d=$((d + 1))
+  done
+  return 1
+}
+
+# `find -newermt` IS the test, so its absence must not read as "nothing is
+# newer" -- that would silently downgrade every dirty tree on a host whose find
+# predates it. Probed once; a failed probe leaves the anchor unset, i.e. FLAG.
+SESSION_EPOCH=""
+if command -v find >/dev/null 2>&1 && find /dev/null -newermt "@0" >/dev/null 2>&1; then
+  SESSION_EPOCH="$(session_start_epoch || true)"
+fi
+
+# Every dirty path modified at or after <epoch>. One that cannot be resolved --
+# a deletion, a rename's old half, a git-quoted name this does not unquote --
+# prints as RECENT: unattributable is this run's until proven otherwise. `find`
+# rather than `stat` because an untracked DIRECTORY is one `dir/` entry whose
+# own mtime says nothing about a file three levels inside it.
+dirty_newer_than() { # <repo> <epoch> <porcelain-output>
+  local repo="$1" epoch="$2" line p
+  printf '%s\n' "$3" | while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    p="${line:3}"; case "$p" in *' -> '*) p="${p##* -> }" ;; esac
+    p="${p%\"}"; p="${p#\"}"
+    if [ ! -e "$repo/$p" ] && [ ! -L "$repo/$p" ]; then printf '%s\n' "$p"
+    elif [ -n "$(find "$repo/$p" -newermt "@$epoch" -print -quit 2>/dev/null)" ]; then
+      printf '%s\n' "$p"
+    fi
+  done
+}
 
 i=0
 while [ "$i" -lt "${#projects[@]}" ]; do
@@ -210,35 +218,12 @@ while [ "$i" -lt "${#projects[@]}" ]; do
   [ -d "$repo" ] || { echo "  FLAG [missing-repo] $name: $repo does not exist"; flags=$((flags+1)); continue; }
   git -C "$repo" rev-parse --git-dir >/dev/null 2>&1 || continue
 
-  # Linked worktrees are checked BEFORE the age gate, deliberately. This
-  # section reads the registered path's own HEAD only, so a branch checked
-  # out in a linked worktree is invisible to every check below -- and the
-  # registered repo's HEAD can be old while that branch is minutes fresh,
-  # which would let the gate hide exactly the case this exists to surface.
-  # Decided 2026-07-28 (Zach, option b, scheduler/BLOCKERS.md "realisateur"):
-  # emit a symbol saying the domain was not read, rather than grow section A
-  # to audit each worktree. A sensor that cannot represent "did not look"
-  # reports it as "nothing there" -- see bin/silence-audit.sh.
-  # REVERSED 2026-08-07, and the measurement is why.
-  #
-  # Until today this emitted ONE `BLIND [worktrees]` line per repo and read
-  # nothing, per the 2026-07-28 decision (option b) to represent "did not look"
-  # rather than grow this section. On the real realisateur checkout that line
-  # covered THIRTEEN linked worktrees and sat directly above twelve loud FLAG
-  # lines that were all false (see the squash-merge note below). A guard whose
-  # entire purpose is finding stranded work was noisy about 12 resolved things
-  # and quiet about 13 places it had not looked -- and every agent in this
-  # estate works IN a worktree, so the unread domain is exactly where stranded
-  # work disproportionately lives. Signal-to-noise, precisely inverted.
-  #
-  # Probing all 13 for real: every one clean, none ahead. So reading them costs
-  # ZERO new FLAGs. The blindness was not protecting anyone from noise; it was
-  # not looking, and its remedy line was "run closeout-lint against them by
-  # hand" -- which is the "and then the human runs X" that Zach ruled out today.
-  #
-  # So: READ them. BLIND is kept for the case that actually earns it -- a
-  # worktree that cannot be read at all -- because trading "did not look" for a
-  # confident silence would be the same conflation pointed the other way.
+  # Linked worktrees are READ, and BEFORE the age gate; both halves measured
+  # 2026-08-07. A repo's HEAD can be old while a worktree's branch is minutes
+  # fresh (that gate hid two unpushed commits on 2026-07-28), and the older rule
+  # -- one `BLIND [worktrees]` line reading nothing -- covered 13 of them above
+  # 12 false FLAGs, all 13 in fact clean. BLIND is kept only for a worktree
+  # that cannot be read at all.
   wt="$(git -C "$repo" worktree list --porcelain 2>/dev/null \
         | awk -v m="$repo" '/^worktree /{p=substr($0,10); if (p != m) print p}')"
   if [ -n "$wt" ]; then
@@ -256,12 +241,10 @@ while [ "$i" -lt "${#projects[@]}" ]; do
       wbr="$(git -C "$w" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
       echo "  read [worktree] $name: $w [$wbr]"
 
-      # AN UNPUSHED COMMIT IS THE UNAMBIGUOUS FINDING, and the state the old
-      # code could not represent at all: work was committed and never
-      # published. Measured against the branch's own remote ref, never `@{u}`
-      # -- a branch pushed by explicit refspec has no upstream configured and
-      # is still safely on origin (BUILD-DISCIPLINE's settled definition; the
-      # `@{u}` form over-reported by two on the first propagation pass).
+      # AN UNPUSHED COMMIT IS THE UNAMBIGUOUS FINDING. Measured against the
+      # branch's own remote ref, never `@{u}`: an explicit-refspec push
+      # configures no upstream and is still safely on origin (`@{u}` over-
+      # reported by two on the first propagation pass).
       if git -C "$w" rev-parse --verify -q "origin/$wbr" >/dev/null 2>&1; then
         wahead="$(git -C "$w" rev-list --count "origin/$wbr..HEAD" 2>/dev/null)"
         if [ "${wahead:-0}" -gt 0 ]; then
@@ -271,18 +254,10 @@ while [ "$i" -lt "${#projects[@]}" ]; do
         fi
       fi
 
-      # A DIRTY TREE IS REPORTED AND DOES NOT GATE, deliberately.
-      #
-      # A concurrent agent's worktree is dirty by construction for as long as
-      # it is running. FLAGging that would make this guard red during every
-      # parallel session, and a guard that is red by default is furniture --
-      # which is the exact failure the rest of this commit is undoing. It is
-      # also not this run's to resolve: the propagated concurrent-agents rule
-      # forbids acting on another agent's in-flight tree, and three subagents
-      # already spent real effort proving they were right to refuse.
-      #
-      # Never silent, though. "A dirty tree at exit is a failed run" is a real
-      # standard; a human reading a closing report must see it and decide.
+      # A DIRTY TREE IS REPORTED AND DOES NOT GATE. A concurrent agent's tree
+      # is dirty by construction while it runs, so FLAGging it would make this
+      # guard red during every parallel session -- and red by default is
+      # furniture. Never silent, though: a human must see it and decide.
       wdirty="$(git -C "$w" status --porcelain 2>/dev/null | grep -c .)"
       if [ "${wdirty:-0}" -gt 0 ]; then
         echo "    note [worktree-dirty] $name: $wdirty uncommitted path(s) in $w"
@@ -303,55 +278,65 @@ EOF
   # audit nothing and report clean -- the exact shape of a false all-clear.
   if [ -z "$REPO_ARG" ] && [ "$age" -gt "$cutoff" ]; then continue; fi
   touched=$((touched+1))
+  touched_names+=("$name"); touched_paths+=("$repo")
   printf '  %-18s HEAD %sh ago\n' "$name" "$(( age / 3600 ))"
 
   # dirty tree: an uncommitted change to a live script is indistinguishable
-  # from an abandoned one (CLAUDE.md subagent rule, 2026-07-25 incident).
-  dirty="$(git -C "$repo" status --porcelain 2>/dev/null | head -8)"
-  if [ -n "$dirty" ]; then
-    echo "    FLAG [dirty-tree] $name: uncommitted changes at session close"
-    echo "$dirty" | sed 's/^/      /'
-    flags=$((flags+1))
+  # from an abandoned one (CLAUDE.md subagent rule, 2026-07-25 incident) --
+  # unless it predates the session, in which case it is indistinguishable from
+  # a CONCURRENT one, and adopting it is the same incident with the names
+  # swapped. See the session_start_epoch header above.
+  dirty_all="$(git -C "$repo" status --porcelain 2>/dev/null)"
+  if [ -n "$dirty_all" ]; then
+    dcount="$(printf '%s\n' "$dirty_all" | grep -c .)"
+    recent=""
+    [ -n "$SESSION_EPOCH" ] && recent="$(dirty_newer_than "$repo" "$SESSION_EPOCH" "$dirty_all")"
+    if [ -n "$SESSION_EPOCH" ] && [ -z "$recent" ]; then
+      echo "    note [pre-existing-dirty] $name: $dcount uncommitted path(s), every one last modified BEFORE this session started ($(date -d "@$SESSION_EPOCH" '+%F %T' 2>/dev/null || printf '@%s' "$SESSION_EPOCH"))"
+      printf '%s\n' "$dirty_all" | head -8 | sed 's/^/      /'
+      echo "      (not a FLAG, same carve-out as [worktree-dirty] above: committing"
+      echo "       adopts another run's work under your name, reverting destroys it)"
+    else
+      echo "    FLAG [dirty-tree] $name: uncommitted changes at session close"
+      printf '%s\n' "$dirty_all" | head -8 | sed 's/^/      /'
+      if [ -n "$SESSION_EPOCH" ]; then
+        echo "      ($(printf '%s\n' "$recent" | grep -c .) of $dcount modified since this session started -- those are this run's:)"
+        printf '%s\n' "$recent" | head -8 | sed 's/^/        /'
+      else  # unknown is not clean: the FLAG stands, as it did before #137
+        echo "      (session start is unknown here -- no SESSION_START and no claude"
+        echo "       ancestor -- so pre-existing dirt cannot be told from this run's)"
+      fi
+      flags=$((flags+1))
+    fi
   fi
 
-  # unpushed: "verified where the consumer reads it" -- the nightly clones
-  # the REF, not this working tree.
-  # EVERY BRANCH, not just the checked-out one. This read HEAD alone until
-  # 2026-08-01, so a branch that exists only on this host was invisible unless
-  # it happened to be checked out -- scheduler carried three such `paced/*`
-  # branches through an entire session and no lint mentioned them. `fauche`
-  # caught them, because it enumerates refs/heads/ rather than HEAD. Same
-  # defect shape as BUILD-DISCIPLINE pattern 20: the census read one branch
-  # and the report named the repository.
+  # unpushed: "verified where the consumer reads it" -- the nightly clones the
+  # REF, not this tree. EVERY BRANCH, not just the checked-out one: this read
+  # HEAD alone until 2026-08-01 and scheduler carried three host-only `paced/*`
+  # branches through a whole session unmentioned. A HOST-ONLY BRANCH IS A
+  # BLOCKER (Zach, 2026-08-01), tested against the remote REF and never the
+  # tracking config. SCOPE (2026-08-05, Zach; senechal evidence): these rules
+  # assert a negative over every ref in refs/heads/, wider than the run being
+  # gated, and two consequences were seen for real -- a CONCURRENT worktree's
+  # branch flagged (implied remedy: publish another agent's in-flight work), and
+  # a stale pointer called lost work when its tip was already on a remote.
+  # Neither goes silent; both just do not FLAG.
   #
-  # A HOST-ONLY BRANCH IS A BLOCKER (Zach, 2026-08-01). The test is the remote
-  # REF, never the tracking config: a branch pushed by explicit refspec has no
-  # upstream configured and is still safely on origin.
-  # SCOPE (2026-08-05, Zach; senechal evidence). The two rules below assert a
-  # negative over EVERY ref in refs/heads/, which is wider than the run being
-  # gated. Two consequences, both seen for real in senechal that night:
-  #
-  #   1. Branches checked out in the LINKED WORKTREES this same section just
-  #      declared BLIND and "outside this check's domain" were flagged anyway
-  #      -- the check contradicted its own scope one screen earlier. Worse,
-  #      the remedy it implies (push it) means publishing a CONCURRENT
-  #      agent's in-flight work, which the propagated concurrent-agents rule
-  #      forbids. Three subagents each refused it, correctly, and each spent
-  #      real effort proving they were right to.
-  #   2. Stale local pointers were reported as lost work. A branch whose tip
-  #      is REACHABLE FROM ANY REMOTE REF has nothing to lose: the commits
-  #      are on origin under this name or another (squash-merge and
-  #      explicit-refspec pushes both land here). A session that pushed
-  #      everything it authored still failed the gate on its neighbours.
-  #
-  # Neither case goes silent -- both still print, they just do not FLAG.
-  # Reachability is the test, never the branch name: a genuinely unpushed
-  # branch is reachable from no remote ref and still blocks, so the
-  # 2026-08-01 host-only rule keeps its teeth.
-  wt_branches="$(git -C "$repo" worktree list --porcelain 2>/dev/null \
+  # ATTRIBUTION, COUNTED NOT ENUMERATED (#106). `git worktree list --porcelain`
+  # is the only mechanical answer to "whose branch is this", and it already
+  # suppressed the FLAG -- what it did not do was stay quiet: 22 worktrees gave
+  # 20 `skip` lines of ~180 characters in a 99-line report whose only real
+  # finding was one line. So: ONE counted line that still names them. Two
+  # halves of #106's shape are DECLINED, both because #99 landed after it was
+  # filed -- (a) not a BLIND, since #99 made every readable worktree READ
+  # above, unpushed commits and all, which IS this loop's question (A8, G3);
+  # (b) the FLAG is not narrowed to the current worktree's HEAD, because a
+  # branch checked out NOWHERE is attributable to nobody (E3/F2/I4).
+  wt_owner="$(git -C "$repo" worktree list --porcelain 2>/dev/null \
         | awk -v m="$repo" '
             /^worktree /{p=substr($0,10)}
-            /^branch /{b=substr($0,8); sub("^refs/heads/","",b); if (p != m) print b}')"
+            /^branch /{b=substr($0,8); sub("^refs/heads/","",b); if (p != m) printf "%s\t%s\n", b, p}')"
+  wt_branches="$(printf '%s' "$wt_owner" | cut -f1)"
   on_a_remote() { # <branch> -> 0 if its tip is reachable from any remote ref
     local sha
     sha="$(git -C "$repo" rev-parse -q --verify "$1" 2>/dev/null)" || return 1
@@ -362,45 +347,27 @@ EOF
   # SQUASH-MERGE MAKES `on_a_remote` STRUCTURALLY BLIND (2026-08-07).
   #
   # THE NUMBERS. This section reported 12 [host-only-branch] FLAGs against the
-  # realisateur checkout -- "unmerged work at risk" -- and all 12 were PRs that
-  # had been squash-merged and had their upstream branch deleted. Zero true
-  # positives, 12 false. Reconciling that against the 26 local branches whose
-  # upstream is `gone`: 29 branches had no origin/<name> ref, of which 4 were
-  # skipped as other-worktree and 13 were downgraded by `on_a_remote` -- but
-  # downgraded BY COINCIDENCE, because some other still-existing remote branch
-  # happened to contain their tip, not because anything knew they had landed.
-  # So the old rule was wrong in BOTH directions: it exempted 13 by accident
-  # and flagged 12 by accident, over a set where all 25 were equally merged.
+  # realisateur checkout -- "unmerged work at risk" -- and all 12 were PRs
+  # squash-merged with their upstream branch deleted: zero true positives. It
+  # was wrong in both directions, too, exempting 13 more by coincidence rather
+  # than by knowing (#99 carries the full reconciliation).
+  # THE CAUSE IS THAT SQUASH REWRITES: GitHub lands the content
+  # under a DIFFERENT sha and deletes the branch, so `on_a_remote` is correctly
+  # answered NO for work that landed. THE ANSWERABLE QUESTION is "is this
+  # branch's CONTENT already on the default branch?" -- reconstruct what the
+  # squash produced (a commit whose tree is the tip's, parented on the merge
+  # base) and ask `git cherry` for a patch-identical one.
   #
-  # THE CAUSE IS THAT SQUASH REWRITES. GitHub lands ONE new commit carrying the
-  # branch's content under a DIFFERENT sha, then deletes the branch. So the
-  # question `on_a_remote` asks -- "is this exact commit reachable from a
-  # remote ref?" -- is correctly answered NO for work that landed weeks ago.
-  # No amount of fetching fixes it. The question is unanswerable, not unasked.
-  #
-  # THE QUESTION THAT IS ANSWERABLE: "is this branch's CONTENT already on the
-  # default branch?" Reconstruct what GitHub's squash would have produced -- a
-  # single commit whose tree is the branch tip's tree, parented on the merge
-  # base -- and ask `git cherry` whether the default branch already carries a
-  # patch-identical commit. That is exactly the object GitHub created, so the
-  # patch-ids match.
-  #
-  # OFFLINE ON PURPOSE, AND THIS IS A DELIBERATE CHOICE. `gh pr list --head`
-  # would answer the same question from the authority, and it was rejected as
-  # the PRIMARY test: a guard that hard-requires the network goes BLIND on a
-  # plane, in a container, and on the read-only deploy-key accounts, and a
-  # BLIND guard that then FLAGs everything is the same noise by another route.
-  # This probe needs no remote it does not already have, so it works
-  # everywhere the old one did. Measured: it identifies all 12 offline. What it
-  # cannot see is a branch merged since this clone last fetched -- that still
-  # FLAGs, which is the honest answer for a clone that has not looked.
-  #
-  # IT WRITES ONE UNREFERENCED OBJECT per candidate branch. `git commit-tree`
-  # creates a loose commit that no ref points at; `git gc` prunes it and
-  # nothing reachable changes. Identity is supplied here rather than inherited,
-  # because a CI runner or a fresh container has no global git identity and
-  # commit-tree fails with "empty ident name" -- which would make this probe
-  # silently unavailable in exactly the environment the workflow runs in.
+  # OFFLINE ON PURPOSE: `gh pr list --head` would answer from the authority and
+  # was rejected as the PRIMARY test, because a guard that hard-requires the
+  # network goes blind on a plane, in a container and on the deploy-key
+  # accounts, and one that then FLAGs everything is the same noise by another
+  # route. It identifies all 12 offline; a branch merged since the last fetch
+  # still FLAGs, the honest answer for a clone that has not looked.
+  # IT WRITES ONE UNREFERENCED OBJECT per candidate branch -- `git commit-tree`
+  # makes a loose commit no ref points at, which `git gc` prunes -- and
+  # supplies its own identity, because a CI runner has none and commit-tree
+  # would fail with "empty ident name" exactly where CI runs.
   default_remote="$(git -C "$repo" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null)"
   if [ -z "$default_remote" ]; then
     for c in origin/main origin/master; do
@@ -427,10 +394,13 @@ EOF
     esac
     return 1
   }
+  owned_elsewhere=""
+  owned_n=0
   while IFS= read -r br; do
     [ -n "$br" ] || continue
     if [ -n "$wt_branches" ] && printf '%s\n' "$wt_branches" | grep -qxF "$br"; then
-      echo "    skip [other-worktree] $name: '$br' is checked out in a linked worktree (read above -- not this run's to push)"
+      owned_n=$((owned_n+1))
+      owned_elsewhere="${owned_elsewhere:+$owned_elsewhere, }$br"
       continue
     fi
     if ! git -C "$repo" rev-parse --verify -q "origin/$br" >/dev/null 2>&1 && on_a_remote "$br"; then
@@ -457,53 +427,87 @@ EOF
   done <<EOF
 $(git -C "$repo" for-each-ref --format='%(refname:short)' refs/heads/ 2>/dev/null)
 EOF
+  if [ "$owned_n" -gt 0 ]; then
+    owner_n="$(printf '%s' "$wt_owner" | cut -f2 | sort -u | grep -c .)"
+    echo "    skip [other-worktree] $name: $owned_n branch(es) are checked out in $owner_n linked worktree(s) and belong to those runs, not this one (each read above):"
+    printf '%s\n' "$owned_elsewhere" | fold -s -w 74 | sed 's/^/      /'
+  fi
   i=$i
 done
 [ -n "$REPO_ARG" ] || [ "$touched" -ne 0 ] || \
   echo "  (no registered repo has a commit younger than ${HOURS}h)"
 
-# B and C ask about the SESSION -- did it leave a dated record, did it file a
-# decision -- not about a directory. --repo skips them: a hook auditing one
-# worktree must not block on realisateur's FOCUS.md lacking today's entry.
-# Wrapped in a function purely so the body stays unindented and diffs cleanly
-# against the version before this flag existed; bash functions share scope, so
-# `flags` still accumulates.
+# B and C ask about the SESSION, not a directory, so --repo skips them -- which
+# is also what keeps the SubagentStop path offline now that B asks a remote.
+# Wrapped in a function purely so the body stays unindented; bash functions
+# share scope, so `flags` still accumulates.
 session_wide_sections() {
 echo
-echo "== B. TODAY'S SESSION RECORD ($FOCUS_MD) =="
-if [ ! -f "$FOCUS_MD" ]; then
-  echo "  FLAG [no-focus] $FOCUS_MD does not exist"; flags=$((flags+1))
+echo "== B. TODAY'S SESSION RECORD (issues/PRs created $TODAY) =="
+# B USED TO READ .scheduler/FOCUS.md, AND DOCTRINE MADE THAT UNSATISFIABLE
+# (#139). It emitted `FLAG [no-record] no FOCUS.md entry dated <today>`, while
+# `/cloture` §3 -- revised 2026-08-10, and the thing that RUNS this script --
+# forbids that row: "Nothing from this session gets appended to
+# .scheduler/FOCUS.md ... as a session-log row." Clearing the FLAG required
+# doing the forbidden thing, every time -- CLAUDE.md's "a mandatory row nobody
+# can satisfy is how a checklist stops being read", a second time. `/cloture`
+# is newer and wins, so B asks what it commits to: did this session leave
+# anything on the REMOTE, over the repos A just found touched (PROSE-REAPING.md
+# §3, "an issue title is a countable unit; a FOCUS.md bullet is not"). REST,
+# NOT SEARCH -- search would be one call rather than one per repo, but its
+# index is eventually consistent and a PR opened ninety seconds ago is exactly
+# what a closing session asks about.
+#
+# IT CAN NEVER FLAG FOR BEING OFFLINE -- no gh, no auth, a timeout, a rate
+# limit, a non-GitHub origin: each leaves the question unanswered, which is a
+# counted BLIND. A FLAG needs GitHub reached and actually saying no, and if
+# even one touched repo went unreached the record might be in that one.
+# $GH_BIN under a timeout when there is one: a hung DNS lookup at session close
+# must not wedge the rite that runs this.
+GH_RUN=("$GH_BIN")
+command -v timeout >/dev/null 2>&1 && GH_RUN=(timeout "${GH_TIMEOUT:-20}" "$GH_BIN")
+gh_slug() { # <repo-path> -> owner/name for a GitHub origin, or nothing
+  local url
+  url="$(git -C "$1" remote get-url origin 2>/dev/null)" || return 1
+  case "$url" in *github.com*) ;; *) return 1 ;; esac
+  url="${url##*github.com}"; url="${url#:}"; url="${url#/}"; url="${url%/}"
+  case "${url%.git}" in */*) printf '%s\n' "${url%.git}" ;; *) return 1 ;; esac
+}
+if ! command -v "$GH_BIN" >/dev/null 2>&1; then
+  blind=$((blind+1))
+  echo "  BLIND [session-record] '$GH_BIN' is not on PATH, so nothing here can ask"
+  echo "    the remote where /cloture §3 now says the record goes."
+elif [ "${#touched_paths[@]}" -eq 0 ]; then
+  echo "  NOTE no repo touched in the last ${HOURS}h -- no work to have recorded."
 else
-  # An entry opens with a dated line and runs to the next `---` rule. BOTH
-  # `**2026-07-31 ...` and `## 2026-07-31 ...` count: the file's older entries
-  # use the bold form and its recent ones use the heading form, and matching
-  # only the bold form made this check report "no durable record" over records
-  # that were sitting in the file. It fired that way against two real entries
-  # dated 2026-07-31 before anyone noticed, which is the failure mode this
-  # whole script exists to catch in other people's work.
-  entry="$(awk -v d="$TODAY" '
-    $0 ~ "^(\\*\\*|##+[[:space:]]*)" d {f=1}
-    f && /^---[[:space:]]*$/ {exit}
-    f {print}
-  ' "$FOCUS_MD")"
-  if [ -z "$entry" ]; then
-    echo "  FLAG [no-record] no FOCUS.md entry dated $TODAY -- this session left no durable record"
-    flags=$((flags+1))
-  else
-    shas="$(printf '%s\n' "$entry" | grep -oE '`[0-9a-f]{7,40}`' | sort -u | tr '\n' ' ')"
-    if [ -z "$shas" ]; then
-      echo "  FLAG [record-no-sha] today's entry cites no commit sha in backticks"
-      echo "    (a record that names no commit cannot be checked against the repo)"
-      flags=$((flags+1))
+  b_found=""; b_probed=0; b_unreached=0; bi=0
+  while [ "$bi" -lt "${#touched_paths[@]}" ]; do
+    bname="${touched_names[$bi]}"; bpath="${touched_paths[$bi]}"; bi=$((bi+1))
+    if ! slug="$(gh_slug "$bpath")"; then
+      b_unreached=$((b_unreached+1))
+      echo "  NOTE $bname: origin is not a GitHub remote -- cannot ask it for today's record"
+    elif out="$("${GH_RUN[@]}" api -X GET "repos/$slug/issues" \
+                  -f state=all -f "since=${TODAY}T00:00:00Z" -f per_page=100 \
+                  --jq ".[] | select(.created_at | startswith(\"$TODAY\")) | \"$slug#\(.number) \(.title)\"" \
+                  2>/dev/null)"; then
+      b_probed=$((b_probed+1)); [ -n "$out" ] && b_found="${b_found}${out}"$'\n'
     else
-      echo "  ok -- entry dated $TODAY cites: $shas"
-      # Cheap corroboration: do those shas actually exist here?
-      for s in $shas; do
-        s="${s//\`/}"
-        git -C "$REPO_ROOT" cat-file -e "${s}^{commit}" 2>/dev/null && continue
-        echo "    NOTE [foreign-sha] $s is not a commit in this repo (fine if it names another project's)"
-      done
+      b_unreached=$((b_unreached+1))
     fi
+  done
+  if [ -n "$b_found" ]; then
+    echo "  ok -- $(printf '%s' "$b_found" | grep -c .) issue(s)/PR(s) created $TODAY, across $b_probed repo(s):"
+    printf '%s' "$b_found" | head -6 | sed 's/^/    /'
+  elif [ "$b_unreached" -gt 0 ]; then
+    blind=$((blind+1))
+    echo "  BLIND [session-record] $b_unreached of $((b_probed + b_unreached)) touched repo(s)"
+    echo "    could not be asked (offline, unauthenticated, rate-limited, or not on"
+    echo "    GitHub) and today's record could be in one. Never a FLAG: this check"
+    echo "    does not report a missing record it merely could not see."
+  else
+    echo "  FLAG [no-record] no issue or PR created $TODAY on any of the $b_probed"
+    echo "    recently-touched repo(s) -- no durable record where /cloture §3 puts it."
+    flags=$((flags+1))
   fi
 fi
 
@@ -523,12 +527,9 @@ fi
 [ -n "$REPO_ARG" ] || session_wide_sections
 
 echo
-# BLIND LEADS. It used to be a trailing clause after the FLAG count, and on
-# 2026-08-07 that is exactly how "13 linked worktree(s) NOT examined" got
-# skipped: it was one quiet line above twelve loud FLAG lines that were all
-# false. An admission of not having looked is a weaker claim than a finding
-# but a WORSE result, because a finding is bounded and not-looking is not. It
-# goes first, in its own banner, or it gets read last and therefore never.
+# BLIND LEADS. As a trailing clause after the FLAG count it is how "13 linked
+# worktree(s) NOT examined" got skipped on 2026-08-07: one quiet line above
+# twelve loud false FLAGs.
 if [ "$blind" -gt 0 ]; then
   echo "!! BLIND: $blind domain(s) existed and were NOT read. This is NOT a clean"
   echo "!! result -- an unread domain can hold anything, including the stranded"
