@@ -48,13 +48,17 @@ Run:
 bin/closeout-lint.sh
 ```
 
-first (offline, zero AI) — it already does the hard part: distinguishing
-a genuinely unpushed branch from one that's squash-merged, stale-pointer,
-or checked out in someone else's worktree (`note`/`skip`, not `FLAG`).
-Then, for anything it does NOT already clear:
+first (zero AI; offline but for its section-B `gh` query) — it already
+does the hard part: distinguishing a genuinely unpushed branch from one
+that's squash-merged, stale-pointer, or checked out in someone else's
+worktree, and dirt this run made from dirt that predates it
+(`note`/`skip`/`BLIND`, not `FLAG`). For anything it does NOT clear:
 
-- **Uncommitted changes** → commit (per `CLAUDE.md`'s commit-message-via-
-  file rule) or discard deliberately, never leave sitting.
+- **Uncommitted changes it FLAGged** → commit (per `CLAUDE.md`'s
+  commit-message-via-file rule) or discard deliberately, never leave
+  sitting. A `note [pre-existing-dirty]` is NOT that: those paths
+  predate this session, and committing or reverting them adopts or
+  destroys a concurrent run's work.
 - **Committed but unpushed, no PR** → push and open one. Even a one-line
   draft PR beats a branch only this host knows exists.
 - **Pushed with an open PR already** → re-read the PR body against
