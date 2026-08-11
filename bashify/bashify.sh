@@ -8,9 +8,10 @@
 # page, its contract, and a contract test that runs against BOTH the legacy
 # tooling and the new verb.
 #
-# It uses `git worktree`, never a checkout, so a project's working tree is
-# never touched -- which is what makes this safe to run against a repo the
-# human has an interactive session open in.
+# It works in a THROWAWAY CLONE, never a checkout, so a project's working tree
+# is never touched -- which is what makes this safe to run against a repo the
+# human has an interactive session open in. It was a `git worktree` until
+# 2026-08-11; the block that creates the clone says why that changed.
 
 set -uo pipefail
 SKEL="$(cd "$(dirname "${BASH_SOURCE[0]}")/skel" && pwd)"
@@ -45,13 +46,33 @@ SCOPE="${BASHIFY_SCOPE:-}"
 WT="$WORK/$PROJ"
 rm -rf "$WT"; mkdir -p "$WORK"
 
-# Branch off the project's own default branch, from a worktree so the human's
-# working tree and index are untouched even mid-session.
+# Branch off the project's own default branch, in a THROWAWAY CLONE so the
+# human's working tree and index are untouched even mid-session.
+#
+# WHY A CLONE AND NOT A WORKTREE (changed 2026-08-11, hf7y/realisateur#69).
+# This was `git worktree add -b bashified "$WT" "$DEFAULT"`, and it never
+# removed the worktree it created: the removal below fires only on the NEXT
+# emit for the SAME project. So one `bashify emit` left one linked worktree
+# registered in that project's .git/worktrees, indefinitely, under a /tmp path
+# no operator thinks to look at. Estate count: 18 linked worktrees on
+# 2026-08-06, 30 by 2026-08-11 after the directories had been cleared once.
+#
+# A clone keeps the property the worktree was chosen for -- the project's
+# working tree and index are never touched -- and drops the one that caused
+# the growth: it registers nothing in $REPO. The finished branch is published
+# with an explicit push below, which is the same act that `git branch -D
+# bashified` plus a worktree commit used to perform implicitly through the
+# shared .git.
+#
+# The remove/prune pair is KEPT rather than deleted: it is now the only thing
+# that clears registrations left behind by every emit before this change.
 DEFAULT="$(git -C "$REPO" symbolic-ref --short HEAD 2>/dev/null || echo main)"
 git -C "$REPO" worktree remove --force "$WT" 2>/dev/null
-git -C "$REPO" branch -D bashified 2>/dev/null
-git -C "$REPO" worktree add -b bashified "$WT" "$DEFAULT" >/dev/null 2>&1 || {
-  echo "bashify: could not create worktree for $PROJ" >&2; exit 1; }
+git -C "$REPO" worktree prune 2>/dev/null
+git clone -q "$REPO" "$WT" 2>/dev/null || {
+  echo "bashify: could not clone $PROJ from $REPO" >&2; exit 1; }
+git -C "$WT" checkout -q -b bashified --no-track "origin/$DEFAULT" 2>/dev/null || {
+  echo "bashify: could not branch bashified off $DEFAULT for $PROJ" >&2; exit 1; }
 
 # (the vendor list is SURFACE_VENDORS in lib/surface.sh -- do not retype it)
 
@@ -451,4 +472,13 @@ names without tooling behind it exits 4 (GAP) and says so.
 EOF
 ) >/dev/null 2>&1
 
-echo "$PROJ -> $VERB  (worktree $WT, ${#SCRIPTS[@]} scripts, ${#PY[@]} py)"
+# PUBLISH. Under a worktree this was implicit: the branch lived in $REPO's own
+# ref store, so committing in the worktree moved $REPO's refs/heads/bashified.
+# A clone has its own ref store, so the branch is pushed back. --force is the
+# explicit form of the `git branch -D bashified` this used to do up front --
+# emit REGENERATES the branch, it never appends to it. $REPO is checked out on
+# $DEFAULT and never on bashified, so this is not a push to a current branch.
+git -C "$WT" push -q --force "$REPO" "bashified:refs/heads/bashified" 2>/dev/null || {
+  echo "bashify: emitted the branch but could not publish it into $REPO" >&2; exit 1; }
+
+echo "$PROJ -> $VERB  (clone $WT, ${#SCRIPTS[@]} scripts, ${#PY[@]} py)"

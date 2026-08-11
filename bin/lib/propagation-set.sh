@@ -350,6 +350,7 @@ selfdev-agent-survey.sh
 served-not-cloned.sh
 shellcheck-lint.sh
 repo-settings-provision.sh
+no-worktree-lint.sh
 "
 # repo-settings-provision.sh is LOCAL for thermostat-wiring.sh's reason, not
 # bin/shellcheck-lint.sh's. (The `bin/` is load-bearing: a comment line whose
@@ -363,6 +364,16 @@ repo-settings-provision.sh
 # it is ten writers on one setting. It also needs a credential no provisioned
 # account holds or should: `gh repo edit` is admin on someone else's repo,
 # where the self-dev accounts are deliberately read-only deploy keys.
+# bin/no-worktree-lint.sh is LOCAL on shellcheck-lint.sh's exact reasoning, and
+# note that scheduler DOES need the same guard and still does not get this file.
+# Its allowlist is compiled in and is about realisateur's tree -- one entry, for
+# bashify/lib/sync-runtime.sh, which exists in no other repository. Shipping it
+# would hand an account a guard excusing a path it does not have, and check B
+# would report that entry stale forever. scheduler carries its own copy
+# (bin/no-worktree-guard.sh) with its own allowlist, the same PORTED-COPY answer
+# hf7y/scheduler#77 gets for shellcheck-lint.sh and for the same reason: what
+# would propagate is the judgement, not the mechanism.
+#
 # bin/shellcheck-lint.sh is LOCAL because it lints THIS REPOSITORY'S OWN SOURCE.
 # Its file selection is `git ls-files` against its own ROOT and its baseline is
 # bin/shellcheck-lint.ratchet, both of which describe realisateur's tree and

@@ -200,24 +200,57 @@ for p in ${SELFDEV_PROJECTS:-senechal ecosim}; do
   clone_or_update "$p" "$url"
 done
 
-# senechal's bashified worktree, because `installe` lives in it and `installe`
-# is what every other verb install goes through.
-if [ -d "$PROJECTS/senechal/.git" ] && [ ! -d "$PROJECTS/senechal-verbs" ]; then
-  act "senechal-verbs: git worktree add (bashified)"
-  git -C "$PROJECTS/senechal" worktree add -q "$PROJECTS/senechal-verbs" bashified \
-    && ok "senechal-verbs worktree created" || bad "could not add the bashified worktree"
-fi
-
 # The chicken-and-egg, broken exactly the way install-verbs.sh already prints:
 # installe is itself a verb, and it is the tool that installs verbs. ONE
 # hand-made symlink, in one place, and every subsequent write goes through it.
+#
+# IT USED TO BOOTSTRAP OUT OF A WORKTREE THIS SCRIPT CREATED -- `git worktree
+# add $PROJECTS/senechal-verbs bashified`, immediately above. That block is
+# gone, for two independent reasons and either alone would be enough:
+#
+#   1. It was already dead. `installe` stopped reading a <project>-verbs
+#      worktree on 2026-08-05 (hf7y/senechal a1c8629f, PR #22) and installs
+#      from the pinned build manifest instead. Re-probed on mandark
+#      2026-08-11: $PROJECTS/senechal-verbs does not exist, ~/.local/bin/
+#      installe resolves into the adopted verb build under ~/.local/share,
+#      and every verb on PATH resolves through the build. This was
+#      bootstrapping from a location nothing else in the ecosystem reads.
+#   2. Zach, 2026-08-06: "we should not have any more worktrees after
+#      tonight" (hf7y/realisateur#69). This was one of three scripts on the
+#      estate that put them back after the directories were cleared.
+#
+# bin/install-verb-build.sh's own header states the same supersession from the
+# other end: "A verb today is a symlink into a bashified WORKTREE of a full
+# dev clone ... A build depends on no dev checkout at all -- which is the
+# whole point."
+#
+# AND IT NO LONGER HAND-BUILDS THE SYMLINK EITHER. The replacement is not
+# "ln -sf into the build directory" -- that would make this a third reader of
+# the verb-build layout, and bin/tests/propagation.test.sh case 6b asserts that
+# only the two scripts that OWN that layout resolve it, because "which build am
+# I on" answered independently in several places is the one-fact-two-readers
+# shape MONKEY.md found five times in one day. The layout's owner is
+# bin/install-verb-build.sh, and it already does exactly this job, atomically,
+# refusing a build it could not fully verify. So the bootstrap became a call to
+# it rather than a reimplementation of its last step.
+#
+# ON A GENUINELY BARE HOST this now FIXES the chicken-and-egg instead of
+# describing it: no build present means one gets installed here. If that
+# cannot happen -- no credential for the private meta-repo, no network -- the
+# installer exits non-zero (3 is its BLIND) and this reports BAD rather than
+# proceeding to install-verbs.sh with no installe to route through.
 if ! command -v installe >/dev/null 2>&1; then
-  if [ -x "$PROJECTS/senechal-verbs/bin/installe" ]; then
-    act "installe: the one bootstrap symlink"
-    mkdir -p "$HOME/.local/bin"
-    ln -sf "$PROJECTS/senechal-verbs/bin/installe" "$HOME/.local/bin/installe" && ok "installe linked"
+  if [ -x "$PROJECTS/realisateur/bin/install-verb-build.sh" ]; then
+    act "installe: bootstrap by installing the pinned verb build"
+    if "$PROJECTS/realisateur/bin/install-verb-build.sh" --latest --apply --link; then
+      command -v installe >/dev/null 2>&1 \
+        && ok "verb build installed; installe on PATH" \
+        || bad "the verb build installed but installe is still not on PATH"
+    else
+      bad "could not install a verb build (see above) -- no verb can be installed on this host"
+    fi
   else
-    bad "senechal-verbs/bin/installe not found -- cannot install any verb"
+    bad "no $PROJECTS/realisateur/bin/install-verb-build.sh -- cannot obtain a verb build, so no verb can be installed"
   fi
 else ok "installe already on PATH"; fi
 

@@ -69,8 +69,8 @@ everything on it. Against a branch that already carries more than one verb it
 refuses as a usage error and names
 .B coin
 instead: a rebuild there destroys hand\-written verbs, and destruction is not
-regeneration. The branch is built in a
-.BR git\-worktree (1),
+regeneration. The branch is built in a throwaway
+.BR git\-clone (1),
 so a project's working tree is never touched, even mid\-session. Discovery
 reads every tracked executable program anywhere in the tree, not only
 .IR bin/ ,
@@ -282,7 +282,7 @@ usually yes.
 .B BASHIFY_WORK
 Directory in which
 .B emit
-builds its worktrees. Defaults to a scratch path.
+builds its throwaway clones. Defaults to a scratch path.
 .TP
 .B BASHIFY_REPO
 The real repository, when a project lives inside a larger one it does not own
@@ -458,7 +458,7 @@ the very thing the page forbids naming. Both were the tooling catching its
 author, which is the argument for the gate being a script rather than a habit.
 .SH SEE ALSO
 .BR man (1),
-.BR git-worktree (1),
+.BR git-clone (1),
 .BR make (1),
 .BR test (1),
 .BR getopt (1)
