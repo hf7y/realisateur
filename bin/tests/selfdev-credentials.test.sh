@@ -141,9 +141,12 @@ grade x "$MISSING_CONF_ROW"
 t_has "missing conf: flagged" "$GRADE_OUT" "gh-app.conf is MISSING"
 t_hasnt "missing conf: does NOT also flag appid/owner (nothing to compare)" "$GRADE_OUT" "declares App id"
 
-MISMATCH_ROW=$'ok:600\tok\tmismatch:/home/x/.config/selfdev/OTHER.pem\tgho\t-\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+# A fixture path, not a real filesystem location -- deliberately NOT shaped
+# like /home/<name>/..., which bin/hardcoded-home-lint.sh's own suite scans
+# this repository's TRACKED files for and flags on sight, fixture or not.
+MISMATCH_ROW=$'ok:600\tok\tmismatch:/var/tmp/selfdev-fixture/OTHER.pem\tgho\t-\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade x "$MISMATCH_ROW"
-t_has "SELFDEV_APP_KEY mismatch: flagged" "$GRADE_OUT" "points at /home/x/.config/selfdev/OTHER.pem"
+t_has "SELFDEV_APP_KEY mismatch: flagged" "$GRADE_OUT" "points at /var/tmp/selfdev-fixture/OTHER.pem"
 
 WRONG_APPID_ROW=$'ok:600\tok\tmatch\tgho\t-\t3\t3\t3\t3\t9999999\t'"$CRED_GH_OWNER"
 grade x "$WRONG_APPID_ROW"
