@@ -54,10 +54,13 @@
 # HOW IT SURFACES. .github/workflows/claim-drift.yml runs this on every
 # pull_request event INCLUDING ready_for_review and converted_to_draft, which
 # are not in the default set. A drifted claim is a red check on the PR -- and
-# because this repository has no branch protection available (private repo on
-# a plan where the branch-protection and rulesets APIs both answer 403
-# "Upgrade to GitHub Pro", probed 2026-08-07), a red check here blocks nothing
-# at all. It is a light, which is exactly what was asked for.
+# it blocks nothing at all: branch protection on main (live since 2026-08-08,
+# see THE MECHANISM below) requires `suites` and `markdown-cost`, and this
+# job (`claim`) is not among the required contexts. That is deliberate, not
+# the leftover of an earlier "this repo cannot have branch protection at all"
+# state (true only briefly, probed 2026-08-07, obsolete a day later) -- a
+# drifted claim is a signal for the human reading the PR, not a build
+# failure. It is a light, which is exactly what was asked for.
 #
 # The CITABLE half falls out for free: for a claimed PR this prints the
 # IMMUTABLE sha the claim was made about. A report that says "done, PR #98 at
@@ -144,8 +147,14 @@ PULL REQUEST CONVENTION -- canonical. Reference this; do not paraphrase it.
     strict=false          -- deliberately NOT "require branches up to date":
                              that forces every open PR to re-sync whenever main
                              moves, the loop that broke #95/#96/#98 repeatedly.
-    enforce_admins=false  -- deliberate. The gate binds automation, not Zach;
-                             a wedged check must not lock him out.
+    enforce_admins=true    -- flipped from false on 2026-08-11: twelve
+                             self-dev accounts run tools this repo ships, so a
+                             bad merge here breaks all of them at once, and
+                             `--admin` routing around a wedged check (done
+                             once, on Zach's explicit authorization, for #123)
+                             is not a standing practice. A required check that
+                             an admin can route around on a bad day is not a
+                             gate, it is a suggestion.
     no required reviews   -- the point. Green is sufficient; nobody has to look.
   Before this, main was UNPROTECTED and allow_auto_merge was false: every check
   was voluntary, which is how #102 was merged red.
