@@ -184,6 +184,8 @@ bin/tests/guard-estate.test.sh     realisateur a test over the guard POPULATION.
 .github/workflows/tests.yml        realisateur this repo's own CI.
 .claude/commands/ideate.md         realisateur the interactive triage pass. README.md 2 and UNIVERSE.md Law 1's enforcement point.
 .claude/commands/nightly-batch.md  realisateur the unattended inbox pass. This is the mission in one file.
+bin/selfdev-credentials.sh         realisateur asks whether each self-dev account's credentials match one declared baseline, side by side across the fleet. Same claim as bin/selfdev-agent-survey.sh's own row, extended from the dispatch-prompt contract to the credential shape -- realisateur owns the self-dev account contract being measured, not the accounts themselves. --apply converges by delegating to wire-selfdev-git.sh, scheduler's own effector, never reimplementing a credential mutation of its own.
+bin/lib/selfdev-credentials-set.sh realisateur the baseline bin/selfdev-credentials.sh reads from -- follows its subject, the way bin/lib/ownership-set.sh follows this audit.
 "
 
 # ---- DELEGABLE -------------------------------------------------------------
