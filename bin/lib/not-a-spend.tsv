@@ -1,0 +1,46 @@
+#project	file	why the mentions are not calls
+#
+# THE OPT-OUT for bashify's purge scorer, and the sibling of
+# bin/lib/not-a-verb.tsv. Read by bashify/lib/closure.sh and by nothing else.
+# Every row is a WRITTEN JUDGEMENT that a file NAMES a vendor or an agent
+# without ever REACHING one, so its ESSENTIAL score is a measurement of its
+# vocabulary rather than of its behaviour.
+#
+# THE RULE IT EXEMPTS FROM
+#   surface_score_code() strips comment lines and counts what still matches
+#   \b(claude|anthropic|openai|gpt|llm|assistant)|agent
+#   Any hit makes the file ESSENTIAL, which bars it from a `bashified` branch.
+#
+# WHY AN EXEMPTION HAD TO EXIST. bashify/lib/surface.sh:54 predicted this and
+# left the door unbuilt: "if one ever does it fails loudly and gets an
+# exemption, which is the right way round for a guarantee of absence."
+# Default-deny with an explicit, written escape is the correct shape and is not
+# in dispute here -- what was missing was the escape.
+#
+# The case that forced it, 2026-08-11: realisateur's lints cannot be carried
+# onto bashified, so the ten ~/.local/bin shims on every self-dev account keep
+# a realisateur checkout load-bearing on eight accounts. They score ESSENTIAL
+# because an auditing tool must NAME what it audits. bin/hygiene-lint.sh's
+# highest-scoring line is:
+#
+#     echo "(offline-first: no claude calls -- findings are SIGNALS ...)"
+#
+# It fails a spend guard because it says it does not spend.
+#
+# WHAT A ROW IS NOT. It is not "this file is fine". It is a claim that EVERY
+# match in that file is a path component, a filename, prose, or an inspection
+# of something else's name -- and that the file invokes nothing. That claim is
+# checkable in one command, and the row should say enough for a reader to
+# check it:
+#
+#     grep -cE 'claude -p|claude --print|api\.anthropic' <file>     -> 0
+#
+# NEVER WIDEN THE REGEX INSTEAD. Broadening the pattern to spare these files
+# would silently exempt a real spender somewhere nobody is looking. The value
+# of the guard is that it is default-deny; the value of this file is that each
+# escape is signed.
+realisateur	bin/hygiene-lint.sh	names `.claude/commands` as a directory it scans, `CLAUDE.md` as a file it looks for, and prints findings called `no-claude-md` and `no-checklist`. Its own banner line says "offline-first: no claude calls -- findings are SIGNALS, not verdicts", which is the single highest-scoring line in the file. Invokes nothing: `grep -cE 'claude -p|claude --print|api\.anthropic'` -> 0.
+realisateur	bin/closeout-lint.sh	prints "no claude calls, writes nothing" in two banner variants, and at :120 INSPECTS a process name (`case "$comm" in claude|claude.exe)`) to decide whether a live session owns a dirty tree -- reading who else is running, which is the opposite of starting one. Also prints prose about "a live concurrent agent's tree". Invokes nothing: grep -> 0.
+realisateur	bin/silence-audit.sh	one match, and it is a FILENAME: `"$repo/CLAUDE.md"` in the list of docs it reads when checking whether a rule is asserted in prose but unchecked by any script. Invokes nothing: grep -> 0.
+realisateur	bin/reach-lint.sh	names `~/.claude/commands` in its usage text, its `USER_CMD_DIR` default and the directory list it scans -- the whole job of the tool is to check that commands in that directory reach what they name. Also prints "offline-first: no claude calls". Invokes nothing: grep -> 0.
+realisateur	bin/precipitation-scan.sh	one match, and it is prose: "offline-first: no claude calls -- findings are SIGNALS, not verdicts." Invokes nothing: grep -> 0.
