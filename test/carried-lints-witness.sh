@@ -39,6 +39,22 @@ for s in $CARRIED; do
     || bad "$s --help exited $rc -- help must never depend on the estate"
 done
 
+# --- 2b. THE ARM ITSELF, not just the script -------------------------------
+# THE BLIND SPOT THIS FILE SHIPPED WITH. Case 2 runs the carried SCRIPTS
+# directly and passed while the VERB was still broken: #191 inserted the $SELF
+# guard but left the old LEGACY_ROOT one above it, so every arm GAPped at exit
+# 4 before reaching $SELF. `--help` hid it too -- verb_parse intercepts --help
+# before the case, so no arm ran at all. Invoke the arm for real, with
+# LEGACY_ROOT pointed at nothing.
+for pair in "arpente precipitation-scan" "epluche hygiene-lint" "epluche closeout-lint" "epluche reach-lint"; do
+  set -- $pair; v="$1"; a="$2"
+  up="$(printf '%s' "$v" | tr '[:lower:]' '[:upper:]')_LEGACY_ROOT"
+  ( cd "$OUT" && env "$up=/nonexistent" timeout 90 bash "$BIN/$v" "$a" >/dev/null 2>&1 )
+  rc=$?
+  [ "$rc" -ne 4 ] && ok "$v $a runs with LEGACY_ROOT unset (rc=$rc, not a GAP)" \
+    || bad "$v $a GAPped (4) with no checkout -- the arm still resolves through LEGACY_ROOT"
+done
+
 # --- 3. THE GUARD IS LIVE, not merely quiet -------------------------------
 # The load-bearing case. If cli_guard were undefined again, --help would still
 # reach the usage text by luck in some scripts, but a bad flag would sail
