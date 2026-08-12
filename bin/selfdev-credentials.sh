@@ -120,8 +120,11 @@ CRED_SSH_BIN="${CRED_SSH_BIN:-ssh}"
 CRED_GH_BIN="${CRED_GH_BIN:-gh}"
 CRED_SSH_TIMEOUT="${CRED_SSH_TIMEOUT:-20}"
 CRED_PASSWD_FILE="${CRED_PASSWD_FILE:-/etc/passwd}"       # a REMOTE path
-CRED_APP_PEM_SRC="${CRED_APP_PEM_SRC:-$HOME/.config/selfdev/app.pem}"     # LOCAL
-CRED_APP_CONF_SRC="${CRED_APP_CONF_SRC:-$HOME/.config/selfdev/gh-app.conf}" # LOCAL
+# NO CANONICAL-SOURCE KNOBS. There used to be CRED_APP_PEM_SRC /
+# CRED_APP_CONF_SRC pointing at a local copy of the App key to push out per
+# account. The credential is host-wide now and bin/selfdev-app-key.sh places
+# it; a second script holding its own opinion about where the key lives is
+# precisely realisateur#209.
 
 PASS=0; GAPS=0; BAD=0; BLIND_N=0
 ok()    { printf '  ok    %s\n' "$*"; PASS=$((PASS+1)); }
@@ -187,12 +190,19 @@ REPOS="$*"
 
 probe_one() {
   local owner="$1"; shift
-  local d="$HOME/.config/selfdev" pem conf hosts
-  pem="$d/app.pem"; conf="$d/gh-app.conf"; hosts="$HOME/.config/gh/hosts.yml"
+  # THE CREDENTIAL IS HOST-WIDE as of 2026-08-12: /etc/selfdev/{app.pem,gh-app.conf},
+  # one file readable by group `selfdev`, not a copy per account. So what this
+  # probe asks changed shape: not "does this account have its own key" but
+  # "can this account READ the one key". The witness is a read, not a stat --
+  # `usermod -aG` before the account's next session stats fine and reads
+  # EACCES, which is the entire failure mode of a group-readable secret.
+  local pem="${SELFDEV_APP_PEM:-/etc/selfdev/app.pem}"
+  local conf="${SELFDEV_APP_CONF:-/etc/selfdev/gh-app.conf}"
+  local hosts="$HOME/.config/gh/hosts.yml"
+  local d="$HOME/.config/selfdev"
   local pem_state="missing"
   if [ -e "$pem" ]; then
-    local m; m="$(stat -c %a "$pem" 2>/dev/null || echo '?')"
-    [ "$m" = "600" ] && pem_state="ok:600" || pem_state="mode:$m"
+    if head -c 1 -- "$pem" >/dev/null 2>&1; then pem_state="ok:600"; else pem_state="unreadable"; fi
   fi
   local conf_state="missing" keymatch="n/a" appid="-" ownerd="-"
   if [ -r "$conf" ]; then
@@ -204,9 +214,14 @@ probe_one() {
       [ "$dkey" = "$pem" ] && keymatch="match" || keymatch="mismatch:$dkey"
     fi
   fi
+  # ANY surviving file under the retired per-account directory is drift now,
+  # including app.pem and gh-app.conf themselves: the host-wide file is the
+  # credential, and a private copy beside it is a second source that a rotation
+  # will miss. Before 2026-08-12 those two names were the baseline here and
+  # only OTHER files were flagged.
   local extra="-"
   if [ -d "$d" ]; then
-    local ex; ex="$(ls -A "$d" 2>/dev/null | grep -vxF -e app.pem -e gh-app.conf | tr '\n' ',' | sed 's/,$//')"
+    local ex; ex="$(ls -A "$d" 2>/dev/null | tr '\n' ',' | sed 's/,$//')"
     [ -n "$ex" ] && extra="$ex"
   fi
   local token="missing"
@@ -269,13 +284,13 @@ cred_grade_account() {
 
   case "$pem" in
     ok:600) : ;;
-    mode:*) bad "$acct: app.pem is mode ${pem#mode:}, must be 600"; drift=1 ;;
-    missing|*) bad "$acct: app.pem is MISSING -- this account cannot mint an App token at all"; drift=1 ;;
+    unreadable) bad "$acct: the host-wide App key exists but this account CANNOT READ IT -- check group '${CRED_APP_GROUP:-selfdev}' membership has taken effect (sudo bin/selfdev-app-key.sh --check)"; drift=1 ;;
+    missing|*) bad "$acct: no host-wide App key at /etc/selfdev/app.pem -- no account on this host can mint an App token (sudo bin/selfdev-app-key.sh --apply)"; drift=1 ;;
   esac
 
   case "$conf" in
     ok) : ;;
-    *) bad "$acct: gh-app.conf is MISSING -- selfdev-gh-app.sh has nothing to read"; drift=1 ;;
+    *) bad "$acct: no host-wide /etc/selfdev/gh-app.conf -- selfdev-gh-app.sh has nothing to read (sudo bin/selfdev-app-key.sh --apply)"; drift=1 ;;
   esac
 
   case "$keymatch" in
@@ -310,7 +325,7 @@ cred_grade_account() {
       if cred_grant_covers "$acct" extra-file "$f"; then
         gap "$acct: extra file '$f' under ~/.config/selfdev/ -- DECLARED in CRED_GRANTS"
       else
-        bad "$acct: UNDECLARED extra file '$f' under ~/.config/selfdev/ -- exactly ecosim's ecosim.pem shape; declare it in CRED_GRANTS with a dated reason, or remove it by hand (this tool never deletes)"
+        bad "$acct: leftover private file '$f' under ~/.config/selfdev/ -- the credential is host-wide now, so a private copy is a second source a rotation will miss; retire with \`sudo bin/selfdev-app-key.sh --retire-copies\`, or declare it in CRED_GRANTS with a dated reason"
         drift=1
       fi
     done
@@ -357,11 +372,29 @@ cred_check_deploy_keys() { # cred_check_deploy_keys <account>...
     blind "deploy-key symmetry: '$CRED_GH_BIN' is not authenticated here -- could not check GitHub-side read/write permissions"
     return
   fi
-  local repo
+  # AN ACCOUNT'S OWN REPO IS ALWAYS ITS OWN, even when that repo also appears
+  # on the shared list. `realisateur@monkey` and `scheduler@monkey` exist
+  # because one unix user per project is the whole monkey design, and their
+  # own repo IS a shared repo -- so the two halves of the symmetry rule gave
+  # opposite answers for exactly those accounts and the audit reported a
+  # permanent, unfixable FLAG pair (realisateur#210).
+  #
+  # Zach, 2026-08-12: "210 should just be settled where you can have writes to
+  # your own repo. obviously they can push to themselves."
+  #
+  # So the shared-repo pass skips the account that OWNS the repo; the own-repo
+  # pass below still checks it, and still demands WRITE. Nothing goes
+  # unchecked -- the account is graded once, by the rule that applies to it.
+  local repo acct others
   for repo in $CRED_SHARED_REPOS; do
-    cred_check_repo_keys "$repo" ro "$@"
+    others=""
+    for acct in "$@"; do
+      [ "$(cred_own_repo "$acct")" = "$repo" ] && continue
+      others="$others $acct"
+    done
+    # shellcheck disable=SC2086
+    [ -n "$others" ] && cred_check_repo_keys "$repo" ro $others
   done
-  local acct
   for acct in "$@"; do
     cred_check_repo_keys "$(cred_own_repo "$acct")" rw "$acct"
   done
@@ -510,32 +543,35 @@ cmd_apply() {
 
   local failed=0 changed=0
 
-  # --- 1. the shared App credential: copy from a canonical LOCAL source, ----
-  # never mint. Minting needs a human browser click (selfdev-gh-app-
-  # register.sh's own header); this only ever CONVERGES an account that fell
-  # behind the fleet's already-issued key, the same shared-credential-copy
-  # shape provision-selfdev-user.sh already uses for the claude/gh tokens.
-  if [ "$pem" = missing ] || [ "$conf" = missing ]; then
-    if [ ! -r "$CRED_APP_PEM_SRC" ] || [ ! -r "$CRED_APP_CONF_SRC" ]; then
-      echo "  FLAG  $acct is missing app.pem and/or gh-app.conf, and no canonical copy is readable at $CRED_APP_PEM_SRC / $CRED_APP_CONF_SRC -- cannot converge this without a human (a new App key needs a browser click; see selfdev-gh-app-register.sh)" >&2
-      failed=1
+  # --- 1. the App credential: HOST-WIDE, placed by the script that owns it --
+  #
+  # This block used to copy a private app.pem + gh-app.conf into the account,
+  # from `$CRED_APP_PEM_SRC` (default ~/.config/selfdev/app.pem on THIS host).
+  # That default path never existed here -- selfdev-gh-app.sh --adopt writes
+  # ~/.config/selfdev/<host>/<host>.pem -- so the one step this command exists
+  # for reported "cannot converge without a human, a new App key needs a
+  # browser click" while the key sat two directories away (realisateur#209).
+  # It also installed the conf VERBATIM, whose SELFDEV_APP_KEY line names a
+  # per-account path, so a straight copy produced exactly the mismatch the
+  # audit half then flagged. Both failures were the same root cause: one key
+  # with a different name in every script that touched it.
+  #
+  # There is no source path to get wrong any more. The credential is one
+  # host-wide file, bin/selfdev-app-key.sh owns placing it, and this delegates
+  # -- the same "already exists and is already tested" rule the rest of this
+  # command follows for wire-selfdev-git.sh.
+  if [ "$pem" != "ok:600" ] || [ "$conf" = missing ]; then
+    act "placing the host-wide App credential and adding $acct to group $CRED_APP_GROUP (selfdev-app-key.sh --apply)"
+    if "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \
+         "sudo -n /home/${CRED_APPKEY_RUNNER:-zach}/Documents/Projects/realisateur/bin/selfdev-app-key.sh --apply --owner '$CRED_GH_OWNER'" 2>&1 | sed 's/^/    /'; then
+      echo "  OK    host-wide App credential in place and readable by $acct"
+      changed=1
     else
-      act "copying app.pem + gh-app.conf from $CRED_APP_PEM_SRC / $CRED_APP_CONF_SRC to $acct@$CRED_HOST"
-      if "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \
-           "sudo -n install -d -m 700 -o '$acct' -g '$acct' /home/$acct/.config /home/$acct/.config/selfdev" \
-         && "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \
-           "sudo -n install -m 600 -o '$acct' -g '$acct' /dev/stdin /home/$acct/.config/selfdev/app.pem" < "$CRED_APP_PEM_SRC" \
-         && "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \
-           "sudo -n install -m 600 -o '$acct' -g '$acct' /dev/stdin /home/$acct/.config/selfdev/gh-app.conf" < "$CRED_APP_CONF_SRC"; then
-        echo "  OK    app.pem + gh-app.conf installed for $acct"
-        changed=1
-      else
-        echo "  FLAG  copying app.pem/gh-app.conf to $acct FAILED -- re-run with the rows above visible" >&2
-        failed=1
-      fi
+      echo "  FLAG  selfdev-app-key.sh --apply did not complete on $CRED_HOST -- run it there and read its rows: sudo bin/selfdev-app-key.sh --check" >&2
+      failed=1
     fi
   else
-    echo "  --    app.pem and gh-app.conf already present for $acct; left alone"
+    echo "  --    $acct already reads the host-wide App credential; left alone"
   fi
 
   # --- 2. git wiring: DELEGATED to the account's own wire-selfdev-git.sh ----

@@ -96,7 +96,30 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-CONF="${SELFDEV_APP_CONF:-$HOME/.config/selfdev/gh-app.conf}"
+# WHERE THE CREDENTIAL LIVES is answered in ONE place for every reader --
+# bin/lib/selfdev-app-key.sh -- and not re-spelled here. Until 2026-08-12 this
+# line said `$HOME/.config/selfdev/gh-app.conf`, i.e. one copy of one key per
+# account (thirteen on monkey), and three other scripts spelled the same fact
+# three other ways; converging an account failed because the writer and the
+# reader disagreed (realisateur#209). Now: $SELFDEV_APP_CONF, else
+# /etc/selfdev/gh-app.conf, host-wide.
+#
+# Sourced by PATH when this file is installed as a lone copy under
+# ~/.local/libexec/selfdev/ (the release bootstrap copies both), and by
+# directory otherwise -- a bootstrap that only works from a full checkout is
+# not a bootstrap.
+_sd_lib="$(dirname "${BASH_SOURCE[0]}")/lib/selfdev-app-key.sh"
+[ -r "$_sd_lib" ] || _sd_lib="$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh"
+if [ -r "$_sd_lib" ]; then
+  # shellcheck source=lib/selfdev-app-key.sh
+  . "$_sd_lib"
+  CONF="$(selfdev_app_conf)"
+else
+  # No lib beside us: fall back to the same host-wide default it declares,
+  # rather than to a per-account path that no longer exists. Stated, not silent.
+  CONF="${SELFDEV_APP_CONF:-/etc/selfdev/gh-app.conf}"
+  SELFDEV_APP_PEM_DEFAULT=/etc/selfdev/app.pem
+fi
 # The environment is captured BEFORE the config file is sourced, because
 # sourcing it would otherwise clobber the very variables it is supposed to
 # default. Sourced-file-wins is the opposite of the documented contract and is
@@ -108,7 +131,7 @@ _env_owner="${SELFDEV_GH_OWNER:-}"
 # shellcheck source=/dev/null
 [ -r "$CONF" ] && . "$CONF"
 APP_ID="${_env_app_id:-${SELFDEV_APP_ID:-}}"
-APP_KEY="${_env_app_key:-${SELFDEV_APP_KEY:-$HOME/.config/selfdev/selfdev-app.pem}}"
+APP_KEY="${_env_app_key:-${SELFDEV_APP_KEY:-${SELFDEV_APP_PEM_DEFAULT:-/etc/selfdev/app.pem}}}"
 OWNER="${_env_owner:-${SELFDEV_GH_OWNER:-hf7y}}"
 API="${SELFDEV_GH_API:-https://api.github.com}"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/selfdev-gh-app"
@@ -302,20 +325,25 @@ case "$MODE" in
     ok "fingerprint: $fp"
     echo "          ^ must equal the SHA256: shown on the App's settings page"
 
-    dir="$HOME/.config/selfdev/$ADOPT_ACCOUNT"
-    mkdir -p "$dir" && chmod 700 "$HOME/.config/selfdev" "$dir"
-    install -m 600 "$ADOPT_KEY" "$dir/$ADOPT_ACCOUNT.pem" \
-      || die "could not install the key into $dir"
-    ok "key installed at $dir/$ADOPT_ACCOUNT.pem (mode 600)"
-    ( umask 077; { printf '# written by selfdev-gh-app.sh --adopt for %s\n' "$ADOPT_ACCOUNT"
-      printf 'SELFDEV_APP_ID=%s\n' "$ADOPT_ID"
-      printf 'SELFDEV_APP_KEY=%s/%s.pem\n' "$dir" "$ADOPT_ACCOUNT"
-      printf 'SELFDEV_GH_OWNER=%s\n' "$OWNER"; } > "$dir/gh-app.conf" )
-    ok "config written at $dir/gh-app.conf (mode 600)"
+    # ADOPT NO LONGER INVENTS A PATH. It used to write
+    # ~/.config/selfdev/<account>/<account>.pem plus a conf naming it -- which
+    # is how one App key came to sit on disk under four different names, and
+    # why `selfdev-credentials.sh --apply` could not find it (realisateur#209).
+    # The host-wide placement, the group, and the per-account read witness are
+    # bin/selfdev-app-key.sh's job; this hands the key to it rather than
+    # keeping a second placement implementation alive.
+    if [ "$(id -u)" -eq 0 ] && [ -x "$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh" ]; then
+      "$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh" --apply --from "$ADOPT_KEY" --app-id "$ADOPT_ID" --owner "$OWNER" \
+        || die "selfdev-app-key.sh --apply refused; the key was NOT installed"
+      dir="$SELFDEV_APP_DIR"
+    else
+      die "adopting a key places it host-wide in ${SELFDEV_APP_DIR:-/etc/selfdev} and needs root:
+    sudo bin/selfdev-app-key.sh --apply --from $ADOPT_KEY --app-id $ADOPT_ID"
+    fi
     echo
     # Re-exec rather than duplicate the witness. A second copy of this logic
     # is a second thing to keep true.
-    exec env SELFDEV_APP_CONF="$dir/gh-app.conf" \
+    exec env SELFDEV_APP_CONF="${SELFDEV_APP_CONF_DEFAULT:-/etc/selfdev/gh-app.conf}" \
          SELFDEV_APP_ID= SELFDEV_APP_KEY= SELFDEV_GH_OWNER= "$0" --check
     ;;
 

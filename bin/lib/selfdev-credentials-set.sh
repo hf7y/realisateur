@@ -29,14 +29,24 @@
 # THE BASELINE SHAPE (verified live 2026-08-11, all ten accounts)
 # ============================================================================
 #
-#   ~/.config/selfdev/app.pem        the ONE fleet-wide GitHub App's private
+#   /etc/selfdev/app.pem             the ONE fleet-wide GitHub App's private
 #                                     key (MONKEY.md 11.1: one App, id 4521586,
 #                                     shared across every account on purpose).
-#                                     Mode 600. No other file in that
-#                                     directory is baseline.
-#   ~/.config/selfdev/gh-app.conf    SELFDEV_APP_ID / SELFDEV_APP_KEY (must
-#                                     resolve to the app.pem actually present)
-#                                     / SELFDEV_GH_OWNER. Mode 600.
+#                                     HOST-WIDE since 2026-08-12: 0640
+#                                     root:selfdev, ONE file, read by every
+#                                     account through group membership.
+#   /etc/selfdev/gh-app.conf         SELFDEV_APP_ID / SELFDEV_APP_KEY /
+#                                     SELFDEV_GH_OWNER. 0644 root:root.
+#   ~/.config/selfdev/               MUST NOT EXIST. It held a private copy of
+#                                     the same key per account -- thirteen
+#                                     copies of one fact, which is thirteen
+#                                     things a rotation can miss. Any file
+#                                     surviving there is graded as drift.
+#
+#   The layout, the resolution order and the argument for /etc are in
+#   bin/lib/selfdev-app-key.sh; bin/selfdev-app-key.sh places it. This file
+#   does not re-spell either -- that was the defect (four names for one key,
+#   realisateur#209).
 #   ~/.config/gh/hosts.yml           the gh CLI's own OAuth token, COPIED
 #                                     (provision-selfdev-user.sh), not minted
 #                                     per account -- see THE REDUNDANCY NOTE.
@@ -54,6 +64,15 @@
 #    issues? this keeps coming up but it makes no sense. [make them]
 #    symmetrical with the option to add extra permissions using the script
 #    utility"
+#
+# AN ACCOUNT'S OWN REPO IS ITS OWN, even when that repo is also on the shared
+# list. `realisateur@monkey` and `scheduler@monkey` are named for shared repos,
+# so both halves of the rule applied and gave opposite answers -- a permanent
+# FLAG pair the audit could never clear (realisateur#210). Zach, 2026-08-12:
+# "210 should just be settled where you can have writes to your own repo.
+# obviously they can push to themselves." The shared-repo pass now skips the
+# account that owns the repo; the own-repo pass still demands WRITE, so the
+# account is graded exactly once, by the rule that applies to it.
 #
 # An account has WRITE on its own project repo, READ on the shared repos it
 # must pull (realisateur, scheduler, senechal, ...), and anything it needs to
@@ -139,6 +158,9 @@ CRED_SHARED_REPOS="realisateur scheduler senechal"
 # gh-app.conf declares a DIFFERENT id or owner is not obviously wrong (the
 # decision has a stated revisit trigger) but it IS a divergence from every
 # sibling, and this baseline is what "divergence" is measured against.
+# The group that can read the host-wide key. Named here because the audit
+# reports it in its own remedy text; owned by bin/lib/selfdev-app-key.sh.
+CRED_APP_GROUP="${CRED_APP_GROUP:-selfdev}"
 CRED_APP_ID="${CRED_APP_ID:-4521586}"
 CRED_GH_OWNER="${CRED_GH_OWNER:-hf7y}"
 

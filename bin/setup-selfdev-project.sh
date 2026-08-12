@@ -22,7 +22,8 @@
 #   2. the hands key into <p>'s authorized_keys    (root)  see --no-key
 #   3. bin/wire-selfdev-git.sh <repo> --apply      (as <p>) per-repo deploy keys
 #   4. bin/land-selfdev.sh --land                  (as <p>) clones + verbs
-#   5. the RELEASE BOOTSTRAP + its clock            (as <p>) see below
+#   5. the App credential, host-wide               (root)  see 5/6 below
+#   6. the RELEASE BOOTSTRAP + its clock            (as <p>) see below
 #
 # Step 3 is a GATE, not a sequence point: every repo that fails to wire is
 # named and the run stops there rather than landing an account on credentials
@@ -100,7 +101,9 @@ if [ "$MODE" = --check ]; then
                         || echo "    2. SKIPPED (--no-key)"
   echo "    3. wire-selfdev-git.sh for realisateur, scheduler, senechal, $PROJECT"
   echo "    4. land-selfdev.sh --land as $PROJECT"
-  echo "    5. release bootstrap into ~$PROJECT/.local/libexec/selfdev/, then"
+  echo "    5. selfdev-app-key.sh --apply: the host-wide GitHub App credential,"
+  echo "       and $PROJECT into the group that can read it"
+  echo "    6. release bootstrap into ~$PROJECT/.local/libexec/selfdev/, then"
   echo "       selfdev-release-tick.sh --install-cadence --apply as $PROJECT"
   echo
   echo "  it will NOT arm dispatch: that is a 0->1 in schedule/_paced.$HOST.conf."
@@ -210,7 +213,37 @@ run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
 # to run account creation at it -- so nine of monkey's ten accounts never got
 # one and the release channel sat at one consumer for five days. That script
 # has the whole argument; this is the same code with a second caller.
-say "5/5 release bootstrap + clock"
+# --- 5. the App credential, host-wide ---------------------------------------
+# secretaire (account #13, 2026-08-12) was provisioned end to end by this
+# script and came out with NO App credential at all -- the audit caught it,
+# not this script, and the account could not mint an installation token.
+# Every step here installed something per-account; the App key was the one
+# thing nobody's step owned.
+#
+# It is host-wide now (bin/lib/selfdev-app-key.sh), so this is not a copy per
+# account: it is "make sure this host has the one key, and that THIS account
+# is in the group that can read it". Idempotent, so provisioning account #14
+# on a host that already has the key just adds the group membership and
+# witnesses the read.
+say "5/6 the GitHub App credential (host-wide)"
+if [ -x "$HERE/selfdev-app-key.sh" ]; then
+  # rc read from the command, not from a pipeline whose last stage is `sed`.
+  # `set -o pipefail` is on here and would carry it, but the 3/4 block in this
+  # same file records what that assumption cost once already.
+  appkey_out="$("$HERE/selfdev-app-key.sh" --apply --owner "${SELFDEV_GH_OWNER:-hf7y}" 2>&1)"; appkey_rc=$?
+  printf '%s\n' "$appkey_out" | sed 's/^/  /'
+  if [ "$appkey_rc" -eq 0 ]; then
+    echo "  OK      $PROJECT can read the host-wide App key"
+  else
+    echo "  BAD     selfdev-app-key.sh --apply failed -- $PROJECT cannot mint an App token."
+    echo "          This is not fatal to the rest of provisioning, but the account is"
+    echo "          incomplete: fix it with \`sudo $HERE/selfdev-app-key.sh --check\` before arming."
+  fi
+else
+  echo "  MISSING $HERE/selfdev-app-key.sh -- cannot place the App credential"
+fi
+
+say "6/6 release bootstrap + clock"
 "$HERE/wire-release-channel.sh" "$PROJECT" --apply
 echo "  DO      notify-senechal 'realisateur selfdev-release-tick cron in $PROJECT@$HOST crontab, owned by realisateur'"
 
