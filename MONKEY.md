@@ -12,7 +12,7 @@ quoted below was captured on the date shown. Where a phase has not run, this
 file says so rather than describing what it would print — `THE-FLOOR.md` opens
 with a correction about a pass that scored itself by "reading the specification
 instead of running the mechanization", and this is the document that most
-invites that error.
+invites that error. **2026-08-12: mandark stopped serving the `scheduler` verb** — five shims retired, held at 29 undeclared by `bin/path-provenance-audit.ratchet`; clone removal staged, unrun. This supersedes §9's `realisateur`/`scheduler` bullet for `scheduler` alone: monkey holds the only clone, so that bullet's two-host divergence is closed for it by construction. `realisateur#203` carries the probe outputs.
 
 ---
 
