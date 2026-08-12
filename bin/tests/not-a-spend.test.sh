@@ -4,6 +4,14 @@
 # An exemption mechanism with no test is the dangerous kind: it is the one
 # piece of machinery whose whole job is to say "ignore the guard". Every case
 # below exists to bound it.
+#
+# HERMETICITY: PARTIAL, and the split is deliberate. Cases 1 and 5 are fully
+# hermetic -- they read only this repo's own ledger and closure.sh's source, so
+# they hold anywhere. Cases 2, 3, 4 and 6 must run closure.sh against a REAL
+# project, which needs sibling checkouts and a bashified branch that CI does
+# not have; they SKIP there rather than fail, and say so. A case that is red
+# purely because of where it ran teaches a reader to ignore the suite, which is
+# how the drift these guards exist to catch gets shipped.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 C="$ROOT/bashify/lib/closure.sh"
@@ -29,8 +37,16 @@ while IFS=$'\t' read -r proj file why; do
 done < "$LEDGER"
 [ "$rows" -gt 0 ] && ok "ledger carries $rows signed row(s)" || bad "ledger is empty"
 
-# --- 2. a signed file's verdict changes ----------------------------------
+# --- can closure.sh see a real estate here? ------------------------------
 out="$(timeout 120 bash "$C" realisateur x 2>/dev/null)"
+if ! grep -qE 'bin/hygiene-lint\.sh' <<<"$out"; then
+  echo "  SKIP: closure.sh cannot score realisateur here (no sibling checkouts /"
+  echo "        no bashified branch). Cases 2,3,4,6 need a real estate; 1 and 5 ran."
+  printf '\nnot-a-spend.test: %d passed, %d failed\n' "$pass" "$fail"
+  [ "$fail" -eq 0 ]; exit $?
+fi
+
+# --- 2. a signed file's verdict changes ----------------------------------
 grep -qE 'COMMENT-ONLY.*bin/hygiene-lint\.sh' <<<"$out" \
   && ok "a signed lint is no longer ESSENTIAL" || bad "hygiene-lint.sh did not clear"
 

@@ -153,6 +153,8 @@ bashify
 # the honest move is to raise the bar deliberately, not to leave the row
 # wrong.
 OWN_MINE="
+bin/lib/not-a-spend.tsv            realisateur the signed escape from bashify's purge scorer. A vendor-mention ledger is a judgement about what may leave this repo for a bashified branch, which is realisateur's own distribution question; the sibling bin/lib/not-a-verb.tsv is classified here for the same reason.
+bin/tests/not-a-spend.test.sh      realisateur the witness for that ledger, and it re-greps every signed file so a row that becomes false fails the build here rather than somewhere downstream.
 bin/precipitation-scan.sh          realisateur PRECIPITATION.md's mechanism; ranks promotion signals across every project. Pure sense, and the doctrine names it.
 bin/silence-audit.sh               realisateur the null-discriminator. UNIVERSE.md's Ashby reading names proprioception as the third unregulated interface; this is the regulator.
 bin/hygiene-lint.sh                realisateur BUILD-DISCIPLINE.md's own mechanization, scanning every registered project for the seeded patterns. Auditing compliance is the half UNIVERSE.md assigned here.
