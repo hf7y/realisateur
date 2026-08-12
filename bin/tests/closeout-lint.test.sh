@@ -358,8 +358,13 @@ has   "F2 a genuinely unmerged branch STILL flags"          "$out" "FLAG [host-o
 
 # F3: the downgrade must not need the network. F1 passing at all is already the
 # offline proof, but pin it explicitly -- a guard that hard-requires a network
-# is its own failure mode.
-out="$(PATH="/nonexistent-bin:$PATH" run "$T/blockers-today.md" squashed)"
+# is its own failure mode. Prepending a nonexistent directory to PATH does not
+# remove the real `gh` already earlier on it, so this used to not exercise the
+# no-gh case it claimed to; use the same GH_BIN-pointed-at-nothing stub B4
+# uses instead, which `command -v` genuinely cannot resolve.
+GH_BIN="$T/nope/gh"
+out="$(run "$T/blockers-today.md" squashed)"
+GH_BIN="$GH_DEFAULT"
 hasnt "F3 offline (no gh on PATH) still declines to flag"   "$out" "FLAG [host-only-branch] squashed: branch 'feature'"
 has   "F3 and still flags the genuinely unmerged one"       "$out" "FLAG [host-only-branch] squashed: branch 'lost'"
 
