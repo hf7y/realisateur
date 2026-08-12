@@ -199,6 +199,7 @@ bin/tests/guard-estate.test.sh     realisateur a test over the guard POPULATION.
 .claude/commands/ideate.md         realisateur the interactive triage pass. README.md 2 and UNIVERSE.md Law 1's enforcement point.
 .claude/commands/nightly-batch.md  realisateur the unattended inbox pass. This is the mission in one file.
 bin/selfdev-credentials.sh         realisateur asks whether each self-dev account's credentials match one declared baseline, side by side across the fleet. Same claim as bin/selfdev-agent-survey.sh's own row, extended from the dispatch-prompt contract to the credential shape -- realisateur owns the self-dev account contract being measured, not the accounts themselves. --apply converges by delegating to wire-selfdev-git.sh, scheduler's own effector, never reimplementing a credential mutation of its own.
+bin/install-honey-plugin.sh        realisateur installs the token-cost harness every self-dev account's sessions run under, and verifies it by RUNNING the SessionStart hook as the account rather than by checking that files exist. Same claim as bin/selfdev-credentials.sh's own row: realisateur owns the self-dev account contract being measured, not the accounts themselves -- scheduler owns the accounts and their dispatch, and nothing here touches either.
 bin/lib/selfdev-credentials-set.sh realisateur the baseline bin/selfdev-credentials.sh reads from -- follows its subject, the way bin/lib/ownership-set.sh follows this audit.
 "
 
