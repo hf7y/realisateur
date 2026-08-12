@@ -271,6 +271,14 @@ lib/propagation-set.sh
 # list executes as commands. That is not hypothetical; it is what the first
 # draft of this very comment did, and `bin/tests/propagation.test.sh` caught it
 # as 20 lines of "command not found". Comments go ABOVE the assignment.
+# selfdev-app-key.sh is PROVISION, not LOCAL and not PAYLOAD, on the same test
+# every entry here answers: would a host with NO payload installed still need
+# it? Yes -- it is what puts the one GitHub App credential at
+# /etc/selfdev/app.pem in the first place, and nothing on a bare host can mint
+# a token until it has run. It runs AS ROOT ON THE SELF-DEV HOST (like
+# provision-selfdev-user.sh directly above it), not from a hands account over
+# ssh (which is what makes selfdev-credentials.sh LOCAL instead), and
+# setup-selfdev-project.sh calls it as step 5/6.
 PROP_PROVISION_SCRIPTS="
 land-selfdev.sh
 provision-selfdev-user.sh
@@ -279,6 +287,7 @@ setup-selfdev-project.sh
 wire-selfdev-git.sh
 wire-release-channel.sh
 selfdev-gh-app-register.sh
+selfdev-app-key.sh
 install-shims.sh
 install-verbs.sh
 pivot.sh
