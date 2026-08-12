@@ -85,7 +85,6 @@ case "$cmd" in
     # "unknown subcommand", which reads as a typo.
     verb_gap 'incubation-audit: retired -- bin/incubation-audit.sh, deleted 2026-08-07 in 69246bc (#95)' ;;
   precipitation-scan)
-    [ -x "$LEGACY_ROOT/bin/precipitation-scan.sh" ] || verb_gap 'precipitation-scan: bin/precipitation-scan.sh is not executable or not present'
     # CARRIED: travels on this branch, so $SELF finds it with no checkout.
     [ -x "$SELF/bin/precipitation-scan.sh" ] || verb_gap 'precipitation-scan: missing from this BUILD (not from a checkout -- this verb no longer needs one)'
     exec "$SELF/bin/precipitation-scan.sh" "$@" ;;
