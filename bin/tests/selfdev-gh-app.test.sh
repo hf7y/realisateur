@@ -52,9 +52,18 @@ openssl genrsa -traditional -out "$T/app.pem" 2048 2>/dev/null \
 chmod 600 "$T/app.pem"
 openssl rsa -in "$T/app.pem" -pubout -out "$T/app.pub.pem" 2>/dev/null
 
-# Every case runs with HOME redirected into the sandbox, so a real
-# ~/.config/selfdev on the machine running this test can never leak in.
-run() { env HOME="$T/home" XDG_CACHE_HOME="$T/cache" "$@"; }
+# Every case runs with HOME redirected into the sandbox AND $SELFDEV_APP_CONF
+# pointed at the fixture conf, so neither a real ~/.config/selfdev nor the
+# host-wide /etc/selfdev on the machine running this test can leak in.
+#
+# The conf override became load-bearing on 2026-08-12: the credential is
+# host-wide now (/etc/selfdev/gh-app.conf, bin/lib/selfdev-app-key.sh), so
+# redirecting HOME alone no longer redirects where the script looks -- these
+# cases silently read nothing and every JWT assertion failed on an empty
+# string. $SELFDEV_APP_CONF is the supported way to say "this conf, this
+# invocation", and it is exactly what a test should be using.
+FIXTURE_CONF="$T/home/.config/selfdev/gh-app.conf"
+run() { env HOME="$T/home" XDG_CACHE_HOME="$T/cache" SELFDEV_APP_CONF="$FIXTURE_CONF" "$@"; }
 mkdir -p "$T/home/.config/selfdev" "$T/cache"
 
 echo "== selfdev-gh-app.test.sh =="
@@ -155,28 +164,31 @@ outH2="$(run "$SCRIPT" --adopt --account acct1 --key "$T/app.pem" 2>&1)"; rcH2=$
 has "H2 refuses without --app-id" "$outH2" "app-id"
 eq  "H2 exits 5" "$rcH2" "5"
 
-# --- I: --adopt installs, configures and hands off to the witness --------------
+# --- I: --adopt no longer invents a per-account path ---------------------------
+# It used to install ~/.config/selfdev/<account>/<account>.pem plus a conf
+# naming it -- which is how ONE App key came to sit on disk under four names,
+# and why `selfdev-credentials.sh --apply` could not find it (realisateur#209).
+# Placement is bin/selfdev-app-key.sh's job now, host-wide and as root, and
+# --adopt hands the key to it rather than keeping a second implementation.
+#
+# What is asserted here is the REFUSAL, because that is what an unprivileged
+# caller gets and it is the path a person actually hits. The placement itself
+# needs root and is exercised live, the same split selfdev-app-key.test.sh
+# makes for the same reason.
 outI="$(run env SELFDEV_GH_API="http://127.0.0.1:1" "$SCRIPT" --adopt \
         --account acct2 --key "$T/app.pem" --app-id 4520255 2>&1)"; rcI=$?
 has "I prints the fingerprint"  "$outI" "fingerprint:"
 has "I mentions the settings page" "$outI" "SHA256:"
-key="$T/home/.config/selfdev/acct2/acct2.pem"
-if [ -f "$key" ]; then
-  ok "I installed the key"
-  eq "I key is mode 600" "$(stat -c %a "$key")" "600"
-  eq "I conf is mode 600" "$(stat -c %a "$T/home/.config/selfdev/acct2/gh-app.conf")" "600"
-  has "I conf carries the app id" "$(cat "$T/home/.config/selfdev/acct2/gh-app.conf")" "SELFDEV_APP_ID=4520255"
-  # The fingerprint --adopt prints must be the one openssl computes here.
-  want="$(openssl rsa -in "$T/app.pem" -pubout -outform DER 2>/dev/null | openssl sha256 -binary | openssl base64)"
-  has "I fingerprint matches openssl" "$outI" "$want"
+want="$(openssl rsa -in "$T/app.pem" -pubout -outform DER 2>/dev/null | openssl sha256 -binary | openssl base64)"
+has "I fingerprint matches openssl" "$outI" "$want"
+if [ "$(id -u)" -eq 0 ]; then
+  ok "I skipped the refusal case: running as root"
 else
-  bad "I installed the key"; bad "I key is mode 600"; bad "I conf is mode 600"
-  bad "I conf carries the app id"; bad "I fingerprint matches openssl"
+  has "I refuses to place the key without root" "$outI" "needs root"
+  has "I names the script that owns placement"  "$outI" "selfdev-app-key.sh --apply"
+  eq  "I exits 5 rather than half-installing"   "$rcI" "5"
 fi
-# It re-execs --check, so the closed-port witness must fail loud through it.
-has "I runs the witness"       "$outI" "== selfdev-gh-app --check"
-has "I witness fails loud"     "$outI" "WITNESS FAILED"
-eq  "I exits 5 when the witness fails" "$rcI" "5"
+no  "I writes no per-account key directory" "$(ls -A "$T/home/.config/selfdev" 2>/dev/null)" "acct2"
 
 # --- J: the credential helper, INVOKED THE WAY GIT INVOKES IT ------------------
 # THE BUG THIS CASE EXISTS FOR, reproduced 2026-08-07:

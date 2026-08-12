@@ -127,18 +127,25 @@ t_has "BLIND row: reported as BLIND, not ok" "$GRADE_OUT" "BLIND"
 grade nobody ""
 t_eq "empty row: treated the same as BLIND (exit 2)" "$GRADE_RC" 2
 
-BAD_PEM_ROW=$'mode:644\tok\tmatch\tgho\t-\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
-grade x "$BAD_PEM_ROW"
-t_has "wrong pem mode: flagged" "$GRADE_OUT" "app.pem is mode 644"
-[ "$GRADE_FLAGS" -ge 1 ] && t_ok "wrong pem mode: at least one FLAG" || t_bad "wrong pem mode: no FLAG counted"
+# THE HOST-WIDE KEY, 2026-08-12. The pem column used to grade a per-account
+# file's MODE; it now grades whether this account could READ the one key at
+# /etc/selfdev/app.pem. `unreadable` is the case that mode:644 used to stand
+# in for, and it is the one that actually happens: group membership granted
+# but not yet in effect for that session.
+UNREADABLE_PEM_ROW=$'unreadable\tok\tmatch\tgho\t-\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+grade x "$UNREADABLE_PEM_ROW"
+t_has "host-wide key present but unreadable: flagged" "$GRADE_OUT" "CANNOT READ IT"
+t_has "host-wide key unreadable: names the group to check" "$GRADE_OUT" "selfdev-app-key.sh --check"
+[ "$GRADE_FLAGS" -ge 1 ] && t_ok "unreadable pem: at least one FLAG" || t_bad "unreadable pem: no FLAG counted"
 
 MISSING_PEM_ROW=$'missing\tok\tn/a\tgho\t-\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade x "$MISSING_PEM_ROW"
-t_has "missing pem: flagged, names the consequence" "$GRADE_OUT" "cannot mint an App token at all"
+t_has "missing pem: flagged, names the consequence" "$GRADE_OUT" "no account on this host can mint an App token"
+t_has "missing pem: names the one command that fixes it" "$GRADE_OUT" "selfdev-app-key.sh --apply"
 
 MISSING_CONF_ROW=$'ok:600\tmissing\tn/a\tgho\t-\t3\t3\t3\t3\t-\t-'
 grade x "$MISSING_CONF_ROW"
-t_has "missing conf: flagged" "$GRADE_OUT" "gh-app.conf is MISSING"
+t_has "missing conf: flagged" "$GRADE_OUT" "no host-wide /etc/selfdev/gh-app.conf"
 t_hasnt "missing conf: does NOT also flag appid/owner (nothing to compare)" "$GRADE_OUT" "declares App id"
 
 # A fixture path, not a real filesystem location -- deliberately NOT shaped
@@ -174,7 +181,16 @@ t_has "no gh-token at all: flagged" "$GRADE_OUT" "gh CLI cannot authenticate"
 
 EXTRA_ROW=$'ok:600\tok\tmatch\tgho\tecosim.pem\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade ecosim "$EXTRA_ROW"
-t_has "undeclared extra file: flagged, names the ecosim shape" "$GRADE_OUT" "UNDECLARED extra file 'ecosim.pem'"
+t_has "leftover private file: flagged" "$GRADE_OUT" "leftover private file 'ecosim.pem'"
+t_has "leftover private file: names why a second copy is drift" "$GRADE_OUT" "a rotation will miss"
+
+# app.pem itself is now a leftover when it appears under ~/.config/selfdev/:
+# the host-wide file is the credential and a private copy beside it is the
+# second source this whole change exists to end.
+LEFTOVER_BASELINE_ROW=$'ok:600\tok\tmatch\tgho\tapp.pem,gh-app.conf\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+grade x "$LEFTOVER_BASELINE_ROW"
+t_has "a private app.pem copy is itself drift now" "$GRADE_OUT" "leftover private file 'app.pem'"
+t_has "...and so is a private gh-app.conf" "$GRADE_OUT" "leftover private file 'gh-app.conf'"
 
 EXTRA_TWO_ROW=$'ok:600\tok\tmatch\tgho\ta.pem,b.pem\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade x "$EXTRA_TWO_ROW"
@@ -215,8 +231,8 @@ STUB="$T/stub"; mkdir -p "$STUB"
 # A stub `ssh` that answers fetch_remote's `bash -s -- <args...>` shape (the
 # FILTER positional is the 4th token after "--") from $STUB_ROWS, and treats
 # any OTHER invocation (cmd_apply's one-shot commands) as "log it, succeed" --
-# see section E, which points CRED_APP_PEM_SRC/CONF_SRC at real fixture files
-# and inspects this log rather than trusting a bare exit code.
+# see section E, which inspects this log for the delegated commands rather
+# than trusting a bare exit code.
 #
 # `flat="$*"` DELIBERATELY THROWS AWAY the argv boundaries this stub was
 # actually invoked with, then re-derives them by joining with one space and
@@ -300,7 +316,7 @@ t_rc "file-clean but gh unreachable still exits non-zero (BLIND is never ok)" 1 
 FULL_DRIFT_ROWS='fleet-drift	missing	missing	n/a	pat	x.pem	0	3	3	3	-	-'
 O="$(STUB_ROWS="$FULL_DRIFT_ROWS" CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN=/nonexistent-gh "$SCRIPT" --audit 2>&1)"; R=$?
 t_rc "a drifted fleet exits 1" 1 "$R"
-t_has "drifted fleet: FLAG on missing pem" "$O" "app.pem is MISSING"
+t_has "drifted fleet: FLAG on missing pem" "$O" "no host-wide App key"
 t_has "drifted fleet: prints the redundancy note" "$O" "redundant on that path"
 t_has "drifted fleet: names hf7y/scheduler#103" "$O" "scheduler#103"
 
@@ -410,14 +426,15 @@ t_has "an unrecognized readOnly value is reported BLIND, never silent" "$O" "ret
 echo
 echo "-- E. --apply: idempotency, converge actions, and refusals ------------"
 # ============================================================================
-SRC="$T/src"; mkdir -p "$SRC"
-printf 'FIXTURE-PEM-BYTES\n' > "$SRC/app.pem"
-printf 'SELFDEV_APP_ID=4521586\nSELFDEV_APP_KEY=/x\nSELFDEV_GH_OWNER=hf7y\n' > "$SRC/gh-app.conf"
+# NO FIXTURE SOURCE KEY any more. --apply used to push a private copy of the
+# App key into the account from a local source path, and the source-path knobs
+# are gone with the per-account copies (realisateur#209): the credential is one
+# host-wide file and bin/selfdev-app-key.sh places it. What --apply does now is
+# DELEGATE, so what these cases assert is the delegation, not bytes on stdin.
 
 LOG="$T/apply.log"; : > "$LOG"
 CLEAN_SINGLE='conv-clean	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y'
 O="$(STUB_ROWS="$CLEAN_SINGLE" CRED_SSH_BIN="$STUB/ssh" STUB_LOG="$LOG" \
-     CRED_APP_PEM_SRC="$SRC/app.pem" CRED_APP_CONF_SRC="$SRC/gh-app.conf" \
      "$SCRIPT" --apply conv-clean 2>&1)"; R=$?
 t_rc "apply on an already-compliant account exits 0" 0 "$R"
 t_has "apply on a compliant account reports nothing to do" "$O" "nothing to do"
@@ -427,29 +444,27 @@ t_has "apply on a compliant account reports nothing to do" "$O" "nothing to do"
 : > "$LOG"
 NEEDS_CREDS='conv-fix	missing	missing	n/a	gho	-	0	3	3	0	-	-'
 O="$(STUB_ROWS="$NEEDS_CREDS" CRED_SSH_BIN="$STUB/ssh" STUB_LOG="$LOG" \
-     CRED_APP_PEM_SRC="$SRC/app.pem" CRED_APP_CONF_SRC="$SRC/gh-app.conf" \
      "$SCRIPT" --apply conv-fix 2>&1)"; R=$?
-t_rc "apply that converges pem+conf+wiring exits 0" 0 "$R"
-t_has "apply reports the pem/conf install" "$O" "app.pem + gh-app.conf installed"
+t_rc "apply that converges credential+wiring exits 0" 0 "$R"
+t_has "apply reports the host-wide placement" "$O" "host-wide App credential"
 t_has "apply reminds the operator to notify-senechal" "$O" "notify-senechal 'selfdev-credentials --apply"
-PEM_HASH="$(sha256sum "$SRC/app.pem" | cut -d' ' -f1)"
-CONF_HASH="$(sha256sum "$SRC/gh-app.conf" | cut -d' ' -f1)"
-t_has "apply piped the REAL app.pem bytes over stdin (hash matches)" "$(cat "$LOG")" "$PEM_HASH"
-t_has "apply piped the REAL gh-app.conf bytes over stdin (hash matches)" "$(cat "$LOG")" "$CONF_HASH"
+t_has "apply delegates placement to selfdev-app-key.sh --apply" "$(cat "$LOG")" "selfdev-app-key.sh --apply"
+t_hasnt "apply never writes a per-account app.pem again" "$(cat "$LOG")" "/.config/selfdev/app.pem"
 t_has "apply delegates own-repo wiring to wire-selfdev-git.sh --apply --rw" "$(cat "$LOG")" "wire-selfdev-git.sh' 'conv-fix' --apply --rw"
 t_has "apply delegates senechal wiring to wire-selfdev-git.sh --apply (read-only)" "$(cat "$LOG")" "wire-selfdev-git.sh' 'senechal' --apply\""
 t_hasnt "apply never touches realisateur wiring when it is already 3/3" "$(cat "$LOG")" "'realisateur' --apply"
 t_hasnt "apply never touches scheduler wiring when it is already 3/3" "$(cat "$LOG")" "'scheduler' --apply"
 
 : > "$LOG"
-O="$(STUB_ROWS='conv-nosrc	missing	missing	n/a	gho	-	3	3	3	3	-	-' \
+# The placement step failing on the host is reported, not swallowed: the
+# account is left exactly as it was and the operator is pointed at the one
+# command that explains why.
+O="$(STUB_ROWS='conv-nokey	missing	missing	n/a	gho	-	3	3	3	3	-	-' \
      CRED_SSH_BIN="$STUB/ssh" STUB_LOG="$LOG" \
-     CRED_APP_PEM_SRC="$T/does-not-exist.pem" CRED_APP_CONF_SRC="$T/does-not-exist.conf" \
-     "$SCRIPT" --apply conv-nosrc 2>&1)"; R=$?
-t_rc "apply with no canonical local source to copy from exits 5" 5 "$R"
-t_has "apply names why it refused (no source, needs a human)" "$O" "cannot converge this without a human"
-[ -s "$LOG" ] && t_bad "apply with no source still issued a remote command" \
-              || t_ok "apply with no source issued NO remote command (nothing destructive attempted)"
+     STUB_FAIL_MATCH="selfdev-app-key.sh" \
+     "$SCRIPT" --apply conv-nokey 2>&1)"; R=$?
+t_rc "apply exits 5 when the host-wide placement fails" 5 "$R"
+t_has "apply names the command that explains it" "$O" "selfdev-app-key.sh --check"
 
 : > "$LOG"
 O="$(STUB_ROWS='conv-blind	BLIND' CRED_SSH_BIN="$STUB/ssh" STUB_LOG="$LOG" "$SCRIPT" --apply conv-blind 2>&1)"; R=$?
@@ -462,7 +477,6 @@ t_has "apply on a BLIND account refuses by name" "$O" "read as BLIND"
 O="$(STUB_ROWS='conv-fail	ok:600	ok	match	gho	-	0	3	3	3	4521586	hf7y' \
      STUB_FAIL_MATCH="wire-selfdev-git.sh' 'conv-fail'" \
      CRED_SSH_BIN="$STUB/ssh" STUB_LOG="$LOG" \
-     CRED_APP_PEM_SRC="$SRC/app.pem" CRED_APP_CONF_SRC="$SRC/gh-app.conf" \
      "$SCRIPT" --apply conv-fail 2>&1)"; R=$?
 t_rc "apply propagates a failed delegate step as exit 5" 5 "$R"
 t_has "apply reports the failed step and does not claim success" "$O" "FAILED"
