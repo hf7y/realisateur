@@ -78,10 +78,21 @@
 # What changes is that the queue is now countable, so the judgement has
 # somewhere to be applied instead of being remembered.
 #
-# IT NEVER PUSHES, and it never commits either. The deposit mechanism writes
-# files into the vault working tree and stops; the vault has a GitHub remote
-# and is deliberately left unpushed (PROSE-REAPING.md 2, Zach's 2026-08-06
-# licensing/IP note). No code path here runs `git push` or `git commit`.
+# IT NEVER PUSHES, and it never commits either: the deposit mechanism writes
+# files into the vault working tree and stops. No code path here runs
+# `git push` or `git commit`.
+#
+# THE REASON CHANGED ON 2026-08-12 EVEN THOUGH THE BEHAVIOUR DID NOT, which is
+# worth ten seconds of a reader's time. It used to say the vault "is
+# deliberately left unpushed (Zach's 2026-08-06 licensing/IP note)". That is
+# reversed: the private hf7y/ecosystem1-vault remote IS the vault now, and a
+# reaping pass commits AND pushes (PROSE-REAPING.md 2 and 5.6). What that rule
+# actually cost, before it was reversed: mandark's working copy was found 19
+# commits ahead of origin with 9 uncommitted paths -- one laptop holding the
+# only copy of every consignment since 2026-08-02.
+#
+# So this tool still not committing is now a division of labour rather than a
+# prohibition: depositing is mechanical, deciding what a commit SAYS is not.
 #
 # exit: 0 kept  2 usage  5 broken  6 blind  7 refused
 #       -- byte-identical to `fonde`'s own VERB_EXITS, because for the deposit
@@ -99,7 +110,13 @@ SELF_NAME='consigne'
 # a second name to point the new one at the same place, and a `consigne` that
 # invented CONSIGNE_VAULT would deposit into a different tree than
 # `fonde consign` for the same caller, silently.
-VAULT="${BIBLIOTHECAIRE_VAULT:-$HOME/ecosystem1/ecosystem1}"
+# THE DEFAULT MOVED, 2026-08-12, Zach-directed ("vault moves off of any local
+# host"): out of one user's home on one laptop and onto the FHS location for
+# system-served data. A local clone is a CACHE of the GitHub remote, which is
+# the vault; /srv is where a cache like that belongs, and it is readable by
+# every account on the host rather than by whoever owns the home directory.
+VAULT_DEFAULT=/srv/ecosystem1-vault
+VAULT="${BIBLIOTHECAIRE_VAULT:-$VAULT_DEFAULT}"   # --vault overrides, below
 
 die()    { printf '%s: %s\n' "$SELF_NAME" "$*" >&2; exit 2; }
 blind()  { printf '%s: BLIND: %s\n' "$SELF_NAME" "$*" >&2; exit 6; }
@@ -118,6 +135,8 @@ usage:
   consigne --help                 this text
 
 flags:
+  --vault PATH  the vault to deposit into, for this invocation only. Beats
+                $BIBLIOTHECAIRE_VAULT, which beats /srv/ecosystem1-vault.
   --summon      accepted and buys nothing. The deposit is mechanized and
                 reaches no agent, so this spends zero and says so -- exactly
                 as `fonde consign --summon` does, which is the remedy `fauche`
@@ -133,8 +152,10 @@ exit:
                  under version control
 
 environment:
-  BIBLIOTHECAIRE_VAULT   the vault (default $HOME/ecosystem1/ecosystem1).
-                         The same variable `fonde` reads, on purpose.
+  BIBLIOTHECAIRE_VAULT   the vault (default /srv/ecosystem1-vault). The same
+                         variable `fonde` and `fauche` read, on purpose: one
+                         name, so pointing one door somewhere cannot leave
+                         another pointing elsewhere. `--vault` beats it.
   CONSIGNE_IMPL          path to lib/consign-prose.sh, if it should not be
                          found automatically. Resolution order otherwise:
                          the installed `fonde`'s own tree, then `installe
@@ -144,8 +165,9 @@ environment:
 THIS TOOL DELETES NOTHING. `status` reports a queue; acting on it is a
 judgement (PROSE-REAPING.md 1), and it is still yours to make.
 
-NEVER PUSHES, NEVER COMMITS. The vault is committed by hand and deliberately
-left unpushed -- PROSE-REAPING.md 2, Zach's 2026-08-06 licensing/IP note.
+NEVER PUSHES, NEVER COMMITS. It writes files and stops; the pass that ran it
+commits and pushes (PROSE-REAPING.md 5.6). The remote IS the vault as of
+2026-08-12 -- the older "deliberately left unpushed" rule is reversed.
 
 see: man consigne; hf7y/scheduler#86 for the half `status` makes countable.
 EOF
@@ -340,6 +362,11 @@ while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help) usage; exit 0 ;;
     --summon)  SUMMON=1 ;;
+    # Highest-precedence form of the one config this tool has. Both spellings,
+    # because `--vault=/x` silently becoming a positional path argument would
+    # deposit the vault path itself as a document.
+    --vault)   shift; [ $# -gt 0 ] || die "--vault needs a path"; VAULT="$1" ;;
+    --vault=*) VAULT="${1#*=}"; [ -n "$VAULT" ] || die "--vault needs a path" ;;
     # A near-miss on the only flag that has ever meant "may spend money" must
     # fail rather than be swallowed as an unknown -- bin/lib/cli-guard.sh's
     # rule, restated here because a verb-shaped front door does not source it.

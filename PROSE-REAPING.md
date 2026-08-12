@@ -88,11 +88,39 @@ this end up this way?"* rather than *"what will break if I touch it?"*: run
 narratives, migration post-mortems, weight and tuning archaeology, unregistration
 records, reversed decisions and the reason they reversed.
 
-**Prose does not go to GitHub** — Zach's licensing/IP note, standing until
-ethics guards around IP exist.
+**REVERSED 2026-08-12, Zach-directed:** *"remove the reference to 'do not
+push' and use github remote as the canonical location. vault moves off of any
+local host."* The private `hf7y/ecosystem1-vault` remote **is** the vault now.
+Commit **and push**.
 
-**The vault has a GitHub remote and is deliberately left unpushed.** Commit
-locally; do not push. As of 2026-08-06 it is 6 commits ahead of `origin/main`.
+What the old rule said, kept because a reversed decision is worth more than a
+clean page: *"Prose does not go to GitHub — Zach's licensing/IP note, standing
+until ethics guards around IP exist"*, and *"the vault has a GitHub remote and
+is deliberately left unpushed."*
+
+What it cost, and why this is written down at all: on 2026-08-12 the working
+copy on mandark was **19 commits ahead of origin with 9 uncommitted paths** —
+one laptop disk holding the only copy of every consignment since 2026-08-02.
+"Do not push" and "no other copy exists" are the same sentence when nothing
+else is arranged, and nothing else had been.
+
+A local clone is now a **cache**, not the vault. Any host may hold one at
+`/srv/ecosystem1-vault`; losing it costs a `git clone`.
+
+**Where a local clone goes, and why there.** `/srv` is the FHS location for
+"data for services provided by this system" — the vault is exactly that, and
+it was living in `~zach/ecosystem1/ecosystem1`, which is one user's home on one
+laptop. On monkey it is `/srv/ecosystem1-vault`, group `vault`, mode 2775
+setgid, so every self-dev account can read and deposit without a copy each.
+Three verbs resolve it, in this order, and none of them hardcodes it:
+
+    --vault <path>          highest precedence, per invocation
+    $BIBLIOTHECAIRE_VAULT   one variable, shared across all three
+    /srv/ecosystem1-vault   the default
+
+`consigne` (realisateur), `fonde` (bibliothecaire) and `fauche` (gardien) all
+read that variable — it is one name deliberately, so a caller pointing one door
+somewhere cannot silently leave another door pointing elsewhere.
 
 ### GitHub issues — the work
 
@@ -207,8 +235,8 @@ ahead-count is against last-known remote state and the flag text says so.
    it. Put the witness command in the file.
 5. Convert every actionable paragraph to a **GitHub issue** in that project's
    repo (§3). Count them; the count is part of the report.
-6. Write the narrative to the vault under `<project>/`. Commit locally, **do not
-   push.**
+6. Write the narrative to the vault under `<project>/`, then **commit and
+   push**. The remote is the vault (§2); an unpushed deposit is not deposited.
 7. Verify **behaviour is unchanged** — for a config file, a byte-identical
    preview from whatever consumes it, plus its witness tests.
 8. Report the before/after line count, and **the list of expired-premise

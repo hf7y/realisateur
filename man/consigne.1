@@ -91,11 +91,16 @@ Print the usage text and exit 0.
 .TP
 .B BIBLIOTHECAIRE_VAULT
 The vault. Default
-.IR $HOME/ecosystem1/ecosystem1 .
+.IR /srv/ecosystem1-vault ,
+the FHS location for data a system serves; it was
+.I $HOME/ecosystem1/ecosystem1
+until 2026-08-12, which put the estate's prose in one user's home on one laptop.
 This is the same variable and the same default
-.B fonde
-reads, deliberately: a caller who has pointed the old door at another tree must
-not have to learn a second name to point this one at the same place.
+.BR fonde " and " fauche
+read, deliberately: a caller who has pointed one door at another tree must
+not have to learn a second name to point the others at the same place.
+.B \-\-vault
+overrides it for a single invocation.
 .TP
 .B CONSIGNE_IMPL
 Path to
@@ -138,9 +143,15 @@ No code path runs
 .B git push
 or
 .BR "git commit" .
-The vault has a GitHub remote and is deliberately left unpushed \(em
+It writes files and stops; the reaping pass that ran it commits and pushes
+\(em
 .I PROSE-REAPING.md
-\(sc2, standing on Zach's 2026-08-06 licensing/IP note.
+\(sc5.6. The private
+.I hf7y/ecosystem1\-vault
+remote IS the vault as of 2026-08-12, Zach-directed; the older
+"deliberately left unpushed" rule is reversed, and what it cost is recorded in
+.I PROSE-REAPING.md
+\(sc2.
 .SH "SEE ALSO"
 .BR fonde (1),
 .BR fauche (1),

@@ -281,6 +281,30 @@ hasnt "it invents no second name for the vault" "$SRC_TEXT" "CONSIGNE_VAULT"
 # scripts; this asks `fonde` and `installe` where they are instead.
 hasnt "it does not re-derive the verb-build layout" "$SRC_TEXT" "verb-builds/current"
 
+# --- the vault knob: flag beats env beats default ---------------------------
+# Three sources for one fact, so the ORDER is the thing to assert. It was one
+# hardcoded home until 2026-08-12; a knob whose precedence nobody checked would
+# be the same defect wearing a flag.
+: > "$ARGV_LOG"
+VAULT_F="$TMP/vault-flag"; mkdir -p "$VAULT_F"
+PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" BIBLIOTHECAIRE_VAULT="$VAULTDIR" \
+  "$CONSIGNE" --vault "$VAULT_F" DOC.md >/dev/null 2>&1
+check "--vault beats BIBLIOTHECAIRE_VAULT" "$(head -1 "$ARGV_LOG")" "$VAULT_F"
+
+: > "$ARGV_LOG"
+PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" BIBLIOTHECAIRE_VAULT="$VAULTDIR" \
+  "$CONSIGNE" --vault="$VAULT_F" DOC.md >/dev/null 2>&1
+check "--vault=PATH is the same knob" "$(head -1 "$ARGV_LOG")" "$VAULT_F"
+
+OUT="$(PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" "$CONSIGNE" --vault DOC.md 2>&1)"; rc=$?
+check "--vault with no path is a usage error, not a silent deposit" "$rc" "2"
+
+# The default is the FHS location, not a home directory. Asserted against the
+# source rather than by running with a clean env, because running it would
+# depend on whether this machine happens to have /srv/ecosystem1-vault.
+has   "the default vault is /srv/ecosystem1-vault" "$SRC_TEXT" "VAULT_DEFAULT=/srv/ecosystem1-vault"
+hasnt "no vault path under a home directory remains" "$SRC_TEXT" 'ecosystem1/ecosystem1'
+
 echo
 printf -- '--- consigne: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
