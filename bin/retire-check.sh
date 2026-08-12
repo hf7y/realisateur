@@ -2,6 +2,18 @@
 # retire-check.sh -- mechanizes /cloture step 3's "retire check" (#166):
 # does the closing text name a problem it did not attach a URL to?
 #
+# GUARD: does the closing text name a problem without attaching a URL to it?
+# RUNNER: bin/tests/retire-check.test.sh
+# GUARD-TEST: bin/tests/retire-check.test.sh
+# GATE: default $TREE/README.md
+# VERIFIED: 2026-08-12 via bash bin/tests/retire-check.test.sh and bash bin/tests/guard-estate.test.sh
+#
+# The GATE line points at a FILE, not a checkout, because this guard scans
+# TEXT -- it has no tree to be pointed at. Everything after the mode word in a
+# `# GATE:` line is argv (guard-estate.test.sh substitutes $TREE), so the
+# reason lives here rather than trailing that line, where it would be passed
+# to this script as eight filenames.
+#
 # realisateur#165, 2026-08-11: a `/cloture` close named a real defect with
 # "Not something I fixed -- flagging it" and stopped there, with no issue/PR
 # URL. cloture.md's step 3 already tells a session to grep its own closing
