@@ -93,26 +93,17 @@ push' and use github remote as the canonical location. vault moves off of any
 local host."* The private `hf7y/ecosystem1-vault` remote **is** the vault now.
 Commit **and push**.
 
-What the old rule said, kept because a reversed decision is worth more than a
-clean page: *"Prose does not go to GitHub — Zach's licensing/IP note, standing
-until ethics guards around IP exist"*, and *"the vault has a GitHub remote and
-is deliberately left unpushed."*
+The old rule, kept because a reversed decision outlives a clean page: *"Prose
+does not go to GitHub"*, and *"the vault has a GitHub remote and is deliberately
+left unpushed."* What it cost: on 2026-08-12 mandark's copy was **19 commits
+ahead of origin with 9 uncommitted paths** — one laptop holding the only copy of
+every consignment since 2026-08-02. "Do not push" and "no other copy exists" are
+the same sentence when nothing else is arranged.
 
-What it cost, and why this is written down at all: on 2026-08-12 the working
-copy on mandark was **19 commits ahead of origin with 9 uncommitted paths** —
-one laptop disk holding the only copy of every consignment since 2026-08-02.
-"Do not push" and "no other copy exists" are the same sentence when nothing
-else is arranged, and nothing else had been.
-
-A local clone is now a **cache**, not the vault. Any host may hold one at
-`/srv/ecosystem1-vault`; losing it costs a `git clone`.
-
-**Where a local clone goes, and why there.** `/srv` is the FHS location for
-"data for services provided by this system" — the vault is exactly that, and
-it was living in `~zach/ecosystem1/ecosystem1`, which is one user's home on one
-laptop. On monkey it is `/srv/ecosystem1-vault`, group `vault`, mode 2775
-setgid, so every self-dev account can read and deposit without a copy each.
-Three verbs resolve it, in this order, and none of them hardcodes it:
+A local clone is now a **cache**: `/srv/ecosystem1-vault` (FHS "data for
+services provided by this system"), on monkey group `vault` mode 2775 setgid so
+all thirteen accounts share one copy. Losing it costs a `git clone`. Three verbs
+resolve it, in this order, none hardcoding it:
 
     --vault <path>          highest precedence, per invocation
     $BIBLIOTHECAIRE_VAULT   one variable, shared across all three
