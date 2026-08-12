@@ -274,6 +274,7 @@ lib/propagation-set.sh
 PROP_PROVISION_SCRIPTS="
 land-selfdev.sh
 provision-selfdev-user.sh
+install-honey-plugin.sh
 setup-selfdev-project.sh
 wire-selfdev-git.sh
 wire-release-channel.sh
