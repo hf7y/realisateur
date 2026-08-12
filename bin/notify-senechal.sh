@@ -127,7 +127,7 @@ case "$text" in
     exit 2 ;;
 esac
 
-[ -x "$SCHED_ROOT/bin/scheduler" ] || die "scheduler front door not found/executable at $SCHED_ROOT/bin/scheduler"
+command -v gh >/dev/null 2>&1 || die "gh is not on PATH -- cannot file, and could not confirm a filing either"
 # NOTE: no senechal clone is required any more -- the note goes to GitHub.
 # The check that used to be here (`[ -d "$SENECHAL/.git" ]`) is removed
 # deliberately: keeping it would have made this script keep DEMANDING the very
@@ -152,20 +152,55 @@ esac
 # holds a READ-ONLY deploy key on senechal, so the old push could never work
 # and `installe` exited 8 on all 25 verbs while the change itself had landed.
 # Filing an issue needs no write access to any default branch.
-echo "notify-senechal: filing via 'scheduler -i senechal'..."
-out="$("$SCHED_ROOT/bin/scheduler" -i senechal "$text" 2>&1)" || {
+# SHALLOW FIX, 2026-08-12, Zach-directed: file with `gh` directly instead of
+# shelling out to `scheduler -i`.
+#
+# WHY. `scheduler -i` is bin/scheduler, the 3,522-line monolith hf7y/scheduler#34
+# is sunsetting -- and it lives in a CHECKOUT. This command is the one every
+# project protocol requires, so that single call was pinning a scheduler clone
+# onto every host that must be able to notify. Filing the issue is the part
+# `scheduler -i` does last and least; the labels below are the part that
+# matters, and `gh` can stamp those directly.
+#
+# THE LABEL IS A SENSOR, NOT METADATA, and it is the reason this is not just
+# `gh issue create`. From realisateur/bin/thermostat-wiring.sh:147 -- "the
+# provenance label is the thermostat's actual sensor. Every actor in this
+# estate is `hf7y` (realisateur#40, #86), so authorship cannot answer 'did a
+# human ask for this, or did an agent find it' ... An unlabelled issue reads as
+# a Zach directive, i.e. it errors toward dispatching MORE." Git authorship
+# cannot carry provenance here because every actor is the same account, so
+# `from:<project>` is the only channel that can. Dropping it would not be
+# untidy; it would make every machine note read as a human instruction.
+#
+# THIS IS NOT THE PRINCIPLED SHAPE -- see hf7y/realisateur#196. One door, as a
+# French verb, taking a destination, with notify-senechal and `consulte` as
+# thin callers. Both already implement "file a machine-authored note, labelled
+# with its origin, and prove it landed", twice.
+DEST_REPO="${NOTIFY_SENECHAL_REPO:-hf7y/senechal}"
+FROM_PROJECT="${NOTIFY_FROM_PROJECT:-realisateur}"
+
+# The title is the first line, bounded; the body carries the whole note. A
+# title that is the entire paragraph is unreadable in a list, and the list is
+# where a human meets this.
+title="$(printf '%s' "$text" | head -1 | cut -c1-72)"
+[ -n "$title" ] || die "the note has no first line to title it with"
+
+echo "notify-senechal: filing to $DEST_REPO as from:$FROM_PROJECT ..."
+out="$(gh issue create --repo "$DEST_REPO" \
+        --title "$title" \
+        --body "$text" \
+        --label idea --label "from:$FROM_PROJECT" 2>&1)" || {
   printf '%s\n' "$out" >&2
-  die "scheduler -i senechal rejected the note"
+  die "gh issue create rejected the note on $DEST_REPO"
 }
 printf '%s\n' "$out"
 
-# The URL is the receipt. Parsed rather than assumed, because a `scheduler -i`
-# that silently changed its output shape must fail here, not be reported as a
-# success nobody can find. This is the same reason the old body verified the
-# commit instead of trusting exit 0.
+# The URL is the receipt. Parsed rather than assumed: a create that prints
+# success without a URL recorded nothing anybody can find, and exit 0 is not
+# evidence that an issue exists. Same reason the body below reads it back.
 issue_url="$(printf '%s\n' "$out" | grep -oE 'https://github\.com/[^[:space:]]+/issues/[0-9]+' | head -1)"
 [ -n "$issue_url" ] \
-  || die "scheduler -i reported success but printed no issue URL -- nothing verifiable was recorded"
+  || die "gh reported success but printed no issue URL -- nothing verifiable was recorded"
 
 # --- 2. prove the issue exists on the remote --------------------------------
 #
