@@ -341,6 +341,16 @@ has "--help documents the strict exit" "$O" "foreign mechanism remains"
 
 echo
 echo "== 10. WITNESS -- THE LIVE TREE (read-only) ================================="
+# A backtick pair inside OWN_MINE/OWN_THEIRS is command substitution (the
+# strings are double-quoted, not single-quoted or a heredoc) -- confirmed
+# live 2026-08-11, hf7y/realisateur#170: the consigne row's two backtick-
+# quoted words silently vanished and sourcing printed two "command not
+# found" lines. Nothing else in this suite sources the LIVE ledger, so this
+# is the one place that would catch a backtick regression before it repeats.
+LEDGER_ERR="$(bash -c "source '$REPO/bin/lib/ownership-set.sh'" 2>&1 >/dev/null)"
+[ -z "$LEDGER_ERR" ] && ok "sourcing the live ledger prints nothing to stderr" \
+  || bad "sourcing the live ledger printed to stderr (unescaped backtick in a row?): $LEDGER_ERR"
+
 # Not an assertion about the NUMBER. Two things that must hold at any share.
 OUT="$(cd "$REPO" && bash "$AUD" --repo "$REPO" 2>&1)"; RC=$?
 rc_is "the recorded baseline is honest: no regression on this branch" 0 $RC
