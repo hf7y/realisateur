@@ -153,6 +153,8 @@ bashify
 # the honest move is to raise the bar deliberately, not to leave the row
 # wrong.
 OWN_MINE="
+.agent-project                     realisateur the registry marker this repo both defines and carries. cut-verb-build.sh resolves it across every non-archived repo in one GraphQL query; a project declaring itself in its own tree is the same shape as declaring a verb.
+bin/tests/registry-marker.test.sh  realisateur the witness for that derivation, and specifically for the property that a BLIND marker query records NO registry rather than an empty one.
 bin/lib/not-a-spend.tsv            realisateur the signed escape from bashify's purge scorer. A vendor-mention ledger is a judgement about what may leave this repo for a bashified branch, which is realisateur's own distribution question; the sibling bin/lib/not-a-verb.tsv is classified here for the same reason.
 bin/tests/not-a-spend.test.sh      realisateur the witness for that ledger, and it re-greps every signed file so a row that becomes false fails the build here rather than somewhere downstream.
 bin/precipitation-scan.sh          realisateur PRECIPITATION.md's mechanism; ranks promotion signals across every project. Pure sense, and the doctrine names it.
