@@ -326,10 +326,20 @@ PROP_LEAK_BOUND=7
 # PAYLOAD without adding it to PENDING, not to grow the bound. Doing that is
 # #115's job. Reclassifying it here without the man page would silently drop
 # it from every build (#85).
+#
+# retire-check.sh (#166) is LOCAL for the identical reason, same paragraph:
+# adding an eighth PAYLOAD row raises the leak bound rather than shrinking it.
+# It also is not yet CALLED by anything -- wiring it into cloture.md step 3,
+# the command every project's session would actually invoke it from, needs an
+# edit to `.claude/commands/*.md`, which this repo's own sensitive-file gate
+# refuses in an unattended session (#187, same wall). Until both land --
+# PAYLOAD without growing the bound, and the cloture.md wiring -- this stays a
+# standalone tool run by path, not a verb.
 PROP_LOCAL_SCRIPTS="
 claim-drift.sh
 defere.sh
 deferral-ledger.sh
+retire-check.sh
 cut-verb-build.sh
 deploy-drift.sh
 release-gate.sh

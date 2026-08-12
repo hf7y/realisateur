@@ -241,6 +241,7 @@ bin/defere.sh                      vim-arcade files an issue and prints the ledg
 bin/path-provenance-audit.sh       senechal asks whether every PATH entry has an owner and a source. senechal owns knowing what exists on a machine -- Zach reassigned this class explicitly on 2026-08-07.
 bin/tests/path-provenance-audit.test.sh senechal follows its subject.
 bin/closeout-lint.sh               bashify generic session-durability lint. Nothing in it is about ideas, inboxes or scaffolding; every repo in the estate wants it, which is the definition of a verb.
+bin/retire-check.sh                realisateur mechanizes cloture.md step 3's own by-hand grep (#166), same door as hygiene-lint.sh -- auditing compliance with a doctrine this project wrote, first used against this repo before any estate-wide adoption is warranted. Unlike closeout-lint.sh it is not yet wired into any command (#187's .claude/ write gate) or accepted onto the payload ratchet, so it stays realisateur's own tool rather than a claimed bashify verb.
 bin/hardcoded-home-lint.sh         bashify generic shell lint. Same test.
 bin/markdown-cost.sh               bashify generic diff-shape gate. Same test.
 bin/suite-docs-lint.sh             bashify generic suite-hygiene lint. Same test.
