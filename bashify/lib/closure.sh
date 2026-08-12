@@ -48,6 +48,21 @@
 # Read-only. Never writes to any repository, never checks anything out.
 set -uo pipefail
 
+# not_a_spend <project> <relpath> -- is this file's vocabulary signed for?
+#
+# EXEMPTS THE FILE ITSELF ONLY, never its closure: a script that SOURCES a real
+# spender must still score ESSENTIAL, because the spend is then genuinely
+# reachable through it. So this is consulted per member below, and a member
+# that is not signed keeps its score.
+NOT_A_SPEND="${NOT_A_SPEND_TSV:-$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)/bin/lib/not-a-spend.tsv}"
+not_a_spend() {
+  [ -r "$NOT_A_SPEND" ] || return 1
+  awk -F'\t' -v p="$1" -v f="$2" '
+    /^[[:space:]]*#/ {next} NF<3 {next}
+    $1==p && $2==f {found=1; exit} END {exit !found}' "$NOT_A_SPEND"
+}
+exempted=0
+
 CLI_NAME='closure.sh'
 CLI_SUMMARY='classify each wrapped script by the purge score of its transitive source closure'
 CLI_USAGE='  closure.sh                 every project with a bashified branch
@@ -209,9 +224,28 @@ for conf in "$SCHED"/schedule/*.conf; do
       s="$(surface_score "$repo/$m")"
       c="$(surface_score_code "$repo/$m")"
       if [ "$s" -gt "$worst" ]; then worst="$s"; via="$m"; fi
+      # PER MEMBER, never blanket. A script that SOURCES a real spender must
+      # still be ESSENTIAL -- the spend is genuinely reachable through it -- so
+      # signing the outer file cannot excuse an unsigned member. Only the
+      # member's own row exempts the member.
+      if [ "$c" -gt 0 ] && not_a_spend "$proj" "$m"; then
+        exempted=$((exempted+1)); c=0
+      fi
       [ "$c" -gt "$worst_code" ] && worst_code="$c"
     done
 
+    # THE SIGNED ESCAPE. surface_score_code counts VOCABULARY; for an auditing
+    # tool that is not the same question as behaviour, because such a tool must
+    # NAME what it audits. realisateur/bin/hygiene-lint.sh's highest-scoring
+    # line is `echo "(offline-first: no claude calls ...)"` -- it fails a spend
+    # guard by saying it does not spend.
+    #
+    # The measurement above is left ALONE and still reports the real count. Only
+    # the VERDICT consults the ledger, so a reader still sees what the file
+    # contains and sees that a human signed for it. bashify/lib/surface.sh:54
+    # predicted exactly this ("it fails loudly and gets an exemption, which is
+    # the right way round for a guarantee of absence") and left the door
+    # unbuilt; this is the door, and it is per-file, never a wider regex.
     nunres="${#UNRES[@]}"
     if   [ "$worst_code" -gt 0 ]; then class=ESSENTIAL
     elif [ "$nunres" -gt 0 ];     then class=UNRESOLVED
