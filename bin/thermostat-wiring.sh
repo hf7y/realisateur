@@ -174,7 +174,22 @@ fi
 # The append-only ledger (scheduler#54) is what makes REPETITION observable;
 # without it the verdict is destroyed at dispatch and DONE cannot brake.
 if [ -d "$SCHED/.git" ]; then
-  if git -C "$SCHED" grep -qlE 'scheduler-verdict/.*\.history' -- lib bin 2>/dev/null; then
+  # THE PROBE MUST TEST THE PROPERTY, NOT A GUESSED FILENAME. The first pattern
+  # here was `scheduler-verdict/.*\.history` -- a path invented when this probe
+  # was written, before anything implemented it. hf7y/scheduler#135 shipped the
+  # ledger as lib/run-ledger.sh writing ledger.tsv, and this probe went on
+  # reporting UNMET against a working implementation.
+  #
+  # A wrong UNMET is worse than no probe: it is read as work still to do, and
+  # the next reader builds it a second time. Same defect already fixed once
+  # today in scheduler's roster-target.sh `rosterfromgh`, which demanded a
+  # literal `gh` and could not see a call through a variable.
+  #
+  # Widened, not loosened: an append-only ledger is a function that APPENDS
+  # (>>) verdict rows, so either the original path shape or a named
+  # ledger_append counts. Both are specific to this mechanism; neither matches
+  # incidental prose.
+  if git -C "$SCHED" grep -qlE 'scheduler-verdict/.*\.history|ledger_append' -- lib bin 2>/dev/null; then
     record ledger PASS 'an append-only verdict ledger is written'
   else
     record ledger UNMET 'no verdict history is appended anywhere in lib/ or bin/'
