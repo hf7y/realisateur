@@ -203,6 +203,51 @@ repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].nam
   || die "cannot list $OWNER's repositories -- BLIND, not empty."
 [ -n "$repos" ] || die "$OWNER has no readable repositories -- BLIND, not empty."
 
+# --- 1b. THE REGISTRY: which repos are agent PROJECTS ----------------------
+#
+# Distinct from the verb set, and the difference is the whole reason this
+# exists. Measured 2026-08-12: 46 non-archived repos, 12 declaring verbs, 13
+# registered as projects in scheduler/schedule/*.conf. The org is full of
+# things that are not agent projects -- lilypond, songbook, portfolio,
+# hf7y.github.io, and `verbs` itself -- so "every repo" is not a registry.
+# And the verb set is not one either: chezz is a real registered project whose
+# bashified branch was retired, so it declares nothing and would vanish.
+#
+# WHY THIS MATTERS TO ANYTHING. realisateur's lints ask "what projects exist"
+# and the only answer available was scheduler/schedule/*.conf -- a CHECKOUT.
+# That single data dependency is what still forces a scheduler clone onto
+# hosts that otherwise need none (hf7y/realisateur#189's sibling problem). A
+# lint that silently scans 12 of 13 is the "scanned nothing, reported clean"
+# failure hygiene-lint's own BLIND check exists to catch, one project wide.
+#
+# SELF-DECLARED, Zach-chosen 2026-08-12: a repo is a project iff it carries
+# `.agent-project` on its default branch. Same shape as declaring a verb -- the
+# project says so itself, in its own tree, rather than someone remembering to
+# add a row somewhere else. Retirement is symmetric with --no-archived: delete
+# the file, or archive the repo.
+#
+# ONE QUERY, NOT ONE PER REPO. A contents call per repo would be ~46 API calls
+# every nightly build. GraphQL resolves the same path across every repository
+# in a single request, so the registry costs one call whatever the org size.
+REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
+registry=""
+_gql='query($owner:String!){ user(login:$owner){ repositories(first:100, isFork:false, ownerAffiliations:OWNER){
+        nodes{ name isArchived marker: object(expression:"HEAD:'"$REGISTRY_MARKER"'"){ __typename } } } } }'
+if _reg="$(gh api graphql -F owner="$OWNER" -f query="$_gql" \
+             --jq '.data.user.repositories.nodes[] | select(.marker != null and .isArchived == false) | .name' 2>/dev/null)"; then
+  registry="$_reg"
+  say "registry: $(printf '%s\n' "$registry" | grep -c .) project(s) carry $REGISTRY_MARKER"
+else
+  # BLIND, and it must not read as "no projects". An empty registry written
+  # into the manifest would tell every consumer the estate has no projects,
+  # which is an instruction to scan nothing -- the exact shape section 5's
+  # BLIND refusal exists to prevent for the verb set.
+  say "registry: BLIND -- the marker query failed. Recording NO registry rows"
+  say "          rather than an empty one; consumers must treat absence as"
+  say "          'could not look', never as 'there are none'."
+  registry=""
+fi
+
 # --- 2. per repo: the bashified sha, then the verbs in that exact tree ---
 # ls-remote gives the sha, and the tree is then read AT THAT SHA rather
 # than at the branch name. Reading at the name would race a merge landing
@@ -385,6 +430,24 @@ manifest="$tmp/manifest.tsv"
   printf '# cut by %s from github.com/%s on %s\n' "$CLI_NAME" "$OWNER" "$(hostname -s)"
   printf '# %d verb(s), %d project(s). Immutable: install this by id, never by branch.\n' \
          "$verb_count" "$projects"
+  # THE REGISTRY, as comment rows so every consumer's `grep -v '^#'` and this
+  # script's own shape check are unaffected -- the manifest's data rows stay
+  # exactly "one verb per line" and nothing downstream has to learn a second
+  # row type.
+  #
+  # ABSENCE IS NOT EMPTINESS. If the marker query was BLIND, no rows are
+  # written at all and there is no `registry: 0` line to misread. A consumer
+  # that finds no registry block has learned "this build could not look",
+  # which is a different instruction from "there are no projects" -- and the
+  # second one, acted on by a lint, means scan nothing and report clean.
+  if [ -n "$registry" ]; then
+    printf '# registry: %d project(s) carrying %s on their default branch.\n' \
+           "$(printf '%s\n' "$registry" | grep -c .)" "$REGISTRY_MARKER"
+    printf '# A PROJECT is not the same set as a repo (46 non-archived here) nor as a\n'
+    printf '# verb declarer (12): chezz is registered and declares nothing. Read this\n'
+    printf '# block, not `gh repo list`, when you need "what projects exist".\n'
+    printf '%s\n' "$registry" | grep . | sed 's/^/# registry\t/'
+  fi
   # WHAT THIS BUILD DECIDED NOT TO INCLUDE, AND WHY -- in the artifact every
   # account consumes, not only on the terminal of whoever ran the cut. A
   # half-declaration's whole failure mode is that its consequence lands on a
