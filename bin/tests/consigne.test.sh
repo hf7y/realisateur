@@ -373,6 +373,65 @@ else
   echo "  (skipped: no git on PATH)"
 fi
 
+# ===========================================================================
+echo
+echo "-- H. LOCK: serializing the vault's 13 writers (hf7y/realisateur#213) --"
+# ===========================================================================
+if command -v flock >/dev/null 2>&1; then
+  VL="$TMP/vault-lock"; mkdir -p "$VL"
+
+  OUT="$(PATH="$BASE_PATH" "$CONSIGNE" lock -- echo hello world 2>&1)"; rc=$?
+  check "lock runs the wrapped command" "$rc" "0"
+  has   "...and its stdout reaches the caller" "$OUT" "hello world"
+
+  OUT="$(PATH="$BASE_PATH" "$CONSIGNE" lock -- sh -c 'exit 3' 2>&1)"; rc=$?
+  check "lock exits with the wrapped command's own code" "$rc" "3"
+
+  OUT="$(PATH="$BASE_PATH" "$CONSIGNE" lock 2>&1)"; rc=$?
+  check "lock with no -- is a usage error (2)" "$rc" "2"
+
+  OUT="$(PATH="$BASE_PATH" "$CONSIGNE" lock -- 2>&1)"; rc=$?
+  check "lock -- with no command is a usage error (2)" "$rc" "2"
+
+  OUT="$(PATH="$BASE_PATH" "$CONSIGNE" lock --vault "$VL" -- echo hi 2>&1)"; rc=$?
+  check "lock accepts --vault before --, same knob as a deposit" "$rc" "0"
+  [ -f "$VL/.consigne.lock" ] \
+    && ok "...and the lock file lands inside that vault" \
+    || bad "...and the lock file lands inside that vault" "no $VL/.consigne.lock"
+
+  OUT="$(PATH="$BASE_PATH" "$CONSIGNE" lock --vault=/no/such/dir -- echo hi 2>&1)"; rc=$?
+  check "lock --vault of a missing dir is BLIND (6), not a silent lock" "$rc" "6"
+
+  # Contention: hold the lock in a background process, then confirm a second
+  # caller times out distinctly rather than hanging or silently proceeding.
+  # `flock <file> <command>` (no `--`) is the same command-variant syntax
+  # `vault_locked` itself uses, so the holder is the real mechanism, not a
+  # fixture standing in for it.
+  VC="$TMP/vault-contend"; mkdir -p "$VC"
+  flock "$VC/.consigne.lock" sleep 4 &
+  HOLDER=$!
+  # Give the holder a moment to actually acquire before racing it.
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    flock -n "$VC/.consigne.lock" true 2>/dev/null && { sleep 0.2; continue; }
+    break
+  done
+
+  OUT="$(PATH="$BASE_PATH" CONSIGNE_LOCK_TIMEOUT=1 "$CONSIGNE" lock --vault "$VC" -- echo should-not-run 2>&1)"
+  rc=$?
+  check "a contended lock times out at 66, not the wrapped command's own code" "$rc" "66"
+  hasnt "...and the wrapped command never ran" "$OUT" "should-not-run"
+  has   "...and says another writer held it" "$OUT" "another writer held the vault lock"
+
+  OUT="$(PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" CONSIGNE_LOCK_TIMEOUT=1 \
+         BIBLIOTHECAIRE_VAULT="$VC" "$CONSIGNE" DOC.md 2>&1)"
+  rc=$?
+  check "a contended lock folds into the deposit's own 6 (blind), not a raw 66" "$rc" "6"
+
+  wait "$HOLDER" 2>/dev/null
+else
+  echo "  (skipped: no flock on PATH)"
+fi
+
 echo
 printf -- '--- consigne: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

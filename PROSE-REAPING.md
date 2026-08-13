@@ -227,7 +227,13 @@ ahead-count is against last-known remote state and the flag text says so.
 5. Convert every actionable paragraph to a **GitHub issue** in that project's
    repo (§3). Count them; the count is part of the report.
 6. Write the narrative to the vault under `<project>/`, then **commit and
-   push**. The remote is the vault (§2); an unpushed deposit is not deposited.
+   push, under `consigne lock`**: `consigne lock -- git -C <vault> commit
+   -F <msgfile>` then `consigne lock -- git -C <vault> push`. The remote is
+   the vault (§2); an unpushed deposit is not deposited. The lock matters
+   because the vault is one shared checkout with thirteen writers and
+   nothing else serializes them (hf7y/realisateur#213) — the identical lock
+   a plain `consigne <path>` deposit already takes, so a commit cannot land
+   mid-write and a deposit cannot land mid-commit.
 7. Verify **behaviour is unchanged** — for a config file, a byte-identical
    preview from whatever consumes it, plus its witness tests.
 8. Report the before/after line count, and **the list of expired-premise
