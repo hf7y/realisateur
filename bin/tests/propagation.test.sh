@@ -385,6 +385,16 @@ SURVEY_FN="$(sed -n '/^run_survey()/,/^}/p' "$TICK")"
 hasnt "--survey never adopts a build" "$SURVEY_FN" "--apply"
 hasnt "--survey never repoints a symlink" "$SURVEY_FN" "ln -s"
 
+# AND IT MUST NOT CALL THE FINISHED MIGRATION A FINDING. Before #180 an account
+# with no private pin had no consumer of the channel; after it, that is the
+# COMPLETED state. Probed 2026-08-13 minutes after the last account was
+# retired: this view reported "0 ok, 13 gap" about an estate where every
+# account resolved every verb. An alarm that fires on success is one nobody
+# reads the next time it fires on failure.
+has "--survey grades the host-wide channel, not just the private pin" "$SURVEY_FN" "host-wide"
+has "...by asking AS THE ACCOUNT, since its own PATH can shadow the host dir" "$SURVEY_FN" 'sudo -u "\$user" -H'
+has "...and an account with neither is still a finding" "$SURVEY_FN" "this account has no verbs"
+
 # ===========================================================================
 echo
 echo "-- 5b. THE SWITCH IS DELEGATED, NEVER REIMPLEMENTED --------------------"
