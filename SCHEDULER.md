@@ -1,119 +1,64 @@
 # Joining the scheduler ecosystem
 
-`realisateur` has been registered since 2026-07-19 — `schedule/realisateur.conf`
-in the scheduler repo, Tier 2 only, paced (no fixed cron slot), local bare
-remote at `~/git-remotes/realisateur.git`. This file is kept as the
+`realisateur` has been registered since 2026-07-19. This file is the
 walkthrough a *new* project scaffolded out of the inbox follows to register
-itself the same way (`nightly-batch.md` step 3 points here) — read it as
-"how registration works," not "realisateur's own status."
+itself (`nightly-batch.md` step 3 points here) — read it as "how
+registration works," not "realisateur's own status."
 
-## What the scheduler is
+**Reaped 2026-08-13, 119 lines → this.** What was here described the
+mandark-era model in step-by-step detail: local bare remotes under
+`~/git-remotes/`, a `.scheduler/FOCUS.md` that scoped every Tier 2 run, a
+`.scheduler/QUESTIONS.md` answered with `> ` blockquotes, symlinks into the
+scheduler's `focus/`/`questions/` aggregation folders, and
+`bin/sync-crontab.sh --apply` to install per-account cron. Every one of
+those premises has expired, and a walkthrough that instructs a new project
+to build retired surfaces is how they kept being reborn — see
+`PROSE-REAPING.md` §1, third row: prose defending an expired mechanism is a
+deletion signal, not something to relocate. The narrative is in git history
+if it is ever wanted.
 
-`~/Documents/Projects/scheduler` is a shared engine + config registry
-that runs unattended `claude -p` jobs on top of plain cron — it is **not a
-daemon**. Two job tiers a project can opt into, independently:
+## What is true now
 
-- **Tier 1 — Bug Sweeper**: fast, frequent (e.g. every 15 min), narrow,
-  fixed daytime window. Mechanical fixes only, against a live web tracker's
-  open-report queue. Skip this tier if the project has no such tracker.
-- **Tier 2 — Overnight Batch**: slow, thorough, broad. One long unattended
-  run per night, scoped entirely by the project's own `.scheduler/FOCUS.md`.
-  Builds features too, not just fixes — see the autonomy policy below.
+- **Prose lives in the issue tracker.** `BLOCKERS.md`, `.scheduler/FOCUS.md`
+  and `.scheduler/QUESTIONS.md` were retired by hf7y/scheduler#66 on
+  2026-08-07. A new project gets a GitHub repo under `hf7y` and files its
+  findings, questions and milestones as issues. Do not scaffold those files.
+- **Questions are issues, and Zach answers by commenting and CLOSING.** A
+  closed issue carrying a comment is an answer, not a dropped thread.
+- **Verbs come from the host-wide build**, not from a clone: on monkey,
+  `/usr/local/bin` fed by one nightly tick. A new project needs no
+  `*-verbs` worktree and no per-account pin (hf7y/realisateur#180).
+- **A project holds a clone of its own repo, and nothing else.**
 
-Every registered project's Tier 2 batch currently runs through a shared
-**usage-paced governor** rather than a fixed cron time (`schedule/_paced.conf`
-+ `bin/usage-paced-runner.sh`): it round-robins enabled participants and only
-fires a cycle when there's spare weekly usage quota, so nightly jobs don't
-collectively blow the usage cap. New projects join this same rotation, not a
-hand-picked cron slot.
+## What registering still requires
 
-## What registering actually requires
+1. A git repo with a remote the scheduler can clone from unattended — the
+   engine works in a disposable clone (`git clone`, `reset --hard`, invoke
+   `claude`, push, repeat).
+2. A `.claude/commands/nightly-batch.md` — the prompt the unattended run
+   follows. Adapt a real one; the templates in scheduler's `examples/`
+   still carry retired-surface instructions, so read before copying.
+3. A root `CLAUDE.md` — the "suggest `/ideate <project>` instead of
+   implementing" guardrail, so an interactive session recognises an
+   open-ended ask and points at `/ideate` rather than building inline.
+4. Registration with the scheduler, per its own `README.md`, which is the
+   source of truth.
 
-Read `~/Documents/Projects/scheduler/README.md` and `MIGRATION.md`
-first — they're the source of truth; this file is a project-specific
-pointer into them, not a replacement. In short, registering means:
+**Dispatch registration is in flux.** hf7y/realisateur#228 is retiring
+per-account cron and `usage-paced-runner` in favour of host-level dispatch
+on monkey. Read that issue before copying any crontab shape out of an older
+project, and do not add a new per-account cron line without it.
 
-1. **`realisateur` must be a git repo with a remote the scheduler can clone
-   from unattended.** The engine works in a dedicated, disposable clone —
-   `git clone`, `reset --hard`, invoke `claude`, push, repeat. The remote can
-   be:
-   - A real GitHub repo, cloned over SSH via a **passphrase-less per-repo
-     deploy key** + a `~/.ssh/config` host alias (see the `github-*-deploy`
-     aliases already set up for chezz/home-assistant/wtul/vkv), since cron
-     has no ssh-agent. This is the standard path.
-   - A **local bare repo** (`git init --bare` somewhere like
-     `~/git-remotes/realisateur.git`, then `git remote add origin ...` and
-     push) — no credentials or network needed at all. `crt` (a project with
-     no GitHub presence) uses exactly this, and a GitHub mirror can be added
-     later without disrupting anything by swapping `REPO_URL`.
+## One gotcha that still holds
 
-2. **A `.scheduler/FOCUS.md`** — the single file that scopes every Tier 2
-   run. (`.scheduler/`, NOT `.claude/`: the harness's sensitive-file gate
-   blocks unattended writes to any `.claude/` path, so a FOCUS.md there is
-   unwritable by the very nightly runs it scopes — the 2026-07-26
-   migration decision. Set `SCHEDULER_SUBDIR=".scheduler"` in the
-   project's `schedule/<name>.conf` so the audits and symlinks follow.)
-   Copy the shape from `scheduler/examples/FOCUS.md.template`, or read a real
-   one (`crt`'s or `chezz`'s) for a fuller example. Key convention worth
-   knowing before writing it: the **"build maximally autonomously" policy**
-   — an unattended nightly run is expected to actually build reasonable
-   things, not just report on them, committing/branching as it goes; the
-   only real stop-and-wait bar is an action that can't be reverted (a real
-   message to a person, spending real money, deleting something with no
-   backup — not an ordinary commit or branch).
-
-3. **A `.scheduler/QUESTIONS.md`** — the two-way channel for anything needing a
-   human decision. Either tier appends a question; you reply inline with a
-   `> ` blockquote under it; the next nightly run reads and acts on answered
-   questions, then removes them (git history + that run's report keep the
-   record). Template: `scheduler/examples/QUESTIONS.md.template`.
-
-4. **A `.claude/commands/nightly-batch.md`** (and `bug-sweep.md` if doing
-   Tier 1) — the actual prompt/instructions the unattended run follows.
-   Templates: `scheduler/examples/nightly-batch.md.template` and
-   `bug-sweep.md.template`. Adapt the report path and tracker-specific
-   sections to `realisateur`'s reality — e.g. if there's no web tracker (like
-   `crt`), the command should say so explicitly and scope purely off
-   `FOCUS.md` instead of `../INTAKE.md`.
-
-5. **A root `CLAUDE.md`** (optional but recommended) — copy
-   `scheduler/examples/CLAUDE.md.template`: the "suggest `/ideate
-   <project>` instead of implementing" guardrail, so an ordinary
-   interactive session on the new project recognizes an open-ended/
-   vision-shaped ask and points at realisateur's `/ideate` rather than
-   quietly building against it inline.
-
-6. **One file dropped into the scheduler repo**:
-   `schedule/realisateur.conf`, copied from
-   `scheduler/examples/schedule-entry.conf.template`. This is the single
-   source of truth for both *when* the job fires and *how* it runs —
-   `REPO_URL`, `PROJECT_REPO_PATH` (this checkout, so `FOCUS.md`/
-   `QUESTIONS.md` get symlinked into the scheduler's `focus/`/`questions/`
-   aggregation folders), and per-tier `BATCH_PROMPT`/`BATCH_MAX_TURNS`/etc.
-   Leave `BATCH_SCRIPT` unset — new projects go straight onto the generic
-   `bin/scheduler-run` entrypoint, no bespoke wrapper script needed (older
-   projects like chezz still have legacy `*_SCRIPT` wrappers for
-   backwards-compat reasons; don't copy that pattern for a new project).
-
-7. **Preview, then apply**: from the scheduler repo,
-   `bin/sync-crontab.sh` (no `--apply`) to check the generated config, then
-   `bin/sync-crontab.sh --apply` to actually install the symlinks/crontab
-   changes.
-
-## A gotcha worth knowing before the first run
-
-The very first project to go through the pure `scheduler-run` + raw
-`BATCH_PROMPT="/nightly-batch"` path (as opposed to a legacy `*_SCRIPT`
-wrapper) was `crt`, registered 2026-07-19. Its first run failed because the
-dedicated clone briefly caught a commit older than the one that added
-`.claude/commands/nightly-batch.md` — a stale-clone timing issue, not a
-scheduler bug — and self-healed on the next cycle once `origin/main` had the
-command file. Moral: **push `.claude/commands/nightly-batch.md` (and
-FOCUS.md/QUESTIONS.md) to the remote *before* registering**, and check the
-first run's report/log rather than assuming it worked.
+Push `.claude/commands/nightly-batch.md` to the remote **before**
+registering, and read the first run's report rather than assuming it
+worked. `crt`'s first run in 2026-07-19 failed because the disposable clone
+briefly caught a commit older than the one that added its command file. It
+self-healed, and the moral is the general one: a scheduled job reads the
+ref, not your working tree.
 
 ## Who to ask
 
-Zach owns all policy/scope decisions here — the scheduler's own
-`.scheduler/FOCUS.md` backlog and `QUESTIONS.md` are where open
-questions about the ecosystem itself (not this project) get tracked.
+Zach owns all policy and scope decisions. Open questions about the
+ecosystem itself go in the relevant repo's issue tracker.
