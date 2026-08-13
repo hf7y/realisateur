@@ -105,8 +105,9 @@ CLI_SUMMARY='the consumer-side clock for the verb release channel, and the alarm
 CLI_USAGE='  selfdev-release-tick.sh                  --check (default): pin vs latest, and is the clock alive
   selfdev-release-tick.sh --apply          adopt the newest build (delegates to install-verb-build.sh)
   selfdev-release-tick.sh --install-cadence  print (with --apply, install) THIS ACCOUNT'"'"'s cron entry
+  selfdev-release-tick.sh --retire-cadence   print (with --apply, remove) THIS ACCOUNT'"'"'s cron entry and private pin, once the host-wide channel resolves
   selfdev-release-tick.sh --survey         read-only fleet view: every account'"'"'s pin vs latest'
-CLI_FLAGS='--check --apply --install-cadence --survey'
+CLI_FLAGS='--check --apply --install-cadence --retire-cadence --survey'
 CLI_POSITIONAL=none
 CLI_EXITS='  0  on the current build and the clock is alive
   1  findings: a newer build exists, the clock is dead, or bootstrap incomplete
@@ -156,12 +157,21 @@ SURVEY_PASSWD="${TICK_SURVEY_PASSWD:-/etc/passwd}"
 UID_MIN="${TICK_UID_MIN:-3000}"
 UID_MAX="${TICK_UID_MAX:-3099}"
 
-MODE=check; CADENCE=0; SURVEY=0
+# The host-wide link directory a retired account must resolve verbs from.
+# Overridable so bin/tests/propagation.test.sh can point it at a fixture.
+HOST_BIN="${TICK_HOST_BIN:-/usr/local/bin}"
+# The verb this account is asked to resolve as proof the host channel reaches
+# it. One real verb, looked up the way a non-interactive `ssh <host> <verb>`
+# would, beats inferring reachability from the host's own /usr/local/bin.
+HOST_PROBE_VERB="${TICK_HOST_PROBE_VERB:-dose}"
+
+MODE=check; CADENCE=0; RETIRE=0; SURVEY=0
 for a in "$@"; do
   case "$a" in
     --check) MODE=check ;;
     --apply) MODE=apply ;;
     --install-cadence) CADENCE=1 ;;
+    --retire-cadence) RETIRE=1 ;;
     --survey) SURVEY=1 ;;
   esac
 done
@@ -291,6 +301,76 @@ install_cadence() {
 }
 
 # ---------------------------------------------------------------------------
+# The other half of install_cadence: hf7y/realisateur#180 retires the
+# per-account clock and private build root now that one host-wide channel
+# feeds every account. This exists as a COMMAND rather than as twelve hand
+# edits because the crontab read-modify-write is the part that goes wrong --
+# #179 fixed a stderr bug in install_cadence that could have erased the rest
+# of an account's crontab, and a hand-edit reintroduces that risk per account.
+#
+# Fails CLOSED on the precondition: an account whose PATH does not reach the
+# host-wide channel would be left with no clock and no verbs at all. That is
+# checked per account, from inside the account, because a $HOME/.local/bin
+# entry earlier on its PATH shadows /usr/local/bin -- the mandark situation.
+# ---------------------------------------------------------------------------
+retire_cadence() {
+  echo "-- retire cadence (account $(id -un)) ---------------------------------"
+  local probe; probe="$(command -v "$HOST_PROBE_VERB" 2>/dev/null || true)"
+  case "$probe" in
+    "$HOST_BIN"/*)
+      ok "$HOST_PROBE_VERB resolves to $probe -- the host-wide channel reaches this account" ;;
+    *)
+      bad "refusing to retire: '$HOST_PROBE_VERB' resolves to ${probe:-nothing}, not $HOST_BIN/$HOST_PROBE_VERB. Retiring here would leave the account with no clock AND no verbs."
+      return ;;
+  esac
+
+  if ! crontab -l 2>/dev/null | grep -qF "$CRON_TAG" && [ ! -d "$BUILD_ROOT" ]; then
+    ok "already retired: no $CRON_TAG line and no private build root at $BUILD_ROOT"
+    return
+  fi
+
+  if [ "$MODE" != apply ]; then
+    act "would remove the $CRON_TAG line from $(id -un)'s crontab"
+    act "would remove the private build root $BUILD_ROOT (pin $(current_pin || echo '<none>'))"
+    act "not removed (--check). Re-run with --apply."
+    return
+  fi
+
+  # Same stderr discipline as install_cadence: `cur` is what gets written
+  # BACK, so reading an unreadable crontab as empty would erase every other
+  # entry in it.
+  local cur new back
+  cur="$(crontab -l 2>&1 || true)"
+  case "$cur" in *"no crontab for"*) cur="" ;; esac
+  if printf '%s\n' "$cur" | grep -qF "$CRON_TAG"; then
+    new="$(printf '%s\n' "$cur" | grep -vF "$CRON_TAG")"
+    printf '%s\n' "$new" | grep -v '^[[:space:]]*$' | crontab -
+    # WITNESS: read it back out of cron, not out of the variable just written.
+    back="$(crontab -l 2>&1)"
+    if printf '%s\n' "$back" | grep -qF "$CRON_TAG"; then
+      bad "crontab accepted the write but the $CRON_TAG line is STILL there on re-read"
+      return
+    fi
+    ok "cadence removed from $(id -un)'s crontab, verified by re-reading crontab -l"
+    act "machine-wide config changed. Run: notify-senechal 'realisateur selfdev-release-tick cron REMOVED from $(id -un)@$(hostname -s) crontab; that account now follows the host-wide channel in $HOST_BIN'"
+  fi
+
+  # The private pin goes only after the clock, and only if it is under $HOME.
+  # A BUILD_ROOT pointed elsewhere is the HOST-scoped tick's own root, and
+  # this path must never delete that.
+  if [ -d "$BUILD_ROOT" ]; then
+    case "$BUILD_ROOT" in
+      "$HOME"/*)
+        rm -rf "$BUILD_ROOT"
+        if [ -d "$BUILD_ROOT" ]; then bad "private build root $BUILD_ROOT survived removal"
+        else ok "private build root $BUILD_ROOT removed (verbs now resolve from $HOST_BIN)"; fi ;;
+      *)
+        bad "refusing to remove $BUILD_ROOT -- it is not under \$HOME, so it is not this account's private pin" ;;
+    esac
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # --survey: the read-only operator view. It does not write, does not adopt,
 # and does not need the accounts to trust it -- it runs each account's own
 # --check. Reporting from a hands account is fine; PROPAGATING from one is
@@ -350,6 +430,19 @@ if [ "$SURVEY" = 1 ]; then
   printf '%d ok, %d gap, %d bad\n' "$PASS" "$GAPS" "$BAD"
   [ "$srv" = 3 ] && exit 3
   [ "$GAPS" -eq 0 ] && [ "$BAD" -eq 0 ] || exit 1
+  exit 0
+fi
+
+if [ "$CADENCE" = 1 ] && [ "$RETIRE" = 1 ]; then
+  echo "--install-cadence and --retire-cadence are opposites; pick one." >&2
+  exit 2
+fi
+
+if [ "$RETIRE" = 1 ]; then
+  retire_cadence
+  echo
+  printf '%d ok, %d gap, %d bad\n' "$PASS" "$GAPS" "$BAD"
+  [ "$BAD" -eq 0 ] || exit 1
   exit 0
 fi
 
