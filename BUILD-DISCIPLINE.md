@@ -707,8 +707,53 @@ Before marking anything done:
 - [ ] Multi-line or shell-quoting commit message written with
       **`git commit -F <file>`**, not `-m` (backticks inside double
       quotes execute)?
-- [ ] `silence-audit --strict` clean? (mechanizes the retired
-      stderr-silencing / wired-to-a-real-path / names-what-it-retires rows)
+- [ ] `silence-audit --strict` clean, ON THE PROJECTS THIS CHANGE TOUCHES?
+      (mechanizes the retired stderr-silencing / wired-to-a-real-path rows.
+      Scoped 2026-08-07: it had demanded a clean estate-wide run since the day
+      it was written and that has never once been passable -- 74 FLAGs on the
+      morning it was scoped, 52 of them one retired check's false alarms. A
+      mandatory row nobody can satisfy is how a checklist stops being read.)
+- [ ] Pull request opened per the convention — **`claim-drift.sh --convention`**
+      is the canonical text. Reference it; do NOT paraphrase it into a brief.
+      In short: a **draft** claims nothing; marking it **ready** is the
+      completion claim. A ready PR with **no decision** goes on
+      `gh pr merge --auto --squash` and lands unattended; a ready PR that needs
+      a call carries `DECISION: <the call>` as its **first non-empty line** and
+      auto-merge stays off. (Added 2026-08-08. This convention was previously
+      retyped from memory into eight agent briefs in one evening, and a second
+      conflicting meaning was invented an hour later — retyping was the
+      distribution mechanism, and that is the defect. `claim-drift.sh` now
+      enforces the same text it prints.)
+- [ ] **Before writing `DECISION:`, ask the cheaper question first: did the
+      human already explicitly ask for this exact change earlier in THIS
+      conversation, and is there verified evidence (tests, a live dogfooded
+      run) that it does what was asked?** If yes, there is no decision —
+      write nothing, or `NO-DECISION:` if auto-merge is unavailable. This is
+      not mechanically checkable: `claim-drift.sh`'s `OVERCAUTIOUS` check
+      only catches ONE narrow shape (a diff touching no existing file's
+      behavior) and cannot see the conversation at all — proven live on
+      2026-08-10 when realisateur#124, implementing that very check, carried
+      an unwarranted `DECISION:` line that the check itself could not flag
+      (its diff genuinely touches an existing file) and STILL got a second,
+      identical `DECISION:` on the very next commit fixing the first one.
+      There is no diff-shape or wording heuristic that reliably tells a
+      legitimate `DECISION:` from an illegitimate one — a real, correctly-
+      approved decision in this repo's own test suite
+      (`"DECISION: adopt the ratchet as a build-blocking floor?"`) is worded
+      in the identical closed-yes/no shape as the illegitimate #124 case.
+      The check is real and worth keeping for what it does catch; it is not
+      a substitute for this.
+- [ ] **Empty input distinguished from clean result?** If the registry,
+      list, or match set this reads can be *absent* rather than merely
+      empty, does it say BLIND — or does zero iterations produce a
+      confident pass? A check that cannot see its own subject must not
+      report the same thing as one that looked. (Added 2026-08-13: three
+      independent instances in one session — `tools/issue-janitor.py`
+      swept 0 of 28 issues at exit 0 when a footer format it keyed on
+      changed underneath it (#220); `closeout-lint.sh` reported a clean
+      `0 FLAG, 0 BLIND` from a host with no scheduler checkout at all
+      (#232); see pattern 20 for the sibling case where the domain IS
+      readable but only partially.)
 
 ## Ecosystem protocols (realisateur baseline)
 The checklist above governs work inside this repo. These govern anything

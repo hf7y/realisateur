@@ -80,6 +80,17 @@ Before marking anything done:
       in the identical closed-yes/no shape as the illegitimate #124 case.
       The check is real and worth keeping for what it does catch; it is not
       a substitute for this.
+- [ ] **Empty input distinguished from clean result?** If the registry,
+      list, or match set this reads can be *absent* rather than merely
+      empty, does it say BLIND — or does zero iterations produce a
+      confident pass? A check that cannot see its own subject must not
+      report the same thing as one that looked. (Added 2026-08-13: three
+      independent instances in one session — `tools/issue-janitor.py`
+      swept 0 of 28 issues at exit 0 when a footer format it keyed on
+      changed underneath it (#220); `closeout-lint.sh` reported a clean
+      `0 FLAG, 0 BLIND` from a host with no scheduler checkout at all
+      (#232); see pattern 20 for the sibling case where the domain IS
+      readable but only partially.)
 
 ## Ecosystem protocols (realisateur baseline)
 The checklist above governs work inside this repo. These govern anything
