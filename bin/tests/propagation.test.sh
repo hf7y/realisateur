@@ -514,15 +514,92 @@ BR="$T/pinned/.local/share/verb-builds"     # has current -> 2026-08-06T043915Z
 O="$(VERB_BUILD_ROOT="$BR" bash -c '. '"$SET_LIB"'; prop_build_trailer')"
 has "a host with an adopted build stamps the build id" "$O" "Verb-Build: 2026-08-06T043915Z"
 
-O="$(VERB_BUILD_ROOT="$T/no-such-build-root" bash -c '. '"$SET_LIB"'; prop_build_trailer')"
+# BOTH roots are pointed at nothing. Naming only the private one stopped
+# being a hermetic test when prop_current_pin learned the host-wide root:
+# it would then quietly read /usr/local/share/verb-builds on any machine that
+# has one, and pass or fail on the estate's state rather than the fixture's.
+O="$(VERB_BUILD_ROOT="$T/no-such-build-root" VERB_HOST_BUILD_ROOT="$T/no-such-host-root" \
+     bash -c '. '"$SET_LIB"'; prop_build_trailer')"
 has "a host with NO build adopted stamps 'unknown', honestly" "$O" "Verb-Build: unknown"
 hasnt "...and never invents a plausible build id" "$O" "2026-"
+
+# The retire in hf7y/realisateur#180 removes the PRIVATE pin and leaves the
+# account running the host-wide build. Probed live on 2026-08-13: the four
+# accounts retired that morning stamped `Verb-Build: unknown` while running a
+# perfectly well-known build out of /usr/local/bin. "Unknown" is the right
+# answer to an unreadable pin and the wrong answer to a pin that moved.
+HR="$T/hostbuilds"; mkdir -p "$HR/2026-08-12T183347Z"; ln -s 2026-08-12T183347Z "$HR/current"
+O="$(VERB_BUILD_ROOT="$T/no-such-build-root" VERB_HOST_BUILD_ROOT="$HR" \
+     bash -c '. '"$SET_LIB"'; prop_build_trailer')"
+has "a retired account stamps the HOST-WIDE build, not 'unknown'" "$O" "Verb-Build: 2026-08-12T183347Z"
+
+# Order matters and is not cosmetic: an account that still holds a private pin
+# is RUNNING it, because its ~/.local/bin shims point into it and shadow the
+# host-wide directory. Reporting the host build there would name a build that
+# account is not executing.
+O="$(VERB_BUILD_ROOT="$BR" VERB_HOST_BUILD_ROOT="$HR" \
+     bash -c '. '"$SET_LIB"'; prop_build_trailer')"
+has "a private pin still wins over the host-wide one while it exists" "$O" "Verb-Build: 2026-08-06T043915Z"
 
 # The trailer must be emitted unconditionally: a stamper that emits nothing
 # when it does not know produces an artifact indistinguishable from an
 # unstamped one, which is the failure this exists to prevent.
 [ -n "$O" ] && ok "the trailer is emitted even when the build is unknown" \
             || bad "an unknown build produced NO trailer -- unstamped and stamped-unknown are now identical"
+
+# --- EVERY commit, not just the mandated ones ------------------------------
+# focus-commit.sh stamps FOCUS.md and QUESTIONS.md. That is the ecosystem's
+# highest-volume artifact and it was the right first target, but it is not
+# "the work": an account's actual output is code commits, and none of them
+# carried a build id. stamp-verb-build.sh wires the same trailer into
+# core.hooksPath so every commit the account makes gets one, with no per-repo
+# step and nothing for an agent to remember.
+STAMPER="$REPO/bin/stamp-verb-build.sh"
+SHOME="$T/stamphome"; mkdir -p "$SHOME"
+: > "$SHOME/gitconfig"
+stamp() { GIT_CONFIG_GLOBAL="$SHOME/gitconfig" STAMP_HOOK_DIR="$SHOME/hooks" \
+          VERB_BUILD_ROOT="$T/no-such-build-root" VERB_HOST_BUILD_ROOT="$HR" \
+          "$STAMPER" "$@" 2>&1; }
+
+O="$(stamp)"; R=$?
+has "--check reports an unwired account as not stamping" "$O" "does not stamp its commits"
+rc "...and that is a finding, not a silence" 1 "$R"
+[ -e "$SHOME/hooks/prepare-commit-msg" ] && bad "--check installed the hook anyway" \
+                                         || ok "--check installs nothing"
+
+O="$(stamp --apply)"; R=$?
+rc "--apply exits 0 once the account stamps" 0 "$R"
+has "the hook is witnessed by RUNNING it, not by its presence" "$O" "witnessed by running it"
+has "...and it stamps the build the account actually resolves" "$O" "Verb-Build: 2026-08-12T183347Z"
+has "an amend or rebase does not collect a second trailer" "$O" "does not add a second trailer"
+
+# The end-to-end witness: a real `git commit` in a real repository. Everything
+# above tests the hook; this tests that git RUNS it.
+SREPO="$T/stamprepo"; mkdir -p "$SREPO"
+( cd "$SREPO" && git init -q . && echo x > f && git add f && \
+  GIT_CONFIG_GLOBAL="$SHOME/gitconfig" git -c user.email=t@t -c user.name=t commit -q -m "work" ) >/dev/null 2>&1
+O="$(cd "$SREPO" && git log -1 --format='%(trailers:key=Verb-Build,valueonly)' 2>/dev/null)"
+has "a real commit carries the trailer, written by git itself" "$O" "2026-08-12T183347Z"
+
+# A hooks directory someone else owns is not this command's to take: doing so
+# would silently disable whatever else lives in it.
+printf '[core]\n\thooksPath = /somebody/elses/hooks\n' > "$SHOME/gitconfig2"
+O="$(GIT_CONFIG_GLOBAL="$SHOME/gitconfig2" STAMP_HOOK_DIR="$SHOME/hooks" \
+     VERB_HOST_BUILD_ROOT="$HR" "$STAMPER" --apply 2>&1)"; R=$?
+# And a config that cannot be PARSED is not an empty slot either.
+printf 'this is not a git config\n' > "$SHOME/gitconfig3"
+OB="$(GIT_CONFIG_GLOBAL="$SHOME/gitconfig3" STAMP_HOOK_DIR="$SHOME/hooks" \
+      VERB_HOST_BUILD_ROOT="$HR" "$STAMPER" --apply 2>&1)"
+has "an UNREADABLE git config is refused, not read as unset" "$OB" "not an empty one"
+has "a foreign core.hooksPath is refused, not clobbered" "$O" "does not own"
+rc "...and the refusal is a finding" 1 "$R"
+grep -q "somebody/elses" "$SHOME/gitconfig2" && ok "...and the foreign setting is left exactly as it was" \
+                                             || bad "the foreign core.hooksPath was overwritten"
+
+O="$(stamp --retire --apply)"
+has "--retire unsets it, verified by re-reading the config" "$O" "re-read"
+[ -e "$SHOME/hooks/prepare-commit-msg" ] && bad "--retire left the hook file behind" \
+                                         || ok "--retire removes the hook file too"
 
 # ONE READER, with a NAMED exemption list rather than a loose rule.
 #

@@ -1,0 +1,229 @@
+#!/usr/bin/env bash
+# stamp-verb-build.sh -- record WHICH VERB BUILD an account's work was done
+# with, in the work itself.
+#
+# ============================================================================
+# WHY
+# ============================================================================
+#
+# Thirteen self-dev accounts on monkey run verbs out of one host-wide build,
+# and that build moves nightly. Nothing anywhere records which build a piece
+# of work was produced under. So the question a bug report has to answer --
+# "this commit did the wrong thing; which `dose` was that?" -- is answerable
+# only by guessing from a date, and only while the build directories survive.
+#
+# The estate already learned this lesson once in the other direction:
+# install-verb-build.sh links through `current` so that ONE switch moves every
+# verb, which is exactly what makes the running version invisible afterwards.
+# A channel that converges silently needs its consumers to say what they got.
+#
+# ============================================================================
+# WHAT IT STAMPS, AND WHY THERE
+# ============================================================================
+#
+# A `Verb-Build:` trailer on every commit the account makes. Not a log file, a
+# marker, or a report:
+#
+#   * it travels with the work, into the repo, the PR, and the mirror. A log
+#     under ~/.local/state answers the question only on the machine that still
+#     has that account, which is not where a bug report is read.
+#   * it is greppable by the tooling that already exists -- `git log
+#     --grep`, `git interpret-trailers` -- rather than needing a reader.
+#   * it cannot drift from the work: it is written at commit time, by the
+#     account doing the committing, from the build that account's PATH is
+#     actually resolving.
+#
+# The hook is installed at core.hooksPath, GLOBALLY for the account, because
+# the alternative is per-clone and a per-clone hook is absent from exactly the
+# clone that was made after the pass ran. Probed 2026-08-13: no self-dev
+# account on monkey sets core.hooksPath or init.templateDir, so this takes an
+# empty slot rather than fighting a hook someone else owns -- and --check
+# refuses rather than clobbering if that ever stops being true.
+#
+# ============================================================================
+# FAIL-OPEN, LOUDLY
+# ============================================================================
+#
+# A hook that cannot resolve a build id does NOT block the commit. Refusing to
+# commit because a symlink is missing would convert a propagation problem into
+# an inability to work, which is the trade BUILD-DISCIPLINE's "fail LOUD, not
+# STOPPED" rule already settled for the release tick. The commit goes through
+# unstamped, and `--check` reports the account as unstamped with an exit code.
+# ============================================================================
+set -uo pipefail
+
+CLI_NAME='stamp-verb-build.sh'
+CLI_SUMMARY='stamp every commit this account makes with the verb build it was made under'
+CLI_USAGE='  stamp-verb-build.sh              --check (default): is this account stamping, and with what
+  stamp-verb-build.sh --apply      install the commit hook for THIS account
+  stamp-verb-build.sh --retire     remove it (with --apply; --check alone prints what would go)'
+CLI_FLAGS='--check --apply --retire'
+CLI_POSITIONAL=none
+CLI_EXITS='  0  this account stamps its commits, and the build id resolves
+  1  findings: not wired, or wired but cannot resolve a build id
+  2  usage error'
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+cli_guard "$@"
+
+# The pin has ONE reader in this ecosystem and it is not here. This script
+# resolves no build-root layout of its own -- it calls prop_build_trailer(),
+# the same function focus-commit.sh stamps with, so the two can never disagree
+# about which build an account is on. bin/tests/propagation.test.sh enforces
+# that mechanically by grepping every bin/*.sh for the layout path.
+PROP_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/propagation-set.sh"
+# shellcheck source=bin/lib/propagation-set.sh
+# shellcheck disable=SC1090  # resolved at runtime: the same relative path holds
+                             # in this repo and in an account's bootstrap, which
+                             # is the property that lets one file serve both.
+. "$PROP_LIB"
+
+# --- knobs, so the suite can run against a fixture home with no git config
+# of its own and no host-wide build root.
+HOOK_DIR="${STAMP_HOOK_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-stamp/hooks}"
+HOOK="$HOOK_DIR/prepare-commit-msg"
+TRAILER=Verb-Build
+
+MODE=check; RETIRE=0
+for a in "$@"; do
+  case "$a" in
+    --check)  MODE=check ;;
+    --apply)  MODE=apply ;;
+    --retire) RETIRE=1 ;;
+  esac
+done
+
+PASS=0; GAPS=0; BAD=0
+ok()  { printf '  ok    %s\n' "$*"; PASS=$((PASS+1)); }
+gap() { printf '  gap   %s\n' "$*"; GAPS=$((GAPS+1)); }
+bad() { printf '  bad   %s\n' "$*"; BAD=$((BAD+1)); }
+act() { printf '  ..    %s\n' "$*"; }
+
+# The hook, generated rather than shipped as a file of its own: a second file
+# in the bootstrap set is another copy that rots. The LIB PATH is baked in at
+# install time and the hook sources it, so the hook holds no copy of the
+# answer -- only of where to ask.
+#
+# `git interpret-trailers` does the parsing, so a message that already carries
+# the trailer (an amend, a rebase, a cherry-pick) does not collect a second.
+write_hook() {
+  mkdir -p "$HOOK_DIR" || return 1
+  cat > "$HOOK" <<EOF
+#!/bin/sh
+# GENERATED by realisateur bin/stamp-verb-build.sh -- do not edit here.
+# Records the verb build this commit was made under, via the ecosystem's one
+# reader of that fact. Fails OPEN: an unresolvable lib means an unstamped
+# commit, never a blocked one.
+msg="\$1"
+[ -r "$PROP_LIB" ] || exit 0
+. "$PROP_LIB" || exit 0
+line="\$(prop_build_trailer)" || exit 0
+grep -qxF "\$line" "\$msg" && exit 0
+git interpret-trailers --if-exists replace --trailer "\$line" --in-place "\$msg" 2>/dev/null
+exit 0
+EOF
+  chmod 755 "$HOOK"
+}
+
+echo "== stamp-verb-build ($MODE) -- $(id -un)@$(hostname -s 2>/dev/null || echo '?') =="
+echo
+
+# --- what build would be stamped -------------------------------------------
+# Three states, never two (see propagation-set.sh): a resolved id, an honest
+# `unknown`, or no trailer at all. `unknown` is a finding here rather than a
+# failure -- the stamper ran and told the truth, which is the whole point of
+# keeping it distinguishable from an unstamped commit.
+id_now="$(prop_current_pin 2>/dev/null || true)"
+if [ -n "$id_now" ]; then
+  ok "build id resolves: $id_now"
+else
+  gap "no build id resolves here -- commits would be stamped 'Verb-Build: unknown', honestly but uselessly"
+  id_now=unknown
+fi
+
+# --- who owns core.hooksPath -----------------------------------------------
+# `git config --get` exits 1 for "not set" and something else for "could not
+# read the file at all". Folding both into an empty string would read an
+# UNPARSEABLE config as an empty slot -- and then --apply would write into it.
+# Found by a fixture with a malformed line, 2026-08-13; the same stderr
+# conflation selfdev-release-tick.sh's crontab read exists to avoid.
+cur="$(git config --global core.hooksPath 2>/dev/null)"; cfg_rc=$?
+if [ "$cfg_rc" -gt 1 ]; then
+  bad "cannot read this account's global git config (git config exited $cfg_rc). Nothing was changed -- an unreadable config is not an empty one."
+  echo; printf '%d ok, %d gap, %d bad\n' "$PASS" "$GAPS" "$BAD"
+  exit 1
+fi
+
+if [ "$RETIRE" = 1 ]; then
+  if [ "$cur" != "$HOOK_DIR" ]; then
+    ok "nothing to retire: core.hooksPath is ${cur:-unset}, not this account's stamp"
+  elif [ "$MODE" != apply ]; then
+    act "would unset core.hooksPath and remove $HOOK"
+    act "not removed (--check). Re-run with --apply."
+  else
+    git config --global --unset core.hooksPath
+    rm -f "$HOOK"
+    # WITNESS: re-read the config, rather than trusting the write's rc.
+    if [ -z "$(git config --global core.hooksPath 2>/dev/null || true)" ]; then
+      ok "stamp retired: core.hooksPath unset (re-read) and the hook removed"
+      act "machine-wide config changed. Run: notify-senechal 'realisateur verb-build commit stamp REMOVED from $(id -un)@$(hostname -s)'"
+    else
+      bad "core.hooksPath is still set after the unset"
+    fi
+  fi
+  echo; printf '%d ok, %d gap, %d bad\n' "$PASS" "$GAPS" "$BAD"
+  [ "$BAD" -eq 0 ] || exit 1
+  exit 0
+fi
+
+case "$cur" in
+  "$HOOK_DIR") ;;
+  '') if [ "$MODE" != apply ]; then
+        gap "core.hooksPath is unset -- this account does not stamp its commits"
+        act "would write $HOOK and point core.hooksPath at $HOOK_DIR"
+        act "not installed (--check). Re-run with --apply."
+        echo; printf '%d ok, %d gap, %d bad\n' "$PASS" "$GAPS" "$BAD"
+        exit 1
+      fi ;;
+  *)  # Someone else's hooks directory. Taking it over would silently disable
+      # whatever else it holds -- the failure `installe`'s own manifest check
+      # exists to prevent, in a different directory.
+      bad "core.hooksPath is already $cur, which this command does not own. Reconcile deliberately; nothing was changed."
+      echo; printf '%d ok, %d gap, %d bad\n' "$PASS" "$GAPS" "$BAD"
+      exit 1 ;;
+esac
+
+if [ "$MODE" = apply ]; then
+  write_hook || { bad "could not write $HOOK"; echo; exit 1; }
+  git config --global core.hooksPath "$HOOK_DIR"
+fi
+
+# --- WITNESS: run the hook, on a real message file, and read the result -----
+# Not "the file exists and is executable". The 2026-08-13 honey pass found
+# three accounts reported as installed whose hook produced nothing when run;
+# an installer's report of itself is not evidence.
+if [ -x "$HOOK" ] && [ "$(git config --global core.hooksPath 2>/dev/null || true)" = "$HOOK_DIR" ]; then
+  tmp="$(mktemp)"; printf 'a commit message\n' > "$tmp"
+  "$HOOK" "$tmp" 2>/dev/null
+  if [ -n "$id_now" ] && grep -q "^$TRAILER: $id_now$" "$tmp"; then
+    ok "the hook stamps '$TRAILER: $id_now' -- witnessed by running it, not by its presence"
+    # Twice, because an amend or a rebase replays the hook over a message that
+    # already carries the trailer, and two of them is a malformed commit.
+    "$HOOK" "$tmp" 2>/dev/null
+    if [ "$(grep -c "^$TRAILER: " "$tmp")" = 1 ]; then
+      ok "running it again does not add a second trailer (amend and rebase are safe)"
+    else
+      bad "a second run added another $TRAILER trailer -- an amend would malform the message"
+    fi
+  else
+    bad "the hook is installed but produced no '$TRAILER:' trailer when run"
+  fi
+  rm -f "$tmp"
+  [ "$MODE" = apply ] && act "machine-wide config changed. Run: notify-senechal 'realisateur verb-build commit stamp installed for $(id -un)@$(hostname -s): core.hooksPath -> $HOOK_DIR'"
+else
+  gap "not wired: core.hooksPath is ${cur:-unset} and $HOOK is $([ -x "$HOOK" ] && echo present || echo absent)"
+fi
+
+echo
+printf '%d ok, %d gap, %d bad\n' "$PASS" "$GAPS" "$BAD"
+[ "$GAPS" -eq 0 ] && [ "$BAD" -eq 0 ] || exit 1
+exit 0
