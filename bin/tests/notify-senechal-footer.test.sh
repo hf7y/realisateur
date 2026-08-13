@@ -82,11 +82,8 @@ fi
 # 5. THE COUPLING ITSELF: if senechal is checked out, our copy of the regex
 #    must still be the regex it actually enforces. Skips loudly rather than
 #    passing quietly when senechal is not on this host.
-JANITOR=""
-for c in "${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/senechal/tools/issue-janitor.py"; do
-  [ -r "$c" ] && JANITOR="$c"
-done
-if [ -z "$JANITOR" ]; then
+JANITOR="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/senechal/tools/issue-janitor.py"
+if [ ! -r "$JANITOR" ]; then
   echo "  SKIP senechal checkout not on this host -- cannot re-verify FOOTER_RE is still theirs"
 else
   if python3 - "$JANITOR" "$T/body.txt" <<'PY'

@@ -210,6 +210,7 @@ bin/lib/selfdev-credentials-set.sh realisateur the baseline bin/selfdev-credenti
 OWN_THEIRS="
 bin/install-shims.sh               senechal writes ~/.local/bin shims. CLAUDE.md's standing rule: the project that generates machine config owns it and senechal owns KNOWING it exists. senechal's installe already owns ~/.local/bin, and on 2026-08-07 three orphaned shims exited 127 because install-shims walks SOURCES and cannot express an orphan.
 bin/notify-senechal.sh             senechal senechal's own front door, per CLAUDE.md. A project does not own another project's doorbell.
+bin/tests/notify-senechal-footer.test.sh senechal follows its subject, and doubly so: what it asserts is senechal's FOOTER_RE -- the gate tools/issue-janitor.py closes issues on -- and when a senechal checkout is present it imports that module and checks against the real thing. The row is not merely inherited from the doorbell; the property under test lives in senechal's repo.
 provision/monkey-vm.sh             senechal stands a VM up on a host. Host provisioning is estate work.
 provision/monkey-tailscale.sh      senechal host network membership.
 provision/monkey-nopasswd.sh       senechal host sudo policy.
