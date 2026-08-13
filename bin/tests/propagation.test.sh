@@ -195,6 +195,62 @@ has "the cron line is tagged for attribution" "$O" "realisateur:selfdev-release:
 has "--install-cadence without --apply installs nothing" "$O" "not installed (--check)"
 rc "--install-cadence --check exits 0 (it reported, it did not fail)" 0 "$R"
 
+# --- the other half: retiring the clock (hf7y/realisateur#180) -------------
+# A per-account clock is retired when ONE host-wide channel feeds every
+# account. The precondition is checked from INSIDE the account, because a
+# $HOME/.local/bin entry earlier on that account's PATH shadows the host-wide
+# directory -- and retiring there would leave it with no clock AND no verbs.
+#
+# `crontab` is SHIMMED onto PATH for these cases. Without it the apply path
+# would edit the crontab of whoever runs the suite: proven the hard way on
+# 2026-08-13, when a fixture run with HOME redirected deleted the real tick
+# line out of zach@mandark's crontab, because HOME does not redirect crontab.
+RH="$T/retirehome"; mkdir -p "$RH/.local/share/verb-builds/B" "$T/hostbin" "$T/shim"
+ln -s B "$RH/.local/share/verb-builds/current"
+printf '#!/bin/sh\nexit 0\n' > "$T/hostbin/dose"; chmod +x "$T/hostbin/dose"
+# The shim is the fixture crontab: `crontab -l` prints the file, `crontab -`
+# replaces it. Same contract the real one has, no spool touched.
+cat > "$T/shim/crontab" <<SHIM
+#!/bin/sh
+F="$T/fixture.crontab"
+case "\$1" in
+  -l) [ -f "\$F" ] && cat "\$F" || { echo "no crontab for fixture" >&2; exit 1; } ;;
+  -)  cat > "\$F" ;;
+esac
+SHIM
+chmod +x "$T/shim/crontab"
+retire() { HOME="$RH" TICK_STATE="$RH/state" VERB_BUILD_ROOT="$RH/.local/share/verb-builds" \
+           TICK_HOST_BIN="$T/hostbin" PATH="$T/shim:$T/hostbin:/usr/bin:/bin" "$TICK" "$@" 2>&1; }
+
+# Precondition unmet: the probe verb does not come from the host-wide dir.
+O="$(HOME="$RH" TICK_STATE="$RH/state" VERB_BUILD_ROOT="$RH/.local/share/verb-builds" \
+     TICK_HOST_BIN="$T/hostbin" PATH="$T/shim:/usr/bin:/bin" "$TICK" --retire-cadence --apply 2>&1)"; R=$?
+has "--retire-cadence refuses when the host-wide channel does not resolve" "$O" "refusing to retire"
+rc "the refusal is a finding, not a silence" 1 "$R"
+[ -d "$RH/.local/share/verb-builds" ] && ok "the refused retire left the private pin alone" \
+                                      || bad "the refused retire removed the private pin anyway"
+
+printf '%s\n' "0 1 * * * /some/other/job # someone-else:KEEP" \
+              "47 5 * * * $RH/tick.sh --apply # realisateur:selfdev-release:TICK" > "$T/fixture.crontab"
+O="$(retire --retire-cadence)"
+has "--retire-cadence without --apply removes nothing" "$O" "not removed (--check)"
+has "the cron tag is still in the fixture crontab after --check" "$(cat "$T/fixture.crontab")" "selfdev-release:TICK"
+
+O="$(retire --retire-cadence --apply)"; R=$?
+rc "--retire-cadence --apply exits 0 when it retires cleanly" 0 "$R"
+has "the removal is verified by re-reading crontab -l" "$O" "verified by re-reading"
+hasnt "the tagged line is gone from the crontab" "$(cat "$T/fixture.crontab")" "selfdev-release:TICK"
+has "every OTHER crontab line survives the retire" "$(cat "$T/fixture.crontab")" "someone-else:KEEP"
+[ -d "$RH/.local/share/verb-builds" ] && bad "the private build root survived --retire-cadence --apply" \
+                                      || ok "the private build root is gone after --retire-cadence --apply"
+has "a machine-wide change tells the operator to notify senechal" "$O" "notify-senechal"
+O="$(retire --retire-cadence --apply)"
+has "--retire-cadence is idempotent (a second run is 'already retired')" "$O" "already retired"
+
+RETIRE_FN="$(sed -n '/^retire_cadence()/,/^}/p' "$TICK")"
+hasnt "the retire never touches another account's crontab" "$RETIRE_FN" "sudo"
+has "the retire refuses to delete a build root outside \$HOME" "$RETIRE_FN" 'refusing to remove'
+
 # ===========================================================================
 echo
 echo "-- 4. A STOPPED CLOCK IS A FINDING -------------------------------------"
