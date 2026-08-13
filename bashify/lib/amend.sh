@@ -31,6 +31,23 @@ blind() { printf 'amend: BLIND: %s\n' "$*" >&2
           exit 6; }
 broke() { printf 'amend: BROKEN: %s\n' "$*" >&2; exit 5; }
 
+# amend_repo_slug <path> -- "owner/repo", normalised off `origin`'s URL.
+# Same shape as scheduler's lib/run-record.sh:run_record_repo_slug (#158),
+# reimplemented here rather than sourced because that lib lives in a
+# different project's repo. Matches github.com and the self-dev SSH host
+# aliases (github-<account>), so a plain https clone and an aliased ssh clone
+# of the same GitHub repo resolve to the same slug. Prints nothing and
+# returns 1 for a remote this can't place -- callers must treat empty as
+# "unknown", not as a slug that matches nothing.
+amend_repo_slug() {
+  local url; url="$(git -C "$1" remote get-url origin 2>/dev/null)" || return 1
+  case "$url" in
+    *github.com*|*github-*) ;;
+    *) return 1 ;;
+  esac
+  printf '%s' "$url" | sed -E 's#^.*[:/]([^/:]+/[^/]+)$#\1#; s#\.git$##'
+}
+
 [ -n "$PAGE" ]   || die "usage: amend <page> <reason>"
 [ -n "$REASON" ] || die "the first gate is a STATED REASON. Pass it as the second argument."
 [ -f "$PAGE" ]   || blind "no such page: $PAGE"
@@ -100,6 +117,7 @@ fi
 # Prose mentioning the verb is not a caller; an invocation is.
 INVOCATIONS=0; PROSE=0; SCANNED=0; UNREADABLE=0; SELFSKIP=0
 OWNER_GITDIR="$(cd "$REPO" && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"
+OWNER_SLUG="$(amend_repo_slug "$REPO" || true)"
 if [ ! -d "$SCHED/schedule" ]; then
   gate_fail 'CALLERS' "cannot read the project registry at $SCHED/schedule"
 else
@@ -113,10 +131,16 @@ else
     # Skip the project that OWNS the verb. Its own implementation, its own
     # test and its own GAPS.md all name it, and counting those as downstream
     # callers made every amendment to a real verb unpassable: `installe`
-    # scored 6 invocations, all of them itself. Compared by common git dir so
-    # a worktree of the owner is recognised as the owner.
-    if [ -n "$OWNER_GITDIR" ] \
-       && [ "$(cd "$path" && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = "$OWNER_GITDIR" ]; then
+    # scored 6 invocations, all of them itself. Two independent tests, either
+    # one enough (#115): common git dir catches a WORKTREE of the owner;
+    # matching normalised `origin` slugs catches a CLONE of it, which a
+    # common-git-dir test cannot -- a fresh `git clone` has its own git dir by
+    # construction. Neither subsumes the other: a worktree can have no remote
+    # of its own (falls through to the gitdir test), and a clone has no common
+    # git dir with its origin (falls through to the slug test).
+    if { [ -n "$OWNER_GITDIR" ] \
+         && [ "$(cd "$path" && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = "$OWNER_GITDIR" ]; } \
+       || { [ -n "$OWNER_SLUG" ] && [ "$(amend_repo_slug "$path" || true)" = "$OWNER_SLUG" ]; }; then
       SELFSKIP=$((SELFSKIP+1)); continue
     fi
     SCANNED=$((SCANNED+1))
