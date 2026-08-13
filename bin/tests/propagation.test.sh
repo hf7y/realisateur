@@ -576,8 +576,13 @@ has "an amend or rebase does not collect a second trailer" "$O" "does not add a 
 # The end-to-end witness: a real `git commit` in a real repository. Everything
 # above tests the hook; this tests that git RUNS it.
 SREPO="$T/stamprepo"; mkdir -p "$SREPO"
+# The build-root overrides go to the COMMIT too, not only to the installer.
+# Without them the hook reads the real ~/.local/share/verb-builds of whoever
+# runs the suite -- which is how this case passed on a workstation with a live
+# pin and failed in CI, testing the machine instead of the fixture.
 ( cd "$SREPO" && git init -q . && echo x > f && git add f && \
-  GIT_CONFIG_GLOBAL="$SHOME/gitconfig" git -c user.email=t@t -c user.name=t commit -q -m "work" ) >/dev/null 2>&1
+  GIT_CONFIG_GLOBAL="$SHOME/gitconfig" VERB_BUILD_ROOT="$T/no-such-build-root" \
+  VERB_HOST_BUILD_ROOT="$HR" git -c user.email=t@t -c user.name=t commit -q -m "work" ) >/dev/null 2>&1
 O="$(cd "$SREPO" && git log -1 --format='%(trailers:key=Verb-Build,valueonly)' 2>/dev/null)"
 has "a real commit carries the trailer, written by git itself" "$O" "2026-08-12T183347Z"
 

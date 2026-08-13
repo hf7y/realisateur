@@ -219,6 +219,7 @@ bin/check-project-busy.sh          scheduler a live probe of whether a project's
 bin/deploy-drift.sh                scheduler asks whether every DISPATCHER is running merged code. The dispatchers are the scheduler's.
 bin/focus-commit.sh                scheduler exists solely because the scheduler's ~:30 autocommit watcher is the other writer. UNIVERSE.md split this pair across two repos in 2026-07-26; single-owner is now the doctrine.
 bin/session-marker.sh              scheduler declares a human is live in a repo so dispatch defers. A dispatch input.
+bin/stamp-verb-build.sh            realisateur records WHICH VERB BUILD produced a commit, via the pin reader realisateur already owns. The artifact-provenance half of the release channel this project runs; no consumer owns knowing what it was running.
 bin/pivot.sh                       scheduler installs and uninstalls ecosystem MOVEs, most of which are scheduler config. An installer is an effector.
 bin/lib/conf.sh                    scheduler reads a scheduler conf. One commit ever; a reader of another project's file format.
 bin/provision-selfdev-user.sh      scheduler adds a self-dev dispatch account to a host.
