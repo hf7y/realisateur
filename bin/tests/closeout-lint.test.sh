@@ -493,6 +493,37 @@ out="$(run "$T/blockers-today.md" attribrepo)"
 has   "I4 a branch owned by no worktree still FLAGs" "$out" "FLAG [host-only-branch] attribrepo: branch 'nobodys-branch'"
 count "I4 and the counted skip line is still one" "$out" "skip [other-worktree]" 1
 
+echo "-- J. an unreadable/absent registry is BLIND, not clean (#232)"
+# A full sweep (no --repo, no explicit names) against a SCHED_ROOT whose
+# schedule/ directory does not exist must not read as "zero repos touched" --
+# that is indistinguishable from "looked at everything, found nothing", the
+# exact conflation E4's BLIND gate exists for elsewhere in this suite.
+# mandark lost its scheduler checkout entirely (hf7y/realisateur#232); this
+# fixture is that state, reached with no fixture registry at all.
+EMPTY="$T/no-such-sched"
+J_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" BLOCKERS_MD="$T/blockers-today.md" HOURS=12 \
+  GH_BIN="$GH_DEFAULT" SESSION_START="" "$SCRIPT" 2>&1)"; J_RC=$?
+rc    "J1 absent registry sweep exits 0 without --strict" 0 "$J_RC"
+has   "J1 but still reports BLIND"             "$J_OUT" "BLIND [registry]"
+hasnt "J1 and never claims a clean scan"       "$J_OUT" "0 FLAG(s) across 0 recently-touched repo(s); 0 BLIND"
+
+J2_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" BLOCKERS_MD="$T/blockers-today.md" HOURS=12 \
+  GH_BIN="$GH_DEFAULT" SESSION_START="" "$SCRIPT" --strict 2>&1)"; J2_RC=$?
+rc    "J2 --strict against an absent registry gates as BLIND (6)" 6 "$J2_RC"
+has   "J2 names the registry path"             "$J2_OUT" "$EMPTY/schedule/"
+
+J3_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" BLOCKERS_MD="$T/blockers-today.md" HOURS=12 \
+  GH_BIN="$GH_DEFAULT" SESSION_START="" "$SCRIPT" --strict --allow-blind 2>&1)"; J3_RC=$?
+rc    "J3 --allow-blind downgrades it to a warning" 0 "$J3_RC"
+
+# A registry that DOES exist and has real projects must not regress into
+# reporting BLIND [registry] just because nothing was touched recently --
+# that path is A1's "(no registered repo has a commit younger than...)" note,
+# a different and older signal this change must not shadow.
+J4_OUT="$(run "$T/blockers-old.md" oldrepo)"
+hasnt "J4 a real, merely-stale registry is not BLIND [registry]" "$J4_OUT" "BLIND [registry]"
+has   "J4 it still reports the stale-repo note"                  "$J4_OUT" "no registered repo has a commit younger"
+
 echo
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1
