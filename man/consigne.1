@@ -72,6 +72,19 @@ A count and a prompt are printed after the rows.
 Acting on the queue is the per-paragraph judgement
 .I PROSE-REAPING.md
 \(sc1 asks for, and there is deliberately no flag here that makes it.
+.PP
+Both
+.B status
+and a kept (0) plain deposit also report whether the vault
+.B clone itself
+is actually the vault: a
+.B "NOT PUSHED"
+line naming how many commits it is ahead of its upstream and how many paths
+are uncommitted, printed only when that count is nonzero (hf7y/realisateur#212).
+The remote is the vault as of 2026-08-12; a local clone is a cache, and a
+clone that is ahead or dirty is holding a deposit nowhere else has a copy of
+\(em measured once as 19 commits and 9 uncommitted paths, silently, on one
+laptop. The count is offline, against the last fetch, not re-fetched here.
 .SH OPTIONS
 .TP
 .B \-\-summon
