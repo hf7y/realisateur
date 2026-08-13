@@ -185,10 +185,38 @@ FROM_PROJECT="${NOTIFY_FROM_PROJECT:-realisateur}"
 title="$(printf '%s' "$text" | head -1 | cut -c1-72)"
 [ -n "$title" ] || die "the note has no first line to title it with"
 
+# THE FOOTER IS A GATE, NOT DECORATION (restored 2026-08-13; senechal#221 ->
+# realisateur#220). `scheduler -i` stamped every issue it filed with
+#
+#   ---
+#   filed <YYYY-MM-DD HH:MM> via `<tool>` on <host>
+#
+# and senechal's tools/issue-janitor.py keys on it as gate 2 of seven. That
+# footer is the ONLY thing distinguishing a machine receipt from a
+# human-written issue: every actor in this estate is the same `hf7y` account,
+# so authorship cannot answer it and the label cannot either (senechal#75 is
+# `idea`-labelled, machine-filed, and real work).
+#
+# Filing with `gh` directly dropped it. Nothing errored -- a missing footer
+# means "not machine-filed", so the janitor did not fail, it went BLIND:
+# 0 of 28 swept, exit 0, reading as a clean inbox rather than a broken broom.
+# Thirteen receipts were closed by hand on 2026-08-13 before it was noticed.
+#
+# Emitted byte-identically to `scheduler -i`'s version and pinned against
+# senechal's own FOOTER_RE by bin/tests/notify-senechal-footer.test.sh.
+# Changing this shape silently disables a tool in another repo -- if it must
+# change, change FOOTER_RE in the same breath.
+#
+# The triage paragraph sits AFTER the footer on purpose: the janitor strips
+# from the footer onward, so text below can never be read as part of the
+# receipt body that gate 4 anchors against.
+body="$(printf '%s\n\n---\nfiled %s via `notify-senechal` on %s\n\nTriage this on senechal'\''s next run: fold it into FOCUS.md if it is work,\nanswer and close it if it is a note. Closing IS the acknowledgement --\nthere is no separate label to add.\n' \
+  "$text" "$(date '+%Y-%m-%d %H:%M')" "$(hostname -s 2>/dev/null || hostname)")"
+
 echo "notify-senechal: filing to $DEST_REPO as from:$FROM_PROJECT ..."
 out="$(gh issue create --repo "$DEST_REPO" \
         --title "$title" \
-        --body "$text" \
+        --body "$body" \
         --label idea --label "from:$FROM_PROJECT" 2>&1)" || {
   printf '%s\n' "$out" >&2
   die "gh issue create rejected the note on $DEST_REPO"
