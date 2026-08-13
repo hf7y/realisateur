@@ -149,6 +149,36 @@ run --rollback 2026-08-04T0130Z >/dev/null 2>&1
 check "...and after a rollback the SAME link resolves to the older build" \
       "$(readlink -f "$BIN/entraine")" "$ROOT/2026-08-04T0130Z/vim-arcade/bin/entraine"
 
+# --- 8. THE VERB COUNT PROPAGATES, NOT JUST THE VERB CONTENT ------------
+# Test 7 proves an EXISTING verb follows `current` for free. It says nothing
+# about a build whose verb SET changed, which is the question an operator
+# actually asks of a nightly channel: "a verb was added last night -- do the
+# accounts have it, or does somebody have to go and link it?"
+#
+# Asked on 2026-08-13 of the live estate and unanswerable there: the two
+# builds on monkey either side of that date carry the identical 33 verbs, so
+# nothing had ever exercised the path. Hence a fixture that does.
+mk_build "2026-08-08T0130Z" "vim-arcade:entraine senechal:installe scheduler:arme bibliothecaire:consulte"
+run --build 2026-08-08T0130Z --apply --link >/dev/null 2>&1
+check "a verb ADDED by the nightly build is linked with no hand step" \
+      "$(readlink "$BIN/consulte")" "$ROOT/current/bibliothecaire/bin/consulte"
+[ -x "$BIN/consulte" ] && ok "...and the new verb is executable through the link" \
+                       || bad "the new verb is executable through the link" "not executable"
+check "...while the verbs already there still resolve through current" \
+      "$(readlink "$BIN/entraine")" "$ROOT/current/vim-arcade/bin/entraine"
+
+# The other half of a count change, and the one this channel does NOT handle:
+# a verb DROPPED from the manifest keeps its link, which now dangles. Asserted
+# as the known behaviour rather than left to be discovered on a live account --
+# PATH search skips a dangling link, so the failure is silent by construction.
+mk_build "2026-08-09T0130Z" "vim-arcade:entraine senechal:installe scheduler:arme"
+run --build 2026-08-09T0130Z --apply --link >/dev/null 2>&1
+if [ -L "$BIN/consulte" ] && [ ! -e "$BIN/consulte" ]; then
+    ok "a verb DROPPED from the build leaves a dangling link (known gap, not a surprise)"
+else
+    bad "a dropped verb leaves a dangling link" "the link was cleaned -- update this test and the docs"
+fi
+
 echo
 printf 'verb-build: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
