@@ -10,7 +10,7 @@
 # RUNNER: hooks/subagent-closeout.sh bin/tests/closeout-lint.test.sh
 # GUARD-TEST: bin/tests/closeout-lint.test.sh
 # GATE: strict --repo $TREE
-# VERIFIED: 2026-08-11 via bash bin/tests/closeout-lint.test.sh (post-#137/#106/#139: shared-checkout dirt, branch attribution, remote session record)
+# VERIFIED: 2026-08-13 via bash bin/tests/closeout-lint.test.sh (post-#232: an absent/unreadable registry now counts as BLIND instead of reporting a clean 0 FLAG/0 BLIND sweep)
 #
 # An overnight run that is not saved anywhere didn't happen, and the recorded
 # ways that goes wrong are a dirty tree at exit, a commit that never left the
@@ -147,6 +147,21 @@ touched=0
 touched_names=()
 touched_paths=()
 now="$(date +%s)"
+
+# REGISTRY ITSELF UNREADABLE (hf7y/realisateur#232). A full sweep (no --repo,
+# no explicit names) that discovers ZERO projects is ambiguous the same way
+# hygiene-lint.sh's equivalent loop was until 2026-08-07: it might mean "the
+# registry is empty" or it might mean "$SCHED_ROOT/schedule doesn't exist on
+# this host" -- e.g. mandark, which no longer holds a scheduler checkout.
+# Both produced the SAME zero-iteration, zero-finding, exit-0 result as a
+# session that really did touch nothing. cli_require_matched (lib/cli-guard.sh)
+# only catches this when project NAMES were given and none matched; a bare
+# sweep skips that check entirely. Counted as BLIND, same as every other
+# domain this script could not read.
+if [ -z "$REPO_ARG" ] && [ "${#want[@]}" -eq 0 ] && [ "${#projects[@]}" -eq 0 ]; then
+  blind=$((blind+1))
+  echo "  BLIND [registry] no registered project was readable under $SCHED_ROOT/schedule/ -- 'could not look', not 'nothing to report'"
+fi
 cutoff=$(( HOURS * 3600 ))
 
 # --- WHEN DID THIS SESSION START (hf7y/realisateur#137) ----------------------
@@ -434,7 +449,7 @@ EOF
   fi
   i=$i
 done
-[ -n "$REPO_ARG" ] || [ "$touched" -ne 0 ] || \
+[ -n "$REPO_ARG" ] || [ "$touched" -ne 0 ] || [ "${#projects[@]}" -eq 0 ] || \
   echo "  (no registered repo has a commit younger than ${HOURS}h)"
 
 # B and C ask about the SESSION, not a directory, so --repo skips them -- which
