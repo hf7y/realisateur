@@ -33,7 +33,29 @@
 # file must contain no symlink-switching of its own.
 #
 # ============================================================================
-# PULL, NOT PUSH -- this runs AS THE ACCOUNT, FROM THE ACCOUNT'S OWN CRONTAB
+# WHERE THIS RUNS CHANGED ON 2026-08-13 -- READ THIS BEFORE THE SECTION BELOW
+# ============================================================================
+#
+# The section that follows describes the PER-ACCOUNT shape: one tick in each
+# account's own crontab, one private pin per account. That shape is RETIRED on
+# monkey. hf7y/realisateur#180 moved every one of the 13 accounts to a single
+# host-wide channel -- the host build root's `current` link, under
+# /usr/local/share, resolved into /usr/local/bin and moved by ONE tick in
+# ROOT's crontab -- and `--retire-cadence`
+# is what took each account off its own.
+#
+# The doctrine below is UNCHANGED by that and is why the host tick is still a
+# tick and not a push: the consumer still owns its clock, verifies before
+# adopting, and records what it did. What changed is WHO the consumer is. It is
+# the host, once, instead of every account, thirteen times, converging on the
+# identical build.
+#
+# The per-account shape is still SUPPORTED, because a host that has not
+# migrated is a real state -- --install-cadence still installs it and --survey
+# still grades it. It is no longer the default and it is not what monkey runs.
+#
+# ============================================================================
+# PULL, NOT PUSH -- THE CONSUMER OWNS ITS CLOCK
 # ============================================================================
 #
 # No ssh. No sudo. No hands account reaching into a 0700 home. The account
