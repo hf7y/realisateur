@@ -380,17 +380,24 @@ echo "-- H. LOCK: serializing the vault's 13 writers (hf7y/realisateur#213) --"
 if command -v flock >/dev/null 2>&1; then
   VL="$TMP/vault-lock"; mkdir -p "$VL"
 
-  OUT="$(PATH="$BASE_PATH" "$CONSIGNE" lock -- echo hello world 2>&1)"; rc=$?
+  # BIBLIOTHECAIRE_VAULT set explicitly on every case below, even the ones
+  # that don't reach vault_locked's directory check (the usage-error cases) --
+  # a missing --vault/env falls back to the real host default,
+  # /srv/ecosystem1-vault, and this suite's own header promises nothing
+  # outside $TMP is touched. Relying on that default happening not to exist
+  # is exactly the false-pass this hermeticity rule exists to prevent: it
+  # passed by accident on any host that happens to already have a vault.
+  OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$VL" "$CONSIGNE" lock -- echo hello world 2>&1)"; rc=$?
   check "lock runs the wrapped command" "$rc" "0"
   has   "...and its stdout reaches the caller" "$OUT" "hello world"
 
-  OUT="$(PATH="$BASE_PATH" "$CONSIGNE" lock -- sh -c 'exit 3' 2>&1)"; rc=$?
+  OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$VL" "$CONSIGNE" lock -- sh -c 'exit 3' 2>&1)"; rc=$?
   check "lock exits with the wrapped command's own code" "$rc" "3"
 
-  OUT="$(PATH="$BASE_PATH" "$CONSIGNE" lock 2>&1)"; rc=$?
+  OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$VL" "$CONSIGNE" lock 2>&1)"; rc=$?
   check "lock with no -- is a usage error (2)" "$rc" "2"
 
-  OUT="$(PATH="$BASE_PATH" "$CONSIGNE" lock -- 2>&1)"; rc=$?
+  OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$VL" "$CONSIGNE" lock -- 2>&1)"; rc=$?
   check "lock -- with no command is a usage error (2)" "$rc" "2"
 
   OUT="$(PATH="$BASE_PATH" "$CONSIGNE" lock --vault "$VL" -- echo hi 2>&1)"; rc=$?
