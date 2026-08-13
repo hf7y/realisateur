@@ -163,11 +163,28 @@ PROP_PIN_PATH=".local/share/verb-builds/current"
 # maintains it. A line in a report file satisfies none of those.
 
 # prop_current_pin -- the adopted build id, or nothing. Never a guess.
+#
+# TWO ROOTS, IN THE ORDER THE ACCOUNT ACTUALLY RESOLVES THEM. The private pin
+# first: an account that still has one is running it, because its ~/.local/bin
+# shims point into it and shadow the host-wide directory. The HOST-WIDE root
+# second, which is where hf7y/realisateur#180 is moving every account.
+#
+# Without the second, this function went honest-but-useless the moment an
+# account retired: probed 2026-08-13, the four accounts retired that morning
+# stamped `Verb-Build: unknown` while running a perfectly well-known build out
+# of /usr/local/bin. "Unknown" is the right answer to an unreadable pin and the
+# wrong answer to a pin that moved -- and the three-state rule above only earns
+# its keep while `unknown` stays rare enough to mean something.
 prop_current_pin() {
-  local p="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}/current"
-  local t; t="$(readlink "$p" 2>/dev/null)" || return 1
-  [ -n "$t" ] || return 1
-  basename "$t"
+  local p t
+  for p in "${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}/current" \
+           "${VERB_HOST_BUILD_ROOT:-/usr/local/share/verb-builds}/current"; do
+    t="$(readlink "$p" 2>/dev/null)" || continue
+    [ -n "$t" ] || continue
+    basename "$t"
+    return 0
+  done
+  return 1
 }
 
 # prop_build_trailer -- the trailer line, always emitted, honest when unknown.
@@ -292,6 +309,7 @@ install-shims.sh
 install-verbs.sh
 pivot.sh
 session-marker.sh
+stamp-verb-build.sh
 "
 
 # --- PAYLOAD: reaches user paths as a verb, inside a dated build ------------
