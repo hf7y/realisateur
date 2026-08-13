@@ -163,6 +163,26 @@ run grower env
 rc  "B7 a markdown-only rewrite that nets POSITIVE still exits 1" 1 "$RUN_RC"
 has "B7 and still FLAGs the ratio"  "$RUN_OUT" "FLAG [markdown-ratio]"
 
+# B8: THE LAUNDERING CASE. Netting repo-wide is not enough on its own --
+# deleting one obsolete document buys room for a brand-new essay somewhere
+# else, and the total still reads negative. Found by fixture against the
+# exemption's own first version, before it had shipped a week. So the test is
+# per FILE as well as in total: no markdown file may grow.
+newrepo launderer
+mkdir -p "$T/launderer/docs"
+lines 300 "$T/launderer/docs/OLD.md" 'an obsolete paragraph'
+G "$T/launderer" add -A
+G "$T/launderer" commit -qm seed
+G "$T/launderer" checkout -q -b work
+rm "$T/launderer/docs/OLD.md"
+lines 250 "$T/launderer/docs/NEW.md" 'a brand new essay line'
+G "$T/launderer" add -A
+G "$T/launderer" commit -qm launder
+run launderer env
+rc  "B8 a big delete does NOT buy a big new document elsewhere" 1 "$RUN_RC"
+has "B8 and the grown file is named"  "$RUN_OUT" "docs/NEW.md:+250"
+has "B8 and it says why this is not a reap"  "$RUN_OUT" "these grew, so this is not a reap"
+
 echo "-- C. a new top-level document"
 newrepo newroot
 lines 50 "$T/newroot/big.sh" 'echo line'
