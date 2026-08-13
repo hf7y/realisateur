@@ -133,11 +133,12 @@ tag.
 
 ## Where a milestone lives — the canonical format
 
-A `## Stability milestone` section near the top of each project's
-FOCUS.md (`.scheduler/FOCUS.md` standard, legacy `.claude/` until
-migrated -- the audit follows the conf's `SCHEDULER_SUBDIR`). Required
-shape (so `bin/milestone-audit.sh` can parse
-it offline):
+**An issue labelled `milestone`** on the project's own tracker, one open
+at a time. Its body carries the shape below.
+
+(`FOCUS.md` was the old home, retired by hf7y/scheduler#66;
+`milestone-audit.sh` still parses it -- hf7y/realisateur#229.) The shape is
+unchanged:
 
 ```
 ## Stability milestone
@@ -195,54 +196,16 @@ one of two things — explicitly:
    the recovered-backlog "ready to go on its own" / viable-systems idea, and
    the natural home for the senescence/retirement idea in the same bullet.)
 
-## Rolling this out while the ecosystem runs concurrently
+## Relationships
 
-Other projects' nightly-batch loops run concurrently with realisateur's,
-and realisateur cross-writes into their files. Git makes this safe for
-*correctness and recoverability* — nothing is unrecoverable. The residual
-risks are narrower, and each has a mitigation that fits the existing model:
+**Supersedes the incubation-audit "graduation-candidate" framing.**
+`bin/incubation-audit.sh` scored projects `incubating|graduation-candidate`
+to suggest a weight. That axis is subsumed: `status: in-progress` ==
+incubating, `status: reached` == graduated. `bin/milestone-audit.sh` is the
+canonical status signal; incubation-audit is legacy. Don't grow both.
 
-- **(a) Concurrent edits to shared files realisateur touches.** Keep every
-  cross-write **small and committed immediately** — never leave another
-  project's repo dirty between edits (a half-written FOCUS.md is what races
-  a concurrent nightly run). This is the same lesson that skipped `crt`
-  during the 2026-07-23 checklist backfill: a dirty tree is a stop, not a
-  thing to edit around.
-- **(b) Projects running against a convention that's changing under them.**
-  While the bootstrap is live and this convention is still settling, treat
-  changes to it as **versioned and backward-compatible**: a project's
-  existing `## Stability milestone` section must keep parsing even as the
-  convention grows. Add fields, don't repurpose the `status:` token or the
-  section heading. `milestone-audit.sh` degrading gracefully (no-focus /
-  missing / UNRECOGNIZED rather than crashing) is part of this contract.
-- **(c) Slower iteration from the weight skim.** Accepted residual cost of
-  the weight-3 bootstrap — bounded by the stated exit condition in
-  `_paced.conf`, not open-ended.
-- **(d) Catching (a)/(b) before they bite.** Lean on `hygiene-lint.sh`'s
-  stranded-commit / dirty-tree checks — they already flag exactly the
-  divergence a raced cross-write would produce. Running the three surveys
-  at the top of every pass is what surfaces it early.
-
-## Relationships (name what this supersedes / connects to)
-
-- **Supersedes the incubation-audit "graduation-candidate" framing.**
-  `bin/incubation-audit.sh` scored projects `incubating|graduation-candidate`
-  to suggest a weight. That axis is now subsumed: `status: in-progress` ==
-  incubating, `status: reached` == graduated. **`bin/milestone-audit.sh` is
-  the canonical status signal going forward**; incubation-audit is legacy
-  (kept for its reproducible weight-suggestion pass, not re-wired into
-  nightly-batch). Don't grow both.
-- **Shares the status vocabulary the BLOCKERS.md taxonomy needs.** The
-  `active`/`parked`/`waiting` split is the same distinction the parked
-  `Spec-out-a-more-principled-eco` idea wants for BLOCKERS.md
-  (`blocking`/`waiting`/`fyi`). One vocabulary should serve both — routed to
-  scheduler via `scheduler -i scheduler` on 2026-07-23. When scheduler
-  builds the glance/status taxonomy, this is the vision-item half of it.
-- **Depends lightly on FOCUS.md having parseable structure.** The open
-  `FOCUS-md-formatting-compliance` idea (chezz has no bulleted section,
-  wtul has no FOCUS.md at all) means the audit will report `no-focus` /
-  `no-milestone` for those until they're reformatted. That's a signal, not
-  a blocker — the audit degrades gracefully.
+**Never leave another project's repo dirty between edits.** A dirty tree is
+a stop, not a thing to edit around.
 
 ## The mechanical check
 

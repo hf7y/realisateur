@@ -84,13 +84,11 @@ Silence here is indistinguishable from forgetting to look.
 ## 3. Every cross-project write, and every piece of residue, is a GitHub issue or a PR — not repo prose
 
 **Nothing from this session gets appended to `.scheduler/FOCUS.md`,
-`BLOCKERS.md`, or `QUESTIONS.md` as a session-log row.** Those files stay
-for genuinely stable, load-bearing state (per `PROSE-REAPING.md`'s own
-criterion: "does this describe a premise that still holds"), not as
-where a session dumps what it did. That is what made them grow
-unboundedly in the first place. Prose lives in issues and PRs now,
-per Zach's own reply establishing this paradigm — searchable, closeable,
-and not something every project's clone has to carry forever.
+`BLOCKERS.md`, or `QUESTIONS.md`.** Those surfaces were RETIRED by
+hf7y/scheduler#66 on 2026-08-07 and do not exist in this repo. Prose lives
+in issues and PRs — searchable, closeable, and not something every
+project's clone has to carry forever. If you find one of those files
+anywhere, it is a finding (hf7y/realisateur#230), not a destination.
 
 For each of the following, file a GitHub issue in the **owning** repo
 (the repo the write/finding/decision is actually about — run

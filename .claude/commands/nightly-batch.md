@@ -3,20 +3,24 @@ scope: project
 description: Nightly pass -- infer ideas from dropped inbox artifacts and wire them into scaffolded, scheduler-registered projects
 ---
 
-Read `.scheduler/FOCUS.md` first -- including its "build maximally
-autonomously" policy. Build first, don't just analyze: pick the most
-reasonable interpretation of an inbox artifact and scaffold a real project
-for it, flagged in `.scheduler/QUESTIONS.md` and the report. Only actually
-stop and wait for the user when the action itself can't be reverted -- an
-ordinary commit, branch, or new local scheduler registration never
-qualifies.
+Build first, don't just analyze: pick the most reasonable interpretation of
+an inbox artifact and scaffold a real project for it, and say so in the
+report. Only actually stop and wait for the user when the action itself
+can't be reverted -- an ordinary commit, branch, or new local scheduler
+registration never qualifies.
+
+**Findings go in the issue tracker, never in a markdown surface.**
+`BLOCKERS.md`, `.scheduler/FOCUS.md` and `.scheduler/QUESTIONS.md` were
+retired by hf7y/scheduler#66 and do not exist in this repo. One
+destination, and it is a command: `gh issue create -R hf7y/realisateur`.
 
 This command is designed to run unattended overnight, with no human
 review step until the morning.
 
 ## 1. Orient
 
-`git log --oneline -10`, `README.md`, and `.scheduler/FOCUS.md`. If a
+`git log --oneline -10`, `README.md`, and the open issues
+(`gh issue list -R hf7y/realisateur`). If a
 previous nightly run left work in progress (check the last report under
 `~/reports/realisateur/`), pick up from there rather than starting over.
 
@@ -29,9 +33,8 @@ output is the most likely to be wrong -- a 5-project "cluster" on 2026-07-26
 turned out to be a shared boilerplate footer (worked example in
 `PRECIPITATION.md`). Confirming a candidate means opening its members and
 judging shape stability, which is an `/ideate` job with a human present, not
-a batch one. What this pass MAY do: note a striking candidate in
-`.scheduler/FOCUS.md` or `QUESTIONS.md` for the next interactive pass to
-judge. What it must NOT do: stamp `(re-arrival: …)`/`[iface: …]`, reorder
+a batch one. What this pass MAY do: file a striking candidate as an issue
+for the next interactive pass to judge. What it must NOT do: stamp `(re-arrival: …)`/`[iface: …]`, reorder
 anything, or change a weight on the strength of the scan alone. A promotion
 nobody stated is the silent reorder `/ideate` 4.5 forbids.
 
@@ -55,11 +58,11 @@ other projects' own nightly runs, not this one. Note any FLAG against a
 project *this* run touches and fix it before committing; don't go fix the
 whole ecosystem unprompted.
 
-**Read `.scheduler/QUESTIONS.md` and process any answers.** The user replies
-inline, on a line starting with `> ` directly under a question --
-QUESTIONS.md's own header documents the convention. Treat any `> `
-answer as authoritative (same standing as FOCUS.md): act on it, fold a
-standing decision into FOCUS.md if it should persist, then remove that
+**Read the answers on your own issues and process them.** Zach answers by
+commenting and CLOSING the issue -- a closed issue with a comment is an
+answer, not a dropped thread, and a label-gated sweep will miss it. Treat
+any such comment as authoritative: act on it, and if the decision should
+persist, put it where the mechanism it governs lives. Then remove that
 question+answer block once acted on. Leave unanswered questions
 untouched.
 
@@ -93,10 +96,9 @@ other projects**, and the output is *routing*, not building:
 - Pick the **one** most striking row — a dark high-weight project, a
   reservoir stranded behind a closed valve, a live weight-1 project whose
   oldest open idea is weeks old.
-- Write it up as a dated entry in `.scheduler/FOCUS.md`, and if it needs a
-  human decision (re-enable? reweight? park the stranded ideas?), put a
-  `> `-answerable question in `.scheduler/QUESTIONS.md`. **Re-enabling a
-  project or changing a weight is not this pass's call** — those are
+- **File it as an issue.** If it needs a human decision (re-enable?
+  reweight? park the stranded ideas?), the issue IS the question.
+  **Re-enabling a project or changing a weight is not this pass's call** — those are
   stated decisions, and a batch run making them silently is the reorder
   `/ideate` §4.5 forbids.
 - Then **stop**. A steward pass that surfaces one thing clearly and
@@ -104,9 +106,8 @@ other projects**, and the output is *routing*, not building:
 
 **Explicitly out of scope on an empty-inbox night:** authoring a new lint,
 survey, guard, or command for realisateur itself. If the pass believes one
-is needed, that belief is the output — file it as a `[batch]` row in
-`.scheduler/FOCUS.md` for a pass with a human present, and do not build it
-tonight. Realisateur already has five surveys; the sixth needs a stated
+is needed, that belief is the output — file it as an issue for a pass with
+a human present, and do not build it tonight. Realisateur already has five surveys; the sixth needs a stated
 reason from outside this loop.
 
 ## 3. Infer and wire up, one artifact at a time
@@ -115,8 +116,8 @@ reason from outside this loop.
 `bin/check-project-busy.sh <project>`** (offline, ~instant -- flock-probes
 that project's own scheduler job locks). If it reports `BUSY: <job-name>`,
 that project's automation is mid-run against the same files RIGHT NOW:
-**defer the write**, note it in the report and `.scheduler/QUESTIONS.md`
-for the next pass, and carry on with the rest of this run. This is the
+**defer the write**, note it in the report and in the issue it belongs to,
+and carry on with the rest of this run. This is the
 same guard `/ideate` has used since the 2026-07-24 concurrency finding,
 and it belongs here at least as much: an unattended pass has no human
 watching to notice it just edited a file out from under a live job.
@@ -139,10 +140,10 @@ For each unarchived artifact:
   here" is feedback about this repo, not raw material for a new
   `~/Documents/Projects/<name>/`. Telltale: it names realisateur, the
   scheduler, or "this folder/workflow" itself as the subject. For these,
-  don't scaffold a project -- research the answer, fold the finding/
-  decision into `.scheduler/FOCUS.md` (a dated bullet is enough) and/or
-  `README.md` if it changes the documented process, then archive the
-  source artifact same as any other processed idea.
+  don't scaffold a project -- research the answer, record the decision
+  where the mechanism it governs lives (or `README.md` if it changes the
+  documented process), then archive the source artifact same as any other
+  processed idea.
 - Check whether a project for this idea already exists under
   `~/Documents/Projects/` before creating a new one -- an artifact might
   be an addition to something already scaffolded, not a brand-new project.
@@ -160,12 +161,11 @@ For each unarchived artifact:
 - For a genuinely new idea: create `~/Documents/Projects/<name>/`, `git
   init` it, write a minimal README describing the inferred idea and
   initial scaffolding (actual code/structure appropriate to what was
-  inferred -- don't leave it as just a README). When you write its
-  `.scheduler/FOCUS.md` (below), open it with a `## Stability milestone`
-  section (canonical shape in `STABILITY-MILESTONES.md`) whose bar is the
-  inferred **v1 core** of the idea, `status: not-started`. That milestone
-  is what every later idea against the project gets park-by-default-triaged
-  against.
+  inferred -- don't leave it as just a README). Its **stability
+  milestone** (canonical shape in `STABILITY-MILESTONES.md`) is the
+  inferred **v1 core** of the idea, filed as a `milestone` issue,
+  `status: not-started`. That milestone is what every later idea against
+  the project gets park-by-default-triaged against.
 - **Stamp the build-discipline baseline into every new project** so the
   lessons in `BUILD-DISCIPLINE.md` are inherited from day one, not
   rediscovered per project the hard way (see that file for why -- it
@@ -184,48 +184,37 @@ For each unarchived artifact:
 - If the new project is the kind of thing that benefits from unattended
   nightly iteration (most agent/codebase projects are), wire it into the
   scheduler exactly as `SCHEDULER.md` documents for realisateur itself:
-  a local bare remote under `~/git-remotes/<name>.git` (no GitHub
-  credentials needed unless one already clearly exists for this idea), a
-  `.scheduler/FOCUS.md` + `.scheduler/QUESTIONS.md` (NOT `.claude/` -- the
-  sensitive-file gate blocks unattended writes there; set `SCHEDULER_SUBDIR=".scheduler"` in the conf) + `.claude/commands/nightly-batch.md` + a root `CLAUDE.md` (adapt the
-  templates in `~/Documents/Projects/scheduler/examples/` to what
-  the new project actually is -- `CLAUDE.md.template` is the "suggest
-  `/ideate <project>` instead of implementing" guardrail, worth every new
-  project having from day one), push to the bare remote, then drop
-  `schedule/<name>.conf` into the scheduler repo (copy
-  `schedule-entry.conf.template`, `BATCH_CRON="auto"`, no `BATCH_SCRIPT`)
-  and add it to `schedule/_paced.conf` as a new participant with a thin
-  `~/.local/bin/<name>-nightly-batch-loop.sh` wrapper (mirror
-  `crt-nightly-batch-loop.sh` exactly -- it's the current canonical
-  no-legacy-wrapper example). Preview with `bin/sync-crontab.sh`, then
-  `--apply`.
+  a GitHub repo under `hf7y` (its issue tracker is where the project's
+  prose lives -- do NOT create `.scheduler/FOCUS.md`, `QUESTIONS.md` or
+  `BLOCKERS.md`; scaffolding them is how the retired surfaces kept being
+  reborn after hf7y/scheduler#66), a `.claude/commands/nightly-batch.md`
+  and a root `CLAUDE.md` (adapt the templates in scheduler's `examples/`
+  to what the new project actually is -- `CLAUDE.md.template` is the
+  "suggest `/ideate <project>` instead of implementing" guardrail, worth
+  every new project having from day one), then register it with the
+  scheduler as `SCHEDULER.md` documents.
+
+  **Dispatch registration is in flux** -- hf7y/realisateur#228 is retiring
+  per-account cron and `usage-paced-runner`. Check that issue before
+  copying a crontab shape out of an older project; do not add a new
+  per-account cron line on monkey without reading it.
 - Move the source artifact into `archive/` (create it if missing) once
   acted on, or once a real decision was made not to (note why in the
   report either way).
 
-### 3a. Two mandatory write paths
-
-**Every `.scheduler/FOCUS.md` / `.scheduler/QUESTIONS.md` commit goes
-through `bin/focus-commit.sh <repo> <msgfile> <file>...`** — never a bare
-`git add` + `git commit` + `git push`. It commits exactly the named files
-(anything else already staged is a loud abort, so an unrelated
-working-tree edit can never ride along inside a FOCUS commit), does the
-fetch/rebase/retry itself on a rejected push, and verifies the rebase did
-not change what the commit means. That last check is the one that would
-have caught the 2026-07-26 rename-following rebase that silently rewrote
-an archived artifact's content. The bare sequence is prose discipline
-carried in session memory; this is the guard.
+### 3a. The mandatory write path
 
 **Every machine-wide config change goes through
-`bin/notify-senechal.sh '<what, where, who owns it>'`** — crontab entries,
+`notify-senechal '<what, where, who owns it>'`** — crontab entries,
 `~/.claude` settings hooks, systemd units, autostart, WM config, marker
 files under `~/.local/share`. Standing rule: realisateur *owns* the thing
-it generates; senechal *owns knowing it exists*. The script files through
-`scheduler -i senechal` (the front door — a staleness-checked commit path
-that is safe against a live senechal run, unlike a hand edit of its
-FOCUS.md) and then confirms the note actually reached senechal's remote,
-because `scheduler -i` skips the push when the repo is behind origin and
-an unpushed note is invisible to senechal's own nightly clone.
+it generates; senechal *owns knowing it exists*. It files a labelled issue
+on `hf7y/senechal` with `gh` directly and reads it back to confirm it
+landed, so it needs no clone of that repo and no push access to it.
+
+`focus-commit` still exists for repos that have not finished migrating off
+`FOCUS.md`/`QUESTIONS.md`. **This repo has.** Do not create those files
+here in order to have something to commit.
 
 ## 4. Commit as you go
 
@@ -235,8 +224,7 @@ end. Each new project gets its own first commit(s) in its own repo.
 
 ## 5. Flag what you built, and anything needing the user's own judgment
 
-Append-only, format `- **YYYY-MM-DD (nightly-batch):** <text>`, in
-`.scheduler/QUESTIONS.md`:
+One issue per item, on `hf7y/realisateur`:
 
 - **Every new project scaffolded tonight** -- what artifact it came from,
   what was inferred, where it lives, whether it got a scheduler
@@ -253,8 +241,7 @@ Append-only, format `- **YYYY-MM-DD (nightly-batch):** <text>`, in
 `~/reports/realisateur/LATEST.md` to match. Cover: which inbox artifacts
 were processed and what was inferred from each, which new projects were
 scaffolded (and whether scheduler-registered), what was archived, what
-was deliberately left unprocessed and why, and whether anything got
-appended to `.scheduler/QUESTIONS.md`.
+was deliberately left unprocessed and why, and which issues were filed.
 
 ## 7. Before finishing
 

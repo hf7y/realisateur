@@ -52,8 +52,7 @@ weights get raised and ideas get promoted, and it is worth knowing that a
 project you are about to accelerate is carrying a dirty tree, a stranded
 commit, or a `[dispatch-parity]` gap. Same stance as the others -- FLAGs
 are signals, most belong to other projects' own runs, and this pass fixes
-only what it touches. Also read this repo's own
-`.scheduler/FOCUS.md`/`QUESTIONS.md`.
+only what it touches. Also read this repo's own open issues.
 
 **Single-project (`$ARGUMENTS` given):** run
 `"/home/zach/Documents/Projects/scheduler/bin/scheduler" status <project>`
@@ -100,8 +99,8 @@ found). Don't scaffold or implement speculatively while waiting.
 ## 4. Record and queue, don't build
 
 **Park-by-default triage (do this for every idea before recording it).**
-Against the target project's *current* stability milestone (from
-its FOCUS.md), judge each idea: is it required to reach that
+Against the target project's *current* stability milestone (its open
+`milestone`-labelled issue), judge each idea: is it required to reach that
 milestone? If **yes** it's `active`; if **no**, tag it `(parked)` (or
 `(waiting: <dep>)` if it's blocked externally, not by choice) and record
 one line of why it's past the bar. Parking is the default for anything
@@ -116,7 +115,7 @@ Zach's repeated ask (2026-07-24, `revise-the-ideate-workflow-*.idea` --
 see `IDEATE-WORKFLOW-REVISION.md` at the repo root for the full context)
 is that this structure should be `/ideate`'s own default, not something
 restated by hand each session. When a session records a real direction
-(not just a one-line decision), shape the FOCUS.md entry as:
+(not just a one-line decision), shape the issue as:
 1. **Vision** -- the actual goal in plain terms, and how much of it is
    decided vs. still explicitly open (name what's NOT decided yet, don't
    let silence imply it is).
@@ -129,82 +128,29 @@ restated by hand each session. When a session records a real direction
 3. **Blockers** -- anything blocking the CURRENT milestone step
    specifically, tagged by who can clear it (human-only step vs.
    buildable-now), not a generic backlog dump.
-The 2026-07-24 dexter parallelism entry in this repo's own `FOCUS.md` is
-the reference example this shape is modeled on -- reread it if the
-structure above is unclear in the abstract.
 
-For each decision:
-- **About realisateur's own scope** -- write into this repo's own
-  `.scheduler/FOCUS.md` (decision + rationale) same as any other project,
-  committed via **`bin/focus-commit.sh <repo> <msgfile> <file>...`**, never
-  a bare `git add`/`commit`/`push`. It stages exactly the named files
-  (a loud abort if anything else is staged, so an unrelated edit cannot
-  ride along inside a FOCUS commit), handles a rejected push itself, and
-  verifies the rebase did not change what the commit means -- the check
-  that would have caught the 2026-07-26 rebase that silently rewrote an
-  archived file's content.
+
+For each decision, the destination is a command, never a file:
+
+- **About realisateur's own scope** — file an issue on `hf7y/realisateur`
+  carrying the decision and its rationale.
 - **About machine-wide config** (crontab, `~/.claude` settings hooks,
-  systemd, autostart, WM config, markers under `~/.local/share`) -- run
-  **`bin/notify-senechal.sh '<what, where, who owns it>'`**. Standing rule:
-  realisateur owns what it generates, senechal owns knowing it exists. The
-  script files through `scheduler -i senechal` -- senechal's front door,
-  whose staleness-checked commit path is safe against a live senechal run,
-  so this case does NOT need the busy-deferral below -- and then confirms
-  the note reached senechal's remote, since an unpushed note is invisible
-  to senechal's own nightly clone.
-- **About another project** -- first run `bin/check-project-busy.sh
-  <project>` (offline, ~instant -- flock-probes that project's own
-  scheduler job locks). If it reports `BUSY: <job-name>`, that project's
-  own automation is mid-run against the same files RIGHT NOW -- **defer
-  the cross-write** (note the decision in this session's chat/report
-  instead, cross-write next session) rather than risk editing FOCUS.md/
-  QUESTIONS.md out from under a live nightly-batch/bug-sweep pass. This is
-  realisateur's own half of the 2026-07-24 concurrency finding (see
-  FOCUS.md) -- scheduler owns making dispatch/push itself robust;
-  detecting "don't step on a live run" before cross-writing is
-  realisateur's job specifically because it's the one thing reaching into
-  other projects' files from outside their own automation.
-  If free, write directly into THAT project's own
-  FOCUS.md/QUESTIONS.md (`.scheduler/` if migrated, legacy `.claude/`
-  otherwise -- check `SCHEDULER_SUBDIR` in its conf) (realisateur owns this
-  cross-write relationship, unlike chezz's `/ideate`, which must go
-  through scheduler's `-i` front door for anything outside itself).
-  Tag the entry so it reads as ecosystem-informed rather than the
-  project's own agent noticing something locally -- prefix with
-  `(realisateur)` the same way entries are already tagged
-  `(nightly-batch)`/`(bug-sweep)`/`(via scheduler -i)`, e.g.
-  `- **YYYY-MM-DD (realisateur):** <text>`. If a mirror/summary is worth
-  keeping in realisateur's own `QUESTIONS.md` too (so the ecosystem-wide
-  view doesn't require opening every project), add a short cross-link
-  there pointing at the real entry -- don't duplicate the full text in
-  both places.
-  - **`aedile`/`vkv-inventory` note (revised 2026-07-24, via `/ideate`;
-    supersedes the same-day front-door-only carve-out).** Both run under
-    `svc-vaporwave` for dispatch, but their real vision docs are
-    git-tracked in each project's own GitHub remote regardless of
-    whether zach@mandark's interactive working copy exists --
-    confirmed for aedile: `aedile/.scheduler/FOCUS.md`/`QUESTIONS.md`
-    (not `.claude/`, deliberately gitignored in the shared `wavebucks`
-    monorepo since it's co-owned with Tyler's unrelated projects -- see
-    [[wavebucks_org_structure]]) are tracked and pushed normally. So the
-    mandark-copy-closing concern doesn't actually block a direct
-    cross-write: clone `git@github.com:media-arts-collective/wavebucks.git`
-    (or `inventory-app.git` for vkv-inventory, which just uses plain
-    `.claude/` -- it's its own dedicated repo, no shared-collaborator
-    concern at all) fresh with zach's own existing GitHub access if
-    mandark's copy is gone, write/commit/push the same as any other
-    registered project's direct-cross-write privilege above. **The
-    `scheduler -i <project>` front door stays available as a documented
-    fallback** (e.g. if you'd rather realisateur never hold push access
-    to a shared repo at all) -- but it's an option, not the default, for
-    these two.
-- **Priority weight** -- if this session's findings justify it, edit
-  `schedule/_paced.conf`'s weight field for the affected project(s)
-  directly (see `docs/priority-weight.md` in the scheduler repo). This
-  is scheduler's own file, but the weight field itself is explicitly
-  realisateur's to set -- that's not covered by the "go through the
-  front door" rule below, which is about scheduler's *engine* logic, not
-  this specific per-project knob.
+  systemd, autostart, WM config, markers under `~/.local/share`) — run
+  `notify-senechal '<what, where, who owns it>'`. Standing rule:
+  realisateur owns what it generates, senechal owns knowing it exists. It
+  files a labelled issue on `hf7y/senechal` with `gh` and reads it back to
+  confirm it landed, so it needs no clone of that repo and no push access
+  to it — and therefore no busy-deferral either.
+- **About another project** — file an issue on **that project's** tracker,
+  labelled `from:realisateur` so it reads as ecosystem-informed rather than
+  that project's own agent noticing something locally. The provenance label
+  is a sensor, not decoration: every actor in this estate is `hf7y`, so
+  authorship cannot answer "did a human ask for this, or did an agent find
+  it", and an unlabelled issue errors toward dispatching more.
+
+  `check-project-busy <project>` gates DIRECT writes into another repo's
+  files. Filing an issue is a front door and carries its own regulator, so
+  it does not need the check.
 
 ## 4.5. Vision debt -- watch it, and know when to override oldest-first
 
@@ -278,11 +224,9 @@ directly.
 
 ## 6. Commit, push, and stop
 
-Commit realisateur's own `.scheduler/FOCUS.md`/`QUESTIONS.md` changes here;
-commit each touched project's own FOCUS.md/QUESTIONS.md changes in THAT
-project's repo (separate commits, separate repos -- don't bundle). Push
-everything pushable; note anything that couldn't push (e.g. the
-bare-remote permission issue some repos hit 2026-07-22) rather than
+Commit realisateur's own code and doc changes here; findings and decisions
+went to issues in §4 and need no commit. Push everything pushable; note
+anything that couldn't push rather than
 silently leaving it unmentioned. End with a short summary: what's now
 queued and where, any weight changes made and why, current ecosystem-wide
 vision-debt state (oldest open item, whether it grew or drained since
