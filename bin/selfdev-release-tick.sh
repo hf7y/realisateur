@@ -431,7 +431,12 @@ while IFS=: read -r user _ uid _ _ home _; do
   clk=\$(sudo -u "\$user" stat -c %Y "\$home/.local/state/selfdev-release-tick.status" 2>/dev/null || echo 0)
   cron=none
   sudo -u "\$user" crontab -l 2>/dev/null | grep -q 'selfdev-release:TICK' && cron=armed
-  echo "\$user \${pin:-NONE} \$clk \$cron"
+  # Does this account resolve the host-wide channel? Asked AS THE ACCOUNT,
+  # because a \$HOME/.local/bin entry earlier on its PATH shadows the host
+  # directory, and the host's own view cannot see that.
+  host=no
+  sudo -u "\$user" -H sh -c 'command -v $HOST_PROBE_VERB' 2>/dev/null | grep -q "^$HOST_BIN/" && host=yes
+  echo "\$user \${pin:-NONE} \$clk \$cron \$host"
 done < $SURVEY_PASSWD
 EOF
 )"
@@ -441,19 +446,29 @@ EOF
     echo "BLIND: could not survey $SURVEY_HOST (ssh rc=$rc). Nothing was verified." >&2
     return 3
   fi
-  printf '  %-16s %-26s %-8s %s\n' ACCOUNT PIN CLOCK CRON
+  printf '  %-16s %-26s %-8s %-6s %s\n' ACCOUNT PIN CLOCK CRON CHANNEL
   local now; now="$(date +%s)"
-  while read -r user pin clk cron; do
+  while read -r user pin clk cron host; do
     found=1
     local age='never'
     [ "${clk:-0}" -gt 0 ] 2>/dev/null && age="$(( (now - clk) / 3600 ))h"
-    printf '  %-16s %-26s %-8s %s\n' "$user" "$pin" "$age" "$cron"
-    if [ "$pin" = NONE ]; then
-      gap "$user: no build adopted -- the release channel has no consumer here"
+    printf '  %-16s %-26s %-8s %-6s %s\n' "$user" "$pin" "$age" "$cron" \
+           "$([ "${host:-no}" = yes ] && echo host-wide || echo private)"
+    # THREE STATES, and the middle one is the point. Before hf7y/realisateur#180
+    # a missing private pin meant the channel had no consumer here. AFTER it,
+    # it is the FINISHED state, and grading it as a gap makes this view report
+    # a completed migration as thirteen findings -- which is how an alarm stops
+    # being read. Probed 2026-08-13, minutes after the migration finished: this
+    # survey said "0 ok, 13 gap" about an estate where every account resolved
+    # every verb.
+    if [ "${host:-no}" = yes ] && [ "$pin" = NONE ]; then
+      ok "$user: follows the host-wide channel ($HOST_BIN); no private pin or clock to keep"
+    elif [ "$pin" = NONE ]; then
+      gap "$user: no build adopted AND $HOST_PROBE_VERB does not resolve from $HOST_BIN -- this account has no verbs"
     elif [ "$cron" != armed ]; then
-      gap "$user: on build $pin but NO CLOCK -- it will never advance"
+      gap "$user: on private build $pin but NO CLOCK -- it will never advance. Retire it (--retire-cadence) or arm it (--install-cadence)."
     else
-      ok "$user: $pin, clock $age"
+      ok "$user: private pin $pin, clock $age (pre-#180 shape; --retire-cadence moves it to $HOST_BIN)"
     fi
   done <<<"$out"
   [ "$found" = 1 ] || { echo; echo "BLIND: no project accounts (uid $UID_MIN-$UID_MAX) on $SURVEY_HOST." >&2; return 3; }
