@@ -305,6 +305,74 @@ check "--vault with no path is a usage error, not a silent deposit" "$rc" "2"
 has   "the default vault is /srv/ecosystem1-vault" "$SRC_TEXT" "VAULT_DEFAULT=/srv/ecosystem1-vault"
 hasnt "no vault path under a home directory remains" "$SRC_TEXT" 'ecosystem1/ecosystem1'
 
+# ===========================================================================
+echo
+echo "-- G. PUSH STATUS: is the clone actually the vault (hf7y/realisateur#212)"
+# ===========================================================================
+# The failure this closes: a vault CLONE sitting commits-ahead-of-origin or
+# with uncommitted paths, silently -- measured on mandark as 19 ahead with 9
+# uncommitted paths, every consignment since 2026-08-02 in exactly one place.
+# All local: a bare repo standing in for the GitHub remote, no network.
+if command -v git >/dev/null 2>&1; then
+  mk_pushed_vault() { # <vault-dir> -- a clean clone, in sync with its "origin"
+    local vault="$1" origin="$TMP/origin-g-$$-$RANDOM.git"
+    git init --quiet --bare "$origin"
+    git init --quiet "$vault"
+    git -C "$vault" config user.email test@example.com
+    git -C "$vault" config user.name  Test
+    mkdir -p "$vault/proj"
+    printf 'hello\n' > "$vault/proj/NOTE.md"
+    git -C "$vault" add proj/NOTE.md
+    git -C "$vault" commit --quiet -m seed
+    git -C "$vault" remote add origin "$origin"
+    git -C "$vault" push --quiet -u origin HEAD:main
+  }
+
+  VG="$TMP/vault-g-clean"; mk_pushed_vault "$VG"
+  OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$VG" "$CONSIGNE" status 2>&1)"
+  hasnt "a clean, fully-pushed vault prints no push-status line" "$OUT" "NOT PUSHED"
+
+  VG="$TMP/vault-g-dirty"; mk_pushed_vault "$VG"
+  printf 'uncommitted\n' > "$VG/proj/SCRATCH.md"
+  OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$VG" "$CONSIGNE" status 2>&1)"
+  has "an uncommitted path is reported" "$OUT" "NOT PUSHED"
+  has "...with a nonzero uncommitted count" "$OUT" "1 uncommitted path(s)"
+  has "...naming the consequence, not just the count" "$OUT" \
+      "not in the vault until it is committed and pushed"
+
+  VG="$TMP/vault-g-ahead"; mk_pushed_vault "$VG"
+  printf 'second commit\n' > "$VG/proj/SECOND.md"
+  git -C "$VG" add proj/SECOND.md
+  git -C "$VG" commit --quiet -m second
+  OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$VG" "$CONSIGNE" status 2>&1)"
+  has "a commit not yet pushed is reported ahead" "$OUT" "1 ahead of"
+
+  # A plain deposit (not `status`) reports it too, but only when the deposit
+  # itself was kept (0) -- a refused/broken/blind deposit says nothing about
+  # push status because nothing was written to report.
+  VG="$TMP/vault-g-deposit"; mk_pushed_vault "$VG"
+  printf 'uncommitted\n' > "$VG/proj/SCRATCH.md"
+  OUT="$(PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" STUB_RC=0 \
+         BIBLIOTHECAIRE_VAULT="$VG" "$CONSIGNE" DOC.md 2>&1)"
+  has "a kept deposit is followed by the push-status line" "$OUT" "NOT PUSHED"
+
+  OUT="$(PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" STUB_RC=7 \
+         BIBLIOTHECAIRE_VAULT="$VG" "$CONSIGNE" DOC.md 2>&1)"
+  hasnt "a refused deposit is not followed by the push-status line" "$OUT" "NOT PUSHED"
+
+  # A vault clone that is not a git working tree at all (the case every other
+  # test above already exercises against non-git fixture dirs) must not error
+  # -- the check is additive, never a new way for `status` to go BLIND.
+  VG="$TMP/vault-g-nongit"; mkdir -p "$VG/proj"
+  note "$VG/proj/N.md" "$SRC" "DESIGN-NOTES.md" \
+       "$(sha256sum "$SRC/DESIGN-NOTES.md" | cut -d' ' -f1)"
+  OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$VG" "$CONSIGNE" status 2>&1)"; rc=$?
+  check "a non-git vault still reports status cleanly" "$rc" "0"
+  hasnt "...and is silent about push state it cannot know" "$OUT" "NOT PUSHED"
+else
+  echo "  (skipped: no git on PATH)"
+fi
+
 echo
 printf -- '--- consigne: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -94,6 +94,15 @@
 # So this tool still not committing is now a division of labour rather than a
 # prohibition: depositing is mechanical, deciding what a commit SAYS is not.
 #
+# WHAT THIS TOOL DOES SAY, since hf7y/realisateur#212: whether the clone it
+# just wrote into is actually ahead of origin or has uncommitted paths. It
+# still commits and pushes nothing itself -- that division of labour did not
+# move -- but a deposit that landed in a clone nobody then pushed used to be
+# silent about it, which is exactly the mandark failure above, undetected
+# until someone happened to look. Both `status` and a kept (0) plain deposit
+# now end with that line when the clone is not clean; a clean clone stays
+# quiet, same as `status`'s own "nothing to report" line does.
+#
 # exit: 0 kept  2 usage  5 broken  6 blind  7 refused
 #       -- byte-identical to `fonde`'s own VERB_EXITS, because for the deposit
 #       path they are literally the same process's exit code, unwrapped.
@@ -231,6 +240,40 @@ resolve_impl() {
        Nothing was deposited."
 }
 
+# ---- push status: is the clone actually the vault? -------------------------
+# hf7y/realisateur#212. The remote IS the vault as of 2026-08-12; a local
+# clone is a cache, and nothing said so when the cache and the remote
+# disagreed. Measured failure mode: mandark's clone sat 19 commits ahead of
+# origin with 9 uncommitted paths, silently -- every consignment since
+# 2026-08-02 existing in exactly one place, a laptop.
+#
+# Offline, like hygiene-lint.sh's own branch-unpushed check this mirrors: an
+# ahead-count against the LAST FETCH, not re-fetched here, so it can go stale
+# in the other direction (looking clean when origin has since moved). That is
+# an acceptable false-negative for a check that costs one `git status`, not a
+# CI gate -- the ecosystem's other ahead-count check makes the same trade for
+# the same reason.
+vault_push_report() { # <vault> -- prints one line to stderr if not clean, silent if it is
+  local vault="$1" dirty=0 ahead=0 up
+  git -C "$vault" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+
+  dirty="$(git -C "$vault" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+  case "$dirty" in ''|*[!0-9]*) dirty=0 ;; esac
+
+  up="$(git -C "$vault" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null)"
+  if [ -n "$up" ]; then
+    ahead="$(git -C "$vault" rev-list --count "$up..HEAD" 2>/dev/null)"
+    case "$ahead" in ''|*[!0-9]*) ahead=0 ;; esac
+  fi
+
+  if [ "$dirty" -gt 0 ] || [ "$ahead" -gt 0 ]; then
+    printf 'consigne: NOT PUSHED -- %s ahead of %s, %s uncommitted path(s) in %s\n' \
+      "$ahead" "${up:-no upstream}" "$dirty" "$vault"
+    printf '          this deposit is not in the vault until it is committed and pushed\n'
+    printf '          (offline count against the last fetch, not re-fetched here)\n'
+  fi
+}
+
 # ---- status: the half nothing consumed -------------------------------------
 # Reads the vault's own notes, not a list. Every note written by
 # consign-prose.sh carries the three fields this needs in its frontmatter --
@@ -253,6 +296,8 @@ status_field() { # <file> <field> -- first frontmatter value, or empty
 
 do_status() {
   [ -d "$VAULT" ] || blind "no vault at $VAULT (set BIBLIOTHECAIRE_VAULT)"
+
+  vault_push_report "$VAULT"
 
   local -a projects=()
   if [ $# -gt 0 ]; then
@@ -400,9 +445,14 @@ IMPL="$(resolve_impl)" || exit $?
 [ "$SUMMON" -eq 1 ] && printf '%s: the deposit is mechanized; --summon buys nothing here and nothing was spent.\n' \
   "$SELF_NAME" >&2
 
-# Foreground, output unswallowed, exit code unwrapped. The impl prints each
-# DEPOSITED path and what is now safe to remove, and that report is the
-# caller's whole basis for deciding anything afterwards. Capturing it to
-# inspect the exit code first is how it went missing.
+# Foreground, output unswallowed. The impl prints each DEPOSITED path and
+# what is now safe to remove, and that report is the caller's whole basis for
+# deciding anything afterwards. Capturing IT (stdout) to inspect the exit code
+# first is how it went missing -- so this still doesn't. The exit code alone
+# is held one command longer than necessary so a kept (0) deposit can be
+# followed by the #212 push-status line: a deposit is not IN the vault until
+# it is committed and pushed, and nothing said so before this.
 bash "$IMPL" "$VAULT" "${ARGS[@]}"
-exit $?
+rc=$?
+[ "$rc" -eq 0 ] && vault_push_report "$VAULT" >&2
+exit "$rc"
