@@ -152,16 +152,6 @@ For each decision, the destination is a command, never a file:
   files. Filing an issue is a front door and carries its own regulator, so
   it does not need the check.
 
-**Reaped 2026-08-13, 73 lines.** What was here routed each of these into a
-different project's `FOCUS.md`/`QUESTIONS.md` by direct cross-write, with a
-busy-deferral protocol around the race that creates, a 26-line
-`aedile`/`vkv-inventory` carve-out about which clone to write into, and a
-`_paced.conf` weight-field rule. Those surfaces were retired by
-hf7y/scheduler#66 and the weight field is inert (hf7y/realisateur#74), so
-the whole apparatus was prose defending mechanisms that no longer exist —
-`PROSE-REAPING.md` §1, third row. Issues need no clone, no push access and
-no concurrency protocol, which is most of why the retirement happened.
-
 ## 4.5. Vision debt -- watch it, and know when to override oldest-first
 
 **The signal ladder is now formalized in `PRECIPITATION.md` and sensed by

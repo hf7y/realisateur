@@ -116,10 +116,11 @@ NAMESTATUS="$(git diff --name-status --diff-filter=A "$RANGE" -- 2>"$ERR")" || \
 # --- count -------------------------------------------------------------------
 total_added=0
 md_added=0
+md_deleted=0
 md_files=''
 binary_files=''
 
-while IFS=$'\t' read -r added _deleted path; do
+while IFS=$'\t' read -r added deleted path; do
   [ -n "${path:-}" ] || continue
   case "$added" in
     -)  # A binary file has no line count. It is classifiable (not markdown)
@@ -134,6 +135,7 @@ while IFS=$'\t' read -r added _deleted path; do
   if md_is_markdown "$path" && ! md_allowlisted "$path"; then
     md_added=$((md_added + added))
     md_files="$md_files $path:$added"
+    case "$deleted" in ''|*[!0-9]*) ;; *) md_deleted=$((md_deleted + deleted)) ;; esac
   fi
 done <<EOF
 $NUMSTAT
@@ -174,7 +176,21 @@ else
   pct=$(( md_added * 100 / total_added ))
   printf '  %d of %d added line(s) are markdown -- %d%% (threshold %d%%)\n' \
     "$md_added" "$total_added" "$pct" "$MAX_PCT"
-  if [ $(( md_added * 100 )) -gt $(( MAX_PCT * total_added )) ]; then
+  if [ "$md_deleted" -ge "$md_added" ] && [ "$md_added" -gt 0 ]; then
+    # A REAP IS NOT A COST. This guard prices ADDED prose, which makes any
+    # markdown-only diff 100% markdown -- including one that deletes far more
+    # than it adds. So it flagged hf7y/realisateur#231, a pass that removed 330
+    # lines of prose defending retired mechanisms and put back 155, and it
+    # would flag every future reap the same way. A guard that fails the work it
+    # exists to encourage stops being read, which is the failure PROSE-REAPING
+    # itself is about.
+    #
+    # The exemption is narrow and self-limiting: the diff must delete AT LEAST
+    # as much markdown as it adds, counted over the same files. Prose that
+    # merely moves still nets zero and passes; prose that grows still pays.
+    printf '  net prose: -%d line(s) (added %d, deleted %d) -- a reap, not a cost.\n' \
+      "$((md_deleted - md_added))" "$md_added" "$md_deleted"
+  elif [ $(( md_added * 100 )) -gt $(( MAX_PCT * total_added )) ]; then
     printf '  FLAG [markdown-ratio] %d%% of the added lines are prose, over the %d%% threshold.\n' \
       "$pct" "$MAX_PCT"
     printf '        contributing file(s) (path:added-lines):\n'

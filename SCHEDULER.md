@@ -5,18 +5,6 @@ walkthrough a *new* project scaffolded out of the inbox follows to register
 itself (`nightly-batch.md` step 3 points here) — read it as "how
 registration works," not "realisateur's own status."
 
-**Reaped 2026-08-13, 119 lines → this.** What was here described the
-mandark-era model in step-by-step detail: local bare remotes under
-`~/git-remotes/`, a `.scheduler/FOCUS.md` that scoped every Tier 2 run, a
-`.scheduler/QUESTIONS.md` answered with `> ` blockquotes, symlinks into the
-scheduler's `focus/`/`questions/` aggregation folders, and
-`bin/sync-crontab.sh --apply` to install per-account cron. Every one of
-those premises has expired, and a walkthrough that instructs a new project
-to build retired surfaces is how they kept being reborn — see
-`PROSE-REAPING.md` §1, third row: prose defending an expired mechanism is a
-deletion signal, not something to relocate. The narrative is in git history
-if it is ever wanted.
-
 ## What is true now
 
 - **Prose lives in the issue tracker.** `BLOCKERS.md`, `.scheduler/FOCUS.md`

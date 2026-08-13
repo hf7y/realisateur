@@ -128,6 +128,41 @@ run reaper env
 rc  "B5 deleting 60 lines of prose is free"  0 "$RUN_RC"
 has "B5 the deletions are not in the count"  "$RUN_OUT" "0 of 10 added line(s) are markdown"
 
+# B6: THE REWRITE-AS-REAP. B5 only covers a diff that adds NO prose. A real
+# reap replaces a long stale passage with a short correct one, so it is
+# markdown-only and therefore 100% markdown -- over any threshold, forever.
+# That flagged hf7y/realisateur#231, which removed 330 lines of prose
+# defending retired mechanisms and put back 155, and it would have flagged
+# every future reap identically. A guard that fails the work it exists to
+# encourage stops being read.
+newrepo rewriter
+lines 200 "$T/rewriter/DOC.md" 'a long stale passage about a retired mechanism'
+G "$T/rewriter" add -A
+G "$T/rewriter" commit -qm grow
+G "$T/rewriter" checkout -q -b work
+lines 40 "$T/rewriter/DOC.md" 'the short correct replacement'
+G "$T/rewriter" add -A
+G "$T/rewriter" commit -qm reap
+run rewriter env
+rc  "B6 a markdown-only rewrite that nets NEGATIVE passes"  0 "$RUN_RC"
+has "B6 and it is reported as a reap, with the net"         "$RUN_OUT" "net prose: -160 line(s)"
+hasnt "B6 and raises no ratio FLAG"                         "$RUN_OUT" "FLAG [markdown-ratio]"
+
+# The exemption is self-limiting: prose that GROWS still pays, even though
+# this diff also deletes. Otherwise "delete a line, add a hundred" would buy
+# an exemption, which is the same dodge inverted.
+newrepo grower
+lines 20 "$T/grower/DOC.md" 'a short passage'
+G "$T/grower" add -A
+G "$T/grower" commit -qm seed
+G "$T/grower" checkout -q -b work
+lines 150 "$T/grower/DOC.md" 'a much longer passage that replaced it'
+G "$T/grower" add -A
+G "$T/grower" commit -qm grow
+run grower env
+rc  "B7 a markdown-only rewrite that nets POSITIVE still exits 1" 1 "$RUN_RC"
+has "B7 and still FLAGs the ratio"  "$RUN_OUT" "FLAG [markdown-ratio]"
+
 echo "-- C. a new top-level document"
 newrepo newroot
 lines 50 "$T/newroot/big.sh" 'echo line'

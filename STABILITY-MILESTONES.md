@@ -136,13 +136,9 @@ tag.
 **An issue labelled `milestone`** on the project's own tracker, one open
 at a time. Its body carries the shape below.
 
-The canonical home used to be a `## Stability milestone` section near the
-top of each project's `FOCUS.md`. That surface was retired by
-hf7y/scheduler#66 on 2026-08-07, which leaves `bin/milestone-audit.sh`
-parsing a file that no longer exists in a migrated repo -- it reports
-`no-focus` and reads as "no milestone declared" rather than "I am looking
-in the wrong place". Flagged as hf7y/realisateur#229; the shape itself is
-unchanged and still what the audit expects to parse:
+(`FOCUS.md` was the old home, retired by hf7y/scheduler#66;
+`milestone-audit.sh` still parses it -- hf7y/realisateur#229.) The shape is
+unchanged:
 
 ```
 ## Stability milestone
@@ -208,14 +204,7 @@ to suggest a weight. That axis is subsumed: `status: in-progress` ==
 incubating, `status: reached` == graduated. `bin/milestone-audit.sh` is the
 canonical status signal; incubation-audit is legacy. Don't grow both.
 
-**Reaped 2026-08-13, 49 lines.** Two sections went: a concurrent-rollout
-risk register written while this convention was still settling (it is
-settled), and a relationships block tying this vocabulary to the
-`BLOCKERS.md` taxonomy and to `FOCUS.md` formatting compliance. Both of
-those surfaces are retired, so both blocks were prose defending mechanisms
-that no longer exist — `PROSE-REAPING.md` §1, third row. The one rule worth
-keeping out of the rollout register is general, and is stated once here:
-**never leave another project's repo dirty between edits.** A dirty tree is
+**Never leave another project's repo dirty between edits.** A dirty tree is
 a stop, not a thing to edit around.
 
 ## The mechanical check
