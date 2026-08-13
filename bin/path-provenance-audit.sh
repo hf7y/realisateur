@@ -319,6 +319,27 @@ DIRS_TOTAL=0; DIRS_UNATTRIBUTED=0; UNATTRIBUTED_LIST=""; UNATTRIBUTED_EXECS=0
 N_TOTAL=0; N_OWNED=0; N_DECLARED=0; N_ORPHAN=0; N_DRIFT=0; N_REPOLINK=0; N_UNKNOWN=0
 FINDING_LINES=""; CENSUS_JSON=""
 
+# classify one swept entry and fold it into the running totals. Shared by the
+# top-level sweep and the one-level descent into retired-*/ below, so a
+# dangling symlink left behind by a hand retirement is held to the same
+# ORPHAN check as a live shim -- not silently skipped for being in a
+# subdirectory. $1 = actual path to classify, $2 = display name for output.
+sweep_entry() {
+  local f="$1" disp="$2" st ow de
+  N_TOTAL=$((N_TOTAL + 1))
+  IFS=$'\t' read -r st ow de <<< "$(classify "$f")"
+  case "$st" in
+    OWNED)     N_OWNED=$((N_OWNED + 1)) ;;
+    DECLARED)  N_DECLARED=$((N_DECLARED + 1)) ;;
+    ORPHAN)    N_ORPHAN=$((N_ORPHAN + 1));   FINDING_LINES="$FINDING_LINES  ORPHAN    $disp  ($de)"$'\n' ;;
+    DRIFT)     N_DRIFT=$((N_DRIFT + 1));     FINDING_LINES="$FINDING_LINES  DRIFT     $disp  ($de)"$'\n' ;;
+    REPO-LINK) N_REPOLINK=$((N_REPOLINK + 1)) ;;
+    UNKNOWN)   N_UNKNOWN=$((N_UNKNOWN + 1)) ;;
+  esac
+  CENSUS_JSON="$CENSUS_JSON{\"name\":\"$disp\",\"state\":\"$st\",\"owner\":\"$ow\"}
+"
+}
+
 _seen_dirs=" "
 while IFS= read -r d; do
   [ -n "$d" ] || continue
@@ -339,19 +360,24 @@ while IFS= read -r d; do
   fi
   for f in "$d"/*; do
     [ -e "$f" ] || [ -L "$f" ] || continue
-    [ -d "$f" ] && continue
-    N_TOTAL=$((N_TOTAL + 1))
-    IFS=$'\t' read -r st ow de <<< "$(classify "$f")"
-    case "$st" in
-      OWNED)     N_OWNED=$((N_OWNED + 1)) ;;
-      DECLARED)  N_DECLARED=$((N_DECLARED + 1)) ;;
-      ORPHAN)    N_ORPHAN=$((N_ORPHAN + 1));   FINDING_LINES="$FINDING_LINES  ORPHAN    ${f##*/}  ($de)"$'\n' ;;
-      DRIFT)     N_DRIFT=$((N_DRIFT + 1));     FINDING_LINES="$FINDING_LINES  DRIFT     ${f##*/}  ($de)"$'\n' ;;
-      REPO-LINK) N_REPOLINK=$((N_REPOLINK + 1)) ;;
-      UNKNOWN)   N_UNKNOWN=$((N_UNKNOWN + 1)) ;;
-    esac
-    CENSUS_JSON="$CENSUS_JSON{\"name\":\"${f##*/}\",\"state\":\"$st\",\"owner\":\"$ow\"}
-"
+    if [ -d "$f" ] && [ ! -L "$f" ]; then
+      # A plain subdirectory of a swept dir is not itself a PATH entry, so it
+      # is skipped -- except retired-*/, a hand-made holding pen for shims
+      # pulled off PATH rather than deleted outright (see hf7y/realisateur#204).
+      # Its contents dangle exactly like a live shim would once their target
+      # is removed, and nothing else censuses them.
+      case "${f##*/}" in
+        retired-*)
+          for rf in "$f"/*; do
+            [ -e "$rf" ] || [ -L "$rf" ] || continue
+            [ -d "$rf" ] && [ ! -L "$rf" ] && continue
+            sweep_entry "$rf" "${f##*/}/${rf##*/}"
+          done
+          ;;
+      esac
+      continue
+    fi
+    sweep_entry "$f" "${f##*/}"
   done
 done < <(home_path_dirs)
 

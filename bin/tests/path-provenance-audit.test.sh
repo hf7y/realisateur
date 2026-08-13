@@ -32,6 +32,7 @@
 #      (the lid-inhibit-daemon false positive the first draft produced)
 #   B5 a regression AND an unreachable tracker -> exit 1, blindness still said
 #   B6 an unreachable tracker, nothing else    -> exit 2, never 0
+#   B7 a dangling symlink in retired-*/        -> ORPHAN, not skipped (#204)
 #   C1 manifest says X, link resolves to Y     -> DRIFT
 #   C2 manifest target deleted                 -> ORPHAN
 #   D1 provisioned class, one undeclared entry -> coverage UNMET at any ceiling
@@ -198,6 +199,16 @@ chmod +x "$FH/.local/bin/lid-inhibit-daemon"
 run
 hasnt "B4 an owner-only declaration is not an orphan" "$OUT" "ORPHAN"
 has   "B4 it is counted as declared"                  "$OUT" "self-declaring 1"
+
+# B7 -- hf7y/realisateur#204: a symlink hand-retired into retired-*/ (pulled
+# off PATH rather than deleted) whose target later vanishes must still be
+# caught, not silently skipped for being one level down.
+newhome
+mkdir -p "$FH/.local/bin/retired-2026-08-12"
+ln -s "$FH/Documents/Projects/someproj/bin/gone" "$FH/.local/bin/retired-2026-08-12/old-verb"
+run
+has "B7 a dangling symlink in retired-*/ is still censused" "$OUT" "ORPHAN"
+has "B7 it is named with its retired- prefix"                "$OUT" "retired-2026-08-12/old-verb"
 
 echo
 echo "== C. DRIFT AND A DEAD MANIFEST ENTRY =="
