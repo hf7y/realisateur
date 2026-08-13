@@ -121,10 +121,25 @@ PROP_RELEASE_REPO="hf7y/verbs"
 PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
 
 # A VERSION is a build id -- a UTC timestamp, so lexical sort is chronological
-# and two builds in one day cannot collide. An account's pin is the target of
-# ~/.local/share/verb-builds/current. "I am on 2026-08-06T043915Z and
+# and two builds in one day cannot collide. "I am on 2026-08-06T043915Z and
 # 2026-08-07T040739Z exists" is a one-line comparison; "I am on 60ef8c6" is
 # archaeology.
+#
+# WHERE THE PIN LIVES CHANGED ON 2026-08-13, and this file said otherwise for
+# long enough to mislead a session. There is now ONE pin per HOST:
+#
+#   /usr/local/share/verb-builds/current   linked into /usr/local/bin, moved by
+#                                          ONE tick in root's crontab
+#
+# and NO account on monkey holds a private one -- hf7y/realisateur#180, all 13
+# retired, measured per account: every host-wide verb resolves from
+# /usr/local/bin in a login shell on every one of them.
+#
+# PROP_PIN_PATH is kept because the LEGACY shape still has to be RECOGNISED --
+# --survey grades an account that still holds a private pin, and a host that
+# has not migrated is a real state, not a bug. It is no longer the place to
+# look first. prop_current_pin() below reads the host-wide root as its
+# fallback and is the only function that should resolve either.
 PROP_PIN_PATH=".local/share/verb-builds/current"
 
 # ============================================================================
@@ -328,6 +343,26 @@ silence-audit.sh
 # realisateur's bashified branch declares THREE verbs (arpente, epluche,
 # juge); the seven below reach accounts as clone-backed shims instead, which is
 # `main` acting as a deploy ref through the back door.
+#
+# WHAT THE SHIMS ACTUALLY ARE (Zach, 2026-08-13, correcting a session that had
+# read this section as a design): they are an artefact of the OLD scheduler
+# workflow, which ran under zach@mandark where one clone served everything.
+# They are not relevant to the individual-account model at all. So the exit is
+# not "bless the shim and give it a clock" -- it never was -- and it is also
+# not "each account keeps a realisateur clone". It is the verb cut, and the
+# work is already moving: notify-senechal.sh was converted to a STANDALONE
+# wrapper filing GitHub issues with `gh` directly (#197), holding no dependency
+# on a senechal checkout, and it ships with the verb cut once the French rename
+# lands -- hf7y/realisateur#196, "One door as a French verb: notify-senechal
+# and consulte are the same mechanism, written twice".
+#
+# WHAT IS NOT TRUE, stated because the absence of it read as permission: the
+# build ships NONE of these seven today. Probed 2026-08-13 against the live
+# manifest -- 33 verbs, 12 projects, not one of the seven among them. So a
+# session cannot retire these shims "because the verbs cover them"; on that day
+# every account still reached notify-senechal, focus-commit and
+# check-project-busy through this leak, and those are mandated front doors in
+# CLAUDE.md. Retiring the shim before the verb exists removes the door.
 #
 # This list may SHRINK and must never GROW. propagation.test.sh enforces that
 # against PROP_LEAK_BOUND. Empty it by adding bin/<n> + man/<n>.1 to
