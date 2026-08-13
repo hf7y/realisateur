@@ -247,6 +247,43 @@ has "a machine-wide change tells the operator to notify senechal" "$O" "notify-s
 O="$(retire --retire-cadence --apply)"
 has "--retire-cadence is idempotent (a second run is 'already retired')" "$O" "already retired"
 
+# --- the shims that point INTO the build root go with it -------------------
+# Removing the root and leaving $HOME/.local/bin pointing into it produces
+# dangling links that PATH search skips -- so the host-wide verb still wins
+# and nobody notices the debris. That was the realisateur account on
+# 2026-08-13: 33 dead links from a hand retire, reported as finished.
+SH="$T/shimhome"; mkdir -p "$SH/.local/share/verb-builds/B/scheduler/bin" "$SH/.local/bin"
+ln -s B "$SH/.local/share/verb-builds/current"
+printf '#!/bin/sh\nexit 0\n' > "$SH/.local/share/verb-builds/B/scheduler/bin/dose"
+chmod +x "$SH/.local/share/verb-builds/B/scheduler/bin/dose"
+ln -s "$SH/.local/share/verb-builds/current/scheduler/bin/dose" "$SH/.local/bin/dose"
+ln -s /bin/sh "$SH/.local/bin/unrelated"        # points elsewhere: must survive
+printf 'not-a-link\n' > "$SH/.local/bin/plainfile"
+printf '%s\n' "47 5 * * * x --apply # realisateur:selfdev-release:TICK" > "$T/fixture.crontab"
+shimretire() { HOME="$SH" TICK_STATE="$SH/state" VERB_BUILD_ROOT="$SH/.local/share/verb-builds" \
+  TICK_LOCAL_BIN="$SH/.local/bin" TICK_HOST_BIN="$T/hostbin" \
+  PATH="$T/shim:$T/hostbin:/usr/bin:/bin" "$TICK" "$@" 2>&1; }
+O="$(shimretire --retire-cadence)"
+has "--check counts the shims pointing into the build root" "$O" "would retire 1 shim"
+O="$(shimretire --retire-cadence --apply)"
+has "a shim into the build root is retired with it" "$O" "shim dose"
+[ -L "$SH/.local/bin/dose" ] && bad "the shim into the build root survived the retire" \
+                             || ok "no dangling shim is left behind by the retire"
+[ -L "$SH/.local/bin/unrelated" ] && ok "a shim pointing OUTSIDE the build root is left alone" \
+                                  || bad "the retire removed a shim it does not own"
+[ -f "$SH/.local/bin/plainfile" ] && ok "a plain file in the bin dir is left alone" \
+                                  || bad "the retire removed a file that is not a symlink"
+O="$(shimretire --retire-cadence)"
+has "a fully retired account reports already retired" "$O" "already retired"
+
+# The realisateur-account shape exactly: root gone by hand, links left behind.
+ln -s "$SH/.local/share/verb-builds/current/scheduler/bin/dose" "$SH/.local/bin/dose"
+O="$(shimretire --retire-cadence)"
+hasnt "an account with DANGLING shims is not reported as already retired" "$O" "already retired"
+O="$(shimretire --retire-cadence --apply)"
+[ -L "$SH/.local/bin/dose" ] && bad "a dangling shim survived the retire" \
+                             || ok "a dangling shim is cleaned even with the build root already gone"
+
 RETIRE_FN="$(sed -n '/^retire_cadence()/,/^}/p' "$TICK")"
 hasnt "the retire never touches another account's crontab" "$RETIRE_FN" "sudo"
 has "the retire refuses to delete a build root outside \$HOME" "$RETIRE_FN" 'refusing to remove'

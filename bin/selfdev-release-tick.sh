@@ -164,6 +164,8 @@ HOST_BIN="${TICK_HOST_BIN:-/usr/local/bin}"
 # it. One real verb, looked up the way a non-interactive `ssh <host> <verb>`
 # would, beats inferring reachability from the host's own /usr/local/bin.
 HOST_PROBE_VERB="${TICK_HOST_PROBE_VERB:-dose}"
+# This account's own bin directory -- the one whose entries shadow $HOST_BIN.
+LOCAL_BIN="${TICK_LOCAL_BIN:-$HOME/.local/bin}"
 
 MODE=check; CADENCE=0; RETIRE=0; SURVEY=0
 for a in "$@"; do
@@ -324,13 +326,25 @@ retire_cadence() {
       return ;;
   esac
 
-  if ! crontab -l 2>/dev/null | grep -qF "$CRON_TAG" && [ ! -d "$BUILD_ROOT" ]; then
-    ok "already retired: no $CRON_TAG line and no private build root at $BUILD_ROOT"
+  # "Already retired" must account for the shims too. A hand retire that
+  # removed the build root and left $HOME/.local/bin pointing into it looks
+  # finished by every other measure -- that is the realisateur account on
+  # 2026-08-13, 33 dangling links reported as done.
+  local shims=0 s
+  if [ -d "$LOCAL_BIN" ]; then
+    for s in "$LOCAL_BIN"/*; do
+      [ -L "$s" ] || continue
+      case "$(readlink "$s")" in "$BUILD_ROOT"/*) shims=$((shims+1)) ;; esac
+    done
+  fi
+  if ! crontab -l 2>/dev/null | grep -qF "$CRON_TAG" && [ ! -d "$BUILD_ROOT" ] && [ "$shims" = 0 ]; then
+    ok "already retired: no $CRON_TAG line, no private build root at $BUILD_ROOT, no shim pointing into it"
     return
   fi
 
   if [ "$MODE" != apply ]; then
     act "would remove the $CRON_TAG line from $(id -un)'s crontab"
+    act "would retire $shims shim(s) in $LOCAL_BIN pointing into that root"
     act "would remove the private build root $BUILD_ROOT (pin $(current_pin || echo '<none>'))"
     act "not removed (--check). Re-run with --apply."
     return
@@ -355,9 +369,37 @@ retire_cadence() {
     act "machine-wide config changed. Run: notify-senechal 'realisateur selfdev-release-tick cron REMOVED from $(id -un)@$(hostname -s) crontab; that account now follows the host-wide channel in $HOST_BIN'"
   fi
 
-  # The private pin goes only after the clock, and only if it is under $HOME.
-  # A BUILD_ROOT pointed elsewhere is the HOST-scoped tick's own root, and
-  # this path must never delete that.
+  # The shims that point INTO the build root go before the root itself.
+  # Removing the root first leaves a $HOME/.local/bin full of dangling links
+  # -- 33 of them on the realisateur account on 2026-08-13, from the hand
+  # retire that preceded this flag. A dangling link is skipped by PATH search
+  # so the host-wide verb still wins, which is precisely why nobody notices:
+  # it is invisible debris that makes `installe list` describe a state the
+  # account is not in.
+  #
+  # `installe retire` is the front door for an entry in that directory, so it
+  # is used when it is reachable. The direct unlink is the fallback, not the
+  # preference, and it says so when it takes it.
+  local shim tgt inst
+  inst="$(command -v installe 2>/dev/null || true)"
+  if [ -d "$LOCAL_BIN" ]; then
+    for shim in "$LOCAL_BIN"/*; do
+      [ -L "$shim" ] || continue
+      tgt="$(readlink "$shim")"
+      case "$tgt" in "$BUILD_ROOT"/*) ;; *) continue ;; esac
+      if [ -n "$inst" ] && "$inst" retire "$(basename "$shim")" >/dev/null 2>&1 && [ ! -e "$shim" ] && [ ! -L "$shim" ]; then
+        ok "shim $(basename "$shim") retired through installe (its target was not touched)"
+      else
+        rm -f "$shim"
+        [ -L "$shim" ] && bad "shim $(basename "$shim") survived removal" \
+                       || ok "shim $(basename "$shim") unlinked directly (installe was not reachable to do it)"
+      fi
+    done
+  fi
+
+  # The private pin goes only after the clock and the shims, and only if it is
+  # under $HOME. A BUILD_ROOT pointed elsewhere is the HOST-scoped tick's own
+  # root, and this path must never delete that.
   if [ -d "$BUILD_ROOT" ]; then
     case "$BUILD_ROOT" in
       "$HOME"/*)
