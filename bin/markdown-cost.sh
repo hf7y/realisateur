@@ -117,6 +117,7 @@ NAMESTATUS="$(git diff --name-status --diff-filter=A "$RANGE" -- 2>"$ERR")" || \
 total_added=0
 md_added=0
 md_deleted=0
+md_grew=''
 md_files=''
 binary_files=''
 
@@ -135,7 +136,14 @@ while IFS=$'\t' read -r added deleted path; do
   if md_is_markdown "$path" && ! md_allowlisted "$path"; then
     md_added=$((md_added + added))
     md_files="$md_files $path:$added"
-    case "$deleted" in ''|*[!0-9]*) ;; *) md_deleted=$((md_deleted + deleted)) ;; esac
+    case "$deleted" in ''|*[!0-9]*) deleted=0 ;; esac
+    md_deleted=$((md_deleted + deleted))
+    # PER FILE, not just in total: a file that GREW is named here even when
+    # some other file shrank by more. Repo-wide netting alone let a 300-line
+    # delete of an obsolete doc launder a brand-new 250-line essay through as
+    # "a reap" -- found by fixture against this script's own first version of
+    # the exemption, before it had shipped a week.
+    [ "$added" -gt "$deleted" ] && md_grew="$md_grew $path:+$((added - deleted))"
   fi
 done <<EOF
 $NUMSTAT
@@ -176,7 +184,7 @@ else
   pct=$(( md_added * 100 / total_added ))
   printf '  %d of %d added line(s) are markdown -- %d%% (threshold %d%%)\n' \
     "$md_added" "$total_added" "$pct" "$MAX_PCT"
-  if [ "$md_deleted" -ge "$md_added" ] && [ "$md_added" -gt 0 ]; then
+  if [ "$md_deleted" -ge "$md_added" ] && [ "$md_added" -gt 0 ] && [ -z "$md_grew" ]; then
     # A REAP IS NOT A COST. This guard prices ADDED prose, which makes any
     # markdown-only diff 100% markdown -- including one that deletes far more
     # than it adds. So it flagged hf7y/realisateur#231, a pass that removed 330
@@ -185,14 +193,17 @@ else
     # exists to encourage stops being read, which is the failure PROSE-REAPING
     # itself is about.
     #
-    # The exemption is narrow and self-limiting: the diff must delete AT LEAST
-    # as much markdown as it adds, counted over the same files. Prose that
-    # merely moves still nets zero and passes; prose that grows still pays.
+    # The exemption is narrow and self-limiting on TWO axes: the diff must
+    # delete at least as much markdown as it adds, AND no single markdown file
+    # may grow. Prose that merely moves still nets zero and passes; prose that
+    # grows still pays, in total or in any one file.
     printf '  net prose: -%d line(s) (added %d, deleted %d) -- a reap, not a cost.\n' \
       "$((md_deleted - md_added))" "$md_added" "$md_deleted"
   elif [ $(( md_added * 100 )) -gt $(( MAX_PCT * total_added )) ]; then
     printf '  FLAG [markdown-ratio] %d%% of the added lines are prose, over the %d%% threshold.\n' \
       "$pct" "$MAX_PCT"
+    [ -n "$md_grew" ] && { printf '        these grew, so this is not a reap (path:+net):\n'
+      for f in $md_grew; do printf '          %s\n' "$f"; done; }
     printf '        contributing file(s) (path:added-lines):\n'
     for f in $md_files; do printf '          %s\n' "$f"; done
     printf '        Prose that describes mechanism is cheaper than the mechanism.\n'
