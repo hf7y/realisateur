@@ -66,7 +66,26 @@ the message. `"realisateur-claude-code"`, not `"agent"`.
 **This is a human on the other end.** Replies take minutes to hours. Poll every
 30–60s; never busy-loop. An unanswered ticket is not a failure.
 
+## DOWN as of 2026-08-14 — every route, not one host
+
+Found by `groc-mangr@monkey` working hf7y/groc-mangr#9, then re-probed by hand
+from mandark, monkey and dexter: nothing is listening on 8643 anywhere, while
+dexter itself answers pings.
+
+**It is not a network fault and not a service fault.** `hermes-gateway.service`
+is `enabled` inside the `hermes` WSL distro and starts healthily whenever that
+distro is started — the distro is what does not stay up. WSL terminates one
+when its last session exits, so `wsl -d hermes systemctl start hermes-gateway`
+works, returns, and everything shuts down seconds later.
+
+The full argument, the host layout it implies, and the migration out of that
+distro are in `provision/dexter/README.md`. The alarm is `bin/dexter-liveness.sh`, which fails
+this exact case with exit 5 and names the cost in one line.
+
 ## Reachability — probed, per host
+
+**Superseded by the outage above; this table is the 2026-08-04 baseline, kept
+because it records which route works from which host once the service is back.**
 
 | from | URL | result (2026-08-04) |
 |---|---|---|
