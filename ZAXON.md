@@ -79,7 +79,7 @@ when its last session exits, so `wsl -d hermes systemctl start hermes-gateway`
 works, returns, and everything shuts down seconds later.
 
 The full argument, the host layout it implies, and the migration out of that
-distro are in `DEXTER.md`. The alarm is `bin/dexter-liveness.sh`, which fails
+distro are in `provision/dexter/README.md`. The alarm is `bin/dexter-liveness.sh`, which fails
 this exact case with exit 5 and names the cost in one line.
 
 ## Reachability — probed, per host

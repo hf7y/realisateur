@@ -1,6 +1,9 @@
-# DEXTER.md — where work lives on dexter
+# dexter — where work lives on it, and what it runs
 
-*Sibling to `MONKEY.md`, which says where self-dev runs. This one says where
+*Sibling to `MONKEY.md`, which says where self-dev runs; it lives here, beside
+the compose files it governs, rather than as another root document.*
+
+* This one says where
 anything else on dexter runs, and it exists because the answer was previously
 "wherever whoever built it happened to put it." Every claim below carries the
 command that produced it and the date. Re-probe before relying on one.*
