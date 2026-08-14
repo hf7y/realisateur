@@ -13,9 +13,8 @@ migrated yet; §6 says what would move and what that costs.
 
 ## 1. The failure this document is for
 
-`zaxon` — the only relay that carries a question to a human — ran in a WSL
-distro called `hermes` that **no ecosystem document mentioned**. `ZAXON.md`
-recorded its reachability and not its lifetime. When dexter rebooted, the
+zaxon — the only relay that carries a question to a human — ran in a WSL distro
+called `hermes` that no ecosystem document mentioned. When dexter rebooted, the
 `Ubuntu` distro came back and `hermes` did not. Nothing noticed for ten days.
 
 ```
@@ -25,12 +24,11 @@ wslx -l -v                   Ubuntu Running / hermes Stopped / docker-desktop St
 ss -ltn | grep 8643          (nothing)
 ```
 
-The service was never broken. `hermes-gateway.service` is `enabled`, runs as
-`User=zaxon`, and carries `Restart=always` — it is correctly written. **A WSL
-distro has no supervisor above it.** `Restart=always` protects the process and
-nothing protects the distro; WSL terminates one when its last session exits.
-That is a missing layer, not a tuning problem, and no amount of care inside
-`hermes` would have caught it.
+The service was never broken: `hermes-gateway.service` is `enabled` and carries
+`Restart=always`. **A WSL distro has no supervisor above it** — `Restart=always`
+protects the process, nothing protects the distro. That is a missing layer, and
+no amount of care inside `hermes` would have caught it. The alarm now exists as
+`bin/dexter-liveness.sh`; its header carries the rest of this argument.
 
 ## 2. The canonical userland: the `Ubuntu` distro, and no other
 
@@ -74,13 +72,8 @@ INSTALLED 2026-08-14: `docker.io` 29.1.3, `systemctl is-enabled docker` →
 that comes up with the host, `restart: always` on a container is a real
 promise — which is the layer §1 says was missing.
 
-As of 2026-08-14, before that install, there was **no Docker in the Ubuntu distro at all** —
-`command -v docker` is empty, `/var/run/docker.sock` absent, zero
-docker/containerd packages, no units. Installing the native engine
-(`docker.io` + `docker-compose-v2`, systemd-supervised) is therefore a green
-field, and it buys the layer §1 says is missing: `restart: always` on the
-container, `dockerd` supervised by the Ubuntu distro's systemd, and the distro
-itself proven durable across reboots.
+Before that install there was no Docker in this distro at all — no binary, no
+socket, no packages, no units — so this is a green field, not a migration.
 
 ## 4. The canonical paths
 
@@ -102,24 +95,16 @@ Anything that does not fit one of those four is a finding, not a fifth option.
 
 ## 5. The Windows edge, and the one wrapper that crosses it
 
-Some work genuinely needs Windows — starting a distro, driving VirtualBox,
-touching `D:`. That crossing goes through **`/usr/local/bin/wslx`** and
-nowhere else.
+Work that genuinely needs Windows — starting a distro, driving VirtualBox,
+touching `D:` — crosses at **`/usr/local/bin/wslx`** and nowhere else. Calling
+`wsl.exe` directly is unreliable: under `systemd=true` the `WSLInterop` binfmt
+registration does not hold, and stdin must be closed or `wsl.exe` eats the rest
+of a piped script. `wslx`'s own header records the probe log.
 
-`wsl.exe` cannot be called directly and reliably: with `systemd=true` in
-`/etc/wsl.conf` the `WSLInterop` binfmt registration is absent at boot, and
-**re-registering it does not hold** — on 2026-08-14 it worked, vanished within
-seconds, and worked again, three times in one session. `wslx` re-registers
-before every call (milliseconds) and closes stdin, because `wsl.exe` is a
-Windows process that inherits stdin and will silently eat the rest of a piped
-script — the same class of bug `MONKEY.md` §7 records for `VBoxManage.exe`.
-
-This depends on `/etc/sudoers.d/zach-nopasswd` (passwordless sudo for `zach`,
-installed 2026-08-14 at Zach's direction). **State that plainly rather than
-letting it be discovered**: every agent holding a mandark key can now reach
-root on dexter's Ubuntu distro and drive Windows through it. That was the
-deliberate trade for being able to fix things unattended. Declared to senechal
-as hf7y/senechal#253.
+It depends on `/etc/sudoers.d/zach-nopasswd`, installed 2026-08-14 at Zach's
+direction. **Stated plainly rather than left to be discovered**: every agent
+holding a mandark key can now reach root here and drive Windows through it.
+That was the deliberate trade for fixing things unattended — senechal#253.
 
 ## 5b. Nothing here starts at boot — it starts at LOGIN
 
