@@ -86,6 +86,7 @@ vim-arcade      hf7y/vim-arcade exists
 ecosim          hf7y/ecosim exists
 gardien         hf7y/gardien exists
 bibliothecaire  hf7y/bibliothecaire exists
+crt             hf7y/crt exists (private, pushed 2026-08-12; probed 2026-08-14 via gh repo view)
 bashify         NO REPO -- see OWN_HOMELESS below
 "
 
@@ -178,7 +179,6 @@ bin/no-worktree-lint.sh            realisateur mechanizes a standing instruction
 bin/tests/no-worktree-lint.test.sh realisateur follows its subject.
 bin/selfdev-agent-survey.sh        realisateur asks whether each self-dev account does what its own dispatch prompt claims. Sense over the whole fleet, and realisateur owns the self-dev account contract that prompt is measured against.
 provision/dexter/README.md         realisateur declares where work lives on dexter and what may run there. Same organ as MONKEY.md, which this repo already holds: naming the host layout is triage, and the document sits beside the compose files it governs.
-provision/dexter/zaxon             realisateur HELD, NOT OWNED -- zaxon is a service with no repository, so its container form has nowhere else to live today. That is the finding, not the resting place: by the container doctrine (provision/dexter/README.md 3) the project that runs a service produces its own image, and zaxon cannot until it is a project. Same shape as OWN_HOMELESS above.
 bin/dexter-liveness.sh             realisateur asks whether dexter is serving what it is declared to serve. Same claim as bin/publish-monkey-status.sh's row one line down -- realisateur owns the host layout document (provision/dexter/README.md) and the probes over it -- and the alarm belongs with the declaration it checks, not with the services it names.
 bin/tests/dexter-liveness.test.sh  realisateur follows its subject.
 bin/dexter-service-deploy.sh       realisateur ships a service from a repo to dexter's /srv. The container channel is the service-side twin of the verb release channel, and realisateur owns the propagation contract for both. The SERVICES it carries stay their own projects' -- this is the road, not the freight.
