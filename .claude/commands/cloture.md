@@ -107,8 +107,9 @@ repo that isn't this one) rather than a row in a file:
   chat — an issue nobody but you can decode is a second dropped write
   wearing a filed one's clothes.
 - **A decision blocked on Zach** — an issue, titled as the question,
-  in the repo it's about. He answers by commenting and closing (per
-  standing convention) — not by editing a file back.
+  in the repo it's about. He answers by commenting and leaving it open
+  (`SCHEDULER.md` has the rule and the sweep predicate) — not by closing
+  it, not by labelling it, and not by editing a file back.
 - **An insight true beyond this session** — if it's a *rule*, it goes in
   a doctrine file for real (step 2). If it's a fact or a finding rather
   than a rule, it's an issue. If it's neither — just interesting — it

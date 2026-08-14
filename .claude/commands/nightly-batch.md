@@ -59,8 +59,12 @@ project *this* run touches and fix it before committing; don't go fix the
 whole ecosystem unprompted.
 
 **Read the answers on your own issues and process them.** Zach answers by
-commenting and CLOSING the issue -- a closed issue with a comment is an
-answer, not a dropped thread, and a label-gated sweep will miss it. Treat
+commenting and LEAVING THE ISSUE OPEN -- state and labels say nothing about
+whether he answered, so an open question issue is *not* evidence that it is
+unanswered. Sweep across **all** states and treat an issue as answered when
+it carries a comment by the repo owner that is not agent-stamped
+(`is_stamped` = last non-blank line only). Full rule and its history:
+`SCHEDULER.md`, "What is true now". Treat
 any such comment as authoritative: act on it, and if the decision should
 persist, put it where the mechanism it governs lives. Then remove that
 question+answer block once acted on. Leave unanswered questions
