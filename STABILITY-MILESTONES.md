@@ -136,12 +136,10 @@ tag.
 **An issue labelled `milestone`** on the project's own tracker, one open
 at a time. Its body carries the shape below.
 
-(`FOCUS.md` was the old home, retired by hf7y/scheduler#66. There is no
-mechanical reader of either the old or the new home -- `bin/milestone-audit.sh`
-was retired deliberately in #101, 2026-08-07, as a non-guard: "a missing
-[milestone] is not a failure" was its own header's admission that a missing
-one carries no signal to check. Read the labelled issue directly.) The shape
-is unchanged:
+(`FOCUS.md` was the old home, retired by hf7y/scheduler#66. No mechanical
+reader exists over either home -- `bin/milestone-audit.sh` was retired in
+#101, 2026-08-07, as a non-guard: its own header admitted a missing milestone
+"is not a failure". Read the labelled issue directly.) The shape is unchanged:
 
 ```
 ## Stability milestone
@@ -212,13 +210,8 @@ a stop, not a thing to edit around.
 
 ## No mechanical check exists, deliberately
 
-`bin/milestone-audit.sh` — a readout of whether a milestone was declared, its
-bar + status, and a `(parked)`-tag count — was retired in hf7y/realisateur#101
-(2026-08-07) along with two sibling surveys, as a **non-guard**: its own
-header already said a missing milestone "is not a failure", which is the
-definition of something with nothing to check mechanically. Read the
-project's own `milestone`-labelled issue directly (`gh issue list --label
-milestone --repo <project>`) rather than expecting a runner to surface it —
-there is deliberately no runner. If a mechanical reader over the issue form
-is wanted back, that is new work, not a bug fix to the retired script; see
-hf7y/realisateur#229's discussion for one attempt at scoping it.
+`bin/milestone-audit.sh` -- reporting a declared milestone, its bar + status,
+and a parked-tag count -- was retired in hf7y/realisateur#101 (2026-08-07) as
+a **non-guard**: its own header admitted a missing milestone "is not a
+failure". Read the labelled issue directly; there is deliberately no runner
+(a mechanical reader over the issue form is new work -- see #229).
