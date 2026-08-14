@@ -72,16 +72,31 @@ if [ "$NAME" = "zaxon" ]; then
   esac
 fi
 
+# WHAT THE REPO DOES NOT OWN. `data/` is always service state. A service may
+# declare more in `.deploykeep` -- zaxon's uv interpreter, for instance, is 97M
+# lifted off the old host and belongs to no repo. Without this, --delete-after
+# removes it and the service crash-loops on a half-present runtime. The list
+# lives WITH the service so this script needs no per-service special case.
+KEEP="--exclude data"
+if [ -f "$SRC/.deploykeep" ]; then
+  while IFS= read -r line; do
+    case "$line" in ''|\#*) continue;; esac
+    KEEP="$KEEP --exclude $line"
+  done < "$SRC/.deploykeep"
+fi
+
 if [ "$DRY" = 1 ]; then
   echo "$CLI_NAME: would push $SRC/ -> $HOST:/srv/$NAME/ (excluding data/) and run compose up -d"
-  rsync -an --exclude data --itemize-changes "$SRC/" "$HOST:/srv/$NAME/" 2>/dev/null | head -20
+  # shellcheck disable=SC2086
+  rsync -an $KEEP --itemize-changes "$SRC/" "$HOST:/srv/$NAME/" 2>/dev/null | head -20
   exit 0
 fi
 
 # /srv is root-owned; make the directory once, owned by the login user, so the
 # push itself needs no privilege.
 ssh -n "$HOST" "sudo -n mkdir -p /srv/$NAME && sudo -n chown \$(id -u):\$(id -g) /srv/$NAME"
-rsync -a --exclude data --delete-after "$SRC/" "$HOST:/srv/$NAME/"
+# shellcheck disable=SC2086  # KEEP is a built argument list, intentionally split
+rsync -a $KEEP --delete-after "$SRC/" "$HOST:/srv/$NAME/"
 
 # `docker compose up -d --build`: build is idempotent and cheap when nothing
 # changed, and it means a Dockerfile edit in this repo actually reaches the
