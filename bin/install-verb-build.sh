@@ -250,5 +250,42 @@ if [ "$LINK" -eq 1 ]; then
   done < <(grep -v '^#' "$DEST/manifest.tsv")
   say "linked $linked verb(s) into $BIN; $skipped left alone"
   [ "$skipped" -eq 0 ] || say 'the skipped ones are installe-owned -- reconcile deliberately, not by clobbering.'
+
+  # --- drop links for verbs this build no longer promises ---------------
+  # The loop above only ever ADDS: it walks the NEW manifest, so a verb a
+  # nightly build dropped keeps its old link, now pointing at
+  # `current/<project>/bin/<verb>` -- which after the switch above does not
+  # exist. PATH search skips a dangling link, so that failure is silent by
+  # construction (realisateur#223). Only ever remove a link that resolves
+  # into THIS build root; anything else -- installe-owned, or unrelated --
+  # is left exactly as it was, same direction guard as the SKIP case above.
+  wanted="$(grep -v '^#' "$DEST/manifest.tsv" | cut -f2)"
+  dropped=0
+  for have in "$BIN"/*; do
+    [ -L "$have" ] || continue
+    tgt="$(readlink "$have" 2>/dev/null || true)"
+    case "$tgt" in
+      "$BUILD_ROOT/current/"*) : ;;
+      *) continue ;;
+    esac
+    verb="$(basename "$have")"
+    printf '%s\n' "$wanted" | grep -Fxq "$verb" && continue
+    rm -f "$have" && { row DROP "$verb" "no longer in build $BUILD_ID's manifest"; dropped=$((dropped+1)); }
+  done
+  say "dropped $dropped verb(s) no longer in this build"
+
+  # --- the one honest count: manifest rows vs links pointing in here -----
+  # "N verbs in the manifest, N links on the host" is the comparison an
+  # operator actually reaches for. Report it loudly rather than let a link
+  # this loop should have made or removed drift the two apart silently.
+  ours=0
+  for have in "$BIN"/*; do
+    [ -L "$have" ] || continue
+    tgt="$(readlink "$have" 2>/dev/null || true)"
+    case "$tgt" in "$BUILD_ROOT/current/"*) ours=$((ours + 1)) ;; esac
+  done
+  if [ "$ours" -ne "$total" ]; then
+    say "COUNT MISMATCH: manifest promises $total verb(s), but $ours link(s) in $BIN point into this build root"
+  fi
 fi
 exit 0
