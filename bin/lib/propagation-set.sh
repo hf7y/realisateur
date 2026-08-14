@@ -332,7 +332,7 @@ PROP_PAYLOAD_SCRIPTS="
 check-project-busy.sh
 closeout-lint.sh
 focus-commit.sh
-hygiene-lint.sh
+retired/hygiene-lint.sh
 notify-senechal.sh
 precipitation-scan.sh
 silence-audit.sh
