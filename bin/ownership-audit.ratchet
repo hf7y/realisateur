@@ -41,6 +41,7 @@ file bin/deferral-ledger.sh
 file bin/deploy-drift.sh
 file bin/ecosim-sensor-tick.sh
 file bin/focus-commit.sh
+file bin/gh-comment.sh
 file bin/hardcoded-home-lint.sh
 file bin/install-shims.sh
 file bin/install-verb-build.sh
@@ -71,6 +72,7 @@ file bin/tests/conf.test.sh
 file bin/tests/cut-verb-build-test.sh
 file bin/tests/deferral-ledger.test.sh
 file bin/tests/focus-commit.test.sh
+file bin/tests/gh-comment.test.sh
 file bin/tests/hardcoded-home-lint.test.sh
 file bin/tests/install-shims.test.sh
 file bin/tests/markdown-cost.test.sh
