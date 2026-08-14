@@ -130,6 +130,36 @@ VAULT="${BIBLIOTHECAIRE_VAULT:-$VAULT_DEFAULT}"   # --vault overrides, below
 die()    { printf '%s: %s\n' "$SELF_NAME" "$*" >&2; exit 2; }
 blind()  { printf '%s: BLIND: %s\n' "$SELF_NAME" "$*" >&2; exit 6; }
 
+# ---- the lock: serializing the vault's 13 writers --------------------------
+# hf7y/realisateur#213: /srv/ecosystem1-vault is one working tree, writable by
+# all thirteen self-dev accounts, with nothing serializing a deposit against
+# another account's `git add`/`commit`/`pull` on the same checkout. flock on a
+# file inside the vault itself -- the shape `usage-paced-runner.sh` already
+# uses for its own run lock, not a new pattern. The lock file lives IN the
+# vault (not $HOME) so it is shared by every writer, and the vault's own
+# setgid 2775 dir makes a freshly-created lock file group `vault` and
+# group-writable automatically -- no chmod step to forget.
+# 66 is arbitrary but distinct from every code a wrapped command could
+# plausibly reuse to mean something else -- a lock TIMEOUT must never be
+# mistaken for the wrapped command's own exit 1.
+CONSIGNE_LOCK_TIMEOUT="${CONSIGNE_LOCK_TIMEOUT:-30}"
+CONSIGNE_LOCK_TIMEOUT_RC=66
+vault_locked() { # <vault> <command> [args...] -- runs command holding the lock
+  local vault="$1"; shift
+  [ -d "$vault" ] || blind "no vault at $vault to lock (set BIBLIOTHECAIRE_VAULT)"
+  # NO `--` HERE: unlike most GNU tools, flock's own command-variant syntax is
+  # `flock [options] <file> <command> [args...]` with no separator -- a `--`
+  # in that position is parsed as the command itself and fails to execve.
+  flock -w "$CONSIGNE_LOCK_TIMEOUT" -E "$CONSIGNE_LOCK_TIMEOUT_RC" \
+    "$vault/.consigne.lock" "$@"
+  local rc=$?
+  if [ "$rc" -eq "$CONSIGNE_LOCK_TIMEOUT_RC" ]; then
+    printf '%s: BLIND: another writer held the vault lock (%s/.consigne.lock) for %ss -- not proceeding\n' \
+      "$SELF_NAME" "$vault" "$CONSIGNE_LOCK_TIMEOUT" >&2
+  fi
+  return "$rc"
+}
+
 usage() {
   cat <<'EOF'
 consigne -- deposit prose into the Obsidian vault, and report what a deposit
@@ -141,11 +171,21 @@ usage:
                                   -- same mechanism, same deposit, same codes.
   consigne status [<project>...]  what is deposited AND still in the repo.
                                   No argument: every project in the vault.
+  consigne lock -- <command>...   run <command> holding the vault's write
+                                  lock (hf7y/realisateur#213). For the manual
+                                  commit-and-push PROSE-REAPING.md 5.6 asks
+                                  for -- mutually exclusive with every
+                                  deposit and every other `lock` caller on
+                                  the same vault. Exits with <command>'s own
+                                  code, or 66 if the lock could not be
+                                  acquired within CONSIGNE_LOCK_TIMEOUT
+                                  seconds (default 30).
   consigne --help                 this text
 
 flags:
   --vault PATH  the vault to deposit into, for this invocation only. Beats
                 $BIBLIOTHECAIRE_VAULT, which beats /srv/ecosystem1-vault.
+                For `lock`, must come before the `--`.
   --summon      accepted and buys nothing. The deposit is mechanized and
                 reaches no agent, so this spends zero and says so -- exactly
                 as `fonde consign --summon` does, which is the remedy `fauche`
@@ -156,9 +196,14 @@ exit:
   0  kept     -- deposited, or status read cleanly
   2  usage    -- bad arguments, or a path that does not exist
   5  broken   -- a note was written and read back with a different body
-  6  blind    -- could not read the vault, a source, or the mechanism itself
+  6  blind    -- could not read the vault, a source, or the mechanism itself,
+                 or another writer held the vault lock too long
   7  refused  -- would have overwritten an existing note, or the vault is not
                  under version control
+
+  `consigne lock` is the one exception: it exits with its command's own
+  code, or 66 (never 6) if the lock itself timed out -- a caller wrapping an
+  arbitrary command needs a code that command cannot itself mean.
 
 environment:
   BIBLIOTHECAIRE_VAULT   the vault (default /srv/ecosystem1-vault). The same
@@ -170,6 +215,9 @@ environment:
                          the installed `fonde`'s own tree, then `installe
                          list`'s row for `fonde`, then bibliothecaire's
                          checkout under $INSTALLE_PROJECTS.
+  CONSIGNE_LOCK_TIMEOUT  seconds to wait for the vault lock before giving up
+                         (default 30). Applies to both a plain deposit and
+                         `consigne lock`.
 
 THIS TOOL DELETES NOTHING. `status` reports a queue; acting on it is a
 judgement (PROSE-REAPING.md 1), and it is still yours to make.
@@ -401,6 +449,32 @@ do_status() {
 }
 
 # ---- dispatch ---------------------------------------------------------------
+
+# `consigne lock -- <command> [args...]` -- hf7y/realisateur#213's second half.
+# The deposit path below is locked automatically; PROSE-REAPING.md 5.6's manual
+# `git commit`/`git push` into the shared vault is not automatic, and never
+# will be (case F pins that this file runs neither) -- so it gets a door
+# instead: a reaping pass wraps its own commit-and-push in this, and it is
+# mutually exclusive with every deposit AND every other `lock` caller, because
+# both hold the identical `$VAULT/.consigne.lock`. Handled before the general
+# flag loop because `--` is otherwise rejected outright, below, and a wrapped
+# command's own flags (`git commit -m ...`) must reach it unmangled.
+if [ "${1:-}" = lock ]; then
+  shift
+  while [ $# -gt 0 ] && [ "$1" != "--" ]; do
+    case "$1" in
+      --vault)   shift; [ $# -gt 0 ] || die "--vault needs a path"; VAULT="$1"; shift ;;
+      --vault=*) VAULT="${1#*=}"; [ -n "$VAULT" ] || die "--vault needs a path"; shift ;;
+      *) die "consigne lock: unexpected argument before '--': $1 (try --help)" ;;
+    esac
+  done
+  [ "${1:-}" = "--" ] || die "consigne lock needs a command after '--' (try --help)"
+  shift
+  [ $# -gt 0 ] || die "consigne lock -- needs a command to run"
+  vault_locked "$VAULT" "$@"
+  exit $?
+fi
+
 SUMMON=0
 ARGS=()
 while [ $# -gt 0 ]; do
@@ -452,7 +526,15 @@ IMPL="$(resolve_impl)" || exit $?
 # is held one command longer than necessary so a kept (0) deposit can be
 # followed by the #212 push-status line: a deposit is not IN the vault until
 # it is committed and pushed, and nothing said so before this.
-bash "$IMPL" "$VAULT" "${ARGS[@]}"
+#
+# LOCKED (hf7y/realisateur#213): thirteen accounts share this vault, so the
+# write is serialized against every other deposit AND against a `consigne
+# lock -- git commit ...` from PROSE-REAPING.md 5.6, above. A lock timeout
+# is folded into the published `6 blind` -- this front door has never
+# published a code for "another writer has it", and both mean the same thing
+# to a caller: nothing was deposited, try again.
+vault_locked "$VAULT" bash "$IMPL" "$VAULT" "${ARGS[@]}"
 rc=$?
+[ "$rc" -eq "$CONSIGNE_LOCK_TIMEOUT_RC" ] && rc=6
 [ "$rc" -eq 0 ] && vault_push_report "$VAULT" >&2
 exit "$rc"

@@ -9,6 +9,13 @@ left behind
 .B consigne status
 .RI [ project ...]
 .br
+.B consigne lock
+.RB [ \-\-vault
+.IR path ]
+.B \-\-
+.I command
+.RI [ arg ...]
+.br
 .B consigne
 .RB [ \-\-help ]
 .SH DESCRIPTION
@@ -85,6 +92,35 @@ The remote is the vault as of 2026-08-12; a local clone is a cache, and a
 clone that is ahead or dirty is holding a deposit nowhere else has a copy of
 \(em measured once as 19 commits and 9 uncommitted paths, silently, on one
 laptop. The count is offline, against the last fetch, not re-fetched here.
+.SS lock
+.I /srv/ecosystem1\-vault
+is one working tree, writable by all thirteen self\-dev accounts, with
+nothing serializing a deposit against another account's commit\-and\-push on
+the same checkout (hf7y/realisateur#213).
+.B consigne lock \-\- \fIcommand\fR...
+runs
+.I command
+holding the vault's write lock \(em an
+.BR flock (1)
+on
+.IR \(dqVAULT/.consigne.lock\(dq ,
+the same file every plain deposit locks below. A reaping pass wraps its
+manual commit\-and\-push
+.RI ( PROSE-REAPING.md
+\(sc5.6) in this so it cannot interleave with a deposit or with another
+account's
+.B lock
+call on the same vault. Exits with
+.IR command 's
+own code, or
+.B 66
+if the lock could not be acquired within
+.B CONSIGNE_LOCK_TIMEOUT
+seconds \(em a code deliberately outside this tool's own
+.B 0\(en7
+contract, because
+.I command
+is arbitrary and might legitimately exit any of those itself.
 .SH OPTIONS
 .TP
 .B \-\-summon
@@ -129,6 +165,11 @@ then a bibliothecaire checkout under
 .BR $INSTALLE_PROJECTS .
 Each candidate is probed, not assumed. If none answers, that is exit 6 and it
 says so; it does not quietly deposit nothing.
+.TP
+.B CONSIGNE_LOCK_TIMEOUT
+Seconds to wait for the vault's write lock before giving up. Default 30.
+Applies to a plain deposit and to
+.BR "consigne lock" .
 .SH "EXIT STATUS"
 Byte-identical to
 .BR fonde 's
@@ -150,6 +191,13 @@ blind \(em could not read the vault, a source, or the mechanism itself.
 .B 7
 refused \(em would have overwritten an existing note, or the vault is not under
 version control.
+.PP
+.B consigne lock
+is the one exception: it exits with its
+.I command Ns 's
+own code, or
+.B 66
+\(em never 6 \(em if the lock itself timed out.
 .SH NOTES
 .B Never pushes, and never commits.
 No code path runs
@@ -159,12 +207,26 @@ or
 It writes files and stops; the reaping pass that ran it commits and pushes
 \(em
 .I PROSE-REAPING.md
-\(sc5.6. The private
+\(sc5.6, under
+.B consigne lock
+(hf7y/realisateur#213). The private
 .I hf7y/ecosystem1\-vault
 remote IS the vault as of 2026-08-12, Zach-directed; the older
 "deliberately left unpushed" rule is reversed, and what it cost is recorded in
 .I PROSE-REAPING.md
 \(sc2.
+.PP
+.B Every deposit is locked.
+A plain deposit takes the same
+.IR VAULT/.consigne.lock
+flock a
+.B consigne lock
+caller does, so the thirteen accounts sharing
+.I /srv/ecosystem1\-vault
+cannot interleave a deposit's file writes with each other or with a
+commit\-and\-push.
+.B status
+is read\-only and takes no lock.
 .SH "SEE ALSO"
 .BR fonde (1),
 .BR fauche (1),
