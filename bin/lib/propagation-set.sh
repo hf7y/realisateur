@@ -413,7 +413,12 @@ PROP_LEAK_BOUND=7
 # BATCH_PROMPT instead -- which is retyped logic, which is the defect, which
 # is what #244 is for. Do NOT reclassify this row to PAYLOAD without the man
 # page: that drops it from every build in silence (#85).
+# dexter-liveness.sh and dexter-service-deploy.sh are LOCAL: both need an ssh
+# credential to dexter and a working copy of provision/dexter/. An account
+# neither probes another host nor deploys to one -- it is the thing deployed.
 PROP_LOCAL_SCRIPTS="
+dexter-liveness.sh
+dexter-service-deploy.sh
 playbook.sh
 publish-monkey-status.sh
 claim-drift.sh
