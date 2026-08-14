@@ -136,9 +136,12 @@ tag.
 **An issue labelled `milestone`** on the project's own tracker, one open
 at a time. Its body carries the shape below.
 
-(`FOCUS.md` was the old home, retired by hf7y/scheduler#66;
-`milestone-audit.sh` still parses it -- hf7y/realisateur#229.) The shape is
-unchanged:
+(`FOCUS.md` was the old home, retired by hf7y/scheduler#66. There is no
+mechanical reader of either the old or the new home -- `bin/milestone-audit.sh`
+was retired deliberately in #101, 2026-08-07, as a non-guard: "a missing
+[milestone] is not a failure" was its own header's admission that a missing
+one carries no signal to check. Read the labelled issue directly.) The shape
+is unchanged:
 
 ```
 ## Stability milestone
@@ -150,14 +153,14 @@ Ideas beyond this bar are PARKED by default (see realisateur/STABILITY-MILESTONE
 ```
 
 - The `**Current:**` line MUST end with `status: not-started`,
-  `status: in-progress`, or `status: reached` — that token is what the
-  audit reads.
-- **The whole bar + status must be on ONE physical line** — `bin/
-  milestone-audit.sh` finds it with `grep -m1`, so wrapping the bar text
-  across multiple Markdown lines (even though it reads fine rendered)
-  makes the line lack its own `status:` token and reports UNRECOGNIZED.
-  Long bar text is fine; line breaks in it are not (hit and fixed
-  2026-07-24 across gardien/senechal/wtul's first real milestones).
+  `status: in-progress`, or `status: reached` — that token is what a reader
+  (human, or `gh issue view` piped to `grep -m1`) looks for.
+- **The whole bar + status stays on ONE physical line.** Wrapping the bar
+  text across multiple Markdown lines (even though it reads fine rendered)
+  makes the line lack its own `status:` token and reports UNRECOGNIZED to
+  anything grepping for it. Long bar text is fine; line breaks in it are not
+  (hit and fixed 2026-07-24 across gardien/senechal/wtul's first real
+  milestones, back when this lived in `FOCUS.md`).
 - `Done when:` is a checklist of the concrete, checkable criteria. When
   every box is checked, the status is `reached`.
 
@@ -201,17 +204,21 @@ one of two things — explicitly:
 **Supersedes the incubation-audit "graduation-candidate" framing.**
 `bin/incubation-audit.sh` scored projects `incubating|graduation-candidate`
 to suggest a weight. That axis is subsumed: `status: in-progress` ==
-incubating, `status: reached` == graduated. `bin/milestone-audit.sh` is the
-canonical status signal; incubation-audit is legacy. Don't grow both.
+incubating, `status: reached` == graduated. The `milestone`-labelled issue is
+the canonical status signal; incubation-audit is legacy. Don't grow both.
 
 **Never leave another project's repo dirty between edits.** A dirty tree is
 a stop, not a thing to edit around.
 
-## The mechanical check
+## No mechanical check exists, deliberately
 
-`bin/milestone-audit.sh` (offline, no AI, dry-run) reports, per registered
-project: whether a milestone is declared, its current bar + status, and a
-`(parked)`-tag count as a rough active-vs-reservoir signal. Same stance as
-`hygiene-lint.sh`/`ecosystem-survey.sh` — its findings are **signals, not
-verdicts**. Run it at the top of every `/ideate` and `/nightly-batch` pass,
-alongside the other two surveys.
+`bin/milestone-audit.sh` — a readout of whether a milestone was declared, its
+bar + status, and a `(parked)`-tag count — was retired in hf7y/realisateur#101
+(2026-08-07) along with two sibling surveys, as a **non-guard**: its own
+header already said a missing milestone "is not a failure", which is the
+definition of something with nothing to check mechanically. Read the
+project's own `milestone`-labelled issue directly (`gh issue list --label
+milestone --repo <project>`) rather than expecting a runner to surface it —
+there is deliberately no runner. If a mechanical reader over the issue form
+is wanted back, that is new work, not a bug fix to the retired script; see
+hf7y/realisateur#229's discussion for one attempt at scoping it.
