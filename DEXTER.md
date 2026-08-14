@@ -53,7 +53,28 @@ needs isolation, it gets a container (§3), which has all three.
 same failure mode as `hermes` one layer down. A service that needs someone
 logged in is not a service.
 
-As of 2026-08-14 there is **no Docker in the Ubuntu distro at all** —
+**A container is what a dev agent SHIPS.** Zach, 2026-08-14: *"docker containers
+are the consumables produced by dev agents."* That is the distribution channel
+for services, sitting beside the one that already exists for commands — a
+project declares a verb on its `bashified` branch and the verb build carries it
+to every account (`VERB-DISTRIBUTION.md`); a project that runs a *service*
+produces an image and a `compose.yaml` under `/srv/<project>/`, and this host
+runs it. Same shape, different artifact: the repo is the source, the built
+thing is the deliverable, and no service is hand-installed into a userland
+where only its author knows it exists. That is what `hermes` was.
+
+The roster this implies, Zach-directed the same day:
+`zaxon` (from the `hermes` distro), `crt`'s whisper/STT services (from
+`crt-vm`, retired), `bibliothecaire` intake, `gardien` auto-backup. `potato`
+(the Pi) is out of scope — it is a separate appliance `crt` produces, not a
+container on this host.
+
+INSTALLED 2026-08-14: `docker.io` 29.1.3, `systemctl is-enabled docker` →
+`enabled`, `is-active` → `active`. Since dockerd is enabled inside a distro
+that comes up with the host, `restart: always` on a container is a real
+promise — which is the layer §1 says was missing.
+
+As of 2026-08-14, before that install, there was **no Docker in the Ubuntu distro at all** —
 `command -v docker` is empty, `/var/run/docker.sock` absent, zero
 docker/containerd packages, no units. Installing the native engine
 (`docker.io` + `docker-compose-v2`, systemd-supervised) is therefore a green
@@ -100,6 +121,30 @@ root on dexter's Ubuntu distro and drive Windows through it. That was the
 deliberate trade for being able to fix things unattended. Declared to senechal
 as hf7y/senechal#253.
 
+## 5b. Nothing here starts at boot — it starts at LOGIN
+
+The probe that matters most, and the one `bin/dexter-liveness.sh` runs last:
+
+```
+Windows LastBootUpTime          2026-08-03 16:25
+Ubuntu distro uptime            10 days          (i.e. it came up with that boot)
+hermes distro                   never started
+C:\Users\Zach\...\Startup\      monkey-vm.bat, senechal-wsl-autostart.vbs
+```
+
+Both live things on this host are started by **per-user Startup folder** items,
+which run at **login**. A reboot with nobody logging in leaves `monkey` down —
+that is *all* of self-dev — and looks, from outside, exactly like a quiet
+night. `hermes` was simply never given such an item, which is the entire
+ten-day outage.
+
+`senechal-wsl-autostart.vbs` is the shape that works, and it already uses the
+`sleep infinity` anchor, because *"WSL tears the VM down when its last process
+exits."* It is owned by senechal (`remedies/dexter-wsl-autostart.sh`) and has a
+matching scheduled task. **The fix is not a third such script — it is to make
+these boot-scoped rather than login-scoped**, so the host recovers from a power
+cut without a human. That needs a Windows credential and is Zach's to authorise.
+
 ## 6. What this would move, and what it costs
 
 **zaxon, out of `hermes` and into a container under `/srv/zaxon/`.** It is a
@@ -108,10 +153,23 @@ gateway run`, `User=zaxon`, working dir `~/.hermes` — with no Windows
 dependency beyond an inherited `PATH` full of `/mnt/c` entries. Two real costs,
 neither of which should be discovered mid-migration:
 
-1. **WhatsApp re-auth.** `~/.hermes/auth.json` + `auth.lock` is a linked-device
-   session. It may not survive the host change; if it does not, re-linking
-   needs Zach's phone and a QR scan. This is the step that can strand the
-   channel, so it is the step to rehearse first.
+1. **The WhatsApp session, and the ONE-OWNER rule.** Probed 2026-08-14 rather
+   than assumed: the bridge is **Baileys** (`@whiskeysockets/baileys`
+   7.0.0-rc13, Node + express on :3000, `scripts/whatsapp-bridge/`), storing a
+   linked-device session as plain files in `~/.hermes/whatsapp/session`.
+
+   **This retires the belief that a Samsung Galaxy must stay powered on.** A
+   linked device keeps working while the phone is off; WhatsApp expires an idle
+   link at roughly two weeks, so the phone is needed to pair (QR) and
+   occasionally to refresh — not continuously. What must be always-on is
+   whatever holds the session directory.
+
+   The real hazard is different and sharper: **exactly one process may own that
+   session.** Two — a container and the old distro, say — and WhatsApp logs the
+   link out, which costs a QR scan to recover. So the cutover order is: stop
+   the distro's bridge, move the session, start the container. Never overlap.
+   `auth.json` is unrelated to WhatsApp; it holds the *model provider*
+   credential (Nous Portal — see `~/.hermes/AUTH_NOTES.md`).
 2. **`whisper-server` is the CPU-heavy half.** Move the gateway alone first —
    it is the part that must never be down. STT degrades gracefully; the relay
    does not.
