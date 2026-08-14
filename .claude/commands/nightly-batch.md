@@ -47,10 +47,8 @@ two different names. For per-project git health and open questions use
 was calling. See `bin/tests/guard-estate.test.sh` for the standard the
 survivors are now held to, and for what is knowingly given up.
 
-(The third mechanical survey used to be `bin/hygiene-lint.sh`. RETIRED
-2026-08-14: it scanned only scheduler-registered projects, which meant NOTHING
-on a host without a scheduler checkout. `bin/retired/README.md` and
-hf7y/realisateur#265 record the checks worth rebuilding.)
+(The third mechanical survey was `bin/hygiene-lint.sh`, RETIRED 2026-08-14 --
+see `bin/retired/README.md`, hf7y/realisateur#265.)
 
 **Read the answers on your own issues and process them.** Zach answers by
 commenting and LEAVING THE ISSUE OPEN -- state and labels say nothing about
@@ -175,12 +173,8 @@ For each unarchived artifact:
       that is a finding — say so loudly, and do not recite the checklist from
       memory.
 
-  **Copying the block is what this replaced, and it is not a style
-  preference.** Stamping produced eleven repos carrying a byte-identical
-  CORRUPTED checklist, two generations stale, missing an entire protocol,
-  while the drift detector reported OK throughout (realisateur#263 has the
-  post-mortem). A new project that starts with a copy starts with a copy that
-  will rot.
+  **Do not copy the block.** Stamping is what realisateur#263 retired, and a
+  new project that starts with a copy starts with a copy that will rot.
   - Write a baseline `.gitignore` that blocks secrets and build debris
     before the first `git add`: at minimum
     `*.env`, `.env`, `secrets/`, `*secret*`, `*cred*`, `*.pem`, `*.key`,
