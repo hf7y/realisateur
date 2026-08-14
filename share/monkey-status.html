@@ -1,0 +1,95 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>self-dev on monkey</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+ :root{--bg:#fbfbfa;--fg:#1a1a19;--mut:#6b6b66;--line:#e3e3df;
+       --ok:#1a7f37;--warn:#9a6700;--bad:#b3261e}
+ @media(prefers-color-scheme:dark){:root{--bg:#16161a;--fg:#ececea;--mut:#9a9a94;
+       --line:#2c2c31;--ok:#3fb950;--warn:#d29922;--bad:#f85149}}
+ body{background:var(--bg);color:var(--fg);font:16px/1.55 ui-sans-serif,system-ui,sans-serif;
+      margin:0;padding:2rem 1.25rem;display:flex;justify-content:center}
+ main{width:100%;max-width:52rem}
+ h1{font-size:1.05rem;font-weight:600;letter-spacing:.02em;text-transform:uppercase;
+    color:var(--mut);margin:0 0 1.25rem}
+ .verdict{font-size:2.3rem;font-weight:700;letter-spacing:-.02em;margin:0}
+ .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+ .sub{color:var(--mut);margin:.35rem 0 1.75rem}
+ table{border-collapse:collapse;width:100%;font-size:.9rem}
+ th,td{text-align:left;padding:.45rem .6rem;border-bottom:1px solid var(--line);
+       vertical-align:top}
+ th{color:var(--mut);font-weight:500}
+ .wrap{overflow-x:auto}
+ code{font-family:ui-monospace,monospace;font-size:.88em}
+ .why{color:var(--mut);font-size:.85rem}
+ footer{color:var(--mut);font-size:.85rem;margin-top:2rem}
+ a{color:inherit}
+</style>
+<main>
+<h1>self-dev on monkey</h1>
+<div id="app">loading&hellip;</div>
+<footer>
+  Machine-readable: <a href="status.json">status.json</a>.
+  Published by <code>realisateur/bin/publish-monkey-status.sh</code>, which runs
+  <code>bin/monkey-status-collect.py</code> as root on the host itself &mdash; every
+  row is a live probe of a crontab and a run ledger, not a claim copied from a
+  document. <b>ARMED</b> means the account's own crontab holds a dispatch runner;
+  <b>never run</b> means its scheduler ledger is empty, which for an armed account
+  is a finding.
+</footer>
+</main>
+<script>
+const H=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ago=t=>{if(!t)return"never";const h=(Date.now()-new Date(t))/36e5;
+  return h<1?`${Math.round(h*60)} min ago`:h<48?`${Math.round(h)} h ago`:`${Math.round(h/24)} days ago`;};
+
+fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
+  // STALENESS IS THE DOCUMENT'S OWN CLAIM, as on the verbs page: the publisher
+  // writes valid_until from its own cadence, so a cadence change is not a
+  // constant to chase across consumers.
+  const stale = d.valid_until && Date.now() > new Date(d.valid_until);
+  const A = d.accounts||[];
+  const armed = A.filter(a=>a.armed);
+  const dark  = armed.filter(a=>!a.last_run);
+  const cls = stale ? "bad" : dark.length ? "warn" : "ok";
+  const head = stale ? "STALE"
+             : dark.length ? `${armed.length} ARMED, ${dark.length} NEVER RAN`
+             : `${armed.length} ARMED`;
+
+  const rows = A.map(a=>{
+    const r=a.last_run||{};
+    const v=r.verdict_computed, c=r.claimed_verdict;
+    const vc={WORKED:"ok",IDLE:"warn"}[v]||"";
+    // Only worth showing when the ledger saw nothing but the agent claimed
+    // something: an IDLE run that reported itself DONE/CONTINUE is the
+    // disagreement. A WORKED run's own claim adds nothing.
+    const disagree = v && v!=="WORKED" && c;
+    return `<tr>
+      <td><code>${H(a.account)}</code><div class="why">uid ${H(a.uid)}</div></td>
+      <td class="${a.armed?"ok":"mut"}">${a.armed?"armed":"&mdash;"}</td>
+      <td>${H(ago(r.started_at))}${r.elapsed_s!=null?`<div class="why">${H(r.elapsed_s)}s, rc ${H(r.rc)}</div>`:""}</td>
+      <td class="${vc}">${H(v||"&mdash;")==="&mdash;"?"&mdash;":H(v)}
+        ${disagree?`<div class="why">claimed ${H(c)}</div>`:""}</td>
+      <td>${r.started_at?`${H(r.commits_added??0)}c / ${H(r.issues_closed??0)}i / ${H(r.prs_merged??0)}pr`:"&mdash;"}</td>
+      <td class="why">${H((a.release_tick||"no release tick").replace(/^\S+\s/,""))}</td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("app").innerHTML = `
+    <p class="verdict ${cls}">${head}</p>
+    <p class="sub">${H(d.accounts.length)} accounts in the self-dev uid band on
+      <code>${H(d.host)}</code>, verb build <code>${H(d.verb_build||"none")}</code>.
+      Probed ${H(ago(d.generated))}${stale?" &mdash; past its own valid_until, so read nothing here as current":""}.</p>
+    <div class="wrap"><table>
+      <tr><th>account</th><th>cron</th><th>last run</th><th>verdict</th>
+          <th>commits / issues closed / PRs merged</th><th>verb pin</th></tr>
+      ${rows}
+    </table></div>
+    ${dark.length?`<p class="why">Armed with an empty ledger: ${dark.map(a=>`<code>${H(a.account)}</code>`).join(", ")}.
+      Cron holds a runner for each; none has ever recorded a run.</p>`:""}`;
+}).catch(e=>{
+  document.getElementById("app").innerHTML =
+    `<p class="verdict bad">NO DOCUMENT</p><p class="sub">status.json did not load
+     (${H(e.message)}). That is itself the finding: the publisher has not run.</p>`;
+});
+</script>
