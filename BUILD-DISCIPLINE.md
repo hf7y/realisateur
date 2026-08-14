@@ -669,40 +669,18 @@ uses the block above.
 `discipline` prints it. Every project's `CLAUDE.md` carries a single line
 pointing at that command, and nothing else.
 
-### What this replaced, and why the replacement is not a better copier
+### What this replaced
 
 Until 2026-08-14 this block was **stamped into every project's CLAUDE.md** by
-`bin/restamp-discipline.sh`, and the copy-rather-than-symlink argument was:
-the nightly jobs run in a dedicated clone, shared hosts may have no
-realisateur checkout, and a dangling symlink does not error — it makes the
-discipline *silently absent*, which is the first failure pattern this file
-names.
+`bin/restamp-discipline.sh`. The copy-not-symlink argument was sound — a
+dangling symlink does not error, it makes the discipline *silently absent* —
+and it was refuted by measurement, not by taste: eleven repos carried a
+**byte-identical corrupted** checklist two generations stale, the stamper could
+not run at all on the host where the source lives, this file was **36 lines
+behind its own copies**, and the only drift detector compared row counts and
+reported OK throughout. The copies were not travelling, they were rotting.
 
-That argument was sound. It was also, as of 2026-08-14, refuted by measurement:
-
-- **11 repos** (baudin, chezz, crt, ecosim, gardien, groc-mangr, nine-speakers,
-  sequestria, vim-arcade, wtul, abletim) carried a **byte-identical corrupted**
-  checklist — the `silence-audit` row spliced through the middle of the
-  `git commit -F` row, so a reader got neither. Byte-identity across eleven
-  repos is proof the *generator* wrote it: the source briefly held the splice,
-  stamped it out, was repaired in `45c8120`, and no restamp ever ran again.
-- Those 11 were missing the entire `consulte` protocol and **two whole
-  checklist rows** — a 10-row checklist where the live rule was 12.
-- **`restamp-discipline.sh` could not run at all** on the machine where the
-  source lives: it discovers projects from `$SCHED_ROOT/schedule/*.conf` and
-  there is no scheduler checkout there. It failed loud, correctly, and
-  propagation had therefore reached **zero** for an unmeasured period.
-- **This file was 36 lines behind its own copies.** The scoped `silence-audit`
-  row, the `claim-drift --convention` row and the `DECISION:` row were added to
-  realisateur's `CLAUDE.md` and never here. *The source of truth was the
-  stalest copy, and nothing said so.*
-- `hygiene-lint.sh` §7b, the only drift detector, compared **row counts only**
-  and emitted an advisory NOTE. Both sides had 10 rows, so it read clean —
-  blind to the corruption and to twenty missing lines of protocol.
-
-So the copies were not *travelling*, they were *rotting*, and the detector was
-reporting OK. Zach, 2026-08-14: *"why are we even stamping at all? if it's
-stamp worthy it should just be in a global file."*
+Full post-mortem with the evidence: hf7y/realisateur#263.
 
 ### Why a command answers the original objection better than a copy did
 
