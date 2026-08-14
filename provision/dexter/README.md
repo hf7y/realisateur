@@ -133,47 +133,30 @@ matching scheduled task. **The fix is not a third such script — it is to make
 these boot-scoped rather than login-scoped**, so the host recovers from a power
 cut without a human. That needs a Windows credential and is Zach's to authorise.
 
-## 6. What this would move, and what it costs
+## 6. Moving zaxon, and the one rule that governs it
 
-**zaxon, out of `hermes` and into a container under `/srv/zaxon/`.** It is a
-plain Python venv service — `hermes-agent/.venv/bin/python -m hermes_cli.main
-gateway run`, `User=zaxon`, working dir `~/.hermes` — with no Windows
-dependency beyond an inherited `PATH` full of `/mnt/c` entries. Two real costs,
-neither of which should be discovered mid-migration:
+zaxon is a plain Python venv service plus a Node bridge — no Windows dependency
+beyond an inherited `PATH`. `zaxon/compose.yaml` and `zaxon/Dockerfile` here are
+its container form; `bin/dexter-service-deploy.sh` ships them.
 
-1. **The WhatsApp session, and the ONE-OWNER rule.** Probed 2026-08-14 rather
-   than assumed: the bridge is **Baileys** (`@whiskeysockets/baileys`
-   7.0.0-rc13, Node + express on :3000, `scripts/whatsapp-bridge/`), storing a
-   linked-device session as plain files in `~/.hermes/whatsapp/session`.
+**The WhatsApp bridge is Baileys, a LINKED DEVICE** (probed 2026-08-14:
+`@whiskeysockets/baileys` 7.0.0-rc13, Node + express on :3000, session as plain
+files in `~/.hermes/whatsapp/session`). This retires the belief that a phone
+must stay powered on — a linked device keeps working while the phone is off,
+and is needed only to pair and, roughly every two weeks, to refresh.
 
-   **This retires the belief that a Samsung Galaxy must stay powered on.** A
-   linked device keeps working while the phone is off; WhatsApp expires an idle
-   link at roughly two weeks, so the phone is needed to pair (QR) and
-   occasionally to refresh — not continuously. What must be always-on is
-   whatever holds the session directory.
+**Exactly one process may own that session.** Two — a container and the old
+distro — and WhatsApp logs the link out, costing a QR scan to recover. The
+deploy script enforces this by refusing while `hermes` runs; the cutover order
+is stop, move, start, never overlap. (`auth.json` is unrelated: it holds the
+model-provider credential.)
 
-   The real hazard is different and sharper: **exactly one process may own that
-   session.** Two — a container and the old distro, say — and WhatsApp logs the
-   link out, which costs a QR scan to recover. So the cutover order is: stop
-   the distro's bridge, move the session, start the container. Never overlap.
-   `auth.json` is unrelated to WhatsApp; it holds the *model provider*
-   credential (Nous Portal — see `~/.hermes/AUTH_NOTES.md`).
-2. **`whisper-server` is the CPU-heavy half.** Move the gateway alone first —
-   it is the part that must never be down. STT degrades gracefully; the relay
-   does not.
+`whisper-server` is the CPU-heavy half and moves second. STT degrades
+gracefully; the relay does not.
 
-**Open question this document does NOT settle**: whether dexter is a
-build-and-compute host that happens to hold zaxon, or the estate's always-on
-service host. `monkey` is also always-on Linux and is where the agents that
-*call* zaxon live. The layout above is right either way; the roster is not
-decided.
+**Not settled here**: whether dexter is a build host that happens to hold
+zaxon, or the estate's always-on service host — `monkey` is also always-on and
+is where zaxon's callers live. The layout is right either way; the roster is not.
 
-## 7. What is still missing, named rather than implied
-
-- **A liveness probe.** This outage was found by accident, by a `groc-mangr`
-  dispatch run that happened to try the relay (hf7y/groc-mangr#9). Every hour
-  of those ten days, something could have curled 8643 and filed a finding.
-  Until that exists, this document has improved the map and not the alarm.
-- **hermes is still the live location.** Nothing here has been migrated. A
-  `hermes-keepalive.service` was written as a stopgap and its install is
-  pending — see hf7y/senechal#253.
+**Still missing**: nothing has been migrated yet, and dexter's autostart is
+still login-scoped (§5b).
