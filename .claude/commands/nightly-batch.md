@@ -149,12 +149,11 @@ For each unarchived artifact:
   be an addition to something already scaffolded, not a brand-new project.
 - **If it's an addition to an existing project, apply park-by-default
   triage** (see `STABILITY-MILESTONES.md`): is this idea required to reach
-  that project's *current* stability milestone (its open `milestone`-labelled
-  issue)? If **yes**, it's `active` -- build/queue it normally. If
-  **no**, **park it**: `bin/defere.sh '<one line>' --project <name>` to file
-  it as a `deferred` issue on that project's own tracker, with one line of
-  why it's past the milestone, and do NOT build it tonight. Parking is the
-  default for anything beyond the current bar --
+  that project's *current* stability milestone (its open `milestone`-
+  labelled issue)? If **yes**, it's `active` -- build/queue it normally. If
+  **no**, **park it**: `bin/defere.sh '<one line>' --project <name>` to
+  file it as a `deferred` issue, and do NOT build it tonight. Parking is
+  the default for anything beyond the current bar --
   building past the milestone unprompted is the failure mode this convention
   exists to prevent. A brand-new project is exempt: the inbox idea *is* its
   v1, so scaffold it and set its first `## Stability milestone` as part of
