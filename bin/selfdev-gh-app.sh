@@ -487,9 +487,22 @@ case "$MODE" in
     [ -n "$APP_ID" ] && ok "app id $APP_ID" || gap "SELFDEV_APP_ID unset -- the App ID is on the App's settings page"
     if [ -r "$APP_KEY" ]; then
       perm="$(stat -c %a "$APP_KEY" 2>/dev/null || echo '?')"
+      keygrp="$(stat -c %G "$APP_KEY" 2>/dev/null || echo '?')"
+      # 640/selfdev is not a looser rule than 600 -- it is the SAME property
+      # (unreadable outside the intended readers) applied to the host-wide
+      # key, which multiple accounts in the `selfdev` group must read by
+      # design; per-account copies were retired in favour of it. World bits
+      # must still be zero in every case, so 644/646/etc still fail below.
       case "$perm" in
         600|400) ok "private key $APP_KEY (mode $perm)" ;;
-        *)       bad "private key $APP_KEY is mode $perm -- a bearer key must be 600" ;;
+        640|440)
+          if [ "$keygrp" = selfdev ]; then
+            ok "private key $APP_KEY (mode $perm, group $keygrp -- host-wide key, readable only within the selfdev group)"
+          else
+            bad "private key $APP_KEY is mode $perm and group is '$keygrp', not selfdev -- group-readable is only correct for the shared host-wide key; a private key must be 600"
+          fi
+          ;;
+        *) bad "private key $APP_KEY is mode $perm -- a bearer key must be 600 (or 640, group selfdev, for the shared host-wide key)" ;;
       esac
     else
       gap "no private key at $APP_KEY -- generate one on the App's settings page (Private keys -> Generate a private key) and save it there"
