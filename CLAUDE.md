@@ -50,7 +50,7 @@ Before marking anything done:
       it was written and that has never once been passable -- 74 FLAGs on the
       morning it was scoped, 52 of them one retired check's false alarms. A
       mandatory row nobody can satisfy is how a checklist stops being read.)
-- [ ] Pull request opened per the convention — **`claim-drift.sh --convention`**
+- [ ] Pull request opened per the convention — **`claim-drift --convention`**
       is the canonical text. Reference it; do NOT paraphrase it into a brief.
       In short: a **draft** claims nothing; marking it **ready** is the
       completion claim. A ready PR with **no decision** goes on
@@ -59,14 +59,14 @@ Before marking anything done:
       auto-merge stays off. (Added 2026-08-08. This convention was previously
       retyped from memory into eight agent briefs in one evening, and a second
       conflicting meaning was invented an hour later — retyping was the
-      distribution mechanism, and that is the defect. `claim-drift.sh` now
+      distribution mechanism, and that is the defect. `claim-drift` now
       enforces the same text it prints.)
 - [ ] **Before writing `DECISION:`, ask the cheaper question first: did the
       human already explicitly ask for this exact change earlier in THIS
       conversation, and is there verified evidence (tests, a live dogfooded
       run) that it does what was asked?** If yes, there is no decision —
       write nothing, or `NO-DECISION:` if auto-merge is unavailable. This is
-      not mechanically checkable: `claim-drift.sh`'s `OVERCAUTIOUS` check
+      not mechanically checkable: `claim-drift`'s `OVERCAUTIOUS` check
       only catches ONE narrow shape (a diff touching no existing file's
       behavior) and cannot see the conversation at all — proven live on
       2026-08-10 when realisateur#124, implementing that very check, carried
