@@ -44,12 +44,8 @@ project you are about to touch. `ecosystem-survey`,
 as four re-implementations of one registry enumeration that nothing ran; each
 project's stability milestone is read from its own FOCUS.md
 `## Stability milestone` section, convention in `STABILITY-MILESTONES.md`.
-`hygiene-lint` was RETIRED 2026-08-14 and this step is gone with it. It
-discovered projects through `$SCHED_ROOT/schedule/*.conf`, so on a host with no
-scheduler checkout it scanned NOTHING — and an interactive pass is exactly
-where that silence was most expensive, because it is where weights get raised
-and ideas get promoted. See `bin/retired/README.md` and hf7y/realisateur#265
-for the checks worth rebuilding.
+`hygiene-lint` ran here until it was RETIRED 2026-08-14; the step is gone with it.
+See `bin/retired/README.md` and hf7y/realisateur#265.
 
 **Single-project (`$ARGUMENTS` given):** run
 `"/home/zach/Documents/Projects/scheduler/bin/scheduler" status <project>`
