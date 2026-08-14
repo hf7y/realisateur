@@ -266,6 +266,40 @@ for name in "${SHIMMED[@]}"; do
   install_file "$BIN_DEST/$name" "$(render_shim "$name")" 755 "$name"
 done
 
+# PRUNE ORPHANS. Installing was only ever half the job: nothing removed a shim
+# whose source had been retired, so `hygiene-lint` stayed live on all 13 monkey
+# accounts after realisateur#267 moved its script under bin/retired/ -- a
+# command on PATH whose target no longer exists, on every account, reported by
+# nothing. hf7y/groc-mangr#3 recorded this same shape a week earlier
+# ("orphaned shims on PATH: ecosystem-survey, milestone-audit, steward-survey,
+# sources deleted in realisateur#101") and it was fixed by hand, per host,
+# which is why it came straight back.
+#
+# ONLY OUR OWN. The marker line render_shim writes is the whole safety
+# argument: this removes files this installer generated and nothing else, so a
+# hand-written script or another project's command in ~/.local/bin is never
+# touched. A prune that could delete a stranger's file would be a worse defect
+# than the orphan it fixes.
+prune_orphans() {
+  local f base
+  for f in "$BIN_DEST"/*; do
+    [ -f "$f" ] || continue
+    grep -q '>>> realisateur-owned shim' "$f" 2>/dev/null || continue
+    base="$(basename "$f")"
+    # still wanted?
+    local keep=0 n
+    for n in "${SHIMMED[@]:-}"; do [ "$n" = "$base" ] && { keep=1; break; }; done
+    [ "$keep" = 1 ] && continue
+    if [ "$CHECK_ONLY" = 1 ]; then
+      flag "$base is an ORPHAN shim -- its source is gone from bin/ (rerun without --check to remove)"
+      continue
+    fi
+    rm -f "$f" && note "  pruned  $base (source retired)" \
+      || flag "could not remove orphan shim $f"
+  done
+}
+prune_orphans
+
 note "user-level slash commands -> $CMD_DEST"
 for name in "${GLOBAL_COMMANDS[@]}"; do
   if [ ! -f "$CMD_SRC/$name.md" ]; then
