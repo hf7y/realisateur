@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# playbook -- carry a project's standing brief through its issue queue.
+#
+# WHY AN ISSUE AND NOT A FILE. A self-dev account's brief has to be readable
+# by the run and writable by Zach from a phone. A file in the repo is neither:
+# editing it needs a clone and a push, and an unattended run that rewrites its
+# own brief is a loop with no outside input. The issue queue is already the
+# channel Zach files into, already the thing a dispatch run reads first. So
+# the brief lives there, in ONE issue, and this verb is the only thing that
+# writes it.
+#
+#   playbook push <owner/repo> <file>          upsert the playbook issue from a file
+#   playbook pull <owner/repo> [outfile]       fetch it (default: stdout)
+#   playbook check <owner/repo>                is there exactly one, and how old
+#
+# The pull subcommand is what a dispatch run calls, first thing, before it
+# touches the queue -- it needs `gh` and nothing else, so it works from any
+# account with a token and no write access at all. CARRIED on this branch so
+# a pull needs no realisateur checkout (hf7y/realisateur#244).
+#
+# EXACTLY ONE. Two playbook issues is the failure this guards: two briefs that
+# disagree, with the reader seeing whichever `gh` listed first. push updates
+# the existing one rather than opening a second; pull and check REFUSE on two
+# rather than picking. A missing playbook is also a refusal, not an empty
+# string -- silently proceeding with no brief is the thing worth preventing.
+#
+# Ported from bin/playbook.sh (the human-facing LOCAL script `push` is meant
+# to be run from, hf7y/realisateur#244) rather than exec'd from it, so this
+# verb carries no dependency on a checkout at all.
+
+SELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+
+VERB_NAME=playbook
+VERB_SUMMARY="carry a project's standing brief through its issue queue"
+VERB_USAGE="playbook <push|pull|check> <owner/repo> [args...]"
+VERB_CAN_SUMMON=0
+# push mutates GitHub state (creates or edits one issue); pull and check
+# never write. -n/--dry-run is honoured by push (see below); -f/--force
+# overrides no refusal in this verb -- none of them is safe to skip
+# silently, so --force is accepted (VERB_CAN_WRITE requires it exist) and
+# does nothing. Said here, not left to be discovered.
+VERB_CAN_WRITE=1
+# shellcheck source=../lib/verb.sh
+. "$SELF/lib/verb.sh"
+
+LABEL="${PLAYBOOK_LABEL:-playbook}"
+TITLE_PREFIX="PLAYBOOK"
+
+# A leading flag is a flag, not a subcommand. Without this arm `--json`,
+# `--quiet` and `--version` reach the subcommand table, exit 2 as "unknown
+# subcommand", and contradict this verb's own `--help`, which offers all
+# three. (Same arm as arpente/epluche.)
+case "${1:-}" in
+  -*) cmd=list ;;
+  *)  cmd="${1:-}"; [ $# -gt 0 ] && shift || true ;;
+esac
+verb_parse "$@"
+set -- "${VERB_ARGS[@]+"${VERB_ARGS[@]}"}"
+
+# Subcommand flags are NOT run through verb_parse a second time -- it knows
+# only the global vocabulary and dies loud on anything else. So `pull` takes
+# its optional output path as a plain positional argument, not `--out`.
+
+find_one() { # find_one <owner/repo> -- the one open playbook issue number, or a refusal
+  local repo="$1"
+  # shellcheck disable=SC2046  # word splitting is the point: one number per line
+  set -- $(gh issue list --repo "$repo" --label "$LABEL" --state open \
+             --json number --jq '.[].number' 2>/dev/null)
+  case $# in
+    1) echo "$1" ;;
+    0) verb_broke "no open issue labelled '$LABEL' in $repo. There is no standing brief to read; refusing to return an empty one." ;;
+    *) verb_broke "$# issues labelled '$LABEL' in $repo ($*). Two briefs that disagree is worse than none -- close all but one." ;;
+  esac
+}
+
+command -v gh >/dev/null || verb_blind "gh is not on PATH. Cannot reach the issue queue."
+
+case "$cmd" in
+  ''|list)
+    printf '%s -- %s\n\n' "$VERB_NAME" "$VERB_SUMMARY"
+    printf 'subcommands:\n'
+    printf '  push <owner/repo> <file>       upsert the standing brief from a file\n'
+    printf '  pull <owner/repo> [outfile]    fetch it (default: stdout)\n'
+    printf '  check <owner/repo>             is there exactly one, and how old\n'
+    printf '\n(`man %s` for the contract)\n' "$VERB_NAME"
+    ;;
+  help|--help|-h) verb_usage ;;
+  push)
+    repo="${1:-}"; file="${2:-}"
+    [ -n "$repo" ] || verb_die "push needs <owner/repo>"
+    [ -s "${file:-/nonexistent}" ] || verb_die "push needs a NON-EMPTY file. Refusing to overwrite a standing brief with nothing."
+    title="$TITLE_PREFIX -- standing brief (do not close)"
+    existing="$(gh issue list --repo "$repo" --label "$LABEL" --state open \
+                  --json number --jq '.[].number' 2>/dev/null)"
+    n_existing=$(printf '%s\n' "$existing" | sed '/^$/d' | wc -l)
+    if [ "$VERB_DRYRUN" = 1 ]; then
+      case "$n_existing" in
+        1) echo "$VERB_NAME: would update $repo#$existing from $file" ;;
+        0) echo "$VERB_NAME: would create a new playbook issue in $repo from $file" ;;
+        *) echo "$VERB_NAME: would refuse -- $n_existing existing playbook issues in $repo, ambiguous" ;;
+      esac
+      exit 0
+    fi
+    # The label must exist before it can be applied; creating it is idempotent.
+    gh label create "$LABEL" --repo "$repo" --color "0e8a16" \
+        --description "the standing brief a dispatch run reads first" >/dev/null 2>&1 || true
+    if num="$(find_one "$repo" 2>/dev/null)"; then
+      gh issue edit "$num" --repo "$repo" --title "$title" --body-file "$file" >/dev/null
+      echo "$VERB_NAME: updated $repo#$num from $file"
+    else
+      num="$(gh issue create --repo "$repo" --title "$title" --label "$LABEL" \
+               --body-file "$file" --json number --jq .number 2>/dev/null \
+             || gh issue create --repo "$repo" --title "$title" --label "$LABEL" \
+                  --body-file "$file" | sed 's#.*/##')"
+      echo "$VERB_NAME: created $repo#$num from $file"
+    fi
+    ;;
+  pull)
+    repo="${1:-}"; out="${2:-}"
+    [ -n "$repo" ] || verb_die "pull needs <owner/repo>"
+    num="$(find_one "$repo")" || exit $?
+    body="$(gh issue view "$num" --repo "$repo" --json body --jq .body)"
+    [ -n "$body" ] || verb_broke "$repo#$num is empty. An empty brief is a broken one; not writing it."
+    if [ -n "$out" ]; then
+      mkdir -p "$(dirname "$out")"
+      printf '%s\n' "$body" > "$out"
+      echo "$VERB_NAME: $repo#$num -> $out"
+    else
+      printf '%s\n' "$body"
+    fi
+    ;;
+  check)
+    repo="${1:-}"
+    [ -n "$repo" ] || verb_die "check needs <owner/repo>"
+    num="$(find_one "$repo")" || exit $?
+    gh issue view "$num" --repo "$repo" \
+      --json number,title,updatedAt,author \
+      --jq '"\(.number)\t\(.updatedAt)\t\(.author.login)\t\(.title)"'
+    ;;
+  *) verb_gap "unknown subcommand: $cmd (try \`list\`)" ;;
+esac

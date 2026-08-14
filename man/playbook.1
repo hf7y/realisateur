@@ -1,0 +1,59 @@
+.TH PLAYBOOK 1 "2026-08-14" "realisateur" "bashified verb"
+.SH NAME
+playbook \- carry a project's standing brief through its issue queue
+.SH SYNOPSIS
+.B playbook
+push <owner/repo> <file>
+.br
+.B playbook
+pull <owner/repo> [outfile]
+.br
+.B playbook
+check <owner/repo>
+.SH DESCRIPTION
+The standing brief a dispatch run reads first, before it touches the queue.
+It lives in exactly ONE open GitHub issue per repo, labelled
+.BR playbook .
+Two such issues is the failure this guards against: two briefs that
+disagree, with the reader seeing whichever one
+.B gh
+listed first.
+.PP
+.B push
+upserts the brief from a file -- it edits the existing issue rather than
+opening a second one, and refuses an empty file.
+.B pull
+fetches the brief, to stdout or to
+.IR outfile .
+.B check
+reports the issue number, last-updated time and author.
+.B pull
+and
+.B check
+both REFUSE if zero or more than one open issue carries the label, rather
+than guessing.
+.PP
+Needs only
+.BR gh (1)
+on
+.BR PATH ,
+so
+.B pull
+works from any account with a token and no repo write access at all.
+.SH "EXIT STATUS"
+0 ok; 2 usage; 4 GAP (unrecognised subcommand); 5 BROKEN (no brief, more
+than one brief, or an empty one); 6 BLIND (\fBgh\fR is not on PATH).
+.SH FLAGS
+Global flags (\fB\-\-dry\-run\fR, \fB\-\-force\fR, \fB\-\-json\fR, ...) go
+AFTER the subcommand, e.g.
+.IR "playbook push hf7y/foo brief.md --dry-run" .
+A flag before the subcommand is parsed as "no subcommand given", per the
+shared bashified dispatch convention.
+.PP
+.B \-n, \-\-dry\-run
+applies to
+.B push
+only: prints what would be created or updated and writes nothing.
+.B \-f, \-\-force
+is accepted (this verb changes state) but overrides no refusal here --
+none of them is safe to skip silently.
