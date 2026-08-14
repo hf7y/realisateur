@@ -550,6 +550,56 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     census is an instance of the class it cannot see.** Write one.
 
 
+21. **A mechanism loses its input and reports clean instead of blind.** A
+    check's registry, list, or match set goes missing or empty for a reason
+    unrelated to the thing it's checking — a renamed field, a moved file, a
+    footer format that changed underneath it. Zero iterations follow. Exit
+    code 0. The output is indistinguishable from "looked, found nothing,"
+    so it reads as good news and nobody looks again.
+
+    Distinct from pattern 14 (a sensor reporting a negative it never
+    checked for): there the domain was under-read but present. Distinct
+    from pattern 15's `0/0` case: there the parser's own anchor moved
+    underneath it inside one file. Here the *entire input* is gone —
+    absent, not merely narrower than claimed — and the shape recurs across
+    unrelated mechanisms, which is what makes it its own row rather than a
+    third example folded into either.
+
+    **Found live, three instances, one session, 2026-08-13:**
+    - `tools/issue-janitor.py` swept 0 of 28 issues, exit 0, because
+      `notify-senechal` had switched to filing with `gh` directly and
+      dropped the machine-filed footer the janitor keys on. Thirteen
+      receipts were closed by hand before anyone noticed
+      (hf7y/realisateur#220 → #221).
+    - senechal's plaintext-egress check kept FAILing after its own remedy
+      fixed reality, because it asked "is this path inside a gardien
+      backup set" and ignored the set's `exclude` list (hf7y/senechal#245).
+    - `closeout-lint` reported `0 FLAG, 0 BLIND` at the end of a session
+      with ~10 commits and 5 merged PRs, because it globs a scheduler
+      registry that no longer exists on mandark, and a glob matching
+      nothing iterates zero times (hf7y/realisateur#232).
+
+    **The rule:** a check that cannot see its own subject must not report
+    the same thing as one that looked. If the registry, list, or match set
+    a check reads can be *absent* rather than merely *empty*, the check
+    says BLIND when it's absent — never folds that into the same "clean"
+    result zero real findings would produce. A companion, from the same
+    session: a check that cannot see its own remedy working is worse than
+    no check — it trains the reader to ignore its findings.
+
+    **Also from this session:** prose that says *cannot* where the truth
+    is *have not* turns a gap into a policy. `health/dead-config.sh`
+    carried a comment asserting a read was impossible when it was merely
+    unimplemented, and the false claim survived long enough to be quoted
+    back as a reason (retired in hf7y/senechal#246). An unimplemented
+    capability is described as unimplemented, with the issue number that
+    tracks it — never as impossible.
+
+    **Mechanical guard:** none today, filed as a proposal
+    (hf7y/realisateur#233) rather than landed doctrine — this row is
+    prose, and prose decays; stated here rather than left implied, per
+    pattern 15's own closing.
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a
@@ -633,6 +683,11 @@ boot-path line) over a reminder. Reminders decay; guards fail loud.
   A dirty tree at exit is a failed run, not a handoff — an uncommitted
   change to a live script is indistinguishable from an abandoned one, and
   the next autocommit may adopt it under someone else's name.
+- **Empty input distinguished from clean result.** If the registry, list,
+  or match set a check reads can be *absent* rather than merely *empty*,
+  it says BLIND — never lets zero iterations produce the same confident
+  pass a real all-clear would. A check that cannot see its own subject
+  must not report the same thing as one that looked (pattern 21).
 
 ### Settled definition: "pushed" (2026-08-01, Zach)
 
@@ -709,6 +764,10 @@ Before marking anything done:
       quotes execute)?
 - [ ] `silence-audit --strict` clean? (mechanizes the retired
       stderr-silencing / wired-to-a-real-path / names-what-it-retires rows)
+- [ ] **Empty input distinguished from clean result?** If the registry,
+      list, or match set this reads can be absent rather than merely
+      empty, does it say BLIND — or does zero iterations produce a
+      confident pass?
 
 ## Ecosystem protocols (realisateur baseline)
 The checklist above governs work inside this repo. These govern anything
