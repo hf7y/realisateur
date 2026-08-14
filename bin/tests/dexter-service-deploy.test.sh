@@ -36,6 +36,10 @@ echo "rsync $*" >> "$STUB_CALLS"
 EOF
 chmod +x "$STUB/ssh" "$STUB/rsync"
 export STUB_REPLY="$STUB/reply" STUB_CALLS="$STUB/calls"
+# A fixture service, so this suite needs no project's real files: zaxon's
+# container lives in hf7y/crt now (crt owns it), which may not be cloned here.
+mkdir -p "$STUB/svc/zaxon" && printf 'services: {}\n' > "$STUB/svc/zaxon/compose.yaml"
+export DEXTER_SERVICE_PATH="$STUB/svc"
 export PATH="$STUB:$PATH"
 
 echo "== 1. hermes RUNNING => REFUSE, and touch nothing =========================="
@@ -66,16 +70,15 @@ echo
 echo "== 3. AN UNKNOWN SERVICE IS A USAGE ERROR, NOT A SILENT NO-OP ============="
 out="$(bash "$DEPLOY" not-a-service 2>&1)"; rc=$?
 is "exits non-zero" "$rc" "1"
-has "names what it looked for" "$out" "provision/dexter/not-a-service"
+has "names where it looked" "$out" "provision/dexter/"
 
 echo
 echo "== 4. THE REFUSAL IS SCOPED TO THE SERVICE THAT OWNS A SESSION ============"
 # A different service must not inherit zaxon's refusal -- a guard that blocks
 # unrelated work gets routed around, and then it protects nothing.
 : > "$STUB_CALLS"; printf 'Ubuntu\nhermes\n' > "$STUB_REPLY"
-mkdir -p "$PWD/../provision/dexter/_testsvc" && printf 'services: {}\n' > "$PWD/../provision/dexter/_testsvc/compose.yaml"
+mkdir -p "$STUB/svc/_testsvc" && printf 'services: {}\n' > "$STUB/svc/_testsvc/compose.yaml"
 out="$(bash "$DEPLOY" _testsvc --dry-run 2>&1)"; rc=$?
-rm -rf "$PWD/../provision/dexter/_testsvc"
 is "an unrelated service deploys while hermes runs" "$rc" "0"
 case "$out" in *"logs the link out"*) bad "zaxon's refusal leaked onto another service";; *) ok "no zaxon refusal for a service with no session";; esac
 

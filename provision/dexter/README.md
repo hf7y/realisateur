@@ -64,9 +64,10 @@ runs it. Same shape, different artifact: the repo is the source, the built
 thing is the deliverable, and no service is hand-installed into a userland
 where only its author knows it exists. That is what `hermes` was.
 
-The roster this implies, Zach-directed the same day:
-`zaxon` (from the `hermes` distro), `crt`'s whisper/STT services (from
-`crt-vm`, retired), `bibliothecaire` intake, `gardien` auto-backup. `potato`
+The roster this implies, Zach-directed the same day: `zaxon` and the whisper/STT
+services (both **crt's** — crt owns the human channel, see `SECRETARY.md` in
+that repo), `bibliothecaire` intake, `gardien` auto-backup. Each is produced by
+its own project; this repo holds none of them. `potato`
 (the Pi) is out of scope — it is a separate appliance `crt` produces, not a
 container on this host.
 
@@ -135,9 +136,11 @@ cut without a human. That needs a Windows credential and is Zach's to authorise.
 
 ## 6. Moving zaxon, and the one rule that governs it
 
-zaxon is a plain Python venv service plus a Node bridge — no Windows dependency
-beyond an inherited `PATH`. `zaxon/compose.yaml` and `zaxon/Dockerfile` here are
-its container form; `bin/dexter-service-deploy.sh` ships them.
+**crt owns zaxon** (Zach, 2026-08-14), so its container form lives in
+`hf7y/crt` at `provision/dexter/zaxon/` — this repo ships the road, not the
+freight. `bin/dexter-service-deploy.sh` resolves a service from the owning
+project's checkout; `DEXTER_SERVICE_PATH` overrides the search for a worktree
+or an owner that is not cloned locally.
 
 **The WhatsApp bridge is Baileys, a LINKED DEVICE** (probed 2026-08-14:
 `@whiskeysockets/baileys` 7.0.0-rc13, Node + express on :3000, session as plain

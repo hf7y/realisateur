@@ -12,7 +12,7 @@
 #   bin/dexter-service-deploy.sh <name>            # push + up -d
 #   bin/dexter-service-deploy.sh <name> --dry-run  # show what would move
 #
-# Source of truth is provision/dexter/<name>/ in THIS repo. /srv/<name>/data on
+# Source of truth is provision/dexter/<name>/ in the OWNING project's repo. /srv/<name>/data on
 # dexter is service state and is NEVER overwritten from here -- it is the one
 # thing the repo does not own.
 set -euo pipefail
@@ -27,10 +27,33 @@ DRY=0
 die() { echo "$CLI_NAME: $*" >&2; exit 1; }
 
 [ -n "$NAME" ] || die "usage: $CLI_NAME <service-name> [--dry-run]
-services in this repo: $(find "$HERE/provision/dexter" -mindepth 1 -maxdepth 1 -type d -printf '%f ' 2>/dev/null)"
+services visible from here: $(find "$HERE/provision/dexter" "$HOME"/Documents/Projects/*/provision/dexter -mindepth 1 -maxdepth 1 -type d -printf '%f ' 2>/dev/null)"
 
-SRC="$HERE/provision/dexter/$NAME"
-[ -d "$SRC" ] || die "no such service: provision/dexter/$NAME"
+# WHERE A SERVICE COMES FROM. The container channel is realisateur's ROAD; the
+# freight belongs to whichever project owns the service (bin/lib/ownership-set.sh
+# has the ledger). zaxon is crt's, so its Dockerfile and compose.yaml live in
+# hf7y/crt -- not here. This searches this repo first, then sibling checkouts,
+# so each project ships its own service and no project's mechanism gets parked
+# in this one.
+# DEXTER_SERVICE_PATH is a colon-separated list of extra roots, searched FIRST.
+# It exists for a worktree or an uncloned owner, and it is what the test suite
+# points at a fixture -- so the refusal below is exercised without needing any
+# project's real files on the machine running the test.
+SEARCH=""
+if [ -n "${DEXTER_SERVICE_PATH:-}" ]; then
+  IFS=: read -ra _roots <<< "$DEXTER_SERVICE_PATH"
+  for r in "${_roots[@]}"; do SEARCH="$SEARCH $r/$NAME"; done
+fi
+SEARCH="$SEARCH $HERE/provision/dexter/$NAME"
+for d in "$HOME"/Documents/Projects/*/provision/dexter/"$NAME"; do
+  SEARCH="$SEARCH $d"
+done
+SRC=""
+for d in $SEARCH; do [ -d "$d" ] && { SRC="$d"; break; }; done
+[ -n "$SRC" ] || die "no such service: '$NAME' is not in this repo's provision/dexter/,
+  nor in any sibling checkout under ~/Documents/Projects/*/provision/dexter/.
+  If the owning project is not cloned here, clone it -- a service deploys from
+  its owner's repo, not from a copy parked in this one."
 [ -f "$SRC/compose.yaml" ] || die "$NAME has no compose.yaml. A service that cannot be composed is not deployable from here."
 
 # --- THE ONE-OWNER CHECK ----------------------------------------------------
