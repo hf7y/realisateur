@@ -158,8 +158,11 @@ Corollaries worth stating because they have already gone wrong:
 - **`BLOCKERS.md` is never a work queue** (standing rule). Doable-unattended
   work goes to the project's own backlog or to an issue. Nothing dispatches from
   `BLOCKERS.md`, so a task parked there is invisible to every run.
-- **Zach answers question-issues by commenting and closing.** A sweep that
-  gates on labels loses his answers. Read closed issues.
+- **Zach answers question-issues by commenting and leaving them open.** State
+  and labels carry no signal either way; an open issue is not evidence of an
+  unanswered one. Sweep all states, and read answeredness off the comments —
+  an owner comment that is not agent-stamped. Rule stated once in
+  `SCHEDULER.md`; do not retype it.
 - **Before reaping into another project's repo, run `check-project-busy
   <project>`.** A front-door write (`scheduler -i`, `notify-senechal`) carries
   its own regulator and does not need the guard; a direct file write does.
