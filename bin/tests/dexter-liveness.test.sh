@@ -5,6 +5,8 @@
 # testing: "I could not look" reported as healthy is how ten days of a dead
 # relay passed unnoticed. Everything here runs offline against a stub `ssh`
 # on PATH -- no dexter, no network, no credential.
+# HERMETICITY: no network, no dexter, no credential -- `ssh` is a stub on PATH
+# that prints a staged reply file, so every case is decided by local text.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 PROBE="$PWD/dexter-liveness.sh"

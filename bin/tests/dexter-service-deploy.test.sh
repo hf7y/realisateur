@@ -7,6 +7,10 @@
 # logs the link out and recovery costs a QR scan on Zach's phone. A refusal
 # that only exists in a comment is not a refusal, so it is tested here --
 # offline, against a stub `ssh`, before it is ever needed for real.
+# HERMETICITY: no network and no dexter -- both `ssh` and `rsync` are stubs on
+# PATH that record their calls, which is also how the refusal cases assert that
+# nothing was pushed or started. The one temp service dir it creates under
+# provision/dexter/ is removed in the same case that makes it.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 DEPLOY="$PWD/dexter-service-deploy.sh"
