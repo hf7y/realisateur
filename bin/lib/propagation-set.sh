@@ -390,6 +390,14 @@ PROP_LEAK_BOUND=7
 # #115's job. Reclassifying it here without the man page would silently drop
 # it from every build (#85).
 #
+# gh-comment.sh (#238) is LOCAL for the same reason as defere.sh, one step
+# short of the protest: nothing checked into this repo calls it yet (no
+# script here posts a GitHub comment at all -- that is the gap #238 found),
+# so unlike defere.sh it is not YET needed on the ten accounts, only built
+# ahead of that need so the stamp is never optional once something does call
+# it. Promote it alongside defere.sh if and when it gains a caller other
+# accounts need, not before -- the leak bound is the same FULL 7 either way.
+#
 # retire-check.sh (#166) is LOCAL for the identical reason, same paragraph:
 # adding an eighth PAYLOAD row raises the leak bound rather than shrinking it.
 # It also is not yet CALLED by anything -- wiring it into cloture.md step 3,
@@ -402,6 +410,7 @@ PROP_LOCAL_SCRIPTS="
 claim-drift.sh
 defere.sh
 deferral-ledger.sh
+gh-comment.sh
 retire-check.sh
 cut-verb-build.sh
 deploy-drift.sh
