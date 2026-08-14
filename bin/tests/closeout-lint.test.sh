@@ -23,7 +23,8 @@
 # --repo -> E3; stop skipping B/C -> E2; remove host-only-branch -> A4; reword
 # the unpushed count -> A3; remove worktree detection -> A8/A9; exempt dirt
 # unconditionally -> H2; call an unknown session start clean -> H3; FLAG only
-# the current worktree's branches -> I4; let B FLAG unreached -> B3/B4/B7.
+# the current worktree's branches -> I4; let B FLAG unreached -> B3/B4/B7; drop the
+# worktree-dirty mtime split -> G2b/G2c.
 #
 # Usage: bin/tests/closeout-lint.test.sh   (exit 0 = all pass)
 set -uo pipefail
@@ -411,6 +412,25 @@ run_rc "$T/blockers-today.md" --strict --repo "$T/wt_dirty"
 has   "G2 a dirty worktree is reported"              "$RUN_OUT" "note [worktree-dirty]"
 hasnt "G2 but it is not a FLAG"                      "$RUN_OUT" "FLAG [worktree"
 rc    "G2 and it does not gate a concurrent run"     0 "$RUN_RC"
+
+# G2b/G2c: mtime-split the worktree note the way #137 split the main checkout
+# (#150). An anchor an hour in the future makes the fixture's dirt unambiguously
+# OLDER than this session -- the agent that used the worktree already exited
+# before this run began, so it FLAGs instead of reading as a live concurrent
+# run. Same tree, anchor moved to 1970: every path now postdates the session
+# start, and the original note-only behaviour is preserved.
+SESSION_START="$(( $(date +%s) + 3600 ))"
+run_rc "$T/blockers-today.md" --strict --repo "$T/wt_dirty"
+has   "G2b abandoned worktree dirt FLAGs"            "$RUN_OUT" "FLAG [worktree-dirty-abandoned]"
+has   "G2b names the worktree path"                  "$RUN_OUT" "$T/wt_dirty-side"
+rc    "G2b and it gates"                             1 "$RUN_RC"
+
+SESSION_START=1
+run_rc "$T/blockers-today.md" --strict --repo "$T/wt_dirty"
+has   "G2c dirt modified during the session is still just a note" "$RUN_OUT" "note [worktree-dirty]"
+hasnt "G2c and still not a FLAG"                     "$RUN_OUT" "FLAG [worktree"
+rc    "G2c and it still does not gate"               0 "$RUN_RC"
+SESSION_START=""
 
 # G3: an UNREADABLE worktree is still BLIND. Removing the audit's ability to
 # say "I could not look" would trade one conflation for another.

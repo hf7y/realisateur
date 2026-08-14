@@ -10,7 +10,7 @@
 # RUNNER: hooks/subagent-closeout.sh bin/tests/closeout-lint.test.sh
 # GUARD-TEST: bin/tests/closeout-lint.test.sh
 # GATE: strict --repo $TREE
-# VERIFIED: 2026-08-14 via bash bin/tests/closeout-lint.test.sh (post-#245: Section B's own "no repo touched" NOTE fired even when the registry itself was BLIND, misreporting a session that had committed real work as one with nothing to record -- now BLIND there too)
+# VERIFIED: 2026-08-14 via bash bin/tests/closeout-lint.test.sh (110 passed, 0 failed; post-#150: [worktree-dirty] now gets the same mtime-vs-session-start split #137 gave the main checkout, so a worktree whose agent already exited FLAGs instead of reading as a live concurrent run)
 #
 # An overnight run that is not saved anywhere didn't happen, and the recorded
 # ways that goes wrong are a dirty tree at exit, a commit that never left the
@@ -271,15 +271,36 @@ while [ "$i" -lt "${#projects[@]}" ]; do
         fi
       fi
 
-      # A DIRTY TREE IS REPORTED AND DOES NOT GATE. A concurrent agent's tree
-      # is dirty by construction while it runs, so FLAGging it would make this
-      # guard red during every parallel session -- and red by default is
-      # furniture. Never silent, though: a human must see it and decide.
-      wdirty="$(git -C "$w" status --porcelain 2>/dev/null | grep -c .)"
-      if [ "${wdirty:-0}" -gt 0 ]; then
-        echo "    note [worktree-dirty] $name: $wdirty uncommitted path(s) in $w"
-        echo "      (not a FLAG: a live concurrent agent's tree is dirty by"
-        echo "       construction, and it is that run's to resolve, not this one's)"
+      # A DIRTY TREE, mtime-split the same way #137 split the main checkout
+      # (dirty_newer_than, above): dirt modified DURING this session could
+      # belong to a still-running concurrent agent in this same worktree, so
+      # it stays a note -- FLAGging it would make this guard red during every
+      # parallel session, and red by default is furniture. Dirt that predates
+      # this session's own start is different: whatever agent left it had
+      # already exited before this run even began, so nothing is left to
+      # adopt or clean it (#150; CLAUDE.md subagent rule, 2026-07-25 incident
+      # -- "a dirty tree at exit is a failed run, not a handoff"). Before this
+      # split, both cases printed the identical unconditional note, so a
+      # genuinely abandoned worktree read exactly like one mid-run.
+      wdirty_all="$(git -C "$w" status --porcelain 2>/dev/null)"
+      if [ -n "$wdirty_all" ]; then
+        wdcount="$(printf '%s\n' "$wdirty_all" | grep -c .)"
+        wrecent=""
+        [ -n "$SESSION_EPOCH" ] && wrecent="$(dirty_newer_than "$w" "$SESSION_EPOCH" "$wdirty_all")"
+        if [ -n "$SESSION_EPOCH" ] && [ -z "$wrecent" ]; then
+          echo "    FLAG [worktree-dirty-abandoned] $name: $wdcount uncommitted path(s) in $w, every one last modified BEFORE this session started ($(date -d "@$SESSION_EPOCH" '+%F %T' 2>/dev/null || printf '@%s' "$SESSION_EPOCH"))"
+          printf '%s\n' "$wdirty_all" | head -8 | sed 's/^/      /'
+          echo "      (the agent that used this worktree already exited before this"
+          echo "       session began -- nothing is left to adopt or clean this up)"
+          flags=$((flags+1))
+        else
+          echo "    note [worktree-dirty] $name: $wdcount uncommitted path(s) in $w"
+          if [ -n "$SESSION_EPOCH" ]; then
+            echo "      ($(printf '%s\n' "$wrecent" | grep -c .) of $wdcount modified since this session started)"
+          fi
+          echo "      (not a FLAG: a live concurrent agent's tree is dirty by"
+          echo "       construction, and it is that run's to resolve, not this one's)"
+        fi
       fi
     done <<EOF
 $wt
