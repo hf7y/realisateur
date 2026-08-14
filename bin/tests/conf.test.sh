@@ -52,29 +52,16 @@ printf 'OTHER="x"\n' > "$T/e.conf"
 conf_repo_path "$T/e.conf" >/dev/null 2>&1
 eq "A5  no PROJECT_REPO_PATH returns 1" "$?" "1"
 
-# --- B: restamp-discipline, end to end ---------------------------------------
-printf '\nB. restamp-discipline.sh against a fixture ecosystem\n'
-H="$T/home"; mkdir -p "$H/Documents/Projects/demo" "$T/sched/schedule"
-printf 'PROJECT_REPO_PATH="$HOME/Documents/Projects/demo"\n' > "$T/sched/schedule/demo.conf"
-git -C "$H/Documents/Projects/demo" init -q
-printf '# demo\n' > "$H/Documents/Projects/demo/CLAUDE.md"
-
-out="$(HOME="$H" SCHED_ROOT="$T/sched" "$REPO/bin/restamp-discipline.sh" demo 2>&1)"; rc=$?
-if printf '%s' "$out" | grep -q 'SKIP -- no git repo'; then
-  bad "B1  a real checkout is not skipped" "$(printf '%s' "$out" | grep SKIP)"
-else ok "B1  a real checkout is not skipped"; fi
-if printf '%s' "$out" | grep -q '\$HOME'; then
-  bad "B2  no literal \$HOME survives into the report"
-else ok "B2  no literal \$HOME survives into the report"; fi
-eq "B3  drift in a dry run exits 1" "$rc" "1"
-
-# The regression guard: every project skipped must NOT be a clean pass.
-rm -rf "$H/Documents/Projects/demo"
-out="$(HOME="$H" SCHED_ROOT="$T/sched" "$REPO/bin/restamp-discipline.sh" demo 2>&1)"; rc=$?
-eq "B4  a pass that reached nothing exits nonzero" "$rc" "1"
-if printf '%s' "$out" | grep -q 'NOTHING WAS REACHED'; then
-  ok "B4b and says so in words, not only in a code"
-else bad "B4b and says so in words, not only in a code"; fi
+# --- B: RETIRED 2026-08-14 -----------------------------------------------------
+# This section exercised restamp-discipline.sh end to end against a fixture
+# ecosystem, including its "a pass that reached nothing exits nonzero" guard.
+# The script is gone: `discipline` prints the one file at the point of use
+# instead of stamping copies into 17 repos (BUILD-DISCIPLINE.md,
+# "## The baseline"). Its replacement's tests live in bin/tests/discipline.test.sh.
+#
+# The B4 guard is NOT lost -- it is the shape that mattered here and it is
+# carried over: discipline.test.sh asserts the command refuses to print an
+# empty or truncated baseline and exit 0.
 
 # --- C: the population ratchet -----------------------------------------------
 # WHY A RATCHET AND NOT A LIST. lib/conf.sh's header used to NAME the four

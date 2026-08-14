@@ -446,7 +446,7 @@ markdown-cost.sh
 ownership-audit.sh
 port-markdown-cost.sh
 reach-lint.sh
-restamp-discipline.sh
+discipline.sh
 stamp-agent.sh
 suite-docs-lint.sh
 thermostat-wiring.sh
