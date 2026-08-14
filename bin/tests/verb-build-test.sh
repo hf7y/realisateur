@@ -167,17 +167,30 @@ check "a verb ADDED by the nightly build is linked with no hand step" \
 check "...while the verbs already there still resolve through current" \
       "$(readlink "$BIN/entraine")" "$ROOT/current/vim-arcade/bin/entraine"
 
-# The other half of a count change, and the one this channel does NOT handle:
-# a verb DROPPED from the manifest keeps its link, which now dangles. Asserted
-# as the known behaviour rather than left to be discovered on a live account --
-# PATH search skips a dangling link, so the failure is silent by construction.
+# The other half of a count change: a verb DROPPED from the manifest must
+# have its link removed, not left dangling -- PATH search skips a dangling
+# link, so leaving it there is a silent failure (realisateur#223).
 mk_build "2026-08-09T0130Z" "vim-arcade:entraine senechal:installe scheduler:arme"
 run --build 2026-08-09T0130Z --apply --link >/dev/null 2>&1
-if [ -L "$BIN/consulte" ] && [ ! -e "$BIN/consulte" ]; then
-    ok "a verb DROPPED from the build leaves a dangling link (known gap, not a surprise)"
+if [ ! -L "$BIN/consulte" ] && [ ! -e "$BIN/consulte" ]; then
+    ok "a verb DROPPED from the build has its link removed, not left dangling"
 else
-    bad "a dropped verb leaves a dangling link" "the link was cleaned -- update this test and the docs"
+    bad "a dropped verb's link is removed" \
+        "$([ -L "$BIN/consulte" ] && echo 'still a dangling symlink' || echo 'still present')"
 fi
+check "...while a verb still in the manifest keeps resolving through current" \
+      "$(readlink "$BIN/entraine")" "$ROOT/current/vim-arcade/bin/entraine"
+
+# The count check: after a drop, links pointing into the build root match
+# the manifest exactly -- the comparison an operator would reach for. Not
+# 3: `installe` stays foreign for the rest of the suite (test 6 gave it to
+# another owner), so only entraine and arme are ours to count.
+ours=0
+for f in "$BIN"/*; do
+    [ -L "$f" ] || continue
+    case "$(readlink "$f")" in "$ROOT/current/"*) ours=$((ours + 1)) ;; esac
+done
+check "count check: links into the build root match the manifest row count" "$ours" "2"
 
 echo
 printf 'verb-build: %d passed, %d failed\n' "$PASS" "$FAIL"
