@@ -137,7 +137,14 @@ mapfile -t SHIMMED < <(
     # hand-copied to ~/.local/bin, which is the failure install-shims exists
     # to retire. Existence of bin/<token>.sh is still the filter, so a prose
     # word can never become a shim.
-    grep -oP '`\K[a-z][a-z0-9-]*(?=[`[:space:]])' "$REPO/CLAUDE.md" 2>/dev/null \
+    # READ FROM BUILD-DISCIPLINE.md, NOT CLAUDE.md. Until 2026-08-14 the
+    # protocols block was STAMPED into CLAUDE.md and this line grepped the
+    # stamp. `discipline` retired the stamp, so CLAUDE.md now carries a
+    # one-line pointer and none of the command names -- grepping it would have
+    # silently dropped the silence-audit / consulte / focus-commit shims, i.e.
+    # deleted working guards as a side effect of a docs change. The names live
+    # where the text lives.
+    grep -oP '`\K[a-z][a-z0-9-]*(?=[`[:space:]])' "$REPO/BUILD-DISCIPLINE.md" 2>/dev/null \
       | while read -r t; do [ -f "$REPO/bin/$t.sh" ] && echo "$t"; done
   } | sort -u
 )

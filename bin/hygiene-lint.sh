@@ -125,14 +125,18 @@ fi
 
 total_flags=0
 
-# Baseline checklist row count, read from the ONE source (BUILD-DISCIPLINE.md's
-# own "## Build discipline (realisateur baseline" block) rather than retyped
-# here -- check 7b compares each project's stamped copy against it.
-BD_MD="$(cd "$(dirname "$0")/.." && pwd)/BUILD-DISCIPLINE.md"
-BASELINE_ROWS=0
-if [ -f "$BD_MD" ]; then
-  BASELINE_ROWS="$(awk '/^## Build discipline \(realisateur baseline/{f=1} f&&/^- \[ \]/{c++} END{print c+0}' "$BD_MD")"
-fi
+# RETIRED 2026-08-14: BASELINE_ROWS and check 7b. There are no stamped copies
+# to compare against any more -- `discipline` prints the one file at the point
+# of use (see BUILD-DISCIPLINE.md "## The baseline"). Nothing replaces 7b
+# because nothing needs to: the failure it watched for cannot occur when there
+# is only one copy.
+#
+# It is worth recording WHY it never worked, since the shape recurs. 7b
+# compared ROW COUNTS and emitted an advisory NOTE. On 2026-08-14 eleven repos
+# carried a byte-identical CORRUPTED checklist and were two source-generations
+# behind, and this check read CLEAN throughout -- both sides had ten rows. A
+# check that passes on the exact failure it exists to catch is worse than no
+# check, because it also supplies the confidence.
 
 for name in "${projects[@]}"; do
   conf="$SCHED_ROOT/schedule/$name.conf"
@@ -291,20 +295,6 @@ for name in "${projects[@]}"; do
     fi
   else
     echo "  NOTE [no-claude-md] no root CLAUDE.md tracked"
-  fi
-
-  # 7b. STAMPED-CHECKLIST DRIFT ------------------------------------------------
-  # BUILD-DISCIPLINE.md's baseline checklist is COPIED into each project's
-  # CLAUDE.md at scaffold time; when the baseline gains a row, every stamped
-  # copy silently lags and nothing detects it (incident: three rows added
-  # 2026-07-25, nothing noticed). Compare row counts, not text -- a project
-  # may legitimately append its OWN rows, so only a SHORTFALL is reported.
-  if [ "${BASELINE_ROWS:-0}" -gt 0 ] && echo "$tracked" | grep -qx 'CLAUDE.md'; then
-    have="$(git -C "$repo" show ":CLAUDE.md" 2>/dev/null \
-            | awk '/^## Build discipline/{f=1} f&&/^- \[ \]/{c++} END{print c+0}')"
-    if [ "$have" -gt 0 ] && [ "$have" -lt "$BASELINE_ROWS" ]; then
-      echo "  NOTE [checklist-drift] CLAUDE.md checklist has $have row(s), baseline has $BASELINE_ROWS -- restamp from BUILD-DISCIPLINE.md"
-    fi
   fi
 
   # 7c. UNWIRED DEPLOY KEY ------------------------------------------------------
