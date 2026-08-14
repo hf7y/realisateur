@@ -30,6 +30,8 @@
 #      '=' padding or '+/' in place)
 #   F  env var beats config file       -> SELFDEV_APP_ID wins over the conf
 #   G  key with loose permissions      -> --check says BAD, exit 5
+#   G2 host-wide key (0640, group selfdev) -> --check says OK, not BAD
+#   G3 0640 outside the selfdev group  -> --check says BAD, exit 5
 #
 # Usage: bin/tests/selfdev-gh-app.test.sh   (exit 0 = all pass)
 set -uo pipefail
@@ -150,6 +152,32 @@ out="$(run env SELFDEV_APP_CONF="$T/none.conf" SELFDEV_APP_ID=4520255 \
         "$SCRIPT" --check 2>&1)"; rc=$?
 has "G flags mode 644 as BAD" "$out" "must be 600"
 eq  "G exits 5" "$rc" "5"
+
+# --- G2: the host-wide key (mode 640, group selfdev) is not a defect ----------
+# realisateur#269: one root:selfdev key is deliberately group-readable so every
+# account in the selfdev group can mint tokens from it; chmod 600 would break
+# all of them. `id -Gn` covers a caller in the group without needing root.
+if id -Gn | tr ' ' '\n' | grep -qx selfdev; then
+  cp "$T/app.pem" "$T/shared.pem"; chmod 640 "$T/shared.pem"; chgrp selfdev "$T/shared.pem"
+  outG2="$(run env SELFDEV_APP_CONF="$T/none.conf" SELFDEV_APP_ID=4520255 \
+          SELFDEV_APP_KEY="$T/shared.pem" SELFDEV_GH_API="http://127.0.0.1:1" \
+          "$SCRIPT" --check 2>&1)"
+  has "G2 mode 640 group selfdev reports OK, not BAD" "$outG2" "shared.pem (mode 640"
+  no  "G2 does not call the host-wide key a defect" "$outG2" "shared.pem is mode"
+  # exit code is not asserted here: SELFDEV_GH_API points at a closed port (see
+  # file header), so the WITNESS step always fails and --check always exits 5
+  # in this offline harness (see D) -- unrelated to the key-mode check under test.
+else
+  echo "  skip G2 -- caller is not in the selfdev group"
+fi
+
+# --- G3: mode 640 outside the selfdev group is still a defect -----------------
+cp "$T/app.pem" "$T/other.pem"; chmod 640 "$T/other.pem"
+outG3="$(run env SELFDEV_APP_CONF="$T/none.conf" SELFDEV_APP_ID=4520255 \
+        SELFDEV_APP_KEY="$T/other.pem" SELFDEV_GH_API="http://127.0.0.1:1" \
+        "$SCRIPT" --check 2>&1)"; rcG3=$?
+has "G3 mode 640 outside selfdev group is flagged BAD" "$outG3" "must be 600"
+eq  "G3 exits 5" "$rcG3" "5"
 
 # --- H: --adopt refuses a bad key BEFORE it moves anything ---------------------
 # Ordering is the assertion. Validating after the install would leave a junk
