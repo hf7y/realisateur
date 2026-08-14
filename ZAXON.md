@@ -66,7 +66,62 @@ the message. `"realisateur-claude-code"`, not `"agent"`.
 **This is a human on the other end.** Replies take minutes to hours. Poll every
 30–60s; never busy-loop. An unanswered ticket is not a failure.
 
+## DOWN as of 2026-08-14 — every route, not one host
+
+zaxon answers nothing right now. Found by `groc-mangr@monkey` working
+hf7y/groc-mangr#9 on its own dispatch, then re-probed by hand from mandark and
+from dexter rather than relayed:
+
+```
+# from mandark, 2026-08-14T02:5xZ
+curl -X POST http://100.107.253.56:8643/mcp ...      HTTP 000     (was 200 on 08-04)
+ping 100.107.253.56                                   up
+# from monkey, same night (the run's own probe)
+curl http://10.0.2.2:8643/mcp                         refused
+curl http://100.107.253.56:8643/mcp                   refused
+# from dexter's Ubuntu distro
+curl http://127.0.0.1:8643/mcp                        HTTP 000
+ss -ltn | grep 8643                                   nothing listening
+```
+
+**All WSL2 distros on a host share one network namespace**, so `127.0.0.1:8643`
+inside dexter's Ubuntu would reach a listener inside `hermes`. Nothing is
+listening. So this is not a network fault and not a per-host fault:
+`hermes-gateway.service` is not running, most likely because the `hermes`
+distro itself is stopped (WSL terminates idle distros).
+
+**Why it was not fixed in that session, stated plainly rather than left as a
+silence.** Starting a distro needs `wsl.exe`, which needs the Windows side, and
+both doors were shut:
+
+| door | state, probed 2026-08-14 |
+|---|---|
+| `wsl.exe` from dexter's Ubuntu | `Exec format error` — `/proc/sys/fs/binfmt_misc/` has no `WSLInterop` entry, though binfmt itself is `enabled`. Known interaction with `systemd=true` in `/etc/wsl.conf`. Re-registering it needs root. |
+| `sudo` in dexter's Ubuntu | `sudo: interactive authentication is required` — no passwordless sudo for `zach@dexter` |
+| Windows sshd, `dexter:22` | `Permission denied (publickey,password,keyboard-interactive)` — mandark holds no key for it. Only `2223` (the WSL sshd) accepts us |
+
+**The one-liner, from a Windows terminal on dexter:**
+
+```
+wsl -d hermes -u root systemctl start hermes-gateway
+wsl -d hermes -u root systemctl status hermes-gateway --no-pager
+```
+
+Then verify from anywhere else — `curl http://100.107.253.56:8643/mcp` should
+stop returning `000`.
+
+**The durable fix is not that command.** A relay that stops when a distro goes
+idle, with nothing watching, is a channel that is down exactly when an agent
+needs to ask a question — which is what happened here: it was silently dead for
+some part of ten days and the estate found out only because one dispatch run
+happened to try. Wanted: the distro kept alive (`wsl.conf` / a Windows
+scheduled task), plus a liveness probe that files a finding, not a doc that
+says it works.
+
 ## Reachability — probed, per host
+
+**Superseded by the outage above; this table is the 2026-08-04 baseline, kept
+because it records which route works from which host once the service is back.**
 
 | from | URL | result (2026-08-04) |
 |---|---|---|
