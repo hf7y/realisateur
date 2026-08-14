@@ -398,7 +398,24 @@ PROP_LEAK_BOUND=7
 # refuses in an unattended session (#187, same wall). Until both land --
 # PAYLOAD without growing the bound, and the cloture.md wiring -- this stays a
 # standalone tool run by path, not a verb.
+# publish-monkey-status.sh is LOCAL for publish-release-verdict.sh's reason,
+# one paragraph up: it runs where the ssh credential to the self-dev host is,
+# and an account never publishes a page about its own fleet.
+#
+# playbook.sh IS FILED HERE UNDER PROTEST, like defere.sh above, and with the
+# same issue-number-not-a-sentence rule: hf7y/realisateur#244. Its `push` half
+# is genuinely local -- a human hand, at a keyboard with write access. Its
+# `pull` half is the opposite: it is meant to run on every dispatch account,
+# first thing, before the queue. LOCAL means it does not exist there. Until it
+# is declared as bin/playbook + man/playbook.1 on the bashified branch and
+# added to PAYLOAD (without growing PROP_LEAK_BOUND, see #115's shape), the
+# accounts read their brief with a two-command `gh` snippet written into
+# BATCH_PROMPT instead -- which is retyped logic, which is the defect, which
+# is what #244 is for. Do NOT reclassify this row to PAYLOAD without the man
+# page: that drops it from every build in silence (#85).
 PROP_LOCAL_SCRIPTS="
+playbook.sh
+publish-monkey-status.sh
 claim-drift.sh
 defere.sh
 deferral-ledger.sh
