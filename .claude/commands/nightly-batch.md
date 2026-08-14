@@ -47,16 +47,7 @@ two different names. For per-project git health and open questions use
 was calling. See `bin/tests/guard-estate.test.sh` for the standard the
 survivors are now held to, and for what is knowingly given up.
 
-**Then run `bin/hygiene-lint.sh`** (offline, no AI cost). It's the third
-mechanical survey: it scans every
-registered project for the recurring build/deploy failure signatures in
-`BUILD-DISCIPLINE.md` -- secrets in tracked files, build debris, finished-
-but-uncommitted scripts, missing exec bits, silent-pipeline smells, config
-duplication. Same stance as the others: its FLAGs are *signals*, not
-verdicts -- a human/AI confirms each before acting, and most belong to
-other projects' own nightly runs, not this one. Note any FLAG against a
-project *this* run touches and fix it before committing; don't go fix the
-whole ecosystem unprompted.
+(The third survey was `bin/hygiene-lint.sh`, retired: hf7y/realisateur#265.)
 
 **Read the answers on your own issues and process them.** Zach answers by
 commenting and LEAVING THE ISSUE OPEN -- state and labels say nothing about
@@ -170,21 +161,17 @@ For each unarchived artifact:
   inferred **v1 core** of the idea, filed as a `milestone` issue,
   `status: not-started`. That milestone is what every later idea against
   the project gets park-by-default-triaged against.
-- **Stamp the build-discipline baseline into every new project** so the
-  lessons in `BUILD-DISCIPLINE.md` are inherited from day one, not
-  rediscovered per project the hard way (see that file for why -- it
-  generalizes `crt`'s retrospective):
-  - Append the "Build discipline" checklist block from
-    `BUILD-DISCIPLINE.md` to the new project's root `CLAUDE.md`.
+- **Point every new project at `discipline`; do NOT copy the checklist in.**
+  Its root `CLAUDE.md` gets a one-line pointer to the command. Copying the
+  block is what realisateur#263 retired.
   - Write a baseline `.gitignore` that blocks secrets and build debris
     before the first `git add`: at minimum
     `*.env`, `.env`, `secrets/`, `*secret*`, `*cred*`, `*.pem`, `*.key`,
     `id_rsa*`, plus build/debris `*.img`, `*.img.xz`, `*.iso`, `*.efi`,
     `*.dmg`, `*.log`, `__pycache__/`, `*.pyc`, `.DS_Store`. Real secrets
     go in an untracked `.env`/`secrets/`, never a tracked file.
-  - `bin/hygiene-lint.sh <name>` should come back clean (or only advisory
-    NOTEs) before you consider the scaffold done -- that's the mechanical
-    proof the baseline actually took.
+  - Prove it took by RUNNING `discipline` from the new project and seeing the
+    full checklist, not by trusting that a file was written.
 - If the new project is the kind of thing that benefits from unattended
   nightly iteration (most agent/codebase projects are), wire it into the
   scheduler exactly as `SCHEDULER.md` documents for realisateur itself:

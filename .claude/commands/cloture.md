@@ -68,8 +68,7 @@ worktree, and dirt this run made from dirt that predates it
   exactly what `claim-drift.sh <n>` checks — run it on anything you
   touched.
 
-`hygiene-lint <project>` too, for any project this session
-touched — it overlaps deliberately little with the above.
+(`hygiene-lint` ran here until it was retired: hf7y/realisateur#265.)
 
 ## 2. Name the philosophy delta, or say "none"
 

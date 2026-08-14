@@ -44,15 +44,7 @@ project you are about to touch. `ecosystem-survey`,
 as four re-implementations of one registry enumeration that nothing ran; each
 project's stability milestone is read from its own FOCUS.md
 `## Stability milestone` section, convention in `STABILITY-MILESTONES.md`.
-**Then run `bin/hygiene-lint.sh`** (offline) --
-the build-hygiene scan for `BUILD-DISCIPLINE.md`'s recurring failure
-signatures. `/nightly-batch` has always run it; `/ideate` should too, and
-for a reason specific to this command: an interactive pass is where
-weights get raised and ideas get promoted, and it is worth knowing that a
-project you are about to accelerate is carrying a dirty tree, a stranded
-commit, or a `[dispatch-parity]` gap. Same stance as the others -- FLAGs
-are signals, most belong to other projects' own runs, and this pass fixes
-only what it touches. Also read this repo's own open issues.
+(`hygiene-lint` ran here until it was retired: hf7y/realisateur#265.)
 
 **Single-project (`$ARGUMENTS` given):** run
 `"/home/zach/Documents/Projects/scheduler/bin/scheduler" status <project>`
