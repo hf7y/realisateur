@@ -8,6 +8,19 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 B="$HERE/bin/bashify"
+
+# bin/bashify's own page documents `bashify list` showing `page` as SUMMON,
+# which is only true when $BASHEUR_BIN resolves to something executable.
+# Without a basheur checkout as a sibling project (true on most hosts and
+# in CI), `page` reports GAP instead and the EXAMPLES row fails -- not
+# because the tool is broken, but because this test was reading host state
+# instead of testing the page. Stub it, same as guard-estate stubs gh/ssh.
+STUB_STORE="$(mktemp -d)/basheur"
+printf '#!/bin/sh\nexit 0\n' > "$STUB_STORE"
+chmod +x "$STUB_STORE"
+export BASHEUR_BIN="$STUB_STORE"
+trap 'rm -rf "$(dirname "$STUB_STORE")"' EXIT
+
 pass=0; fail=0
 t() { # t <name> <want-rc> <args...>
   local name="$1" want="$2"; shift 2
