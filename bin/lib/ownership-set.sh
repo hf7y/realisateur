@@ -213,6 +213,8 @@ bin/selfdev-app-key.sh             realisateur places the ONE self-dev GitHub Ap
 bin/lib/selfdev-app-key.sh         realisateur the resolution order bin/selfdev-app-key.sh, bin/selfdev-gh-app.sh and bin/selfdev-credentials.sh all read -- follows its subject, the way bin/lib/ownership-set.sh follows this audit. It exists because that one fact was spelled four different ways in four scripts (realisateur#209).
 bin/tests/selfdev-app-key.test.sh  realisateur the witness for the two above; follows them.
 bin/lib/selfdev-credentials-set.sh realisateur the baseline bin/selfdev-credentials.sh reads from -- follows its subject, the way bin/lib/ownership-set.sh follows this audit.
+bin/lib/api-restamp.sh             realisateur the GitHub-API fallback transport bin/restamp-discipline.sh falls back to when git push cannot reach a foreign repo (#256) -- follows its subject, the way bin/lib/conf.sh follows restamp-discipline.sh's own conf reads.
+bin/tests/api-restamp.test.sh      realisateur follows its subject.
 "
 
 # ---- DELEGABLE -------------------------------------------------------------
