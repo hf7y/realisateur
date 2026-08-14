@@ -512,6 +512,15 @@ J2_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" BLOCKERS_MD="$T/blockers-today.md" HO
 rc    "J2 --strict against an absent registry gates as BLIND (6)" 6 "$J2_RC"
 has   "J2 names the registry path"             "$J2_OUT" "$EMPTY/schedule/"
 
+# hf7y/realisateur#245: an unreadable registry also empties touched_paths, so
+# Section B's "no repo touched" branch fired even when this session HAD
+# committed and pushed real work -- a blind enumerator phrasing its own
+# blindness as a finding about the subject. Must read BLIND, not NOTE.
+has   "J2 Section B is BLIND too, not a false 'no work' claim" "$J_OUT" \
+  "BLIND [session-record] registry was unreadable"
+hasnt "J2 and never claims there was no work to record"       "$J_OUT" \
+  "no work to have recorded"
+
 J3_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" BLOCKERS_MD="$T/blockers-today.md" HOURS=12 \
   GH_BIN="$GH_DEFAULT" SESSION_START="" "$SCRIPT" --strict --allow-blind 2>&1)"; J3_RC=$?
 rc    "J3 --allow-blind downgrades it to a warning" 0 "$J3_RC"

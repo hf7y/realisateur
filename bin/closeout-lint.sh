@@ -10,7 +10,7 @@
 # RUNNER: hooks/subagent-closeout.sh bin/tests/closeout-lint.test.sh
 # GUARD-TEST: bin/tests/closeout-lint.test.sh
 # GATE: strict --repo $TREE
-# VERIFIED: 2026-08-13 via bash bin/tests/closeout-lint.test.sh (post-#232: an absent/unreadable registry now counts as BLIND instead of reporting a clean 0 FLAG/0 BLIND sweep)
+# VERIFIED: 2026-08-14 via bash bin/tests/closeout-lint.test.sh (post-#245: Section B's own "no repo touched" NOTE fired even when the registry itself was BLIND, misreporting a session that had committed real work as one with nothing to record -- now BLIND there too)
 #
 # An overnight run that is not saved anywhere didn't happen, and the recorded
 # ways that goes wrong are a dirty tree at exit, a commit that never left the
@@ -146,6 +146,7 @@ blind=0
 touched=0
 touched_names=()
 touched_paths=()
+registry_blind=0
 now="$(date +%s)"
 
 # REGISTRY ITSELF UNREADABLE (hf7y/realisateur#232). A full sweep (no --repo,
@@ -160,6 +161,7 @@ now="$(date +%s)"
 # domain this script could not read.
 if [ -z "$REPO_ARG" ] && [ "${#want[@]}" -eq 0 ] && [ "${#projects[@]}" -eq 0 ]; then
   blind=$((blind+1))
+  registry_blind=1
   echo "  BLIND [registry] no registered project was readable under $SCHED_ROOT/schedule/ -- 'could not look', not 'nothing to report'"
 fi
 cutoff=$(( HOURS * 3600 ))
@@ -492,6 +494,11 @@ if ! command -v "$GH_BIN" >/dev/null 2>&1; then
   blind=$((blind+1))
   echo "  BLIND [session-record] '$GH_BIN' is not on PATH, so nothing here can ask"
   echo "    the remote where /cloture §3 now says the record goes."
+elif [ "$registry_blind" = 1 ]; then
+  blind=$((blind+1))
+  echo "  BLIND [session-record] registry was unreadable (see A above) -- cannot"
+  echo "    enumerate which repos this session touched, so whether any has a"
+  echo "    record is unknown -- this is not a claim that there was none."
 elif [ "${#touched_paths[@]}" -eq 0 ]; then
   echo "  NOTE no repo touched in the last ${HOURS}h -- no work to have recorded."
 else
