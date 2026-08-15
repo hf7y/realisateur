@@ -319,14 +319,14 @@ eq "K5  and still names exactly one line" "$n2" "1"
 # first, the link then dangled, `[ -e ]` read false, and the tool reported
 # "removal complete" with both links still on disk.
 note "M. Symlinked targets"
-mkdir -p "$T/repo-link/.claude" && cd "$T/repo-link"
+mkdir -p "$T/repo-link/.claude" && cd "$T/repo-link" || exit 1
 git init -q . && git config user.email t@t && git config user.name t
 mkdir -p .scheduler && echo "# retired" > .scheduler/FOCUS.md
 ln -s ../.scheduler/FOCUS.md .claude/FOCUS.md
 git add -A && git commit -qm init
 rc=0; "$CMD" "$T/repo-link" --apply >/dev/null 2>&1 || rc=$?
 eq "M1  --apply exits 2" "$rc" "2"
-cd "$T/repo-link"
+cd "$T/repo-link" || exit 1
 [ -L .claude/FOCUS.md ] && bad "M2  dangling symlink survived" || ok "M2  symlink removed too"
 [ -d .scheduler ] && bad "M3  .scheduler survived" || ok "M3  .scheduler removed"
 

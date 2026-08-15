@@ -270,8 +270,19 @@ PYSCANNER
 
   # awk still handles shell/js/yaml, where a comment really is "the line starts
   # with a marker" or a /* */ block -- no ambiguity to desync on.
+  #
+  # The pattern reaches awk through the ENVIRONMENT, never through -v. It is a
+  # grep ERE containing a backslash-dot, and awk's -v PROCESSES escape
+  # sequences: -v both warned and degraded backslash-dot to "." = any
+  # character. The .scheduler/ alternative then matched
+  # "Projects/scheduler/schedule" -- a path to a SIBLING CHECKOUT -- in
+  # basheur's impl/project-evidence and crt's crt-present-morning-report.py.
+  # A false positive nobody can legitimately fix blocks --apply forever, which
+  # is worse than a miss. This is the fourth double-escaping bug in this file;
+  # ENVIRON has no escape layer to get wrong, which is why it is used rather
+  # than doubling the backslashes and hoping the next reader keeps the count.
   awk_matches=$(printf '%s\n' "$other_files" | grep -v '^$' | tr '\n' '\0' \
-    | xargs -0 -r awk -v pat="$pat" '
+    | SUNSET_PAT="$pat" xargs -0 -r awk 'BEGIN { pat = ENVIRON["SUNSET_PAT"] }
       FNR==1 { inblk=0; inpy=0 }
       {
         s=$0; sub(/^[ \t]*/,"",s); c=$0; iscomment=0
