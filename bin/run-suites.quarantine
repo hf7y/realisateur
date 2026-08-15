@@ -1,0 +1,14 @@
+# run-suites.quarantine -- suites allowed to fail without reddening the
+# required check that bin/run-suites.sh gates (see #316).
+#
+# One entry per line, tab-separated: <suite-path>\t<issue-ref>\t<reason>
+# The suite still runs and a failure still prints loud (::warning, not
+# silence) -- quarantine hides a failure from the gate, not from the log.
+# Remove the line the moment the suite is fixed; a quarantine entry for a
+# now-passing suite prints its own stale notice so it does not linger.
+#
+# Empty today: every suite in bin/tests/ and bashify/test/ passed as of
+# 2026-08-15 (re-probed for #316). This file exists so the NEXT suite that
+# goes bad under time pressure has a one-line lever instead of forcing the
+# choice #125 forced -- block every PR in the repo, or drop the whole
+# `suites` required check.

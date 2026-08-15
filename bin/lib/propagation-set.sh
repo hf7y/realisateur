@@ -499,6 +499,7 @@ repo-settings-provision.sh
 branch-protection-provision.sh
 verbs-refresh.sh
 no-worktree-lint.sh
+run-suites.sh
 "
 # repo-settings-provision.sh is LOCAL for thermostat-wiring.sh's reason, not
 # bin/shellcheck-lint.sh's. (The `bin/` is load-bearing: a comment line whose

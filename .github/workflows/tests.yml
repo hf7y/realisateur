@@ -62,51 +62,11 @@ jobs:
           git config --global user.name  "realisateur CI"
           git config --global init.defaultBranch main
 
-      # Every suite runs. A suite that fails does not stop the ones after it --
-      # one red assertion hiding eight other suites' results is how a run gets
-      # reported as "the tests are broken" instead of as a list.
-      #
+      # bin/run-suites.sh does the looping and quarantine handling (#316).
       # Two globs, not one: bashify/test/ carries its own verify-*.sh suites
-      # that bin/tests/*.sh never matched, so nothing ran them (#157). Still a
-      # glob, not a roster -- a new bashify suite is picked up the same way a
-      # new bin/tests/ suite is, with nothing here to append to.
+      # that bin/tests/*.sh never matched (#157). Still a glob, not a roster.
       - name: Run every suite in bin/tests/ and bashify/test/
-        run: |
-          set -uo pipefail
-          failed=""
-          ran=0
-          for t in bin/tests/*.sh bashify/test/verify-*.sh; do
-            ran=$((ran + 1))
-            echo "::group::$t"
-            # `rc=0; cmd || rc=$?` and NOT `cmd; rc=$?`. GitHub runs a `run:`
-            # block under `bash -eo pipefail`, so the plain form aborts the
-            # whole step on the first failing suite -- which is precisely the
-            # "one red assertion hides eight suites" failure this loop exists
-            # to prevent, and it is invisible until a suite actually fails.
-            # Measured: run 31153987276 stopped dead at the first suite and
-            # never ran any of the ones after it.
-            rc=0
-            bash "$t" || rc=$?
-            echo "::endgroup::"
-            if [ "$rc" -ne 0 ]; then
-              echo "::error file=$t::suite failed (exit $rc)"
-              failed="$failed $t"
-            fi
-          done
-          echo
-          # A run that matched no suites is a broken glob, not a clean tree.
-          # Reporting it as success is the "found nothing / nothing is wrong"
-          # conflation this repository keeps paying for.
-          if [ "$ran" -eq 0 ]; then
-            echo "::error::bin/tests/*.sh and bashify/test/verify-*.sh matched nothing -- this run tested NOTHING."
-            exit 2
-          fi
-          echo "ran $ran suite(s)."
-          if [ -n "$failed" ]; then
-            echo "FAILED:$failed"
-            exit 1
-          fi
-          echo "all $ran suite(s) passed."
+        run: bash bin/run-suites.sh bin/tests/*.sh bashify/test/verify-*.sh
 
   # SHELLCHECK. A separate job from `suites` on purpose: the suite above
   # asserts that bin/shellcheck-lint.sh BEHAVES (its regression path fires, it
