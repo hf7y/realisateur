@@ -169,7 +169,11 @@ TESTS="$REPO/bin/tests"
 # lowered. Raising one is the change this file exists to make visible.
 GUARD_OPERATOR_BOUND="${GUARD_OPERATOR_BOUND:-5}"   # no automatic runner
 GUARD_UNTESTED_BOUND="${GUARD_UNTESTED_BOUND:-4}"   # no dedicated suite
-GUARD_UNGATED_BOUND="${GUARD_UNGATED_BOUND:-7}"     # not safely executable here
+# 7 -> 9 on 2026-08-15 (#294, #304): bin/directive-prose.sh and
+# bin/rot-ratchet.sh. Both are `GATE: none` for reasons already accepted here
+# -- a diff gate cannot form a merge-base in a fixture repo (markdown-cost.sh),
+# and an estate survey needs the live issue trackers (thermostat-wiring.sh).
+GUARD_UNGATED_BOUND="${GUARD_UNGATED_BOUND:-9}"     # not safely executable here
 
 # UNDECLARED IS ZERO, and it earned the right to be. It was briefly 1, for
 # bin/closeout-lint.sh, which was being rewritten concurrently on

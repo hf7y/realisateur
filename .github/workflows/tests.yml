@@ -171,3 +171,6 @@ jobs:
 
       - name: Price the prose in this diff
         run: bash bin/markdown-cost.sh
+
+      - name: A decision recorded in prose must cite an issue
+        run: bash bin/directive-prose.sh
