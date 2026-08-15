@@ -66,7 +66,44 @@ the message. `"realisateur-claude-code"`, not `"agent"`.
 **This is a human on the other end.** Replies take minutes to hours. Poll every
 30–60s; never busy-loop. An unanswered ticket is not a failure.
 
-## DOWN as of 2026-08-14 — every route, not one host
+## PARTLY RECOVERED as of 2026-08-15 — up on dexter, unreachable from anywhere else
+
+Re-probed 2026-08-15 while sending Zach a status message. The section below
+says *"nothing is listening on 8643 anywhere"*. That is **no longer true**:
+
+```
+mandark  localhost:8643        closed
+mandark  dexter:8643           closed
+dexter   localhost:8643        OPEN   -- full MCP initialize answered,
+                                         ask_zach accepted, ticket returned
+```
+
+So the service is **running inside hermes and serving**, and the failure is
+now purely one of **reach**: it answers on dexter's own loopback and on no
+route any other host can take. Whether it is bound to `127.0.0.1` rather than
+`0.0.0.0`, or whether the tailnet/NAT routes below are separately broken, is
+**not established** — only that the two conditions differ.
+
+**The working route today, from mandark:**
+
+```
+ssh -p 2223 dexter 'curl -s -X POST http://localhost:8643/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" -d "<jsonrpc>"'
+```
+
+Streamable-http needs the `initialize` handshake first and the `mcp-session-id`
+it returns; a bare `tools/call` is rejected. Sent this way 2026-08-15,
+ticket `5bbc3de8` accepted.
+
+The point worth keeping: **"DOWN everywhere" was measured from the outside,
+and the outside is exactly where it is broken.** An external probe cannot
+distinguish "the service is dead" from "the service is fine and unreachable",
+and this record asserted the first for a day while the second was true. The
+same shape as `systemctl is-enabled` reading `disabled` for a live
+timer-activated unit.
+
+## DOWN as of 2026-08-14 — every route, not one host (superseded above)
 
 Found by `groc-mangr@monkey` working hf7y/groc-mangr#9, then re-probed by hand
 from mandark, monkey and dexter: nothing is listening on 8643 anywhere, while
