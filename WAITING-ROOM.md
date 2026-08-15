@@ -126,8 +126,24 @@ verb resolved it rather than picking a winner. The name `trie` is its original
 one; only the name returned — the two-clause summary that got it renamed to
 `range` on 07-31 did not.
 
-quatre-vingt-douze (`cueille`) remains genuinely reaped: folded into
-bibliothecaire as `glane`/`accroche` and removed from disk.
+quatre-vingt-douze (`cueille`) — **this file recorded the fold as done, and it
+was not.** Corrected 2026-08-15 (#290). The claim above read: *"remains
+genuinely reaped: folded into bibliothecaire as `glane`/`accroche` and removed
+from disk."* Probed against the code rather than the claim: `bibliothecaire`
+has `man/cueille.1` committed, and `bibliothecaire/bin` has **no `cueille` and
+no `page92.py`** — the man page landed, the implementation never did
+(hf7y/bibliothecaire#40).
+
+The repo is archived and read-only, so it could not receive the work back.
+Zach's call, 2026-08-15: no unarchive; fold it. The six pieces of un-reaped
+work now live in bibliothecaire as #40 (the decision and its done-when),
+#43, #44, #45, #46 and #47. The no-auto-arranging constraint — *user judgment
+IS the product* — travels with them, which is the thing a silent deletion
+would have lost.
+
+This entry is left here rather than rewritten clean, because a record that
+said "done" about work that never ran is the exact failure #294 is about, and
+the correction is worth more than the tidiness.
 
 ## What ends a stay here
 
