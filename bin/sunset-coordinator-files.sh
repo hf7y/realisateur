@@ -106,8 +106,15 @@ done
 cd "$repo" || die "cannot cd: $repo"
 git rev-parse --git-dir >/dev/null 2>&1 || die "not a git repo: $repo"
 
-branch="$(git symbolic-ref --quiet --short HEAD)" \
-  || die "detached HEAD -- refusing to work on no branch"
+# A DRY RUN NEEDS NO BRANCH. Only --apply cuts one, so only --apply requires
+# one. Demanding it up front made the script unusable against exactly the
+# checkouts you most want to scan -- a CI checkout (this repo's own `suites`
+# job runs detached, and test A failed there while passing locally), a pinned
+# clone, a tag. The refusal is kept, moved to the step that actually needs it.
+branch="$(git symbolic-ref --quiet --short HEAD || true)"
+if [ $APPLY -eq 1 ] && [ -z "$branch" ]; then
+  die "detached HEAD -- refusing to cut a branch from no branch"
+fi
 
 repo_name="$(basename "$(git rev-parse --show-toplevel)")"
 

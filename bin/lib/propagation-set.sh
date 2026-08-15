@@ -433,7 +433,12 @@ PROP_LEAK_BOUND=7
 # where the previous publisher could not report an outage because publishing
 # required ssh to the thing that was down). A watcher that ships to its subject
 # is the failure, not the delivery.
+# sunset-coordinator-files.sh is LOCAL because it operates on a CHECKOUT it is
+# handed -- a clone of some other repo, on a branch it cuts and pushes. An
+# account has no such clone and no push right to sixteen foreign repos; the
+# sweep is run once, from a workstation, against fresh clones.
 PROP_LOCAL_SCRIPTS="
+sunset-coordinator-files.sh
 dexter-liveness.sh
 dexter-service-deploy.sh
 monkey-vdi-to-internal.sh
