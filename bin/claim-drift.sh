@@ -375,7 +375,7 @@ for n in "${PRS[@]}"; do
     printf '  #%-4s UNDECIDED ready, not auto-merging, and its first line does not say why.\n' "$n"
     printf '                  Either `gh pr merge %s --auto --squash` (no decision needed),\n' "$n"
     printf '                  or open the body with `DECISION: <the call>`.\n'
-    printf '                  See: claim-drift.sh --convention\n'
+    printf '                  See: claim-drift --convention\n'
   fi
 
   # THE MIRROR CHECK: a DECISION nobody needs to make. See is_additive_only_diff
@@ -389,7 +389,7 @@ for n in "${PRS[@]}"; do
       printf '                  shrinking .md edit -- nothing existing was touched. Re-check\n'
       printf '                  whether this really needs the human'"'"'s call, or downgrade to\n'
       printf '                  plain ready + auto-merge (no decision) or a NO-DECISION line.\n'
-      printf '                  See: claim-drift.sh --convention\n'
+      printf '                  See: claim-drift --convention\n'
     fi
   fi
 
