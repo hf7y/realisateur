@@ -115,6 +115,37 @@ rc=0
 "$CMD" /nonexistent 2>&1 >/dev/null || rc=$?
 eq "F4  nonexistent repo exits 3" "$rc" "3"
 
+# --- G: the two defects that would have caused real damage ---
+# G1: chezz's live producer is test/answer-channel.spec.mjs, which resolves
+# .scheduler/QUESTIONS.md at runtime. A scan limited to *.sh/*.yml reports
+# chezz clean and deletes the files the suite reads.
+# G2: --apply used to commit onto whatever branch was checked out, so running
+# it on main committed the removal to a protected branch.
+note "G. Regressions"
+mkdir -p "$T/repo-mjs" && cd "$T/repo-mjs"
+git init -q . && git config user.email t@t && git config user.name t
+mkdir -p .scheduler scripts
+echo "# retired" > .scheduler/FOCUS.md
+printf 'const F = path.join(ROOT, ".scheduler", "FOCUS.md");\n' > scripts/reader.mjs
+git add -A && git commit -qm init
+rc=0; out="$("$CMD" "$T/repo-mjs" 2>&1)" || rc=$?
+eq "G1  a .mjs producer blocks the sunset" "$rc" "1"
+printf '%s' "$out" | grep -q "reader.mjs" && \
+  ok "G1b names the .mjs producer" || bad "G1b names the .mjs producer"
+
+rm scripts/reader.mjs && git add -A && git commit -qm "fix producer"
+start_branch=$(git symbolic-ref --short HEAD)
+rc=0; "$CMD" "$T/repo-mjs" --apply >/dev/null 2>&1 || rc=$?
+eq "G2  --apply exits 2" "$rc" "2"
+cd "$T/repo-mjs"
+[ "$(git symbolic-ref --short HEAD)" != "$start_branch" ] && \
+  ok "G2b --apply commits on a new branch, not $start_branch" || \
+  bad "G2b --apply commits on a new branch, not $start_branch"
+[ -z "$(git show "$start_branch" --stat --format= 2>/dev/null | grep -c '^$' )" ] || true
+git ls-tree -r --name-only "$start_branch" | grep -q '.scheduler/FOCUS.md' && \
+  ok "G2c starting branch still has the files (untouched)" || \
+  bad "G2c starting branch still has the files (untouched)"
+
 # --- Summary ---
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

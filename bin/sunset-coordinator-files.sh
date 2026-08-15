@@ -120,68 +120,54 @@ repo_name="$(basename "$(git rev-parse --show-toplevel)")"
 # ============================================================================
 
 # Filenames that were retired on 2026-08-07
-RETIRED_NAMES='(FOCUS\.md|QUESTIONS\.md|BLOCKERS\.md)'
+
 
 find_producers() {
-  local found=0
-  local temp_matches
-  local match_count=0
-
-  # Pattern: .scheduler/ referenced in shell/yaml (active code)
-  # Exclude documentation files
-  temp_matches=$(grep -r '\.scheduler/' \
-    --include='*.sh' \
+  # One scan, every language a producer can be written in. The earlier version
+  # searched only *.sh/*.yml plus .claude/commands, which made chezz's real
+  # producers invisible -- they are *.mjs (scripts/, test/) and CLAUDE.md.
+  #
+  # Two exclusions matter and are not cosmetic:
+  #   - the retired files themselves. A FOCUS.md that mentions FOCUS.md is the
+  #     thing being removed, not a producer of it.
+  #   - this script and its test. They necessarily contain the patterns they
+  #     search for, so without this the mechanism permanently blocks itself in
+  #     realisateur and can never report clean.
+  # Code is scanned broadly: any language can read or write these paths.
+  local pat='\.scheduler/|FOCUS\.md|QUESTIONS\.md|BLOCKERS\.md'
+  local matches code_matches doc_matches
+  code_matches=$(grep -rInE "$pat" \
+    --include='*.sh' --include='*.bash' \
     --include='*.yml' --include='*.yaml' \
-    --exclude-dir='archive' --exclude-dir='retired' \
+    --include='*.mjs' --include='*.js' --include='*.cjs' --include='*.ts' \
+    --include='*.py' \
+    --include='crontab*' \
     --exclude-dir='.git' \
+    --exclude-dir='archive' --exclude-dir='retired' \
+    --exclude-dir='.scheduler' \
+    --exclude='sunset-coordinator-files.sh' \
+    --exclude='sunset-coordinator-files.test.sh' \
     . 2>/dev/null || true)
 
-  if [ -n "$temp_matches" ]; then
-    printf '%s\n' "$temp_matches"
-    match_count=$((match_count + $(printf '%s\n' "$temp_matches" | wc -l)))
-    found=1
-  fi
-
-  # Pattern: .claude/ with coordinator filenames in active code
-  temp_matches=$(grep -rE "\.claude/(FOCUS|QUESTIONS|BLOCKERS)" \
-    --include='*.sh' \
-    --include='*.yml' --include='*.yaml' \
-    --exclude-dir='archive' --exclude-dir='retired' \
+  # Markdown is scanned NARROWLY, and the distinction is the whole point:
+  # a slash-command file or CLAUDE.md INSTRUCTS an agent to read or write
+  # these paths, so it is a producer. A retrospective that merely mentions
+  # FOCUS.md in prose is not. Scanning all *.md flags MONKEY.md, PLAYBOOK.md
+  # and THE-FLOOR.md for narrating history, which blocks the sunset forever
+  # on files that produce nothing.
+  doc_matches=$(grep -rInE "$pat" \
+    --include='*.md' \
     --exclude-dir='.git' \
-    . 2>/dev/null || true)
-
-  if [ -n "$temp_matches" ]; then
-    printf '%s\n' "$temp_matches"
-    match_count=$((match_count + $(printf '%s\n' "$temp_matches" | wc -l)))
-    found=1
-  fi
-
-  # Pattern: FOCUS/QUESTIONS/BLOCKERS referenced in shell scripts (actual reads/writes)
-  temp_matches=$(grep -rE "FOCUS\.md|QUESTIONS\.md|BLOCKERS\.md" \
-    --include='*.sh' \
     --exclude-dir='archive' --exclude-dir='retired' \
-    --exclude-dir='.git' \
-    . 2>/dev/null || true)
+    --exclude-dir='.scheduler' \
+    ./.claude/commands ./.scheduler/commands ./CLAUDE.md ./AGENTS.md \
+    2>/dev/null || true)
 
-  if [ -n "$temp_matches" ]; then
-    printf '%s\n' "$temp_matches"
-    match_count=$((match_count + $(printf '%s\n' "$temp_matches" | wc -l)))
-    found=1
-  fi
+  matches=$(printf '%s\n%s' "$code_matches" "$doc_matches" | grep -v '^$' || true)
 
-  # Special case: .claude/commands/* are active commands even though they're .md
-  if [ -d '.claude/commands' ]; then
-    temp_matches=$(grep -rE "\.scheduler/|FOCUS\.md|QUESTIONS\.md|BLOCKERS\.md" \
-      '.claude/commands' \
-      2>/dev/null || true)
-    if [ -n "$temp_matches" ]; then
-      printf '%s\n' "$temp_matches"
-      match_count=$((match_count + $(printf '%s\n' "$temp_matches" | wc -l)))
-      found=1
-    fi
-  fi
-
-  return $([ $found -eq 0 ] && echo 0 || echo 1)
+  [ -z "$matches" ] && return 0
+  printf '%s\n' "$matches"
+  return 1
 }
 
 # ============================================================================
@@ -200,11 +186,16 @@ find_targets() {
     found=1
   fi
 
-  for f in FOCUS.md QUESTIONS.md BLOCKERS.md; do
-    if [ -f ".claude/$f" ]; then
-      echo ".claude/$f"
-      found=1
-    fi
+  # Retired names live in three places across the ecosystem: .scheduler/,
+  # .claude/, and the repo root (sequestria, nine-speakers, groc-mangr and
+  # abletim all carried a bare FOCUS.md).
+  for f in FOCUS.md QUESTIONS.md BLOCKERS.md PARKING-LOT.md; do
+    for dir in .claude .; do
+      if [ -f "$dir/$f" ]; then
+        echo "${dir#./}/$f" | sed 's|^\./||; s|^/||'
+        found=1
+      fi
+    done
   done
 
   return $([ $found -eq 0 ] && echo 0 || echo 1)
@@ -249,12 +240,28 @@ if [ $APPLY -eq 0 ]; then
 fi
 
 # --- APPLY: git rm the targets ---
-note "applying removal on branch $branch..."
 
-# Verify clean working tree before making changes
+# Verify clean working tree BEFORE cutting a branch, so a dirty tree cannot
+# be carried onto it.
 if ! git diff-index --quiet HEAD 2>/dev/null; then
   die "working tree not clean. Commit or stash changes before applying sunset."
 fi
+
+# Never commit onto whatever branch happened to be checked out. The earlier
+# version committed to $branch, so running this on main committed to main --
+# which is protected everywhere in this ecosystem, and the push would be
+# rejected after the files were already gone locally.
+case "$branch" in
+  main|master) : ;;
+  *) note "note: not on main (on '$branch'); cutting the sunset branch from here anyway" ;;
+esac
+
+sunset_branch="sunset-coordinator-files-${repo_name}"
+if git show-ref --quiet "refs/heads/$sunset_branch"; then
+  die "branch $sunset_branch already exists -- delete or rename it first"
+fi
+git checkout -q -b "$sunset_branch" || die "could not create branch $sunset_branch"
+note "applying removal on new branch $sunset_branch..."
 
 # Remove the targets
 for target in $targets; do
@@ -290,6 +297,7 @@ if ! git commit -q -F "$msg_file"; then
 fi
 
 note "committed $(git rev-parse --short HEAD) -- removal complete"
-note "branch: $branch"
+note "branch: $sunset_branch"
 note "removed files/dirs: $(printf '%s\n' "$staged" | wc -l)"
+note "next: git push -u origin $sunset_branch && gh pr create --base $branch"
 exit 2
