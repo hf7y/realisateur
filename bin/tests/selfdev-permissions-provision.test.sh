@@ -39,6 +39,9 @@ has() { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
 hasnt(){ case "$2" in *"$3"*) bad "$1 (unexpected: $3)" ;; *) ok "$1" ;; esac; }
 rc()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3)"; fi; }
 
+# shellcheck disable=SC1007  # `SUDO= cmd` is a deliberate per-command env
+# override setting SUDO to the empty string, not a mistyped assignment: it
+# is what keeps every case in this file from invoking sudo.
 WANT="$(SUDO= "$SCRIPT" --print)"
 
 mkhome() { # $1 = root name, $2 = account, $3 = settings content ('' = no file)
@@ -46,6 +49,7 @@ mkhome() { # $1 = root name, $2 = account, $3 = settings content ('' = no file)
   [ -n "$3" ] && printf '%s\n' "$3" > "$T/$1/$2/.claude/settings.json"
   return 0
 }
+# shellcheck disable=SC1007  # see the note on WANT above: empty SUDO on purpose.
 run() { local r="$1"; shift; HOME_ROOT="$T/$r" SUDO= "$SCRIPT" "$@" 2>&1; }
 
 # --- A/B/C/D/E: one tree carrying every shape -------------------------------
@@ -101,6 +105,7 @@ has "C: --apply leaves a correct account alone" "$out" "ok    correct"
 
 # --- H: an empty roster is BLIND, never a clean 0 ---------------------------
 mkdir -p "$T/h4"
+# shellcheck disable=SC1007  # empty SUDO on purpose, as above.
 HOME_ROOT="$T/h4" SUDO= "$SCRIPT" >/dev/null 2>&1
 rc "H: no account found exits 2 BLIND" 2 "$?"
 

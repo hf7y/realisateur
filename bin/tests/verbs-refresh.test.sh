@@ -41,7 +41,9 @@ rc()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3
 # Build a fixture root pinned to build $1, with a working verb link.
 fixture() {
   root="$T/$2/root"; bin="$T/$2/bin"
-  rm -rf "$T/$2"; mkdir -p "$root/$1/p/bin" "$bin"
+  # ${T:?} so a fixture name that somehow arrives empty cannot make this
+  # `rm -rf /` -- SC2115, and the one line in this file that could hurt.
+  rm -rf "${T:?}/$2"; mkdir -p "$root/$1/p/bin" "$bin"
   : > "$root/$1/p/bin/goodverb"; chmod +x "$root/$1/p/bin/goodverb"
   ln -s "$1" "$root/current"
   ln -s "$root/current/p/bin/goodverb" "$bin/goodverb"

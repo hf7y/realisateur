@@ -11,50 +11,40 @@
 # VERIFIED: 2026-08-15 via bash bin/tests/selfdev-permissions-provision.test.sh and a --check run against all 14 accounts on monkey
 #
 # WHY THIS EXISTS. hf7y/realisateur#282: THE-FLOOR.md documents self-dev
-# accounts as running `"permissions": {"defaultMode":"auto"}` with deny rules
-# layered on for genuinely risky actions. bin/setup-selfdev-project.sh writes
-# no permissions block at all, so none of them had one. Probed 2026-08-15:
-# 13 of 14 accounts on monkey had no `permissions` key whatsoever.
+# accounts as running defaultMode auto with deny rules layered on.
+# bin/setup-selfdev-project.sh wrote no permissions block at all, so none had
+# one -- probed 2026-08-15, 13 of 14 accounts on monkey had no `permissions`
+# key whatsoever.
 #
-# What that costs, from the worked example in #282 (vim-arcade@monkey's first
-# night): the run built and shipped real work, and two writes were REFUSED --
-# one recording what it had done, one creating the settings file that would
-# have granted it. The gate fails closed, so nothing was half-written; the run
-# simply could not record itself. Routing around it from Bash was considered
-# and correctly rejected: an agent cannot self-grant, which is the entire
-# point of the gate. Only a human-authorised pass like this one can.
+# The cost, from #282's worked example (vim-arcade@monkey's first night): the
+# run shipped real work and two writes were REFUSED -- one recording what it
+# had done, one creating the settings file that would have granted it. The gate
+# fails closed, and an agent cannot self-grant, which is the point of it. Only
+# a human-authorised pass like this one can close it.
 #
-# THE DENY FLOOR, and why each line is on it. Zach's instruction (2026-08-15)
-# was "whatever allows them to keep going within unattended scope best" -- so
-# this maximises autonomy and denies only what is IRREVERSIBLE or REACHES
-# OUTSIDE the account. Everything else is allowed, because a gate that stops
+# THE DENY FLOOR. Zach, 2026-08-15: "whatever allows them to keep going within
+# unattended scope best" -- so this denies only what is IRREVERSIBLE or reaches
+# OUTSIDE the account, and allows everything else, because a gate that stops
 # ordinary work unattended is the defect being fixed, not the fix.
 #
-#   git push --force / -f     Rewrites published history. Recoverable only
-#                             from another clone, and the accounts share
-#                             remotes. Never needed by ordinary work.
-#   git push ... main         CLAUDE.md: main is protected and a direct push
-#                             is rejected for everyone. An agent that tries is
-#                             burning a run on a wall; 5 failed runs and 15
-#                             stranded salvage branches came from exactly this.
-#   gh pr merge --admin       Routes around a required check. That is a human
-#                             decision with a reason, every time (#125), and
-#                             #288 is what unattended merging already cost.
-#   gh repo delete / archive   Irreversible, and reaches every consumer.
-#   crontab                   A live crontab is shared machine state; an agent
-#                             already modified one under a second user account
-#                             (2026-07-25). notify-senechal is the channel.
-#   sudo                      The account boundary IS the blast radius.
-#   rm -rf on $HOME or /      Unrecoverable, no backup is proven (THE-FLOOR
-#                             gate 2.2: no snapshot exists anywhere).
-#   reading the App key and gh hosts.yml
-#                             Credentials. The account authenticates through
-#                             them; it never needs to READ them, and a read is
-#                             how one ends up echoed into an issue body.
+#   force push          rewrites published history; these accounts share remotes
+#   push to main        CLAUDE.md: rejected for everyone anyway. Agents trying
+#                       it cost 5 failed runs and 15 stranded salvage branches
+#   gh pr merge --admin routes around a required check -- a human call every
+#                       time (#125), and #288 is what unattended merging cost
+#   repo delete/archive irreversible, and reaches every consumer
+#   crontab             shared machine state; an agent already modified one
+#                       under a second account (2026-07-25). Channel is
+#                       notify-senechal
+#   sudo                the account boundary IS the blast radius
+#   recursive deletes of / or $HOME
+#                       unrecoverable; no backup is proven (THE-FLOOR 2.2)
+#   READING the App key and gh hosts.yml
+#                       the account authenticates through them and never needs
+#                       to read them; a read is how one lands in an issue body
 #
-# THE ALLOW LIST is deliberately short. `.claude/**` writes are what #282 is
-# about -- an account must be able to write its own harness state -- and the
-# two network reads are what bibliothecaire already had.
+# The allow list is short on purpose: `.claude/**` writes are what #282 is
+# about, and the two network reads are what bibliothecaire already had.
 #
 # Usage:
 #   selfdev-permissions-provision.sh              report drift, change nothing
@@ -150,7 +140,8 @@ if [ "$PRINT" = 1 ]; then printf '%s\n' "$PERMS"; exit 0; fi
 
 set -- $ACCOUNTS
 [ "$#" -gt 0 ] || {
-  echo "$CLI_NAME: no self-dev account found under $HOME_ROOT -- nothing was checked. This is NOT a clean result." >&2
+  echo "BLIND: no self-dev account found under $HOME_ROOT -- nothing was checked." >&2
+  echo "$CLI_NAME: nothing was measured. This is NOT a clean result." >&2
   exit 2
 }
 

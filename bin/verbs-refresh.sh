@@ -4,31 +4,21 @@
 #
 # KIND: LOCAL
 #
-# WHY THIS EXISTS. Every self-dev account on monkey adopts new verb builds
-# from a cron tick (bin/selfdev-release-tick.sh). mandark -- the machine Zach
-# actually types on -- has no such tick (hf7y/realisateur#117). The build
-# channel works, `install-verb-build.sh` does the fetch/verify/switch and is
-# tested doing it; what is missing is anything that ever ASKS. So this asks,
-# and delegates every write to the tested tool. It fetches nothing, verifies
-# no manifest, and moves no symlink of its own -- a second implementation of
-# the atomic switch would be a second answer to "which build am I on", which
-# is the one question a bug report has to answer.
+# WHY THIS EXISTS. Every self-dev account on monkey adopts builds from a cron
+# tick. mandark -- the machine Zach types on -- has none (#117). The channel
+# works and `install-verb-build.sh` does the fetch/verify/switch, tested; what
+# is missing is anything that ever ASKS. So this asks, and delegates every
+# write. It moves no symlink of its own -- a second implementation of the
+# atomic switch would be a second answer to "which build am I on".
 #
-# WHAT IT ADDS over `install-verb-build.sh --check`, which already answers
-# "is a newer build available":
-#   - AGE. A build channel can be up to date and months old: if the nightly
-#     cutter stops, --check says "up to date" forever, which is the same
-#     silent-zero this estate keeps paying for. Up-to-date-and-stale is
-#     reported as a finding, not as green.
-#   - OFF-CHANNEL LINKS. A verb on PATH whose symlink points at a FIXED build
-#     directory rather than through `current` never moves when a build is
-#     adopted -- the switch succeeds and that verb stays behind, silently.
-#     install-verb-build.sh --link deliberately leaves those alone (they are
-#     installe-owned and it will not clobber another tool's manifest), so
-#     nothing reports them. This does. It only reports them; reconciling
-#     installe's manifest is installe's job.
-#   - A DANGLING verb link is a silent failure by construction: PATH search
-#     skips a broken symlink, so the verb is simply "not found".
+# WHAT IT ADDS over `install-verb-build.sh --check`:
+#   - AGE. A channel can be up to date and months old: if the nightly cutter
+#     stops, --check says "up to date" forever. Stale-and-current is a finding.
+#   - OFF-CHANNEL LINKS. A verb whose symlink points at a FIXED build dir
+#     rather than through `current` never moves when a build is adopted -- the
+#     switch reports success and that verb stays behind. --link leaves those
+#     alone deliberately (installe owns them), so nothing reported them.
+#   - DANGLING links, which PATH search skips in silence.
 #
 # Usage:
 #   verbs-refresh.sh            report: which build, how old, anything newer

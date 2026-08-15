@@ -11,53 +11,32 @@
 # GATE: strict
 # VERIFIED: 2026-08-15 via bash bin/tests/branch-protection-provision.test.sh and a read-only run against the live roster (18 repos)
 #
-# WHY THIS EXISTS. hf7y/realisateur#288, with a live incident as the exhibit:
-# `gh pr merge --auto --squash` is the estate's sanctioned merge command, and
-# `--auto` has an unstated precondition -- it needs a PENDING REQUIRED CHECK to
-# queue behind. On a repo with no branch protection there is nothing to wait
-# for, so the same command either errors ("Pull request is in clean status",
-# observed on hf7y/crt) or MERGES IMMEDIATELY AND SILENTLY, printing nothing,
-# with `autoMergeRequest` reading null afterwards so it looks like a no-op
-# (observed on hf7y/gardien and hf7y/ecosim). Seven unreviewed merges landed in
-# one sweep, six of them from the sanctioned command. "Ready and unmerged" was
-# not a reachable state.
+# WHY THIS EXISTS. hf7y/realisateur#288: `gh pr merge --auto --squash` is the
+# sanctioned merge command, and `--auto` needs a PENDING REQUIRED CHECK to
+# queue behind. With no branch protection there is nothing to wait for, so it
+# either errors ("Pull request is in clean status", hf7y/crt) or MERGES
+# IMMEDIATELY AND SILENTLY, with `autoMergeRequest` null afterwards so it looks
+# like a no-op (hf7y/gardien, hf7y/ecosim). Seven unreviewed merges in one
+# sweep. "Ready and unmerged" was not a reachable state.
 #
-# bin/repo-settings-provision.sh deliberately declined this job, and said why:
-# it would have to name check contexts, and `suites`/`markdown-cost` are
-# realisateur's own CI job names, not a convention every repo shares -- forcing
-# them estate-wide would wedge every repo whose checks are named differently.
-# That objection is correct and is the whole design of this script: it never
-# names a context. It READS each repo's own checks and requires those.
+# bin/repo-settings-provision.sh declined this job because it would have to
+# name check contexts, and `suites`/`markdown-cost` are realisateur's own job
+# names -- forcing them estate-wide wedges every repo named differently. That
+# objection is this script's design: it never names a context. It reads each
+# repo's own check runs from the head of its most recent PR -- evidence a check
+# RUNS ON PULL REQUESTS -- and requires those. (Parsing `on:` out of workflow
+# YAML asserts what a file claims, not what GitHub ran.)
 #
-# HOW A CONTEXT IS DISCOVERED. From the check runs that actually appeared on
-# the head commit of that repo's most recent pull request -- evidence that the
-# check RUNS ON PULL REQUESTS, which is the only property that matters here. A
-# workflow that runs only on push to main is useless as a required check: it
-# would never report on a PR and every PR would wedge forever, which is a worse
-# failure than the one being fixed. Parsing `on:` out of workflow YAML was the
-# other candidate and was rejected -- it asserts what the file claims, not what
-# GitHub actually ran.
+# A repo with no CI is reported NOCI and left alone, never silently skipped:
+# requiring a context no workflow produces wedges every PR, which is worse than
+# the bug. That list is hf7y/realisateur#285's worklist, measured.
 #
-# A REPO WITH NO CI IS NOT PROTECTED AND IS NOT SILENTLY SKIPPED. It is
-# reported as NOCI and counted, because there is no honest protection to apply:
-# requiring a context that no workflow produces wedges the repo. Those repos
-# are the CI-rollout decision in hf7y/realisateur#285, and this script's NOCI
-# list is that decision's worklist, measured rather than estimated.
-#
-# WHAT --apply WRITES, per repo that has a discoverable context:
-#   required_status_checks: strict=false, contexts=<the repo's own>
-#   enforce_admins: false      -- a human must be able to unstick a wedged repo
-#                                 without an API call to turn protection off.
-#                                 realisateur itself runs with this ON; that is
-#                                 its own older decision and is left alone.
-#   required_pull_request_reviews: null
-#                              -- deliberately NO required reviewer. Every
-#                                 agent in this estate would be blocked from
-#                                 landing anything, and there is no second
-#                                 human. The defect in #288 was SILENT merging,
-#                                 not unreviewed merging; a required check
-#                                 restores the pause and the audit trail.
-#   allow_force_pushes: false, allow_deletions: false
+# --apply writes, per repo with a discoverable context: strict=false and the
+# repo's own contexts; enforce_admins false, so a human can unstick a wedged
+# repo (realisateur's own older ON is left alone); required reviewers NULL,
+# deliberately -- the defect was SILENT merging, not unreviewed merging, and a
+# required reviewer blocks every agent in an estate with one human; no force
+# pushes, no deletions.
 #
 # Bare invocation is READ-ONLY. --apply is the only path that writes.
 #
