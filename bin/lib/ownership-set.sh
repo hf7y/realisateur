@@ -271,6 +271,7 @@ bin/decision-rot.sh                realisateur SENSES the ecosystem and TRIAGES 
 bin/tests/decision-rot.test.sh     realisateur follows its subject.
 bin/rot-ratchet.sh                 realisateur the ratchet half of bin/decision-rot.sh: same organ, same estate-wide sensing, and it reads that script's own --json rather than restating anything.
 bin/tests/rot-ratchet.test.sh      realisateur follows its subject.
+.github/workflows/rot-ratchet.yml  realisateur the runner for bin/rot-ratchet.sh, which had none: same organ, and it is the clock that makes that guard grade anything at all.
 bin/directive-prose.sh             realisateur enforces THIS repo's own doctrine -- a decision must exist where a consumer reads it (#294) -- against this repo's diffs, on retire-check.sh's precedent. It becomes a bashify generic once the copier that carries it exists (#305), not on the day it is written.
 bin/tests/directive-prose.test.sh  realisateur follows its subject.
 bin/hardcoded-home-lint.sh         bashify generic shell lint. Same test.
