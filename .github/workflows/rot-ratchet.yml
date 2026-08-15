@@ -17,5 +17,5 @@ jobs:
 
       - name: The count of answers nobody acted on may not rise
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ECOSYSTEM_ISSUES_TOKEN || secrets.GITHUB_TOKEN }}  # BLIND(3) without a cross-repo token -- #312
         run: bash bin/rot-ratchet.sh
