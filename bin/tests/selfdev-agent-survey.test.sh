@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: fully hermetic. Every case calls a pure function with a string
-# literal -- no network, no sudo, no `gh`, no account, no filesystem read
-# outside sourcing the script under test. The script's live half (account
-# discovery, git/gh calls, log reading) needs root on a real self-dev host and
-# is deliberately NOT faked here; what is asserted is the part with a right
-# answer independent of machine state.
 #
 # selfdev-agent-survey.test.sh -- witness for the classify_* functions, the
 # only part of selfdev-agent-survey.sh with a right answer independent of

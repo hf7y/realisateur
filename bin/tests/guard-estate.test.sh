@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 # guard-estate.test.sh -- a test over the guard POPULATION, not over one guard.
 #
-# HERMETICITY: it never runs a guard against live state. Every executed check
-# builds a throwaway git repo under mktemp, sets HOME, SCHED_ROOT, XDG_*,
-# GH_TOKEN='' and cwd into it, and puts a stub `gh`/`ssh` ahead of the real
-# ones on PATH, so a guard that reaches the network or the estate gets a
-# deterministic refusal rather than whatever this machine happens to have.
-# The only live thing it reads is this repository's own bin/ and bin/tests/,
-# which is the branch under test, not the shared checkout.
 #
 # ============================================================================
 # WHY A TEST OVER THE ESTATE AND NOT OVER A GUARD
@@ -210,30 +203,28 @@ is_guard_shaped() {
 # ============================================================================
 # A. DECLARED
 # ============================================================================
-echo "== A. EVERY GUARD DECLARES ITSELF =="
+echo "== A. EVERY GUARD NAMES WHAT RUNS IT =="
 
 GUARDS=""
 undeclared=0
 for f in "$BIN"/*.sh; do
   [ -e "$f" ] || continue
   n="$(basename "$f")"
-  g="$(hdr "$f" GUARD)"
-  if [ -n "$g" ]; then
-    case "$g" in
-      no\ --*|no--*)
-        # An explicit opt-out with a reason. install-silence-audit.sh is not a
-        # guard; it installs one.
-        continue ;;
-      no|no\ *)
-        bad "A1 $n: '# GUARD: no' without a reason -- say why the name is not a guard"
-        continue ;;
+  # A guard is a script that names a POINTER: what runs it, or what tests it.
+  # Both are checked against the tree below (B2/B3, C2/C3), so neither can rot
+  # into a false claim the way a prose self-description can.
+  r="$(hdr "$f" RUNNER)"; [ -n "$r" ] || r="$(hdr "$f" GUARD-TEST)"
+  if [ -n "$r" ]; then
+    case "$r" in
+      no\ --*|no--*) continue ;;
+      no|no\ *) bad "A1 $n: '# RUNNER: no' without a reason -- say what runs it, or why nothing does" ; continue ;;
     esac
     GUARDS="$GUARDS $n"
     continue
   fi
   if is_guard_shaped "$n"; then
     undeclared=$((undeclared + 1))
-    printf '  note %s: guard-shaped name with no '"'"'# GUARD:'"'"' header -- UNDECLARED, invisible to B..G\n' "$n"
+    printf '  note %s: guard-shaped name with no '"'"'# RUNNER:'"'"' header -- UNDECLARED, invisible to B..G\n' "$n"
   fi
 done
 if [ "$undeclared" -gt "$GUARD_UNDECLARED_BOUND" ]; then
@@ -259,10 +250,10 @@ for f in "$BIN"/*.sh; do
   [ -e "$f" ] || continue
   n="$(basename "$f")"
   case " $GUARDS " in *" $n "*) continue ;; esac
-  [ -n "$(hdr "$f" GUARD)" ] && continue
+  { [ -n "$(hdr "$f" RUNNER)" ] || [ -n "$(hdr "$f" GUARD-TEST)" ]; } && continue
   is_guard_shaped "$n" && continue
   if grep -qE 'FLAG \[|FLAG\(s\)|violation\(s\)' "$f"; then
-    bad "A0 $n: emits findings (FLAG/violation) but declares no '# GUARD:' line -- a guard does not stop being one by being renamed"
+    bad "A0 $n: emits findings (FLAG/violation) but declares neither '# RUNNER:' nor '# GUARD-TEST:' -- a guard does not stop being one by being renamed"
   fi
 done
 
@@ -473,56 +464,6 @@ if [ "$ungated" -gt "$GUARD_UNGATED_BOUND" ]; then
 else
   ok "D3 ungated guards: $ungated <= $GUARD_UNGATED_BOUND"
 fi
-
-# ============================================================================
-# G. THE METABOLISM
-# ============================================================================
-echo
-echo "== G. FRESHNESS -- RHYTHM AND SPAN =="
-today_s="$(date -u +%s)"
-oldest=-1; oldest_name=""
-for n in $GUARDS; do
-  v="$(hdr "$BIN/$n" VERIFIED)"
-  case "$v" in
-    "") bad "G1 $n: no '# VERIFIED: YYYY-MM-DD via <command>' stamp"; continue ;;
-  esac
-  d="${v%% *}"
-  rest="${v#* }"
-  if ! printf '%s' "$d" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
-    bad "G1 $n: '# VERIFIED: $v' does not start with a YYYY-MM-DD date"; continue
-  fi
-  case "$rest" in
-    via\ ?*) : ;;
-    *) bad "G2 $n: stamp names no command. 'via <command>' is what makes re-stamping cost a re-probe rather than a keystroke."; continue ;;
-  esac
-  s="$(date -u -d "$d" +%s 2>/dev/null)" || { bad "G1 $n: '$d' is not a date this system can read"; continue; }
-  if [ "$s" -gt "$((today_s + 86400))" ]; then
-    bad "G1 $n: stamped $d, which is in the future"; continue
-  fi
-  age=$(( (today_s - s) / 86400 ))
-  if [ "$age" -gt "$oldest" ]; then oldest="$age"; oldest_name="$n"; fi
-  if [ "$age" -gt "$GUARD_SPAN_DAYS" ]; then
-    bad "G4 SPAN: $n was last verified $age days ago (> $GUARD_SPAN_DAYS). Re-probe it and re-stamp it, or retire it. This is the far end of the bridge."
-  fi
-done
-# `newest` above is tracking the LARGEST age; the freshest stamp is the
-# smallest one. Recompute plainly rather than being clever about it.
-fresh=99999; fresh_name=""
-for n in $GUARDS; do
-  v="$(hdr "$BIN/$n" VERIFIED)"; d="${v%% *}"
-  printf '%s' "$d" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' || continue
-  s="$(date -u -d "$d" +%s 2>/dev/null)" || continue
-  age=$(( (today_s - s) / 86400 ))
-  if [ "$age" -lt "$fresh" ]; then fresh="$age"; fresh_name="$n"; fi
-done
-if [ "$fresh" -eq 99999 ]; then
-  bad "G3 RHYTHM: not one guard in the estate carries a readable stamp"
-elif [ "$fresh" -gt "$GUARD_RHYTHM_DAYS" ]; then
-  bad "G3 RHYTHM: the freshest stamp in the whole estate is $fresh days old ($fresh_name) (> $GUARD_RHYTHM_DAYS). Nothing has been repainted in that window. Pick the oldest guard, re-run it, and re-stamp or retire it."
-else
-  ok "G3 RHYTHM: freshest stamp is $fresh day(s) old ($fresh_name) <= $GUARD_RHYTHM_DAYS"
-fi
-[ -n "$oldest_name" ] && ok "G4 SPAN: oldest stamp is ${oldest} day(s) ($oldest_name) <= $GUARD_SPAN_DAYS"
 
 echo
 echo "guard-estate: $NGUARDS guard(s); $pass ok, $fail FAIL"

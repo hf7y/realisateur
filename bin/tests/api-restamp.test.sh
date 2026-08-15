@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: `git` runs for real against throwaway repos under $TMP (no
-# network -- local `git init`/`git remote add` only). `gh` is a fake earlier
-# on PATH that logs every invocation and answers from fixture env vars
-# instead of reaching GitHub. No live repo, no live token, no live PR.
 #
 # Contract test for lib/api-restamp.sh (hf7y/realisateur#256): the fallback
 # restamp-discipline.sh falls back to when `git push` fails because this

@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 # ownership-audit.test.sh -- the suite for bin/ownership-audit.sh.
 #
-# HERMETICITY: every assertion about behaviour runs the guard against a
-# FABRICATED tree built under mktemp -- its own git repo, its own
-# bin/lib/ownership-set.sh, its own areas, its own ratchet copied in. The
-# guard is pointed at it with --repo, and nothing it reports may name this
-# repository. Two assertions deliberately read the LIVE tree (the ratchet
-# baseline is honest, and the strict run still fails); they are marked WITNESS
-# and they only read -- they never write, and they never run --accept.
 #
 # WHY A FABRICATED TREE AND NOT THIS ONE. The number this guard produces is
 # supposed to change as mechanism migrates out. A suite that asserted "the

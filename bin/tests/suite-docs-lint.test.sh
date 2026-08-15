@@ -2,11 +2,6 @@
 # suite-docs-lint.test.sh -- the witness for the guard that stops the ledger
 # growing back.
 #
-# HERMETICITY: builds a throwaway repo per case under mktemp -d, sets
-# SUITE_DOCS_ROOT / SUITE_DIR / SUITE_WORKFLOW at it, and never reads the live
-# machine. Cases L1 and L2 run the guard over THIS repository, which is a
-# statement about the checkout under test and not about the host.
-#
 # THE LOAD-BEARING ASSERTION IS B2: a workflow that names one suite FAILS.
 # That is the mechanism -- everything else is scaffolding. A version of this
 # suite without B2 would pass against a guard that had check B deleted, which
@@ -60,45 +55,10 @@ mkfixture() { # <name>
 
 echo "== A. every suite documents its own hermeticity =="
 
-# A1: a suite carrying the marker passes.
-d="$(mkfixture a1)"
-printf '#!/usr/bin/env bash\n# alpha.test.sh\n# HERMETICITY: builds a temp repo.\ntrue\n' > "$d/bin/tests/alpha.test.sh"
-run "$d"
-check "A1 marker present -> exit 0" "$rc" 0
-
-# A2: a suite with NO marker fails, and is named.
-d="$(mkfixture a2)"
-printf '#!/usr/bin/env bash\n# beta.test.sh -- no note at all.\ntrue\n' > "$d/bin/tests/beta.test.sh"
-run "$d"
-check "A2 marker absent -> exit 1" "$rc" 1
-has   "A2 names the offending suite" "$out" "beta.test.sh"
-
-# A3: an EMPTY marker does not count. A guard that accepts `# HERMETICITY:`
-# with nothing after it can be silenced by a one-word edit, which is the
-# "make the check pass" move rather than the "make the claim true" one.
-d="$(mkfixture a3)"
-printf '#!/usr/bin/env bash\n# HERMETICITY:\ntrue\n' > "$d/bin/tests/gamma.test.sh"
-run "$d"
-check "A3 empty marker -> still exit 1" "$rc" 1
-
-# A4: a marker BURIED past the header does not count -- it is a header note.
-d="$(mkfixture a4)"
-{ printf '#!/usr/bin/env bash\n'; for i in $(seq 1 80); do echo "# filler $i"; done
-  printf '# HERMETICITY: too late to be a header.\ntrue\n'; } > "$d/bin/tests/delta.test.sh"
-run "$d"
-check "A4 marker below the header window -> exit 1" "$rc" 1
-
-# A5: several suites, one bad -- the bad one is named and the good ones are ok.
-d="$(mkfixture a5)"
-printf '#!/usr/bin/env bash\n# HERMETICITY: temp repo.\ntrue\n' > "$d/bin/tests/good.test.sh"
-printf '#!/usr/bin/env bash\n# nothing here.\ntrue\n'          > "$d/bin/tests/bad.test.sh"
-run "$d"
-check "A5 mixed -> exit 1"          "$rc" 1
-has   "A5 names the bad suite"      "$out" "bad.test.sh"
-has   "A5 passes the good suite"    "$out" "ok   bin/tests/good.test.sh"
-
-echo
-echo "== B. the workflow names no individual suite (THE MECHANISM) =="
+# The A cases -- one per shape of a missing/empty/buried '# HERMETICITY:'
+# marker -- were retired with the requirement itself on 2026-08-15 (#321). It
+# was 56 hand-written paragraphs asserting a property no test could check.
+# Check B, the load-bearing one, is untouched and so are its cases.
 
 # B1: a globbing workflow is clean.
 d="$(mkfixture b1)"

@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: offline, zero AI, no network, no live tracker. Every case
-# writes a pull-request body to a file under one `mktemp -d` and runs
-# bin/deferral-ledger.sh in its `--body-file` mode, which reads nothing but
-# that file. The bin/defere.sh cases build a throwaway git repo and put a fake
-# `gh` at the front of PATH; case R4 removes `gh` entirely to pin the BLIND
-# path rather than inheriting whatever the runner happens to have installed.
-# Nothing here reads hf7y/realisateur, this checkout, or $HOME.
 #
 # deferral-ledger.test.sh -- witness for bin/deferral-ledger.sh and its filing
 # sibling bin/defere.sh.

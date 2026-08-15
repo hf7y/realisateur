@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: builds a throwaway git repository per case in a temp dir and runs
-# the script against a range inside it. Nothing here reads the live ecosystem,
-# this checkout's own history, or origin.
 #
 # markdown-cost.test.sh -- witness for bin/markdown-cost.sh.
 #

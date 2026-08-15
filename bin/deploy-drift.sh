@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # deploy-drift.sh -- answer "is every dispatcher running the code we merged?"
 #
-# GUARD: is every dispatcher account running the code we merged?
 # RUNNER: operator -- probes uid 3000-3099 accounts on a shared host over ssh
 # GUARD-TEST: none -- no fixture yet for a multi-account host probe; the honest fix is to build one, not to drop the check
 # GATE: none -- ssh to live accounts; a sandbox can only make it lie
-# VERIFIED: 2026-08-07 via bash bin/deploy-drift.sh --help and a read of its account derivation
 #
 # The gap this closes: on 2026-08-06, 26 PRs merged across five repos and
 # five of six monkey accounts were running code from before them. One was

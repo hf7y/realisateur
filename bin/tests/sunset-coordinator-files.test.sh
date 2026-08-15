@@ -11,10 +11,6 @@
 #   G. Regressions (a .mjs producer; --apply never commits to the checked-out branch)
 #   H. A comment is not a producer -- and the real producers under comments still are
 #
-# HERMETICITY: every fixture is a throwaway git repo under mktemp -d, removed
-# on EXIT. No network, no gh, no writes outside $T. Section A and C point the
-# script at THIS repo, which is read-only there -- both are dry-run/refusal
-# paths that never reach --apply's branch cut.
 #
 set -uo pipefail
 

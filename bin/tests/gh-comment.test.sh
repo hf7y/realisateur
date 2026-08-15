@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: a fake `gh` earlier on PATH records every invocation to a log
-# file instead of reaching GitHub. No network, no real `gh`, no live issue.
 #
 # Contract test for gh-comment.sh (hf7y/realisateur#238): the wrapper this
 # project's own code is supposed to route every issue comment through, so

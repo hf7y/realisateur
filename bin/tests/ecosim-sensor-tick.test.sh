@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: overrides STATE_DIR to a temp directory and ECOSIM_SENSOR_BIN to
-# a fake sensor, so it never reads the verb build and never writes a byte into
-# the live ~/.local/share/ecosim-sensor archive.
 #
 # ecosim-sensor-tick.test.sh -- witness for the monthly rotation of
 # bin/ecosim-sensor-tick.sh's durable archive (#55).

@@ -3,12 +3,9 @@
 # allow_auto_merge live on every scheduler-registered project's GitHub repo,
 # not just the one they happened to be turned on by hand for.
 #
-# GUARD: does every registered repo have the settings claim-drift.sh's own
-#        --convention output asserts are "live" ecosystem-wide?
 # RUNNER: bin/tests/repo-settings-provision.test.sh
 # GUARD-TEST: bin/tests/repo-settings-provision.test.sh
 # GATE: strict
-# VERIFIED: 2026-08-11 via bash bin/tests/repo-settings-provision.test.sh (20/20) and a read-only run against the live registry (13 repos, 0 drift, 0 BLIND)
 #
 # WHY THIS EXISTS. claim-drift.sh --convention states, as settled ecosystem
 # fact: "allow_auto_merge=true, delete_branch_on_merge=true ... live on

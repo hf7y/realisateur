@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 # directive-prose.test.sh -- witness for bin/directive-prose.sh.
 #
-# HERMETICITY: builds a throwaway git repository per case in a temp dir and
-# runs the script against a range inside it. Nothing reads the live ecosystem,
-# this checkout's history, or origin.
 #
 # Cases:
 #   A uncited decision prose added            -> exit 1, names file and line

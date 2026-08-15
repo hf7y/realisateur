@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 # rot-ratchet.test.sh -- witness for bin/rot-ratchet.sh.
 #
-# HERMETICITY: fully offline. ROT_RATCHET_SCAN points at a stub that prints
-# fixture NDJSON in bin/decision-rot.sh's `--json` shape and exits as it does
-# (1 when rot exists, 3 when a repo was unreadable), so no network, no token,
-# and no dependence on the state of Zach's inbox.
 #
 # Cases:
 #   A at baseline                      -> exit 0

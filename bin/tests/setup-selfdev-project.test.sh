@@ -1,13 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: it never provisions anything. setup-selfdev-project.sh is COPIED
-# into a mktemp bin/ beside stub siblings, and `id`, `getent`, `install` and
-# `sudo` are stubbed ahead of the real ones on PATH -- so `id -u` answers 0
-# without root, `getent passwd` answers out of a temp home, `install` drops the
-# -o/-g it cannot honour unprivileged, and `sudo -u <p>` runs the command as
-# whoever ran the suite. No unix account is created, no ssh key is generated, no
-# repository is cloned and nothing outside $TMP is written or read. The four
-# scripts it sequences are stubs that record their own invocation, which is what
-# makes "it stopped before landing" a witness rather than an inference.
 #
 # Contract test for bin/setup-selfdev-project.sh's step 3 GATE -- realisateur#120.
 #

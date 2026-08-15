@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: offline, zero AI, no network. Every invocation sets BPP_OWNER
-# (to a fixture owner) and GH_BIN (to a stub in $T answering from a fixture
-# table), so no run reaches github.com -- the stub resolves no hostname and
-# holds no credential. The roster is filtered by positional args to fixture
-# names, so no case sweeps the real 18-repo roster.
 #
 # branch-protection-provision.test.sh -- witness for
 # bin/branch-protection-provision.sh.

@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: builds a throwaway git repository per case, copies the guard
-# into it, and points the guard at THAT root via its own `cd "$ROOT"` (ROOT is
-# derived from the script's own location, so a copy in a fixture lints the
-# fixture). It never reads this repository's files or ratchet. The BLIND case
-# shims PATH to a directory holding only the binaries the guard needs MINUS
-# the linter -- rather than clearing PATH, which would also remove git and
-# make the case pass for the wrong reason.
 #
 # bin/tests/shellcheck-lint.test.sh -- witness for bin/shellcheck-lint.sh.
 #

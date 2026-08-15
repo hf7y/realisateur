@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: it runs the argument guard and nothing else. Every case either
-# invokes a throwaway script written into `mktemp -d` that sources
-# bin/lib/cli-guard.sh and then prints its own argv, or invokes a real bin/
-# script in a mode that stops at the parser (`--dry-run`, `--help`, a refusal).
-# Nothing here reaches the network, no verdict is published, no file outside
-# the temp dir is written, and $HOME is redirected into the sandbox so a real
-# ~/.config on the machine running this cannot leak in.
 #
 # cli-guard.test.sh -- the argument contract, tested at the place it broke.
 #

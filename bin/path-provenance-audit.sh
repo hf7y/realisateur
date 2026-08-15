@@ -2,11 +2,9 @@
 # path-provenance-audit.sh -- eight probes asking one question: can senechal
 # name the owner and the live source of every executable this account can run?
 #
-# GUARD: is every executable on PATH traceable to a declaring project and a source it still matches?
 # RUNNER: bin/tests/path-provenance-audit.test.sh
 # GUARD-TEST: bin/tests/path-provenance-audit.test.sh
 # GATE: strict
-# VERIFIED: 2026-08-07 via bash bin/path-provenance-audit.sh --strict on mandark (1/8 met, 0 blind)
 #
 # ---------------------------------------------------------------------------
 # THE FINDING THIS IS THE MECHANISM FOR

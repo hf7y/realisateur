@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # defere.sh -- file the thing you were about to write a paragraph about.
 #
-# GUARD: no -- this is the FILING half. It creates issues; it grades nothing.
-#        Its checking sibling is bin/deferral-ledger.sh.
 #
 # ============================================================================
 # WHY THIS EXISTS, AND WHY IT IS THE PRIMARY DELIVERABLE

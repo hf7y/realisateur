@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # retire-check.test.sh -- witness for bin/retire-check.sh (#166).
 #
-# HERMETICITY: fully offline. Every case pipes fixture text at the script or
-# hands it a fixture file under a temp dir; nothing reads the live ecosystem.
 set -uo pipefail
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/retire-check.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }

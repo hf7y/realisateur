@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: fully hermetic. Every case runs against a FABRICATED scheduler
-# tree in a temp dir (SERVED_SCHEDULER_REPO) and a fabricated fleet crontab
-# dump (SERVED_FLEET_CRONTABS) -- no ssh, no sudo, no network, no live host,
-# and the real ~/Documents/Projects/scheduler is never read. The date boundary
-# is driven through SERVED_SUNSET rather than by waiting two weeks. The one
-# thing it cannot fabricate is a real `git ls-tree origin/bashified`, so it
-# builds a real throwaway git repo with that ref in the temp dir.
 #
 # served-not-cloned.test.sh -- witness for the vision probe's EXIT CONTRACT,
 # which is the whole mechanism: red until the redesign lands, green when it

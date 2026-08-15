@@ -2,7 +2,7 @@
 # selfdev-agent-survey.sh -- what does each self-dev account ACTUALLY do on
 # its own dispatch run, vs. what its own prompt claims it does?
 #
-# GUARD: no -- the `-survey` name matches guard-estate.test.sh's shape rule,
+# RUNNER: no -- the `-survey` name matches guard-estate.test.sh's shape rule,
 # and this is the opt-out it provides for a name that is not a gate. It cannot
 # be one: it needs root on the self-dev host, a live `gh` token per account,
 # and ten accounts to walk, so no CI job and no hook can ever run it. Its own

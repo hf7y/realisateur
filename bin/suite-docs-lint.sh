@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # suite-docs-lint.sh -- a suite documents ITSELF; the workflow names NO suite.
 #
-# GUARD: does every suite document its own hermeticity, and does the workflow name none?
 # RUNNER: bin/tests/suite-docs-lint.test.sh
 # GUARD-TEST: bin/tests/suite-docs-lint.test.sh
 # GATE: default
-# VERIFIED: 2026-08-07 via bash bin/suite-docs-lint.sh and bash bin/tests/suite-docs-lint.test.sh
 #
 # THE FAILURE THIS EXISTS FOR, with the numbers.
 #
@@ -66,36 +64,12 @@ ROOT="${1:-${SUITE_DOCS_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null)}}"
 SUITE_DIR="${SUITE_DIR:-$ROOT/bin/tests}"
 WORKFLOW="${SUITE_WORKFLOW:-$ROOT/.github/workflows/tests.yml}"
 
-# The marker a suite must carry. A bare "# HERMETICITY:" with nothing after it
-# is not a note, so the pattern requires at least one non-space character --
-# an empty marker added to silence this lint is the exact move BUILD-DISCIPLINE
-# exists to refuse.
-MARKER='^#[[:space:]]*HERMETICITY:[[:space:]]*[^[:space:]]'
-
-# How far into a file the marker may be. It is a HEADER note: a reader opening
-# the file must meet it before the code. 60 lines is generous for the longest
-# existing preamble and still refuses "buried at line 400".
-HEAD_LINES="${SUITE_DOC_HEAD_LINES:-60}"
-
 violations=0
-scanned=0
-
-echo "== A. EVERY SUITE DOCUMENTS ITS OWN HERMETICITY =="
-[ -d "$SUITE_DIR" ] || {
-  echo "suite-docs-lint: BLIND: no suite directory at $SUITE_DIR" >&2
-  exit 2
-}
-for t in "$SUITE_DIR"/*.sh; do
-  [ -e "$t" ] || continue
-  scanned=$((scanned + 1))
-  rel="${t#"$ROOT"/}"
-  if head -n "$HEAD_LINES" "$t" | grep -Eq "$MARKER"; then
-    echo "  ok   $rel"
-  else
-    echo "  FAIL $rel: no '# HERMETICITY: <what makes it safe>' in its first $HEAD_LINES lines"
-    violations=$((violations + 1))
-  fi
-done
+# The per-suite '# HERMETICITY:' note was retired 2026-08-15 (#321). This file
+# already said why: "A is a cleanup; B is what stops the ledger growing back."
+# A was a prose requirement no test could check -- 56 hand-written paragraphs
+# asserting a property nothing verified. B is behavioural and stays.
+scanned="$(ls -1 "$SUITE_DIR"/*.sh 2>/dev/null | wc -l)"
 [ "$scanned" -gt 0 ] || {
   echo "suite-docs-lint: BLIND: $SUITE_DIR/*.sh matched nothing -- scanned NOTHING" >&2
   exit 2
@@ -131,5 +105,5 @@ if [ "$violations" -gt 0 ]; then
   echo "suite-docs-lint: $violations violation(s) over $scanned suite(s)."
   exit 1
 fi
-echo "suite-docs-lint: $scanned suite(s), each self-documenting; workflow names none."
+echo "suite-docs-lint: $scanned suite(s); the workflow names none."
 exit 0

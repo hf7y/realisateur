@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # deferral-ledger.sh -- does this pull request say where the work it deferred went?
 #
-# GUARD: does this pull request say where the work it deferred went?
 # RUNNER: .github/workflows/deferral-ledger.yml bin/tests/deferral-ledger.test.sh
 # GUARD-TEST: bin/tests/deferral-ledger.test.sh
 # GATE: strict --body-file $TREE/PR_BODY.md
-# VERIFIED: 2026-08-07 via bash bin/deferral-ledger.sh --strict 95 96 97 98 99 100 101 102 103 104 (10 unledgered; 6 of them deferring named work in prose with no destination)
 #
 # ============================================================================
 # THE FAILURE THIS CLOSES

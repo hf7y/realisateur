@@ -711,8 +711,10 @@ Before marking anything done:
 - [ ] **Shared-host footprint declared** (script/autostart/systemd unit on
       `dexter`/`mandark`/etc named in this project's own FOCUS.md), and
       retired entries actually removed, not left live?
-- [ ] Claims about system state **re-probed, not quoted** — and if written
-      down, stamped `# verified <date> via <command>`?
+- [ ] Claims about system state **re-probed, not quoted**? (Do not write the
+      probe down in the file. The `# VERIFIED:` stamp was retired 2026-08-15,
+      #321: 30 hand-maintained dates asserting freshness that nothing re-ran,
+      which is a staleness generator wearing the costume of a guarantee.)
 - [ ] Verified **where the consumer reads it** (pushed to the ref the job
       clones — not just committed locally)?
 - [ ] Multi-line or shell-quoting commit message written with

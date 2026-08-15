@@ -3,12 +3,9 @@
 # permissions block it was documented as having and never had, so an
 # unattended run can record what it did instead of dying at the gate.
 #
-# GUARD: does every self-dev account's ~/.claude/settings.json carry a
-#        permissions block with defaultMode and the deny floor?
 # RUNNER: bin/tests/selfdev-permissions-provision.test.sh
 # GUARD-TEST: bin/tests/selfdev-permissions-provision.test.sh
 # GATE: strict
-# VERIFIED: 2026-08-15 via bash bin/tests/selfdev-permissions-provision.test.sh and a --check run against all 14 accounts on monkey
 #
 # WHY THIS EXISTS. hf7y/realisateur#282: THE-FLOOR.md documents self-dev
 # accounts as running defaultMode auto with deny rules layered on.

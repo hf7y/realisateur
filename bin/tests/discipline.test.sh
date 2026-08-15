@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: reads the live BUILD-DISCIPLINE.md but never writes it; every
-# failure case runs against a THROWAWAY COPY of the script in a mktemp dir with
-# its own fixture source, so no assertion can mutate the real one.
 #
 # discipline.test.sh -- the guard that replaced restamp-discipline's "a pass
 # that reached nothing is not a clean pass".

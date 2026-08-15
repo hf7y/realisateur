@@ -2,11 +2,9 @@
 # bin/no-worktree-lint.sh -- does any production script in this tree create a
 # git worktree?
 #
-# GUARD: does any shell file outside the test tree name `git worktree add`?
 # RUNNER: bin/tests/no-worktree-lint.test.sh
 # GUARD-TEST: bin/tests/no-worktree-lint.test.sh
 # GATE: default
-# VERIFIED: 2026-08-11 via bash bin/no-worktree-lint.sh (64 files scanned, 0 FLAGs) and its suite
 #
 # ---------------------------------------------------------------------------
 # WHY THIS EXISTS

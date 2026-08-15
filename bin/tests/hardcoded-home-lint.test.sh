@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: builds a throwaway repo per case, and its one assertion about
-# live state (I3, "this repository is clean") is about the checkout under test,
-# not about the machine.
 #
 # hardcoded-home-lint.test.sh -- the guard, and the shape it used to miss.
 #

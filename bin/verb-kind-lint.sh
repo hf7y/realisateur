@@ -2,11 +2,9 @@
 # verb-kind-lint.sh -- a command in the verb build says which CHANNEL it
 # belongs to, in its own file, or it does not ship.
 #
-# GUARD: does every command in a verb build declare itself a workchain verb or a product, and is no product riding the workchain channel?
 # RUNNER: bin/tests/verb-kind-lint.test.sh bin/cut-verb-build.sh
 # GUARD-TEST: bin/tests/verb-kind-lint.test.sh
 # GATE: default --build $TREE
-# VERIFIED: 2026-08-11 via bash bin/tests/verb-kind-lint.test.sh and bash bin/tests/cut-verb-build-test.sh
 #
 # The run against the live build -- the one that produced the numbers in
 # bin/verb-kind-lint.ratchet -- is stamped in that file instead of here,

@@ -1,18 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: fully hermetic, zero live access. Sections A-B source the two
-# files under test and call their PURE functions directly with fixture
-# strings -- no ssh, no sudo, no gh, no network, no real account. Sections
-# C-E exercise the CLI by pointing CRED_SSH_BIN / CRED_GH_BIN at throwaway
-# stub executables under a mktemp dir that this suite writes itself: the ssh
-# stub prints canned fixture TSV instead of reaching monkey, and the gh stub
-# answers `deploy-key list` from a fixture instead of calling GitHub. Section
-# F greps the SOURCE TEXT for invariants that must never execute even by
-# accident (propagation.test.sh's own style for the same reason: asserting
-# "--apply never does X" by running --apply against a live account would be
-# the opposite of hermetic). Nothing here reads bin/lib/selfdev-credentials-
-# set.sh's CRED_GRANTS as anything but the empty table it ships with; a case
-# that needs a grant declares one locally by re-sourcing with CRED_GRANTS
-# overridden, never by editing the real file.
 #
 # NAMING NOTE: this suite's own assertion helpers are prefixed `t_` on
 # purpose. The script under test defines global `ok()`/`gap()`/`bad()`
@@ -495,7 +481,7 @@ t_hasnt "never opens hosts.yml for writing (> or >>)" "$SRC_TXT" '> "$hosts'
 t_hasnt "never mints a NEW key (no ssh-keygen)" "$SRC_TXT" "ssh-keygen"
 t_hasnt "never mints a NEW key (no openssl genrsa/req)" "$SRC_TXT" "openssl genrsa"
 t_has "does delegate git wiring to wire-selfdev-git.sh (reuse, not reimplement)" "$SRC_TXT" "wire-selfdev-git.sh"
-t_has "declares its GUARD:no opt-out with a reason" "$SRC_TXT" "# GUARD: no --"
+t_has "declares its opt-out with a reason" "$SRC_TXT" "# RUNNER: no --"
 t_has "reads the token's oauth_token line but never echoes the token value" "$SRC_TXT" "grep oauth_token"
 t_hasnt "the token classifier never captures anything past the shape prefix" "$SRC_TXT" 'printf.*oauth_token.*\$token'
 
