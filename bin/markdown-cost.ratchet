@@ -1,29 +1,5 @@
 # markdown-cost.ratchet -- prose lines in this tree. SHRINKS ONLY.
-# Raised only by a hand edit, which is meant to be reviewed. See bin/markdown-cost.sh.
-# seeded 2026-08-15 at 19646.
-#
-# RAISED 2026-08-15 to 20052 (+406), by hand, with the case here.
-#
-# The branch adds three guards and their three witness suites (#288, #117,
-# #282). In a repo whose convention is a documented WHY header per script --
-# and whose bin/suite-docs-lint.sh REQUIRES a HERMETICITY note on every suite
-# -- six new files cannot be added without prose. Getting to +0 would have
-# meant six files carrying no explanation, which is the thing this ratchet is
-# meant to protect, not the thing it is meant to prevent.
-#
-# It was trimmed first, not just raised: the three script headers were cut by
-# ~34 lines of restatement before this number was written. What remains is the
-# incident each guard exists because of, which is the part that stops the next
-# agent re-deriving it.
-#
-# The ratchet's purpose is to stop UNDIRECTED prose growth -- a tree reaching
-# 57% prose one under-threshold commit at a time. It is not a ban on adding
-# mechanism. This is the affordance the guard itself names: "make the case in
-# review and raise bin/markdown-cost.ratchet by hand."
-#
-# The first value (19533) was taken before #298, #302, #307, #308 and #310
-# landed, so it never described the tree it guarded -- main was already 102
-# over it on the day it was written. This is a measurement of main plus the 40
-# lines this guard itself costs, trimmed twice to get there. Every later PR is
-# judged against a number that is true.
-20052
+# Written by markdown-cost.sh --accept, which refuses to raise it. A hand
+# edit that raises it is rejected by --census. See bin/markdown-cost.sh.
+# accepted 2026-08-15T15:44:46-05:00
+20051

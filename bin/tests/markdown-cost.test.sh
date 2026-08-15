@@ -50,6 +50,8 @@
 #   F4 residue/ is excluded from every rule      -> exit 0
 #   G1 --census with no baseline                 -> exit 2, never 0
 #   G2 --accept records the count it measured
+#   G5 --accept REFUSES to write a higher number
+#   G6 --census REJECTS a branch that raised the baseline by hand
 #   G3 a tree above the baseline                 -> exit 1
 #   G4 a tree below it passes, and says so
 #
@@ -377,6 +379,31 @@ has "G3 and says how far it rose"    "$RUN_OUT" "gained 40 prose line(s)"
 RUN_OUT="$(cd "$T/ratchet" && "$SCRIPT" --census 2>&1)"; RUN_RC=$?
 rc  "G4 a tree that shrank exits 0" 0 "$RUN_RC"
 has "G4 and invites locking the reduction in" "$RUN_OUT" "run --accept to lock it in"
+
+# G5/G6. The ratchet only falls, and BOTH doors are shut: --accept cannot
+# re-accept upward, and a hand edit that raises the number is rejected by
+# --census. The hand-raise used to be advertised in the FLAG itself, and was
+# taken twice on 2026-08-15 -- both times inside a PR that merged itself.
+{ printf '#!/usr/bin/env bash\n'; for i in $(seq 1 90); do printf '# line %d\n' "$i"; done; } > "$T/ratchet/tool.sh"
+RUN_OUT="$(cd "$T/ratchet" && "$SCRIPT" --accept 2>&1)"; RUN_RC=$?
+rc  "G5 --accept refuses to raise the baseline" 1 "$RUN_RC"
+has "G5 and says so out loud"        "$RUN_OUT" "REFUSED"
+has "G5 and names the reap instead"  "$RUN_OUT" "Reap prose instead"
+
+# G6 needs a real merge base, because that is what the check compares against.
+G6="$T/g6"; mkdir -p "$G6" && (
+  cd "$G6" && git init -q -b main .
+  git config user.email t@t.invalid && git config user.name t
+  printf '#!/usr/bin/env bash\n# one\n' > tool.sh
+  printf '# r\n100\n' > .ratchet
+  git add -A && git commit -qm base
+  git update-ref refs/remotes/origin/main HEAD
+  printf '# r\n999\n' > .ratchet
+)
+RUN_OUT="$(cd "$G6" && MARKDOWN_COST_RATCHET="$G6/.ratchet" "$SCRIPT" --census 2>&1)"; RUN_RC=$?
+rc  "G6 a hand-raised baseline is rejected" 1 "$RUN_RC"
+has "G6 and names both numbers"   "$RUN_OUT" "RAISES the baseline from 100 to 999"
+has "G6 and offers no override"   "$RUN_OUT" "there is no override"
 unset MARKDOWN_COST_RATCHET
 
 echo
