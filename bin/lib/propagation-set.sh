@@ -321,6 +321,7 @@ wire-selfdev-git.sh
 wire-release-channel.sh
 selfdev-gh-app-register.sh
 selfdev-app-key.sh
+selfdev-permissions-provision.sh
 install-shims.sh
 install-verbs.sh
 pivot.sh
@@ -495,6 +496,8 @@ served-not-cloned.sh
 shellcheck-lint.sh
 verb-kind-lint.sh
 repo-settings-provision.sh
+branch-protection-provision.sh
+verbs-refresh.sh
 no-worktree-lint.sh
 "
 # repo-settings-provision.sh is LOCAL for thermostat-wiring.sh's reason, not
