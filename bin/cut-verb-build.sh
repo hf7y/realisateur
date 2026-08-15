@@ -1,88 +1,14 @@
 #!/usr/bin/env bash
-# cut-verb-build.sh -- pin the ecosystem's whole verb surface to one
-# immutable, dated BUILD, derived live from GitHub with no clone on this
-# host at all.
+# cut-verb-build.sh -- pin the ecosystem's whole verb surface to one dated,
+# immutable BUILD, read live from GitHub with no clone on this host.
 #
-# WHY THIS EXISTS
-# ---------------
-# Today a verb on this host is a symlink into a `bashified` WORKTREE of a
-# full development clone (`installe`, senechal bin/installe:194-213). Three
-# consequences follow from that one fact, and this script exists to break
-# all three:
+# A verb is declared by a project's `bashified` branch carrying an executable
+# bin/<name> AND a matching man/<name>.1 -- the rule is bin/lib/verb-set.sh's.
+# Opt out by name in bin/lib/not-a-verb.tsv.
 #
-#   1. You cannot delete a dev clone without breaking its verb. Removing
-#      ~/Documents/Projects/vim-arcade breaks `entraine`, because
-#      vim-arcade-verbs/.git is a POINTER into vim-arcade/.git/worktrees/.
-#      Measured 2026-08-04: 807M of dev clones on mandark to serve 26 verbs
-#      whose bashified branches total ~2.3M.
-#   2. Your verbs move under you while agents work. A worktree tracks a
-#      BRANCH, so the moment monkey merges to `bashified`, the next `git
-#      pull` anywhere changes what `arme` means mid-sitting. There is no
-#      version of the verb set to name, hold, or roll back to.
-#   3. Different user paths get different verbs. zach@mandark, ecosim@monkey
-#      and bibliothecaire@monkey each pull at their own moment, so "the verb
-#      set" is whatever each account last happened to fetch.
-#
-# A BUILD answers all three: a dated manifest naming an exact sha per
-# project, so every user path can install *the same named thing*, hold it
-# while agents merge past it, and step back to yesterday's by name.
-#
-# WHAT IT READS
-# -------------
-# GitHub, and nothing else. The declaration rule is realisateur
-# bin/lib/verb-set.sh's, unchanged:
-#
-#     a project declares a verb  <=>  its `bashified` branch carries an
-#     executable bin/<name> AND a matching man/<name>.1
-#
-# but read via `gh api .../git/trees/bashified?recursive=1` instead of
-# `git ls-tree` against a local checkout. verb-set.sh's header already says
-# the declaration "lives in the repository, not in ~/.local" -- that was
-# true of the REF and false of the PROJECT LIST, which was a scan of
-# ~/Documents/Projects/*/ as directories. This reads both from the source.
-#
-# THE FAILURE MODE THIS REFUSES TO HAVE
-# -------------------------------------
-# An empty build is not a small build -- it is an instruction to uninstall
-# every verb on every host. So unreachable GitHub, an unauthenticated `gh`,
-# and a zero-verb result are all HARD failures that write nothing, never an
-# empty manifest exiting 0. This is the `garde` shape (realisateur/
-# MONKEY.md §5): `pending_sets()` skipped unreachable destinations, so
-# nothing reachable read as "everything is already proven". Absent must not
-# read as proven, and here it must not read as "declared nothing".
-#
-# For the same reason a build that SHRINKS against the previous one is a
-# refusal unless --allow-shrink: losing a project's verbs because one API
-# call flaked is indistinguishable, in the manifest, from a project that
-# genuinely retired its verbs.
-#
-# AND FOR THE SAME REASON, A HALF-DECLARATION IS A REFUSAL.
-# ---------------------------------------------------------
-# The declaration rule is a conjunction, so it has a difference as well as an
-# intersection: an executable bin/<n> with no man/<n>.1, or a man/<n>.1 with
-# no executable bin/<n>. This script printed the intersection and DISCARDED
-# the difference -- no count, no name, no line in the manifest -- and then
-# `[ -n "$verbs" ] || continue` skipped the project entirely.
-#
-# What that cost, exactly: ecosim's `bin/ecosim-sensor` has been half-declared
-# for its whole existence, so it was excluded from EVERY BUILD EVER CUT. What
-# was visible instead was `ecosim-sensor-tick` reporting WRAPPER_NO_SENSOR on
-# a host, which reads as a stale build, and cost a diagnosis that concluded
-# "cut a new build" -- realisateur#66. A new build would have changed nothing.
-#
-# So a half-declaration is named, written into the manifest, and REFUSED. Not
-# warned about: this script already refuses on two weaker conditions (a tree
-# that did not read, a name declared twice), and a build that warns and
-# proceeds is a build whose warnings get skimmed.
-#
-# The genuinely-not-a-verb case -- an installer, a cron wrapper, a scraper --
-# opts out ONCE, by name, in bin/lib/not-a-verb.tsv, and every applied
-# exemption is written into the manifest so the decision travels with the
-# artifact every account consumes rather than living on the terminal of
-# whoever ran the cut. --allow-half-declared is the per-run escape, and it is
-# the same shape as --allow-shrink: the operator who has already filed the
-# defect can still cut tonight's build, loudly, with the finding recorded in
-# the manifest.
+# Every refusal below is deliberate and says so when it fires: an empty build,
+# a shrinking one, and a half-declaration are all HARD failures, because an
+# absent verb and a retired verb are indistinguishable in a manifest.
 set -uo pipefail
 
 CLI_NAME='cut-verb-build.sh'
@@ -213,22 +139,9 @@ repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].nam
 # And the verb set is not one either: chezz is a real registered project whose
 # bashified branch was retired, so it declares nothing and would vanish.
 #
-# WHY THIS MATTERS TO ANYTHING. realisateur's lints ask "what projects exist"
-# and the only answer available was scheduler/schedule/*.conf -- a CHECKOUT.
-# That single data dependency is what still forces a scheduler clone onto
-# hosts that otherwise need none (hf7y/realisateur#189's sibling problem). A
-# lint that silently scans 12 of 13 is the "scanned nothing, reported clean"
-# failure hygiene-lint's own BLIND check exists to catch, one project wide.
-#
-# SELF-DECLARED, Zach-chosen 2026-08-12: a repo is a project iff it carries
-# `.agent-project` on its default branch. Same shape as declaring a verb -- the
-# project says so itself, in its own tree, rather than someone remembering to
-# add a row somewhere else. Retirement is symmetric with --no-archived: delete
-# the file, or archive the repo.
-#
-# ONE QUERY, NOT ONE PER REPO. A contents call per repo would be ~46 API calls
-# every nightly build. GraphQL resolves the same path across every repository
-# in a single request, so the registry costs one call whatever the org size.
+# A repo is a project iff it carries `.agent-project` on its default branch --
+# self-declared, like a verb. One GraphQL query resolves the path across every
+# repo, so the registry costs one call at any org size.
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
 registry=""
 _gql='query($owner:String!){ user(login:$owner){ repositories(first:100, isFork:false, ownerAffiliations:OWNER){
