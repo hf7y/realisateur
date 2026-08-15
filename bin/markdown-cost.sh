@@ -31,15 +31,11 @@
 #      (see PROSE-REAPING.md, which is itself one of them). Any new root .md
 #      outside the allowlist exits 1 on its own, whatever the ratio says.
 #
-#   3. COMMENTS IN FILES THAT ARE NOT MARKDOWN. Pricing only *.md left more
-#      than half the estate's prose invisible: 34,939 comment lines in shell
-#      scripts and 2,480 in .conf, against 43,586 in *.md. Flags when a diff
-#      adds >=150 comment lines AND they are >=60% of its non-markdown lines.
+#   3. COMMENTS IN FILES THAT ARE NOT MARKDOWN -- most of the estate's prose.
+#      Flags at >=150 added comment lines AND >=60% of added non-markdown.
 #
-#   4. THE TREE, AGAINST A RATCHET (--census). The three above price a DIFF, so
-#      accumulated mass never trips them -- a repo reaches 57% prose one
-#      under-threshold commit at a time. bin/markdown-cost.ratchet records the
-#      tree's prose count, and it only ever falls.
+#   4. THE TREE, AGAINST A RATCHET (--census). bin/markdown-cost.ratchet
+#      records the tree's prose count; it only ever falls.
 #
 # THE ONE BUG IT MUST NOT HAVE. In this ecosystem "found nothing" has
 # repeatedly been reported as "nothing is wrong" -- a survey that reached zero
@@ -109,9 +105,6 @@ prose_lang() { # <path> -> 'h', 'j', 'm', or empty for a file we do not price
   esac
 }
 
-# residue/ is a retired tree kept as an artefact -- basheur's holds 8,923 prose
-# lines and dominates every threshold here. Grading a museum makes the output
-# noise. Excluded once, not per-rule, so no two rules can disagree about it.
 prose_excluded() { # <path> -> 0 if no rule should grade this file
   case "$1" in residue/*|*/residue/*) return 0 ;; esac
   return 1
@@ -142,7 +135,6 @@ case "$GROW_TOL" in
   ''|*[!0-9]*) die2 "MARKDOWN_COST_GROW_TOL must be a whole number of lines, got '$GROW_TOL'" ;;
 esac
 
-# Both must hold before the comment rule fires. See the derivation above it.
 CM_MAX_PCT="${MARKDOWN_COST_COMMENT_PCT:-60}"
 CM_FLOOR="${MARKDOWN_COST_COMMENT_FLOOR:-150}"
 case "$CM_MAX_PCT$CM_FLOOR" in
@@ -150,20 +142,6 @@ case "$CM_MAX_PCT$CM_FLOOR" in
 esac
 
 # --- the census and its ratchet ----------------------------------------------
-# The checks above price a DIFF, so accumulated mass never trips them: a repo
-# reaches 57% prose one under-threshold commit at a time. This measures the TREE.
-#
-# It records a NUMBER, not forgiven pairs as shellcheck-lint.ratchet does,
-# because prose has no stable identity -- a comment that moved is the same
-# prose, and a per-file baseline would be re-accepted on every edit, which is
-# how a ratchet quietly loosens itself.
-#
-# It deliberately does NOT grade the existing tree file-by-file. Measured across
-# 21 repos (see #299), a >=120-line comment-run rule fires on 16 already-
-# committed files outside residue/ and a ratio rule on 11. A guard whose first
-# act is to fail 27 files nobody is touching is the unsatisfiable guard this
-# repo has paid for twice. The floor is "add no more"; the mass comes down by
-# reaping, which the ratchet then locks in.
 RATCHET="${MARKDOWN_COST_RATCHET:-$(dirname "${BASH_SOURCE[0]}")/markdown-cost.ratchet}"
 
 # census_stream reads NUL-separated repo-relative paths and totals their prose.
