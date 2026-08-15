@@ -123,6 +123,7 @@ set -uo pipefail
 
 PROJECTS_ROOT="${PROJECTS_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}}"
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
+UNDECLARED_SEEN="$(mktemp)"; trap 'rm -f "$UNDECLARED_SEEN"' EXIT
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)" || REPO=""
 
 STRICT=0
@@ -244,10 +245,25 @@ project_repos() {
   # can open, so a project it cannot read is not one it could audit anyway.
   for tree in "$PROJECTS_ROOT"/*; do
     [ -d "$tree" ] || continue
-    [ -f "$tree/$REGISTRY_MARKER" ] || continue
-    [ -d "$tree/bin" ] || continue
     name="$(basename "$tree")"
     [ -n "$ONLY" ] && [ "$name" != "$ONLY" ] && continue
+    if [ ! -f "$tree/$REGISTRY_MARKER" ]; then
+      # A CHECKOUT MISSING THE MARKER IS NOT THE SAME AS A NON-PROJECT, and
+      # silently treating it as one is how this guard would narrow its own
+      # domain without saying so. wtul carries .agent-project on its default
+      # branch and a local clone here did not -- a stale clone, not a
+      # declaration. So a git tree that does not declare itself is NAMED on
+      # stderr rather than skipped in silence.
+      # project_repos runs twice (once to count, once to iterate), so the
+      # notice is deduped rather than printed twice per tree.
+      if [ -d "$tree/.git" ] && ! grep -qxF "$name" "$UNDECLARED_SEEN" 2>/dev/null; then
+        echo "$name" >>"$UNDECLARED_SEEN"
+        printf 'undeclared: %s (no %s -- stale clone, or not a project)\n' \
+          "$name" "$REGISTRY_MARKER" >&2
+      fi
+      continue
+    fi
+    [ -d "$tree/bin" ] || continue
     printf '%s\t%s\n' "$name" "$tree"
   done
 }
