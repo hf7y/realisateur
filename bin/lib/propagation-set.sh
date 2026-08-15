@@ -424,9 +424,20 @@ PROP_LEAK_BOUND=7
 # dexter-liveness.sh and dexter-service-deploy.sh are LOCAL: both need an ssh
 # credential to dexter and a working copy of provision/dexter/. An account
 # neither probes another host nor deploys to one -- it is the thing deployed.
+#
+# monkey-vdi-to-internal.sh and monkey-watch.sh are LOCAL for a sharper version
+# of the same reason: both must run ON THE VM HOST, because both call
+# VBoxManage against the guest. Shipping either to an account would be worse
+# than useless -- monkey-watch's whole purpose is to report monkey being down,
+# which it can only do from somewhere that is not monkey (hf7y/realisateur#274,
+# where the previous publisher could not report an outage because publishing
+# required ssh to the thing that was down). A watcher that ships to its subject
+# is the failure, not the delivery.
 PROP_LOCAL_SCRIPTS="
 dexter-liveness.sh
 dexter-service-deploy.sh
+monkey-vdi-to-internal.sh
+monkey-watch.sh
 playbook.sh
 publish-monkey-status.sh
 claim-drift.sh
