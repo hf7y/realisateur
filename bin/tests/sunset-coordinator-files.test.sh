@@ -229,7 +229,7 @@ eq "H11 a read after the docstring still blocks" "$rc" "1"
 # Selecting code by extension reported hf7y/scheduler READY while bin/scheduler
 # (3,659 lines, ~40 live sites) still wrote the retired paths.
 note "J. Extensionless executables"
-mkdir -p "$T/repo-noext/bin" && cd "$T/repo-noext"
+mkdir -p "$T/repo-noext/bin" && cd "$T/repo-noext" || exit 1
 git init -q . && git config user.email t@t && git config user.name t
 mkdir -p .scheduler && echo "# retired" > .scheduler/FOCUS.md
 printf '#!/usr/bin/env bash\necho x > .scheduler/FOCUS.md\n' > bin/tool
@@ -240,6 +240,78 @@ rc=0; out="$("$CMD" "$T/repo-noext" 2>&1)" || rc=$?
 eq "J1  an extensionless shebang producer blocks" "$rc" "1"
 printf '%s' "$out" | grep -q 'bin/tool' && ok "J1b names it" || bad "J1b names it"
 printf '%s' "$out" | grep -q ':notes:' && bad "J2  extensionless non-script scanned" || ok "J2  extensionless non-script ignored"
+
+# --- J: one hop out of an instruction file ---
+# baudin: .claude/commands/nightly-batch.md said "read README.md in full and
+# trust it", and README.md said "see .claude/FOCUS.md for current priority".
+# The scan saw nothing and the agent was still sent to the dead path.
+note "J. One-hop producer chain"
+mkdir -p "$T/repo-hop/.claude/commands" && cd "$T/repo-hop" || exit 1
+git init -q . && git config user.email t@t && git config user.name t
+touch .claude/FOCUS.md
+printf 'Read `README.md` in full and trust it over your own assumptions.\n' \
+  > .claude/commands/nightly-batch.md
+printf 'See `.claude/FOCUS.md` for current priority.\n' > README.md
+git add -A && git commit -qm init
+rc=0; out="$("$CMD" "$T/repo-hop" 2>/dev/null)" || rc=$?
+eq "J1  a hop through a named file blocks" "$rc" "1"
+printf '%s' "$out" | grep -q "README.md" && \
+  ok "J2  names the hopped-to file" || bad "J2  names the hopped-to file" "$out"
+
+# ...and it stops at one hop. Past one, "a file that mentions a file" is the
+# whole repo, and the guard goes back to being unsatisfiable.
+printf 'Read `README.md` in full.\n' > .claude/commands/nightly-batch.md
+printf 'See `HISTORY.md`.\n' > README.md
+printf 'We used to keep it in `.claude/FOCUS.md`.\n' > HISTORY.md
+git add -A && git commit -qm "two hops"
+rc=0; "$CMD" "$T/repo-hop" >/dev/null 2>&1 || rc=$?
+eq "J3  the hop stops at one" "$rc" "0"
+
+# --- K: the python verdict is DETERMINISTIC ---
+# The awk parity heuristic desynced on a stray quote and every line after it
+# flipped, so ecosim's bin/migration-watch.py:196/:257/:1165 stopped blocking
+# after unrelated edits elsewhere in the file. A guard over a destructive
+# operation whose verdict depends on distant content is not reproducible.
+note "K. Python: docstring vs code, and stable under unrelated edits"
+mkdir -p "$T/repo-py" && cd "$T/repo-py" || exit 1
+git init -q . && git config user.email t@t && git config user.name t
+mkdir -p .scheduler lib
+echo "# retired" > .scheduler/FOCUS.md
+cat > lib/both.py <<'PYFIX'
+"""Module docstring whose prose can't spell things right.
+
+It cites .scheduler/FOCUS.md as the source of the bar, and it's got an
+apostrophe plus a stray " quote to desync a parity counter.
+"""
+
+
+def read_it():
+    """One-line docstring mentioning .scheduler/FOCUS.md."""
+    return open(".scheduler/FOCUS.md").read()
+PYFIX
+git add -A && git commit -qm init
+rc=0; out="$("$CMD" "$T/repo-py" 2>/dev/null)" || rc=$?
+eq "K1  the file blocks -- it really does read the path" "$rc" "1"
+n=$(printf '%s\n' "$out" | grep -c 'both\.py:')
+eq "K2  exactly one line named: the open(), not the two docstrings" "$n" "1"
+printf '%s' "$out" | grep -q 'both\.py:10' && \
+  ok "K3  and it is the open() line" || bad "K3  and it is the open() line" "$out"
+
+# The same file, with unrelated prose added ABOVE. The verdict must not move.
+before="$out"
+python3 - <<'PYEDIT'
+p = "lib/both.py"
+s = open(p).read()
+s = s.replace("def read_it():",
+              "X = 1  # an unrelated addition, with a lone ' apostrophe\n\n\ndef read_it():")
+open(p, "w").write(s)
+PYEDIT
+git add -A && git commit -qm "unrelated edit above"
+rc=0; out2="$("$CMD" "$T/repo-py" 2>/dev/null)" || rc=$?
+eq "K4  still blocks after an unrelated edit" "$rc" "1"
+n2=$(printf '%s\n' "$out2" | grep -c 'both\.py:')
+eq "K5  and still names exactly one line" "$n2" "1"
+[ -n "$before" ] && ok "K6  the first verdict was recorded" || bad "K6  the first verdict was recorded"
 
 # --- Summary ---
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
