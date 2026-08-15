@@ -146,6 +146,60 @@ git ls-tree -r --name-only "$start_branch" | grep -q '.scheduler/FOCUS.md' && \
   ok "G2c starting branch still has the files (untouched)" || \
   bad "G2c starting branch still has the files (untouched)"
 
+# --- H: a comment is not a producer ---
+# The scan used to count every rationale comment mentioning FOCUS.md as a live
+# producer: 123 in scheduler, 117 in realisateur, 62 in crt. Those lines read
+# and write nothing, so no amount of fixing them ever unblocks the sunset.
+note "H. Comments are not producers"
+mkdir -p "$T/repo-comments" && cd "$T/repo-comments"
+git init -q . && git config user.email t@t && git config user.name t
+mkdir -p .scheduler lib tests
+echo "# retired" > .scheduler/FOCUS.md
+printf '# the 0.82 threshold comes from .scheduler/FOCUS.md 2026-07-24\nTHRESHOLD=0.82\n' > lib/tuned.sh
+printf '"""Covers the end-goal stated in .claude/FOCUS.md."""\nX = 1\n' > tests/test_x.py
+printf '// see FOCUS.md item 9\nconst n = 9;\n' > lib/n.mjs
+git add -A && git commit -qm init
+rc=0; out="$("$CMD" "$T/repo-comments" 2>&1)" || rc=$?
+eq "H1  comment-only references do not block" "$rc" "0"
+printf '%s' "$out" | grep -q "would remove" && \
+  ok "H2  reaches the removal step" || bad "H2  reaches the removal step" "$out"
+
+# ...but a real code reference in the same repo still blocks.
+printf 'FOCUS=".scheduler/FOCUS.md"\ncat "$FOCUS"\n' > lib/reader.sh
+git add -A && git commit -qm "add a real producer"
+rc=0; out="$("$CMD" "$T/repo-comments" 2>&1)" || rc=$?
+eq "H3  a live code reference still blocks" "$rc" "1"
+printf '%s' "$out" | grep -q "reader.sh" && \
+  ok "H4  names the real producer" || bad "H4  names the real producer" "$out"
+printf '%s' "$out" | grep -q "tuned.sh" && \
+  bad "H5  does not name the comment-only file" "$out" || \
+  ok "H5  does not name the comment-only file"
+
+# The failure mode of stripping comments is dropping a REAL producer that
+# happens to sit under one. bin/stamp-agent.sh is the live shape (#278): a
+# comment block explaining the bootstrap FOCUS.md, then the line that WRITES
+# it. The write must still be caught.
+rm lib/reader.sh
+printf '# writes the bootstrap .scheduler/FOCUS.md, then gates on it\nwrite_stamp() {\n  echo hi > "$repo/.scheduler/FOCUS.md"\n}\n' > lib/stamp.sh
+git add -A && git commit -qm "comment above a writer"
+rc=0; out="$("$CMD" "$T/repo-comments" 2>&1)" || rc=$?
+eq "H6  a writer under a comment still blocks" "$rc" "1"
+printf '%s' "$out" | grep -qE 'stamp\.sh:3' && \
+  ok "H7  names the code line, not the comment line" || \
+  bad "H7  names the code line, not the comment line" "$out"
+
+# A .claude/commands/*.md instruction is a producer BY NATURE -- an
+# instruction is what creates the reader -- and markdown is never filtered.
+rm lib/stamp.sh
+mkdir -p .claude/commands
+printf 'Read `.scheduler/FOCUS.md` first; everything below is scoped by it.\n' \
+  > .claude/commands/nightly-batch.md
+git add -A && git commit -qm "instruction file"
+rc=0; out="$("$CMD" "$T/repo-comments" 2>&1)" || rc=$?
+eq "H8  a command-file instruction still blocks" "$rc" "1"
+printf '%s' "$out" | grep -q "nightly-batch.md" && \
+  ok "H9  names the instruction file" || bad "H9  names the instruction file" "$out"
+
 # --- Summary ---
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

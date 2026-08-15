@@ -149,6 +149,21 @@ find_producers() {
     --exclude='sunset-coordinator-files.test.sh' \
     . 2>/dev/null || true)
 
+  # A COMMENT IS NOT A PRODUCER, and this is the difference between a usable
+  # mechanism and one that can never report clean. Across the estate almost
+  # every code hit is rationale prose in a comment or docstring -- "see
+  # FOCUS.md #8", "the 2026-07-21 .claude/FOCUS.md end-goal", a dated note
+  # explaining why a threshold is what it is. Those lines read nothing and
+  # write nothing, so deleting the files cannot regenerate them and fixing
+  # them accomplishes nothing. Counting them reported 123 blocking producers
+  # in scheduler, 117 in realisateur and 62 in crt on 2026-08-15, which put
+  # the sunset permanently out of reach in ten of sixteen repos.
+  # Only a line of live code that names the path can bring a file back.
+  # Markdown is NOT filtered here: an instruction file has no code, and its
+  # prose IS its mechanism.
+  code_matches=$(printf '%s\n' "$code_matches" \
+    | grep -vE '^[^:]*:[0-9]+:[[:space:]]*(#|//|\*|/\*|"""|'"'''"')' || true)
+
   # Markdown is scanned NARROWLY, and the distinction is the whole point:
   # a slash-command file or CLAUDE.md INSTRUCTS an agent to read or write
   # these paths, so it is a producer. A retrospective that merely mentions
