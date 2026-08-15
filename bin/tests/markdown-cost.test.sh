@@ -148,6 +148,27 @@ rc  "B6 a markdown-only rewrite that nets NEGATIVE passes"  0 "$RUN_RC"
 has "B6 and it is reported as a reap, with the net"         "$RUN_OUT" "net prose: -160 line(s)"
 hasnt "B6 and raises no ratio FLAG"                         "$RUN_OUT" "FLAG [markdown-ratio]"
 
+# B6b: THE PRODUCER FIX (#287). #187 makes a reap incomplete until it also
+# repoints the command file that WROTE the surface being deleted, and that
+# edit adds a net line or two. Under a one-line "grew" trigger the mandatory
+# step disqualified the exemption, so every correct reap PR failed:
+# senechal#280 deleted 1,662 net lines and scored 97% because
+# .claude/commands/nightly-batch.md gained ONE net line.
+newrepo producer
+mkdir -p "$T/producer/.claude/commands"
+lines 200 "$T/producer/DOC.md" 'a retired prose surface'
+lines 10 "$T/producer/.claude/commands/nightly.md" 'write DOC.md every night'
+G "$T/producer" add -A
+G "$T/producer" commit -qm seed
+G "$T/producer" checkout -q -b work
+lines 5 "$T/producer/DOC.md" 'see the issue tracker'
+lines 12 "$T/producer/.claude/commands/nightly.md" 'file an issue every night'
+G "$T/producer" add -A
+G "$T/producer" commit -qm reap
+run producer env
+rc  "B6b a reap whose producer fix nets +2 still passes" 0 "$RUN_RC"
+has "B6b and is reported as a reap"  "$RUN_OUT" "a reap, not a cost."
+
 # The exemption is self-limiting: prose that GROWS still pays, even though
 # this diff also deletes. Otherwise "delete a line, add a hundred" would buy
 # an exemption, which is the same dodge inverted.

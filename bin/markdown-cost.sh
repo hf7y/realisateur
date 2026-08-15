@@ -90,6 +90,13 @@ case "$MAX_PCT" in
   ''|*[!0-9]*) die2 "MARKDOWN_COST_MAX_PCT must be a whole number of percent, got '$MAX_PCT'" ;;
 esac
 
+# Net lines a single markdown file may gain inside a reap without disqualifying
+# it. See the md_grew assignment for why this is not zero.
+GROW_TOL="${MARKDOWN_COST_GROW_TOL:-10}"
+case "$GROW_TOL" in
+  ''|*[!0-9]*) die2 "MARKDOWN_COST_GROW_TOL must be a whole number of lines, got '$GROW_TOL'" ;;
+esac
+
 # --- resolve the range -------------------------------------------------------
 [ $# -le 1 ] || die2 "takes at most one argument (a ref range), got $#"
 git rev-parse --git-dir >/dev/null 2>&1 || die2 "not inside a git repository"
@@ -143,7 +150,15 @@ while IFS=$'\t' read -r added deleted path; do
     # delete of an obsolete doc launder a brand-new 250-line essay through as
     # "a reap" -- found by fixture against this script's own first version of
     # the exemption, before it had shipped a week.
-    [ "$added" -gt "$deleted" ] && md_grew="$md_grew $path:+$((added - deleted))"
+    #
+    # But "grew" was a ONE-LINE trigger, and #187 makes a producer fix
+    # mandatory in every reap: a reap PR must also repoint the command file
+    # that wrote the surface it deleted. senechal#280 deleted 1,662 net lines
+    # of prose and was scored as bloat because .claude/commands/nightly-batch.md
+    # gained ONE net line doing exactly that. So growth is judged against a
+    # tolerance: an edit that swaps instructions is not an essay, and 250 is
+    # still an essay.
+    [ "$((added - deleted))" -gt "$GROW_TOL" ] && md_grew="$md_grew $path:+$((added - deleted))"
   fi
 done <<EOF
 $NUMSTAT
