@@ -89,7 +89,7 @@ while [ $# -gt 0 ]; do
     --account) ADOPT_ACCOUNT="${2:-}"; shift ;;
     --key)     ADOPT_KEY="${2:-}"; shift ;;
     --app-id)  ADOPT_ID="${2:-}"; shift ;;
-    -h|--help) sed -n '2,21p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,/^set -/p' "$0" | sed 's/^# \{0,1\}//;$d'; exit 0 ;;
     *) echo "usage: $0 [--check|--token|--identity|--credential|--wire|--jwt] [--repos a,b]" >&2
        echo "       $0 --adopt --account <name> --key <file.pem> --app-id <id>" >&2; exit 2 ;;
   esac

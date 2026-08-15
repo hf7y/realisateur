@@ -22,7 +22,8 @@
 # where the wrong path is already the expensive one just makes everything
 # cost more. The only lever that changes behaviour is making the RIGHT path
 # cheaper than the paragraph. That is this script, and the guard
-# (bin/deferral-ledger.sh) is secondary to it.
+# (the DEFERRED grammar in bin/lib/body-grammar.sh, refused at the write by
+# bin/gh-sign.sh) is secondary to it.
 #
 #   defere 'orphaned ecosystem-survey shim on chezz@monkey' --project chezz
 #
@@ -263,7 +264,7 @@ FULLBODY="$BODY
 ---
 Deferred from **$FROM**${REPO:+ (}${REPO}${REPO:+)} by \`defere\` on $(date -u +%Y-%m-%d).
 Filed because the work was left behind deliberately and a paragraph is not a queue.
-See realisateur \`bin/deferral-ledger.sh\` for why this exists."
+See realisateur \`bin/lib/body-grammar.sh\` for why this exists."
 
 if [ "$DRY" -eq 1 ]; then
   printf 'defere: DRY RUN -- nothing filed.\n\n'

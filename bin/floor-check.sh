@@ -61,7 +61,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --quiet|-q) QUIET=1 ;;
     --restore)  DO_RESTORE=1 ;;
-    -h|--help)  sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)  sed -n '2,/^set -/p' "$0" | sed 's/^# \{0,1\}//;$d'; exit 0 ;;
     *) printf 'floor-check: unknown flag: %s\n' "$1" >&2; exit 2 ;;
   esac
   shift

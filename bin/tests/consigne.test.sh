@@ -258,7 +258,8 @@ echo "-- F. IT IS NOT A SECOND IMPLEMENTATION --------------------------------"
 # in order to explain why they are forbidden. Scanning the raw text makes the
 # explanation trip the guard -- which is exactly what guard-estate check E's
 # first draft did, firing on its own preamble within ten minutes of being
-# written (bin/deferral-ledger.sh's header records it). So this reads CODE.
+# written (bin/claim-drift.sh's declares_itself comment records it). So this
+# reads CODE.
 SRC_TEXT="$(grep -v '^[[:space:]]*#' "$CONSIGNE")"
 hasnt "it does not run git push"   "$SRC_TEXT" "git push"
 hasnt "it does not run git commit" "$SRC_TEXT" "git commit"

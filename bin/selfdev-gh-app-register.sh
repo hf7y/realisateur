@@ -76,7 +76,7 @@ while [ $# -gt 0 ]; do
     --reader) ROLE="reader" ;;
     --manifest-only) MANIFEST_ONLY=1 ;;
     --no-open) NO_OPEN=1 ;;
-    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,/^set -/p' "$0" | sed 's/^# \{0,1\}//;$d'; exit 0 ;;
     -*) echo "usage: $0 <account> [--repo R] [--reader] [--owner O] [--port N] [--out DIR] [--manifest-only]" >&2; exit 2 ;;
     *)  [ -z "$ACCOUNT" ] && ACCOUNT="$1" || { echo "usage: $0 <account> ..." >&2; exit 2; } ;;
   esac

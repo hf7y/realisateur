@@ -267,8 +267,8 @@ bin/lib/not-a-verb.tsv             verbs the recorded exceptions to that declara
 bin/lib/propagation-set.sh         verbs the dev/prod contract for the verb release channel. Its own header is an argument about hf7y/verbs' visibility.
 provision/verbs-meta              verbs its own README says build-verbs.yml belongs at hf7y/verbs/.github/workflows/build-verbs.yml.
 bin/claim-drift.sh                 vim-arcade asks whether a pull request grew after being presented as done. PR tooling.
-bin/deferral-ledger.sh             vim-arcade asks whether a pull request declares its deferred work. PR tooling, same door as claim-drift.
-bin/tests/deferral-ledger.test.sh  vim-arcade follows its subject.
+bin/lib/body-grammar.sh            vim-arcade the grammar of an agent-written issue/PR body. PR tooling, same door as claim-drift.
+bin/tests/body-grammar.test.sh     vim-arcade follows its subject.
 .github/workflows/deferral-ledger.yml vim-arcade follows its subject.
 bin/defere.sh                      vim-arcade files an issue and prints the ledger line. Issue tooling; the estate's front door for routing a finding to an owner.
 bin/path-provenance-audit.sh       senechal asks whether every PATH entry has an owner and a source. senechal owns knowing what exists on a machine -- Zach reassigned this class explicitly on 2026-08-07.

@@ -26,8 +26,8 @@
 #   deliberately 559, DO NOT 241, on purpose 128, decided 112 -- ordinary
 #   explanatory prose; "for now" 35 -- hedging ("fine for now"), never a
 #   decision; "was wrong" 35 -- usually a lesson about a bug, not a directive;
-#   TODO 28 / FIXME 0 -- a deferral marker, and bin/deferral-ledger.sh already
-#   says plainly that "TODO" does not count as one.
+#   TODO 28 / FIXME 0 -- a deferral marker, and bin/lib/body-grammar.sh's
+#   NO-DESTINATION rule already says plainly that it does not count as one.
 # Kept: Zach-directed 82, an attributed date 63, SUPERSEDED 38, CORRECTED 35,
 #   "stopped being true" 5, "not acted on" 3, un-pause 2.
 #

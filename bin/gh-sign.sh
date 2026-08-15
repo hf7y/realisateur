@@ -10,13 +10,23 @@
 # comments across five repos were stamped. Why the GitHub App cannot own this
 # half of attribution, and the measurement: hf7y/realisateur#327.
 #
-# FAIL OPEN, ALWAYS. Every failure path -- no real gh, an unreadable
-# --body-file, an unrecognised subcommand -- execs the real gh with the
-# ORIGINAL argv. An unsigned comment is the status quo; a dropped one is not.
+# It also REFUSES an `issue create` / `pr create` whose body breaks the body
+# grammar in lib/body-grammar.sh -- admission control, not an audit. The two
+# workflows that graded that same text after the fact (claim-drift.yml,
+# deferral-ledger.yml) are not required checks on main, so nothing they found
+# could ever block anything; the write is the only place the rule bites.
 #
-#   gh-sign.sh <any gh argv>     sign if it is a body-carrying write, then exec gh
-#   gh-sign.sh --self-check      prove the shim resolves a real gh that is not itself
-#   gh-sign.sh --stamp           print the stamp this host/account would append
+# FAIL OPEN ON MACHINERY, CLOSED ON GRAMMAR. Every MECHANICAL failure -- no
+# real gh, an unreadable --body-file, an unrecognised subcommand, a missing
+# grammar library -- execs the real gh with the ORIGINAL argv. An unsigned
+# comment is the status quo; a dropped one is not. A body that violates a rule
+# the shim COULD read is the one case it stops, because a malformed body that
+# reaches GitHub is what every deleted auditor existed to chase afterwards.
+#
+#   gh-sign.sh <any gh argv>        sign if it is a body-carrying write, then exec gh
+#   gh-sign.sh --self-check         prove the shim resolves a real gh that is not itself
+#   gh-sign.sh --stamp              print the stamp this host/account would append
+#   gh-sign.sh --check-body <path>  grade a body against the grammar; `-` reads stdin
 #
 # NOT INSTALLED ANYWHERE YET: it does nothing until something links it ahead of
 # the real gh on PATH, which is #327's open decision. Mandark is excluded
@@ -54,11 +64,30 @@ real_gh() {
   return 1
 }
 
+# The grammar lives next to this file. When the shim is reached through a
+# symlink (/usr/local/bin/gh) ${BASH_SOURCE[0]} is the LINK, so lib/ is not
+# beside it -- hence GH_SIGN_LIB, set by whatever installs the link. A missing
+# library is announced and then fallen through: BLIND, loudly, never silently
+# clean. `%/*` rather than dirname: no external commands here, see stamp().
+GRAMMAR="${GH_SIGN_LIB:-${BASH_SOURCE[0]%/*}/lib}/body-grammar.sh"
+grammar_ok=0
+# shellcheck source=lib/body-grammar.sh
+[ -r "$GRAMMAR" ] && . "$GRAMMAR" && grammar_ok=1
+
 case "${1:-}" in
   --stamp)      stamp; exit 0 ;;
+  --check-body)
+    [ "$grammar_ok" -eq 1 ] || { printf 'gh-sign: BLIND -- no grammar library at %s\n' "$GRAMMAR" >&2; exit 6; }
+    if [ "${2:--}" = - ]; then _b="$(cat)"; else _b="$(cat -- "$2")" || exit 6; fi
+    grammar_check "$_b"; _n=$?
+    [ "$_n" -eq 0 ] && { echo 'gh-sign: body is well-formed'; exit 0; }
+    exit 3 ;;
   --self-check)
     if gh_bin="$(real_gh)"; then
       printf 'gh-sign: real gh -> %s\ngh-sign: stamp   -> %s' "$gh_bin" "$(stamp)"
+      [ "$grammar_ok" -eq 1 ] \
+        && printf 'gh-sign: grammar -> %s\n' "$GRAMMAR" \
+        || printf 'gh-sign: grammar -> BLIND, none at %s -- creates go unchecked\n' "$GRAMMAR"
       exit 0
     fi
     echo 'gh-sign: BLIND -- no gh on PATH other than this shim. Every call falls through unsigned.' >&2
@@ -99,6 +128,28 @@ elif [ "${args[$bi]}" = '-' ]; then
 else
   body="$(cat -- "${args[$bi]}" 2>/dev/null)" || exec "$GH" "$@"
 fi
+
+# ADMISSION CONTROL. A create is the one write whose body is a contract with
+# whoever reads the tracker next, and the only one that can still be corrected
+# for free -- it does not exist yet. Comments are exempt: a thread reply is not
+# where a DEFERRED block belongs, and refusing one would lose the reply.
+#
+# There is no bypass flag on purpose. A documented override turns a guard into
+# a toll booth: everyone pays it once and then always. Fix the body.
+case "${1:-} ${2:-}" in
+  'issue create'|'pr create')
+    if [ "$grammar_ok" -eq 1 ]; then
+      if findings="$(grammar_check "$body")"; then :; else
+        printf 'gh-sign: REFUSED -- this %s body breaks the grammar in %s:\n' "$1 $2" "$GRAMMAR" >&2
+        while IFS= read -r _f; do printf '  %s\n' "$_f" >&2; done <<<"$findings"
+        printf 'gh-sign: nothing was created. `gh-sign.sh --check-body <file>` re-runs this check.\n\n' >&2
+        grammar_template >&2
+        exit 3
+      fi
+    else
+      printf 'gh-sign: BLIND -- no grammar library at %s; body not checked.\n' "$GRAMMAR" >&2
+    fi ;;
+esac
 
 # Already signed -- by a re-run, or by a body composed from one. Signing twice
 # would push the first stamp off the last line and make the marker read as

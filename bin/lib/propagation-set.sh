@@ -360,9 +360,10 @@ PROP_LEAK_BOUND=7
 # the release pipeline (GitHub Actions checks realisateur out to get them), not
 # on a consumer. An account never gates or publishes; it only reads the result.
 #
-# deferral-ledger.sh is LOCAL for the same reason as its sibling
-# claim-drift.sh: it reads a pull request on this repository from a CI job. An
-# account never audits a PR body.
+# lib/body-grammar.sh is LOCAL: it is sourced by gh-sign.sh and claim-drift.sh
+# from inside this checkout, never invoked on its own. It is the one file that
+# has to travel WITH the shim if the shim is ever linked host-wide -- the
+# GH_SIGN_LIB variable exists so an installer can say where it landed.
 #
 # defere.sh IS FILED HERE UNDER PROTEST, and the protest has an issue number
 # rather than being left as a sentence: hf7y/realisateur#115. It is a filing
@@ -451,7 +452,6 @@ playbook.sh
 publish-monkey-status.sh
 claim-drift.sh
 defere.sh
-deferral-ledger.sh
 gh-sign.sh
 retire-check.sh
 decision-rot.sh
