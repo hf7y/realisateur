@@ -110,11 +110,10 @@ git rev-parse --git-dir >/dev/null 2>&1 || die "not a git repo: $repo"
 # one. Demanding it up front made the script unusable against exactly the
 # checkouts you most want to scan -- a CI checkout (this repo's own `suites`
 # job runs detached, and test A failed there while passing locally), a pinned
-# clone, a tag. The refusal is kept, moved to the step that actually needs it.
+# clone, a tag. The refusal is kept, moved down to the step that actually cuts
+# the branch -- which is also AFTER the producer scan, so PRODUCERS FOUND stays
+# the first thing --apply reports. It was reporting the wrong blocker.
 branch="$(git symbolic-ref --quiet --short HEAD || true)"
-if [ $APPLY -eq 1 ] && [ -z "$branch" ]; then
-  die "detached HEAD -- refusing to cut a branch from no branch"
-fi
 
 repo_name="$(basename "$(git rev-parse --show-toplevel)")"
 
@@ -282,6 +281,10 @@ fi
 
 # Verify clean working tree BEFORE cutting a branch, so a dirty tree cannot
 # be carried onto it.
+if [ -z "$branch" ]; then
+  die "detached HEAD -- refusing to cut a branch from no branch"
+fi
+
 if ! git diff-index --quiet HEAD 2>/dev/null; then
   die "working tree not clean. Commit or stash changes before applying sunset."
 fi
