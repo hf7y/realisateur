@@ -174,3 +174,8 @@ jobs:
 
       - name: A decision recorded in prose must cite an issue
         run: bash bin/directive-prose.sh
+      # The diff check cannot see accumulated mass: a repo reaches 57% prose one
+      # under-threshold commit at a time. This one counts the whole tree against
+      # bin/markdown-cost.ratchet, which only falls.
+      - name: Prose ratchet -- the tree may not grow
+        run: bash bin/markdown-cost.sh --census

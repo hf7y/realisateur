@@ -44,6 +44,14 @@
 #   E3 outside a git repository                  -> exit 2
 #   E4 a non-numeric MARKDOWN_COST_MAX_PCT       -> exit 2
 #   E5 two positional arguments                  -> exit 2
+#   F1 many comment lines at a high ratio in .sh -> exit 1
+#   F2 the same comment lines, diluted by code   -> exit 0 (the AND, not an OR)
+#   F3 dense but under the 150-line floor        -> exit 0
+#   F4 residue/ is excluded from every rule      -> exit 0
+#   G1 --census with no baseline                 -> exit 2, never 0
+#   G2 --accept records the count it measured
+#   G3 a tree above the baseline                 -> exit 1
+#   G4 a tree below it passes, and says so
 #
 # Usage: bin/tests/markdown-cost.test.sh   (exit 0 = all pass)
 set -uo pipefail
@@ -299,6 +307,88 @@ has "E4 and names the value it rejected"                   "$RUN_OUT" "got 'lots
 
 RUN_OUT="$(cd "$T/unresolvable" && "$SCRIPT" main..HEAD extra 2>&1)"; RUN_RC=$?
 rc  "E5 a second positional argument exits 2" 2 "$RUN_RC"
+
+echo "-- F. comments in files that are not markdown"
+
+# F1/F2: the two conditions are AND, not OR. 200 comment lines at 95% fires;
+# the same 200 comment lines diluted under the ratio does not. Measured across
+# 21 repos, ratio>=0.60 alone qualifies 101 committed files and the 150-line
+# floor cuts that to 11 outside residue/ -- the floor is what makes it safe.
+newrepo commenter
+G "$T/commenter" checkout -q -b work
+{ printf '#!/usr/bin/env bash\n'
+  for i in $(seq 1 200); do printf '# an explanatory line number %d\n' "$i"; done
+  for i in $(seq 1 10); do printf 'code_%d=1\n' "$i"; done; } > "$T/commenter/tool.sh"
+G "$T/commenter" add -A
+G "$T/commenter" commit -qm header
+run commenter env
+rc  "F1 200 comment lines at 95% of a .sh exits 1"  1 "$RUN_RC"
+has "F1 and FLAGs the comment ratio"  "$RUN_OUT" "FLAG [comment-ratio]"
+has "F1 and names the file"           "$RUN_OUT" "tool.sh:200"
+hasnt "F1 and does NOT call it a markdown-ratio problem" "$RUN_OUT" "FLAG [markdown-ratio]"
+
+newrepo diluted
+G "$T/diluted" checkout -q -b work
+{ printf '#!/usr/bin/env bash\n'
+  for i in $(seq 1 200); do printf '# an explanatory line number %d\n' "$i"; done
+  for i in $(seq 1 400); do printf 'code_%d=1\n' "$i"; done; } > "$T/diluted/tool.sh"
+G "$T/diluted" add -A
+G "$T/diluted" commit -qm mostly-code
+run diluted env
+rc  "F2 the same 200 comment lines at 33% exits 0"  0 "$RUN_RC"
+hasnt "F2 and raises no comment FLAG"  "$RUN_OUT" "FLAG [comment-ratio]"
+
+# F3: dense but small. 100% comments, under the 150-line floor. This is the
+# case the floor exists for -- a short declarative .conf is not bloat.
+newrepo dense
+G "$T/dense" checkout -q -b work
+{ for i in $(seq 1 60); do printf '# setting %d\n' "$i"; done; } > "$T/dense/x.conf"
+G "$T/dense" add -A
+G "$T/dense" commit -qm small
+run dense env
+rc  "F3 60 comment lines at 100% is under the floor, exits 0" 0 "$RUN_RC"
+
+# F4: residue/ is excluded. basheur/residue holds 8,923 prose lines in a repo
+# retired 2026-08-05 and fires every rule dozens of times; grading a museum
+# turns the output into noise.
+newrepo museum
+G "$T/museum" checkout -q -b work
+mkdir -p "$T/museum/residue"
+{ printf '#!/usr/bin/env bash\n'
+  for i in $(seq 1 200); do printf '# a retired explanation %d\n' "$i"; done; } > "$T/museum/residue/old.sh"
+G "$T/museum" add -A
+G "$T/museum" commit -qm retired
+run museum env
+rc  "F4 the same header under residue/ exits 0" 0 "$RUN_RC"
+
+echo "-- G. the tree ratchet"
+
+# G1..G3: the diff checks cannot see accumulated mass. The census counts the
+# TREE against a recorded baseline that may only fall.
+newrepo ratchet
+export MARKDOWN_COST_RATCHET="$T/ratchet/.ratchet"
+{ printf '#!/usr/bin/env bash\n'; for i in $(seq 1 50); do printf '# line %d\n' "$i"; done; } > "$T/ratchet/tool.sh"
+G "$T/ratchet" add -A
+G "$T/ratchet" commit -qm seed
+RUN_OUT="$(cd "$T/ratchet" && "$SCRIPT" --census 2>&1)"; RUN_RC=$?
+rc  "G1 a census with no baseline exits 2, never 0" 2 "$RUN_RC"
+has "G1 and says a missing baseline is not a pass" "$RUN_OUT" "not a pass"
+
+RUN_OUT="$(cd "$T/ratchet" && "$SCRIPT" --accept 2>&1)"; RUN_RC=$?
+rc  "G2 --accept seeds the baseline" 0 "$RUN_RC"
+has "G2 and reports the number it recorded" "$RUN_OUT" "51 prose line(s)"
+
+{ printf '#!/usr/bin/env bash\n'; for i in $(seq 1 90); do printf '# line %d\n' "$i"; done; } > "$T/ratchet/tool.sh"
+RUN_OUT="$(cd "$T/ratchet" && "$SCRIPT" --census 2>&1)"; RUN_RC=$?
+rc  "G3 a tree that grew past the baseline exits 1" 1 "$RUN_RC"
+has "G3 and FLAGs the ratchet"       "$RUN_OUT" "FLAG [prose-ratchet]"
+has "G3 and says how far it rose"    "$RUN_OUT" "gained 40 prose line(s)"
+
+{ printf '#!/usr/bin/env bash\n'; for i in $(seq 1 20); do printf '# line %d\n' "$i"; done; } > "$T/ratchet/tool.sh"
+RUN_OUT="$(cd "$T/ratchet" && "$SCRIPT" --census 2>&1)"; RUN_RC=$?
+rc  "G4 a tree that shrank exits 0" 0 "$RUN_RC"
+has "G4 and invites locking the reduction in" "$RUN_OUT" "run --accept to lock it in"
+unset MARKDOWN_COST_RATCHET
 
 echo
 echo "$pass passed, $fail failed"
