@@ -207,6 +207,24 @@ eq "H8  a command-file instruction still blocks" "$rc" "1"
 printf '%s' "$out" | grep -q "nightly-batch.md" && \
   ok "H9  names the instruction file" || bad "H9  names the instruction file" "$out"
 
+# The reference usually sits in the BODY of a docstring, on a line beginning
+# with an ordinary word -- wtul/lib/catalog_outbox.py:2, nine-speakers/world.py:8.
+# A line-comment test cannot see those; a block tracker can.
+mkdir -p "$T/repo-block" && cd "$T/repo-block" || exit 1
+git init -q . && git config user.email t@t && git config user.name t
+mkdir -p .scheduler lib
+echo "# retired" > .scheduler/FOCUS.md
+printf '"""Outbox.\n\nBuilt for the item at .scheduler/FOCUS.md #8.\n"""\nQ = 1\n' > lib/outbox.py
+printf '/*\n * heading\n   see .claude/QUESTIONS.md 2026-07-24\n */\nconst q = 1;\n' > lib/q.mjs
+git add -A && git commit -qm init
+rc=0; out="$("$CMD" "$T/repo-block" 2>&1)" || rc=$?
+eq "H10 a docstring/block body does not block" "$rc" "0"
+
+printf 'Q = open(".scheduler/FOCUS.md").read()\n' >> lib/outbox.py
+git add -A && git commit -qm "a real read"
+rc=0; out="$("$CMD" "$T/repo-block" 2>&1)" || rc=$?
+eq "H11 a read after the docstring still blocks" "$rc" "1"
+
 # --- Summary ---
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

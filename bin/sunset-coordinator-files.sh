@@ -142,8 +142,8 @@ find_producers() {
   #     realisateur and can never report clean.
   # Code is scanned broadly: any language can read or write these paths.
   local pat='\.scheduler/|FOCUS\.md|QUESTIONS\.md|BLOCKERS\.md'
-  local matches code_matches doc_matches
-  code_matches=$(grep -rInE "$pat" \
+  local matches code_matches doc_matches code_files
+  code_files=$(grep -rIlE "$pat" \
     --include='*.sh' --include='*.bash' \
     --include='*.yml' --include='*.yaml' \
     --include='*.mjs' --include='*.js' --include='*.cjs' --include='*.ts' \
@@ -158,18 +158,34 @@ find_producers() {
 
   # A COMMENT IS NOT A PRODUCER, and this is the difference between a usable
   # mechanism and one that can never report clean. Across the estate almost
-  # every code hit is rationale prose in a comment or docstring -- "see
-  # FOCUS.md #8", "the 2026-07-21 .claude/FOCUS.md end-goal", a dated note
-  # explaining why a threshold is what it is. Those lines read nothing and
-  # write nothing, so deleting the files cannot regenerate them and fixing
-  # them accomplishes nothing. Counting them reported 123 blocking producers
-  # in scheduler, 117 in realisateur and 62 in crt on 2026-08-15, which put
-  # the sunset permanently out of reach in ten of sixteen repos.
-  # Only a line of live code that names the path can bring a file back.
-  # Markdown is NOT filtered here: an instruction file has no code, and its
-  # prose IS its mechanism.
-  code_matches=$(printf '%s\n' "$code_matches" \
-    | grep -vE '^[^:]*:[0-9]+:[[:space:]]*(#|//|\*|/\*|"""|'"'''"')' || true)
+  # every code hit is rationale prose -- "see FOCUS.md #8", "the 2026-07-21
+  # .claude/FOCUS.md end-goal", a dated note explaining why a threshold is what
+  # it is. Those lines read nothing and write nothing, so deleting the files
+  # cannot regenerate them and fixing them accomplishes nothing. Counting them
+  # reported 123 blocking producers in scheduler, 117 in realisateur and 62 in
+  # crt on 2026-08-15, which put the sunset out of reach in ten of sixteen
+  # repos. Only a line of live code that names the path can bring a file back.
+  #
+  # The pass tracks BLOCK comments, not just line comments, because most of
+  # those references sit in the BODY of a python module docstring or a /* */
+  # block -- a line starting with an ordinary word, which no line-comment test
+  # can see. It is deliberately approximate in the safe direction: a match on
+  # a line that is partly code still counts as a producer.
+  #
+  # Markdown is NOT filtered: an instruction file has no code, and its prose
+  # IS its mechanism.
+  code_matches=$(printf '%s\n' "$code_files" | grep -v '^$' | tr '\n' '\0' \
+    | xargs -0 -r awk -v pat="$pat" '
+      FNR==1 { inblk=0; inpy=0 }
+      {
+        s=$0; sub(/^[ \t]*/,"",s); c=$0; iscomment=0
+        if (inblk)      { iscomment=1; if ($0 ~ /\*\//) inblk=0 }
+        else if (inpy)  { iscomment=1; if (gsub(/"""|'"'''"'/,"&",c) % 2 == 1) inpy=0 }
+        else if (s ~ /^(#|\/\/|\*)/)      { iscomment=1 }
+        else if (s ~ /^\/\*/)             { iscomment=1; if ($0 !~ /\*\//) inblk=1 }
+        else if (s ~ /^("""|'"'''"')/)    { iscomment=1; if (gsub(/"""|'"'''"'/,"&",c) % 2 == 1) inpy=1 }
+        if (!iscomment && $0 ~ pat) printf "%s:%d:%s\n", FILENAME, FNR, $0
+      }' || true)
 
   # Markdown is scanned NARROWLY, and the distinction is the whole point:
   # a slash-command file or CLAUDE.md INSTRUCTS an agent to read or write
