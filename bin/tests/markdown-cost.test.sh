@@ -310,10 +310,6 @@ rc  "E5 a second positional argument exits 2" 2 "$RUN_RC"
 
 echo "-- F. comments in files that are not markdown"
 
-# F1/F2: the two conditions are AND, not OR. 200 comment lines at 95% fires;
-# the same 200 comment lines diluted under the ratio does not. Measured across
-# 21 repos, ratio>=0.60 alone qualifies 101 committed files and the 150-line
-# floor cuts that to 11 outside residue/ -- the floor is what makes it safe.
 newrepo commenter
 G "$T/commenter" checkout -q -b work
 { printf '#!/usr/bin/env bash\n'
@@ -338,8 +334,6 @@ run diluted env
 rc  "F2 the same 200 comment lines at 33% exits 0"  0 "$RUN_RC"
 hasnt "F2 and raises no comment FLAG"  "$RUN_OUT" "FLAG [comment-ratio]"
 
-# F3: dense but small. 100% comments, under the 150-line floor. This is the
-# case the floor exists for -- a short declarative .conf is not bloat.
 newrepo dense
 G "$T/dense" checkout -q -b work
 { for i in $(seq 1 60); do printf '# setting %d\n' "$i"; done; } > "$T/dense/x.conf"
@@ -348,9 +342,6 @@ G "$T/dense" commit -qm small
 run dense env
 rc  "F3 60 comment lines at 100% is under the floor, exits 0" 0 "$RUN_RC"
 
-# F4: residue/ is excluded. basheur/residue holds 8,923 prose lines in a repo
-# retired 2026-08-05 and fires every rule dozens of times; grading a museum
-# turns the output into noise.
 newrepo museum
 G "$T/museum" checkout -q -b work
 mkdir -p "$T/museum/residue"
@@ -363,8 +354,6 @@ rc  "F4 the same header under residue/ exits 0" 0 "$RUN_RC"
 
 echo "-- G. the tree ratchet"
 
-# G1..G3: the diff checks cannot see accumulated mass. The census counts the
-# TREE against a recorded baseline that may only fall.
 newrepo ratchet
 export MARKDOWN_COST_RATCHET="$T/ratchet/.ratchet"
 { printf '#!/usr/bin/env bash\n'; for i in $(seq 1 50); do printf '# line %d\n' "$i"; done; } > "$T/ratchet/tool.sh"
