@@ -139,9 +139,9 @@ repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].nam
 # And the verb set is not one either: chezz is a real registered project whose
 # bashified branch was retired, so it declares nothing and would vanish.
 #
-# A repo is a project iff it carries `.agent-project` on its default branch
-# (Zach, 2026-08-12) -- self-declared, like a verb. One GraphQL query resolves
-# the path across every repo, so the registry costs one call at any org size.
+# A repo is a project iff it carries `.agent-project` on its default branch --
+# self-declared, like a verb. One GraphQL query resolves the path across every
+# repo, so the registry costs one call at any org size.
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
 registry=""
 _gql='query($owner:String!){ user(login:$owner){ repositories(first:100, isFork:false, ownerAffiliations:OWNER){
