@@ -398,6 +398,17 @@ PROP_LEAK_BOUND=7
 # it. Promote it alongside defere.sh if and when it gains a caller other
 # accounts need, not before -- the leak bound is the same FULL 7 either way.
 #
+# decision-rot.sh is LOCAL on floor-check.sh's reasoning, not retire-check.sh's:
+# it is an ESTATE-WIDE SURVEY that a human runs from a hands-on session and
+# reads. It needs a GitHub credential that can see all eighteen repos' issues,
+# which the per-account deploy-key tokens do not have, so shipping it to the
+# self-dev accounts would install a command that returns a short, quiet count
+# there -- the exact silent-zero its own header spends thirty lines closing.
+# It is a plausible VERB by Zach's test ("would another agent or Zach ever call
+# one of those?") -- both would -- and it is deliberately not one YET, on
+# retire-check.sh's precedent below: a front door is claimed after the tool has
+# been used against this estate, not on the day it is written.
+#
 # retire-check.sh (#166) is LOCAL for the identical reason, same paragraph:
 # adding an eighth PAYLOAD row raises the leak bound rather than shrinking it.
 # It also is not yet CALLED by anything -- wiring it into cloture.md step 3,
@@ -445,6 +456,7 @@ defere.sh
 deferral-ledger.sh
 gh-comment.sh
 retire-check.sh
+decision-rot.sh
 cut-verb-build.sh
 deploy-drift.sh
 release-gate.sh
