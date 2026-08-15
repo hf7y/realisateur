@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 # decision-rot.sh -- how many of Zach's answers is nobody acting on?
 #
-# GUARD: is an answered issue still sitting open?
-# RUNNER: operator -- needs a GitHub credential against live issues; run in a triage pass
-# GUARD-TEST: bin/tests/decision-rot.test.sh
-# GATE: none -- it grades the ESTATE's issues, not this checkout. Nothing in a
-#       diff can make it pass or fail, so wiring it into CI would only make CI
-#       depend on the network and on Zach's inbox.
-# VERIFIED: 2026-08-15 via bash bin/decision-rot.sh --all and bash bin/tests/decision-rot.test.sh
+# GUARD: no -- this is a SURVEY, on bin/selfdev-agent-survey.sh's opt-out and
+# for its reason. It grades the ESTATE's issue trackers, not this checkout:
+# nothing in a diff can make it pass or fail, and it needs a credential that
+# can read all eighteen repos' issues, so no CI job and no hook can ever run
+# it. What it does instead of gating is exit non-zero when it found something,
+# so a shell -- or a future thermostat sensor -- can branch on it without
+# scraping the text. bin/precipitation-scan.sh states the same distinction the
+# other way round ("a readout and not a gate"); guard-estate.test.sh's
+# operator-run ratchet is at its bound, and it is correct to be: a survey
+# should not be spending one of the five slots reserved for guards nothing runs.
+# RUNNER: operator -- run in a triage pass, or ahead of an /ideate or /nightly-batch
+# GUARD-TEST: bin/tests/decision-rot.test.sh -- 32 cases, offline behind a fake `gh`
+# VERIFIED: 2026-08-15 via bash bin/decision-rot.sh --all (18 repos, 423 answered, 71 rotting, oldest 16d) and bash bin/tests/decision-rot.test.sh
 #
 # ============================================================================
 # THE QUESTION
