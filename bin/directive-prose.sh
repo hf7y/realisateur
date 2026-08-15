@@ -4,9 +4,10 @@
 # GUARD: does this diff record a decision somewhere nothing reads?
 # RUNNER: .github/workflows/tests.yml
 # GUARD-TEST: bin/tests/directive-prose.test.sh
-# GATE: none -- its default range is a merge-base against origin/main, which a
-#       fixture repo with no origin cannot form; its suite builds a throwaway
-#       repo per case, same as bin/markdown-cost.sh.
+# GATE: none -- cli-guard.sh exits 2 under guard-estate's stripped sandbox
+#       before any range is resolved, so it cannot be gated there yet. NOT the
+#       reason first given: the merge-base is only the DEFAULT range and
+#       argument one is an explicit one, so the exemption is soft. See #307.
 # VERIFIED: 2026-08-15 via bash bin/directive-prose.sh and bash bin/tests/directive-prose.test.sh
 #
 # hf7y/crt#39 was filed from a comment that had sat in a scheduler config for
@@ -54,20 +55,20 @@ cli_guard "$@"
 die3() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 3; }
 
 [ $# -le 1 ] || die3 "takes at most one argument (a ref range), got $#"
-git rev-parse --git-dir >/dev/null 2>&1 || die3 "not inside a git repository"
+git rev-parse --git-dir >/dev/null 2>&1 || die3 "BLIND -- not inside a git repository. Nothing was scanned."
 
 RANGE="${1:-}"
 if [ -z "$RANGE" ]; then
   git rev-parse --verify -q origin/main >/dev/null 2>&1 || \
-    die3 "no origin/main to compare against -- fetch it, or pass a range explicitly"
+    die3 "BLIND -- no origin/main to compare against; fetch it, or pass a range explicitly. Nothing was scanned."
   BASE="$(git merge-base HEAD origin/main 2>/dev/null)" || BASE=''
-  [ -n "$BASE" ] || die3 "HEAD and origin/main have no merge base -- pass a range explicitly"
+  [ -n "$BASE" ] || die3 "BLIND -- HEAD and origin/main have no merge base; pass a range explicitly. Nothing was scanned."
   RANGE="$BASE..HEAD"
 fi
 
 ERR="$(mktemp)"; trap 'rm -f "$ERR"' EXIT
 DIFF="$(git diff -U3 "$RANGE" -- 2>"$ERR")" || \
-  die3 "cannot read the diff for '$RANGE': $(tr '\n' ' ' < "$ERR")"
+  die3 "BLIND -- cannot read the diff for '$RANGE': $(tr '\n' ' ' < "$ERR"). Nothing was scanned."
 
 # One pattern list, one citation pattern, read by the awk program below.
 PATTERNS='recorded rather than acted|not acted on|left to rot|Zach-directed|Zach[ ,-]+(said|answered|directed|20[0-9][0-9]-[0-9]{2}-[0-9]{2})|per Zach|SUPERSEDED|CORRECTED|stopped being true|un-?pause|UN-PAUSE|resume (on|after)[ :]|RESUME:'
