@@ -51,7 +51,8 @@ touch "$T/test-repo/.claude/commands/test.md"
 touch "$T/test-repo/.scheduler/commands/test.md"
 touch "$T/test-repo/README.md"
 
-cd "$T/test-repo" && git init && git config user.email test@test && git config user.name Test
+cd "$T/test-repo" || exit 1
+git init && git config user.email test@test && git config user.name Test
 git add -A && git commit -q -m "init"
 
 rc=0
@@ -94,7 +95,8 @@ printf '%s' "$out" | grep -q "committed" && \
 note "E. Dry-run preserves tree"
 mkdir -p "$T/test-repo2/.scheduler" "$T/test-repo2/.claude/commands"
 touch "$T/test-repo2/.claude/QUESTIONS.md" "$T/test-repo2/README.md"
-cd "$T/test-repo2" && git init && git config user.email test@test && git config user.name Test
+cd "$T/test-repo2" || exit 1
+git init && git config user.email test@test && git config user.name Test
 git add -A && git commit -q -m "init"
 hash_before=$(git rev-parse HEAD)
 
