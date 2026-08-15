@@ -22,15 +22,16 @@
 #   2. the hands key into <p>'s authorized_keys    (root)  see --no-key
 #   3. bin/wire-selfdev-git.sh <repo> --apply      (as <p>) per-repo deploy keys
 #   4. bin/land-selfdev.sh --land                  (as <p>) clones + verbs
-#   5. the App credential, host-wide               (root)  see 5/7 below
+#   5. the App credential, host-wide               (root)  see 5/8 below
 #   6. the RELEASE BOOTSTRAP + its clock            (as <p>) see below
 #   7. bin/selfdev-permissions-provision.sh        (root)  the permissions
 #      block, without which the account's first unattended night cannot write
 #      .claude/** at all (hf7y/realisateur#282)
+#   8. bin/selfdev-hooks-provision.sh              (root)  the SubagentStop hook (#272)
 #
 # Step 3 is a GATE, not a sequence point: every repo that fails to wire is
 # named and the run stops there rather than landing an account on credentials
-# that were already proven not to work. See the comment at "3/7" for what that
+# that were already proven not to work. See the comment at "3/8" for what that
 # cost before it did.
 #
 # WHY STEP 5 IS HERE AND NOWHERE ELSE. The account consumes tooling from the
@@ -109,6 +110,7 @@ if [ "$MODE" = --check ]; then
   echo "    6. release bootstrap into ~$PROJECT/.local/libexec/selfdev/, then"
   echo "       selfdev-release-tick.sh --install-cadence --apply as $PROJECT"
   echo "    7. selfdev-permissions-provision.sh --apply: the permissions block"
+  echo "    8. selfdev-hooks-provision.sh --apply: the SubagentStop closeout hook"
   echo
   echo "  it will NOT arm dispatch: that is a 0->1 in schedule/_paced.$HOST.conf."
   echo "Next: sudo bash $0 $PROJECT --apply"
@@ -116,14 +118,14 @@ if [ "$MODE" = --check ]; then
 fi
 
 # --- 1. the account ----------------------------------------------------------
-say "1/7 account + credentials"
+say "1/8 account + credentials"
 "$HERE/provision-selfdev-user.sh" "$PROJECT" --apply || die "provisioning failed -- nothing after this can work; read its rows above"
 
 HOME_DIR="$(getent passwd "$PROJECT" | cut -d: -f6)"
 [ -n "$HOME_DIR" ] || die "no home for $PROJECT after provisioning"
 
 # --- 2. the hands key --------------------------------------------------------
-say "2/7 ssh access for the hands account"
+say "2/8 ssh access for the hands account"
 if [ "$WANT_KEY" -eq 0 ]; then
   echo "  SKIP    --no-key given; $PROJECT will need a root sitting for every later step"
 elif [ ! -r "$HANDS_HOME/.ssh/authorized_keys" ]; then
@@ -166,7 +168,7 @@ install -d -m 700 -o "$PROJECT" -g "$PROJECT" "$STAGE"
 install -m 700 -o "$PROJECT" -g "$PROJECT" \
   "$HERE/wire-selfdev-git.sh" "$HERE/land-selfdev.sh" "$STAGE/"
 
-say "3/7 git credentials, per repo"
+say "3/8 git credentials, per repo"
 # THE PIPE USED TO EAT THE ANSWER. wire-selfdev-git.sh already fails loud on
 # its own: its "6. the witness" section runs `git ls-remote` against the freshly
 # wired alias and exits 5 on `BAD WITNESS FAILED: ... the wiring is not live`.
@@ -208,7 +210,7 @@ line means the key exists and GitHub did not accept it), then re-run:
 and re-run this script when every repo wires clean; the steps before this one
 are idempotent."
 
-say "4/7 land"
+say "4/8 land"
 run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
 
 # --- 5. the release bootstrap, and the account's own clock -------------------
@@ -229,7 +231,7 @@ run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
 # is in the group that can read it". Idempotent, so provisioning account #14
 # on a host that already has the key just adds the group membership and
 # witnesses the read.
-say "5/7 the GitHub App credential (host-wide)"
+say "5/8 the GitHub App credential (host-wide)"
 if [ -x "$HERE/selfdev-app-key.sh" ]; then
   # rc read from the command, not from a pipeline whose last stage is `sed`.
   # `set -o pipefail` is on here and would carry it, but the 3/4 block in this
@@ -247,7 +249,7 @@ else
   echo "  MISSING $HERE/selfdev-app-key.sh -- cannot place the App credential"
 fi
 
-say "6/7 release bootstrap + clock"
+say "6/8 release bootstrap + clock"
 "$HERE/wire-release-channel.sh" "$PROJECT" --apply
 
 # --- 7. the permissions block ------------------------------------------------
@@ -258,9 +260,14 @@ say "6/7 release bootstrap + clock"
 # would have granted it -- an agent cannot self-grant, which is the point of
 # the gate). Provisioning it here is what stops account #15 repeating it; the
 # fourteen that existed before this step were converged by the same script.
-say "7/7 permissions block"
+say "7/8 permissions block"
 ACCOUNTS="$PROJECT" "$HERE/selfdev-permissions-provision.sh" --apply --strict \
   || echo "  WARN    $PROJECT still has no permissions block -- its first unattended run will not be able to write .claude/**"
+
+# --- 8. the SubagentStop closeout hook, same boundary as step 7 (#272) ------
+say "8/8 SubagentStop closeout hook"
+ACCOUNTS="$PROJECT" "$HERE/selfdev-hooks-provision.sh" --apply --strict \
+  || echo "  WARN    $PROJECT still has no SubagentStop hook wired -- a dirty tree at exit will not be caught"
 echo "  DO      notify-senechal 'realisateur selfdev-release-tick cron in $PROJECT@$HOST crontab, owned by realisateur'"
 
 cat <<EOF

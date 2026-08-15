@@ -274,6 +274,7 @@ wire-release-channel.sh
 selfdev-gh-app-register.sh
 selfdev-app-key.sh
 selfdev-permissions-provision.sh
+selfdev-hooks-provision.sh
 install-shims.sh
 install-verbs.sh
 pivot.sh
