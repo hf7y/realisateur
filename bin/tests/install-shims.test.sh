@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: passes REPO / BIN_DEST / CMD_DEST / HOOK_DEST / CLAUDE_SETTINGS
-# into a temp dir, so every write lands in a fixture.
 #
 # WAS RED WHEN CI FIRST RAN IT (8/3, run 31217552355); CLOSED 2026-08-07, and
 # the one-line fix uncovered two more defects behind it. `run_shims` passed only

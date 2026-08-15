@@ -2,7 +2,7 @@
 # selfdev-credentials.sh -- read every self-dev account's credentials SIDE BY
 # SIDE against one declared baseline, and converge one account to it.
 #
-# GUARD: no -- needs `ssh $CRED_HOST` + passwordless `sudo -n -u <account>`
+# RUNNER: no -- needs `ssh $CRED_HOST` + passwordless `sudo -n -u <account>`
 # across the whole live uid 3000-3099 fleet (ten accounts, root-adjacent), the
 # same constraint bin/selfdev-agent-survey.sh's own `# GUARD: no` line names
 # for the identical shape: no CI job and no hook can ever reach it. --audit is

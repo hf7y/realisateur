@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # silence-audit.sh -- the ecosystem's NULL-DISCRIMINATOR.
 #
-# GUARD: can a sensor tell nothing-there from could-not-look from did-not-look?
 # RUNNER: operator -- surveys every registered project's working checkout
 # GUARD-TEST: none -- it carries its own --self-test with fixtures, which is not a suite CI globs; closing this is the next repaint due
 # GATE: strict --target $TREE
-# VERIFIED: 2026-08-11 via bash bin/silence-audit.sh --self-test (PASS) and a live run (13 FLAGs, 12 after widening [unwired] to the whole repo)
 #
 # Offline-first (zero AI), writes nothing, exits 0 unless --strict.
 #

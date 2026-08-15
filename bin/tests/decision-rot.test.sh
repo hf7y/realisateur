@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 # decision-rot.test.sh -- witness for bin/decision-rot.sh.
 #
-# HERMETICITY: fully offline. A fake `gh` earlier on PATH than the real one
-# prints a fixture from $FIXTURE (or fails, for the error cases), so the
-# production code path -- the same jq predicate, the same exit codes -- runs
-# with no network, no token, and no dependence on the state of Zach's inbox.
-# A suite that needed the live estate could not tell its own passing from the
-# estate's.
 #
 # WHAT IS PINNED, and why each case exists rather than being a nice-to-have:
 #

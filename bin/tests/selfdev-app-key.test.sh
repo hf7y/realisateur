@@ -2,11 +2,6 @@
 # selfdev-app-key.test.sh -- witness for bin/lib/selfdev-app-key.sh (the
 # resolution every reader shares) and for bin/selfdev-app-key.sh's refusals.
 #
-# HERMETICITY: fully offline, and it never needs root. The placement half of
-# --apply does need root and is exercised live on monkey instead; what is
-# asserted here is the RESOLUTION ORDER and the REFUSALS, which are the parts
-# with a right answer independent of machine state -- the same split
-# selfdev-credentials.test.sh already makes.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LIB="$ROOT/lib/selfdev-app-key.sh"

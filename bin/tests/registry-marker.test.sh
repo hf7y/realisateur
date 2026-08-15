@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # registry-marker.test.sh -- the manifest's registry block.
 #
-# HERMETICITY: partial. The pattern assertions read only this repo's source and
-# hold anywhere. The live case needs `gh` and is SKIPped without it, named.
 #
 # WHAT THE REGISTRY IS FOR. realisateur's lints ask "what projects exist" and
 # the only answer was scheduler/schedule/*.conf -- a CHECKOUT. That one data

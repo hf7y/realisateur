@@ -5,9 +5,6 @@
 # It is a one-shot installer, run by hand once per target repo (or again to
 # pick up an update to bin/markdown-cost.sh itself).
 #
-# VERIFIED: 2026-08-11 via bash bin/port-markdown-cost.sh <throwaway-repo> (nested and flat
-#   test-style, idempotent rerun, a diverged file rejected then taken with --force, and the
-#   two BLIND paths -- missing directory and non-git directory)
 #
 # WHY THIS EXISTS. bin/markdown-cost.sh (realisateur#176) prices prose against
 # mechanism on every PR here, and nothing else in the estate has it. It was

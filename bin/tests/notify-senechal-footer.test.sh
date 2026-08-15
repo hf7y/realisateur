@@ -2,8 +2,6 @@
 # notify-senechal-footer.test.sh -- witness that notify-senechal.sh stamps the
 # machine-filed footer senechal's tools/issue-janitor.py keys on.
 #
-# HERMETICITY: stubs `gh` on PATH and captures the --body it is handed. Files
-# nothing, reaches no network, needs no senechal clone. Zero AI.
 #
 # WHY THIS TEST EXISTS (senechal#221 -> realisateur#220):
 # On 2026-08-12 notify-senechal switched from `scheduler -i` to `gh` directly

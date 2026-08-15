@@ -1,13 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: every case builds a throwaway $HOME under mktemp, a throwaway
-# copy of the script beside a throwaway ratchet file, and a PATH consisting of
-# that fake home's bin dirs plus a stub directory holding a FAILING `gh` and a
-# FAILING `crontab`. HOME, PATH, INSTALLE_MANIFEST, INSTALLE_PROJECTS and
-# SENECHAL_CONFIG are all redirected into the fixture, so the script cannot
-# read this machine's ~/.local/bin, this machine's installe manifest, this
-# machine's senechal config, or the live issue tracker. It says the same thing
-# on every host and in CI. The one thing it reads from outside is the script
-# under test, which is the branch's copy, not the shared checkout.
 #
 # path-provenance-audit.test.sh -- witness for bin/path-provenance-audit.sh.
 #

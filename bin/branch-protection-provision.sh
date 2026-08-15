@@ -3,13 +3,9 @@
 # default branch with at least one REQUIRED CHECK, so that the one sanctioned
 # merge command cannot silently self-merge an unreviewed PR.
 #
-# GUARD: does every rostered repo's default branch have branch protection
-#        naming at least one required status check that actually runs on
-#        pull requests?
 # RUNNER: bin/tests/branch-protection-provision.test.sh
 # GUARD-TEST: bin/tests/branch-protection-provision.test.sh
 # GATE: strict
-# VERIFIED: 2026-08-15 via bash bin/tests/branch-protection-provision.test.sh and a read-only run against the live roster (18 repos)
 #
 # WHY THIS EXISTS. hf7y/realisateur#288: `gh pr merge --auto --squash` is the
 # sanctioned merge command, and `--auto` needs a PENDING REQUIRED CHECK to

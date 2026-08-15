@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: a fake `gh` earlier on PATH and local fixture repositories stand
-# in for GitHub, and every install target is a temp dir. No network, no real
-# build, no live ~/.local/bin.
 #
 # Contract test for the verb-build pair.
 #

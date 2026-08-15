@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: hermetic. Every case exercises the ARGUMENT CONTRACT and the
-# refusals, which all resolve before the script touches an account: usage
-# errors and the not-root refusal exit ahead of any `install`, `sudo -u` or
-# crontab write. Nothing here runs as root, so the apply path is never
-# reachable from this suite -- deliberately. Its real work (installing files
-# into a 0700 home and having an account write its own crontab) needs root on
-# a live self-dev host with ten accounts, and a fake of that would assert that
-# the fake works.
 #
 # wire-release-channel.test.sh -- witness for the door onto the release
 # channel: that it refuses clearly, that it cannot silently arm anything, and

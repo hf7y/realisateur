@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: offline, zero AI, no network, no privilege. Every invocation
-# sets HOME_ROOT to a throwaway tree under $T and SUDO to the EMPTY string, so
-# no case reads /home, none touches a real account's settings, and none calls
-# sudo. The accounts are directories in $T; `chown` failures are tolerated by
-# the script and are not asserted here, because a test that needed root to
-# pass would be a test nobody runs.
 #
 # selfdev-permissions-provision.test.sh -- witness for
 # bin/selfdev-permissions-provision.sh.

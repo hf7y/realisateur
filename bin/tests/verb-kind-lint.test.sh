@@ -1,16 +1,6 @@
 #!/usr/bin/env bash
 # verb-kind-lint.test.sh -- the suite for bin/verb-kind-lint.sh.
 #
-# HERMETICITY: every case builds a throwaway BUILD TREE under mktemp -- a
-# manifest.tsv plus <project>/bin/<verb> files this script writes itself --
-# and points the lint at it with --build. Nothing here reads
-# ~/.local/share/verb-builds, nothing reaches the network, and no case
-# depends on which build happens to be current on the machine running it.
-# The one place a real number appears is case 9, and that number is baked
-# into a FIXTURE transcribed from the 2026-08-06T003928Z manifest, not read
-# from the host. Case 10 reads two files out of this repository -- the shipped
-# ratchet and lib/not-a-verb.tsv -- which is source, not host state: it says
-# the same thing on every machine and in CI.
 #
 # WHY THE FIXTURES ARE BUILD TREES AND NOT MOCK FUNCTIONS
 # The lint's whole subject is the relationship between a manifest row and
@@ -462,7 +452,7 @@ echo "== 11. THE GUARD SATISFIES THE ESTATE'S OWN CONTRACT =="
 # `verb-kind-lint.sh` up on its own. Asserted here as well so a broken
 # header fails the guard's OWN suite first, where the message is specific,
 # rather than only in the estate sweep where it is one line among many.
-for k in GUARD RUNNER GUARD-TEST GATE VERIFIED; do
+for k in RUNNER GUARD-TEST GATE; do
   if head -n 90 "$LINT" | grep -qE "^#[[:space:]]*$k:[[:space:]]*[^[:space:]]"; then
     ok "declares '# $k:'"
   else

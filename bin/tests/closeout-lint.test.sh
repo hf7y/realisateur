@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: builds its own scheduler registry and sets SCHED_ROOT,
-# BLOCKERS_MD, TODAY, SESSION_START and GH_BIN every invocation, so it reads a
-# fixture and never the live estate -- and $GH_BIN is always a stub in $T, so
-# B's query resolves no hostname here.
 #
 # closeout-lint.test.sh -- witness for bin/closeout-lint.sh. Offline, zero AI:
 # a throwaway registry (schedule/*.conf), real bare remotes and clones, a

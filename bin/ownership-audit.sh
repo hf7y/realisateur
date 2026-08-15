@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # ownership-audit.sh -- how much of realisateur is not realisateur's?
 #
-# GUARD: what fraction of this repo's mechanism serves another project's mission?
 # RUNNER: bin/tests/ownership-audit.test.sh
 # GUARD-TEST: bin/tests/ownership-audit.test.sh
 # GATE: strict --repo $TREE
-# VERIFIED: 2026-08-11 via bash bin/ownership-audit.sh --strict (21169 of 28740 lines foreign = 73.6%, 0 unclassified, 0 parked, exit 3) and bash bin/tests/ownership-audit.test.sh
 #
 # ---------------------------------------------------------------------------
 # THE QUESTION, AND THE ORDER IT HAS TO BE ASKED IN

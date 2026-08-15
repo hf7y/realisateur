@@ -2,7 +2,6 @@
 # served-not-cloned.sh -- seven probes asking one question about the whole
 # estate: does mechanism reach an account by being SERVED, or by being COPIED?
 #
-# GUARD: is the scheduler served to accounts as a verb, or still cloned into each one?
 # RUNNER: bin/tests/served-not-cloned.test.sh
 # GUARD-TEST: bin/tests/served-not-cloned.test.sh
 # GATE: strict
@@ -13,7 +12,6 @@
 #   is deleting this file. The seven vision probes stay operator-run, because
 #   they need a scheduler checkout CI does not have; a run that cannot see the
 #   estate is BLIND, and BLIND is never green here.
-# VERIFIED: 2026-08-10 via bash bin/served-not-cloned.sh --fleet (0/7 met, 7 to go, 0 blind)
 #
 # ############################################################################
 # THE VISION, IN ONE SENTENCE

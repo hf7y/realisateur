@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: a fake `gh` earlier on PATH answers every API call out of local
-# fixture repositories, and GIT_CONFIG_GLOBAL rewrites github.com URLs to
-# file:// paths in a temp dir. No network, no GitHub, no real `gh`.
 #
 # Contract test for cut-verb-build.sh -- the DERIVING half of the pair.
 # (bin/tests/verb-build-test.sh covers install-verb-build.sh, the consuming

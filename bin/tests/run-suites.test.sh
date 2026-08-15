@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 # run-suites.test.sh -- witness for bin/run-suites.sh (#316).
 #
-# HERMETICITY: fully offline. Every case builds fixture suites under a temp
-# dir and points RUN_SUITES_QUARANTINE at a fixture file there; nothing
-# reads bin/tests/ or bashify/test/ or this repo's own quarantine file.
 set -uo pipefail
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/run-suites.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }

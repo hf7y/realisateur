@@ -6,11 +6,9 @@
 # and `--repo` skips B so the SubagentStop path stays fully offline. Signals,
 # not verdicts: see $CLI_EXITS below for what each code means.
 #
-# GUARD: is the work this session did actually durable, where its consumers read?
 # RUNNER: hooks/subagent-closeout.sh bin/tests/closeout-lint.test.sh
 # GUARD-TEST: bin/tests/closeout-lint.test.sh
 # GATE: strict --repo $TREE
-# VERIFIED: 2026-08-14 via bash bin/tests/closeout-lint.test.sh (110 passed, 0 failed; post-#150: [worktree-dirty] now gets the same mtime-vs-session-start split #137 gave the main checkout, so a worktree whose agent already exited FLAGs instead of reading as a live concurrent run)
 #
 # An overnight run that is not saved anywhere didn't happen, and the recorded
 # ways that goes wrong are a dirty tree at exit, a commit that never left the

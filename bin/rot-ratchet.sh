@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 # rot-ratchet.sh -- the rotting count may only ever go down.
 #
-# GUARD: did this repo grow a new answered-but-still-open issue?
 # RUNNER: .github/workflows/rot-ratchet.yml -- daily
 # GUARD-TEST: bin/tests/rot-ratchet.test.sh
 # GATE: none -- it grades the ESTATE's issues, not this checkout; same reason
 #       bin/decision-rot.sh is unwired. CI would depend on the network.
-# VERIFIED: 2026-08-15 via bash bin/rot-ratchet.sh and bash bin/tests/rot-ratchet.test.sh
 #
 # The predicate is bin/decision-rot.sh's, unchanged and unduplicated: this
 # reads its `--json` summary. Nothing new is defined here -- no label, no

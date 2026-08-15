@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: overrides HOME and XDG_CACHE_HOME into a temp dir, generates its
-# own throwaway RSA keypair, and points SELFDEV_GH_API at 127.0.0.1:1 -- a
-# CLOSED port, deliberately, so the witness path is exercised and provably
-# FAILS rather than being skipped. No network, no real key, no real App.
 #
 # (Relocated verbatim from the per-suite ledger that used to live in
 # .github/workflows/tests.yml. It says the same thing; it now says it in the

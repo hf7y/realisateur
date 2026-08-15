@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: offline, zero AI, no network. Every invocation sets BUILD_ROOT
-# and VERB_BIN to throwaway trees under $T, and INSTALL_VERB_BUILD to a stub
-# in $T -- so no run reads the real ~/.local/share/verb-builds, none touches
-# ~/.local/bin, and none reaches the build channel. The stub's exit status is
-# the only thing that decides "newer available", so no case fetches anything.
 #
 # verbs-refresh.test.sh -- witness for bin/verbs-refresh.sh.
 #

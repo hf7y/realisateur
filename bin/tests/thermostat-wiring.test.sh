@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: builds a throwaway scheduler repo per case, sets SCHED_ROOT at
-# it, and shims a FAILING `gh` ahead of the real one so the tracker probe is
-# deterministically BLIND. (The first draft set PATH=/usr/bin:/bin believing
-# that removed gh; gh lives in /usr/bin, so two cases were reading the live
-# tracker.)
 #
 # NOT WIRED TO CI: bin/thermostat-wiring.sh ITSELF. It probes the estate -- the
 # scheduler checkout, the issue tracker -- which a container cannot see, so

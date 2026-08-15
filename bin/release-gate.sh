@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # release-gate.sh -- decide whether tonight's verb build is allowed to be cut.
 #
-# GUARD: is any project's default branch red, and must tonight's build therefore not be cut?
 # RUNNER: provision/verbs-meta/build-verbs.yml bin/tests/release-gate.test.sh
 # GUARD-TEST: bin/tests/release-gate.test.sh
 # GATE: none -- calls `gh` against live default branches; the fixture is in its own suite
-# VERIFIED: 2026-08-07 via bash bin/release-gate.sh --owner hf7y --projects "<all 12 bashified projects>" -> "3 green, 0 red, 0 pending, 9 ungated, 0 blind", GATE OPEN (was "0 green, 0 red, 0 pending, 1 ungated, 11 blind" on the check-runs endpoint) and bash bin/tests/release-gate.test.sh (71 passed, 0 failed)
 #
 # ============================================================================
 # WHY THIS EXISTS

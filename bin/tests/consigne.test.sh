@@ -2,14 +2,6 @@
 # consigne.test.sh -- the two doors must be one implementation, and the second
 # half of a reaping pass must be countable.
 #
-# HERMETICITY: nothing outside $TMP is read or written. The deposit mechanism
-# is never the real one: `bin/consigne` resolves it through CONSIGNE_IMPL,
-# which every deposit case points at a RECORDING STUB inside $TMP, so no vault,
-# no bibliothecaire checkout and no installed verb build is touched. PATH is
-# replaced with a $TMP-only bin for the resolution cases, so a host that
-# happens to have `fonde` or `installe` installed cannot change an outcome. The
-# `status` cases build their own fixture repo and fixture vault under $TMP and
-# hash real files there. No network, no git remote, no AI call.
 #
 # ===========================================================================
 # WHAT THIS SUITE IS FOR

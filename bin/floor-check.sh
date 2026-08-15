@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # floor-check.sh -- is THE FLOOR met? Nine criteria, probed live, no AI.
 #
-# GUARD: is the ecosystem-wide stability floor met?
 # RUNNER: operator -- probes crontab, systemd, backups and every repo on this host
 # GUARD-TEST: none -- every criterion is a live host probe; a fixture would assert only that the fixture was built
 # GATE: none -- DEMOTED 2026-08-07 from gate to readout; see below
-# VERIFIED: 2026-08-07 via bash bin/floor-check.sh (NOT MET -- 6 unmet, 2 unproven)
 #
 # DEMOTED, NOT DELETED -- 2026-08-07, and the reasoning is worth keeping.
 #

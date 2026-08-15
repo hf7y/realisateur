@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: one `mktemp -d` per run holds every fixture, and a FAKE `gh` is
-# placed ahead of the real one on PATH so all four states (GREEN/RED/PENDING/
-# BLIND) are produced on demand from canned answers. No network, no real
-# repository, and no dependence on the org happening to be green today -- see
-# the "WHY A FAKE gh" note below, which is the argument for the whole shape.
 #
 # release-gate.test.sh -- witness for bin/release-gate.sh's four states and
 # their exit codes.

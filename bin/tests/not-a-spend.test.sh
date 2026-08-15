@@ -5,13 +5,6 @@
 # piece of machinery whose whole job is to say "ignore the guard". Every case
 # below exists to bound it.
 #
-# HERMETICITY: PARTIAL, and the split is deliberate. Cases 1 and 5 are fully
-# hermetic -- they read only this repo's own ledger and closure.sh's source, so
-# they hold anywhere. Cases 2, 3, 4 and 6 must run closure.sh against a REAL
-# project, which needs sibling checkouts and a bashified branch that CI does
-# not have; they SKIP there rather than fail, and say so. A case that is red
-# purely because of where it ran teaches a reader to ignore the suite, which is
-# how the drift these guards exist to catch gets shipped.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 C="$ROOT/bashify/lib/closure.sh"

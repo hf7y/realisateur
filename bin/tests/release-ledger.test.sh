@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: every case builds its own status.json fixture under one
-# `mktemp -d` and grades it through the script's `--url` entry point pointed at
-# a local path, so the real parse-and-grade code runs with no host to be up and
-# no clone to be current. Nothing reads the live channel, the live estate, or
-# any other account -- the LIVE assertions deliberately live next door in
-# release-channel-wiring.test.sh instead, so this suite stays green offline.
 #
 # release-ledger.test.sh -- THE INVERSION, AS A GUARD.
 #

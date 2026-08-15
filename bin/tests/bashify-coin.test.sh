@@ -26,14 +26,6 @@
 # A verb that cannot be coined is a verb that cannot ship, and this estate's
 # entire distribution story runs through that one command.
 #
-# HERMETICITY: runs the REAL bashify/lib/coin.sh, but every path it can reach
-# is redirected into a mktemp tree -- HOME, SCHEDULE_DIR and BASHIFY_WORK all
-# point inside $TMP, and the "projects" are git repos this file creates and
-# deletes. It touches no repo in ~/Documents/Projects, no registry, no network,
-# and no worktree. The conf fixtures deliberately write `$HOME/...` rather than
-# an absolute path: a fixture that hardcoded the resolved path would pass
-# against the very defect case A exists to catch, which is the fixture bug this
-# estate has already paid for (MEMORY.md, "guards scrape unexpanded $HOME").
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"

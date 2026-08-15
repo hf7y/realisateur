@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: exports INSTALLE_PROJECTS / INSTALLE_BIN / INSTALLE_MANIFEST /
-# SCHEDULE_DIR into a temp dir, and registers `scheduler` in its OWN fixture
-# registry rather than relying on the live one.
 #
 # WAS RED WHEN CI FIRST RAN IT (30/4, run 31217552355); CLOSED 2026-08-07, and
 # the first diagnosis was REFUTED, which is the lesson. The hardcoded

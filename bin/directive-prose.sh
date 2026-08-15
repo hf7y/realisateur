@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 # directive-prose.sh -- a decision written in prose must cite an issue.
 #
-# GUARD: does this diff record a decision somewhere nothing reads?
 # RUNNER: .github/workflows/tests.yml
 # GUARD-TEST: bin/tests/directive-prose.test.sh
 # GATE: none -- cli-guard.sh exits 2 under guard-estate's stripped sandbox
 #       before any range is resolved, so it cannot be gated there yet. NOT the
 #       reason first given: the merge-base is only the DEFAULT range and
 #       argument one is an explicit one, so the exemption is soft. See #307.
-# VERIFIED: 2026-08-15 via bash bin/directive-prose.sh and bash bin/tests/directive-prose.test.sh
 #
 # hf7y/crt#39 was filed from a comment that had sat in a scheduler config for
 # ten days saying, in its own words, "recorded rather than acted on". It was

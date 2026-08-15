@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: offline, zero AI, no network. Every invocation sets both
-# SCHED_ROOT (to a throwaway schedule/*.conf registry in $T) and GH_BIN (to a
-# stub in $T that answers from a fixture table), so no run reads the live
-# scheduler registry and none reaches github.com -- the stub resolves no
-# hostname and holds no credential. The one case that deliberately points at
-# an empty registry points at a fresh mktemp dir, never at $HOME.
 #
 # repo-settings-provision.test.sh -- witness for bin/repo-settings-provision.sh.
 #

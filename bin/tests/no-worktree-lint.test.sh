@@ -2,12 +2,6 @@
 # no-worktree-lint.test.sh -- the witness for the guard that keeps
 # `git worktree add` out of this repository's production paths.
 #
-# HERMETICITY: every fixture is a throwaway git repo under mktemp -d, created
-# and committed with a per-command identity, and the guard is pointed at it by
-# its ROOT argument. Case R1 runs the guard over THIS checkout, which is a
-# statement about the branch under test rather than about the host -- the same
-# scoping bin/tests/suite-docs-lint.test.sh uses for its L cases. Nothing here
-# creates a worktree, reads $HOME, or touches the network.
 #
 # THE LOAD-BEARING ASSERTION IS A2: a production file that gains a
 # `git worktree add` must turn the guard RED. Everything else is scaffolding.

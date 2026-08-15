@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# HERMETICITY: DELIBERATELY NOT HERMETIC, and that is this suite's entire
-# reason to exist -- see "WHY THIS FILE IS DIFFERENT" below. It is the one
-# suite here that asks the real world whether the channel is WIRED: it queries
-# GitHub for the build-verbs schedule and `curl`s the live verdict endpoint
-# (https://hf7y.com/verbs/status.json and the human page). A hermetic version
-# of these cases would pass on a machine where nothing is scheduled and nothing
-# is published, which is the failure it is built to catch.
 #
 # The blast radius is bounded and declared: every access is READ-ONLY -- GETs
 # and `gh` queries, no write, no push, no account touched. Both endpoints are
