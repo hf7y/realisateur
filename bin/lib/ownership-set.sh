@@ -183,6 +183,9 @@ bin/shellcheck-lint.sh             realisateur mechanizes BUILD-DISCIPLINE.md's 
 bin/tests/shellcheck-lint.test.sh  realisateur follows its subject.
 bin/no-worktree-lint.sh            realisateur mechanizes a standing instruction -- no more worktrees after tonight, 2026-08-06 -- that three production scripts had quietly undone by the time it was five days old. Auditing compliance with a rule the human set is the same half of UNIVERSE.md that hygiene-lint.sh and shellcheck-lint.sh serve; the estate-wide subject -- realisateur's own bin/, bashify's generator, and scheduler's dev loop all created worktrees -- is what makes it no single consumer's.
 bin/tests/no-worktree-lint.test.sh realisateur follows its subject.
+bin/run-suites.sh                  realisateur runs this repo's own suite population from tests.yml, quarantine-aware (#316). Local, unpropagated CI plumbing for this repo's build, not a bashified generic.
+bin/run-suites.quarantine          realisateur the data run-suites.sh reads; follows its subject.
+bin/tests/run-suites.test.sh       realisateur follows its subject.
 bin/selfdev-agent-survey.sh        realisateur asks whether each self-dev account does what its own dispatch prompt claims. Sense over the whole fleet, and realisateur owns the self-dev account contract that prompt is measured against.
 provision/dexter/README.md         realisateur declares where work lives on dexter and what may run there. Same organ as MONKEY.md, which this repo already holds: naming the host layout is triage, and the document sits beside the compose files it governs.
 bin/dexter-liveness.sh             realisateur asks whether dexter is serving what it is declared to serve. Same claim as bin/publish-monkey-status.sh's row one line down -- realisateur owns the host layout document (provision/dexter/README.md) and the probes over it -- and the alarm belongs with the declaration it checks, not with the services it names.
