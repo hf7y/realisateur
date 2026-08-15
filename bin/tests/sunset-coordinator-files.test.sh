@@ -225,6 +225,22 @@ git add -A && git commit -qm "a real read"
 rc=0; out="$("$CMD" "$T/repo-block" 2>&1)" || rc=$?
 eq "H11 a read after the docstring still blocks" "$rc" "1"
 
+# --- J: extensionless executables are producers too ---
+# Selecting code by extension reported hf7y/scheduler READY while bin/scheduler
+# (3,659 lines, ~40 live sites) still wrote the retired paths.
+note "J. Extensionless executables"
+mkdir -p "$T/repo-noext/bin" && cd "$T/repo-noext"
+git init -q . && git config user.email t@t && git config user.name t
+mkdir -p .scheduler && echo "# retired" > .scheduler/FOCUS.md
+printf '#!/usr/bin/env bash\necho x > .scheduler/FOCUS.md\n' > bin/tool
+chmod +x bin/tool
+printf 'plain text mentioning FOCUS.md\n' > notes
+git add -A && git commit -qm init
+rc=0; out="$("$CMD" "$T/repo-noext" 2>&1)" || rc=$?
+eq "J1  an extensionless shebang producer blocks" "$rc" "1"
+printf '%s' "$out" | grep -q 'bin/tool' && ok "J1b names it" || bad "J1b names it"
+printf '%s' "$out" | grep -q ':notes:' && bad "J2  extensionless non-script scanned" || ok "J2  extensionless non-script ignored"
+
 # --- Summary ---
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

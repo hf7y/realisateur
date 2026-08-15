@@ -155,6 +155,20 @@ find_producers() {
     --exclude='sunset-coordinator-files.test.sh' \
     . 2>/dev/null || true)
 
+  # EXTENSIONLESS EXECUTABLES. Selecting code by extension misses the shebang
+  # scripts that are usually a repo's front door: scheduler's `bin/scheduler`
+  # is 3,659 lines with ~40 live read/write sites on the retired paths and was
+  # invisible here, so the tool would have reported that repo READY and --apply
+  # would have deleted files the next `scheduler ask` writes straight back.
+  # That is the exact regeneration producers-first exists to prevent.
+  shebang_files=$(git ls-files 2>/dev/null | while IFS= read -r f; do
+    case "$f" in *.*|'') continue ;; esac
+    [ -f "$f" ] || continue
+    [ "$(head -c2 "$f" 2>/dev/null)" = '#!' ] || continue
+    grep -IlE "$pat" "$f" 2>/dev/null || true
+  done)
+  code_files=$(printf '%s\n%s' "$code_files" "$shebang_files" | grep -v '^$' | sort -u)
+
   # A COMMENT IS NOT A PRODUCER, and this is the difference between a usable
   # mechanism and one that can never report clean. Across the estate almost
   # every code hit is rationale prose -- "see FOCUS.md #8", "the 2026-07-21
@@ -193,7 +207,7 @@ find_producers() {
   # and THE-FLOOR.md for narrating history, which blocks the sunset forever
   # on files that produce nothing.
   doc_matches=$(grep -rInE "$pat" \
-    --include='*.md' \
+    --include='*.md' --include='*.template' \
     --exclude-dir='.git' \
     --exclude-dir='archive' --exclude-dir='retired' \
     --exclude-dir='.scheduler' \
