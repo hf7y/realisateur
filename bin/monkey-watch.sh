@@ -174,7 +174,7 @@ gh repo clone "$PUBLISH_REPO" "$WORK/site" -- -q --depth 1 2>/dev/null \
 mkdir -p "$WORK/site/$PUBLISH_DIR"
 printf '%s\n' "$payload" > "$WORK/site/$PUBLISH_DIR/status.json"
 [ -f "$PAGE_SRC" ] && cp "$PAGE_SRC" "$WORK/site/$PUBLISH_DIR/index.html"
-cd "$WORK/site"
+cd "$WORK/site" || die "could not enter the site clone"
 if [ -n "$(git status --porcelain "$PUBLISH_DIR")" ]; then
   git add "$PUBLISH_DIR"
   git -c user.name='monkey-watch' -c user.email='noreply@hf7y.com' \
