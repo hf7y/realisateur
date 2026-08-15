@@ -19,10 +19,17 @@
 # next run of each. Removing today's instances is not the fix; the fix is that
 # a new one cannot be added without this going red.
 #
-# The three, all live on 2026-08-11:
+# The three, live on 2026-08-11:
 #   bashify/bashify.sh            a worktree per `bashify emit`, never removed
 #   bin/land-selfdev.sh           $PROJECTS/senechal-verbs, from `bashified`
 #   (scheduler) bin/scheduler-dev-cycle.sh, bin/overnight-dev.sh
+#
+# bin/land-selfdev.sh's creator was removed by #69 itself (the block that made
+# $PROJECTS/senechal-verbs is gone); bashify/lib/sync-runtime.sh gained one in
+# its place on 2026-08-15 (#158) -- `--apply` now creates the review worktree
+# it used to just print advice about, since nothing left one lying around for
+# it to find. Allowlisted below, same as bashify.sh would be if it were not
+# excluded by removing its own worktree on exit.
 #
 # ---------------------------------------------------------------------------
 # WHAT IS AND IS NOT A VIOLATION
@@ -124,7 +131,7 @@ if [ -n "${NO_WORKTREE_ALLOW_FILE:-}" ]; then
 elif git ls-files --error-unmatch "$SELF_REL" >/dev/null 2>&1; then
   ALLOW_APPLIES=1
   allow bashify/lib/sync-runtime.sh \
-  "prints the command as ADVICE on its refusal path and executes nothing. Stale for a second reason: installe stopped reading a <project>-verbs worktree on 2026-08-05, so the mechanism it advises has no consumer left -- but bashify/test/verify-sync.sh still exercises that mechanism, so retiring it is a change to sync-runtime's contract and belongs to whoever makes that call, not to this guard"
+  "creates \$PROJECTS/<project>-verbs under --apply when no worktree already has the branch's bashified checked out (#158) -- a human review copy for the write sync performs, same shape as bashify.sh's per-emit worktree, and never created during preflight (no --apply)"
 fi
 
 # Excluded prefixes -- see the header for why each.
