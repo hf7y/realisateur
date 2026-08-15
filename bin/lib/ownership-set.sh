@@ -181,6 +181,8 @@ bin/tests/sunset-coordinator-files.test.sh realisateur follows its subject, bin/
 bin/thermostat-wiring.sh           realisateur measures whether the ecosystem matches a redesign or only describes it. Sense over the whole organism, which is this organ's definition.
 bin/shellcheck-lint.sh             realisateur mechanizes BUILD-DISCIPLINE.md's FIRST row -- fails loud, no exit-0 no-ops -- which is the same claim hygiene-lint.sh has and the same reason. SC2164, SC2181, SC2086 and SC2115 ARE the silent-failure class that document names; this is that row with an exit code. Auditing compliance is the half UNIVERSE.md assigned here.
 bin/tests/shellcheck-lint.test.sh  realisateur follows its subject.
+bin/gh-sign.sh                     realisateur the WRITE half of decision-rot.sh's own predicate. Its ancestor bin/gh-comment.sh was vim-arcade's because vim-arcade owned the stamp GRAMMAR (#77); this file cuts the grammar down to a marker, and what is left has exactly one consumer in the estate -- realisateur's sensor, which cannot date an answer without telling an agent's reply from Zach's under one shared token. A sensor that must manufacture its own discriminator owns it; same argument as bin/silence-audit.sh.
+bin/tests/gh-sign.test.sh          realisateur follows its subject.
 bin/no-worktree-lint.sh            realisateur mechanizes a standing instruction -- no more worktrees after tonight, 2026-08-06 -- that three production scripts had quietly undone by the time it was five days old. Auditing compliance with a rule the human set is the same half of UNIVERSE.md that hygiene-lint.sh and shellcheck-lint.sh serve; the estate-wide subject -- realisateur's own bin/, bashify's generator, and scheduler's dev loop all created worktrees -- is what makes it no single consumer's.
 bin/tests/no-worktree-lint.test.sh realisateur follows its subject.
 bin/run-suites.sh                  realisateur runs this repo's own suite population from tests.yml, quarantine-aware (#316). Local, unpropagated CI plumbing for this repo's build, not a bashified generic.
@@ -270,8 +272,6 @@ bin/deferral-ledger.sh             vim-arcade asks whether a pull request declar
 bin/tests/deferral-ledger.test.sh  vim-arcade follows its subject.
 .github/workflows/deferral-ledger.yml vim-arcade follows its subject.
 bin/defere.sh                      vim-arcade files an issue and prints the ledger line. Issue tooling; the estate's front door for routing a finding to an owner.
-bin/gh-sign.sh                     vim-arcade signs every agent-written GitHub body by standing in front of `gh` on PATH. Replaced bin/gh-comment.sh, the opt-in wrapper it supersedes: same subject, but nothing calls it, so nothing can skip it.
-bin/tests/gh-sign.test.sh          vim-arcade follows its subject.
 bin/path-provenance-audit.sh       senechal asks whether every PATH entry has an owner and a source. senechal owns knowing what exists on a machine -- Zach reassigned this class explicitly on 2026-08-07.
 bin/tests/path-provenance-audit.test.sh senechal follows its subject.
 bin/closeout-lint.sh               bashify generic session-durability lint. Nothing in it is about ideas, inboxes or scaffolding; every repo in the estate wants it, which is the definition of a verb.

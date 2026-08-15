@@ -106,15 +106,10 @@
 #     ambiguity in the data. Checking the whole body instead would let a stamp
 #     quoted mid-comment out of another comment silently disqualify a human
 #     answer.
-#   * It reads a MARKER, not a grammar. It used to require the full
-#     `<!-- agent: <project>/<job> <ISO8601> -->` shape, reimplemented three
-#     times over (here in jq, vim-arcade's vim_arcade/provenance.py, ecosim's
-#     lib/provenance.py) because cross-repo imports run the wrong direction in
-#     this ecosystem. Three copies of a field grammar drift; three copies of
-#     "the line starts with `<!-- agent:`" have nothing inside them to
-#     disagree about. The fields are for a human reading the thread. What
-#     WRITES the marker is bin/gh-sign.sh, which is not called by anything --
-#     it stands in front of `gh` on PATH, so no caller can omit it.
+#   * It reads a MARKER, not a grammar. The old `<project>/<job> <ISO8601>`
+#     shape was reimplemented in three repos and could drift in three places;
+#     "the line opens with `<!-- agent:`" cannot. bin/gh-sign.sh writes it,
+#     from in front of `gh` on PATH, so no caller can omit it.
 #
 # AGE is days since that answer comment's own timestamp, read straight off the
 # comment. It is the only number here that is not a boolean, and it is what

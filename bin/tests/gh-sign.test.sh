@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 #
-# Contract test for gh-sign.sh -- the PATH shim that replaced gh-comment.sh.
-# The wrapper it replaced was correct and 2% adopted; the property under test
-# here is that an agent gets signed WITHOUT calling anything special, and that
-# a shim standing in front of `gh` never costs a write.
+# Contract test for gh-sign.sh: an agent gets signed WITHOUT calling anything
+# special, and a shim standing in front of `gh` never costs a write.
 set -uo pipefail
 
 PASS=0; FAIL=0
@@ -20,9 +18,7 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 # --- the fake gh -----------------------------------------------------------
-# Logs argv, and captures the body whichever way it arrives (stdin for
-# --body-file -, argv for --comment), so a test can assert what gh was
-# actually handed.
+# Logs argv and captures the body whichever way it arrives.
 mkdir -p "$TMP/stub"
 cat > "$TMP/stub/gh" <<'STUB'
 #!/usr/bin/env bash
@@ -57,7 +53,7 @@ case "$(lastline)" in
   *) bad "signed" "last non-blank line: $(lastline)" ;;
 esac
 
-# --- 2. the identity is READ, not accepted from the caller ------------------
+# --- 2. the identity is READ, not accepted from the caller -----------------
 contains "the stamp names this account" "$(lastline)" "$(id -un)@"
 stamp_date="$(lastline | sed -E 's/.*@[^ ]+ ([0-9TZ:-]+) -->/\1/')"
 case "$stamp_date" in
@@ -66,7 +62,6 @@ case "$stamp_date" in
   *) bad "ISO8601 UTC" "got: $stamp_date" ;;
 esac
 
-# --- 3. the marker is the LAST non-blank line, through trailing blanks ------
 reset
 printf 'multi\nline\n\n\n' > "$TMP/body.txt"
 run issue create --repo hf7y/widget --title t --body-file "$TMP/body.txt" >/dev/null 2>&1
@@ -75,13 +70,11 @@ case "$(lastline)" in
   *) bad "marker last" "got: $(lastline)" ;;
 esac
 
-# --- 4. never sign twice ----------------------------------------------------
 reset
 run issue comment 7 --repo hf7y/widget --body "$(printf 'already done\n\n<!-- agent: someone@somewhere 2026-08-15T00:00:00Z -->')" >/dev/null 2>&1
 check "an already-signed body is passed through untouched" \
       "$(grep -c 'someone@somewhere' "$TMP/gh.body")" "1"
 
-# --- 5. issue close signs the --comment spelling too ------------------------
 reset
 run issue close 7 --repo hf7y/widget --comment 'closing this out' >/dev/null 2>&1
 contains "\`issue close --comment\` keeps its body" "$(cat "$TMP/gh.body")" "closing this out"
@@ -90,7 +83,6 @@ case "$(lastline)" in
   *) bad "close signed" "got: $(lastline)" ;;
 esac
 
-# --- 6. everything that is not a body-carrying write is untouched ----------
 reset
 run issue list --repo hf7y/widget --state open >/dev/null 2>&1
 check "a read passes through with argv intact" \
@@ -101,7 +93,7 @@ run pr merge 3 --repo hf7y/widget --squash >/dev/null 2>&1
 check "a non-body write passes through with argv intact" \
       "$(cat "$TMP/gh.log")" "pr merge 3 --repo hf7y/widget --squash"
 
-# --- 7. FAIL OPEN: a signature is never worth a lost write -----------------
+# --- 7. FAIL OPEN: a signature is never worth a lost write ----------------
 reset
 run issue comment 7 --repo hf7y/widget --body-file "$TMP/no-such-file" >/dev/null 2>&1
 check "an unreadable --body-file still reaches gh (unsigned beats dropped)" \
@@ -112,13 +104,10 @@ run issue comment 7 --repo hf7y/widget >/dev/null 2>&1
 check "a body-less (interactive) call is left alone" \
       "$(cat "$TMP/gh.log")" "issue comment 7 --repo hf7y/widget"
 
-# --- 8. gh's exit status is the shim's exit status -------------------------
 check "a gh refusal surfaces, not swallowed" \
       "$(GH_EXIT=1 run issue comment 7 --repo hf7y/widget --body hi >/dev/null 2>&1; echo $?)" "1"
 
 # --- 9. the shim must never resolve to ITSELF ------------------------------
-# The real failure this guards: /usr/local/bin/gh -> gh-sign.sh, which then
-# finds /usr/local/bin/gh on PATH and re-executes forever.
 mkdir -p "$TMP/loop"
 ln -sf "$GS" "$TMP/loop/gh"
 out="$(PATH="$TMP/loop" "$TIMEOUT_BIN" 10 "$BASH_BIN" "$GS" --self-check 2>&1)"; rc=$?
