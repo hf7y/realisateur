@@ -1,0 +1,10 @@
+# markdown-cost.ratchet -- prose lines in this tree. SHRINKS ONLY.
+# Raised only by a hand edit, which is meant to be reviewed. See bin/markdown-cost.sh.
+# seeded 2026-08-15 at 19646.
+#
+# The first value (19533) was taken before #298, #302, #307, #308 and #310
+# landed, so it never described the tree it guarded -- main was already 102
+# over it on the day it was written. This is a measurement of main plus the 40
+# lines this guard itself costs, trimmed twice to get there. Every later PR is
+# judged against a number that is true.
+19646
