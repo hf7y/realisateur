@@ -22,10 +22,10 @@
 # fails closed, and an agent cannot self-grant, which is the point of it. Only
 # a human-authorised pass like this one can close it.
 #
-# THE DENY FLOOR. Zach, 2026-08-15: "whatever allows them to keep going within
-# unattended scope best" -- so this denies only what is IRREVERSIBLE or reaches
-# OUTSIDE the account, and allows everything else, because a gate that stops
-# ordinary work unattended is the defect being fixed, not the fix.
+# THE DENY FLOOR, decided on #282. Zach, 2026-08-15: "whatever allows them to
+# keep going within unattended scope best" -- so it denies only what is
+# IRREVERSIBLE or reaches OUTSIDE the account, and allows the rest: a gate that
+# stops ordinary work unattended is the defect being fixed, not the fix.
 #
 #   force push          rewrites published history; these accounts share remotes
 #   push to main        CLAUDE.md: rejected for everyone anyway. Agents trying
