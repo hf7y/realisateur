@@ -2,7 +2,7 @@
 # rot-ratchet.sh -- the rotting count may only ever go down.
 #
 # GUARD: did this repo grow a new answered-but-still-open issue?
-# RUNNER: bin/tests/rot-ratchet.test.sh
+# RUNNER: .github/workflows/rot-ratchet.yml -- daily
 # GUARD-TEST: bin/tests/rot-ratchet.test.sh
 # GATE: none -- it grades the ESTATE's issues, not this checkout; same reason
 #       bin/decision-rot.sh is unwired. CI would depend on the network.
