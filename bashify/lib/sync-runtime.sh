@@ -27,9 +27,25 @@
 # refusal from the code every run, so the day `garde` stops calling it, sync
 # starts working with no list to remember to edit.
 #
-# PREFLIGHT BY DEFAULT. Writes nothing without --apply, and never commits: the
-# change is left in the working tree so it can be read before it becomes
-# history. Same reasoning as coin.sh.
+# NO WORKTREE REQUIRED TO PREFLIGHT (fixed hf7y/realisateur#158). This used to
+# require a <project>-verbs worktree to already exist, and refused with advice
+# to hand-create one otherwise. That advice named the exact mechanism
+# `installe` stopped producing on 2026-08-05 (senechal a1c8629f) -- nothing in
+# the ecosystem left that worktree lying around anymore, so the refusal fired
+# every time. The analysis below only ever READS the branch (which function
+# a verb calls, whether the runtime already matches), and runtime-check.sh
+# next door already proves that reading a bashified branch needs no checkout:
+# it compares via `git show "$ref:lib/verb.sh"`, keyed off verb_set_ref_of.
+# This does the same for preflight, materializing a throwaway read-only mirror
+# under mktemp when no worktree exists.
+#
+# A WORKTREE IS STILL WHERE A WRITE LANDS, because the write is meant to be
+# read by a human before it becomes history (same reasoning as coin.sh), and
+# that needs a real working directory. So --apply creates one at
+# $PROJECTS/<project>-verbs when none exists yet -- the same path the old
+# refusal used to print as advice, just performed instead of asked for. That
+# keeps the PREFLIGHT BY DEFAULT contract intact: nothing is written, and no
+# worktree is created, without --apply.
 set -uo pipefail
 
 CLI_NAME='sync-runtime.sh'
@@ -69,18 +85,44 @@ verb_set_declared | cut -f1 | sort -u | grep -qx "$PROJECT" \
   || { echo "$CLI_NAME: '$PROJECT' declares no verb -- nothing to sync." >&2
        echo "(refusing to exit 0 about a name that matches nothing)" >&2; exit 1; }
 
+ref="$(verb_set_ref_of "$repo")" \
+  || { echo "$CLI_NAME: FATAL: '$PROJECT' declares a verb but no bashified ref resolves at $repo" >&2; exit 1; }
+
 tree="$(verb_set_worktree_of "$repo")"
-[ -n "$tree" ] || { echo "$CLI_NAME: $PROJECT's bashified branch is not checked out in any worktree." >&2
-                    echo "  sync writes into a working copy. Check it out first:" >&2
-                    echo "  git -C $repo worktree add ../$PROJECT-verbs bashified" >&2; exit 1; }
 
 echo "sync-runtime -- $PROJECT"
-echo "  worktree: $tree"
+if [ -n "$tree" ]; then
+  echo "  worktree: $tree"
+else
+  echo "  worktree: (none -- reading committed $ref; --apply will create $PROJECTS/$PROJECT-verbs)"
+fi
 echo "  skeleton: $SKEL"
 echo "  mode:     $( ((APPLY)) && echo APPLY || echo 'preflight (nothing is written)')"
 echo
 
-live="$tree/lib/verb.sh"
+# ------------------------------------------------- read-only source of truth --
+# With a worktree, read it directly (that also picks up uncommitted edits, which
+# the dirty check below then refuses on). Without one, mirror the committed
+# ref's bin/ and lib/ into a throwaway dir -- never $repo itself, never $tree.
+WORK=""
+trap '[ -n "$WORK" ] && rm -rf "$WORK"' EXIT
+if [ -n "$tree" ]; then
+  src="$tree"
+else
+  WORK="$(mktemp -d)"
+  mkdir -p "$WORK/bin" "$WORK/lib"
+  git -C "$repo" show "$ref:lib/verb.sh" > "$WORK/lib/verb.sh" 2>/dev/null \
+    || rm -f "$WORK/lib/verb.sh"
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    name="$(basename "$p")"
+    git -C "$repo" show "$ref:$p" > "$WORK/bin/$name" 2>/dev/null \
+      || rm -f "$WORK/bin/$name"
+  done < <(git -C "$repo" ls-tree -r --name-only "$ref" -- bin/ 2>/dev/null)
+  src="$WORK"
+fi
+
+live="$src/lib/verb.sh"
 if [ -f "$live" ] && cmp -s "$live" "$SKEL"; then
   echo "  already byte-identical to the skeleton -- nothing to do."
   exit 0
@@ -95,7 +137,7 @@ mapfile -t skel_vars < <(grep -oE '^[[:space:]]*VERB_[A-Z_]+=' "$SKEL" | tr -d '
 
 missing_fns=()
 missing_vars=()
-for f in "$tree"/bin/*; do
+for f in "$src"/bin/*; do
   [ -f "$f" ] || continue
   name="$(basename "$f")"
   # Functions this verb defines for itself are not the skeleton's problem.
@@ -128,8 +170,10 @@ fi
 
 # ------------------------------------------------------------- dirty check --
 # A sync landing on top of uncommitted work makes the two indistinguishable in
-# the commit -- this ecosystem's most-recorded failure signature.
-if [ -n "$(git -C "$tree" status --porcelain 2>/dev/null)" ]; then
+# the commit -- this ecosystem's most-recorded failure signature. Only meaningful
+# against a real worktree: the mktemp mirror above is always the clean committed
+# state, so there is nothing to be dirty.
+if [ -n "$tree" ] && [ -n "$(git -C "$tree" status --porcelain 2>/dev/null)" ]; then
   echo "  REFUSED -- $tree has uncommitted changes."
   echo "  Commit or clear them first: a sync on a dirty tree cannot be told apart"
   echo "  from the work already there."
@@ -142,6 +186,18 @@ echo "  every function and variable this branch's verbs use is present in the sk
 echo
 
 if ((APPLY)); then
+  if [ -z "$tree" ]; then
+    echo "  no worktree found -- creating one at $PROJECTS/$PROJECT-verbs"
+    if git -C "$repo" show-ref --verify -q refs/heads/bashified; then
+      git -C "$repo" worktree add "$PROJECTS/$PROJECT-verbs" bashified \
+        || { echo "$CLI_NAME: could not create a worktree at $PROJECTS/$PROJECT-verbs" >&2; exit 1; }
+    else
+      git -C "$repo" worktree add -b bashified "$PROJECTS/$PROJECT-verbs" "$ref" \
+        || { echo "$CLI_NAME: could not create a worktree at $PROJECTS/$PROJECT-verbs" >&2; exit 1; }
+    fi
+    tree="$PROJECTS/$PROJECT-verbs"
+    live="$tree/lib/verb.sh"
+  fi
   mkdir -p "$(dirname "$live")"
   cp "$SKEL" "$live" || { echo "$CLI_NAME: could not write $live" >&2; exit 1; }
   echo "  WRITTEN. Nothing was committed -- read it, run the contract tests, then commit."
@@ -152,6 +208,11 @@ if ((APPLY)); then
     echo "    (cd $tree && ./test/contract-test.sh bin/$(basename "$f"))"
   done
 else
-  echo "  Preflight only. Re-run with --apply to write it."
+  if [ -z "$tree" ]; then
+    echo "  Preflight only. Re-run with --apply to write it -- that will also create"
+    echo "  the worktree at $PROJECTS/$PROJECT-verbs, since none exists yet."
+  else
+    echo "  Preflight only. Re-run with --apply to write it."
+  fi
 fi
 exit 0

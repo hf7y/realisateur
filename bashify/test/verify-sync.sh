@@ -63,6 +63,29 @@ mkproj() {
   G "$d" worktree add -q "$INSTALLE_PROJECTS/$name-wt" bashified
 }
 
+# mkproj_bare <name> <runtime-file> [extra-line-in-verb] -- same as mkproj, but
+# bashified is left committed and UNCHECKED-OUT anywhere: no <name>-wt worktree.
+# This is the shape every project is in today, now that installe stopped
+# leaving one lying around (2026-08-05) -- see hf7y/realisateur#158.
+mkproj_bare() {
+  local name="$1" runtime="$2" extra="${3:-}"
+  local d="$INSTALLE_PROJECTS/$name"
+  mkdir -p "$d"; G "$d" init -q -b main
+  echo x > "$d/README.md"; G "$d" add -A; G "$d" commit -qm init
+  G "$d" checkout -q -b bashified
+  mkdir -p "$d/bin" "$d/man" "$d/lib"
+  cp "$runtime" "$d/lib/verb.sh"
+  { printf '#!/usr/bin/env bash\nSELF="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"\n'
+    printf 'VERB_NAME=%s\nVERB_SUMMARY="x"\nVERB_CAN_SUMMON=0\n. "$SELF/lib/verb.sh"\n' "$name"
+    [ -n "$extra" ] && printf '%s\n' "$extra"
+    printf 'verb_parse "$@"\n'
+  } > "$d/bin/$name"
+  chmod 755 "$d/bin/$name"
+  printf '.TH %s 1\n' "$name" > "$d/man/$name.1"
+  G "$d" add -A; G "$d" commit -qm verbs
+  G "$d" checkout -q main
+}
+
 OLD="$WORK/old-runtime.sh"
 { grep -v 'verb_refuse()' "$SKEL" | head -n -0; } > /dev/null 2>&1
 # An "older" runtime: the skeleton minus verb_refuse, standing in for a dialect.
@@ -144,6 +167,64 @@ G "$INSTALLE_PROJECTS/stale-wt" add lib/verb.sh
 G "$INSTALLE_PROJECTS/stale-wt" commit -qm 'adopt skeleton runtime'
 out="$("$CHECK" stale 2>&1)"; rc=$?
 check "E4 once COMMITTED the branch is clean" "$rc" "0"
+
+printf -- '-- F. no worktree at all: sync reads the committed branch directly\n'
+# F. hf7y/realisateur#158: sync used to REFUSE outright when nothing had
+# checked bashified out into a worktree, and print advice to hand-create one --
+# advice that named exactly the mechanism installe stopped producing on
+# 2026-08-05, so it fired for every project, always. Preflight must now work
+# with no worktree at all, and --apply must create one rather than ask a human
+# to.
+mkproj_bare current-bare "$SKEL"
+mkproj_bare stale-bare   "$OLD"
+[ -e "$INSTALLE_PROJECTS/current-bare-verbs" ] \
+  && bad "F0 no worktree exists yet for current-bare" \
+  || ok "F0 no worktree exists yet for current-bare"
+
+out="$("$SYNC" current-bare 2>&1)"; rc=$?
+check "F1 preflight on an identical, worktree-less branch exits 0" "$rc" "0"
+printf '%s' "$out" | grep -q 'already byte-identical' \
+  && ok "F2 and reports already-identical, reading the commit" \
+  || bad "F2 and reports already-identical"
+[ -e "$INSTALLE_PROJECTS/current-bare-verbs" ] \
+  && bad "F3 preflight must not create a worktree as a side effect" \
+  || ok "F3 preflight must not create a worktree as a side effect"
+
+out="$("$SYNC" stale-bare 2>&1)"; rc=$?
+check "F4 preflight on a drifted, worktree-less branch exits 0 (report only)" "$rc" "0"
+printf '%s' "$out" | grep -q 'would replace lib/verb.sh' \
+  && ok "F5 and it reports what would change, read via git show" \
+  || bad "F5 and it reports what would change"
+[ -e "$INSTALLE_PROJECTS/stale-bare-verbs" ] \
+  && bad "F6 preflight must not create a worktree here either" \
+  || ok "F6 preflight must not create a worktree here either"
+
+# A missing-function refusal must also work with no worktree: reading `bin/*`
+# out of the commit, not a checkout.
+mkproj_bare needy-bare "$OLD" 'verb_gap_or_summon() { :; }
+_unused() { verb_needs_something_absent "x"; }'
+out="$("$SYNC" needy-bare 2>&1)"; rc=$?
+check "F7 sync refuses a missing function with no worktree present" "$rc" "1"
+printf '%s' "$out" | grep -q 'verb_needs_something_absent' \
+  && ok "F8 and still names the specific function" \
+  || bad "F8 and still names the specific function"
+[ -e "$INSTALLE_PROJECTS/needy-bare-verbs" ] \
+  && bad "F9 a refused sync must not leave a worktree behind" \
+  || ok "F9 a refused sync must not leave a worktree behind"
+
+# --apply is the one path allowed to create the worktree, at the conventional
+# <project>-verbs path -- the same path the old refusal used to print as advice.
+"$SYNC" stale-bare --apply >/dev/null 2>&1
+wt="$INSTALLE_PROJECTS/stale-bare-verbs"
+[ -d "$wt" ] && ok "F10 --apply created the worktree at <project>-verbs" \
+  || bad "F10 --apply created the worktree at <project>-verbs"
+if cmp -s "$wt/lib/verb.sh" "$SKEL"; then ok "F11 --apply wrote the skeleton into it"
+else bad "F11 --apply wrote the skeleton into it"; fi
+branch="$(G "$wt" branch --show-current 2>/dev/null)"
+check "F12 the created worktree is ON the bashified branch, not detached" "$branch" "bashified"
+if [ -n "$(G "$wt" status --porcelain)" ]; then
+  ok "F13 --apply did not commit -- the worktree it just made is left dirty to read"
+else bad "F13 --apply did not commit"; fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
