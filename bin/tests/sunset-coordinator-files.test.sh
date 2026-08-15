@@ -108,11 +108,11 @@ printf '%s' "$out" | grep -q "usage:" && \
   bad "F2  --help prints usage"
 
 rc=0
-"$CMD" 2>&1 >/dev/null || rc=$?
+"$CMD" >/dev/null 2>&1 || rc=$?
 eq "F3  no args exits 3" "$rc" "3"
 
 rc=0
-"$CMD" /nonexistent 2>&1 >/dev/null || rc=$?
+"$CMD" /nonexistent >/dev/null 2>&1 || rc=$?
 eq "F4  nonexistent repo exits 3" "$rc" "3"
 
 # --- G: the two defects that would have caused real damage ---
@@ -122,7 +122,7 @@ eq "F4  nonexistent repo exits 3" "$rc" "3"
 # G2: --apply used to commit onto whatever branch was checked out, so running
 # it on main committed the removal to a protected branch.
 note "G. Regressions"
-mkdir -p "$T/repo-mjs" && cd "$T/repo-mjs"
+mkdir -p "$T/repo-mjs" && cd "$T/repo-mjs" || exit 1
 git init -q . && git config user.email t@t && git config user.name t
 mkdir -p .scheduler scripts
 echo "# retired" > .scheduler/FOCUS.md
@@ -137,7 +137,7 @@ rm scripts/reader.mjs && git add -A && git commit -qm "fix producer"
 start_branch=$(git symbolic-ref --short HEAD)
 rc=0; "$CMD" "$T/repo-mjs" --apply >/dev/null 2>&1 || rc=$?
 eq "G2  --apply exits 2" "$rc" "2"
-cd "$T/repo-mjs"
+cd "$T/repo-mjs" || exit 1
 [ "$(git symbolic-ref --short HEAD)" != "$start_branch" ] && \
   ok "G2b --apply commits on a new branch, not $start_branch" || \
   bad "G2b --apply commits on a new branch, not $start_branch"
@@ -151,7 +151,7 @@ git ls-tree -r --name-only "$start_branch" | grep -q '.scheduler/FOCUS.md' && \
 # producer: 123 in scheduler, 117 in realisateur, 62 in crt. Those lines read
 # and write nothing, so no amount of fixing them ever unblocks the sunset.
 note "H. Comments are not producers"
-mkdir -p "$T/repo-comments" && cd "$T/repo-comments"
+mkdir -p "$T/repo-comments" && cd "$T/repo-comments" || exit 1
 git init -q . && git config user.email t@t && git config user.name t
 mkdir -p .scheduler lib tests
 echo "# retired" > .scheduler/FOCUS.md

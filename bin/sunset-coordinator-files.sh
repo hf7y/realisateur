@@ -213,7 +213,8 @@ find_targets() {
     done
   done
 
-  return $([ $found -eq 0 ] && echo 0 || echo 1)
+  # 0 = nothing found, 1 = targets found.
+  return "$found"
 }
 
 # ============================================================================
@@ -295,7 +296,7 @@ fi
 
 # Commit the removal
 msg_file=$(mktemp)
-trap "rm -f '$msg_file'" EXIT
+trap 'rm -f "$msg_file"' EXIT
 cat > "$msg_file" <<'EOF'
 Sunset retired coordination directories
 
