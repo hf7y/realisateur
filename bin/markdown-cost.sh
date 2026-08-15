@@ -193,7 +193,18 @@ if [ "${1:-}" = --census ] || [ "${1:-}" = --accept ]; then
   now="$(census)"
   [ -n "$now" ] || die2 "the census produced no count -- refusing to report a number I did not measure"
   if [ "${1:-}" = --accept ]; then
-    printf '# markdown-cost.ratchet -- prose lines in this tree. SHRINKS ONLY.\n# Raised only by a hand edit, which is meant to be reviewed. See bin/markdown-cost.sh.\n# accepted %s\n%s\n' \
+    # A ratchet that can be re-accepted upward is not a ratchet. If the tree
+    # has grown, --accept refuses; reap prose, do not move the floor.
+    if [ -f "$RATCHET" ]; then
+      prev="$(grep -v '^#' "$RATCHET" | tr -d '[:space:]')"
+      case "$prev" in ''|*[!0-9]*) prev='' ;; esac
+      if [ -n "$prev" ] && [ "$now" -gt "$prev" ]; then
+        printf 'markdown-cost --accept -- REFUSED. The tree is %d line(s) ABOVE the\n' "$((now - prev))" >&2
+        printf '  baseline of %s, and this ratchet only falls. Reap prose instead.\n' "$prev" >&2
+        exit 1
+      fi
+    fi
+    printf '# markdown-cost.ratchet -- prose lines in this tree. SHRINKS ONLY.\n# Written by markdown-cost.sh --accept, which refuses to raise it. A hand\n# edit that raises it is rejected by --census. See bin/markdown-cost.sh.\n# accepted %s\n%s\n' \
       "$(date -Is)" "$now" > "$RATCHET" || die2 "cannot write $RATCHET"
     printf 'markdown-cost --accept -- baseline is now %s prose line(s).\n' "$now"
     exit 0
@@ -209,9 +220,28 @@ if [ "${1:-}" = --census ] || [ "${1:-}" = --accept ]; then
   # cut. On an absolute gate every PR re-accepts, and re-accepting on autopilot
   # is how a ratchet loosens itself. So the FLAG needs both conditions.
   base=''
+  mb=''
   if git rev-parse --verify -q origin/main >/dev/null 2>&1; then
     mb="$(git merge-base HEAD origin/main 2>/dev/null)" || mb=''
     [ -n "$mb" ] && base="$(census_ref "$mb")"
+  fi
+
+  # THE BASELINE ITSELF ONLY FALLS. Raising it by hand was an affordance this
+  # guard printed in its own FLAG, and it was taken twice in one day -- once
+  # to fit three guards, once to fit a rollout -- each time with a written
+  # case, each time unreviewed, because the PR carrying the raise merged
+  # itself (#288/#319). An escape hatch used on the schedule of the thing it
+  # is supposed to restrain is not oversight, it is a toll booth. There is no
+  # flag to override this: reap prose, or the number stands.
+  if [ -n "$mb" ]; then
+    prev="$(git show "$mb:${RATCHET#"$(git rev-parse --show-toplevel)/"}" 2>/dev/null | grep -v '^#' | tr -d '[:space:]')"
+    case "$prev" in ''|*[!0-9]*) prev='' ;; esac
+    if [ -n "$prev" ] && [ "$was" -gt "$prev" ]; then
+      printf '  FLAG [prose-ratchet] this branch RAISES the baseline from %s to %s.\n' "$prev" "$was"
+      printf '        The ratchet only falls, and there is no override. Reap prose until\n'
+      printf '        the tree fits, or leave the number alone.\n'
+      exit 1
+    fi
   fi
 
   if [ "$now" -gt "$was" ]; then
@@ -224,8 +254,8 @@ if [ "${1:-}" = --census ] || [ "${1:-}" = --accept ]; then
     if [ "$now" -gt "$base" ]; then
       printf '  FLAG [prose-ratchet] this branch adds %d prose line(s), and the tree is\n' "$((now - base))"
       printf '        already %d over the baseline of %s.\n' "$((now - was))" "$was"
-      printf '        The ratchet only falls. Reap prose elsewhere in this branch, or make\n'
-      printf '        the case in review and raise %s by hand.\n' "$RATCHET"
+      printf '        The ratchet only falls, and raising %s is\n' "$RATCHET"
+      printf '        rejected too. Reap prose elsewhere in this branch.\n'
       exit 1
     fi
     printf '  over the baseline, but not by this branch -- main drifted. Not this PR to answer for.\n'

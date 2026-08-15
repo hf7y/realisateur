@@ -32,27 +32,10 @@
 # `main` conservative forever. The leak is named below as debt with a bound on
 # it, and the bound is enforced by bin/tests/propagation.test.sh.
 #
-# ============================================================================
-# WHAT WAS MEASURED, 2026-08-07, BEFORE ANY OF THIS
-# ============================================================================
-#
-#   channel                       cadence            state
-#   ----------------------------  -----------------  -----------------------
-#   scheduler clone of main       every runner tick  CURRENT, all 3 armed
-#   realisateur clone of main     NONE               15 commits behind, x4
-#   installe bashified worktree   NONE               senechal 2dcf238 vs
-#                                                    origin a1c8629, stale
-#   hf7y/verbs nightly build      04:07Z nightly     CUT DAILY SINCE 08-05,
-#                                                    INSTALLED ON ZERO HOSTS
-#
-# The one channel with a clock was current. Every channel without one had
-# rotted. And the release channel -- the correct one, already built, already
-# nightly, already refusing BLIND and shrinking builds -- had no consumer at
-# all. `~/.local/share/verb-builds/` did not exist on any of the ten accounts.
-#
-#       >>> A CHANNEL WITH NO CLOCK IS NOT A CHANNEL. <<<
-#
-# It is a hope, and a hope that exits 0 is this estate's signature failure.
+# A CHANNEL WITH NO CLOCK IS NOT A CHANNEL. Measured 2026-08-07: every
+# channel without a clock had rotted, and the release channel -- correct,
+# built, nightly -- had zero consumers. The table that used to sit here
+# recorded four shas and two dates; it was a photograph, and it aged.
 #
 # ============================================================================
 # PULL, NOT PUSH
