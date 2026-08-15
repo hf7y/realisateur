@@ -155,6 +155,20 @@ find_producers() {
     --exclude='sunset-coordinator-files.test.sh' \
     . 2>/dev/null || true)
 
+  # EXTENSIONLESS EXECUTABLES. Selecting code by extension misses the shebang
+  # scripts that are usually a repo's front door: scheduler's `bin/scheduler`
+  # is 3,659 lines with ~40 live read/write sites on the retired paths and was
+  # invisible here, so the tool would have reported that repo READY and --apply
+  # would have deleted files the next `scheduler ask` writes straight back.
+  # That is the exact regeneration producers-first exists to prevent.
+  shebang_files=$(git ls-files 2>/dev/null | while IFS= read -r f; do
+    case "$f" in *.*|'') continue ;; esac
+    [ -f "$f" ] || continue
+    [ "$(head -c2 "$f" 2>/dev/null)" = '#!' ] || continue
+    grep -IlE "$pat" "$f" 2>/dev/null || true
+  done)
+  code_files=$(printf '%s\n%s' "$code_files" "$shebang_files" | grep -v '^$' | sort -u)
+
   # A COMMENT IS NOT A PRODUCER, and this is the difference between a usable
   # mechanism and one that can never report clean. Across the estate almost
   # every code hit is rationale prose -- "see FOCUS.md #8", "the 2026-07-21
@@ -173,8 +187,102 @@ find_producers() {
   #
   # Markdown is NOT filtered: an instruction file has no code, and its prose
   # IS its mechanism.
-  code_matches=$(printf '%s\n' "$code_files" | grep -v '^$' | tr '\n' '\0' \
-    | xargs -0 -r awk -v pat="$pat" '
+  # PYTHON IS TOKENIZED, NOT PATTERN-MATCHED. The awk parity heuristic
+  # (count the triple-quote delimiters on a line, toggle on an odd count)
+  # desyncs on any line with a quote in prose, a single-line docstring, or a
+  # file mixing both delimiters -- and once desynced, every line after it
+  # flips. That produced the one failure mode a guard over a destructive
+  # operation cannot have: NONDETERMINISM. On ecosim,
+  # bin/migration-watch.py:196/:257/:1165 blocked, then silently stopped
+  # blocking after unrelated edits elsewhere in the file, those lines
+  # unchanged. On senechal.py, 506 and 525 were flagged inside an indented
+  # docstring while the identical reference at 146 was correctly suppressed.
+  # Two agents on the same commit could disagree and neither would be wrong.
+  #
+  # python's own tokenizer decides instead. Note what it does NOT strip:
+  # ordinary string literals. open(".scheduler/FOCUS.md") is a producer and
+  # the path lives in a STRING token. Only COMMENTs and DOCSTRINGs -- a string
+  # standing alone as a statement -- are prose. A file that fails to tokenize
+  # has nothing stripped, so it errs toward blocking.
+  #
+  # Which scanner a file gets follows the LANGUAGE, and for the extensionless
+  # scripts above, the shebang is the only thing that says so.
+  local py_files other_files py_matches awk_matches scanner
+  py_files=$(printf '%s\n' "$code_files" | while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      case "$f" in *.py) printf '%s\n' "$f"; continue ;; esac
+      head -n 1 -- "$f" 2>/dev/null | grep -q python && printf '%s\n' "$f"
+    done || true)
+  if [ -n "$py_files" ]; then
+    other_files=$(printf '%s\n' "$code_files" | grep -vxF "$py_files" || true)
+  else
+    other_files="$code_files"
+  fi
+
+  scanner=$(mktemp) || die "mktemp failed"
+  cat > "$scanner" <<'PYSCANNER'
+import io, os, re, sys, tokenize
+
+pat = re.compile(os.environ["SUNSET_PAT"])
+STARTERS = (tokenize.NEWLINE, tokenize.NL, tokenize.INDENT,
+            tokenize.DEDENT, tokenize.ENCODING)
+
+for path in sys.stdin.read().split("\n"):
+    if not path:
+        continue
+    try:
+        with open(path, "rb") as fh:
+            src = fh.read().decode("utf-8", "replace")
+    except OSError:
+        continue
+    lines = src.splitlines()
+    scrubbed = [list(line) for line in lines]
+    try:
+        toks = list(tokenize.generate_tokens(io.StringIO(src).readline))
+    except Exception:
+        toks = []          # untokenizable: strip nothing, so it still blocks
+    prev = tokenize.NEWLINE
+    for n, tok in enumerate(toks):
+        prose = tok.type == tokenize.COMMENT
+        if not prose and tok.type == tokenize.STRING and prev in STARTERS:
+            nxt = next((t for t in toks[n + 1:]
+                        if t.type != tokenize.COMMENT), None)
+            prose = nxt is not None and nxt.type in (tokenize.NEWLINE,
+                                                     tokenize.NL)
+        if prose:
+            (srow, scol), (erow, ecol) = tok.start, tok.end
+            for row in range(srow, erow + 1):
+                if row - 1 >= len(scrubbed):
+                    break
+                line = scrubbed[row - 1]
+                start = scol if row == srow else 0
+                end = ecol if row == erow else len(line)
+                for col in range(start, min(end, len(line))):
+                    line[col] = " "
+        prev = tok.type
+    for num, chars in enumerate(scrubbed, 1):
+        if pat.search("".join(chars)):
+            print("%s:%d:%s" % (path, num, lines[num - 1]))
+PYSCANNER
+  py_matches=$(printf '%s\n' "$py_files" | grep -v '^$' \
+    | SUNSET_PAT="$pat" python3 "$scanner" || true)
+  rm -f "$scanner"
+
+  # awk still handles shell/js/yaml, where a comment really is "the line starts
+  # with a marker" or a /* */ block -- no ambiguity to desync on.
+  #
+  # The pattern reaches awk through the ENVIRONMENT, never through -v. It is a
+  # grep ERE containing a backslash-dot, and awk's -v PROCESSES escape
+  # sequences: -v both warned and degraded backslash-dot to "." = any
+  # character. The .scheduler/ alternative then matched
+  # "Projects/scheduler/schedule" -- a path to a SIBLING CHECKOUT -- in
+  # basheur's impl/project-evidence and crt's crt-present-morning-report.py.
+  # A false positive nobody can legitimately fix blocks --apply forever, which
+  # is worse than a miss. This is the fourth double-escaping bug in this file;
+  # ENVIRON has no escape layer to get wrong, which is why it is used rather
+  # than doubling the backslashes and hoping the next reader keeps the count.
+  awk_matches=$(printf '%s\n' "$other_files" | grep -v '^$' | tr '\n' '\0' \
+    | SUNSET_PAT="$pat" xargs -0 -r awk 'BEGIN { pat = ENVIRON["SUNSET_PAT"] }
       FNR==1 { inblk=0; inpy=0 }
       {
         s=$0; sub(/^[ \t]*/,"",s); c=$0; iscomment=0
@@ -186,21 +294,57 @@ find_producers() {
         if (!iscomment && $0 ~ pat) printf "%s:%d:%s\n", FILENAME, FNR, $0
       }' || true)
 
+
+  code_matches=$(printf '%s\n%s' "$py_matches" "$awk_matches" | grep -v '^$' || true)
+
   # Markdown is scanned NARROWLY, and the distinction is the whole point:
   # a slash-command file or CLAUDE.md INSTRUCTS an agent to read or write
   # these paths, so it is a producer. A retrospective that merely mentions
   # FOCUS.md in prose is not. Scanning all *.md flags MONKEY.md, PLAYBOOK.md
   # and THE-FLOOR.md for narrating history, which blocks the sunset forever
   # on files that produce nothing.
+  local doc_targets='./.claude/commands ./.scheduler/commands ./CLAUDE.md ./AGENTS.md'
+  # shellcheck disable=SC2086  # deliberate word-splitting: a list of paths
   doc_matches=$(grep -rInE "$pat" \
-    --include='*.md' \
+    --include='*.md' --include='*.template' \
     --exclude-dir='.git' \
     --exclude-dir='archive' --exclude-dir='retired' \
     --exclude-dir='.scheduler' \
-    ./.claude/commands ./.scheduler/commands ./CLAUDE.md ./AGENTS.md \
+    $doc_targets \
     2>/dev/null || true)
 
-  matches=$(printf '%s\n%s' "$code_matches" "$doc_matches" | grep -v '^$' || true)
+  # ONE HOP, and only one. An instruction file that says "read README.md in
+  # full and trust it over your own assumptions" has made README.md part of
+  # the instruction -- and baudin's README.md then said "see `.claude/FOCUS.md`
+  # for current priority". The scan saw nothing and the agent was still sent to
+  # the dead path, because nightly-batch.md named no retired path itself. So
+  # the hop starts from the instruction FILES, not from their matches, and
+  # every .md they name is scanned too.
+  #
+  # It stops at one hop deliberately. Past one, "a file that mentions a file"
+  # is the whole repo, and the guard goes back to being unsatisfiable -- the
+  # failure this script has already had twice.
+  local hop_files hop_matches=""
+  # shellcheck disable=SC2086  # deliberate word-splitting: a list of paths
+  hop_files=$(grep -rhoE '[A-Za-z0-9_./-]+\.md' \
+      --include='*.md' --include='*.template' \
+      --exclude-dir='.git' --exclude-dir='archive' --exclude-dir='retired' \
+      $doc_targets 2>/dev/null \
+    | grep -vE '(^|/)(FOCUS|QUESTIONS|BLOCKERS|PARKING-LOT)\.md$' \
+    | sort -u)
+  for hop in $hop_files; do
+    [ -f "$hop" ] || continue
+    case "$hop" in                    # already scanned as an instruction file
+      CLAUDE.md|./CLAUDE.md|AGENTS.md|./AGENTS.md) continue ;;
+      .claude/commands/*|./.claude/commands/*) continue ;;
+      .scheduler/*|./.scheduler/*) continue ;;
+    esac
+    hop_matches="$hop_matches$(grep -nE "$pat" "$hop" 2>/dev/null | sed "s|^|$hop:|" || true)
+"
+  done
+
+  matches=$(printf '%s\n%s\n%s' "$code_matches" "$doc_matches" "$hop_matches" \
+    | grep -v '^$' || true)
 
   [ -z "$matches" ] && return 0
   printf '%s\n' "$matches"
@@ -228,7 +372,10 @@ find_targets() {
   # abletim all carried a bare FOCUS.md).
   for f in FOCUS.md QUESTIONS.md BLOCKERS.md PARKING-LOT.md; do
     for dir in .claude .; do
-      if [ -f "$dir/$f" ]; then
+      # -L as well as -f: chezz's .claude/FOCUS.md is a SYMLINK into
+      # .scheduler/. -f follows the link, so once .scheduler is removed the
+      # link dangles and every later test reads false.
+      if [ -f "$dir/$f" ] || [ -L "$dir/$f" ]; then
         echo "${dir#./}/$f" | sed 's|^\./||; s|^/||'
         found=1
       fi
@@ -251,11 +398,12 @@ producers=$(find_producers 2>&1) || producer_rc=$?
 
 if [ $producer_rc -eq 1 ]; then
   note "PRODUCERS FOUND (must be fixed before removal):"
-  printf '%s\n' "$producers" | head -20 | sed 's/^/  /'
-  lines=$(printf '%s\n' "$producers" | wc -l)
-  if [ "$lines" -gt 20 ]; then
-    printf 'sunset-coordinator-files:   ... (%d more)\n' $((lines - 20))
-  fi
+  # PRINT THEM ALL. The list IS the work order, and truncating at 20 made it
+  # unusable in exactly the repos that need it most -- scheduler has 44. A
+  # producer you cannot see is one you will not fix.
+  printf '%s\n' "$producers" | sed 's/^/  /'
+  printf 'sunset-coordinator-files: %d producer line(s).\n' \
+    "$(printf '%s\n' "$producers" | wc -l)"
   exit 1
 fi
 
@@ -307,7 +455,10 @@ note "applying removal on new branch $sunset_branch..."
 
 # Remove the targets
 for target in $targets; do
-  if [ -e "$target" ]; then
+  # A dangling symlink is still a file to remove. Without -L the loop
+  # skipped chezz's two .claude links after .scheduler went first, and
+  # reported "removal complete" with both still on disk.
+  if [ -e "$target" ] || [ -L "$target" ]; then
     if ! git rm -r "$target"; then
       die "git rm failed on $target"
     fi
@@ -340,6 +491,6 @@ fi
 
 note "committed $(git rev-parse --short HEAD) -- removal complete"
 note "branch: $sunset_branch"
-note "removed files/dirs: $(printf '%s\n' "$staged" | wc -l)"
+note "removed paths: $(printf '%s\n' "$targets" | grep -cv '^$') ($(printf '%s\n' "$staged" | grep -cv '^$') files staged)"
 note "next: git push -u origin $sunset_branch && gh pr create --base $branch"
 exit 2
