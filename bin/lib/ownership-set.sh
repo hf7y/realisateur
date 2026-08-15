@@ -269,6 +269,10 @@ bin/closeout-lint.sh               bashify generic session-durability lint. Noth
 bin/retire-check.sh                realisateur mechanizes cloture.md step 3's own by-hand grep (#166), same door as hygiene-lint.sh -- auditing compliance with a doctrine this project wrote, first used against this repo before any estate-wide adoption is warranted. Unlike closeout-lint.sh it is not yet wired into any command (#187's .claude/ write gate) or accepted onto the payload ratchet, so it stays realisateur's own tool rather than a claimed bashify verb.
 bin/decision-rot.sh                realisateur SENSES the ecosystem and TRIAGES what it senses -- the mission test's own first two verbs. It reads the issue trackers and reports which of Zach's answers nobody took up; it decides nothing and writes nothing. Squarely this organ's.
 bin/tests/decision-rot.test.sh     realisateur follows its subject.
+bin/rot-ratchet.sh                 realisateur the ratchet half of bin/decision-rot.sh: same organ, same estate-wide sensing, and it reads that script's own --json rather than restating anything.
+bin/tests/rot-ratchet.test.sh      realisateur follows its subject.
+bin/directive-prose.sh             realisateur enforces THIS repo's own doctrine -- a decision must exist where a consumer reads it (#294) -- against this repo's diffs, on retire-check.sh's precedent. It becomes a bashify generic once the copier that carries it exists (#305), not on the day it is written.
+bin/tests/directive-prose.test.sh  realisateur follows its subject.
 bin/hardcoded-home-lint.sh         bashify generic shell lint. Same test.
 bin/markdown-cost.sh               bashify generic diff-shape gate. Same test.
 bin/suite-docs-lint.sh             bashify generic suite-hygiene lint. Same test.

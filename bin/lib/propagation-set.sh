@@ -409,6 +409,13 @@ PROP_LEAK_BOUND=7
 # retire-check.sh's precedent below: a front door is claimed after the tool has
 # been used against this estate, not on the day it is written.
 #
+# rot-ratchet.sh and directive-prose.sh are LOCAL for the two reasons already
+# written above, one each. rot-ratchet.sh inherits decision-rot.sh's exactly:
+# it reads that script's output and needs the same estate-wide issue
+# credential, which the per-account deploy-key tokens do not have.
+# directive-prose.sh inherits markdown-cost.sh's: it is a CI gate on this
+# repo's diffs, and reaching other repos is a COPY (#305), not an install.
+#
 # retire-check.sh (#166) is LOCAL for the identical reason, same paragraph:
 # adding an eighth PAYLOAD row raises the leak bound rather than shrinking it.
 # It also is not yet CALLED by anything -- wiring it into cloture.md step 3,
@@ -462,6 +469,8 @@ deferral-ledger.sh
 gh-comment.sh
 retire-check.sh
 decision-rot.sh
+rot-ratchet.sh
+directive-prose.sh
 cut-verb-build.sh
 deploy-drift.sh
 release-gate.sh
