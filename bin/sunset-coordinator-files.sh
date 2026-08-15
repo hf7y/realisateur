@@ -361,7 +361,10 @@ find_targets() {
   # abletim all carried a bare FOCUS.md).
   for f in FOCUS.md QUESTIONS.md BLOCKERS.md PARKING-LOT.md; do
     for dir in .claude .; do
-      if [ -f "$dir/$f" ]; then
+      # -L as well as -f: chezz's .claude/FOCUS.md is a SYMLINK into
+      # .scheduler/. -f follows the link, so once .scheduler is removed the
+      # link dangles and every later test reads false.
+      if [ -f "$dir/$f" ] || [ -L "$dir/$f" ]; then
         echo "${dir#./}/$f" | sed 's|^\./||; s|^/||'
         found=1
       fi
@@ -441,7 +444,10 @@ note "applying removal on new branch $sunset_branch..."
 
 # Remove the targets
 for target in $targets; do
-  if [ -e "$target" ]; then
+  # A dangling symlink is still a file to remove. Without -L the loop
+  # skipped chezz's two .claude links after .scheduler went first, and
+  # reported "removal complete" with both still on disk.
+  if [ -e "$target" ] || [ -L "$target" ]; then
     if ! git rm -r "$target"; then
       die "git rm failed on $target"
     fi
@@ -474,6 +480,6 @@ fi
 
 note "committed $(git rev-parse --short HEAD) -- removal complete"
 note "branch: $sunset_branch"
-note "removed files/dirs: $(printf '%s\n' "$staged" | wc -l)"
+note "removed paths: $(printf '%s\n' "$targets" | grep -cv '^$') ($(printf '%s\n' "$staged" | grep -cv '^$') files staged)"
 note "next: git push -u origin $sunset_branch && gh pr create --base $branch"
 exit 2

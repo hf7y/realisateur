@@ -228,7 +228,7 @@ eq "H11 a read after the docstring still blocks" "$rc" "1"
 # --- J: extensionless executables are producers too ---
 # Selecting code by extension reported hf7y/scheduler READY while bin/scheduler
 # (3,659 lines, ~40 live sites) still wrote the retired paths.
-note "J. Extensionless executables"
+note "L. Extensionless executables"
 mkdir -p "$T/repo-noext/bin" && cd "$T/repo-noext" || exit 1
 git init -q . && git config user.email t@t && git config user.name t
 mkdir -p .scheduler && echo "# retired" > .scheduler/FOCUS.md
@@ -237,9 +237,9 @@ chmod +x bin/tool
 printf 'plain text mentioning FOCUS.md\n' > notes
 git add -A && git commit -qm init
 rc=0; out="$("$CMD" "$T/repo-noext" 2>&1)" || rc=$?
-eq "J1  an extensionless shebang producer blocks" "$rc" "1"
-printf '%s' "$out" | grep -q 'bin/tool' && ok "J1b names it" || bad "J1b names it"
-printf '%s' "$out" | grep -q ':notes:' && bad "J2  extensionless non-script scanned" || ok "J2  extensionless non-script ignored"
+eq "L1  an extensionless shebang producer blocks" "$rc" "1"
+printf '%s' "$out" | grep -q 'bin/tool' && ok "L1b names it" || bad "L1b names it"
+printf '%s' "$out" | grep -q ':notes:' && bad "L2  extensionless non-script scanned" || ok "L2  extensionless non-script ignored"
 
 # --- J: one hop out of an instruction file ---
 # baudin: .claude/commands/nightly-batch.md said "read README.md in full and
@@ -312,6 +312,21 @@ eq "K4  still blocks after an unrelated edit" "$rc" "1"
 n2=$(printf '%s\n' "$out2" | grep -c 'both\.py:')
 eq "K5  and still names exactly one line" "$n2" "1"
 [ -n "$before" ] && ok "K6  the first verdict was recorded" || bad "K6  the first verdict was recorded"
+# --- K: symlinked targets must not survive as dangling links ---
+# chezz's .claude/FOCUS.md linked into .scheduler/. .scheduler was removed
+# first, the link then dangled, `[ -e ]` read false, and the tool reported
+# "removal complete" with both links still on disk.
+note "M. Symlinked targets"
+mkdir -p "$T/repo-link/.claude" && cd "$T/repo-link"
+git init -q . && git config user.email t@t && git config user.name t
+mkdir -p .scheduler && echo "# retired" > .scheduler/FOCUS.md
+ln -s ../.scheduler/FOCUS.md .claude/FOCUS.md
+git add -A && git commit -qm init
+rc=0; "$CMD" "$T/repo-link" --apply >/dev/null 2>&1 || rc=$?
+eq "M1  --apply exits 2" "$rc" "2"
+cd "$T/repo-link"
+[ -L .claude/FOCUS.md ] && bad "M2  dangling symlink survived" || ok "M2  symlink removed too"
+[ -d .scheduler ] && bad "M3  .scheduler survived" || ok "M3  .scheduler removed"
 
 # --- Summary ---
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
