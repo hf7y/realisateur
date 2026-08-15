@@ -283,6 +283,7 @@ selfdev-gh-app.sh
 PROP_BOOTSTRAP_SUPPORT="
 lib/cli-guard.sh
 lib/propagation-set.sh
+lib/selfdev-app-key.sh
 "
 
 # --- PROVISIONING: root-side, runs from a hands account, never on the -------
