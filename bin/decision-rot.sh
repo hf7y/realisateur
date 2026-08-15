@@ -100,13 +100,21 @@
 #     which is exactly why the answer scan reads `--state all`: an answer that
 #     landed on a closed issue still happened, and scanning only open issues
 #     would make the denominator a function of the numerator.
-#   * The STAMP is checked on the LAST NON-BLANK LINE ONLY (hf7y/vim-arcade#77's
-#     predicate, mirrored in ecosim lib/provenance.py and bin/gh-comment.sh).
-#     Under one shared `hf7y` token an agent's own reply looks EXACTLY like
-#     Zach's, and the stamp is the only thing separating them -- this is the
-#     one genuine ambiguity in the data and it is already solved. Checking the
-#     whole body instead would let a stamp quoted mid-comment out of another
-#     comment silently disqualify a human answer.
+#   * The STAMP is checked on the LAST NON-BLANK LINE ONLY. Under one shared
+#     `hf7y` token an agent's own reply looks EXACTLY like Zach's, and the
+#     stamp is the only thing separating them -- this is the one genuine
+#     ambiguity in the data. Checking the whole body instead would let a stamp
+#     quoted mid-comment out of another comment silently disqualify a human
+#     answer.
+#   * It reads a MARKER, not a grammar. It used to require the full
+#     `<!-- agent: <project>/<job> <ISO8601> -->` shape, reimplemented three
+#     times over (here in jq, vim-arcade's vim_arcade/provenance.py, ecosim's
+#     lib/provenance.py) because cross-repo imports run the wrong direction in
+#     this ecosystem. Three copies of a field grammar drift; three copies of
+#     "the line starts with `<!-- agent:`" have nothing inside them to
+#     disagree about. The fields are for a human reading the thread. What
+#     WRITES the marker is bin/gh-sign.sh, which is not called by anything --
+#     it stands in front of `gh` on PATH, so no caller can omit it.
 #
 # AGE is days since that answer comment's own timestamp, read straight off the
 # comment. It is the only number here that is not a boolean, and it is what
@@ -228,13 +236,11 @@ command -v jq >/dev/null || { echo "decision-rot.sh: jq not on PATH" >&2; exit 3
 # rot_scan <owner>       -> TSV per ROTTING issue: number, answer date, age days, title
 # answered_count <owner> -> the ANSWERED total, same predicate, no state filter
 DECISION_ROT_JQ='
-  # isStamped: TRUE iff the body`s LAST NON-BLANK LINE is an agent provenance
-  # stamp. hf7y/vim-arcade#77`s predicate, verbatim.
+  # stamped: TRUE iff the body`s LAST NON-BLANK LINE opens with the agent
+  # marker. A marker, not a field grammar -- see the header.
   def stamped:
     (. // "") | split("\n") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))
-    | if length == 0 then false
-      else (.[-1] | test("^<!--\\s*agent:\\s*\\S+/\\S+\\s+\\S+\\s*-->$"))
-      end;
+    | if length == 0 then false else (.[-1] | test("^<!--\\s*agent:")) end;
   # The answer: the LATEST owner comment that is not agent-stamped. An older
   # answer that was taken up does not excuse a newer one that was not.
   def answer:

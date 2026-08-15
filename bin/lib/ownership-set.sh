@@ -270,8 +270,8 @@ bin/deferral-ledger.sh             vim-arcade asks whether a pull request declar
 bin/tests/deferral-ledger.test.sh  vim-arcade follows its subject.
 .github/workflows/deferral-ledger.yml vim-arcade follows its subject.
 bin/defere.sh                      vim-arcade files an issue and prints the ledger line. Issue tooling; the estate's front door for routing a finding to an owner.
-bin/gh-comment.sh                  vim-arcade posts a stamped GitHub comment. Same front-door shape as defere.sh, one row up; the trailing-line stamp it never omits is the format hf7y/vim-arcade#77's is_stamped() reads.
-bin/tests/gh-comment.test.sh       vim-arcade follows its subject.
+bin/gh-sign.sh                     vim-arcade signs every agent-written GitHub body by standing in front of `gh` on PATH. Replaced bin/gh-comment.sh, the opt-in wrapper it supersedes: same subject, but nothing calls it, so nothing can skip it.
+bin/tests/gh-sign.test.sh          vim-arcade follows its subject.
 bin/path-provenance-audit.sh       senechal asks whether every PATH entry has an owner and a source. senechal owns knowing what exists on a machine -- Zach reassigned this class explicitly on 2026-08-07.
 bin/tests/path-provenance-audit.test.sh senechal follows its subject.
 bin/closeout-lint.sh               bashify generic session-durability lint. Nothing in it is about ideas, inboxes or scaffolding; every repo in the estate wants it, which is the definition of a verb.

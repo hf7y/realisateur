@@ -17,10 +17,12 @@ registration works," not "realisateur's own status."
   so **issue state and labels carry no information about whether he
   answered** — an OPEN question issue is *not* evidence that it is
   unanswered. The predicate for any sweep: an issue is answered if it carries
-  a comment authored by the repo owner that is **not agent-stamped**
-  (`is_stamped`, per hf7y/vim-arcade#77, reads the last non-blank line only —
-  the same stamp `bin/gh-comment.sh` writes). Query across **all** states.
+  a comment authored by the repo owner whose **last non-blank line does not
+  open with `<!-- agent:`**. Query across **all** states.
   This is the one place the rule is written; other files point here.
+  Agents do not append that marker and no code calls anything to get it:
+  `bin/gh-sign.sh` stands in front of `gh` on PATH and signs every body on
+  its way out, so an unsigned owner comment is a human one by construction.
   It was wrong here for ten days because one improvised comment on
   hf7y/vim-arcade#12 — *"Not sure how to label issue as 'answered' for agent
   to pick up. will try close"* — got generalized into a standing convention.

@@ -375,13 +375,28 @@ PROP_LEAK_BOUND=7
 # #115's job. Reclassifying it here without the man page would silently drop
 # it from every build (#85).
 #
-# gh-comment.sh (#238) is LOCAL for the same reason as defere.sh, one step
-# short of the protest: nothing checked into this repo calls it yet (no
-# script here posts a GitHub comment at all -- that is the gap #238 found),
-# so unlike defere.sh it is not YET needed on the ten accounts, only built
-# ahead of that need so the stamp is never optional once something does call
-# it. Promote it alongside defere.sh if and when it gains a caller other
-# accounts need, not before -- the leak bound is the same FULL 7 either way.
+# gh-sign.sh IS FILED HERE UNDER PROTEST, in defere.sh's shape and for a
+# sharper reason. It replaced gh-comment.sh, whose LOCAL row read "not YET
+# needed on the ten accounts, only built ahead of that need so the stamp is
+# never optional once something does call it." That premise was measured on
+# 2026-08-15 and it was backwards: nothing ever called the wrapper, and 97%
+# of agent comments across the estate went out unsigned over a bare `gh`.
+# gh-sign.sh is not a front door an account MIGHT need -- it is a shim that
+# does nothing whatsoever unless it is on the account's PATH, ahead of the
+# real gh. LOCAL is the one class that guarantees it never works.
+#
+# It is recorded LOCAL anyway because that is TRUE TODAY and the alternative
+# is worse than an honest wrong-looking row: PAYLOAD is at a FULL leak bound
+# of 7 (PROP_PAYLOAD_PENDING == PROP_PAYLOAD_SCRIPTS), and the exit this file
+# already prescribes for defere.sh applies here verbatim -- declare it on the
+# bashified branch with a man page and add it to PAYLOAD WITHOUT adding it to
+# PENDING, rather than growing the bound.
+#
+# What makes it a separate decision from #115's rather than a copy of it: the
+# link a verb build would create is `/usr/local/bin/gh`. It shadows a real
+# binary, host-wide, for every account at once, and that is a call to make
+# deliberately and out loud -- not one to arrive as a side effect of a row
+# added here. Until it is made, this row is the accurate one.
 #
 # decision-rot.sh is LOCAL on floor-check.sh's reasoning, not retire-check.sh's:
 # it is an ESTATE-WIDE SURVEY that a human runs from a hands-on session and
@@ -451,7 +466,7 @@ publish-monkey-status.sh
 claim-drift.sh
 defere.sh
 deferral-ledger.sh
-gh-comment.sh
+gh-sign.sh
 retire-check.sh
 decision-rot.sh
 rot-ratchet.sh

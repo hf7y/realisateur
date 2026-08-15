@@ -52,9 +52,7 @@ survivors are now held to, and for what is knowingly given up.
 **Read the answers on your own issues and process them.** Zach answers by
 commenting and LEAVING THE ISSUE OPEN -- state and labels say nothing about
 whether he answered, so an open question issue is *not* evidence that it is
-unanswered. Sweep across **all** states and treat an issue as answered when
-it carries a comment by the repo owner that is not agent-stamped
-(`is_stamped` = last non-blank line only). Full rule and its history:
+unanswered. Sweep across **all** states. Rule, predicate and history:
 `SCHEDULER.md`, "What is true now". Treat
 any such comment as authoritative: act on it, and if the decision should
 persist, put it where the mechanism it governs lives. Then remove that
