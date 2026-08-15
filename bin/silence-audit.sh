@@ -121,7 +121,8 @@
 # worth nothing.
 set -uo pipefail
 
-SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
+PROJECTS_ROOT="${PROJECTS_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}}"
+REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)" || REPO=""
 
 STRICT=0
@@ -225,23 +226,29 @@ project_repos() {
     printf '%s\t%s\n' "$(basename "$TARGET")" "$TARGET"
     return 0
   fi
-  for conf in "$SCHED_ROOT"/schedule/*.conf; do
-    [ -f "$conf" ] || continue
-    name="$(basename "$conf" .conf)"
-    case "$name" in _*) continue ;; esac
+  # A PROJECT IS A TREE THAT SAYS SO. `.agent-project` is the registry, Zach
+  # chosen 2026-08-12: a repo is a project iff it carries that file, declared
+  # in its own tree rather than in a row somebody has to remember to add.
+  #
+  # This used to source scheduler's schedule/*.conf for PROJECT_REPO_PATH,
+  # which forced a scheduler CHECKOUT onto every host that ran this guard --
+  # cut-verb-build.sh names that same coupling in its own header as "the
+  # single data dependency that still forces a scheduler clone onto hosts that
+  # otherwise need none". On mandark there was no such clone, so this parsed
+  # zero projects and exited BLIND on every run: a close-out row in ~19
+  # CLAUDE.md files that could not be satisfied on the machine it was run from.
+  # Cloning scheduler to satisfy it would be a shim; reading the marker is the
+  # registry doing its job.
+  #
+  # Local trees only, no network: this guard reads mechanisms out of trees it
+  # can open, so a project it cannot read is not one it could audit anyway.
+  for tree in "$PROJECTS_ROOT"/*; do
+    [ -d "$tree" ] || continue
+    [ -f "$tree/$REGISTRY_MARKER" ] || continue
+    [ -d "$tree/bin" ] || continue
+    name="$(basename "$tree")"
     [ -n "$ONLY" ] && [ "$name" != "$ONLY" ] && continue
-    # SOURCE the conf; do not scrape it. scheduler's schedule/*.conf are shell
-    # and correctly write PROJECT_REPO_PATH="$HOME/Documents/Projects/<name>".
-    # A `grep -oP` hands back the LITERAL five characters `$HOME`, so [ -d ]
-    # was false for every registered project and this script reported
-    # "BLIND -- parsed ZERO registered projects", exit 3, on every host, always.
-    # That made `silence-audit --strict` -- a BUILD-DISCIPLINE close-out row in
-    # ~19 projects' CLAUDE.md -- a gate that could never be passed: the exact
-    # null-discrimination defect this script exists to detect, committed by the
-    # detector. Diagnosed by senechal 2026-08-05 and fixed here 2026-08-06.
-    # Subshell + unset so one conf's value cannot leak into the next iteration.
-    repo="$(unset PROJECT_REPO_PATH; . "$conf" >/dev/null 2>&1; echo "${PROJECT_REPO_PATH:-}")"
-    [ -n "$repo" ] && [ -d "$repo" ] && echo -e "$name\t$repo"
+    printf '%s\t%s\n' "$name" "$tree"
   done
 }
 
@@ -383,7 +390,10 @@ check_unwired() {
         --include='*.service' --include='*.timer' 2>/dev/null && continue
       grep -rqF "$base" "$repo" --include='*.sh' --exclude="$base" \
         --exclude-dir=.git --exclude-dir=worktrees 2>/dev/null && continue
-      grep -rqF "$base" "$SCHED_ROOT/schedule" 2>/dev/null && continue
+      # scheduler's confs were one place a script could be named. They are not
+      # readable without a scheduler checkout, and requiring one is the coupling
+      # this guard just shed -- so it is consulted only if it happens to exist.
+      [ -n "${SCHED_ROOT:-}" ] && grep -rqF "$base" "$SCHED_ROOT/schedule" 2>/dev/null && continue
       flag unwired "$name: bin/$base is named by no crontab, doc, conf, unit, registry entry, or any other .sh in the repo (tests/ included)"
     done < <(find "$repo/bin" -maxdepth 1 -name '*.sh' -type f 2>/dev/null)
   done < <(project_repos)
@@ -443,9 +453,12 @@ n=0
 for f in /etc/*.conf; do echo "$f"; n=$((n+1)); done
 [ "$n" -eq 0 ] && echo "BLIND: no conf files read"
 EOF
-  SCHED_ROOT="$tmp/sched" ; mkdir -p "$tmp/sched/schedule"
-  printf 'PROJECT_REPO_PATH="%s/proj"\n' "$tmp" >"$tmp/sched/schedule/proj.conf"
-  out="$(SCHED_ROOT="$tmp/sched" ONLY="" bash "${BASH_SOURCE[0]}" 2>&1)"
+  # The registry is the marker in the tree, so the fixture declares itself the
+  # same way a real project does. It used to write a scheduler conf here, which
+  # is what coupled this guard to a scheduler checkout.
+  mkdir -p "$tmp/projects" && ln -sfn "$tmp/proj" "$tmp/projects/proj"
+  : > "$tmp/proj/.agent-project"
+  out="$(PROJECTS_ROOT="$tmp/projects" ONLY="" bash "${BASH_SOURCE[0]}" 2>&1)"
   t  "mute-null fires on unguarded scanner"  'mute-null.*bad\.sh'  "$out"
   tn "mute-null quiet on guarded scanner"    'mute-null.*good\.sh' "$out"
 
@@ -456,26 +469,31 @@ EOF
   # caught that: the scraper must not resurrect.
   printf '# RETIRES: LEGACY_TOKEN_XYZ\n' >"$tmp/proj/bin/new.sh"
   printf 'we still use LEGACY_TOKEN_XYZ here\n' >"$tmp/proj/OLD.md"
-  out="$(SCHED_ROOT="$tmp/sched" bash "${BASH_SOURCE[0]}" 2>&1)"
+  out="$(PROJECTS_ROOT="$tmp/projects" bash "${BASH_SOURCE[0]}" 2>&1)"
   tn "retirement-open stays retired" 'retirement-open' "$out"
   rm -f "$tmp/proj/OLD.md"
 
   # --- stderr-silenced fires on a privileged probe
   printf '#!/usr/bin/env bash\nsudo -n crontab -l 2>/dev/null\n[ -z "$x" ] && echo none found\n' \
     >"$tmp/proj/bin/probe.sh"
-  out="$(SCHED_ROOT="$tmp/sched" bash "${BASH_SOURCE[0]}" 2>&1)"
+  out="$(PROJECTS_ROOT="$tmp/projects" bash "${BASH_SOURCE[0]}" 2>&1)"
   t "stderr-silenced fires on silenced privileged probe" 'stderr-silenced.*probe\.sh' "$out"
 
-  # --- A conf whose PROJECT_REPO_PATH is an UNEXPANDED shell variable must
-  # still resolve. This is the shape production actually writes, and the ONLY
-  # shape it writes; the fixtures above all bake an absolute path, so they
-  # exercised an input the real registry never produces and passed while the
-  # real thing parsed zero projects. Assert the production shape directly.
-  mkdir -p "$tmp/varhome/schedule"
-  printf 'PROJECT_REPO_PATH="$HOME/proj"\n' >"$tmp/varhome/schedule/proj.conf"
-  out="$(HOME="$tmp" SCHED_ROOT="$tmp/varhome" bash "${BASH_SOURCE[0]}" 2>&1; echo "rc=$?")"
-  tn "conf with literal \$HOME is not reported BLIND" 'BLIND' "$out"
-  tn "conf with literal \$HOME does not exit 3"       'rc=3'  "$out"
+  # --- The registry is a MARKER, so no path has to be interpolated at all.
+  # This case replaces the old "conf with a literal $HOME" regression: that
+  # bug existed because a conf was SCRAPED for PROJECT_REPO_PATH and handed
+  # back the five characters `$HOME`, so every project resolved to a directory
+  # that did not exist and the guard reported BLIND on every host, forever.
+  # Reading `.agent-project` in a tree cannot reproduce it -- the tree is the
+  # path. What CAN still go wrong is the opposite: counting a directory that
+  # never declared itself. Assert both halves.
+  mkdir -p "$tmp/reg2/declared/bin" "$tmp/reg2/undeclared/bin"
+  : > "$tmp/reg2/declared/.agent-project"
+  printf '#!/usr/bin/env bash\nls /etc >/dev/null\n' >"$tmp/reg2/undeclared/bin/x.sh"
+  out="$(PROJECTS_ROOT="$tmp/reg2" bash "${BASH_SOURCE[0]}" 2>&1; echo "rc=$?")"
+  tn "a declared tree is not reported BLIND"        'BLIND'       "$out"
+  tn "a declared tree does not exit 3"              'rc=3'        "$out"
+  tn "an undeclared sibling is not audited"         'undeclared'  "$out"
 
   # --- #138: a script whose ONLY caller is its own witness is WIRED.
   # tests/ was outside the reference domain, so the witness-backed pattern the
@@ -485,7 +503,7 @@ EOF
   printf '#!/usr/bin/env bash\necho hi\n'                     >"$tmp/proj/bin/witnessed.sh"
   printf '#!/usr/bin/env bash\nTARGET=bin/witnessed.sh\n'     >"$tmp/proj/tests/witnessed-witness.sh"
   printf '#!/usr/bin/env bash\necho nobody calls me\n'        >"$tmp/proj/bin/orphaned.sh"
-  out="$(SCHED_ROOT="$tmp/sched" bash "${BASH_SOURCE[0]}" 2>&1)"
+  out="$(PROJECTS_ROOT="$tmp/projects" bash "${BASH_SOURCE[0]}" 2>&1)"
   tn "unwired quiet on a script named only by its own witness" 'unwired.*witnessed\.sh' "$out"
   t  "unwired still fires on a script nothing names"           'unwired.*orphaned\.sh'  "$out"
   rm -f "$tmp/proj/bin/witnessed.sh" "$tmp/proj/tests/witnessed-witness.sh" "$tmp/proj/bin/orphaned.sh"
@@ -501,7 +519,7 @@ EOF
   printf 'PROJECT_REPO_PATH="%s/decoy"\n' "$tmp" >"$tmp/reg/schedule/decoy.conf"
   printf '#!/usr/bin/env bash\nfor f in /etc/*.conf; do echo "$f"; done\n' >"$tmp/decoy/bin/decoy-scan.sh"
   printf '#!/usr/bin/env bash\nfor f in /etc/*.conf; do echo "$f"; done\n' >"$tmp/pointed/bin/pointed-scan.sh"
-  out="$(SCHED_ROOT="$tmp/reg" bash "${BASH_SOURCE[0]}" --target "$tmp/pointed" 2>&1)"
+  out="$(PROJECTS_ROOT="$tmp/reg" bash "${BASH_SOURCE[0]}" --target "$tmp/pointed" 2>&1)"
   t  "--target reports on the tree it was pointed at" 'mute-null.*pointed-scan\.sh' "$out"
   tn "--target does not read the registry"            'decoy-scan\.sh'              "$out"
 
@@ -509,7 +527,7 @@ EOF
   # argument one and dropped the rest in silence, so the gating mode and the
   # scope knob could not be combined -- which is the exact invocation
   # CLAUDE.md's checklist row needs.
-  out="$(SCHED_ROOT="$tmp/reg" bash "${BASH_SOURCE[0]}" --strict --target "$tmp/pointed" 2>&1; echo "rc=$?")"
+  out="$(PROJECTS_ROOT="$tmp/reg" bash "${BASH_SOURCE[0]}" --strict --target "$tmp/pointed" 2>&1; echo "rc=$?")"
   # BOTH halves. `rc=1` alone is a vacuous pass: the old parser dropped
   # --target, audited the registry, found the decoy's FLAG and exited 1 -- the
   # right exit code for the wrong tree, which is #107 in one line.
@@ -518,14 +536,14 @@ EOF
 
   # A --target that is not a project tree must fail LOUD. Falling back to the
   # registry, or reporting clean, is how #107 survived a year of green runs.
-  out="$(SCHED_ROOT="$tmp/reg" bash "${BASH_SOURCE[0]}" --target "$tmp/no-such-tree" 2>&1; echo "rc=$?")"
+  out="$(PROJECTS_ROOT="$tmp/reg" bash "${BASH_SOURCE[0]}" --target "$tmp/no-such-tree" 2>&1; echo "rc=$?")"
   t  "--target on a non-tree exits BLIND(3)"      'rc=3'          "$out"
   t  "--target on a non-tree names what it wanted" 'no-such-tree' "$out"
   tn "--target on a non-tree does not fall back to the registry" 'decoy-scan\.sh' "$out"
 
   # --- BLIND: zero mechanisms must exit 3, not 0
   mkdir -p "$tmp/empty/schedule"
-  out="$(SCHED_ROOT="$tmp/empty" bash "${BASH_SOURCE[0]}" 2>&1; echo "rc=$?")"
+  out="$(PROJECTS_ROOT="$tmp/empty" bash "${BASH_SOURCE[0]}" 2>&1; echo "rc=$?")"
   t "empty domain exits BLIND(3) not clean" 'rc=3' "$out"
   t "empty domain says BLIND"               'BLIND'  "$out"
 
@@ -574,7 +592,7 @@ echo "silence-audit -- $(date -Is)"
 if [ -n "$TARGET_GIVEN" ]; then
   echo "domain: the tree this run was pointed at -- ${TARGET:-$TARGET_GIVEN} (registry NOT read)"
 else
-  echo "domain: schedule/*.conf under $SCHED_ROOT${ONLY:+ (project: $ONLY)}"
+  echo "domain: trees carrying $REGISTRY_MARKER under $PROJECTS_ROOT${ONLY:+ (project: $ONLY)}"
 fi
 echo
 self_wiring_banner
@@ -594,7 +612,7 @@ if [ "${projects_seen:-0}" -eq 0 ]; then
     # at something I could not read" renders as "your tree is clean".
     echo "BLIND -- --target $TARGET_GIVEN is not a readable project tree (no bin/ under it)."
   else
-    echo "BLIND -- parsed ZERO registered projects from $SCHED_ROOT/schedule."
+    echo "BLIND -- no tree under $PROJECTS_ROOT carries $REGISTRY_MARKER."
   fi
   echo "This is not a clean result. Nothing was audited; the domain was"
   echo "unreadable or empty. Reporting clean here would be the exact defect"
