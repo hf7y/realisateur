@@ -18,6 +18,23 @@
 #      - .claude/FOCUS.md, .claude/QUESTIONS.md, .claude/BLOCKERS.md
 #        (only these files if present; .claude/ itself stays)
 #
+# A NOTE FOR WHOEVER EDITS THE PATTERN NEXT. This file has had three
+# double-escaping bugs in one day, two of them introduced by the person fixing
+# the previous one. Each was "fixed" by adding another layer of backslashes,
+# and each fix was asserted correct without re-running it against a repo that
+# had the false positive. The pattern now reaches both scanners through the
+# ENVIRONMENT, which has no escape layer to miscount -- do not go back to -v.
+#
+# The regression that should have caught all three is group I: a KNOWN
+# NON-PRODUCER must not match. It did not catch them because the fixture and
+# the fix were written in the same pass, by the same reader, holding the same
+# wrong idea. If you change the pattern, verify against a real clone that
+# exhibited the bug, not only against a fixture you just wrote.
+#
+# Related trap, same shape: CI's pinned shellcheck flags findings that a
+# locally installed older shellcheck does not, so a local "no new findings"
+# is not authoritative here.
+#
 # Default is DRY RUN: prints what would be removed. --apply commits the
 # removal on a new branch.
 #
