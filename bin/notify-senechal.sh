@@ -117,13 +117,10 @@ usage() {
 
 command -v python3 >/dev/null 2>&1 || die "python3 is not on PATH -- cannot validate against senechal's door schema, and filing unvalidated is what this replaces"
 
-# --help before the fetch: the one call a confused caller makes is the one that
-# must work on a host with no network and no auth.
+# --help before the fetch: it must work with no network and no auth.
 case "${1:-}" in --help|-h) usage; exit 0 ;; esac
 
-# Fetched once into a file: the validation and the payload are then built from
-# the same bytes, and a schema that moved mid-run cannot produce a filing that
-# satisfies neither version.
+# Fetched once into a file: validation and payload are built from the same bytes.
 doors_file="$(mktemp)"
 trap 'rm -f "$doors_file"' EXIT
 if [ -n "${NOTIFY_DOORS_FILE:-}" ]; then
@@ -165,11 +162,9 @@ for name, d in sorted(doors.items()):
 esac
 shift
 
-# PROSE IS REFUSED AT THE ARGUMENT, not silently coerced. An argument with no
-# `=` is a sentence someone tried to file, and the whole point of this rewrite
-# is that it does not go through. (This also keeps the 2026-07-30 misparse
-# fixed for free: `--not-a-real-flag` was once filed as a note's entire body
-# and pushed to senechal, because free text has no wrong shape. Now it does.)
+# PROSE IS REFUSED AT THE ARGUMENT, not silently coerced. This also keeps the
+# 2026-07-30 misparse fixed for free: `--not-a-real-flag` was once filed as a
+# note's entire body, because free text has no wrong shape. Now it does.
 fields_args=()
 for arg in "$@"; do
   case "$arg" in
@@ -188,9 +183,8 @@ if [ "${#fields_args[@]}" -eq 0 ]; then
   exit 2
 fi
 
-# Validate HERE, before anything is filed. A payload senechal's absorber would
-# reject must never become an issue somebody has to close by hand -- that is
-# the prose backlog again, wearing a JSON hat.
+# Validate HERE: a payload senechal's absorber would reject must never become
+# an issue somebody closes by hand -- the prose backlog in a JSON hat.
 payload="$(python3 - "$doors_file" "$door" "${fields_args[@]}" <<'PY'
 import json, sys
 
@@ -226,9 +220,8 @@ print(json.dumps({"door": door_name, "fields": fields}, indent=2, sort_keys=True
 PY
 )" || die "the filing does not satisfy senechal's schema for door '$door' (see above) -- nothing was filed"
 
-# The human-readable line stays: the issue list is where a person meets this.
-# It is DERIVED from the fields rather than typed alongside them, so it cannot
-# disagree with the payload the absorber reads.
+# The human-readable line is DERIVED from the fields, not typed alongside them,
+# so it cannot disagree with the payload the absorber reads.
 text="$(printf '%s' "$payload" | python3 -c '
 import json, sys
 p = json.load(sys.stdin)
@@ -322,11 +315,8 @@ title="$(printf '%s' "$text" | head -1 | cut -c1-72)"
 # from the footer onward, so text below can never be read as part of the
 # receipt body that gate 4 anchors against.
 #
-# THE FENCED BLOCK IS THE FILING; the line above it is for the human reading
-# the issue list. senechal's tools/absorb-notices.py reads exactly this fence
-# and writes the object into the live config unattended -- which is why the
-# fence sits ABOVE the footer, inside the receipt body, and not below with the
-# triage prose.
+# THE FENCED BLOCK IS THE FILING -- absorb-notices.py reads exactly this fence,
+# which is why it sits ABOVE the footer, inside the receipt body.
 body="$(printf '%s\n\n```senechal-door\n%s\n```\n\n---\nfiled %s via `notify-senechal` on %s\n\nsenechal absorbs this with `tools/absorb-notices.py --write`; closing IS the\nacknowledgement. If it was REJECTED, the payload above is wrong or the entry\nalready exists -- fix it at the caller, not by hand here.\n' \
   "$text" "$payload" "$(date '+%Y-%m-%d %H:%M')" "$(hostname -s 2>/dev/null || hostname)")"
 
