@@ -321,6 +321,7 @@ retired/hygiene-lint.sh
 notify-senechal.sh
 precipitation-scan.sh
 silence-audit.sh
+gh-sign.sh
 "
 
 # --- THE LEAK, with a bound on it -------------------------------------------
@@ -352,7 +353,24 @@ silence-audit.sh
 # This list may SHRINK and must never GROW. propagation.test.sh enforces that
 # against PROP_LEAK_BOUND. Empty it by adding bin/<n> + man/<n>.1 to
 # realisateur's bashified branch -- never by reclassifying a row as bootstrap.
-PROP_PAYLOAD_PENDING="$PROP_PAYLOAD_SCRIPTS"
+#
+# IT IS NOW WRITTEN OUT rather than being `$PROP_PAYLOAD_SCRIPTS`, because the
+# two stopped being the same set the day one of them was actually declared.
+# gh-sign.sh is PAYLOAD and is NOT pending: hf7y/realisateur#330 puts bin/gh +
+# man/gh.1 on the bashified branch, so it reaches accounts as a verb in a
+# dated build and not as a clone-backed shim. That is the exit this section
+# has named since #115 -- declare it, add it to PAYLOAD, do not grow the bound
+# -- taken for the first time. Anything added to PAYLOAD without a declaration
+# belongs in this list too, and then the bound refuses it.
+PROP_PAYLOAD_PENDING="
+check-project-busy.sh
+closeout-lint.sh
+focus-commit.sh
+retired/hygiene-lint.sh
+notify-senechal.sh
+precipitation-scan.sh
+silence-audit.sh
+"
 PROP_LEAK_BOUND=7
 
 # --- LOCAL: never leaves this repo ------------------------------------------
@@ -376,14 +394,19 @@ PROP_LEAK_BOUND=7
 # #115's job. Reclassifying it here without the man page would silently drop
 # it from every build (#85).
 #
-# gh-sign.sh IS FILED HERE UNDER PROTEST, in defere.sh's shape. LOCAL is true
-# today and is also the one class that guarantees it never works: a shim does
-# nothing unless it is on an account's PATH ahead of the real gh. The exit is
-# defere.sh's, verbatim -- declare it on the bashified branch with a man page
-# and add it to PAYLOAD WITHOUT adding it to PENDING, rather than growing a
-# leak bound that is FULL at 7. What makes it a separate decision from #115's:
-# the link a build would create is `/usr/local/bin/gh`, shadowing a real binary
-# for every account at once (hf7y/realisateur#327).
+# gh-sign.sh WAS FILED HERE UNDER PROTEST and is now PAYLOAD, which is the
+# protest being answered rather than restated. The protest read: LOCAL is true
+# today and is also the one class that guarantees it never works, because a
+# shim does nothing unless it is on an account's PATH ahead of the real gh.
+# The exit it named -- declare it on the bashified branch with a man page, add
+# it to PAYLOAD WITHOUT adding it to PENDING -- is the route #330 took.
+#
+# The decision that was blocking it, made by Zach on 2026-08-16: yes, a verb
+# build may claim `/usr/local/bin/gh` on monkey and shadow the real binary for
+# all 13 accounts. The condition attached was that there be exactly ONE copy
+# of the policy and that changes to it propagate on their own -- which is why
+# bin/carry-drift.sh exists and why the shim dates itself from its own build
+# id and marks every body it signs once that build goes stale.
 #
 # decision-rot.sh is LOCAL on floor-check.sh's reasoning, not retire-check.sh's:
 # it is an ESTATE-WIDE SURVEY that a human runs from a hands-on session and
@@ -451,8 +474,8 @@ monkey-watch.sh
 playbook.sh
 publish-monkey-status.sh
 claim-drift.sh
+carry-drift.sh
 defere.sh
-gh-sign.sh
 retire-check.sh
 decision-rot.sh
 rot-ratchet.sh

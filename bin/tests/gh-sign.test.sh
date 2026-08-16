@@ -54,7 +54,7 @@ esac
 
 # --- 2. the identity is READ, not accepted from the caller -----------------
 contains "the stamp names this account" "$(lastline)" "$(id -un)@"
-stamp_date="$(lastline | sed -E 's/.*@[^ ]+ ([0-9TZ:-]+) -->/\1/')"
+stamp_date="$(lastline | sed -E 's/.*@[^ ]+ ([0-9TZ:-]+) .*/\1/')"
 case "$stamp_date" in
   [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z)
     ok "the stamp is dated ISO8601 UTC, second precision" ;;
@@ -118,6 +118,58 @@ contains "...and says so out loud" "$out" "BLIND"
 
 out="$(PATH="$TMP/loop:$TMP/stub" "$TIMEOUT_BIN" 10 "$BASH_BIN" "$GS" --self-check 2>&1)"
 contains "--self-check resolves past the shim to the real gh" "$out" "$TMP/stub/gh"
+
+# --- 10. WHICH COPY OF THE POLICY IS THIS, AND HOW OLD? (#330) -------------
+# The shim ships as one link per host into a dated build. It recognises itself
+# among the builds by inode -- the same `-ef` test that stops it re-executing
+# itself -- because resolving /usr/local/bin/gh would need readlink, which is
+# one of the externals it may not have.
+mkbuild() {   # mkbuild <build-id> -> path to bin/gh inside a fake build
+  mkdir -p "$TMP/builds/$1/realisateur/bin/lib"
+  cp "$GS" "$TMP/builds/$1/realisateur/bin/gh"
+  cp "$(dirname "$GS")/lib/body-grammar.sh" "$TMP/builds/$1/realisateur/bin/lib/"
+  chmod +x "$TMP/builds/$1/realisateur/bin/gh"
+  printf '%s' "$TMP/builds/$1/realisateur/bin/gh"
+}
+FRESH="$(mkbuild "$(date -u +%Y-%m-%dT%H%MZ)")"
+STALE="$(mkbuild 2020-01-01T0000Z)"
+mkdir -p "$TMP/hostbin"; ln -sf "$FRESH" "$TMP/hostbin/gh"
+
+out="$(GH_SIGN_BUILD_ROOTS="$TMP/builds" PATH="$TMP/stub:$PATH" "$BASH_BIN" "$FRESH" --stamp)"
+contains "a copy inside a build names the build in its stamp" "$out" "build $(date -u +%Y-%m-%d)"
+hasnt    "...and a fresh one is not marked stale" "$out" "STALE"
+
+# Through the LINK, which is how every account will actually invoke it.
+out="$(GH_SIGN_BUILD_ROOTS="$TMP/builds" PATH="$TMP/stub:$PATH" "$TMP/hostbin/gh" --stamp)"
+contains "invoked through the host link, it still finds its own build" "$out" "build $(date -u +%Y-%m-%d)"
+
+out="$(GH_SIGN_BUILD_ROOTS="$TMP/builds" PATH="$TMP/stub:$PATH" "$BASH_BIN" "$STALE" --stamp)"
+contains "a build past the age limit marks the ARTIFACT, not just a log" "$out" "STALE"
+case "$out" in
+  *'STALE '[0-9]*d*) ok "...with the age in days, so the reader need not compute it" ;;
+  *) bad "STALE <n>d" "got: $out" ;;
+esac
+
+out="$(GH_SIGN_BUILD_ROOTS="$TMP/builds" PATH="$TMP/stub:$PATH" "$BASH_BIN" "$STALE" --self-check 2>&1)"; rc=$?
+check "--self-check exits 1 on a stale build, so a clock can ask" "$rc" "1"
+contains "...and demands the refresh by name" "$out" "selfdev-release-tick.sh --apply"
+
+reset
+out="$(GH_SIGN_BUILD_ROOTS="$TMP/builds" GH_LOG="$TMP/gh.log" GH_LAST_BODY="$TMP/gh.body" \
+       PATH="$TMP/stub:$PATH" "$BASH_BIN" "$STALE" issue comment 7 --repo hf7y/w --body hi 2>&1 >/dev/null)"
+contains "a stale shim announces itself at the write" "$out" "STALE"
+check "...and still writes: fail open outlives the expiry" \
+      "$(grep -c 'issue comment 7' "$TMP/gh.log")" "1"
+
+out="$(GH_SIGN_BUILD_ROOTS="$TMP/builds" PATH="$TMP/stub:$PATH" "$BASH_BIN" "$GS" --stamp)"
+contains "a copy that is in no build says so rather than claiming freshness" "$out" "unbuilt"
+
+# cut-verb-build.sh probes `--help` on every command in a build and refuses
+# the whole cut on a bad exit. Without this the shim would fail 33 verbs on
+# any runner that has no gh installed.
+out="$(PATH="$TMP/empty-path" "$TIMEOUT_BIN" 10 "$BASH_BIN" "$GS" --help 2>&1)"; rc=$?
+check "--help exits 0 where there is no real gh at all" "$rc" "0"
+contains "...and introduces the shim" "$out" "gh-sign"
 
 echo
 summary
