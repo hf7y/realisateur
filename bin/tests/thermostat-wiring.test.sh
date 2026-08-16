@@ -70,12 +70,19 @@ mkscheduler() {
     echo 'shared sweep engine'  > "$d/lib/sweep-loop-common.sh"
     echo 'report'               > "$d/bin/morning-report.sh"
     printf 'ecosim|0|2|/x/scheduler-run ecosim batch\n' > "$d/schedule/_paced.conf"
+    # A dispatcher that consults nothing about backlog: the state `setpoint`
+    # exists to report.
+    printf 'exec "$SELF_DIR/freeze-check.sh" "$name"\n' > "$d/bin/usage-paced-runner.sh"
   else
     # no BLOCKERS.md, no sweep loop, no human surface, no weight column,
     # and something that appends to the verdict ledger.
     printf 'ecosim|0|/x/scheduler-run ecosim batch\n' > "$d/schedule/_paced.conf"
     printf 'echo "$v" >> "$HOME/.local/share/scheduler-verdict/$p.history"\n' \
       > "$d/lib/run-record.sh"
+    # Both legs of `setpoint`. Named tempo.sh only because that is what landed;
+    # the check greps for the pair, not for this name.
+    printf 'gh issue list --repo "$slug" --state open\n' > "$d/bin/tempo.sh"
+    printf '"$SELF_DIR/tempo.sh" "$name" || continue\n' > "$d/bin/usage-paced-runner.sh"
   fi
   git -C "$d" add -A >/dev/null 2>&1
   git -C "$d" commit -qm fixture >/dev/null 2>&1
@@ -138,8 +145,8 @@ out="$(run '' "$CUR" --not-a-real-flag)"; rc=$?
 is  E2 "$rc" 2
 
 # --- F: the fixture the redesign is aiming at --------------------------------
-# Only 7 of 8 can pass offline (provenance needs the tracker), so this asserts
-# the seven that CAN, and that none of them reads as UNMET on a clean tree.
+# Only 8 of 9 can pass offline (provenance needs the tracker), so this asserts
+# the eight that CAN, and that none of them reads as UNMET on a clean tree.
 out="$(run '' "$CONF")"; rc=$?
 is    F1  "$rc" 0
 hasnt F1b "$out" "UNMET  blockers"
@@ -148,6 +155,28 @@ hasnt F1d "$out" "UNMET  headless"
 hasnt F1e "$out" "UNMET  weight"
 hasnt F1f "$out" "UNMET  ledger"
 has   F1g "$out" "PASS   blockers"
+has   F1h "$out" "PASS   setpoint"
+
+# --- G: `setpoint` is a WIRING check, and both legs are load-bearing ---------
+# G2 is the one that matters: a tracker-reading script the dispatcher never
+# runs must read UNMET, or the check goes green on build-but-don't-wire, which
+# is what it was added to catch. G3 is its mirror -- wiring without a sensor.
+out="$(run '' "$CUR")"
+has G1 "$out" "UNMET  setpoint"
+
+UNWIRED="$TMP/sched-unwired"; mkscheduler "$UNWIRED" conforming
+printf 'echo "the dispatcher does not run tempo"\n' > "$UNWIRED/bin/usage-paced-runner.sh"
+git -C "$UNWIRED" add -A >/dev/null 2>&1
+git -C "$UNWIRED" commit -qm unwired >/dev/null 2>&1
+out="$(run '' "$UNWIRED")"
+has G2 "$out" "UNMET  setpoint"
+
+NOSENSOR="$TMP/sched-nosensor"; mkscheduler "$NOSENSOR" conforming
+printf 'read the conf and pick an interval\n' > "$NOSENSOR/bin/tempo.sh"
+git -C "$NOSENSOR" add -A >/dev/null 2>&1
+git -C "$NOSENSOR" commit -qm nosensor >/dev/null 2>&1
+out="$(run '' "$NOSENSOR")"
+has G3 "$out" "UNMET  setpoint"
 
 echo
 summary
