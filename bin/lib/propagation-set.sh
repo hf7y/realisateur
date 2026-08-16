@@ -24,18 +24,11 @@
 # branch. Separating them is what lets `main` STAY FAST. Agent stability is the
 # second-order benefit, not the argument.
 #
-# The counter-argument, weighed and rejected: `main` was already the de facto
-# deploy ref, because `install-shims.sh` writes ~/.local/bin shims that `exec`
-# a path inside the realisateur clone. Ten ecosystem commands resolve that way
-# on every self-dev account today. The tempting move is to bless that and give
-# it a clock. That is backwards -- it would make the leak permanent and make
-# `main` conservative forever. The leak is named below as debt with a bound on
-# it, and the bound is enforced by bin/tests/propagation.test.sh.
+# Rejected counter-argument: `main` is already the de facto deploy ref via
+# install-shims.sh. Blessing that would make the leak permanent; it is named
+# below as debt, bounded by bin/tests/propagation.test.sh.
 #
-# A CHANNEL WITH NO CLOCK IS NOT A CHANNEL. Measured 2026-08-07: every
-# channel without a clock had rotted, and the release channel -- correct,
-# built, nightly -- had zero consumers. The table that used to sit here
-# recorded four shas and two dates; it was a photograph, and it aged.
+# A CHANNEL WITH NO CLOCK IS NOT A CHANNEL (measured 2026-08-07).
 #
 # ============================================================================
 # PULL, NOT PUSH
@@ -103,41 +96,17 @@
 PROP_RELEASE_REPO="hf7y/verbs"
 PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
 
-# A VERSION is a build id -- a UTC timestamp, so lexical sort is chronological
-# and two builds in one day cannot collide. "I am on 2026-08-06T043915Z and
-# 2026-08-07T040739Z exists" is a one-line comparison; "I am on 60ef8c6" is
-# archaeology.
-#
-# WHERE THE PIN LIVES CHANGED ON 2026-08-13, and this file said otherwise for
-# long enough to mislead a session. There is now ONE pin per HOST:
-#
-#   /usr/local/share/verb-builds/current   linked into /usr/local/bin, moved by
-#                                          ONE tick in root's crontab
-#
-# and NO account on monkey holds a private one -- hf7y/realisateur#180, all 13
-# retired, measured per account: every host-wide verb resolves from
-# /usr/local/bin in a login shell on every one of them.
-#
-# PROP_PIN_PATH is kept because the LEGACY shape still has to be RECOGNISED --
-# --survey grades an account that still holds a private pin, and a host that
-# has not migrated is a real state, not a bug. It is no longer the place to
-# look first. prop_current_pin() below reads the host-wide root as its
-# fallback and is the only function that should resolve either.
+# A version is a UTC-timestamp build id, so lexical sort is chronological.
+# ONE pin per HOST since #180: /usr/local/share/verb-builds/current. This path
+# is the LEGACY per-account shape, kept because --survey still has to
+# recognise it; prop_current_pin() resolves either.
 PROP_PIN_PATH=".local/share/verb-builds/current"
 
 # ============================================================================
 # STAMPING: WHICH BUILD PRODUCED THIS ARTIFACT
 # ============================================================================
 #
-# Zach, 2026-08-07: every artifact an agent produces should record which verb
-# build produced it. The value already exists -- it is the pin above. What was
-# missing is that nothing records it AT THE MOMENT WORK IS CREATED, so
-# "what was ecosim running when it did that?" is unanswerable afterwards,
-# which is the entire point of asking.
-#
-# ONE READER, HERE. Every stamper calls prop_build_trailer(); none of them
-# reads the pin path themselves. Two readers of one fact is the shape
-# MONKEY.md 10 found five times in a day.
+# ONE READER: every stamper calls prop_build_trailer().
 #
 # THREE STATES, NEVER TWO. The distinction the mechanism lives or dies on:
 #
@@ -154,7 +123,7 @@ PROP_PIN_PATH=".local/share/verb-builds/current"
 # ran. Guessing a plausible build id -- "the latest one", "the one in the
 # manifest" -- would destroy exactly that distinction, so it is never done.
 #
-# WHY A GIT TRAILER. It survives the artifact being read later out of
+# WHY A GIT TRAILER: it survives the artifact being read later out of
 # context, which is the requirement: the commit carries it forever, it
 # travels with a clone, a cherry-pick and a patch, `git log
 # --format='%(trailers:key=Verb-Build)'` reads it in bulk, and no human

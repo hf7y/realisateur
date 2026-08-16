@@ -116,9 +116,14 @@ PULL REQUEST CONVENTION -- canonical. Reference this; do not paraphrase it.
     convert back to draft while you work, mark ready again when finished.
 
   ATTENTION axis (decided 2026-08-08; enforced here and by branch protection):
-    NO decision -> ready + `gh pr merge --auto --squash`. It lands unattended
-                   when the required checks pass. Nobody reads it. This is the
-                   default and should be the common case.
+    NO decision -> ready, then merge it. This is the default and should be
+                   the common case; nobody reads it.
+                     with a required check:  gh pr merge --squash --auto
+                     without one:            gh pr merge --squash
+                   `--auto` on a repo with NO required check does not queue --
+                   it merges instantly and leaves autoMergeRequest null, so the
+                   caller cannot tell it happened (#288, 7 silent merges). Use
+                   it only where a check exists to queue behind.
     A decision  -> ready, auto-merge OFF, and the FIRST non-empty line is:
                      DECISION: <the one call the human must make>
                    Optionally NO-DECISION: <why> when auto-merge is unavailable
@@ -341,8 +346,8 @@ for n in "${PRS[@]}"; do
   if [ "$automerge" != on ] && ! declares_itself "$body"; then
     undecided=$((undecided+1))
     printf '  #%-4s UNDECIDED ready, not auto-merging, and its first line does not say why.\n' "$n"
-    printf '                  Either `gh pr merge %s --auto --squash` (no decision needed),\n' "$n"
-    printf '                  or open the body with `DECISION: <the call>`.\n'
+    printf '                  Either `gh pr merge %s --squash` (add --auto only if this\n' "$n"
+    printf '                  repo has a required check), or open the body with\n'
     printf '                  See: claim-drift --convention\n'
   fi
 
