@@ -16,7 +16,10 @@ ok()      { pass=$((pass + 1)); printf '  ok    %s\n' "$1"; }
 bad()     { fail=$((fail + 1)); printf '  FAIL  %s\n' "$1"; [ $# -gt 1 ] && printf '        %s\n' "$2"; return 0; }
 
 eq()    { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1" "want [$3] got [$2]"; fi; }
-rc()    { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1" "want exit $3, got $2"; fi; }
+# rc is (label, WANT, GOT) -- the order all 54 suites already call it with.
+# eq is (label, GOT, WANT). They disagree, and that is the existing
+# convention, not an improvement to make while converting 51 files.
+rc()    { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1" "want exit $2, got $3"; fi; }
 has()   { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1" "missing: $3" ;; esac; }
 hasnt() { case "$2" in *"$3"*) bad "$1" "present but should not be: $3" ;; *) ok "$1" ;; esac; }
 
