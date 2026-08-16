@@ -185,7 +185,8 @@ usage:
 flags:
   --vault PATH  the vault to deposit into, for this invocation only. Beats
                 $BIBLIOTHECAIRE_VAULT, which beats /srv/ecosystem1-vault.
-                For `lock`, must come before the `--`.
+                May appear anywhere before the `--` -- `--vault PATH lock --`
+                and `lock --vault PATH --` are the same invocation.
   --summon      accepted and buys nothing. The deposit is mechanized and
                 reaches no agent, so this spends zero and says so -- exactly
                 as `fonde consign --summon` does, which is the remedy `fauche`
@@ -450,6 +451,26 @@ do_status() {
 
 # ---- dispatch ---------------------------------------------------------------
 
+# --vault MAY PRECEDE THE SUBCOMMAND, not just follow it (hf7y/realisateur#338).
+# `consigne --vault PATH lock -- cmd` and `consigne lock --vault PATH -- cmd`
+# must resolve to the same vault: --vault applies to the whole invocation
+# regardless of what comes after it, so it is stripped out here, before
+# anything -- including the `lock` dispatch below -- looks at argv position.
+# Only consumed ahead of the first `--`, so a value a wrapped command passes
+# after its own `--` is never touched. Config read from one source
+# (BUILD-DISCIPLINE.md): this is now the only place `--vault`/`--vault=PATH`
+# is parsed, for every form.
+_pre=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --vault)   shift; [ $# -gt 0 ] || die "--vault needs a path"; VAULT="$1"; shift ;;
+    --vault=*) VAULT="${1#*=}"; [ -n "$VAULT" ] || die "--vault needs a path"; shift ;;
+    --) break ;;
+    *) _pre+=("$1"); shift ;;
+  esac
+done
+set -- "${_pre[@]}" "$@"
+
 # `consigne lock -- <command> [args...]` -- hf7y/realisateur#213's second half.
 # The deposit path below is locked automatically; PROSE-REAPING.md 5.6's manual
 # `git commit`/`git push` into the shared vault is not automatic, and never
@@ -461,13 +482,9 @@ do_status() {
 # command's own flags (`git commit -m ...`) must reach it unmangled.
 if [ "${1:-}" = lock ]; then
   shift
-  while [ $# -gt 0 ] && [ "$1" != "--" ]; do
-    case "$1" in
-      --vault)   shift; [ $# -gt 0 ] || die "--vault needs a path"; VAULT="$1"; shift ;;
-      --vault=*) VAULT="${1#*=}"; [ -n "$VAULT" ] || die "--vault needs a path"; shift ;;
-      *) die "consigne lock: unexpected argument before '--': $1 (try --help)" ;;
-    esac
-  done
+  if [ $# -gt 0 ] && [ "$1" != "--" ]; then
+    die "consigne lock: unexpected argument before '--': $1 (try --help)"
+  fi
   [ "${1:-}" = "--" ] || die "consigne lock needs a command after '--' (try --help)"
   shift
   [ $# -gt 0 ] || die "consigne lock -- needs a command to run"
