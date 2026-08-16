@@ -82,7 +82,7 @@ CLI_SUMMARY='has a pull request grown since it was presented as done?'
 CLI_USAGE='  claim-drift.sh <pr-number>...        audit the named PRs
   claim-drift.sh --all                 audit every OPEN pull request
   claim-drift.sh --strict ...          exit 1 on drift, 6 on BLIND
-  claim-drift.sh --repo <owner/name>   default: the checkout own remote'
+  claim-drift.sh --repo <owner/name>   default: the remote of this checkout'
 CLI_FLAGS='--all --strict --repo --convention'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  audited; no --strict, or --strict and nothing drifted
@@ -90,6 +90,7 @@ CLI_EXITS='  0  audited; no --strict, or --strict and nothing drifted
   6  BLIND -- the tracker could not be read. A domain that existed and was
      NOT read is not a pass; 6 is the ecosystem blind code (garde, ausculte,
      closeout-lint) rather than a third invention.'
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/body-grammar.sh"
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 
@@ -210,36 +211,13 @@ fi
 
 drifted=0; current=0; unclaimed=0; settled=0; blind=0; undecided=0; overcautious=0
 
-# first non-empty line, stripped of markdown furniture, classified.
-# Returns 0 if the body declares itself, 1 if not.
-#
-# The word must OPEN the line. Matching it anywhere would let any PR that
-# merely mentions the convention exempt itself -- the false positive
-# guard-estate's check E hit and had to fix within ten minutes of being written.
-declares_itself() {
-  local first stripped
-  first="$(printf '%s\n' "$1" | grep -m1 -v '^[[:space:]]*$')" || return 1
-  stripped="$(printf '%s' "$first" | sed -e 's/^[[:space:]#>*_-]*//')"
-  case "$stripped" in
-    [Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*|[Nn][Oo]-[Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*) return 0 ;;
-  esac
-  return 1
-}
-
-# decision | no-decision | none -- which of the two declares_itself() accepts
-# this body opened with. Kept separate from declares_itself() because the
-# OVERCAUTIOUS check below only cares about the DECISION case: a NO-DECISION
-# line already says "no judgement needed" and asks for nothing.
-declaration_kind() {
-  local first stripped
-  first="$(printf '%s\n' "$1" | grep -m1 -v '^[[:space:]]*$')" || { echo none; return; }
-  stripped="$(printf '%s' "$first" | sed -e 's/^[[:space:]#>*_-]*//')"
-  case "$stripped" in
-    [Nn][Oo]-[Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*) echo no-decision ;;
-    [Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*)          echo decision ;;
-    *)                                            echo none ;;
-  esac
-}
+# Whether the body declares itself at all -- one line over the shared
+# grammar_declaration(), which bin/gh-sign.sh enforces at the write. This file
+# used to carry TWO functions that differed only in return shape, each with
+# its own copy of the first-line parse, and a third copy lived in
+# bin/deferral-ledger.sh. The parse is now in one place and the callers below
+# ask it different questions.
+declares_itself() { [ "$(grammar_declaration "$1")" != none ]; }
 
 # THE OVERCAUTIOUS CHECK. UNDECIDED (below) catches a ready PR that asks for
 # nothing while silently wanting attention. This is the mirror failure: a
@@ -371,7 +349,7 @@ for n in "${PRS[@]}"; do
   # THE MIRROR CHECK: a DECISION nobody needs to make. See is_additive_only_diff
   # above for exactly what "nobody needs to make" means here and why it stops
   # at a FLAG rather than a verdict.
-  if [ "$(declaration_kind "$body")" = decision ]; then
+  if [ "$(grammar_declaration "$body")" = decision ]; then
     prdiff="$(gh pr diff "$n" --repo "$REPO" 2>/dev/null)" || prdiff=''
     if [ -n "$prdiff" ] && is_additive_only_diff "$prdiff"; then
       overcautious=$((overcautious+1))

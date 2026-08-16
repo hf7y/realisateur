@@ -1,26 +1,15 @@
-# deferral-ledger.yml -- the surfacing half of bin/deferral-ledger.sh.
+# deferral-ledger.yml -- grade a live PR body against bin/lib/body-grammar.sh.
 #
-# WHY A SEPARATE WORKFLOW, and not a job in tests.yml: tests.yml globs
-# bin/tests/*.sh and runs suites against the CHECKOUT. This runs against the
-# live pull request's BODY, which is not in the checkout and does not change
-# when the checkout does. Different subject, different trigger.
+# Separate from tests.yml because the subject is the live PR BODY, not the
+# checkout. `edited` is not in the default pull_request set and is the most
+# important event here: adding the ledger emits `edited` and nothing else, so
+# without it an author fixes the finding and watches the check stay red.
+# bin/tests/body-grammar.test.sh case I2 pins it.
 #
-# THE EVENT LIST IS LOAD-BEARING, and differently from claim-drift's.
-# `edited` is NOT in the default `pull_request` set, and it is the single most
-# important event here: a PR body changes with no commit, no push and no
-# `synchronize`. Adding the ledger -- the one act that turns this check green
-# -- emits `edited` and nothing else. Without it the author would fix the
-# finding and watch the check stay red, which is how a guard gets ignored and
-# then deleted. bin/tests/deferral-ledger.test.sh case I2 pins it.
-#
-# `ready_for_review` is here for the opposite reason to claim-drift's: a draft
-# is allowed to be incomplete, but marking ready IS the completion claim, and
-# "I am done" while deferring unfiled work is precisely the claim this
-# repository spent 2026-08-07 making ten times.
-#
-# IT SURFACES; IT DOES NOT BLOCK. Private repo, plan where branch-protection
-# and rulesets both answer 403 (probed 2026-08-07), so a red check prevents
-# nothing. It is a light.
+# THE BACKSTOP, NOT THE ENFORCEMENT. gh-sign.sh refuses at `gh pr create`;
+# this catches bodies that never passed the shim (mandark is unshimmed, the
+# web UI edits afterwards) by running the SAME grammar_check. Not a required
+# check on main (markdown-cost, suites, shellcheck are), so it surfaces only.
 
 name: deferral-ledger
 
@@ -38,10 +27,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # --strict so an unfiled deferral is a red check rather than a line in a
-      # log nobody opens. Exit 6 (BLIND) is red too: a run that could not read
-      # the body has not established that nothing was left behind.
+      # `gh pr view` here rather than github.event.pull_request.body: the event
+      # payload is a snapshot from when the run was queued, and `edited` fires
+      # in bursts. Reading it back gets the body as it stands now.
+      #
+      # A body that cannot be read is a RED run, not a green one: a run that
+      # could not look has not established that nothing was left behind.
       - name: Does this PR say where the work it deferred went?
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash bin/deferral-ledger.sh --strict --repo "$GITHUB_REPOSITORY" "${{ github.event.number }}"
+        run: |
+          gh pr view "${{ github.event.number }}" --repo "$GITHUB_REPOSITORY" --json body -q .body \
+            > /tmp/pr-body.md || { echo "BLIND: could not read the PR body"; exit 6; }
+          bash bin/gh-sign.sh --check-body /tmp/pr-body.md

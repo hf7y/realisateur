@@ -208,9 +208,7 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
 
     **Mechanical guard:** none today — `bin/sensor-agree.sh` is queued
     (realisateur `.scheduler/FOCUS.md` 2026-07-27) to cross-check every
-    sensor that answers the same question and FLAG disagreement. Until it
-    lands, this row is prose, and prose decays; that is stated here rather
-    than left implied.
+    sensor that answers the same question and FLAG disagreement.
 
 15. **A file's prose about its own structure gets parsed as its structure.**
     A document that explains its own format has to *write the format down*,
@@ -271,9 +269,7 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     front door (`scheduler -i scheduler`) — exact-match headings for
     machine-append, and a watcher that refuses to autocommit a file
     carrying conflict markers or duplicate `## ` headings. The `0/0`
-    half is filed separately against `blockers-freshness-check.sh`. Until
-    all three land this row is prose, and prose decays; stated here rather
-    than left implied.
+    half is filed separately against `blockers-freshness-check.sh`.
 
 16. **A correct refusal that nothing retries.** A guard detects a real
     hazard and correctly declines to act. The decline is right, logged,
@@ -329,8 +325,7 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     backlog, pre-filled with the target repo and the caller's identity,
     so declining to write *is* the act of filing. Filed with `scheduler`
     2026-07-28 (`13c0b8e`), and the `/cloture` half filed here the same
-    day. Until one of them lands, this row is prose, and prose decays —
-    stated here rather than left implied, per pattern 15's own closing.
+    day.
 
 17. **The reader that destroys what it read.** A mechanism consumes human
     input as a *side effect of reading it*, before anything has decided
@@ -550,6 +545,25 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     census is an instance of the class it cannot see.** Write one.
 
 
+21. **A guard that fails safe but never clears.** An outage with better
+    manners than an outage. Scheduler `fb485e0`: the paced runner's PULL gate
+    was a bare `git status --porcelain`, so one *untracked* scratch file
+    pinned a dispatcher's deployed code at whatever commit it sat on,
+    indefinitely, announced by a `*/5` log line nobody reads. It scored
+    perfectly on the only thing it measured — it never once pulled over a
+    dirty tree — while the failure it caused was invisible to it. At estate
+    scale in hf7y/scheduler#61/#29/#82: a dirty `BLOCKERS.md` blocked
+    vim-arcade's clone for seven commits.
+
+    Row 14 is a sensor failing toward OK. This is a guard succeeding toward
+    stuck. Row 16 is adjacent and not the same: there a correct refusal is
+    unretried; here the condition **cannot clear on its own**, because the
+    guard's own inaction preserves it.
+
+    **The test:** can the condition this guard waits on clear without a
+    human? If not, it needs a deadline or a voice, not just a refusal.
+
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a
@@ -573,33 +587,9 @@ boot-path line) over a reminder. Reminders decay; guards fail loud.
 - **No secret in a tracked file.** Real secrets live in an untracked
   `.env`/`secrets/`; the `.gitignore` blocks creds and build debris from
   day one.
-- **Declare your host footprint — and report it, don't just log it.** Any
-  project that installs a script, autostart entry, or systemd unit onto a
-  *shared* host (one this project doesn't exclusively own — `dexter`,
-  `mandark`, any future shared box) must (1) name it in that project's own
-  `FOCUS.md` (what, where, why) so it's attributable later, remove/say-so
-  when retired rather than leaving it live and unowned, **and** (2) at the
-  same time it lands, cross-write a dated note into senechal's own
-  `.claude/FOCUS.md` saying so (tagged `(<project> cross-write, ...)`,
-  same discipline realisateur itself already follows per its own
-  `feedback_notify_senechal` policy) — check `senechal`'s tree isn't
-  mid-run first (`bin/check-project-busy.sh` pattern), keep the write
-  small, commit immediately. `senechal` is the ecosystem's registry for
-  this (2026-07-24 decision, widened again 2026-07-25 from passive
-  reconciliation to active reporting — see its own FOCUS.md/QUESTIONS.md,
-  mission widened past mandark-only to own the script/autostart world
-  across all of Zach's shared hosts). A project's own `FOCUS.md`
-  declaration is still the source of truth senechal reconciles against —
-  the cross-write is what makes sure senechal actually *sees* it at
-  install time, instead of only catching it later during its own scan (or
-  never, on a host it doesn't yet watch).
-
 - **Probe, don't quote.** Before repeating a written claim about system
   state (what's installed, enabled, running, reachable), re-derive it from
-  the system. Where the claim must be written down, it carries the date
-  and the command that produced it — `# verified 2026-07-25 via
-  sudo -u svc-vaporwave crontab -l` — so the next reader can re-run it
-  instead of trusting it. Better still, don't store it: a command that
+  the system. Don't store it: a command that
   *derives* current state (`scheduler dispatchers`) can't rot the way a
   comment describing it can.
 - **Never `2>/dev/null` a privileged probe.** Discarding stderr turns
@@ -668,37 +658,6 @@ uses the block above.
 **The fenced block below is the ONE SOURCE, and it is now the ONLY copy.**
 `discipline` prints it. Every project's `CLAUDE.md` carries a single line
 pointing at that command, and nothing else.
-
-### What this replaced
-
-Until 2026-08-14 this block was **stamped into every project's CLAUDE.md** by
-`bin/restamp-discipline.sh`. The copy-not-symlink argument was sound — a
-dangling symlink does not error, it makes the discipline *silently absent* —
-and it was refuted by measurement, not by taste: eleven repos carried a
-**byte-identical corrupted** checklist two generations stale, the stamper could
-not run at all on the host where the source lives, this file was **36 lines
-behind its own copies**, and the only drift detector compared row counts and
-reported OK throughout. The copies were not travelling, they were rotting.
-
-Full post-mortem with the evidence: hf7y/realisateur#263.
-
-### Why a command answers the original objection better than a copy did
-
-The objection was never really about symlinks — it was about **silent
-absence**. A command answers it directly, and this file's own doctrine already
-said so about the protocols half:
-
-> Each is a command on `PATH` — not a rule to remember, because prose decays
-> and guards don't. If a command is missing, say so loudly rather than doing
-> the step by hand: a missing guard is a finding, not an inconvenience.
-
-A missing `discipline` is a **loud** finding on any host, in any clone. A stale
-stamped copy is a silent one — and silent is what we measurably had. The
-protocols half of this block got the architecture right in July; the checklist
-half did not, and that asymmetry is the entire bug.
-
-The "config read from one source, not retyped per file" row now applies to
-*itself*, which it did not before.
 
 ```
 ## Build discipline (realisateur baseline — see realisateur/BUILD-DISCIPLINE.md)

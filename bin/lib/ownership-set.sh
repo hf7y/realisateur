@@ -181,6 +181,9 @@ bin/tests/sunset-coordinator-files.test.sh realisateur follows its subject, bin/
 bin/thermostat-wiring.sh           realisateur measures whether the ecosystem matches a redesign or only describes it. Sense over the whole organism, which is this organ's definition.
 bin/shellcheck-lint.sh             realisateur mechanizes BUILD-DISCIPLINE.md's FIRST row -- fails loud, no exit-0 no-ops -- which is the same claim hygiene-lint.sh has and the same reason. SC2164, SC2181, SC2086 and SC2115 ARE the silent-failure class that document names; this is that row with an exit code. Auditing compliance is the half UNIVERSE.md assigned here.
 bin/tests/shellcheck-lint.test.sh  realisateur follows its subject.
+bin/carry-drift.sh                 realisateur asks whether a file this repo stores TWICE -- once on main where it is edited, once on bashified where it ships -- still says the same thing in both places. It senses duplication in realisateur's own tree and writes nothing outside it; the release channel that consumes the branch is verbs's, but the question of whether this repo contradicts itself is not. Named for its sibling bin/claim-drift.sh, which is foreign because a PR is vim-arcade's domain -- a carried file is nobody's but ours.
+bin/carry-drift.ratchet            realisateur follows its subject.
+bin/tests/carry-drift.test.sh      realisateur follows its subject.
 bin/gh-sign.sh                     realisateur the WRITE half of decision-rot.sh's own predicate. Its ancestor bin/gh-comment.sh was vim-arcade's because vim-arcade owned the stamp GRAMMAR (#77); this file cuts the grammar down to a marker, and what is left has exactly one consumer in the estate -- realisateur's sensor, which cannot date an answer without telling an agent's reply from Zach's under one shared token. A sensor that must manufacture its own discriminator owns it; same argument as bin/silence-audit.sh.
 bin/tests/gh-sign.test.sh          realisateur follows its subject.
 bin/tests/lib/harness.sh           realisateur the assertion vocabulary this repo's own suites run on. Mission-unique: it exists because 51 of 54 suites had re-declared it, which is a fact about THIS tree's suites and travels nowhere.
@@ -267,8 +270,8 @@ bin/lib/not-a-verb.tsv             verbs the recorded exceptions to that declara
 bin/lib/propagation-set.sh         verbs the dev/prod contract for the verb release channel. Its own header is an argument about hf7y/verbs' visibility.
 provision/verbs-meta              verbs its own README says build-verbs.yml belongs at hf7y/verbs/.github/workflows/build-verbs.yml.
 bin/claim-drift.sh                 vim-arcade asks whether a pull request grew after being presented as done. PR tooling.
-bin/deferral-ledger.sh             vim-arcade asks whether a pull request declares its deferred work. PR tooling, same door as claim-drift.
-bin/tests/deferral-ledger.test.sh  vim-arcade follows its subject.
+bin/lib/body-grammar.sh            vim-arcade the grammar of an agent-written issue/PR body. PR tooling, same door as claim-drift.
+bin/tests/body-grammar.test.sh     vim-arcade follows its subject.
 .github/workflows/deferral-ledger.yml vim-arcade follows its subject.
 bin/defere.sh                      vim-arcade files an issue and prints the ledger line. Issue tooling; the estate's front door for routing a finding to an owner.
 bin/path-provenance-audit.sh       senechal asks whether every PATH entry has an owner and a source. senechal owns knowing what exists on a machine -- Zach reassigned this class explicitly on 2026-08-07.

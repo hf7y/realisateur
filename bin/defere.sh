@@ -22,7 +22,8 @@
 # where the wrong path is already the expensive one just makes everything
 # cost more. The only lever that changes behaviour is making the RIGHT path
 # cheaper than the paragraph. That is this script, and the guard
-# (bin/deferral-ledger.sh) is secondary to it.
+# (the DEFERRED grammar in bin/lib/body-grammar.sh, refused at the write by
+# bin/gh-sign.sh) is secondary to it.
 #
 #   defere 'orphaned ecosystem-survey shim on chezz@monkey' --project chezz
 #
@@ -124,8 +125,8 @@ CLI_USAGE="  defere.sh '<one line>' --project <name>       file on hf7y/<name>
   defere.sh '<one line>' --unroutable '<why>'   nothing can own it yet
   defere.sh --ledger                            print the DEFERRED block
   defere.sh --forget                            discard the accumulated block
-  options: --body <text> --from <project> --repo owner/name --dry-run"
-CLI_FLAGS='--project --human --unroutable --body --from --repo --dry-run --ledger --forget'
+  options: --body <text> --from <project> --repo owner/name --decider @who --dry-run"
+CLI_FLAGS='--project --human --unroutable --body --from --repo --decider --dry-run --ledger --forget'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  filed, or printed under --dry-run / --ledger
   1  could not file -- destination did not resolve, or gh refused
@@ -135,6 +136,10 @@ CLI_EXITS='  0  filed, or printed under --dry-run / --ledger
 cli_guard "$@"
 
 OWNER="${DEFERE_OWNER:-hf7y}"
+# Who is asked when a route needs a person. Not derived from the running
+# account: an agent account filing under its own name would be addressing the
+# decision to itself, which is the ownerless case with a handle stuck on it.
+DECIDER="${DEFERE_DECIDER:-zach}"
 WHAT=''; PROJECT=''; HUMAN=''; UNROUTABLE=''; BODY=''; FROM=''; REPO=''
 DRY=0; MODE=file
 
@@ -146,6 +151,7 @@ while [ $# -gt 0 ]; do
     --body)       BODY="${2:-}"; shift 2 ;;
     --from)       FROM="${2:-}"; shift 2 ;;
     --repo)       REPO="${2:-}"; [ -n "$REPO" ] || cli_die '--repo needs owner/name'; shift 2 ;;
+    --decider)    DECIDER="${2:-}"; [ -n "$DECIDER" ] || cli_die '--decider needs a handle'; DECIDER="${DECIDER#@}"; shift 2 ;;
     --dry-run)    DRY=1; shift ;;
     --ledger)     MODE=ledger; shift ;;
     --forget)     MODE=forget; shift ;;
@@ -201,8 +207,9 @@ fi
 
 if ! have gh; then
   echo "defere: BLIND -- gh is not on PATH. Nothing was filed, and nothing has been established about where this work went." >&2
-  echo "        the line you still owe your PR body:" >&2
-  echo "        - NO-OWNER: $WHAT -- could not file: gh unavailable on this host" >&2
+  echo "        Do NOT write this into a PR body as an ownerless line: lib/body-grammar.sh" >&2
+  echo "        refuses one, because that is the shape that shipped hf7y/realisateur#327" >&2
+  echo "        as a no-op. Re-run this where gh works, then cite the issue number." >&2
   exit 6
 fi
 
@@ -258,12 +265,31 @@ records being closed or named."
   LEDGER_KIND=unroutable
 fi
 
-FULLBODY="$BODY
+# The issue this files must satisfy the same grammar bin/gh-sign.sh enforces
+# on `issue create` -- otherwise the front door emits bodies the front door
+# refuses. Each route implies its own declaration:
+#   --project      routed and owned; nothing to weigh -> NO-DECISION
+#   --human        a person is required, and named     -> DECISION
+#   --unroutable   the ownership map has a hole        -> DECISION
+# The DEFERRED block is `- none` because filing IS the destination: this issue
+# is where the work went, so it has left nothing further behind.
+case "$LEDGER_KIND" in
+  project) DECLARE="NO-DECISION: @$DECIDER -- routed to $DEST and owned there; nothing here needs a call" ;;
+  *)       DECLARE="DECISION: @$DECIDER -- $WHAT" ;;
+esac
+
+FULLBODY="$DECLARE
+
+$BODY
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
 
 ---
 Deferred from **$FROM**${REPO:+ (}${REPO}${REPO:+)} by \`defere\` on $(date -u +%Y-%m-%d).
 Filed because the work was left behind deliberately and a paragraph is not a queue.
-See realisateur \`bin/deferral-ledger.sh\` for why this exists."
+See realisateur \`bin/lib/body-grammar.sh\` for why this exists."
 
 if [ "$DRY" -eq 1 ]; then
   printf 'defere: DRY RUN -- nothing filed.\n\n'
@@ -281,8 +307,8 @@ gh label create "$LABEL" --repo "$DEST" --color ededed \
 
 URL="$(gh issue create --repo "$DEST" --title "$TITLE" --body "$FULLBODY" --label "$LABEL" 2>&1)" || {
   printf 'defere: gh refused to file on %s:\n%s\n' "$DEST" "$URL" >&2
-  printf '        the line you still owe your PR body:\n' >&2
-  printf -- '        - NO-OWNER: %s -- could not file on %s\n' "$WHAT" "$DEST" >&2
+  printf '        NOTHING was filed. There is no ownerless line to fall back on --\n' >&2
+  printf '        lib/body-grammar.sh refuses one. Fix the destination and re-run.\n' >&2
   exit 1
 }
 URL="$(printf '%s' "$URL" | grep -oE 'https://[^ ]+' | tail -1)"
