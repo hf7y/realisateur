@@ -30,8 +30,8 @@
 # per-account ~/.local/bin shim is inert; usage-paced-runner.sh APPENDS that).
 # The policy has one home, this file on `main`, and every replica is written
 # by `bin/carry-drift.sh --carry` under a byte-identity CI guard, so nothing
-# can drift without a red check. Zach, 2026-08-16: "it cannot be several
-# copies, one per repo that will drift inevitably."
+# can drift without a red check. Zach on #330: "it cannot be several copies,
+# one per repo that will drift inevitably."
 #
 # AND IT KNOWS HOW OLD IT IS. Propagation can stop, and a shim silently
 # enforcing last month's policy is worse than none -- so past STALE_DAYS it
