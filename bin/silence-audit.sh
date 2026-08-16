@@ -133,11 +133,11 @@ while [ $# -gt 0 ]; do
                  TARGET_GIVEN="$1" ;;
     --target=*)  TARGET_GIVEN="${1#--target=}"
                  [ -n "$TARGET_GIVEN" ] || { echo "--target needs a directory" >&2; exit 2; } ;;
-    # The thesis, THEN the usage block. `2,60p` alone stops 26 lines above
-    # `# Usage:`, so --help has never printed a single invocation form -- it
-    # would have introduced --target to nobody. Anchored on the text, not on
-    # line numbers, because a line number is what rotted in the first place.
-    -h|--help)   sed -n '2,60p' "${BASH_SOURCE[0]}"
+    # The thesis, THEN the usage block. Both halves anchored on the text, not
+    # on line numbers -- `2,60p` used to stop short of `# Usage:` once the
+    # header grew past 60 lines, silently dropping the tail of the thesis.
+    # A line number is what rotted in the first place; don't reintroduce one.
+    -h|--help)   sed -n '2,/^# Usage:/p' "${BASH_SOURCE[0]}" | sed '$d'
                  sed -n '/^# Usage:/,/^#             3 BLIND/p' "${BASH_SOURCE[0]}"
                  exit 0 ;;
     "")          ;;
@@ -324,7 +324,24 @@ check_home_scoped() {
       # reads per-job run state under $HOME, but never mentions another account
       if grep -qE '\$HOME/\.local/share|~/\.local/share' "$sh" 2>/dev/null \
          && ! grep -qE 'CRON_ACCOUNT|sudo -n -u|-u "\$acct"' "$sh" 2>/dev/null; then
-        flag home-scoped "$name: $(basename "$sh") reads job state under \$HOME only, but $n_acct accounts dispatch"
+        # #347: a script that names an established host-wide root
+        # (/usr/local, /etc -- the two this ecosystem actually installs to,
+        # per propagation-set.sh and selfdev-app-key.sh) BEFORE the $HOME
+        # fallback on the same line has already made the choice this check
+        # exists to demand. $HOME is the legacy per-account layout it falls
+        # back to (#180), not the only place it looks -- flag only if no
+        # matching line leads with a host-wide root.
+        local hm_line prefix any_home_scoped=0
+        while IFS= read -r hm_line; do
+          prefix="${hm_line%%\$HOME*}"
+          [ "$prefix" = "$hm_line" ] && prefix="${hm_line%%~*}"
+          if ! printf '%s' "$prefix" | grep -qE '/(usr/local|etc)/'; then
+            any_home_scoped=1
+          fi
+        done < <(grep -E '\$HOME/\.local/share|~/\.local/share' "$sh" 2>/dev/null)
+        if [ "$any_home_scoped" -eq 1 ]; then
+          flag home-scoped "$name: $(basename "$sh") reads job state under \$HOME only, but $n_acct accounts dispatch"
+        fi
       fi
     done < <(find "$repo/bin" -maxdepth 1 -name '*.sh' -type f 2>/dev/null)
   done < <(project_repos)
