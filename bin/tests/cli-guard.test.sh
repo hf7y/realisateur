@@ -33,6 +33,8 @@
 #
 # Usage: bin/tests/cli-guard.test.sh   (exit 0 = all pass)
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 GUARD="$REPO/bin/lib/cli-guard.sh"
@@ -42,12 +44,6 @@ LED="$REPO/bin/release-ledger.sh"
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/home"
-pass=0; fail=0
-ok()  { echo "  ok   $1"; pass=$((pass+1)); }
-bad() { echo "  FAIL $1"; fail=$((fail+1)); }
-has()   { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
-hasnt() { case "$2" in *"$3"*) bad "$1 (unexpectedly present: $3)" ;; *) ok "$1" ;; esac; }
-rc()    { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3)"; fi; }
 
 # A throwaway caller. It declares the same four CLI_* variables every real
 # caller does, guards its argv, and then prints it back -- so an assertion can
@@ -151,5 +147,4 @@ O="$(run bash "$T/any.sh" --help)"
 has "--help states the tool cannot spend" "$O" "cannot spend"
 
 echo
-echo "cli-guard.test.sh: $pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+summary

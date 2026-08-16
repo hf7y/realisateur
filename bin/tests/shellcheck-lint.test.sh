@@ -24,13 +24,13 @@
 # runs. A suite that goes red on a developer laptop for lacking a linter is a
 # suite that gets commented out.
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 GUARD="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)/shellcheck-lint.sh"
 pass=0; fail=0; skipped=0
 T="$(mktemp -d)"; trap 'rm -rf "${T:?}"' EXIT
 
-ok()   { echo "  ok   $1"; pass=$((pass+1)); }
-bad()  { echo "  FAIL $1 -- $2"; fail=$((fail+1)); }
 skip() { echo "  skip $1 -- $2"; skipped=$((skipped+1)); }
 check() { # <name> <expected-exit> <actual-exit>
   if [ "$2" = "$3" ]; then ok "$1"; else bad "$1" "expected exit $2, got $3"; fi
@@ -159,5 +159,4 @@ else
   skip "F --strict" "shellcheck absent"
 fi
 
-echo "shellcheck-lint: $pass passed, $fail failed, $skipped skipped"
-[ "$fail" -eq 0 ]
+summary

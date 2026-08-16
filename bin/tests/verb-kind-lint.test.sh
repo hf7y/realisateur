@@ -10,13 +10,12 @@
 #
 # usage: ./bin/tests/verb-kind-lint.test.sh
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LINT="$REPO/bin/verb-kind-lint.sh"
 
-pass=0; fail=0
-ok()  { printf '  ok   %s\n' "$*"; pass=$((pass+1)); }
-bad() { printf '  FAIL %s\n' "$*"; fail=$((fail+1)); }
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT

@@ -6,11 +6,10 @@
 # the only answer was scheduler/schedule/*.conf -- a CHECKOUT. That one data
 # dependency is what still forces a scheduler clone onto hosts that need none.
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 C="$ROOT/bin/cut-verb-build.sh"
-pass=0; fail=0
-ok()  { printf '  PASS: %s\n' "$*"; pass=$((pass+1)); }
-bad() { printf '  FAIL: %s\n' "$*"; fail=$((fail+1)); }
 echo "registry-marker.test"
 
 # --- 1. one query, not one per repo --------------------------------------
@@ -50,5 +49,4 @@ else
   echo "  SKIP: no gh auth here; the live query was not exercised"
 fi
 
-printf '\nregistry-marker.test: %d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

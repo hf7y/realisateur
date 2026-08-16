@@ -2,15 +2,12 @@
 # retire-check.test.sh -- witness for bin/retire-check.sh (#166).
 #
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/retire-check.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()  { printf '  PASS: %s\n' "$*"; pass=$((pass+1)); }
-bad() { printf '  FAIL: %s\n' "$*"; fail=$((fail+1)); }
-rc()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3)"; fi; }
-has() { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
 
 echo "retire-check.test.sh"
 
@@ -55,5 +52,4 @@ rc  "F2 an unknown flag exits 2, not a silent full run" 2 "$?"
 "$SCRIPT" "$T/does-not-exist.txt" >/dev/null 2>&1
 rc  "F3 an unreadable file exits 2" 2 "$?"
 
-printf '\nretire-check.test.sh: %d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

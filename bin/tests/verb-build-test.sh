@@ -14,10 +14,9 @@
 # Runs against a local fixture meta-repo over file://, so no network -- the
 # suite is not itself subject to the blindness it tests for.
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
-PASS=0; FAIL=0
-ok()   { PASS=$((PASS+1)); printf '  ok    %s\n' "$1"; }
-bad()  { FAIL=$((FAIL+1)); printf '  FAIL  %s\n     %s\n' "$1" "${2:-}"; }
 check(){ if [ "$2" = "$3" ]; then ok "$1"; else bad "$1" "expected [$3] got [$2]"; fi; }
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -190,5 +189,4 @@ done
 check "count check: links into the build root match the manifest row count" "$ours" "2"
 
 echo
-printf 'verb-build: %d passed, %d failed\n' "$PASS" "$FAIL"
-[ "$FAIL" -eq 0 ]
+summary

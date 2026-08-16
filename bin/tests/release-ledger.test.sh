@@ -32,18 +32,14 @@
 #
 # Usage: bin/tests/release-ledger.test.sh   (exit 0 = all pass)
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 LED="$REPO/bin/release-ledger.sh"
 [ -x "$LED" ] || { echo "FAIL: $LED not executable"; exit 1; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()  { echo "  ok   $1"; pass=$((pass+1)); }
-bad() { echo "  FAIL $1"; fail=$((fail+1)); }
-has()   { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
-hasnt() { case "$2" in *"$3"*) bad "$1 (unexpectedly present: $3)" ;; *) ok "$1" ;; esac; }
-rc()    { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3)"; fi; }
 
 # A frozen "now" so ages are arithmetic. 2026-08-10T00:00:00Z.
 NOW=1786060800
@@ -339,5 +335,4 @@ O="$("$LED" --help 2>&1)"
 has "--help documents BLIND as not-clean" "$O" 'not "clean"'
 
 echo
-echo "release-ledger.test.sh: $pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+summary

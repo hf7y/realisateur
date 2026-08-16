@@ -27,12 +27,11 @@
 #
 # usage: ./bin/tests/install-shims.test.sh
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SHIMS="$REPO/bin/install-shims.sh"
-pass=0; fail=0
-ok()   { printf '  ok   %s\n' "$*"; pass=$((pass+1)); }
-bad()  { printf '  FAIL %s\n' "$*"; fail=$((fail+1)); }
 check(){ if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (want '$3', got '$2')"; fi; }
 
 WORK="$(mktemp -d)"
@@ -183,5 +182,4 @@ check "F2b and is byte-identical" "$(md5sum < "$WORK/bin/hand-written")" "$HW_SU
 [ -f "$WORK/bin/silence-audit" ] && ok "F3 a LIVE shim survives the prune" \
                                  || bad "F3 a LIVE shim survives the prune"
 
-printf -- '\n--- install-shims symlink guard: %d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

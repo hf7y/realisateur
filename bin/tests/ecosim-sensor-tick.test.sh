@@ -26,15 +26,13 @@
 #
 # Usage: bash bin/tests/ecosim-sensor-tick.test.sh   (exit 0 = all pass)
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 TICK="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/ecosim-sensor-tick.sh"
 [ -f "$TICK" ] || { echo "FAIL: no $TICK"; exit 1; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()  { pass=$((pass+1)); printf '  ok    %s\n' "$1"; }
-bad() { fail=$((fail+1)); printf '  FAIL  %s\n' "$1"; [ $# -gt 1 ] && printf '        %s\n' "$2"; }
-eq()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1" "want [$3] got [$2]"; fi; }
 
 # A fake sonde. The contract this stands in for is ecosim/SENSOR-CONTRACT.md
 # v1: `run` emits line protocol, `run --json` emits JSONL. Nothing here needs
@@ -122,5 +120,4 @@ eq  "E2  the seal now holds BOTH the old and the late record" \
     "$(zcat "$S/archive-2026-07.jsonl.gz" 2>/dev/null | grep -cE '"old": 1|"late": 1')" "2"
 
 echo
-printf '%s passed, %s failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

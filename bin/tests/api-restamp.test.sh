@@ -8,10 +8,8 @@
 # failure mode and the one step (auto-merge) that is allowed to fail without
 # failing the whole restamp.
 set -uo pipefail
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
-PASS=0; FAIL=0
-ok()   { PASS=$((PASS+1)); printf '  ok    %s\n' "$1"; }
-bad()  { FAIL=$((FAIL+1)); printf '  FAIL  %s\n     %s\n' "$1" "${2:-}"; }
 check(){ if [ "$2" = "$3" ]; then ok "$1"; else bad "$1" "expected [$3] got [$2]"; fi; }
 contains(){ case "$2" in *"$3"*) ok "$1" ;; *) bad "$1" "expected to contain [$3], got [$2]" ;; esac; }
 
@@ -139,5 +137,4 @@ check "GH_FAIL_STEP=pr-merge -> still exit 0" "$rc" "0"
 check "GH_FAIL_STEP=pr-merge -> still prints the PR url" "$out" "$FIXTURE_PR_URL"
 
 echo
-printf 'api-restamp: %d passed, %d failed\n' "$PASS" "$FAIL"
-[ "$FAIL" -eq 0 ]
+summary

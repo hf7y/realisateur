@@ -30,17 +30,14 @@
 #
 # Usage: bin/tests/reach-lint.test.sh   (exit 0 = all pass)
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/reach-lint.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()  { echo "  ok   $1"; pass=$((pass+1)); }
-bad() { echo "  FAIL $1"; fail=$((fail+1)); }
 # has <name> <output> <pattern> -- output must contain pattern
-has() { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
 # rc <name> <expected-exit> <actual-exit>
-rc()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3)"; fi; }
 
 NO_USER_CMDS="$T/no-user-cmds"   # deliberately does not exist
 
@@ -155,5 +152,5 @@ run "$T/F/nonexistent-sched"
 rc  "F2 a missing registry directory exits 0 too"     0 "$RUN_RC"
 
 echo
-echo "$pass passed, $fail failed"
+summary
 [ "$fail" -eq 0 ] || exit 1

@@ -8,14 +8,12 @@
 # that only exists in a comment is not a refusal, so it is tested here --
 # offline, against a stub `ssh`, before it is ever needed for real.
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 DEPLOY="$PWD/dexter-service-deploy.sh"
 
-pass=0; fail=0
-ok()  { printf '  ok   %s\n' "$1"; pass=$((pass+1)); }
-bad() { printf '  FAIL %s\n' "$1"; fail=$((fail+1)); }
 is()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1: expected '$3', got '$2'"; fi; }
-has() { case "$2" in *"$3"*) ok "$1";; *) bad "$1: output lacks '$3'";; esac; }
 
 STUB="$(mktemp -d)"; trap 'rm -rf "$STUB"' EXIT
 # Stub ssh prints the staged distro list. Anything that is NOT the read-only
@@ -79,5 +77,4 @@ is "an unrelated service deploys while hermes runs" "$rc" "0"
 case "$out" in *"logs the link out"*) bad "zaxon's refusal leaked onto another service";; *) ok "no zaxon refusal for a service with no session";; esac
 
 echo
-echo "dexter-service-deploy.test: $pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+summary

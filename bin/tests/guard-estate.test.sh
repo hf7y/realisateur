@@ -152,6 +152,8 @@
 #
 # usage: ./bin/tests/guard-estate.test.sh
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BIN="$REPO/bin"
@@ -181,9 +183,6 @@ GUARD_UNDECLARED_BOUND="${GUARD_UNDECLARED_BOUND:-0}"
 GUARD_RHYTHM_DAYS="${GUARD_RHYTHM_DAYS:-30}"
 GUARD_SPAN_DAYS="${GUARD_SPAN_DAYS:-365}"
 
-pass=0; fail=0
-ok()  { printf '  ok   %s\n' "$*"; pass=$((pass+1)); }
-bad() { printf '  FAIL %s\n' "$*"; fail=$((fail+1)); }
 
 # How far into a file a declaration may be. Same reasoning as
 # suite-docs-lint.sh: it is a HEADER contract; a reader must meet it before

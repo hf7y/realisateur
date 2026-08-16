@@ -13,14 +13,11 @@
 #
 # Usage: bin/tests/selfdev-agent-survey.test.sh   (exit 0 = all pass)
 set -uo pipefail
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 REPO_BIN="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT="$REPO_BIN/selfdev-agent-survey.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
-pass=0; fail=0
-ok()  { echo "  ok   $1"; pass=$((pass+1)); }
-bad() { echo "  FAIL $1"; fail=$((fail+1)); }
-eq()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected '$3', got '$2')"; fi; }
 
 # shellcheck source=/dev/null
 . "$SCRIPT"   # BASH_SOURCE guard keeps main() from firing; classify_* land in scope
@@ -108,5 +105,4 @@ dup_count2="$(duplicated_line_count "$PROMPT_C" "$PROMPT_D")"
 eq "duplication: unrelated prompts share nothing" "$dup_count2" 0
 
 echo
-echo "selfdev-agent-survey.test.sh: $pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+summary

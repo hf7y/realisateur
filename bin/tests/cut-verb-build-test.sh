@@ -43,10 +43,9 @@
 #     is bin/verb-kind-lint.sh and it is asserted here because the failure
 #     mode is a correct lint nothing calls.
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
-PASS=0; FAIL=0
-ok()   { PASS=$((PASS+1)); printf '  ok    %s\n' "$1"; }
-bad()  { FAIL=$((FAIL+1)); printf '  FAIL  %s\n     %s\n' "$1" "${2:-}"; }
 check(){ if [ "$2" = "$3" ]; then ok "$1"; else bad "$1" "expected [$3] got [$2]"; fi; }
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -445,5 +444,4 @@ esac
 : > "$TMP/verb-kind.ratchet"
 
 echo
-printf 'cut-verb-build: %d passed, %d failed\n' "$PASS" "$FAIL"
-[ "$FAIL" -eq 0 ]
+summary

@@ -54,19 +54,15 @@
 #
 # Usage: bin/tests/markdown-cost.test.sh   (exit 0 = all pass)
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/markdown-cost.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()   { echo "  ok   $1"; pass=$((pass+1)); }
-bad()  { echo "  FAIL $1"; fail=$((fail+1)); }
 # has <name> <output> <pattern>   -- output must contain pattern
-has()  { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
 # hasnt <name> <output> <pattern> -- output must NOT contain pattern
-hasnt(){ case "$2" in *"$3"*) bad "$1 (unexpected: $3)" ;; *) ok "$1" ;; esac; }
 # rc <name> <expected-exit> <actual-exit>
-rc()   { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3)"; fi; }
 
 G() { git -c user.email=t@test -c user.name=T -C "$1" "${@:2}"; }
 
@@ -404,5 +400,5 @@ has "G6 and offers no override"   "$RUN_OUT" "there is no override"
 unset MARKDOWN_COST_RATCHET
 
 echo
-echo "$pass passed, $fail failed"
+summary
 [ "$fail" -eq 0 ] || exit 1

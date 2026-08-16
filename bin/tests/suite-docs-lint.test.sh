@@ -10,15 +10,12 @@
 #
 # usage: ./bin/tests/suite-docs-lint.test.sh
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LINT="$REPO/bin/suite-docs-lint.sh"
-pass=0; fail=0
-ok()   { printf '  ok   %s\n' "$*"; pass=$((pass+1)); }
-bad()  { printf '  FAIL %s\n' "$*"; fail=$((fail+1)); }
 check(){ if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (want '$3', got '$2')"; fi; }
-has()  { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (output lacked '$3')" ;; esac; }
-hasnt(){ case "$2" in *"$3"*) bad "$1 (output contained '$3')" ;; *) ok "$1" ;; esac; }
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -129,5 +126,4 @@ check "L1 realisateur passes suite-docs-lint" "$rc" 0
 hasnt "L2 no suite in this repo is undocumented" "$out" "FAIL"
 
 echo
-echo "  passed: $pass  failed: $fail"
-[ "$fail" -eq 0 ]
+summary

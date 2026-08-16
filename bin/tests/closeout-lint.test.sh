@@ -24,21 +24,17 @@
 #
 # Usage: bin/tests/closeout-lint.test.sh   (exit 0 = all pass)
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/closeout-lint.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
 DAY="2026-07-26"
 
-ok()   { echo "  ok   $1"; pass=$((pass+1)); }
-bad()  { echo "  FAIL $1"; fail=$((fail+1)); }
 # has <name> <output> <pattern>   -- output must contain pattern
-has()  { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
 # hasnt <name> <output> <pattern> -- output must NOT contain pattern
-hasnt(){ case "$2" in *"$3"*) bad "$1 (unexpected: $3)" ;; *) ok "$1" ;; esac; }
 # rc <name> <expected-exit> <actual-exit>
-rc()   { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3)"; fi; }
 
 mkdir -p "$T/sched/schedule"
 reg() { # reg <name> <path>
@@ -550,5 +546,5 @@ hasnt "J4 a real, merely-stale registry is not BLIND [registry]" "$J4_OUT" "BLIN
 has   "J4 it still reports the stale-repo note"                  "$J4_OUT" "no registered repo has a commit younger"
 
 echo
-echo "$pass passed, $fail failed"
+summary
 [ "$fail" -eq 0 ] || exit 1

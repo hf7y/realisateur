@@ -6,14 +6,12 @@
 # relay passed unnoticed. Everything here runs offline against a stub `ssh`
 # on PATH -- no dexter, no network, no credential.
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 PROBE="$PWD/dexter-liveness.sh"
 
-pass=0; fail=0
-ok()   { printf '  ok   %s\n' "$1"; pass=$((pass+1)); }
-bad()  { printf '  FAIL %s\n' "$1"; fail=$((fail+1)); }
 is()   { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1: expected '$3', got '$2'"; fi; }
-has()  { case "$2" in *"$3"*) ok "$1";; *) bad "$1: output lacks '$3'";; esac; }
 
 STUB="$(mktemp -d)"; trap 'rm -rf "$STUB"' EXIT
 # The stub stands in for `ssh <host> <script>`: it ignores its arguments and
@@ -103,5 +101,4 @@ else
 fi
 
 echo
-echo "dexter-liveness.test: $pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+summary

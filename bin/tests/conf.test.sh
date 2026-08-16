@@ -19,14 +19,12 @@
 #
 # usage: ./bin/tests/conf.test.sh
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 . "$REPO/bin/lib/conf.sh"
 
-pass=0; fail=0
-ok()  { pass=$((pass+1)); printf '  ok    %s\n' "$1"; }
-bad() { fail=$((fail+1)); printf '  FAIL  %s\n' "$1"; [ $# -gt 1 ] && printf '        %s\n' "$2"; }
-eq()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1" "want [$3] got [$2]"; fi; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 printf 'conf.sh -- test\n\n'
@@ -169,5 +167,4 @@ if [ -f "$REG/demo.interactive" ]; then
   bad "D6  release removes it again" "marker survived release"
 else ok "D6  release removes it again"; fi
 
-printf '\n%s passed, %s failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

@@ -28,7 +28,14 @@ quarantined_failed=""
 for t in "$@"; do
   echo "::group::$t"
   rc=0
-  bash "$t" || rc=$?
+  # STDIN CLOSED. A suite must never read stdin; one that does HANGS FOREVER
+  # under any runner without a tty (cron, a background job, CI). Found
+  # 2026-08-15: bin/tests/selfdev-credentials.test.sh sources its subject,
+  # whose `while IFS=: read -r acct ...` loop then consumed stdin and blocked
+  # a full-suite run for 20 minutes with no output. With </dev/null the same
+  # suite exits 0 in seconds. A hang is the worst failure mode a gate has --
+  # it is indistinguishable from slow, and nothing times it out.
+  bash "$t" </dev/null || rc=$?
   echo "::endgroup::"
   if [ "$rc" -ne 0 ]; then
     if [ -n "${QUARANTINED[$t]+set}" ]; then

@@ -38,6 +38,8 @@
 #
 # Usage: bin/tests/release-channel-wiring.test.sh [--live]
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 WF="$REPO/provision/verbs-meta/build-verbs.yml"
@@ -49,11 +51,6 @@ PUBLISH="$REPO/bin/publish-release-verdict.sh"
 LIVE=0
 [ "${1:-}" = "--live" ] && LIVE=1
 
-pass=0; fail=0
-ok()  { echo "  ok   $1"; pass=$((pass+1)); }
-bad() { echo "  FAIL $1"; fail=$((fail+1)); }
-has()   { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
-hasnt() { case "$2" in *"$3"*) bad "$1 (unexpectedly present: $3)" ;; *) ok "$1" ;; esac; }
 
 echo "release-channel-wiring.test.sh$([ "$LIVE" = 1 ] && echo ' --live')"
 
@@ -246,8 +243,7 @@ if [ "$LIVE" != 1 ]; then
   echo
   echo "  (--live checks skipped: deployed-workflow drift and endpoint freshness)"
   echo
-  echo "release-channel-wiring.test.sh: $pass passed, $fail failed"
-  [ "$fail" -eq 0 ]
+summary
   exit
 fi
 
@@ -298,5 +294,4 @@ hbody="$(curl -fsS --max-time 20 "$HUMAN" 2>/dev/null)"
                 || bad "the human-readable page $HUMAN is not reachable"
 
 echo
-echo "release-channel-wiring.test.sh: $pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+summary

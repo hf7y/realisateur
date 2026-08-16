@@ -2,15 +2,12 @@
 # run-suites.test.sh -- witness for bin/run-suites.sh (#316).
 #
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/run-suites.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()  { printf '  PASS: %s\n' "$*"; pass=$((pass+1)); }
-bad() { printf '  FAIL: %s\n' "$*"; fail=$((fail+1)); }
-rc()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3)"; fi; }
-has() { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
 hasnot() { case "$2" in *"$3"*) bad "$1 (should not contain: $3)" ;; *) ok "$1" ;; esac; }
 
 echo "run-suites.test.sh"
@@ -67,5 +64,24 @@ OUT="$(RUN_SUITES_QUARANTINE="$T/quarantine4" "$SCRIPT" "$T/g1.sh")"; RC=$?
 rc  "G1 exits 0 -- the real entry after the comment/blank still parsed" 0 "$RC"
 has "G2 quarantined the suite" "$OUT" "QUARANTINED"
 
-printf '\nrun-suites.test.sh: %d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+echo "-- H. a suite that reads stdin fails fast instead of hanging the run"
+# The real instance: bin/tests/selfdev-credentials.test.sh sources its subject,
+# whose `while IFS=: read -r acct ...` loop consumed stdin and blocked a full
+# run for 20 minutes with no output. `timeout` is the witness -- if stdin is
+# not closed this case does not fail, it never returns.
+cat > "$T/h1.sh" <<'SUITE'
+#!/usr/bin/env bash
+while IFS=: read -r _line; do :; done
+echo "reached the end"
+SUITE
+chmod +x "$T/h1.sh"
+# stdin must be a pipe that STAYS OPEN, or this case cannot tell the two
+# behaviours apart: the runner inherits whatever this suite was given, and a
+# suite invoked with `</dev/null` hands its child an already-closed stdin, so
+# the case passes with or without the fix. Verified by removing the fix and
+# watching it still pass -- a guessed predicate is not a witness.
+OUT="$(timeout 20 "$SCRIPT" "$T/h1.sh" 2>&1 < <(sleep 45))"; RC=$?
+rc  "H1 the run completes rather than blocking on stdin" 0 "$RC"
+has "H2 the stdin-reading suite still ran to its end" "$OUT" "reached the end"
+
+summary

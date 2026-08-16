@@ -24,16 +24,13 @@
 #
 # usage: ./bin/tests/ownership-audit.test.sh   (exit 0 = all pass)
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 AUD="$REPO/bin/ownership-audit.sh"
 
-pass=0; fail=0
-ok()  { printf '  ok   %s\n' "$*"; pass=$((pass+1)); }
-bad() { printf '  FAIL %s\n' "$*"; fail=$((fail+1)); }
 rc_is() { if [ "$2" = "$3" ]; then ok "$1 (rc=$3)"; else bad "$1: expected rc $2, got $3"; fi; }
-has()   { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1: output did not contain '$3'" ;; esac; }
-hasnt() { case "$2" in *"$3"*) bad "$1: output contained '$3' and should not have" ;; *) ok "$1" ;; esac; }
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -359,6 +356,6 @@ printf '%s\n' "$OUT" | grep -E 'FOREIGN SHARE' | sed 's/^ */  witness: /'
 printf '%s\n' "$OUT" | grep -E '^ *NOTE \[' | sed 's/^ */  witness: /'
 
 echo
-echo "ownership-audit.test: $pass passed, $fail failed"
+summary
 [ "$fail" -eq 0 ] || exit 1
 exit 0
