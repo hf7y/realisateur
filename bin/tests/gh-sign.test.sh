@@ -62,14 +62,10 @@ case "$stamp_date" in
 esac
 
 # --- 2b. the Z must be TRUE, not just present ------------------------------
-# `local TZ=UTC` shipped here for months and was a no-op IN THE ONE CASE THAT
-# MATTERS. `local` creates a shell variable; `printf %(...)T` formats through
-# libc, which reads TZ from the ENVIRONMENT. When TZ is already exported the
-# local inherits the export attribute and the value did reach libc -- so
-# setting TZ here would test nothing. With TZ ABSENT, which is the ordinary
-# state of a login shell and of cron, nothing exported it and every stamp
-# carried /etc/localtime wearing a `Z`. Case 2 above could not see it: the
-# SHAPE was always right.
+# `local TZ=UTC` shipped for months and is a no-op only when TZ is UNSET: with
+# TZ exported, bash's `local` inherits the export and the value does reach
+# libc, so SETTING TZ here would test nothing. Unset is the ordinary state of
+# a login shell and of cron. Case 2 above pinned the SHAPE, always right.
 utc_hour="$(date -u +%H)"
 if [ "$utc_hour" = "$(date +%H)" ]; then
   echo "  SKIP  Z-is-true: this host's localtime IS UTC, so the bug cannot show here" >&2
@@ -186,10 +182,8 @@ out="$(GH_SIGN_BUILD_ROOTS="$TMP/builds" PATH="$TMP/stub:$PATH" "$BASH_BIN" "$GS
 contains "a copy that is in no build says so rather than claiming freshness" "$out" "unbuilt"
 
 # --- 11. WHO IS AT THE KEYBOARD, not which host (scheduler#147) ------------
-# The shim was kept off mandark so Zach's own comments stayed unsigned, which
-# is the signal decision-rot.sh reads. Host was a proxy for actor and agents
-# run on mandark, so an agent comment from there was read as Zach ANSWERING.
-# These pin the replacement: cron signs, an agent signs, a human does not.
+# Host was a proxy for actor, so an agent comment from mandark was read as
+# Zach ANSWERING. Cron signs, an agent signs, a human does not.
 reset
 env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
   GH_LOG="$TMP/gh.log" GH_LAST_BODY="$TMP/gh.body" \
@@ -207,8 +201,8 @@ case "$(lastline)" in
   *) bad "signed" "last non-blank line: $(lastline)" ;;
 esac
 
-# The human path needs a real terminal, so it needs a pty. Skipping is said
-# out loud: an assertion that quietly does not run is worse than none.
+# The human path needs a pty. The skip is said out loud: an assertion that
+# quietly does not run is worse than none.
 if command -v script >/dev/null 2>&1; then
   reset
   script -qec "env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
