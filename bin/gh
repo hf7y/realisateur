@@ -113,10 +113,16 @@ BUILD_ROOTS="${GH_SIGN_BUILD_ROOTS:-/usr/local/share/verb-builds ${XDG_DATA_HOME
 # was -- `build 2026-08-16T0130Z`, or `... STALE 46d`, or `unbuilt`. Without
 # it a body proves who wrote it and says nothing about what rules were in
 # force, which is the question every one of these stamps gets read to answer.
+# `TZ=UTC` PREFIXES THE printf, and does not merely precede it. `local TZ=UTC`
+# was here and was a no-op: it sets a shell variable, and `printf %(...)T`
+# formats through libc, which reads TZ from the ENVIRONMENT. So every stamp
+# ever written carried local time wearing a `Z` -- five hours early on this
+# host, and a different lie per host. The suite could not see it: it pinned
+# the ISO8601 SHAPE, which was always right, and never the value.
 stamp() {
-  local TZ=UTC who
+  local who
   who="$(id -un 2>/dev/null)" || who="${USER:-${LOGNAME:-?}}"
-  printf '%s %s@%s %(%Y-%m-%dT%H:%M:%SZ)T %s -->\n' \
+  TZ=UTC printf '%s %s@%s %(%Y-%m-%dT%H:%M:%SZ)T %s -->\n' \
     "$MARKER" "$who" "${HOSTNAME%%.*}" -1 "$(origin)"
 }
 
@@ -221,8 +227,11 @@ build_age_days() {
     [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T*) ;;
     *) return 1 ;;
   esac
-  local TZ=UTC now
-  now="$(printf '%(%Y %m %d)T' -1)"
+  # Same no-op as in stamp(): TZ must prefix the printf, not merely precede it.
+  # Here it moved the DAY, not just the clock -- west of UTC every call between
+  # local midnight and 00:00Z computed the staleness age one day short.
+  local now
+  now="$(TZ=UTC printf '%(%Y %m %d)T' -1)"
   # shellcheck disable=SC2086  # three fields, deliberately split
   set -- $now
   printf '%s' $(( $(days_from_civil "$1" "$2" "$3") \
