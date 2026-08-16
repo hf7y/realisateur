@@ -399,6 +399,16 @@ if command -v flock >/dev/null 2>&1; then
   OUT="$(PATH="$BASE_PATH" "$CONSIGNE" lock --vault=/no/such/dir -- echo hi 2>&1)"; rc=$?
   check "lock --vault of a missing dir is BLIND (6), not a silent lock" "$rc" "6"
 
+  # hf7y/realisateur#338: --vault BEFORE the subcommand must resolve to the
+  # same vault as --vault after it, not misparse "lock" as a positional and
+  # then die on the "--" naming the wrong token as the offender.
+  OUT="$(PATH="$BASE_PATH" "$CONSIGNE" --vault "$VL" lock -- echo hi 2>&1)"; rc=$?
+  check "--vault before lock is accepted, not misread as '--' rejected" "$rc" "0"
+  has   "...and runs the wrapped command" "$OUT" "hi"
+
+  OUT="$(PATH="$BASE_PATH" "$CONSIGNE" --vault="$VL" lock -- echo hi 2>&1)"; rc=$?
+  check "--vault=PATH before lock is the same knob" "$rc" "0"
+
   # Contention: hold the lock in a background process, then confirm a second
   # caller times out distinctly rather than hanging or silently proceeding.
   # `flock <file> <command>` (no `--`) is the same command-variant syntax
