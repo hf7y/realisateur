@@ -40,7 +40,13 @@
 # man/*, lib/verb.sh, the branch's own tests -- is branch-native and is not
 # graded. The pairing is DERIVED (same path under bin/, else bin/retired/),
 # so a new carry is guarded the day it lands with nothing to remember to add.
-# RENAMES is the one typed part, because a rename cannot be derived.
+#
+# CARRIES is the typed part, and it says something derivation cannot: this
+# file MUST BE THERE. Derivation can only grade what is already on the branch,
+# so a carry that was never made looks exactly like a file nobody wanted --
+# which is #327 in one sentence: the shim merged, nothing linked it, every
+# check stayed green. A declared row that is absent is a MISSING finding, and
+# `--carry` creates it.
 set -uo pipefail
 
 CLI_NAME='carry-drift.sh'
@@ -74,12 +80,15 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-# A rename cannot be derived from the tree, so it is declared -- and only a
-# rename. `bin/gh` must be named `gh` to shadow the real binary on PATH;
-# `main` cannot call it that without shadowing gh for everyone editing this
-# repo. Rows are <bashified path> <main path>.
-RENAMES='
+# Rows are <path on bashified> <path on main>, and each one asserts BOTH that
+# the file must exist on the branch and what it must equal.
+#
+# `bin/gh` is also the one pair that could not be derived even if it were
+# present: it must be named `gh` to shadow the real binary on PATH, and `main`
+# cannot call it that without shadowing gh for everyone editing this repo.
+CARRIES='
 bin/gh	bin/gh-sign.sh
+bin/lib/body-grammar.sh	bin/lib/body-grammar.sh
 '
 
 say()  { printf '%s\n' "$*"; }
@@ -108,7 +117,7 @@ main_original() {
   local b="$1" from to base
   while IFS=$'\t' read -r from to; do
     [ "$from" = "$b" ] && { printf '%s' "$to"; return 0; }
-  done <<< "$(printf '%s' "$RENAMES" | grep -v '^[[:space:]]*$')"
+  done <<< "$(printf '%s' "$CARRIES" | grep -v '^[[:space:]]*$')"
   [ -f "$ROOT/$b" ] && { printf '%s' "$b"; return 0; }
   base="${b##*/}"
   [ -f "$ROOT/bin/retired/$base" ] && { printf '%s' "bin/retired/$base"; return 0; }
@@ -151,17 +160,41 @@ while read -r b; do
   fi
 done < <(git -C "$ROOT" ls-tree -r --name-only "$REF" -- bin/ 2>/dev/null)
 
+# --- declared, but not there at all -----------------------------------------
+while IFS=$'\t' read -r b m; do
+  [ -n "$b" ] || continue
+  git -C "$ROOT" rev-parse --verify -q "$REF:$b" >/dev/null 2>&1 && continue
+  if [ ! -f "$ROOT/$m" ]; then
+    row BLIND "$b" "declared as carried from $m, which is not in this tree either"
+    findings=$((findings + 1)); continue
+  fi
+  still_drifted+=("$b	$m")
+  if ratcheted "$b" "$m"; then
+    row RATCHETED "$b" "$m -- declared, absent, forgiven"
+    forgiven=$((forgiven + 1))
+  else
+    row MISSING "$b" "$m is declared as carried and is NOT on $REF. Nothing ships it: $CLI_NAME --carry <bashified checkout>"
+    findings=$((findings + 1))
+  fi
+done <<< "$(printf '%s' "$CARRIES" | grep -v '^[[:space:]]*$')"
+
 # --- --carry: write the replica. Never commits: a carry is a change to a -----
 # --- deploy branch and wants the same review as any other. -------------------
 if [ -n "$CARRY_TO" ]; then
   say ""
   say "-- carry (writing into $CARRY_TO; nothing is committed) --------------"
   [ -d "$CARRY_TO" ] || { printf '%s: no such directory: %s\n' "$CLI_NAME" "$CARRY_TO" >&2; exit 2; }
+  skipped=0
   for pair in ${still_drifted[@]+"${still_drifted[@]}"}; do
     b="${pair%%	*}"; m="${pair##*	}"
+    # A ratcheted pair is FORGIVEN, not pending. Carrying it here would smuggle
+    # a reviewed change (what 13 accounts enforce) into a run whose stated job
+    # is the unforgiven rows. Point --ratchet at an empty file to include them.
+    if ratcheted "$b" "$m"; then skipped=$((skipped + 1)); continue; fi
     mkdir -p "$CARRY_TO/${b%/*}"
     cp -p -- "$ROOT/$m" "$CARRY_TO/$b" && say "  carried  $m -> $CARRY_TO/$b"
   done
+  [ "$skipped" -gt 0 ] && say "  $skipped ratcheted pair(s) left alone -- forgiven, and their re-carry is its own review."
   say "  Review the diff, then commit on \`bashified\`. Re-run this to confirm."
 fi
 

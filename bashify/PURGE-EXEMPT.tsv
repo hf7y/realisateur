@@ -99,6 +99,9 @@ ecosim	GAPS.md	EXEMPT-SUBJECT-MATTER	line 101 names the propagated CLAUDE.md che
 gardien	bin/fauche	EXEMPT-SUBJECT-MATTER	lines 119/128: a case-statement list of governance FILENAMES it must skip when reaping OTHER, unpurged repos; the names are its input domain
 gardien	GAPS.md	EXEMPT-SUMMON-DOC	documents a caught bug in contract-state reporting
 gardien	man/garde.1	EXEMPT-SUMMON-DOC	standard exit-4 summon language, verbatim across the estate
+realisateur	bin/gh	EXEMPT-SUBJECT-MATTER	the marker it writes IS `<!-- agent: ... -->`, so the word is the mechanism and not a trace of how the file was produced -- the arme ruling exactly. It dispatches no model and reaches no paid service: its only child process is the real gh (hf7y/realisateur#330).
+realisateur	bin/lib/body-grammar.sh	EXEMPT-SUBJECT-MATTER	the grammar of a body written for another reader to act on; the noun is its subject. Sourced by bin/gh, carried with it.
+realisateur	man/gh.1	EXEMPT-SUBJECT-MATTER	man-page mirror of bin/gh's marker documentation, the same shape as bibliothecaire man/accroche.1.
 scheduler	bin/arme	EXEMPT-SUBJECT-MATTER	ZACH RULING 2026-08-02 "detect vendor names": lines 141/148 ARE the spend detector -- grep -qE \bclaude\b|anthropic decides AGENT vs MIXED vs non-agent
 scheduler	man/arme.1	EXEMPT-SUMMON-DOC	documents arme's core distinction: it arms non-agent maintenance only
 scheduler	test/arme-spend-scope-test.sh	EXEMPT-TEST-ARTIFACT	fixture text built to exercise arme's own spend detector
