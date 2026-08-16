@@ -72,6 +72,15 @@ out="$(bash "$CD" --repo "$REPO" --ratchet "$EMPTY_RATCHET" --carry "$T/wt" 2>&1
 eq  "D1 the drifted file is overwritten with main's" "$(cat "$T/wt/bin/reach-lint.sh")" "main v2"
 has "D2 ...and it says what it wrote" "$out" "carried  bin/reach-lint.sh"
 
+section "D2. --carry leaves a ratcheted pair alone"
+# Carrying a forgiven pair would smuggle a reviewed change into a run whose
+# job is the unforgiven rows.
+rm -rf "$T/wt3"; mkdir -p "$T/wt3/bin"
+printf 'main v1\n' > "$T/wt3/bin/reach-lint.sh"
+out="$(bash "$CD" --repo "$REPO" --ratchet "$T/r.ratchet" --carry "$T/wt3" 2>&1)"
+eq  "D2a a ratcheted pair is not overwritten" "$(cat "$T/wt3/bin/reach-lint.sh")" "main v1"
+has "D2b ...and it says how many it left alone" "$out" "ratcheted pair(s) left alone"
+
 section "E. a rename is followed"
 # bin/gh on bashified is bin/gh-sign.sh on main -- the one pair that cannot be
 # derived from the tree, and the reason the guard has a RENAMES table at all.

@@ -184,11 +184,17 @@ if [ -n "$CARRY_TO" ]; then
   say ""
   say "-- carry (writing into $CARRY_TO; nothing is committed) --------------"
   [ -d "$CARRY_TO" ] || { printf '%s: no such directory: %s\n' "$CLI_NAME" "$CARRY_TO" >&2; exit 2; }
+  skipped=0
   for pair in ${still_drifted[@]+"${still_drifted[@]}"}; do
     b="${pair%%	*}"; m="${pair##*	}"
+    # A ratcheted pair is FORGIVEN, not pending. Carrying it here would smuggle
+    # a reviewed change (what 13 accounts enforce) into a run whose stated job
+    # is the unforgiven rows. Point --ratchet at an empty file to include them.
+    if ratcheted "$b" "$m"; then skipped=$((skipped + 1)); continue; fi
     mkdir -p "$CARRY_TO/${b%/*}"
     cp -p -- "$ROOT/$m" "$CARRY_TO/$b" && say "  carried  $m -> $CARRY_TO/$b"
   done
+  [ "$skipped" -gt 0 ] && say "  $skipped ratcheted pair(s) left alone -- forgiven, and their re-carry is its own review."
   say "  Review the diff, then commit on \`bashified\`. Re-run this to confirm."
 fi
 
