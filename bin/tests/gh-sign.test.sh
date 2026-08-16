@@ -164,6 +164,44 @@ check "...and still writes: fail open outlives the expiry" \
 out="$(GH_SIGN_BUILD_ROOTS="$TMP/builds" PATH="$TMP/stub:$PATH" "$BASH_BIN" "$GS" --stamp)"
 contains "a copy that is in no build says so rather than claiming freshness" "$out" "unbuilt"
 
+# --- 11. WHO IS AT THE KEYBOARD, not which host (scheduler#147) ------------
+# The shim was kept off mandark so Zach's own comments stayed unsigned, which
+# is the signal decision-rot.sh reads. Host was a proxy for actor and agents
+# run on mandark, so an agent comment from there was read as Zach ANSWERING.
+# These pin the replacement: cron signs, an agent signs, a human does not.
+reset
+env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+  GH_LOG="$TMP/gh.log" GH_LAST_BODY="$TMP/gh.body" \
+  PATH="$TMP/stub:$PATH" "$BASH_BIN" "$GS" \
+  issue comment 7 --repo hf7y/widget --body 'from cron' </dev/null >/dev/null 2>&1
+case "$(lastline)" in
+  '<!-- agent: '*) ok "no agent env and no TTY is CRON, and cron is still signed" ;;
+  *) bad "signed" "last non-blank line: $(lastline)" ;;
+esac
+
+reset
+CLAUDECODE=1 run issue comment 7 --repo hf7y/widget --body 'from an agent' >/dev/null 2>&1
+case "$(lastline)" in
+  '<!-- agent: '*) ok "a declared agent session is signed" ;;
+  *) bad "signed" "last non-blank line: $(lastline)" ;;
+esac
+
+# The human path needs a real terminal, so it needs a pty. Skipping is said
+# out loud: an assertion that quietly does not run is worse than none.
+if command -v script >/dev/null 2>&1; then
+  reset
+  script -qec "env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+    GH_LOG='$TMP/gh.log' GH_LAST_BODY='$TMP/gh.body' \
+    PATH='$TMP/stub:$PATH' '$BASH_BIN' '$GS' \
+    issue comment 7 --repo hf7y/widget --body 'typed by hand'" /dev/null >/dev/null 2>&1
+  case "$(lastline)" in
+    '<!-- agent: '*) bad "a human's comment left unsigned" "it was signed: $(lastline)" ;;
+    *) ok "a TTY with no agent session is a human, and is NOT signed" ;;
+  esac
+else
+  echo "  SKIP  human-at-keyboard: no \`script\` to allocate a pty" >&2
+fi
+
 # cut-verb-build.sh probes `--help` on every command in a build and refuses
 # the whole cut on a bad exit. Without this the shim would fail 33 verbs on
 # any runner that has no gh installed.
