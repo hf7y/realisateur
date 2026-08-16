@@ -74,7 +74,8 @@ SCHED_ROOT="${SCHED_ROOT:-$PROJECTS_ROOT/scheduler}"
 
 die() { printf 'notify-senechal: FAIL: %s\n' "$*" >&2; exit 1; }
 
-# THIS DOOR NO LONGER ACCEPTS PROSE (Zach-directed, 2026-08-16).
+# THIS DOOR NO LONGER ACCEPTS PROSE (Zach-directed, 2026-08-16;
+# hf7y/senechal#323, follow-on hf7y/senechal#324).
 #
 # It used to take one free-text argument and file a paragraph. Every consumer
 # on senechal's side reads STRUCTURE -- health/dead-config.sh reads
