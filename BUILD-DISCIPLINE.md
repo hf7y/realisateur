@@ -545,6 +545,25 @@ patterns are the ones any fast-moving, self-iterating project regenerates.
     census is an instance of the class it cannot see.** Write one.
 
 
+21. **A guard that fails safe but never clears.** An outage with better
+    manners than an outage. Scheduler `fb485e0`: the paced runner's PULL gate
+    was a bare `git status --porcelain`, so one *untracked* scratch file
+    pinned a dispatcher's deployed code at whatever commit it sat on,
+    indefinitely, announced by a `*/5` log line nobody reads. It scored
+    perfectly on the only thing it measured — it never once pulled over a
+    dirty tree — while the failure it caused was invisible to it. At estate
+    scale in hf7y/scheduler#61/#29/#82: a dirty `BLOCKERS.md` blocked
+    vim-arcade's clone for seven commits.
+
+    Row 14 is a sensor failing toward OK. This is a guard succeeding toward
+    stuck. Row 16 is adjacent and not the same: there a correct refusal is
+    unretried; here the condition **cannot clear on its own**, because the
+    guard's own inaction preserves it.
+
+    **The test:** can the condition this guard waits on clear without a
+    human? If not, it needs a deadline or a voice, not just a refusal.
+
+
 ## The disciplines (stated as mechanical rules)
 
 The rule of this file: prefer a **mechanical guard** (a test, a lint, a
