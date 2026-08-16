@@ -45,7 +45,7 @@
 # them by DELETION: milestone-audit.sh and install-silence-audit.sh were
 # RETIRED in b3fef3d, closeout-lint.sh was fixed in place, session-marker.sh
 # converted here. The sweep found three MORE the list never named --
-# reach-lint.sh, stamp-agent.sh, make-bootstrap-branch.sh -- which is the
+# reach-lint.sh -- which is the
 # argument for a ratchet over a list, so bin/tests/conf.test.sh section C now
 # scans the tree for the shape and no prose here has to be kept accurate.
 

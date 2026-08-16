@@ -90,7 +90,7 @@ project bars here.
 
 **One correction to the record:** `milestone-audit` reporting realisateur and
 scheduler MISSING is a **three-day-old regression**, not an omission —
-`bin/stamp-agent.sh` deleted both sections on 07-29 (`d35f49f` −4,444 lines;
+`bin/stamp-agent.sh` (since removed, #278) deleted both sections on 07-29 (`d35f49f` −4,444 lines;
 `7289527`). Their text survives in `ecosim/sensors/milestones-baseline.json`.
 Restoring them is recovery work, which is why it is a first action and not a
 gate.
