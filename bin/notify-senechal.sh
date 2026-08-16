@@ -101,14 +101,27 @@ die() { printf 'notify-senechal: FAIL: %s\n' "$*" >&2; exit 1; }
 # copied: this script hardcoding a senechal contract is the exact shape that
 # took senechal's issue-janitor blind for a day when the footer was dropped
 # (senechal#221). senechal can add a door without an edit in this repo.
-DOORS_URL="${NOTIFY_DOORS_URL:-https://raw.githubusercontent.com/hf7y/senechal/main/registry/front-doors.json}"
+#
+# FETCHED WITH `gh api`, NOT curl. hf7y/senechal is a PRIVATE repository, so
+# an unauthenticated raw.githubusercontent.com GET returns 404 -- identical
+# from here to "the file does not exist". Measured 2026-08-16, on the first
+# real call this door ever took: every filing died at
+#   "could not fetch senechal's door schema ... filing unvalidated is not the
+#    fallback"
+# and, correctly, filed nothing. The refusal was right; the fetch was wrong.
+# `gh` was already a hard requirement below (it is what files the issue), so
+# routing the schema through it removes the curl dependency rather than adding
+# one, and the token that can read the repo is the same one that can post to it.
+DOORS_REPO="${NOTIFY_DOORS_REPO:-hf7y/senechal}"
+DOORS_PATH="${NOTIFY_DOORS_PATH:-registry/front-doors.json}"
+DOORS_URL="$DOORS_REPO/$DOORS_PATH"
 
 usage() {
   printf "notify-senechal.sh -- file a machine-config fact through senechal's typed door\n\n"
   printf "usage:\n  notify-senechal.sh <door> <field>=<value> ...\n\n"
   printf "example:\n"
   printf "  notify-senechal.sh footprint id=spawn-here-symlinks kind=path \\\\\n"
-  printf "    target=/home/zach/.local/bin/spawn-here host=mandark owner=senechal \\\\\n"
+  printf "    target=\"\$HOME/.local/bin/spawn-here\" host=mandark owner=senechal \\\\\n"
   printf "    status=live retire='remedies/window-spawn-desktop.sh disable' \\\\\n"
   printf "    notes='installed by the window-spawn-desktop remedy'\n\n"
   printf "This door does NOT accept free text. The doors and their required fields\n"
@@ -126,6 +139,10 @@ usage() {
 
 command -v python3 >/dev/null 2>&1 || die "python3 is not on PATH -- cannot validate against senechal's door schema, and filing unvalidated is what this replaces"
 
+# --help before the fetch: the one call a confused caller makes is the one that
+# must work on a host with no network and no auth.
+case "${1:-}" in --help|-h) usage; exit 0 ;; esac
+
 # Fetched once into a file: the validation and the payload are then built from
 # the same bytes, and a schema that moved mid-run cannot produce a filing that
 # satisfies neither version.
@@ -135,8 +152,8 @@ if [ -n "${NOTIFY_DOORS_FILE:-}" ]; then
   cat "$NOTIFY_DOORS_FILE" > "$doors_file" 2>/dev/null \
     || die "NOTIFY_DOORS_FILE=$NOTIFY_DOORS_FILE could not be read"
 else
-  command -v curl >/dev/null 2>&1 || die "curl is not on PATH -- cannot fetch senechal's door schema from $DOORS_URL"
-  curl -fsSL "$DOORS_URL" -o "$doors_file" \
+  command -v gh >/dev/null 2>&1 || die "gh is not on PATH -- cannot fetch senechal's door schema from $DOORS_URL"
+  gh api "repos/$DOORS_REPO/contents/$DOORS_PATH" -H 'Accept: application/vnd.github.raw' > "$doors_file" 2>/dev/null \
     || die "could not fetch senechal's door schema from $DOORS_URL -- filing unvalidated is not the fallback"
 fi
 python3 -c 'import json,sys; json.load(open(sys.argv[1]))["doors"]' "$doors_file" \
