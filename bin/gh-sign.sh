@@ -10,18 +10,15 @@
 # comments across five repos were stamped. Why the GitHub App cannot own this
 # half of attribution, and the measurement: hf7y/realisateur#327.
 #
-# It also REFUSES an `issue create` / `pr create` whose body breaks the body
-# grammar in lib/body-grammar.sh -- admission control, not an audit. The two
-# workflows that graded that same text after the fact (claim-drift.yml,
-# deferral-ledger.yml) are not required checks on main, so nothing they found
-# could ever block anything; the write is the only place the rule bites.
+# It also REFUSES an `issue create` / `pr create` whose body breaks
+# lib/body-grammar.sh. claim-drift.yml and deferral-ledger.yml grade the same
+# text afterwards and are not required checks on main, so the write is the
+# only place the rule bites.
 #
-# FAIL OPEN ON MACHINERY, CLOSED ON GRAMMAR. Every MECHANICAL failure -- no
-# real gh, an unreadable --body-file, an unrecognised subcommand, a missing
-# grammar library -- execs the real gh with the ORIGINAL argv. An unsigned
-# comment is the status quo; a dropped one is not. A body that violates a rule
-# the shim COULD read is the one case it stops, because a malformed body that
-# reaches GitHub is what every deleted auditor existed to chase afterwards.
+# FAIL OPEN ON MACHINERY, CLOSED ON GRAMMAR. No real gh, an unreadable
+# --body-file, an unrecognised subcommand, a missing grammar library: exec the
+# real gh with the ORIGINAL argv. A body that breaks a rule the shim could
+# read is the one case it stops.
 #
 #   gh-sign.sh <any gh argv>        sign if it is a body-carrying write, then exec gh
 #   gh-sign.sh --self-check         prove the shim resolves a real gh that is not itself
@@ -64,11 +61,9 @@ real_gh() {
   return 1
 }
 
-# The grammar lives next to this file. When the shim is reached through a
-# symlink (/usr/local/bin/gh) ${BASH_SOURCE[0]} is the LINK, so lib/ is not
-# beside it -- hence GH_SIGN_LIB, set by whatever installs the link. A missing
-# library is announced and then fallen through: BLIND, loudly, never silently
-# clean. `%/*` rather than dirname: no external commands here, see stamp().
+# Through a symlink (/usr/local/bin/gh) ${BASH_SOURCE[0]} is the LINK, so lib/
+# is not beside it -- hence GH_SIGN_LIB, set by whatever installs the link.
+# `%/*` rather than dirname: no external commands here, see stamp().
 GRAMMAR="${GH_SIGN_LIB:-${BASH_SOURCE[0]%/*}/lib}/body-grammar.sh"
 grammar_ok=0
 # shellcheck source=lib/body-grammar.sh
@@ -129,13 +124,9 @@ else
   body="$(cat -- "${args[$bi]}" 2>/dev/null)" || exec "$GH" "$@"
 fi
 
-# ADMISSION CONTROL. A create is the one write whose body is a contract with
-# whoever reads the tracker next, and the only one that can still be corrected
-# for free -- it does not exist yet. Comments are exempt: a thread reply is not
-# where a DEFERRED block belongs, and refusing one would lose the reply.
-#
-# There is no bypass flag on purpose. A documented override turns a guard into
-# a toll booth: everyone pays it once and then always. Fix the body.
+# Comments are exempt: a DEFERRED block does not belong in a thread reply, and
+# refusing one loses the reply. No bypass flag: a documented override turns a
+# guard into a toll booth.
 case "${1:-} ${2:-}" in
   'issue create'|'pr create')
     if [ "$grammar_ok" -eq 1 ]; then

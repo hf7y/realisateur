@@ -1,52 +1,43 @@
 #!/usr/bin/env bash
 # lib/body-grammar.sh -- the grammar of an agent-written issue or PR body.
+# Sourced by bin/gh-sign.sh (refuses at the write) and bin/claim-drift.sh.
+# Pure bash: gh-sign runs under cron's PATH, where sed and grep were not found.
 #
-# ONE definition, sourced by everything that has an opinion about a body:
-# bin/gh-sign.sh checks it at the write, bin/claim-drift.sh reads the same
-# declaration when it grades an open PR. Before this file the first-line rule
-# lived in claim-drift.sh (twice -- `declares_itself` and `declaration_kind`
-# differ only in return shape) and the DEFERRED rule lived in
-# deferral-ledger.sh, and neither could see the other.
+#   UNDECLARED          line 1 is neither DECISION: nor NO-DECISION:
+#   NO-DECIDER          declared, named no @handle
+#   MISPLACED-DECISION  a declaration below line 1
+#   UNLEDGERED          no <!-- DEFERRED --> block
+#   MULTI-LEDGER        more than one
+#   UNCLOSED            opened, never closed
+#   EMPTY-LEDGER        no entries; write "- none"
+#   NO-DESTINATION      an entry naming no issue and no URL
 #
-# Pure bash. No subprocess, no external command: gh-sign.sh runs in front of
-# every gh call including cron's, under a minimal PATH where `sed` and `grep`
-# were "command not found".
-#
-# RULES, each with a code that is printed and never renumbered:
-#   MISPLACED-DECISION  a `DECISION:`/`NO-DECISION:` line that is not the
-#                       first non-empty line. The convention makes the FIRST
-#                       line the whole signal; one buried at line 40 is a
-#                       decision nobody was asked to make.
-#   UNLEDGERED          no `<!-- DEFERRED -->` block. Silence and
-#                       nothing-was-deferred are indistinguishable.
-#   MULTI-LEDGER        more than one block; a reader cannot tell which is current.
-#   UNCLOSED            opened, never closed -- everything after reads as an entry.
-#   EMPTY-LEDGER        the block has no entries. Write `- none` and mean it.
-#   NO-DESTINATION      an entry naming neither an issue nor `NO-OWNER: <why>`.
+# NO-OWNER: is not a destination. #327 deferred two things to it and one to
+# hf7y/vim-arcade#143; the issue is open and findable, and the two are lost --
+# 0 issues mention gh-sign anywhere, /usr/local/bin/gh does not exist, so #327
+# merged as a no-op. `defere` files one in a command; cite the number.
 
-GRAMMAR_NO_OWNER_MIN="${GRAMMAR_NO_OWNER_MIN:-25}"
+GRAMMAR_DECIDER_RE='@[A-Za-z0-9][-A-Za-z0-9_/]*'
 
-# Printed by the refusal, where a reader actually needs it -- not behind a
-# `--template` flag on a separate command they would have to already know about.
 grammar_template() {
   cat <<'EOF'
+DECISION: @zach -- may a verb build claim /usr/local/bin/gh on monkey?
+NO-DECISION: @zach asked for this exact change; tests green, nothing to weigh
+
 <!-- DEFERRED -->
 - none
 <!-- /DEFERRED -->
 
-...or, one line each, naming where the work went. `defere` writes these:
+...or one line each, every one naming an issue. `defere` files them:
 
 <!-- DEFERRED -->
 - hf7y/chezz#12 -- orphaned ecosystem-survey shim on chezz@monkey
-- NO-OWNER: free the 4th bootstrap slot -- changes what four live accounts
-  must hold before they can fetch anything; needs a human decision
-<!-- /DEFERRED -->
+- hf7y/realisateur#330 -- gh-sign is linked nowhere; needs a human call
 EOF
 }
 
-# decision | no-decision | none -- what the body's first non-empty line opens
-# with, markdown furniture stripped. The word must OPEN the line: matching it
-# anywhere lets a body that merely quotes the convention exempt itself.
+# decision | no-decision | none, from the first non-empty line. The word must
+# OPEN the line, or a body quoting the convention exempts itself.
 grammar_declaration() {
   local line stripped
   while IFS= read -r line; do
@@ -61,34 +52,28 @@ grammar_declaration() {
   printf 'none\n'
 }
 
-# Print one `CODE  message` line per violation; return the count (capped at
-# 125 so it survives being used as an exit status). Never exits: the caller
-# decides whether a finding refuses a write or annotates a PR.
+# Prints `CODE  message` per violation; returns the count. Never exits.
 grammar_check() {
   local body="$1" line stripped n=0 lineno=0 first_seen=0
-  local open=0 close=0 in_block=0 entries=0 entry='' fenced=0
+  local open=0 in_block=0 entries=0 entry='' fenced=0
 
   _find() { printf '%s  %s\n' "$1" "$2"; n=$((n + 1)); }
 
-  # An entry is a bullet plus its continuation lines; judge it when the next
-  # bullet (or the closing marker) arrives, not per physical line.
+  # An entry is a bullet plus its continuation lines; judged when the next
+  # bullet or the closing marker arrives.
   _judge_entry() {
     [ -n "$entry" ] || return 0
     entries=$((entries + 1))
     case "$entry" in
       *[a-zA-Z0-9_.-]/[a-zA-Z0-9_.-]*'#'[0-9]*) entry=''; return 0 ;;
-      *http*://*) entry=''; return 0 ;;
-      '- none'|'- none.'|'-none') entry=''; return 0 ;;
+      *http*://*)                               entry=''; return 0 ;;
+      '- none'|'- none.'|'-none')               entry=''; return 0 ;;
     esac
     case "$entry" in
-      *NO-OWNER:*)
-        local why="${entry#*NO-OWNER:}"
-        why="${why#"${why%%[![:space:]]*}"}"
-        if [ "${#why}" -lt "$GRAMMAR_NO_OWNER_MIN" ]; then
-          _find NO-DESTINATION "\`NO-OWNER:\` with no reason (>= $GRAMMAR_NO_OWNER_MIN chars saying why nothing can own it): ${entry:0:70}"
-        fi ;;
+      *NO-OWNER:*|*'NO OWNER:'*)
+        _find NO-DESTINATION "\`NO-OWNER:\` is not a destination -- \`defere\` it, cite the number: ${entry:0:60}" ;;
       *)
-        _find NO-DESTINATION "names no issue and does not say NO-OWNER: ${entry:0:70}" ;;
+        _find NO-DESTINATION "names no issue and no URL: ${entry:0:70}" ;;
     esac
     entry=''
   }
@@ -99,18 +84,15 @@ grammar_check() {
     [ "$fenced" -eq 1 ] && continue
 
     stripped="${line#"${line%%[![:space:]]*}"}"
-
     case "$stripped" in
-      '<!-- DEFERRED -->'|'<!--DEFERRED-->')
-        open=$((open + 1)); in_block=1; continue ;;
-      '<!-- /DEFERRED -->'|'<!--/DEFERRED-->')
-        _judge_entry; close=$((close + 1)); in_block=0; continue ;;
+      '<!-- DEFERRED -->'|'<!--DEFERRED-->')   open=$((open + 1)); in_block=1; continue ;;
+      '<!-- /DEFERRED -->'|'<!--/DEFERRED-->') _judge_entry; in_block=0; continue ;;
     esac
 
     if [ "$in_block" -eq 1 ]; then
       case "$stripped" in
         '- '*|'* '*|[0-9]*'. '*) _judge_entry; entry="$stripped" ;;
-        '') _judge_entry ;;
+        '')                      _judge_entry ;;
         *) [ -n "$entry" ] && entry="$entry $stripped" ;;
       esac
       continue
@@ -120,16 +102,25 @@ grammar_check() {
     local decl="${stripped#"${stripped%%[![:space:]#>*_-]*}"}"
     case "$decl" in
       [Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*|[Nn][Oo]-[Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*)
-        [ "$first_seen" -eq 1 ] && _find MISPLACED-DECISION \
-          "line $lineno opens with a decision, but the first non-empty line did not. The convention reads line 1 only." ;;
+        if [ "$first_seen" -eq 1 ]; then
+          _find MISPLACED-DECISION "line $lineno declares, but line 1 did not. The convention reads line 1 only."
+        else
+          [[ $decl =~ $GRAMMAR_DECIDER_RE ]] || _find NO-DECIDER \
+            'the declaration names no decider. Line 1: "DECISION: @who -- <the call>".'
+        fi ;;
+      *) [ "$first_seen" -eq 0 ] && [ "$open" -eq 0 ] && _find UNDECLARED \
+           'line 1 is neither `DECISION:` nor `NO-DECISION:`. Every body declares one.' ;;
     esac
     first_seen=1
   done <<<"$body"
 
-  [ "$in_block" -eq 1 ] && { _judge_entry; _find UNCLOSED 'the DEFERRED block is never closed (<!-- /DEFERRED --> missing).'; }
+  # A body that is entirely a ledger never reached the check above.
+  [ "$first_seen" -eq 0 ] && _find UNDECLARED 'no first line to declare on.'
+
+  [ "$in_block" -eq 1 ] && { _judge_entry; _find UNCLOSED 'the DEFERRED block is never closed.'; }
   [ "$open" -eq 0 ] && _find UNLEDGERED 'no <!-- DEFERRED --> block. Say what was left behind, or "- none".'
-  [ "$open" -gt 1 ] && _find MULTI-LEDGER "$open DEFERRED blocks -- a reader cannot tell which is current. Keep one."
-  [ "$open" -ge 1 ] && [ "$entries" -eq 0 ] && _find EMPTY-LEDGER 'the DEFERRED block is empty. Write "- none" and mean it, or list what was left.'
+  [ "$open" -gt 1 ] && _find MULTI-LEDGER "$open DEFERRED blocks -- a reader cannot tell which is current."
+  [ "$open" -ge 1 ] && [ "$entries" -eq 0 ] && _find EMPTY-LEDGER 'the DEFERRED block is empty. Write "- none".'
 
   [ "$n" -gt 125 ] && n=125
   return "$n"

@@ -1,35 +1,15 @@
 # deferral-ledger.yml -- grade a live PR body against bin/lib/body-grammar.sh.
 #
-# WHY A SEPARATE WORKFLOW, and not a job in tests.yml: tests.yml globs
-# bin/tests/*.sh and runs suites against the CHECKOUT. This runs against the
-# live pull request's BODY, which is not in the checkout and does not change
-# when the checkout does. Different subject, different trigger.
-#
-# THE EVENT LIST IS LOAD-BEARING. `edited` is NOT in the default
-# `pull_request` set, and it is the single most important event here: a PR
-# body changes with no commit, no push and no `synchronize`. Adding the ledger
-# -- the one act that turns this check green -- emits `edited` and nothing
-# else. Without it the author would fix the finding and watch the check stay
-# red, which is how a guard gets ignored and then deleted.
+# Separate from tests.yml because the subject is the live PR BODY, not the
+# checkout. `edited` is not in the default pull_request set and is the most
+# important event here: adding the ledger emits `edited` and nothing else, so
+# without it an author fixes the finding and watches the check stay red.
 # bin/tests/body-grammar.test.sh case I2 pins it.
 #
-# `ready_for_review` is here because a draft is allowed to be incomplete, but
-# marking ready IS the completion claim, and "I am done" while deferring
-# unfiled work is precisely the claim this repository spent 2026-08-07 making
-# ten times.
-#
-# THIS IS THE BACKSTOP, NOT THE ENFORCEMENT. bin/gh-sign.sh refuses a
-# malformed body at `gh pr create`, before it exists. This catches the bodies
-# that never passed through the shim: one written from mandark (deliberately
-# unshimmed), or edited in the GitHub web UI afterwards. It runs the SAME
-# `grammar_check` the shim runs -- one grammar, two readers, no second copy to
-# drift. It replaced a 487-line auditor that reimplemented the same rules and
-# carried its own `gh` plumbing to reach a body that had already been written.
-#
-# It is not a required status check on main (`markdown-cost`, `suites` and
-# `shellcheck` are, probed 2026-08-15), so a red run here surfaces and does
-# not block. The header this file replaced claimed branch protection answered
-# 403 on this plan -- it has not since at least 2026-08-11.
+# THE BACKSTOP, NOT THE ENFORCEMENT. gh-sign.sh refuses at `gh pr create`;
+# this catches bodies that never passed the shim (mandark is unshimmed, the
+# web UI edits afterwards) by running the SAME grammar_check. Not a required
+# check on main (markdown-cost, suites, shellcheck are), so it surfaces only.
 
 name: deferral-ledger
 

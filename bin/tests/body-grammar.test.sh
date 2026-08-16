@@ -4,12 +4,9 @@
 #
 # SUBJECT: bin/lib/body-grammar.sh, bin/gh-sign.sh, .github/workflows/deferral-ledger.yml
 #
-# It replaces bin/tests/deferral-ledger.test.sh. The rules it pins are the
-# same rules; what changed is WHERE they bite. deferral-ledger.sh read a body
-# back off GitHub after the body existed and annotated a check that main does
-# not require. The shim reads the same body out of argv before `gh` is called
-# and refuses. Section S is the part the old suite could not have: a
-# demonstration that a malformed body does not reach the network.
+# Replaces bin/tests/deferral-ledger.test.sh: same rules, enforced at the
+# write instead of audited after it. Section S is what the old suite could not
+# have -- proof that a malformed body never reaches the network.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
@@ -33,13 +30,13 @@ chmod +x "$T/bin/gh"
 findings() { local o; o="$(grammar_check "$1")"; printf '%s' "$?"; : "$o"; }
 codes()    { grammar_check "$1" | while read -r c _; do printf '%s ' "$c"; done; }
 
-GOOD='DECISION: link the shim host-wide?
+GOOD='DECISION: @zach -- link the shim host-wide?
 
 Prose about the change.
 
 <!-- DEFERRED -->
 - hf7y/vim-arcade#143 -- drop the third copy of the retired grammar
-- NO-OWNER: free the fourth bootstrap slot; it changes what four live accounts must hold
+- hf7y/realisateur#330 -- gh-sign is linked nowhere, so nothing is signed
 <!-- /DEFERRED -->'
 
 section 'A. the declaration is read from the FIRST non-empty line only'
@@ -66,7 +63,7 @@ DECISION: buried at line 3
 eq  'B2 the well-formed body is clean' "$(findings "$GOOD")" 0
 # A decision inside a fenced block is quoted code, not a claim on a human.
 eq  'B3 a fenced example is not a buried decision' \
-  "$(findings 'body
+  "$(findings 'NO-DECISION: @zach nothing to weigh
 
 ```
 DECISION: this is an example
@@ -78,51 +75,52 @@ DECISION: this is an example
 
 section 'C. the DEFERRED block'
 has 'C1 absent block is UNLEDGERED'   "$(codes 'a body with no ledger at all')" UNLEDGERED
-has 'C2 empty block is EMPTY-LEDGER'  "$(codes 'b
+has 'C2 empty block is EMPTY-LEDGER'  "$(codes 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 <!-- /DEFERRED -->')" EMPTY-LEDGER
-has 'C3 two blocks are MULTI-LEDGER'  "$(codes 'b
+has 'C3 two blocks are MULTI-LEDGER'  "$(codes 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - none
 <!-- /DEFERRED -->
 <!-- DEFERRED -->
 - none
 <!-- /DEFERRED -->')" MULTI-LEDGER
-has 'C4 an unclosed block is UNCLOSED' "$(codes 'b
+has 'C4 an unclosed block is UNCLOSED' "$(codes 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - hf7y/chezz#12 -- a thing')" UNCLOSED
-eq  'C5 "- none" is a complete, passing answer' "$(findings 'b
+eq  'C5 "- none" is a complete, passing answer' "$(findings 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - none
 <!-- /DEFERRED -->')" 0
 
 section 'D. every entry names a destination'
-has 'D1 a bare intention has none' "$(codes 'b
+has 'D1 a bare intention has none' "$(codes 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - clean up the ratchets sometime
 <!-- /DEFERRED -->')" NO-DESTINATION
-eq 'D2 owner/repo#N is a destination' "$(findings 'b
+eq 'D2 owner/repo#N is a destination' "$(findings 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - hf7y/scheduler#49 -- the sibling issue
 <!-- /DEFERRED -->')" 0
-eq 'D3 a URL is a destination' "$(findings 'b
+eq 'D3 a URL is a destination' "$(findings 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - https://github.com/hf7y/realisateur/issues/327 -- the read side
 <!-- /DEFERRED -->')" 0
-# NO-OWNER is a first-class PASSING answer on purpose: banning it does not
-# create an owner, it creates a fake one. What it must carry is the reason.
-eq 'D4 NO-OWNER with a real reason passes' "$(findings 'b
+# NO-OWNER is refused however well argued. #327 filed two of them: the issue
+# it DID cite is open and findable, and both ownerless entries are lost --
+# 0 issues mention gh-sign anywhere, and #327 merged as a no-op because of it.
+has 'D4 NO-OWNER is refused even with a full reason' "$(codes 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - NO-OWNER: it needs a human call about all thirteen accounts at once
-<!-- /DEFERRED -->')" 0
-has 'D5 NO-OWNER with no reason does not' "$(codes 'b
+<!-- /DEFERRED -->')" NO-DESTINATION
+has 'D5 and refused without one' "$(codes 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - NO-OWNER: later
 <!-- /DEFERRED -->')" NO-DESTINATION
-eq 'D6 a wrapped reason folds into its bullet' "$(findings 'b
+eq 'D6 a wrapped entry folds into its bullet' "$(findings 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
-- NO-OWNER: it changes what four live accounts must hold before they
-  can fetch anything, so a human decides
+- hf7y/realisateur#330 -- it changes what four live accounts must hold
+  before they can fetch anything, so a human decides
 <!-- /DEFERRED -->')" 0
 
 section 'S. the shim REFUSES, and the refusal is what stops the write'

@@ -62,10 +62,10 @@ case "$stamp_date" in
 esac
 
 reset
-# `issue create` is now grammar-gated (lib/body-grammar.sh), so the fixture
-# carries a well-formed ledger. The case is about the TRAILING BLANK LINES,
-# not the grammar: bin/tests/body-grammar.test.sh owns the refusal itself.
-printf 'multi\nline\n\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n\n\n' > "$TMP/body.txt"
+# `issue create` is grammar-gated (lib/body-grammar.sh), so the fixture is
+# well-formed. The case is about the TRAILING BLANK LINES, not the grammar:
+# bin/tests/body-grammar.test.sh owns the refusal itself.
+printf 'NO-DECISION: @zach nothing to weigh\nline\n\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n\n\n' > "$TMP/body.txt"
 run issue create --repo hf7y/widget --title t --body-file "$TMP/body.txt" >/dev/null 2>&1
 case "$(lastline)" in
   '<!-- agent: '*) ok "trailing blank lines do not push the marker off the end" ;;
