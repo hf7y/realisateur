@@ -179,9 +179,10 @@ printf '%s' "$out" | grep -q "tuned.sh" && \
   ok "H5  does not name the comment-only file"
 
 # The failure mode of stripping comments is dropping a REAL producer that
-# happens to sit under one. bin/stamp-agent.sh is the live shape (#278): a
-# comment block explaining the bootstrap FOCUS.md, then the line that WRITES
-# it. The write must still be caught.
+# happens to sit under one: a comment block explaining the bootstrap
+# FOCUS.md, then the line that WRITES it. That shape was bin/stamp-agent.sh
+# until #278 deleted it; the fixture below keeps the shape so the write is
+# still caught if it reappears.
 rm lib/reader.sh
 printf '# writes the bootstrap .scheduler/FOCUS.md, then gates on it\nwrite_stamp() {\n  echo hi > "$repo/.scheduler/FOCUS.md"\n}\n' > lib/stamp.sh
 git add -A && git commit -qm "comment above a writer"

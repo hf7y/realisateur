@@ -74,7 +74,7 @@ worktree, and dirt this run made from dirt that predates it
 
 Did this session change what this ecosystem *believes* — a rule, a
 doctrine file (`UNIVERSE.md`, `BUILD-DISCIPLINE.md`, `PRECIPITATION.md`,
-`STABILITY-MILESTONES.md`, `PLAYBOOK.md`, `FOCUS-FORMAT.md`, `CLAUDE.md`
+`STABILITY-MILESTONES.md`, `PLAYBOOK.md`, `CLAUDE.md`
 itself)? If yes, name the delta in one sentence and confirm the file was
 actually edited and is part of a commit/PR from step 1 — not just
 described in chat. If no, **say "philosophy delta: none" explicitly.**
