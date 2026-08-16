@@ -61,6 +61,23 @@ case "$stamp_date" in
   *) bad "ISO8601 UTC" "got: $stamp_date" ;;
 esac
 
+# --- 2b. the Z must be TRUE, not just present ------------------------------
+# `local TZ=UTC` shipped for months and is a no-op only when TZ is UNSET: with
+# TZ exported, bash's `local` inherits the export and the value does reach
+# libc, so SETTING TZ here would test nothing. Unset is the ordinary state of
+# a login shell and of cron. Case 2 above pinned the SHAPE, always right.
+utc_hour="$(date -u +%H)"
+if [ "$utc_hour" = "$(date +%H)" ]; then
+  echo "  SKIP  Z-is-true: this host's localtime IS UTC, so the bug cannot show here" >&2
+else
+  nz_hour="$(env -u TZ "$BASH_BIN" "$GS" --stamp | sed -E 's/.*T([0-9]{2}):.*/\1/')"
+  if [ "$nz_hour" = "$utc_hour" ]; then
+    ok "with TZ unset the stamp is still UTC, so the Z is a fact and not a suffix"
+  else
+    bad "hour $utc_hour (UTC)" "hour $nz_hour -- localtime wearing a Z"
+  fi
+fi
+
 reset
 # `issue create` is grammar-gated (lib/body-grammar.sh), so the fixture is
 # well-formed. The case is about the TRAILING BLANK LINES, not the grammar:
@@ -163,6 +180,42 @@ check "...and still writes: fail open outlives the expiry" \
 
 out="$(GH_SIGN_BUILD_ROOTS="$TMP/builds" PATH="$TMP/stub:$PATH" "$BASH_BIN" "$GS" --stamp)"
 contains "a copy that is in no build says so rather than claiming freshness" "$out" "unbuilt"
+
+# --- 11. WHO IS AT THE KEYBOARD, not which host (scheduler#147) ------------
+# Host was a proxy for actor, so an agent comment from mandark was read as
+# Zach ANSWERING. Cron signs, an agent signs, a human does not.
+reset
+env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+  GH_LOG="$TMP/gh.log" GH_LAST_BODY="$TMP/gh.body" \
+  PATH="$TMP/stub:$PATH" "$BASH_BIN" "$GS" \
+  issue comment 7 --repo hf7y/widget --body 'from cron' </dev/null >/dev/null 2>&1
+case "$(lastline)" in
+  '<!-- agent: '*) ok "no agent env and no TTY is CRON, and cron is still signed" ;;
+  *) bad "signed" "last non-blank line: $(lastline)" ;;
+esac
+
+reset
+CLAUDECODE=1 run issue comment 7 --repo hf7y/widget --body 'from an agent' >/dev/null 2>&1
+case "$(lastline)" in
+  '<!-- agent: '*) ok "a declared agent session is signed" ;;
+  *) bad "signed" "last non-blank line: $(lastline)" ;;
+esac
+
+# The human path needs a pty. The skip is said out loud: an assertion that
+# quietly does not run is worse than none.
+if command -v script >/dev/null 2>&1; then
+  reset
+  script -qec "env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT \
+    GH_LOG='$TMP/gh.log' GH_LAST_BODY='$TMP/gh.body' \
+    PATH='$TMP/stub:$PATH' '$BASH_BIN' '$GS' \
+    issue comment 7 --repo hf7y/widget --body 'typed by hand'" /dev/null >/dev/null 2>&1
+  case "$(lastline)" in
+    '<!-- agent: '*) bad "a human's comment left unsigned" "it was signed: $(lastline)" ;;
+    *) ok "a TTY with no agent session is a human, and is NOT signed" ;;
+  esac
+else
+  echo "  SKIP  human-at-keyboard: no \`script\` to allocate a pty" >&2
+fi
 
 # cut-verb-build.sh probes `--help` on every command in a build and refuses
 # the whole cut on a bad exit. Without this the shim would fail 33 verbs on
