@@ -77,42 +77,19 @@ die() { printf 'notify-senechal: FAIL: %s\n' "$*" >&2; exit 1; }
 # THIS DOOR NO LONGER ACCEPTS PROSE (Zach-directed, 2026-08-16;
 # hf7y/senechal#323, follow-on hf7y/senechal#324).
 #
-# It used to take one free-text argument and file a paragraph. Every consumer
-# on senechal's side reads STRUCTURE -- health/dead-config.sh reads
-# estate.footprint, health/hosts-unregistered.sh reads estate.devices -- so
-# every filing needed a human to translate the paragraph into the schema, and
-# senechal's health/unabsorbed-notices.sh existed purely to nag about the
-# backlog of untranslated prose. The nag was the symptom; free text was the
-# defect.
+# A paragraph had to be transcribed into senechal's schema by hand before any
+# consumer there could read it. Full rationale: senechal#323. There is no
+# free-text fallback on purpose -- it would be the path of least resistance and
+# every filing would take it. If no door fits, ADD one to senechal's
+# registry/front-doors.json.
 #
-# The caller already knows the type where it stands. senechal's own
-# remedies/window-spawn-desktop.sh filed "these two symlinks now exist,
-# senechal owns them": a footprint record with kind/target/host/owner,
-# flattened into a sentence, re-parsed by a human days later. So it now sends
-# the object, senechal's tools/absorb-notices.py writes it into the live
-# config unattended, and nobody transcribes anything.
+# The schema is FETCHED, never copied: hardcoding a senechal contract here is
+# what took their issue-janitor blind for a day (senechal#221).
 #
-# WHY THERE IS NO PROSE FALLBACK. A free-text door would always be the path of
-# least resistance and every filing would take it -- which is exactly the
-# state this replaces. If no door fits, the fix is to ADD ONE: a PR to
-# senechal's registry/front-doors.json plus its apply rule in
-# tools/absorb-notices.py. Filing prose is not the fallback; wiring a door is.
-#
-# senechal owns registry/front-doors.json and it is FETCHED here, never
-# copied: this script hardcoding a senechal contract is the exact shape that
-# took senechal's issue-janitor blind for a day when the footer was dropped
-# (senechal#221). senechal can add a door without an edit in this repo.
-#
-# FETCHED WITH `gh api`, NOT curl. hf7y/senechal is a PRIVATE repository, so
-# an unauthenticated raw.githubusercontent.com GET returns 404 -- identical
-# from here to "the file does not exist". Measured 2026-08-16, on the first
-# real call this door ever took: every filing died at
-#   "could not fetch senechal's door schema ... filing unvalidated is not the
-#    fallback"
-# and, correctly, filed nothing. The refusal was right; the fetch was wrong.
-# `gh` was already a hard requirement below (it is what files the issue), so
-# routing the schema through it removes the curl dependency rather than adding
-# one, and the token that can read the repo is the same one that can post to it.
+# Fetched with `gh api`, NOT curl: senechal is PRIVATE, so an unauthenticated
+# raw.githubusercontent.com GET 404s -- indistinguishable from "renamed", and
+# it killed every filing on the first real call. `gh` was already required
+# below, and carries the token.
 DOORS_REPO="${NOTIFY_DOORS_REPO:-hf7y/senechal}"
 DOORS_PATH="${NOTIFY_DOORS_PATH:-registry/front-doors.json}"
 DOORS_URL="$DOORS_REPO/$DOORS_PATH"
