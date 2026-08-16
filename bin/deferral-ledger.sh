@@ -148,19 +148,9 @@
 #      suite be hermetic and lets it be pointed at a body before a PR exists.
 #
 # ============================================================================
-# USAGE
-#   deferral-ledger.sh <pr-number>...        audit the named PRs
-#   deferral-ledger.sh --all                 audit every OPEN pull request
-#   deferral-ledger.sh --body-file <path>    audit a body on disk (offline)
-#   deferral-ledger.sh --strict ...          exit 1 on findings, 6 on BLIND
-#   deferral-ledger.sh --repo <owner/name>   default: the checkout's own remote
-#   deferral-ledger.sh --template            print the block to paste, exit 0
+# usage: `--help`, from CLI_USAGE below. One source.
 #
-# EXIT CODES
-#   0  audited; no --strict, or --strict and nothing found
-#   1  --strict and at least one finding
-#   2  usage error (lib/cli-guard.sh)
-#   6  BLIND -- a body that exists was not read. Not a pass.
+# exit codes: `--help`, from CLI_EXITS below. One source.
 set -uo pipefail
 
 CLI_NAME='deferral-ledger.sh'
