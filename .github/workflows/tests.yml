@@ -115,6 +115,24 @@ jobs:
       - name: Ratchet -- fail only on a finding a file did not already have
         run: bash bin/shellcheck-lint.sh
 
+  # CARRY-DRIFT. Its own suite proves the guard BEHAVES, hermetically, against
+  # fixture repositories. This job asks the guard's actual question about this
+  # repository -- does what `bashified` ships still match what main says --
+  # which is a different claim, and the one that goes stale between merges.
+  #
+  # It reads origin/bashified deliberately: the build is cut from what is
+  # PUBLISHED, and a stale local ref is what made the guard's first draft
+  # report "0 carried files, exit 0" against a branch carrying six. So the ref
+  # has to be fetched -- actions/checkout brings one branch.
+  carry-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make origin/bashified resolvable
+        run: git fetch --no-tags --depth=1 origin +refs/heads/bashified:refs/remotes/origin/bashified
+      - name: What ships must equal what main says
+        run: bash bin/carry-drift.sh
+
   markdown-cost:
     runs-on: ubuntu-latest
     steps:

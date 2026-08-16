@@ -3,10 +3,10 @@
 # `main`, byte for byte, or it is a second copy of the same fact.
 #
 # GUARD: does every file the bashified branch carries still match its original?
-# RUNNER: bin/tests/carry-drift.test.sh
+# RUNNER: .github/workflows/tests.yml -- job carry-drift, against origin/bashified
 # GUARD-TEST: bin/tests/carry-drift.test.sh
 # GATE: default --repo $TREE
-# VERIFIED: 2026-08-16 via bash bin/carry-drift.sh (6 ratcheted, 0 new) and its suite
+# VERIFIED: 2026-08-16 via bash bin/carry-drift.sh (3 ok, 5 ratcheted, 0 findings) and its suite
 #
 # WHY IT EXISTS
 # -------------
