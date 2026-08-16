@@ -69,8 +69,9 @@ MARKER='<!-- agent:'
 # cutter that runs nightly and a tick that adopts within 26 hours.
 #
 # There is no environment override, on purpose. A documented override turns a
-# guard into a toll booth (Zach, 2026-08-15). The build root IS overridable --
-# that is a path, not a policy, and the suite needs it.
+# guard into a toll booth -- Zach, 2026-08-15, in hf7y/realisateur#321. The
+# build root IS overridable: that is a path, not a policy, and the suite needs
+# it.
 STALE_DAYS=14
 BUILD_ROOTS="${GH_SIGN_BUILD_ROOTS:-/usr/local/share/verb-builds ${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"
 
