@@ -82,7 +82,7 @@ CLI_SUMMARY='has a pull request grown since it was presented as done?'
 CLI_USAGE='  claim-drift.sh <pr-number>...        audit the named PRs
   claim-drift.sh --all                 audit every OPEN pull request
   claim-drift.sh --strict ...          exit 1 on drift, 6 on BLIND
-  claim-drift.sh --repo <owner/name>   default: the checkout's own remote'
+  claim-drift.sh --repo <owner/name>   default: the remote of this checkout'
 CLI_FLAGS='--all --strict --repo --convention'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  audited; no --strict, or --strict and nothing drifted
