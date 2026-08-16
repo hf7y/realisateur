@@ -72,19 +72,9 @@
 # still what we merged. This asks whether a completion claim is still what is
 # on the branch. Same question, same vocabulary, other end of the pipe.
 #
-# USAGE
-#   claim-drift.sh <pr-number>...        audit the named PRs
-#   claim-drift.sh --all                 audit every OPEN pull request
-#   claim-drift.sh --strict ...          exit 1 on drift, 6 on BLIND
-#   claim-drift.sh --repo <owner/name>   default: the checkout's own remote
+# usage: `--help`, from CLI_USAGE below. One source.
 #
-# EXIT CODES
-#   0  audited; no --strict, or --strict and nothing drifted
-#   1  --strict and at least one PR has grown since it was claimed done
-#   2  usage error (lib/cli-guard.sh)
-#   6  BLIND -- the tracker could not be read. A domain that existed and was
-#      NOT read is not a pass; 6 is the ecosystem's blind code (garde,
-#      ausculte, closeout-lint) rather than a third invention.
+# exit codes: `--help`, from CLI_EXITS below. One source.
 set -uo pipefail
 
 CLI_NAME='claim-drift.sh'
@@ -97,7 +87,9 @@ CLI_FLAGS='--all --strict --repo --convention'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  audited; no --strict, or --strict and nothing drifted
   1  --strict and at least one PR has grown since it was claimed done
-  6  BLIND -- the tracker could not be read'
+  6  BLIND -- the tracker could not be read. A domain that existed and was
+     NOT read is not a pass; 6 is the ecosystem blind code (garde, ausculte,
+     closeout-lint) rather than a third invention.'
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 

@@ -112,20 +112,9 @@
 # worker is still better than a paragraph, because it is addressable and it
 # accumulates visibly, but it is not the same as done.
 #
-# USAGE
-#   defere.sh '<one line: what was left>' --project <name>
-#   defere.sh '<one line>' --human '<why a person is required>'
-#   defere.sh '<one line>' --unroutable '<why nothing can own it>'
-#     [--body <more detail>] [--from <project>] [--repo owner/name] [--dry-run]
-#   defere.sh --ledger        print this branch's accumulated DEFERRED block
-#   defere.sh --forget        discard this branch's accumulated ledger
+# usage: `--help`, from CLI_USAGE below. One source.
 #
-# EXIT CODES
-#   0  filed (or printed, under --dry-run / --ledger)
-#   1  could not file -- the destination did not resolve, or `gh` refused
-#   2  usage error (lib/cli-guard.sh), including refusing to choose a route
-#   6  BLIND -- `gh` is not available, so nothing was filed and nothing was
-#      established. Not a success.
+# exit codes: `--help`, from CLI_EXITS below. One source.
 set -uo pipefail
 
 CLI_NAME='defere.sh'
