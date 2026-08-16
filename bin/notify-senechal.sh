@@ -10,40 +10,15 @@
 # block inside Zach's crontab: one project owning its own entry inside a
 # shared machine-config surface.
 #
-# WHAT IT RETIRES: the prose promise. Until now this rule lived only as a
-# remembered policy ("cross-write a dated note to senechal's FOCUS.md"), and
-# prose decays -- UNIVERSE.md's own doctrine. On 2026-07-26 the cross-write
-# for the SessionStart/SessionEnd hook was deferred (senechal was mid-run),
-# recorded as owed in QUESTIONS.md, and only paid a session later by hand.
-# That is exactly the failure mode a script removes.
-#
 # WHY THE FRONT DOOR AND NOT A DIRECT WRITE:
 # `scheduler -i senechal` is the one interface senechal publishes for inbound
 # notes. Going around it means guessing where senechal keeps its inbox, which
-# is precisely the coupling the split below exists to prevent.
+# is precisely the coupling the split below exists to prevent. Since
+# scheduler#22 it files a GitHub ISSUE rather than pushing a file, so this
+# script needs no senechal clone and no write access to a default branch.
 #
-# WHAT CHANGED, 2026-08-05 (scheduler#22), and what it retires:
-# `scheduler -i` used to append to a LOCAL .scheduler/FOCUS.md in a senechal
-# clone and push it. It now files a GitHub ISSUE. So everything this script
-# did after the call -- fetch, merge-base containment, a SIGPIPE-safe blob
-# read of FOCUS.md, and a rebase-with-content-verification path for the
-# behind case -- had no subject any more and is DELETED, not switched off.
-#
-# Two things that bought:
-#   * this script no longer needs a senechal CLONE on the host it runs from.
-#     That clone was the last thing pinning senechal to every machine, and it
-#     was pinned by the one command the protocol requires everyone to call.
-#   * it fixes MONKEY.md 8.1(2) from the other side. A self-dev account holds
-#     a READ-ONLY deploy key on senechal, so the old push could never work:
-#     `installe` exited 8 on all 25 verbs while the change itself had landed.
-#     An issue needs no write access to any default branch.
-#
-# The old header argued this script must not stop at `scheduler -i` because
-# that command skips the push when the repo is behind, leaving a note the
-# consumer never reads. That reasoning is retired with the mechanism -- there
-# is no push to skip. The PRINCIPLE it came from is not: verify where the
-# consumer reads it. So `--- 2.` still re-reads the issue from GitHub rather
-# than trusting exit 0 and a URL we printed ourselves.
+# `--- 2.` re-reads the issue from GitHub rather than trusting exit 0 and a
+# URL we printed ourselves: verify where the consumer reads it.
 #
 # WHO OWNS WHAT IN THIS FILE (Zach's call, 2026-07-27) -- read before editing:
 #

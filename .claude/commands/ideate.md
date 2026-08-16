@@ -23,8 +23,8 @@ build-shaped, treat it the same as if it arrived in the first message:
 name it explicitly ("that's a nightly-batch job...") rather than quietly
 switching into building because enough turns have passed that the
 original `/ideate` framing feels distant. This is a real limitation, not
-fully solved by prose alone -- see `IDEATE-WORKFLOW-REVISION.md` at the
-repo root for the open question about a harder, hook-based guarantee.
+fully solved by prose alone -- hf7y/realisateur#339 is the open question
+about a harder, hook-based guarantee.
 
 **Per-session tuning via `$ARGUMENTS`:** if invoked with a project name
 (`/ideate crt`, `/ideate senechal`), scope this session to that one
@@ -103,8 +103,7 @@ idea into the active set is a deliberate, stated decision, same as the
 oldest-first override in §4.5 -- never a silent reorder.
 
 **Standard entry shape -- vision, then milestones, then blockers.**
-Zach's repeated ask (2026-07-24, `revise-the-ideate-workflow-*.idea` --
-see `IDEATE-WORKFLOW-REVISION.md` at the repo root for the full context)
+Zach's repeated ask (2026-07-24, `revise-the-ideate-workflow-*.idea`)
 is that this structure should be `/ideate`'s own default, not something
 restated by hand each session. When a session records a real direction
 (not just a one-line decision), shape the issue as:

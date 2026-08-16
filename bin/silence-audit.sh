@@ -47,33 +47,14 @@
 #                       executable check exists -- an unretired layer
 #                       waiting to happen.
 #
-# RETIRED 2026-08-07: [retirement-open]. It asked "does a RETIRES: claim's
-# literal still occur anywhere?", scraped every `RETIRES:` line in every
-# tracked .sh and .md, and counted occurrences of whatever followed. That
-# question CANNOT REACH ZERO BY CONSTRUCTION: declaring a retirement writes the
-# retired literal into a file, and documenting the mechanism writes it into
-# several more, so the check counts its own paperwork as proof the retirement
-# did not happen. Measured on the live estate the morning it was retired:
-#
-#   74 FLAG(s) total, of which 52 were [retirement-open]
-#   -- the SAME four claims, re-emitted once per registered project (13 x 4)
-#
-#   claims to retire `silencing stderr`      -- 66 live occurrence(s) remain
-#   claims to retire `Wired to a real path`  -- 51 live occurrence(s) remain
-#   claims to retire `names what it retires` -- 141 live occurrence(s) remain
-#   claims to retire `' | wc -l)"`           -- 29 live occurrence(s) remain
-#
-# The first three are the three checklist rows that the now-deleted
-# bin/install-silence-audit.sh declared retired, in its own header, which is
-# the file the scraper read them out of -- deleted 2026-08-07 with this check. The fourth is a fragment of shell source mis-parsed as a declaration.
-# All 52 are false. Its self-test passed throughout because the fixture holds
-# exactly one declaration in an otherwise empty repository -- the shape
-# production never has.
-#
-# 70% of this guard's output was one bug repeated, and CLAUDE.md has required
-# `silence-audit --strict` clean since the day it was written, so that row has
-# never once been satisfiable. A mandatory gate nobody can pass is how a
-# checklist stops being read.
+# RETIRED 2026-08-07: [retirement-open]. It asked whether a `RETIRES:` claim's
+# literal still occurred anywhere, which CANNOT REACH ZERO BY CONSTRUCTION --
+# declaring a retirement writes the literal into a file, so the check counted
+# its own paperwork as proof the retirement had not happened. 52 of the 74
+# FLAGs on the estate the morning it was retired were this, all false, all the
+# same four claims re-emitted once per project. Its self-test passed
+# throughout, because the fixture held one declaration in an otherwise empty
+# repository -- a shape production never has.
 #
 # WHAT IS GIVEN UP: nothing was being checked. "Names what it retires" is now
 # carried by the repository idiom (a change that retires something names it)
