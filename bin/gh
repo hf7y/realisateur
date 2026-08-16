@@ -57,9 +57,36 @@
 #   gh-sign.sh --stamp              print the stamp this host/account would append
 #   gh-sign.sh --check-body <path>  grade a body against the grammar; `-` reads stdin
 #
-# MANDARK IS EXCLUDED, deliberately and permanently: an unsigned comment from
-# Zach's own machine is the signal decision-rot.sh reads.
+# WHO IS AT THE KEYBOARD, NOT WHICH HOST (2026-08-16, hf7y/scheduler#147).
+# This used to read: "MANDARK IS EXCLUDED, deliberately and permanently: an
+# unsigned comment from Zach's own machine is the signal decision-rot.sh
+# reads." The signal is right; the proxy was wrong. Host stood in for ACTOR,
+# and agents run on mandark constantly -- every interactive session does.
+#
+# Measured, not argued: an agent comment written from mandark on
+# hf7y/scheduler#147 was reported by decision-rot.sh as Zach ANSWERING the
+# issue, 0 days old, because its `answer` is *the latest owner comment that is
+# not agent-stamped*. An unsigned agent comment does not merely go
+# unattributed -- it is affirmatively read as the human's reply, and marks the
+# issue rotting. The 66 of 97 open issues carrying no marker are the same
+# artefact: filed from mandark, where the shim was not installed.
+#
+# So the proxy is replaced by the fact. A human typed this iff no agent
+# session declares itself AND there is a terminal to have typed at. Cron has
+# no TTY, so every dispatch stays signed exactly as before; Zach's own shell
+# keeps its unsigned voice, which is what decision-rot needs; and an agent is
+# signed wherever it runs.
 set -uo pipefail
+
+# Both halves are required. CLAUDECODE alone would unsign every cron script
+# that calls gh without going through an agent -- a regression on the one host
+# where signing already worked. A TTY alone would sign an agent that happens
+# to hold one.
+human_at_keyboard() {
+  [ -z "${CLAUDECODE:-}" ] && [ -z "${CLAUDE_CODE_ENTRYPOINT:-}" ] || return 1
+  [ -t 0 ] || [ -t 1 ] || return 1
+  return 0
+}
 
 MARKER='<!-- agent:'
 
@@ -267,7 +294,11 @@ signable=0
 case "${1:-} ${2:-}" in
   'issue comment'|'issue create'|'issue close'|'pr comment'|'pr create') signable=1 ;;
 esac
-[ "$signable" -eq 1 ] || exec "$GH" "$@"
+# A human's write passes through whole: unsigned AND ungraded. The grammar is
+# a contract between agents; refusing Zach's own `gh issue create` because it
+# opens with prose rather than `DECISION:` would be this shim deciding how its
+# author may talk.
+if [ "$signable" -ne 1 ] || human_at_keyboard; then exec "$GH" "$@"; fi
 
 # Announced HERE and not on every call: a stale channel is a fact about the
 # policy, and the policy only acts on a write. Warning on `gh pr view` too
