@@ -25,6 +25,7 @@ mk_repo() {
   printf 'same\n'    > "$r/bin/lib/cli-guard.sh"
   printf 'main v2\n' > "$r/bin/reach-lint.sh"
   printf '#!/usr/bin/env bash\necho shim\n' > "$r/bin/gh-sign.sh"
+  printf 'grammar\n' > "$r/bin/lib/body-grammar.sh"
   git -C "$r" add -A >/dev/null; git -C "$r" commit -qm main
   git -C "$r" checkout -q --orphan bashified
   git -C "$r" rm -q -rf . >/dev/null 2>&1 || :
@@ -32,6 +33,10 @@ mk_repo() {
   printf 'same\n'    > "$r/bin/lib/cli-guard.sh"
   printf 'main v1\n' > "$r/bin/reach-lint.sh"   # the drift
   printf 'native\n'  > "$r/bin/arpente"          # branch-native: never graded
+  # the two DECLARED carries, present and matching, so the cases below are
+  # about one property each
+  printf '#!/usr/bin/env bash\necho shim\n' > "$r/bin/gh"
+  printf 'grammar\n' > "$r/bin/lib/body-grammar.sh"
   git -C "$r" add -A >/dev/null; git -C "$r" commit -qm carry
   git -C "$r" checkout -q master 2>/dev/null || git -C "$r" checkout -q main
   printf '%s' "$r"
@@ -70,11 +75,6 @@ has "D2 ...and it says what it wrote" "$out" "carried  bin/reach-lint.sh"
 section "E. a rename is followed"
 # bin/gh on bashified is bin/gh-sign.sh on main -- the one pair that cannot be
 # derived from the tree, and the reason the guard has a RENAMES table at all.
-git -C "$REPO" checkout -q bashified
-printf '#!/usr/bin/env bash\necho shim\n' > "$REPO/bin/gh"
-git -C "$REPO" add -A >/dev/null; git -C "$REPO" commit -qm 'carry gh' >/dev/null
-git -C "$REPO" checkout -q master 2>/dev/null || git -C "$REPO" checkout -q main
-out="$(bash "$CD" --repo "$REPO" --ratchet "$EMPTY_RATCHET" 2>&1)"
 has "E1 bin/gh is paired with bin/gh-sign.sh" "$out" "bin/gh                     bin/gh-sign.sh"
 git -C "$REPO" checkout -q bashified
 printf '#!/usr/bin/env bash\necho EDITED IN PLACE\n' > "$REPO/bin/gh"
@@ -91,6 +91,20 @@ rc  "F1 no bashified ref exits 3, not 0" 3 "$rc"
 has "F2 ...and says it could not look"   "$out" "BLIND"
 out="$(bash "$CD" --repo "$T/does-not-exist" 2>&1)"; rc=$?
 rc  "F3 an absent repo is BLIND too" 3 "$rc"
+
+section "H. a DECLARED carry that was never made is a finding, not silence"
+# The shape of hf7y/realisateur#327: the shim merged, nothing carried it, and
+# every check stayed green because nothing knew it was supposed to be there.
+git -C "$REPO" checkout -q bashified
+git -C "$REPO" rm -q bin/gh; git -C "$REPO" commit -qm 'drop the carry' >/dev/null
+git -C "$REPO" checkout -q master 2>/dev/null || git -C "$REPO" checkout -q main
+out="$(bash "$CD" --repo "$REPO" --ratchet "$EMPTY_RATCHET" 2>&1)"; rc=$?
+rc  "H1 a declared carry that is absent exits 1" 1 "$rc"
+has "H2 ...and is named MISSING, not omitted" "$out" "MISSING   bin/gh"
+rm -rf "$T/wt2"; mkdir -p "$T/wt2"
+bash "$CD" --repo "$REPO" --ratchet "$EMPTY_RATCHET" --carry "$T/wt2" >/dev/null 2>&1
+eq  "H3 --carry creates the file that was never there" \
+    "$(cat "$T/wt2/bin/gh" 2>/dev/null)" "$(cat "$REPO/bin/gh-sign.sh")"
 
 section "G. it honours where it is pointed"
 # The guard resolves its own checkout by default. Pointed at $T it must grade
