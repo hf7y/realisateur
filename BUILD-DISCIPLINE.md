@@ -729,12 +729,12 @@ finding, not an inconvenience.
   machine as a whole sees: crontab entries, `~/.claude` settings hooks,
   systemd units, autostart, WM config, marker files under
   `~/.local/share`, scripts in `~/.local/bin`. Run:
-  `notify-senechal '<what changed, where, who owns it>'`
-  Standing rule: the project that generates a piece of machine config
-  **owns** it; `senechal` owns **knowing it exists**. The command files
-  through senechal's own front door and confirms the note reached its
-  remote. Do this without being asked, and without waiting for a
-  convenient moment.
+  `notify-senechal <door> <field>=<value>` — TYPED since 2026-08-16
+  (realisateur#352); the prose form this line used to give now exits 2.
+  `--doors` lists them, and none yet carries a crontab entry
+  (senechal#325), so cron changes are filed by hand and must say so.
+  Standing rule: the project that generates machine config **owns** it;
+  `senechal` owns **knowing it exists**. Do this unasked, and now.
 
 - **Committing this project's `FOCUS.md` / `QUESTIONS.md`** — use
   `focus-commit <repo> <msgfile> <file>...`, never a bare
