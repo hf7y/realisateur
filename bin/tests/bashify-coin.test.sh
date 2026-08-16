@@ -27,14 +27,13 @@
 # entire distribution story runs through that one command.
 #
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
 COIN="$ROOT/bashify/lib/coin.sh"
 [ -f "$COIN" ] || { echo "no coin.sh at $COIN"; exit 1; }
 
-PASS=0; FAIL=0
-ok()  { PASS=$((PASS+1)); printf '  ok    %s\n' "$1"; }
-bad() { FAIL=$((FAIL+1)); printf '  FAIL  %s -- %s\n' "$1" "${2:-}"; }
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
@@ -134,5 +133,4 @@ out="$(coin gone gamma 'no repo at all')"; rc=$?
 if [ "$rc" -eq 6 ]; then ok "D4  a conf pointing at no repo is BLIND (exit 6), not a gap"
 else bad "D4  a conf pointing at no repo is BLIND (exit 6), not a gap" "rc=$rc"; fi
 
-printf '\nbashify-coin: %d passed, %d failed\n' "$PASS" "$FAIL"
-[ "$FAIL" -eq 0 ]
+summary

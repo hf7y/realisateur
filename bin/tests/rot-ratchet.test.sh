@@ -10,15 +10,12 @@
 #   E --accept with nothing to lower   -> exit 1 (never a silent rewrite)
 #   F the scan exiting 3 is BLIND      -> exit 3, never 0
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/rot-ratchet.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()  { printf '  PASS: %s\n' "$*"; pass=$((pass+1)); }
-bad() { printf '  FAIL: %s\n' "$*"; fail=$((fail+1)); }
-rc()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3)"; fi; }
-has() { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
 
 cat > "$T/scan" <<'EOF'
 #!/usr/bin/env bash
@@ -68,5 +65,4 @@ fixture chezz; baseline "chezz	2"
 out="$(SCAN_RC=3 bash "$SCRIPT" 2>&1)"; rc "F1 exits 3" 3 $?
 has "F2 says BLIND" "$out" "BLIND"
 
-printf '\n%d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

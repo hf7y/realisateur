@@ -18,11 +18,12 @@
 #
 # Usage: bin/tests/focus-commit.test.sh   (exit 0 = all pass)
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/focus-commit.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
 check() { # <name> <expected-exit> <actual-exit>
   if [ "$2" = "$3" ]; then echo "  ok   $1"; pass=$((pass+1))
   else echo "  FAIL $1 (expected exit $2, got $3)"; fail=$((fail+1)); fi
@@ -73,5 +74,4 @@ git reset -q --hard; printf 'line7\n' >> FOCUS.md
 remote_tip="$(git -C "$T/remote.git" log --oneline -1 main | grep -c 'upstream renames')"
 check "  ...and nothing was pushed" 1 "$remote_tip"
 
-echo "  $pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+summary

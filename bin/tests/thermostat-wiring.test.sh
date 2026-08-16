@@ -36,13 +36,10 @@
 #   F1 a fully-conforming fixture               -> exit 0 and 8/8
 
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
-pass=0; fail=0
-ok()   { pass=$((pass+1)); printf '  ok   %s\n' "$1"; }
-bad()  { fail=$((fail+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 is()   { [ "$2" = "$3" ] && ok "$1" || bad "$1" "expected [$3], got [$2]"; }
-has()  { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1" "output lacks [$3]" ;; esac; }
-hasnt(){ case "$2" in *"$3"*) bad "$1" "output should not contain [$3]" ;; *) ok "$1" ;; esac; }
 
 TMP="$(mktemp -d)" || { echo "cannot mktemp" >&2; exit 2; }
 trap 'rm -rf "$TMP"' EXIT
@@ -153,6 +150,6 @@ hasnt F1f "$out" "UNMET  ledger"
 has   F1g "$out" "PASS   blockers"
 
 echo
-echo "  $pass passed, $fail failed"
+summary
 [ "$fail" = 0 ] || exit 1
 exit 0

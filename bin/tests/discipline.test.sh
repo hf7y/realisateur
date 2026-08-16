@@ -8,14 +8,12 @@
 # is the first failure pattern BUILD-DISCIPLINE.md names and the exact way the
 # stamped baseline rotted for weeks while hygiene-lint reported OK.
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CMD="$REPO/bin/discipline.sh"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()  { printf '  ok   %s\n' "$1"; pass=$((pass+1)); }
-bad() { printf '  FAIL %s\n    %s\n' "$1" "${2:-}" >&2; fail=$((fail+1)); }
-eq()  { [ "$2" = "$3" ] && ok "$1" || bad "$1" "expected '$3', got '$2'"; }
 
 printf 'discipline.sh\n'
 
@@ -81,5 +79,4 @@ printf '%s' "$out" | grep -q 'partial' \
 [ "$("$CMD" --path)" = "$REPO/BUILD-DISCIPLINE.md" ] \
   && ok "D3  --path names the one source" || bad "D3  --path names the one source"
 
-printf '\n%d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

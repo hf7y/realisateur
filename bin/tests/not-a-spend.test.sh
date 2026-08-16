@@ -6,12 +6,11 @@
 # below exists to bound it.
 #
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 C="$ROOT/bashify/lib/closure.sh"
 LEDGER="$ROOT/bin/lib/not-a-spend.tsv"
-pass=0; fail=0
-ok()  { printf '  PASS: %s\n' "$*"; pass=$((pass+1)); }
-bad() { printf '  FAIL: %s\n' "$*"; fail=$((fail+1)); }
 echo "not-a-spend.test"
 
 # --- 1. every claim in the ledger is TRUE -------------------------------
@@ -35,7 +34,7 @@ out="$(timeout 120 bash "$C" realisateur x 2>/dev/null)"
 if ! grep -qE 'bin/retired/hygiene-lint\.sh' <<<"$out"; then
   echo "  SKIP: closure.sh cannot score realisateur here (no sibling checkouts /"
   echo "        no bashified branch). Cases 2,3,4,6 need a real estate; 1 and 5 ran."
-  printf '\nnot-a-spend.test: %d passed, %d failed\n' "$pass" "$fail"
+summary
   [ "$fail" -eq 0 ]; exit $?
 fi
 
@@ -78,5 +77,4 @@ grep -qE 'ESSENTIAL.*bin/retired/hygiene-lint\.sh' <<<"$noledger" \
   && ok "with the ledger absent, the same file is ESSENTIAL again (not vacuous)" \
   || bad "the verdict does not depend on the ledger -- something else cleared it"
 
-printf '\nnot-a-spend.test: %d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

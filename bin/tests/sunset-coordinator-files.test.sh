@@ -13,14 +13,12 @@
 #
 #
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CMD="$REPO/bin/sunset-coordinator-files.sh"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()  { printf '  ok   %s\n' "$1"; pass=$((pass+1)); }
-bad() { printf '  FAIL %s\n    %s\n' "$1" "${2:-}" >&2; fail=$((fail+1)); }
-eq()  { [ "$2" = "$3" ] && ok "$1" || bad "$1" "expected '$3', got '$2'"; }
 
 printf 'sunset-coordinator-files.sh\n'
 
@@ -327,5 +325,4 @@ cd "$T/repo-link" || exit 1
 [ -d .scheduler ] && bad "M3  .scheduler survived" || ok "M3  .scheduler removed"
 
 # --- Summary ---
-printf '\n%d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

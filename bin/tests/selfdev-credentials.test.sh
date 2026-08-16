@@ -17,6 +17,7 @@
 #
 # Usage: bin/tests/selfdev-credentials.test.sh   (exit 0 = all pass)
 set -uo pipefail
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO_BIN="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT="$REPO_BIN/selfdev-credentials.sh"
@@ -24,7 +25,6 @@ LIB="$REPO_BIN/lib/selfdev-credentials-set.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 [ -f "$LIB" ]    || { echo "FAIL: $LIB missing"; exit 1; }
 
-pass=0; fail=0
 t_ok()  { echo "  ok   $1"; pass=$((pass+1)); }
 t_bad() { echo "  FAIL $1"; fail=$((fail+1)); }
 t_eq()    { if [ "$2" = "$3" ]; then t_ok "$1"; else t_bad "$1 (expected '$3', got '$2')"; fi; }
@@ -486,5 +486,4 @@ t_has "reads the token's oauth_token line but never echoes the token value" "$SR
 t_hasnt "the token classifier never captures anything past the shape prefix" "$SRC_TXT" 'printf.*oauth_token.*\$token'
 
 echo
-echo "selfdev-credentials.test.sh: $pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+summary

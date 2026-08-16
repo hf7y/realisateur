@@ -16,16 +16,13 @@
 #
 # usage: ./bin/tests/no-worktree-lint.test.sh
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LINT="$REPO/bin/no-worktree-lint.sh"
 
-pass=0; fail=0
-ok()   { printf '  ok   %s\n' "$*"; pass=$((pass+1)); }
-bad()  { printf '  FAIL %s\n' "$*"; fail=$((fail+1)); }
 check(){ if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (want '$3', got '$2')"; fi; }
-has()  { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (output lacked '$3')" ;; esac; }
-hasnt(){ case "$2" in *"$3"*) bad "$1 (output contained '$3')" ;; *) ok "$1" ;; esac; }
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -194,5 +191,5 @@ check "R1 this checkout has no production worktree creator" "$rc" "0"
 has   "R1 and the scan was not empty" "$out" "tracked shell file(s)"
 
 echo
-printf 'no-worktree-lint: %d passed, %d failed\n' "$pass" "$fail"
+summary
 exit $(( fail > 0 ? 1 : 0 ))

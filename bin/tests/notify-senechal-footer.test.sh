@@ -16,6 +16,8 @@
 #
 # Usage: bin/tests/notify-senechal-footer.test.sh   (exit 0 = all pass)
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/notify-senechal.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
@@ -24,9 +26,6 @@ SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/notify-senechal.sh"
 FOOTER_RE='\n---\nfiled \d{4}-\d\d-\d\d \d\d:\d\d via `(?:scheduler -i [A-Za-z0-9._-]+|notify-senechal)` on \S+'
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()   { echo "  ok   $1"; pass=$((pass+1)); }
-bad()  { echo "  FAIL $1"; fail=$((fail+1)); }
 check(){ if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected '$2', got '$3')"; fi; }
 
 # --- the gh stub: records every --body it is given, invents a plausible URL --
@@ -96,5 +95,4 @@ PY
   fi
 fi
 
-echo "  $pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+summary

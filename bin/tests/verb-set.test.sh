@@ -35,15 +35,13 @@
 #
 # usage: ./bin/tests/verb-set.test.sh
 set -uo pipefail
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LIB="$REPO/bin/lib/verb-set.sh"
 INSTALL_VERBS="$REPO/bin/install-verbs.sh"
 COIN="$REPO/bashify/lib/coin.sh"
 
-pass=0; fail=0
-ok()   { printf '  ok   %s\n' "$*"; pass=$((pass+1)); }
-bad()  { printf '  FAIL %s\n' "$*"; fail=$((fail+1)); }
 check(){ if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (want '$3', got '$2')"; fi; }
 has()  { if printf '%s' "$2" | grep -q -- "$3"; then ok "$1"; else bad "$1 (output lacked '$3')"; fi; }
 hasnt(){ if printf '%s' "$2" | grep -q -- "$3"; then bad "$1 (output contained '$3')"; else ok "$1"; fi; }
@@ -271,5 +269,4 @@ mkdir -p "$FIX/projects" "$FIX/bin" "$FIX/schedule"
 ) || fail=$((fail+1))
 pass=$((pass+5))
 
-printf '\n%d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

@@ -33,17 +33,14 @@
 #
 # Usage: bin/tests/selfdev-gh-app-register.test.sh   (exit 0 = all pass)
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/selfdev-gh-app-register.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 command -v python3 >/dev/null || { echo "SKIP: python3 absent"; exit 0; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"; kill %1 2>/dev/null' EXIT
-pass=0; fail=0
-ok()  { echo "  ok   $1"; pass=$((pass+1)); }
-bad() { echo "  FAIL $1"; fail=$((fail+1)); }
-has() { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
 no()  { case "$2" in *"$3"*) bad "$1 (unexpected: $3)" ;; *) ok "$1" ;; esac; }
-eq()  { [ "$2" = "$3" ] && ok "$1" || bad "$1 (got '$2', want '$3')"; }
 
 # Ports picked high and per-run-ish to avoid colliding with a real service.
 CBPORT=18731; STUBPORT=18732
@@ -173,6 +170,6 @@ outG="$(run env SELFDEV_GH_API="http://127.0.0.1:$STUBPORT" BROWSER=true \
 [ -f "$T/outG/gh-app.conf" ] && bad "G wrote nothing" || ok "G wrote nothing"
 
 echo
-printf '%d passed, %d failed\n' "$pass" "$fail"
+summary
 [ "$fail" -eq 0 ] || exit 1
 exit 0

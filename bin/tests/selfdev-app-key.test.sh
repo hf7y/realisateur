@@ -3,6 +3,8 @@
 # resolution every reader shares) and for bin/selfdev-app-key.sh's refusals.
 #
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LIB="$ROOT/lib/selfdev-app-key.sh"
 SCRIPT="$ROOT/selfdev-app-key.sh"
@@ -10,11 +12,6 @@ SCRIPT="$ROOT/selfdev-app-key.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()  { printf '  PASS: %s\n' "$*"; pass=$((pass+1)); }
-bad() { printf '  FAIL: %s\n' "$*"; fail=$((fail+1)); }
-eq()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (want '$3', got '$2')"; fi; }
-has() { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
 
 echo "selfdev-app-key.test.sh"
 
@@ -97,5 +94,4 @@ for f in "$ROOT/selfdev-gh-app.sh" "$ROOT/selfdev-credentials.sh"; do
 done
 
 echo
-printf 'selfdev-app-key: %d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

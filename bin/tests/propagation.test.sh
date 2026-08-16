@@ -46,6 +46,8 @@
 #
 # Usage: bin/tests/propagation.test.sh   (exit 0 = all pass)
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 TICK="$REPO/bin/selfdev-release-tick.sh"
@@ -54,12 +56,6 @@ SET_LIB="$REPO/bin/lib/propagation-set.sh"
 [ -f "$SET_LIB" ] || { echo "FAIL: $SET_LIB missing"; exit 1; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()  { echo "  ok   $1"; pass=$((pass+1)); }
-bad() { echo "  FAIL $1"; fail=$((fail+1)); }
-has()   { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
-hasnt() { case "$2" in *"$3"*) bad "$1 (unexpectedly present: $3)" ;; *) ok "$1" ;; esac; }
-rc()    { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3)"; fi; }
 
 echo "propagation.test.sh"
 . "$SET_LIB"
@@ -648,5 +644,4 @@ has "--help documents the BLIND exit" "$O" "BLIND"
 has "--help says --check is the default and writes nothing" "$O" "--check (default)"
 
 echo
-echo "propagation.test.sh: $pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+summary

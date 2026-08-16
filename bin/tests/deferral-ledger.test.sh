@@ -57,15 +57,12 @@
 #       line you owe; a filing tool that fails silently re-creates the bug
 #   R5  defere --dry-run files nothing
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
 SUT="$ROOT/bin/deferral-ledger.sh"
 DEF="$ROOT/bin/defere.sh"
-pass=0; fail=0
-ok()   { pass=$((pass+1)); printf '  ok   %s\n' "$1"; }
-bad()  { fail=$((fail+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 is()   { [ "$2" = "$3" ] && ok "$1" || bad "$1" "expected [$3], got [$2]"; }
-has()  { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1" "output lacks [$3]" ;; esac; }
-hasnt(){ case "$2" in *"$3"*) bad "$1" "output should not contain [$3]" ;; *) ok "$1" ;; esac; }
 
 TMP="$(mktemp -d)" || { echo "cannot mktemp" >&2; exit 2; }
 trap 'rm -rf "$TMP"' EXIT
@@ -357,5 +354,4 @@ has R5b "$o" "DRY RUN"
 hasnt R5c "$o" "filed https"
 
 echo
-printf 'deferral-ledger.test.sh: %d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

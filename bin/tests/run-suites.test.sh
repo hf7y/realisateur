@@ -2,15 +2,12 @@
 # run-suites.test.sh -- witness for bin/run-suites.sh (#316).
 #
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/run-suites.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-pass=0; fail=0
-ok()  { printf '  PASS: %s\n' "$*"; pass=$((pass+1)); }
-bad() { printf '  FAIL: %s\n' "$*"; fail=$((fail+1)); }
-rc()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected exit $2, got $3)"; fi; }
-has() { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (missing: $3)" ;; esac; }
 hasnot() { case "$2" in *"$3"*) bad "$1 (should not contain: $3)" ;; *) ok "$1" ;; esac; }
 
 echo "run-suites.test.sh"
@@ -87,5 +84,4 @@ OUT="$(timeout 20 "$SCRIPT" "$T/h1.sh" 2>&1 < <(sleep 45))"; RC=$?
 rc  "H1 the run completes rather than blocking on stdin" 0 "$RC"
 has "H2 the stdin-reading suite still ran to its end" "$OUT" "reached the end"
 
-printf '\nrun-suites.test.sh: %d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+summary

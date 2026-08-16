@@ -6,15 +6,11 @@
 #
 # Usage: bin/tests/wire-release-channel.test.sh   (exit 0 = all pass)
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 BIN="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT="$BIN/wire-release-channel.sh"
 
-pass=0; fail=0
-ok()  { echo "  ok   $1"; pass=$((pass+1)); }
-bad() { echo "  FAIL $1"; fail=$((fail+1)); }
-eq()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected '$3', got '$2')"; fi; }
-has() { case "$2" in *"$3"*) ok "$1" ;; *) bad "$1 (output lacked '$3')" ;; esac; }
-hasnt() { case "$2" in *"$3"*) bad "$1 (output contained '$3')" ;; *) ok "$1" ;; esac; }
 
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
@@ -112,5 +108,4 @@ echo "== 6. AN EMPTY UID BAND IS A FINDING ===================================="
 has "an empty band is named as a finding" "$SRC" 'that is a finding'
 
 echo
-echo "wire-release-channel.test.sh: $pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+summary
