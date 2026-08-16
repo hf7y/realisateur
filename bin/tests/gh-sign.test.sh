@@ -61,6 +61,27 @@ case "$stamp_date" in
   *) bad "ISO8601 UTC" "got: $stamp_date" ;;
 esac
 
+# --- 2b. the Z must be TRUE, not just present ------------------------------
+# `local TZ=UTC` shipped here for months and was a no-op IN THE ONE CASE THAT
+# MATTERS. `local` creates a shell variable; `printf %(...)T` formats through
+# libc, which reads TZ from the ENVIRONMENT. When TZ is already exported the
+# local inherits the export attribute and the value did reach libc -- so
+# setting TZ here would test nothing. With TZ ABSENT, which is the ordinary
+# state of a login shell and of cron, nothing exported it and every stamp
+# carried /etc/localtime wearing a `Z`. Case 2 above could not see it: the
+# SHAPE was always right.
+utc_hour="$(date -u +%H)"
+if [ "$utc_hour" = "$(date +%H)" ]; then
+  echo "  SKIP  Z-is-true: this host's localtime IS UTC, so the bug cannot show here" >&2
+else
+  nz_hour="$(env -u TZ "$BASH_BIN" "$GS" --stamp | sed -E 's/.*T([0-9]{2}):.*/\1/')"
+  if [ "$nz_hour" = "$utc_hour" ]; then
+    ok "with TZ unset the stamp is still UTC, so the Z is a fact and not a suffix"
+  else
+    bad "hour $utc_hour (UTC)" "hour $nz_hour -- localtime wearing a Z"
+  fi
+fi
+
 reset
 # `issue create` is grammar-gated (lib/body-grammar.sh), so the fixture is
 # well-formed. The case is about the TRAILING BLANK LINES, not the grammar:
