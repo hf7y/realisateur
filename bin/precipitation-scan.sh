@@ -7,11 +7,9 @@
 # docs/offline-first-checks.md. Run at the top of every /ideate and
 # /nightly-batch pass.
 #
-# GUARD: which backlog items have re-arrived in the same shape, i.e. are ready to build?
 # RUNNER: operator -- read at the top of an /ideate or /nightly-batch pass
 # GUARD-TEST: none -- no suite; it ranks signals and asserts nothing, which is why it is a readout and not a gate
 # GATE: default
-# VERIFIED: 2026-08-07 via bash bin/precipitation-scan.sh
 #
 # WHY THIS EXISTS
 # ---------------

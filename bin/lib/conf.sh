@@ -24,7 +24,11 @@
 #     $ echo $?
 #     0
 #
-# restamp-discipline.sh is THE propagation mechanism -- the answer to Zach's
+# (restamp-discipline.sh was RETIRED 2026-08-14 -- `discipline` prints the one
+# file at the point of use instead. The incident below is kept because the
+# lesson is about conf_repo_path and exit-0 no-ops, not about the stamper.)
+#
+# restamp-discipline.sh WAS THE propagation mechanism -- the answer to Zach's
 # 2026-07-26 question "how can all projects know about things like the senechal
 # cross-write?" -- and it had been propagating the baseline to ZERO projects
 # while exiting 0 and printing a tidy summary. Its own header says "Detection
@@ -41,7 +45,7 @@
 # them by DELETION: milestone-audit.sh and install-silence-audit.sh were
 # RETIRED in b3fef3d, closeout-lint.sh was fixed in place, session-marker.sh
 # converted here. The sweep found three MORE the list never named --
-# reach-lint.sh, stamp-agent.sh, make-bootstrap-branch.sh -- which is the
+# reach-lint.sh -- which is the
 # argument for a ratchet over a list, so bin/tests/conf.test.sh section C now
 # scans the tree for the shape and no prose here has to be kept accurate.
 

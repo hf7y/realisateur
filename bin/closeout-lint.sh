@@ -6,11 +6,9 @@
 # and `--repo` skips B so the SubagentStop path stays fully offline. Signals,
 # not verdicts: see $CLI_EXITS below for what each code means.
 #
-# GUARD: is the work this session did actually durable, where its consumers read?
 # RUNNER: hooks/subagent-closeout.sh bin/tests/closeout-lint.test.sh
 # GUARD-TEST: bin/tests/closeout-lint.test.sh
 # GATE: strict --repo $TREE
-# VERIFIED: 2026-08-11 via bash bin/tests/closeout-lint.test.sh (post-#137/#106/#139: shared-checkout dirt, branch attribution, remote session record)
 #
 # An overnight run that is not saved anywhere didn't happen, and the recorded
 # ways that goes wrong are a dirty tree at exit, a commit that never left the
@@ -146,7 +144,24 @@ blind=0
 touched=0
 touched_names=()
 touched_paths=()
+registry_blind=0
 now="$(date +%s)"
+
+# REGISTRY ITSELF UNREADABLE (hf7y/realisateur#232). A full sweep (no --repo,
+# no explicit names) that discovers ZERO projects is ambiguous the same way
+# hygiene-lint.sh's equivalent loop was until 2026-08-07: it might mean "the
+# registry is empty" or it might mean "$SCHED_ROOT/schedule doesn't exist on
+# this host" -- e.g. mandark, which no longer holds a scheduler checkout.
+# Both produced the SAME zero-iteration, zero-finding, exit-0 result as a
+# session that really did touch nothing. cli_require_matched (lib/cli-guard.sh)
+# only catches this when project NAMES were given and none matched; a bare
+# sweep skips that check entirely. Counted as BLIND, same as every other
+# domain this script could not read.
+if [ -z "$REPO_ARG" ] && [ "${#want[@]}" -eq 0 ] && [ "${#projects[@]}" -eq 0 ]; then
+  blind=$((blind+1))
+  registry_blind=1
+  echo "  BLIND [registry] no registered project was readable under $SCHED_ROOT/schedule/ -- 'could not look', not 'nothing to report'"
+fi
 cutoff=$(( HOURS * 3600 ))
 
 # --- WHEN DID THIS SESSION START (hf7y/realisateur#137) ----------------------
@@ -254,15 +269,36 @@ while [ "$i" -lt "${#projects[@]}" ]; do
         fi
       fi
 
-      # A DIRTY TREE IS REPORTED AND DOES NOT GATE. A concurrent agent's tree
-      # is dirty by construction while it runs, so FLAGging it would make this
-      # guard red during every parallel session -- and red by default is
-      # furniture. Never silent, though: a human must see it and decide.
-      wdirty="$(git -C "$w" status --porcelain 2>/dev/null | grep -c .)"
-      if [ "${wdirty:-0}" -gt 0 ]; then
-        echo "    note [worktree-dirty] $name: $wdirty uncommitted path(s) in $w"
-        echo "      (not a FLAG: a live concurrent agent's tree is dirty by"
-        echo "       construction, and it is that run's to resolve, not this one's)"
+      # A DIRTY TREE, mtime-split the same way #137 split the main checkout
+      # (dirty_newer_than, above): dirt modified DURING this session could
+      # belong to a still-running concurrent agent in this same worktree, so
+      # it stays a note -- FLAGging it would make this guard red during every
+      # parallel session, and red by default is furniture. Dirt that predates
+      # this session's own start is different: whatever agent left it had
+      # already exited before this run even began, so nothing is left to
+      # adopt or clean it (#150; CLAUDE.md subagent rule, 2026-07-25 incident
+      # -- "a dirty tree at exit is a failed run, not a handoff"). Before this
+      # split, both cases printed the identical unconditional note, so a
+      # genuinely abandoned worktree read exactly like one mid-run.
+      wdirty_all="$(git -C "$w" status --porcelain 2>/dev/null)"
+      if [ -n "$wdirty_all" ]; then
+        wdcount="$(printf '%s\n' "$wdirty_all" | grep -c .)"
+        wrecent=""
+        [ -n "$SESSION_EPOCH" ] && wrecent="$(dirty_newer_than "$w" "$SESSION_EPOCH" "$wdirty_all")"
+        if [ -n "$SESSION_EPOCH" ] && [ -z "$wrecent" ]; then
+          echo "    FLAG [worktree-dirty-abandoned] $name: $wdcount uncommitted path(s) in $w, every one last modified BEFORE this session started ($(date -d "@$SESSION_EPOCH" '+%F %T' 2>/dev/null || printf '@%s' "$SESSION_EPOCH"))"
+          printf '%s\n' "$wdirty_all" | head -8 | sed 's/^/      /'
+          echo "      (the agent that used this worktree already exited before this"
+          echo "       session began -- nothing is left to adopt or clean this up)"
+          flags=$((flags+1))
+        else
+          echo "    note [worktree-dirty] $name: $wdcount uncommitted path(s) in $w"
+          if [ -n "$SESSION_EPOCH" ]; then
+            echo "      ($(printf '%s\n' "$wrecent" | grep -c .) of $wdcount modified since this session started)"
+          fi
+          echo "      (not a FLAG: a live concurrent agent's tree is dirty by"
+          echo "       construction, and it is that run's to resolve, not this one's)"
+        fi
       fi
     done <<EOF
 $wt
@@ -434,7 +470,7 @@ EOF
   fi
   i=$i
 done
-[ -n "$REPO_ARG" ] || [ "$touched" -ne 0 ] || \
+[ -n "$REPO_ARG" ] || [ "$touched" -ne 0 ] || [ "${#projects[@]}" -eq 0 ] || \
   echo "  (no registered repo has a commit younger than ${HOURS}h)"
 
 # B and C ask about the SESSION, not a directory, so --repo skips them -- which
@@ -477,6 +513,11 @@ if ! command -v "$GH_BIN" >/dev/null 2>&1; then
   blind=$((blind+1))
   echo "  BLIND [session-record] '$GH_BIN' is not on PATH, so nothing here can ask"
   echo "    the remote where /cloture §3 now says the record goes."
+elif [ "$registry_blind" = 1 ]; then
+  blind=$((blind+1))
+  echo "  BLIND [session-record] registry was unreadable (see A above) -- cannot"
+  echo "    enumerate which repos this session touched, so whether any has a"
+  echo "    record is unknown -- this is not a claim that there was none."
 elif [ "${#touched_paths[@]}" -eq 0 ]; then
   echo "  NOTE no repo touched in the last ${HOURS}h -- no work to have recorded."
 else
