@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# thermostat-wiring.sh -- eight live probes asking one question: does the
+# thermostat-wiring.sh -- nine live probes asking one question: does the
 # ecosystem match the 2026-08-07 redesign, or only describe it?
 #
 # RUNNER: bin/tests/thermostat-wiring.test.sh
@@ -142,12 +142,20 @@ else
   record weight BLIND "no _paced.conf under $SCHED"
 fi
 
-# The provenance label is the thermostat's actual sensor. Every actor in this
-# estate is `hf7y` (realisateur#40, #86), so authorship cannot answer "did a
-# human ask for this, or did an agent find it" -- but every agent path into
-# the tracker is a COMMAND, so the command can stamp a label. An unlabelled
-# issue reads as a Zach directive, i.e. it errors toward dispatching MORE,
-# which is why this check exists at all.
+# Provenance: who filed each issue. Every actor here is `hf7y` (realisateur#40,
+# #86), so authorship cannot answer it; a filing verb stamping a label can. An
+# unlabelled issue reads as a Zach directive, i.e. errors toward dispatching MORE.
+#
+# NOT "the thermostat's actual sensor" -- what this comment used to claim.
+# hf7y/scheduler#219 shipped the setpoint reading needs-human/deferred/blocked/
+# question (CAN AN AGENT ACT ON THIS) instead, because the one provenance stamp
+# that exists -- gh-sign.sh's `<!-- agent: -->` marker -- covered 3 of
+# realisateur's 63 open issues when measured 2026-08-16. A 5%-coverage sensor
+# defaulting the rest to "a human asked" fails toward dispatching more.
+#
+# The check stays: the gap is real, and when coverage catches up the marker
+# joins TEMPO_BLOCKED_LABELS rather than replacing it. `setpoint` below is what
+# measures whether the thermostat exists.
 if command -v gh >/dev/null 2>&1; then
   # gh's status is captured on its OWN line. Piping straight into grep would
   # hand $? to grep, and grep exits 1 on no-match -- so the success case
@@ -194,6 +202,41 @@ if [ -d "$SCHED/.git" ]; then
   fi
 else
   record ledger BLIND "no git repo at $SCHED"
+fi
+
+# THE SETPOINT -- the half of §3 provenance cannot see. Labels are an INPUT;
+# this asks whether anything READS them. Until hf7y/scheduler#219 nothing did:
+# the control loop was three brakes and nothing that could say "run this MORE",
+# which is why pace was still a number a human edited in schedule/ROSTER.
+#
+# TESTS THE PROPERTY, NOT A FILENAME (the lesson `ledger` above is a monument
+# to). Two legs, neither worth anything alone:
+#   1. something in bin/ or lib/ derives its answer from the TRACKER, and
+#   2. the DISPATCHER EXECUTES it -- `$SELF_DIR/<name>` in
+#      usage-paced-runner.sh, the shape it already runs freeze-check.sh by.
+# Leg 2 is what makes this a wiring check: a setpoint nothing consults is a
+# document with an exit code, and build-but-don't-wire is this repo's own
+# recurring defect.
+if [ -d "$SCHED/.git" ]; then
+  _runner="$SCHED/bin/usage-paced-runner.sh"
+  if [ ! -r "$_runner" ]; then
+    record setpoint BLIND "no bin/usage-paced-runner.sh under $SCHED"
+  else
+    _sp=""
+    for _f in $(git -C "$SCHED" grep -lE 'gh issue list' -- bin lib 2>/dev/null); do
+      _b="$(basename "$_f")"
+      grep -qF "\$SELF_DIR/$_b" "$_runner" 2>/dev/null && _sp="$_sp $_b"
+    done
+    if [ -n "$_sp" ]; then
+      record setpoint PASS "the dispatcher runs a tracker-derived setpoint:$_sp"
+    else
+      record setpoint UNMET 'nothing the dispatcher runs reads the issue tracker -- pace is still a number a human edits'
+    fi
+    unset _sp _f _b
+  fi
+  unset _runner
+else
+  record setpoint BLIND "no git repo at $SCHED"
 fi
 
 if [ -f "$ROOT/.github/workflows/tests.yml" ]; then
