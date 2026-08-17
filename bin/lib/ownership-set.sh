@@ -182,6 +182,7 @@ bin/port-markdown-cost.sh                  realisateur
 bin/consigne                               realisateur
 bin/tests/consigne.test.sh                 realisateur
 bin/tests/bashify-coin.test.sh             bashify
+bin/tests/subagent-closeout.test.sh        bashify
 bin/ownership-audit.sh                     realisateur
 bin/lib/ownership-set.sh                   realisateur
 bin/tests/guard-estate.test.sh             realisateur
@@ -282,8 +283,13 @@ own_derived_from() {
   # to attach through the READ BY relation instead -- a sentence in
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   while :; do
-    for cand in "bin/$b.sh" "bin/lib/$b.sh" "bin/lib/$b-set.sh"; do
+    for cand in "bin/$b.sh" "bin/lib/$b.sh" "bin/lib/$b-set.sh" "hooks/$b.sh"; do
       [ "$cand" = "$p" ] && continue
+      # `hooks` (unlike bin/bin-lib) is a BLANKET prefix row, so own_owner
+      # matches any hooks/* path whether or not it exists -- a nonexistent
+      # hooks/$b.sh would otherwise derive-match every bin/tests/*.test.sh
+      # whose stem has no real subject. Existence on disk is the guard.
+      [ -f "${TREE:-.}/$cand" ] || continue
       if own_owner "$cand" >/dev/null 2>&1; then printf '%s\n' "$cand"; return 0; fi
     done
     case "$b" in *-*) b="${b%-*}" ;; *) return 1 ;; esac
@@ -294,8 +300,8 @@ own_owner() {
   local p="$1" best="" bestlen=0 pre owner rest sub
 
   # No recursion hazard: own_derived_from only ever answers for bin/tests/*,
-  # and every candidate it hands back is bin/*.sh or bin/lib/*.sh, which it
-  # refuses on sight.
+  # and every candidate it hands back is bin/*.sh, bin/lib/*.sh or hooks/*.sh,
+  # none of which it answers for -- it only ever matches bin/tests/*.
   if sub="$(own_derived_from "$p")"; then own_owner "$sub"; return 0; fi
 
   while read -r pre owner rest; do
