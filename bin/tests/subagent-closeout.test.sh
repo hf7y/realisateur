@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 #
 # Usage: bin/tests/subagent-closeout.test.sh   (exit 0 = all pass)
-#
-# Witness for hooks/subagent-closeout.sh, including #363: cwd in the
-# SubagentStop payload is the SESSION's cwd, not necessarily the tree a
-# worktree-isolated or freshly-cloned subagent wrote to. The hook now also
-# reads agent_transcript_path from the payload and discovers additional
-# trees from Write/Edit/NotebookEdit tool_use file_paths in it.
+# Witness for hooks/subagent-closeout.sh, including #363's tree discovery.
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
@@ -16,8 +11,7 @@ SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/../hooks/subagent-closeout.sh"
 
 harness_tmp
 
-newrepo() { # newrepo <path> -- pushed to a bare remote, so closeout-lint's
-  # host-only-branch check does not flag a repo this suite calls "clean".
+newrepo() { # newrepo <path> -- pushed to a bare remote, so no host-only-branch flag.
   local bare="$1.git"
   git init -q --bare "$bare"
   git clone -q "$bare" "$1" 2>/dev/null
@@ -88,7 +82,9 @@ echo scratch > "$T/cwdrepo4/dirty.txt"
 transcript_writing "$T/t5.jsonl" "$T/cwdrepo4/dirty.txt"
 B5_OUT="$(run "$T/cwdrepo4" "$T/t5.jsonl")"; B5_RC=$?
 rc "B5 transcript re-naming cwd itself does not double-report" 2 "$B5_RC"
-B5_COUNT="$(printf '%s\n' "$B5_OUT" | grep -c "tree: $T/cwdrepo4$")"
+# space-or-EOL, not EOL alone: the fallback path (no closeout-lint on PATH,
+# CI's case) appends " (N uncommitted change(s))" after the tree.
+B5_COUNT="$(printf '%s\n' "$B5_OUT" | grep -cE "tree: $T/cwdrepo4( |\$)")"
 eq "B5 cwd listed exactly once" "$B5_COUNT" "1"
 
 echo
