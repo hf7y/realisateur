@@ -2,7 +2,6 @@
 # api-restamp.sh -- land a single-file commit on a foreign repo's default
 # branch via the GitHub API, for callers whose `git push` cannot work.
 #
-# Usage:
 
 gh_slug() {
   local url

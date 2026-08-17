@@ -15,7 +15,6 @@
 # read, the added lines were counted, and the count came in under the price.
 # It never means the script could not tell.
 #
-# Usage:
 
 set -uo pipefail
 

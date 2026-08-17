@@ -18,7 +18,6 @@
 # can reach without one, so it cannot quietly rewrite the invoking user's own
 # settings.
 #
-# Usage:
 
 set -uo pipefail
 

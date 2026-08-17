@@ -20,7 +20,6 @@
 # a whole /triage-run's Phase 1 to clean up by hand). "Live on realisateur"
 # read as an ecosystem fact; it was one repo's setting.
 #
-# Usage:
 
 set -uo pipefail
 

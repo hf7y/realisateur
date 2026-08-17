@@ -14,7 +14,6 @@
 #     alone deliberately (installe owns them), so nothing reported them.
 #   - DANGLING links, which PATH search skips in silence.
 #
-# Usage:
 
 set -uo pipefail
 
