@@ -1,29 +1,20 @@
 #!/usr/bin/env bash
 # verify-sync.sh -- the two guards that keep the runtime de-forked.
 #
+# TRAPS (the rest of this header is in the vault):
 #   lib/runtime-check.sh   does any branch's lib/verb.sh differ from the skel?
 #   lib/sync-runtime.sh    adopt the skel onto one branch -- refusing first if
 #                          the branch's verbs need something the skel lacks
-#
-# THE LOAD-BEARING ASSERTIONS ARE B4 AND C1.
-#
 # B4: a project name that matches nothing must EXIT 1, not 0. A checker that
 # reports clean about something it never looked at is this ecosystem's
 # most-recorded failure, and a filter is where it hides best.
-#
 # C1: sync must REFUSE when a verb calls a function the skeleton does not
 # define. Without it, adopting the union silently deletes that function and the
 # verb breaks at a call site in a repo nobody opened. This is the guard that
 # mechanically catches gardien -- whose `garde` calls `verb_gap_or_summon` four
 # times, a function the skeleton deliberately omits because it calls `claude -p`
 # directly in violation of the skeleton's own Law 3.
-#
-# gardien is NOT on an exemption list anywhere. C1 proves the refusal is
-# DERIVED from the code, which is what makes it survive the day gardien is
-# fixed -- and the day some other repo does the same thing.
-#
-# Hermetic: builds fixture repos in a temp dir, overrides INSTALLE_PROJECTS.
-# Never reads the live ecosystem, never writes outside its temp dir.
+
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"   # bashify/

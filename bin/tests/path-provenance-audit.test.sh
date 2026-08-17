@@ -1,41 +1,4 @@
 #!/usr/bin/env bash
-#
-# path-provenance-audit.test.sh -- witness for bin/path-provenance-audit.sh.
-#
-# NOT A SUBSTITUTE FOR RUNNING IT ON A HOST. The guard's whole subject is a
-# real account's PATH; this suite proves the CLASSIFIER and the RATCHET are
-# right, which is the half a container can honestly assert.
-#
-# THE LOAD-BEARING CASE IS B. bin/path-provenance-audit.sh exists because
-# hf7y/realisateur#101 deleted three scripts, their shims survived as
-# permanent exit-127 commands, and nothing noticed. B1 reconstructs exactly
-# that shim and asserts the guard names it; B3 asserts that once `noorphan`
-# is in the ratchet, reintroducing one FAILS THE BUILD. A ratchet whose
-# regression path is untested is a print statement.
-#
-# Cases:
-#   A1 a HOME with no PATH dir under it        -> BLIND, exit 2 (never 0)
-#   A2 ...and the BLIND rows print above everything else
-#   B1 the #101 shim, target deleted           -> ORPHAN, named
-#   B2 a healthy generated shim                -> DECLARED, not orphan
-#   B3 an orphan with `noorphan` ratcheted     -> exit 1 REGRESSION
-#   B4 a shim naming an owner but no target    -> DECLARED, not ORPHAN
-#      (the lid-inhibit-daemon false positive the first draft produced)
-#   B5 a regression AND an unreachable tracker -> exit 1, blindness still said
-#   B6 an unreachable tracker, nothing else    -> exit 2, never 0
-#   B7 a dangling symlink in retired-*/        -> ORPHAN, not skipped (#204)
-#   C1 manifest says X, link resolves to Y     -> DRIFT
-#   C2 manifest target deleted                 -> ORPHAN
-#   D1 provisioned class, one undeclared entry -> coverage UNMET at any ceiling
-#   D2 daily class, same fixture under ceiling -> coverage PASS
-#   E1 a symlink into a checkout               -> counted undeclared, not owned
-#   F1 an unrecognised PATH dir under HOME     -> dirs UNMET, and NOT swept
-#   F2 a toolchain dir (rbenv shims)           -> attributed, not a finding
-#   G1 --accept refuses while regressed        -> exit 1
-#   G2 --accept never raises the ceiling
-#   G3 --accept refuses a run that censused nothing
-#   H1 --strict with checks unmet              -> exit 3
-#   H2 an unknown flag                         -> exit 2
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh

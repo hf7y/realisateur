@@ -1,25 +1,6 @@
 #!/usr/bin/env bash
 #
-# The blast radius is bounded and declared: every access is READ-ONLY -- GETs
-# and `gh` queries, no write, no push, no account touched. Both endpoints are
-# overridable (RELEASE_STATUS_URL, RELEASE_STATUS_PAGE) so the suite can be
-# aimed at a fixture or a staging channel. It fails LOUD rather than skipping
-# when the network is absent: unreachable reports "consumers are BLIND" and
-# exits non-zero, because on this suite's question an unanswerable probe and a
-# healthy channel are not the same answer.
-#
-# release-channel-wiring.test.sh -- assert the release channel is WIRED, not
-# merely that its functions work when someone calls them.
-#
-# WHY THIS FILE IS DIFFERENT FROM THE OTHER SUITES
-# ------------------------------------------------
-# bin/tests/release-gate.test.sh and bin/tests/release-ledger.test.sh both
-# pass perfectly on a machine where nothing is installed, nothing is
-# scheduled, and no verdict has ever been published. They exercise shell
-# functions. That is exactly the "built but not wired" failure this estate
-# repeats -- realisateur/BUILD-DISCIPLINE.md's own "wire-on-commit" row, and
-# the reason the nightly verb build ran for two days with zero consumers.
-#
+# TRAPS (the rest of this header is in the vault):
 # So this suite asserts the MECHANISM EXISTS. It goes red if someone:
 #   - deletes or unschedules the nightly workflow
 #   - removes the gate from it, or lets the gate's refusal be ignored
@@ -28,15 +9,8 @@
 #   - lets the vendored workflow drift from the deployed one   (--live)
 #   - lets the published endpoint go stale or malformed        (--live)
 #
-# TWO MODES, and the split is deliberate.
-#   default  hermetic: reads tracked files only. No network. CI-safe, and it
-#            is what gates a merge.
-#   --live   additionally probes GitHub and the published URL. NOT run in CI:
-#            a suite that fails because an external endpoint blipped teaches
-#            people to ignore the suite. Run it from a terminal, or from the
-#            operator survey.
-#
 # Usage: bin/tests/release-channel-wiring.test.sh [--live]
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

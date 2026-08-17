@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 #
-# (Relocated verbatim from the per-suite ledger that used to live in
-# .github/workflows/tests.yml. It says the same thing; it now says it in the
-# one file that changes when this suite does.)
-# selfdev-gh-app.test.sh -- offline witness for bin/selfdev-gh-app.sh.
-#
+# TRAPS (the rest of this header is in the vault):
 # The parts of that script that can be wrong SILENTLY are the crypto and the
 # config resolution, not the HTTP: a malformed JWT comes back from GitHub as a
 # bare 401 that reads exactly like a revoked key, and a config file that is
@@ -14,22 +10,8 @@
 # every case either stops before the first curl or points $SELFDEV_GH_API at a
 # port nothing is listening on.
 #
-# Cases:
-#   A  no App ID configured            -> FATAL naming SELFDEV_APP_ID, exit 5
-#   B  App ID set, key missing         -> FATAL naming the key path, exit 5
-#   C  key present but not a key       -> FATAL, exit 5 (openssl refuses)
-#   D  --check with a real keypair     -> reports the config, key and tools OK
-#   E  the JWT itself                  -> three dot-separated segments, header
-#      is RS256/JWT, payload iss is the App ID, iat is in the PAST, exp within
-#      GitHub's 10-minute ceiling, and the signature VERIFIES against the
-#      public key (this is the case that would have caught a b64url that left
-#      '=' padding or '+/' in place)
-#   F  env var beats config file       -> SELFDEV_APP_ID wins over the conf
-#   G  key with loose permissions      -> --check says BAD, exit 5
-#   G2 host-wide key (0640, group selfdev) -> --check says OK, not BAD
-#   G3 0640 outside the selfdev group  -> --check says BAD, exit 5
-#
 # Usage: bin/tests/selfdev-gh-app.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

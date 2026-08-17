@@ -1,37 +1,8 @@
 #!/usr/bin/env bash
-#
-# cli-guard.test.sh -- the argument contract, tested at the place it broke.
-#
-# ============================================================================
-# WHY THIS SUITE EXISTS
-# ============================================================================
-#
-# bin/lib/cli-guard.sh is sourced by most of bin/ and had no suite of its own.
-# It was covered only incidentally -- each caller's suite asserts "an unknown
-# flag exits 2", which is the case the library gets right. The case it got
-# WRONG was invisible to all of them, because none of them ever passed a VALUE
-# that begins with a dash.
-#
-# THE FAILURE, measured 2026-08-07 on the first real gated cut:
-#
-#   $ publish-release-verdict.sh --decision NO_CHANGE --reason x --build-id -
-#   publish-release-verdict.sh: unknown flag: -
 #   exit 2
 #
-# cli_guard walks every element of argv, values included. `-` is the
-# publisher's OWN documented sentinel for "no build id" and its own default
-# for that field, and build-verbs.yml passes exactly that on every night that
-# does not cut: `--build-id "${CUT_BUILD:--}"`. Those are precisely the
-# BLOCKED / ERROR / NO_CHANGE nights the verdict channel was built to make
-# visible. So the channel published NOTHING on the one night it mattered, the
-# endpoint kept serving the previous CUT verdict, and the consumer
-# (release-ledger.sh, via selfdev-release-tick.sh) graded a broken release
-# gate as "release channel healthy (verdict fresh, no blocked streak)".
-#
-# A library used by fourteen scripts with no suite of its own is how one arm
-# of one `case` takes down a channel. This file is that suite.
-#
 # Usage: bin/tests/cli-guard.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

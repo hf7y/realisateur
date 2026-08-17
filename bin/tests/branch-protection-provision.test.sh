@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 #
-# branch-protection-provision.test.sh -- witness for
-# bin/branch-protection-provision.sh.
-#
+# TRAPS (the rest of this header is in the vault):
 # Cases:
 #   A already protected with a context      -> "ok", counted protected
 #   B unprotected, has PR checks            -> UNPROT, and --apply writes them
@@ -14,15 +12,8 @@
 #   G pages-build-deployment is never required
 #   H bare invocation writes nothing; --strict gates
 #
-# ON E, because it is why this file exists in this shape. The script's FIRST
-# live run reported "18 protected, 0 unprotected" against an estate where 16
-# repos had no protection at all. `gh api` on a 404 prints the error body to
-# STDOUT, so capturing stdout yielded `{"message":"Branch not protected",...}`
-# -- non-empty, and the code tested non-empty. The guard written to end
-# silent-zero produced one on its first run. E pins the fix (gate on gh's exit
-# status, never on the body) so it cannot come back.
-#
 # Usage: bin/tests/branch-protection-provision.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

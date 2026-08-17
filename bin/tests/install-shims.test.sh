@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #
+# TRAPS (the rest of this header is in the vault):
 # WAS RED WHEN CI FIRST RAN IT (8/3, run 31217552355); CLOSED 2026-08-07, and
 # the one-line fix uncovered two more defects behind it. `run_shims` passed only
 # BIN_DEST and CMD_DEST, so REPO fell back to $HOME/Documents/Projects/
@@ -12,20 +13,8 @@
 # redirected -- so this suite would have written into the real ~/.claude/hooks.
 # Both overrides added. No assertion changed.
 #
-# install-shims.test.sh -- the symlink-at-install-target case.
-#
-# Regression test for the 2026-08-01 incident: a hand-made symlink at an
-# install target made install_file() write THROUGH it and destroy this repo's
-# own bin/silence-audit.sh, replacing it with a shim that exec'd itself.
-# The run printed "written silence-audit" and exited 0.
-#
-# The load-bearing assertion is D1: THE CANARY IS UNCHANGED. Everything else
-# is scaffolding. A version of this file that only checked "the target is a
-# regular file afterwards" would have passed against the broken code, because
-# the broken code did leave a regular file there -- it just wrote it to the
-# wrong inode first.
-#
 # usage: ./bin/tests/install-shims.test.sh
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

@@ -1,50 +1,14 @@
 #!/usr/bin/env bash
-#
-# propagation.test.sh -- THE DEV/PROD DOCTRINE, AS A GUARD.
-#
-# Zach, 2026-08-07, directing this work: "creates a test script rather than
-# prose to document the philosophy." So the propagation doctrine is not a
-# markdown section a future session may or may not read. It is these
-# assertions, and CI globs bin/tests/*.sh, so violating it stops a merge.
-#
-# The doctrine, six sentences, one per section:
-#
-#   1. EVERY ARTIFACT HAS EXACTLY ONE DECLARED CHANNEL.
-#      bin/selfdev-gh-app.sh was written on 2026-08-06 for accounts that had
-#      no way to receive it, and nothing anywhere noticed.
-#
-#   2. `main` IS NOT A DEPLOY REF, AND THE LEAK MAY NOT GROW.
-#      Ten realisateur commands reach accounts as shims that exec into the
-#      realisateur clone. That is `main` deploying through the back door. The
-#      count is bounded and the bound may only be lowered.
-#
-#   3. A CHANNEL WITH NO CLOCK IS NOT A CHANNEL.
-#      Probed 2026-08-07: scheduler was current on every armed account because
 #      usage-paced-runner.sh pulls it every tick. realisateur was 15 commits
-#      behind on all four self-dev accounts because nothing pulled it ever.
-#      Same repos, same hosts, same credentials. The only difference was a
-#      clock.
 #
-#   4. A STOPPED CLOCK IS A FINDING, NOT A SILENCE.
-#      The checker must detect that the fixer died -- offline, no ssh, no
-#      network -- or the estate learns about dead propagation the way it
-#      learned about this one: a human reading a sha by hand.
-#
-#   5. PULL, NOT PUSH.
-#      The consumer owns its clock. Asserted mechanically, because a doctrine
-#      that is only written down gets edged back the first time push is more
-#      convenient.
-#
-#   6. "FOUND NOTHING" IS NOT "NOTHING IS WRONG."
-#      vault:realisateur/MONKEY.md 5's `garde` reported "nothing pending -- every set is already
-#      copied and proven" with nothing reachable.
-#
+# TRAPS (the rest of this header is in the vault):
 # HERMETIC. No network, no ssh, no sudo, no read of the live machine. Fixture
 # homes under a temp dir, a fake installer, HOME/TICK_STATE/VERB_BUILD_ROOT
 # redirected. A suite that needed the real estate to be healthy could not tell
 # its own passing from the estate's.
 #
 # Usage: bin/tests/propagation.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

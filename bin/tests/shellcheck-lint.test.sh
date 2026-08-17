@@ -1,28 +1,12 @@
 #!/usr/bin/env bash
 #
-# bin/tests/shellcheck-lint.test.sh -- witness for bin/shellcheck-lint.sh.
-#
-# THE LOAD-BEARING ASSERTIONS ARE C, D AND E.
-#
+# TRAPS (the rest of this header is in the vault):
 # A ratchet whose regression path does not fire is a green light wired to
 # nothing, and this estate has shipped that exact thing more than once: three
 # guards tested a literal unexpanded `$HOME` so `silence-audit --strict` was
 # never once passable, and a propagation pass that reached zero projects
 # exited 0. So the cases that matter are not "it runs" -- they are:
-#
-#   C  a NEW (file, code) pair exits 1, and names the pair
-#   D  shellcheck missing exits 2 (BLIND), NOT 0
-#   E  matching zero shell files exits 2 (BLIND), NOT 0
-#
-# E is the one that looks like paranoia and is not. `bin/tests/*.sh matched
-# nothing` was a live defect in this repository's own CI, found only because
-# someone added the guard for it; a lint that lints nothing reports success in
-# exactly the voice of a lint that found nothing wrong.
-#
-# SKIPS RATHER THAN FAILS when shellcheck is absent from the host -- except
-# for case D, which needs it absent and is therefore the one case that always
-# runs. A suite that goes red on a developer laptop for lacking a linter is a
-# suite that gets commented out.
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

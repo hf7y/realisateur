@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 #
-# release-gate.test.sh -- witness for bin/release-gate.sh's four states and
-# their exit codes.
-#
+# TRAPS (the rest of this header is in the vault):
 # WHY A FAKE `gh` AND NOT THE REAL ONE. The gate's whole job is to be right
 # about GitHub's answer, so a suite that asks GitHub cannot distinguish its
 # own passing from the org happening to be green today -- and the two states
@@ -10,19 +8,8 @@
 # a real repository at all. cut-verb-build-test.sh already established this
 # shape here: a fake `gh` on a controlled path, fixture answers, no network.
 #
-# THE FOUR STATES, and why each has its own assertion:
-#   GREEN    checks exist for HEAD and all succeeded          -> exit 0
-#   RED      a check for HEAD failed                          -> exit 1
-#   PENDING  a check for HEAD has not concluded               -> exit 4
-#   UNGATED  no checks exist for HEAD (the project has no CI)  -> exit 0, counted
-#   BLIND    GitHub could not be asked                        -> exit 3
-#
-# The one that matters most is that UNGATED is neither GREEN nor RED. Nine of
-# the twelve projects carrying a `bashified` branch had no CI at all when this
-# was written, so folding UNGATED into RED blocks every cut forever and
-# folding it into GREEN is the found-nothing/nothing-is-wrong conflation.
-#
 # Usage: bin/tests/release-gate.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

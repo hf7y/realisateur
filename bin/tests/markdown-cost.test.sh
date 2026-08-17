@@ -1,58 +1,7 @@
 #!/usr/bin/env bash
 #
-# markdown-cost.test.sh -- witness for bin/markdown-cost.sh.
-#
-# Offline, zero AI, no network: every case builds its own throwaway git
-# repository in a temp dir, commits fixture files into it, and runs the script
-# against a range inside that repository. Nothing here reads the live
-# ecosystem, this checkout's own history, or origin.
-#
-# THE LOAD-BEARING ASSERTIONS ARE E1..E3. A gate that exits 0 when it could not
-# resolve the range is worse than no gate: it reports "found nothing" as
-# "nothing is wrong", which is the exact failure bin/lib/conf.sh's header
-# records (a propagation pass that reached NOBODY, printed a tidy summary, and
-# exited 0). If markdown-cost.sh ever exits 0 on an unreadable range, this file
-# must go red.
-#
-# Negative-tested against an `exit 0` stub: 19 of the 31 assertions fail as
-# they should. The 12 that survive are the expect-exit-0 and `hasnt` (absence)
-# assertions, which a silent stub passes vacuously -- so each of those cases
-# (A, C3, C4, D1, D2, D3) is paired with a positive assertion on the same
-# fixture, and no case rests on absence alone.
-#
-# Cases:
-#   A1 a code-only diff                          -> exit 0
-#   A2 ...and says so in words, with the ratio
-#   B1 a prose-heavy diff (over the threshold)   -> exit 1
-#   B2 ...names the ratio
-#   B3 ...names the file that cost the money
-#   B4 the threshold is env-overridable: the same diff under a high
-#      MARKDOWN_COST_MAX_PCT passes                -> exit 0
-#   B5 deleting prose is free (deletions are not priced)
-#   C1 a NEW top-level *.md                      -> exit 1
-#   C2 ...names it, and names the allowlist
-#   C3 EDITING an existing top-level *.md is fine (same file, second commit)
-#   C4 a new *.md under a directory is not a new ROOT document
-#   D1 an allowlisted new root doc (CLAUDE.md)   -> exit 0
-#   D2 an allowlisted file's lines are not priced as prose (README.md)
-#   D3 man/ is allowlisted at any depth
-#   E1 an unresolvable range                     -> exit 2, never 0
-#   E2 ...and says why on stderr
-#   E3 outside a git repository                  -> exit 2
-#   E4 a non-numeric MARKDOWN_COST_MAX_PCT       -> exit 2
-#   E5 two positional arguments                  -> exit 2
-#   F1 many comment lines at a high ratio in .sh -> exit 1
-#   F2 the same comment lines, diluted by code   -> exit 0 (the AND, not an OR)
-#   F3 dense but under the 150-line floor        -> exit 0
-#   F4 residue/ is excluded from every rule      -> exit 0
-#   G1 --census with no baseline                 -> exit 2, never 0
-#   G2 --accept records the count it measured
-#   G5 --accept REFUSES to write a higher number
-#   G6 --census REJECTS a branch that raised the baseline by hand
-#   G3 a tree above the baseline                 -> exit 1
-#   G4 a tree below it passes, and says so
-#
 # Usage: bin/tests/markdown-cost.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

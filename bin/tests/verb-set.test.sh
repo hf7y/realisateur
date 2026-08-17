@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #
+# TRAPS (the rest of this header is in the vault):
 # WAS RED WHEN CI FIRST RAN IT (30/4, run 31217552355); CLOSED 2026-08-07, and
 # the first diagnosis was REFUTED, which is the lesson. The hardcoded
 # `SCHED="/home/zach/Documents/Projects/scheduler"` was real, but c8fc45e (#89)
@@ -12,28 +13,8 @@
 # bin/install-verbs.sh reads, instead of retyping the registry join, and reports
 # BLIND rather than "no registered project" when the registry is absent.
 #
-# verb-set.test.sh -- the declared set, and the two defects it closes.
-#
-# THE LOAD-BEARING ASSERTION IS C1: a declared verb that is NOT installed makes
-# install-verbs exit 1. Everything else is scaffolding.
-#
-# That case is precisely what scheduler/bin/deploy-drift-check.sh cannot see.
-# It iterates its own bin/ and `continue`s when the installed file is absent,
-# so a link that SHOULD exist but does not is never examined; with no overlap
-# at all it prints "nothing to check" and exits 0. A version of this test that
-# only checked "install-verbs runs and prints rows" would pass against an
-# intersection check too, and would therefore prove nothing.
-#
-# The second defect is B2/B3: `bashify coin` asked `command -v` -- the HOST's
-# PATH -- whether a verb name was free. Declarations live in repos, so on a
-# host where nothing is installed every name reads as free. That is how `range`
-# was assigned to both bibliothecaire and secretaire on 2026-07-30.
-#
-# Hermetic: builds its own project fixtures in a temp dir and overrides
-# INSTALLE_PROJECTS / INSTALLE_BIN / INSTALLE_MANIFEST, so it never reads the
-# live ecosystem and never writes to ~/.local/bin.
-#
 # usage: ./bin/tests/verb-set.test.sh
+
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 

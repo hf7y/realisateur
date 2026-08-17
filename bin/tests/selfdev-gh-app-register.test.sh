@@ -1,37 +1,7 @@
 #!/usr/bin/env bash
 #
-# (Relocated verbatim from the per-suite ledger that used to live in
-# .github/workflows/tests.yml. It says the same thing; it now says it in the
-# one file that changes when this suite does.)
-# selfdev-gh-app-register.test.sh -- offline witness for
-# bin/selfdev-gh-app-register.sh, INCLUDING the exchange that handles the
-# private key. That step is the one worth testing hardest: it runs once per
-# account, it is the only moment the key is ever in flight, and the manifest
-# code is single-use -- so a bug there is not retryable, it is an App on
-# GitHub whose key nobody holds.
-#
-# No network. A local stub stands in for api.github.com via $SELFDEV_GH_API,
-# and the browser is replaced by a curl at the callback port.
-#
-# Cases:
-#   A  --manifest-only writer  -> contents:write in the manifest, form points
-#      at /settings/apps/new, nothing created
-#   B  --manifest-only --reader-> contents:READ and no pull_requests. This is
-#      the case that catches a reader App silently granted write.
-#   C  --org                   -> form posts to /organizations/<owner>/...
-#   D  the embedded manifest is valid JSON with the right redirect_url (it is
-#      double-encoded into a JS string literal; a naive quote would break it)
-#   E  full flow against the stub -> pem written mode 600, conf written with
-#      the app id, install URL printed, exit 0
-#   F  stub returns an error body -> exits 5, writes NO key, and SAYS the App
-#      may exist without a key
-#   G  no code at the callback -> exits 5, writes nothing, and the wait is
-#      bounded by the script's own --timeout (default 3600s, matching GitHub's
-#      one-hour manifest-code lifetime -- a SHORTER wait is the dangerous
-#      setting, because the human can still click a valid code into a closed
-#      socket and strand an App whose key can never be minted)
-#
 # Usage: bin/tests/selfdev-gh-app-register.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

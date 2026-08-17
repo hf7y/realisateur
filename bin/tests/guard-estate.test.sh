@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 # guard-estate.test.sh -- a test over the guard POPULATION, not over one guard.
 #
-# Every guard is argued about one at a time and one at a time the argument is
-# always winnable. The population is what got bad, so the bar has to FAIL when
-# a guard is added below it rather than live in a document.
-#
+# TRAPS (the rest of this header is in the vault):
 # THE POPULATION IS DERIVED, NOT LISTED. A list is an append point every
 # concurrent PR contends for, and a guard can be added below the bar by simply
 # not adding it. Derivation is by NAME SHAPE over bin/*.sh: -lint, -audit,
@@ -13,22 +10,13 @@
 # coincidence. Anything not matching may opt IN with `# GUARD:`.
 # A0 closes the dodge: any bin/*.sh whose header says it "refuses", "flags",
 # "audits" or "gates" without a `# GUARD:` line fails.
-#
-# THE PROPERTIES:
-#  A DECLARED        declares what question it answers
-#  B RUNNER IS REAL  the runner it names exists and mentions it
-#  C TEST IS REAL    the suite it names exists and mentions it
-#  D EXIT TRACKS     in the gating mode, findings>0 => rc!=0, rc==0 => no findings
-#    FINDINGS
-#  E BLIND != CLEAN  not-looking must not grade as clean, and prints BEFORE findings
-#  F TREE-HONOURING  pointed at a temp tree, must not report on the live checkout
-#
 # THE THREE BOUNDS. Some guards legitimately have no runner, no suite, or no
 # safely-executable gating mode. Each is allowed AND COUNTED against a bound
 # that may shrink and must never grow. A ratchet, not an exemption: the next
 # guard that wants to be hand-run has to retire one that already is.
 #
 # usage: ./bin/tests/guard-estate.test.sh
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

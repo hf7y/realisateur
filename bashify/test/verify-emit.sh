@@ -1,34 +1,17 @@
 #!/usr/bin/env bash
 # verify-emit.sh -- does `bashify emit` actually produce a branch?
 #
-# THE LOAD-BEARING ASSERTION IS E1, AND IT IS EMBARRASSINGLY SIMPLE:
-# emit must exit 0 on a clean project. Nothing asserted that until now, and
-# emit has been totally broken TWICE for the same reason:
-#
-#   1. (recorded in bashify.sh's own header) the purge guard was unsatisfiable
-#      against lib/verb.sh's documentation of --summon. emit exited 5 for every
-#      project, on every run, FOR TWO DAYS, while `bashify list` reported emit
-#      MECHANIZED -- because `_state` only asks whether the file is executable.
-#
+# TRAPS (the rest of this header is in the vault):
 #   2. (2026-08-02, found by this file's first run) the de-fork added
 #      "It calls `claude -p` directly" to the skeleton. The exemption was
 #      bounded to the word `agent` and never covered a vendor name, so the
 #      vendor grep matched the skeleton and emit exited 5 for every project
 #      again.
-#
-# Twice is a pattern, and the pattern is that emit's health was inferred from
-# a file mode rather than from running it. This file runs it.
-#
 # WHY IT IS SAFE TO RUN. emit opens with `git rm -r .` and `git branch -D
 # bashified` against the project's REAL repo, which is why it was untestable
 # until BASHIFY_SCHED and BASHIFY_WORK were made overridable. This test builds
 # throwaway repos and points both at them; it never reads the live registry.
-#
-# A TRAP THIS FILE ENCODES: the fixture must NOT live under a path containing
-# `.claude`. The generated verb bakes its source repo path into LEGACY_ROOT, so
-# a fixture under ~/.claude/... injects the token `claude` into the emitted
-# tree and the purge guard fails for a reason that has nothing to do with the
-# code under test. That cost a false attribution once already; E0 asserts it.
+
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"   # bashify/

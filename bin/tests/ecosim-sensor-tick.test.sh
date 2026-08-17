@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 #
-# ecosim-sensor-tick.test.sh -- witness for the monthly rotation of
-# bin/ecosim-sensor-tick.sh's durable archive (#55).
-#
-# THE DEFECT. The wrapper appended every run to ONE never-rotated
-# archive.jsonl. Measured on mandark 2026-08-11: 753,341 bytes over 45 runs,
-# ~16.7 KB per run; at the armed cadence (*/30) that is ~800 KB/day and
-# ~290 MB/year in a single file nothing can seek into.
-#
+# TRAPS (the rest of this header is in the vault):
 # WHAT IS NOT BEING FIXED, and this is the point of case C. The archive is
 # never TRIMMED -- that was the deliberate decision in #53, because a rolling
 # window cannot answer "what did the sensors say during the migration" three
@@ -15,16 +8,8 @@
 # asserts bytes are MOVED, never dropped: C reads the whole record back after
 # rotation and compares it line-for-line with what went in.
 #
-# Cases:
-#   A  a run appends to archive-<YYYY-MM>.jsonl, not archive.jsonl
-#   B  a closed month is gzipped; the open month is left alone
-#   C  the pre-rotation archive.jsonl is migrated, not deleted, and every
-#      line of it survives into the sealed set
-#   D  the documented reader spans sealed and open months in one command
-#   E  a closed month that reappears after its .gz exists is appended to the
-#      seal, not dropped and not left colliding
-#
 # Usage: bash bin/tests/ecosim-sensor-tick.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

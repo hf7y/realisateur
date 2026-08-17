@@ -1,51 +1,14 @@
 #!/usr/bin/env bash
 # sync-runtime.sh -- adopt the skeleton runtime onto one bashified branch.
 #
-# WHY THIS IS A COMMAND AND NOT A HAND-COPY
-# -----------------------------------------
-# The runtime forked into four dialects because propagating it was always a
-# hand-copy: something a session did once and no code in any repo performed.
-# That is the exact shape of the 2026-07-29 dispatch outage -- one symlink a
-# human made once, that nothing could recreate. Copying the file by hand to fix
-# a fork caused by copying the file by hand would be the same mistake twice.
-#
-# THE GUARD THIS EXISTS FOR, and it is the whole point.
-# Overwriting a branch's runtime DELETES any function that runtime provided and
-# the skeleton does not. If a verb on that branch calls one, the verb breaks the
-# moment the file lands -- and it breaks at a call site nobody is looking at,
-# in a repo nobody opened. So before writing anything, this compares:
-#
-#   functions the branch's verbs CALL   vs   functions the skeleton DEFINES
-#
-# and REFUSES if the skeleton is missing any. A verb that defines the function
-# itself is fine and is not counted.
-#
+# TRAPS (the rest of this header is in the vault):
 # That check is what mechanically catches gardien: its `bin/garde` calls
 # `verb_gap_or_summon` at four sites, and the skeleton deliberately does not
 # carry it (it calls `claude -p` directly, which the skeleton's own line 32
 # forbids). gardien is not on an exemption list here -- the guard derives the
 # refusal from the code every run, so the day `garde` stops calling it, sync
 # starts working with no list to remember to edit.
-#
-# NO WORKTREE REQUIRED TO PREFLIGHT (fixed hf7y/realisateur#158). This used to
-# require a <project>-verbs worktree to already exist, and refused with advice
-# to hand-create one otherwise. That advice named the exact mechanism
-# `installe` stopped producing on 2026-08-05 (senechal a1c8629f) -- nothing in
-# the ecosystem left that worktree lying around anymore, so the refusal fired
-# every time. The analysis below only ever READS the branch (which function
-# a verb calls, whether the runtime already matches), and runtime-check.sh
-# next door already proves that reading a bashified branch needs no checkout:
-# it compares via `git show "$ref:lib/verb.sh"`, keyed off verb_set_ref_of.
-# This does the same for preflight, materializing a throwaway read-only mirror
-# under mktemp when no worktree exists.
-#
-# A WORKTREE IS STILL WHERE A WRITE LANDS, because the write is meant to be
-# read by a human before it becomes history (same reasoning as coin.sh), and
-# that needs a real working directory. So --apply creates one at
-# $PROJECTS/<project>-verbs when none exists yet -- the same path the old
-# refusal used to print as advice, just performed instead of asked for. That
-# keeps the PREFLIGHT BY DEFAULT contract intact: nothing is written, and no
-# worktree is created, without --apply.
+
 set -uo pipefail
 
 CLI_NAME='sync-runtime.sh'

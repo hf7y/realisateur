@@ -1,31 +1,13 @@
 #!/usr/bin/env bash
 #
-# Contract test for bin/setup-selfdev-project.sh's step 3 GATE -- realisateur#120.
-#
-# THE CLAIM WORTH FAILING OVER
-# ----------------------------
-# bin/wire-selfdev-git.sh already fails loud on its own: its "6. the witness"
-# section runs `git ls-remote` against the alias it just wired and exits 5 on
-# `BAD WITNESS FAILED: ... the wiring is not live`. That is a real, correct
-# failure signal, and setup-selfdev-project.sh threw it away one layer up:
-#
-#     run_as "'$STAGE/wire-selfdev-git.sh' '$repo' --apply $access" 2>&1 | sed 's/^/     /'
-#
-# `set -uo pipefail` without `set -e`, and nothing reading $? or PIPESTATUS, so
-# the loop moved on and the script proceeded to "4/5 land" and "5/5 release
-# bootstrap" as though every repo had wired cleanly. Account #4 (vim-arcade)
-# provisioned "successfully" on 2026-08-04 with one repo's wiring broken; it
-# surfaced on that account's first scheduled run, as something else.
-#
-# So this suite asserts three things, and the third is the one a first draft
-# gets wrong:
-#
+# TRAPS (the rest of this header is in the vault):
 #   * a failing repo makes the run REFUSE, non-zero, naming that repo;
 #   * it refuses BEFORE landing and before the release bootstrap -- proven by
 #     the stubs' own markers, not by reading the log;
 #   * EVERY failing repo is named, not the first. "senechal failed" and
 #     "senechal and scheduler failed" are different amounts of re-work, and
 #     stopping at the first hides the difference.
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

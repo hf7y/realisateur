@@ -1,18 +1,10 @@
 #!/usr/bin/env bash
 #
-# release-ledger.test.sh -- THE INVERSION, AS A GUARD.
-#
-# Gating the nightly cut on CI green created a new silent failure, and it is
-# the shape this estate keeps paying for:
-#
-#     "no cut tonight because nothing changed"
-#     "no cut tonight because main is broken"
-#
+# TRAPS (the rest of this header is in the vault):
 # are identical to anything that detects a release by LOOKING FOR A NEW BUILD.
 # You cannot detect an absence by looking for something. So the channel emits
 # a verdict every night whether or not it cuts, and these assertions are what
 # stop that verdict from decaying back into a thing nobody grades.
-#
 # THE SIX RULES, one per section:
 #   1. Default-deny on the enum      -- an unknown decision is BAD, not OK
 #   2. Two clocks                    -- emitter alive vs pipeline productive
@@ -21,16 +13,8 @@
 #   5. An empty channel is not clean -- zero verdicts is BAD
 #   6. Unreadable is not empty       -- BLIND(3) and BAD(1) are different facts
 #
-# The two cases normally left untested because they are awkward to produce --
-# "no verdicts at all" and "the newest verdict is stale" -- are produced here
-# with fixtures and are sections 4 and 5. They are the whole point: every
-# other assertion still passes on a channel that died last Tuesday.
-#
-# HERMETIC. Fixture ledger files in a temp dir, LEDGER_NOW frozen so "how old
-# is this row" is arithmetic and not a race with the wall clock. No network,
-# no git, no live machine read.
-#
 # Usage: bin/tests/release-ledger.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

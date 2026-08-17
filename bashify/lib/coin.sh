@@ -2,35 +2,16 @@
 # coin.sh -- add ONE verb to a bashified branch that already carries verbs.
 #
 # RUNNER: bin/tests/bashify-coin.test.sh
-#   It lives under bin/tests/ and not bashify/test/ because .github/workflows/
-#   tests.yml globs bin/tests/*.sh only -- bashify/test/verify-*.sh is run by
-#   no workflow at all (hf7y/realisateur#157). A suite for the estate's only
-#   new-verb door, filed where nothing executes it, would be the same failure
-#   tests/run-all.sh was written to end.
 #
-# Written 2026-08-01 at its own call site. The doctrine is now ONE NOUN, MANY
-# VERBS (vault:realisateur/RESEARCH-VERB-ECOSYSTEM-20260730.md): a project is a noun, a noun does
-# several things, and forcing each noun to expose exactly one verb was the
-# bashify pass's shortcut rather than a decision.
-#
+# TRAPS (the rest of this header is in the vault):
 # `emit` never learned that. It opens with `git rm -r .` and rebuilds the whole
 # branch from the default branch's tooling, so running it against a branch that
 # has since grown verbs by hand DESTROYS them. That is not a bug in emit -- it
 # is emit doing exactly what a bootstrap does. What was missing is the second
 # act: adding one verb without touching the ones already there.
 #
-# The division of labour:
-#   emit  -- bootstrap a bashified branch that does not exist yet
-#   coin  -- add one verb to a bashified branch that does
-#
-# It deliberately does NOT write a man page. `bashify page` does that, against
-# a live command, which is the page-first method this family documents: the
-# verb is coined, the page is written against it, the page is checked. `fauche`
-# was made in exactly that order (gardien e15ce01, then 544b83a).
-#
 # usage: coin.sh <project> <verb> <summary>
 # exit:  0 coined   2 usage   4 gap   5 broken   6 blind
-#        7 refused -- the branch is not in a state where coining is the act
 
 set -uo pipefail
 

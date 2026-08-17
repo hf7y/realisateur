@@ -19,6 +19,20 @@
 # setup-selfdev-project.sh. It is bounded and asserted to stay bounded
 # (PROP_LEAK_BOUND); everything else is payload and arrives versioned.
 #
+# TRAP: the PROP_*_SCRIPTS values are newline-separated STRINGS consumed by
+#   `for s in $LIST`, not shell code. A `#` comment placed INSIDE the quotes
+#   does not comment anything -- it CLOSES the string and the rest of the list
+#   executes as commands. The first draft of that very comment did this and
+#   propagation.test.sh caught it as 20 lines of "command not found".
+#   Comments go ABOVE the assignment.
+#
+# TRAP: a comment line whose FIRST word is `shellcheck` is parsed as a
+#   shellcheck directive -- SC1072/SC1073, a parse error on the whole file.
+#   Spell the path as `bin/shellcheck-lint.sh`, never bare.
+#
+# TRAP: do not reclassify a row to PAYLOAD without a matching man page. That
+#   drops it from every build in silence (#85).
+
 PROP_RELEASE_REPO="hf7y/verbs"
 PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
 
@@ -28,46 +42,33 @@ PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
 # recognise it; prop_current_pin() resolves either.
 PROP_PIN_PATH=".local/share/verb-builds/current"
 
-# ============================================================================
-# STAMPING: WHICH BUILD PRODUCED THIS ARTIFACT
-# ============================================================================
+# STAMPING -- THREE STATES, NEVER TWO. Every stamper calls
+# prop_build_trailer().
 #
-# ONE READER: every stamper calls prop_build_trailer().
+#   Verb-Build: <build id>   stamped, and the build is known
+#   Verb-Build: unknown      stamped, and the producer honestly did not know
+#   (no trailer at all)      UNSTAMPED: predates or bypasses the mechanism
 #
-# THREE STATES, NEVER TWO. The distinction the mechanism lives or dies on:
+# TRAP: an unstamped artifact must stay distinguishable from one stamped
+#   "unknown" -- they mean opposite things about the mechanism. The second
+#   proves the stamper ran and told the truth; the first proves nothing ran.
+#   NEVER guess a plausible build id ("the latest one", "the one in the
+#   manifest"); that destroys exactly this distinction.
 #
-#   Verb-Build: 2026-08-07T040739Z   stamped, and the build is known
-#   Verb-Build: unknown              stamped, and the producer honestly did
-#                                    not know -- no build is adopted on this
-#                                    host, or the pin is unreadable
-#   (no trailer at all)              UNSTAMPED: produced by something that
-#                                    predates or bypasses the mechanism
-#
-# An unstamped artifact must remain distinguishable from one stamped
-# "unknown", because they mean opposite things about the mechanism: the
-# second proves the stamper ran and told the truth; the first proves nothing
-# ran. Guessing a plausible build id -- "the latest one", "the one in the
-# manifest" -- would destroy exactly that distinction, so it is never done.
-#
-# WHY A GIT TRAILER: it survives the artifact being read later out of
-# context, which is the requirement: the commit carries it forever, it
-# travels with a clone, a cherry-pick and a patch, `git log
-# --format='%(trailers:key=Verb-Build)'` reads it in bulk, and no human
-# maintains it. A line in a report file satisfies none of those.
+# It is a git TRAILER because it must survive the artifact being read later
+# out of context: it travels with a clone, a cherry-pick and a patch, and
+# `git log --format='%(trailers:key=Verb-Build)'` reads it in bulk.
 
 # prop_current_pin -- the adopted build id, or nothing. Never a guess.
 #
-# TWO ROOTS, IN THE ORDER THE ACCOUNT ACTUALLY RESOLVES THEM. The private pin
-# first: an account that still has one is running it, because its ~/.local/bin
-# shims point into it and shadow the host-wide directory. The HOST-WIDE root
-# second, which is where hf7y/realisateur#180 is moving every account.
-#
-# Without the second, this function went honest-but-useless the moment an
-# account retired: probed 2026-08-13, the four accounts retired that morning
-# stamped `Verb-Build: unknown` while running a perfectly well-known build out
-# of /usr/local/bin. "Unknown" is the right answer to an unreadable pin and the
-# wrong answer to a pin that moved -- and the three-state rule above only earns
-# its keep while `unknown` stays rare enough to mean something.
+# TRAP: TWO ROOTS, in the order the account actually resolves them. The
+#   private pin first (an account that still has one is running it, because
+#   its ~/.local/bin shims shadow the host-wide directory), the host-wide root
+#   second. Without the second this went honest-but-useless the moment an
+#   account retired: probed 2026-08-13, four retired accounts stamped
+#   `unknown` while running a perfectly well-known build from /usr/local/bin.
+#   "Unknown" is right for an unreadable pin and wrong for a pin that moved --
+#   and the three-state rule only earns its keep while `unknown` stays rare.
 prop_current_pin() {
   local p t
   for p in "${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}/current" \
@@ -87,66 +88,17 @@ prop_build_trailer() {
 }
 
 # --- BOOTSTRAP: small, near-immutable, installed once per account -----------
-# Every entry here is a file a consumer must hold BEFORE any payload can
-# arrive. Adding one is a review event, not a convenience -- see the bound
-# asserted in propagation.test.sh.
-# release-ledger.sh is bootstrap because the CONSUMER runs it: it is how an
-# account tells "no new build because nothing changed" from "no new build
-# because main is broken", and that question has to be answerable on a host
-# that has no payload installed at all.
-# selfdev-gh-app.sh SPENDS THE FOURTH AND LAST SLOT under the declared bound
-# of 4, so this addition is the "review event" the bound exists to force. The
-# argument for it, stated so a reviewer can reject it: the script is the git
-# CREDENTIAL HELPER. `--credential` is invoked by git on every fetch and push
-# the account makes, so it is not a stand-up-once script (that is its sibling
-# selfdev-gh-app-register.sh, filed under PROVISION below). And it answers the
-# decider's question the only way a credential helper can -- an account with no
-# payload installed cannot authenticate to git, and therefore cannot FETCH a
-# payload, so this must be present before anything else can arrive.
+# Every entry is a file a consumer must hold BEFORE any payload can arrive.
+# Adding one is a review event, not a convenience -- the bound is asserted in
+# bin/tests/propagation.test.sh.
 #
-# THAT LAST STEP WAS PROBED, NOT ASSUMED, because it is the whole argument: if
-# the release repo were PUBLIC, an account could fetch the payload with no
-# credential at all and this would be payload, not bootstrap.
-#   # verified 2026-08-07 23:20Z via `gh repo view hf7y/verbs --json visibility`
-#   -> {"isPrivate":true,"visibility":"PRIVATE"}
-# and bin/install-verb-build.sh:63 clones it over HTTPS
-# (https://github.com/hf7y/verbs.git), which git can only authenticate through
-# a credential helper. So the payload is unreachable until this file is already
-# on the account. Classifying it PAYLOAD would be circular -- the build
-# delivering the credential needed to fetch the build -- and would also push
-# PROP_PAYLOAD_PENDING to 11 against a PROP_LEAK_BOUND of 10 that only ever
-# goes down.
-#
-# >>> THAT STAMP WENT FALSE THE SAME NIGHT, AND THE ARGUMENT ABOVE WENT WITH
-# >>> IT. `hf7y/verbs` was flipped to PUBLIC at ~23:30Z on 2026-08-07.
-#   # verified 2026-08-07 23:52Z via `gh repo view hf7y/verbs --json visibility,isPrivate`
-#   -> {"isPrivate":false,"visibility":"PUBLIC"}
-#
-# The stamp is corrected rather than deleted BECAUSE the reasoning downstream
-# of it is now wrong, and a corrected stamp with the old text struck through it
-# is the only version of this comment that shows a reader why. The argument for
-# selfdev-gh-app.sh occupying the fourth and last bootstrap slot was ITS OWN
-# probe: a private release repo makes the credential helper a precondition for
-# fetching anything, so it cannot travel as payload. A PUBLIC release repo
-# removes that precondition entirely -- `git clone https://github.com/hf7y/verbs.git`
-# now needs no credential at all -- so the circularity is gone and with it the
-# only thing that made this file bootstrap rather than payload.
-#
-# THE SLOT IS NOT FREED IN THIS COMMIT, DELIBERATELY. Reclassifying a bootstrap
-# entry changes what four live accounts hold before they can fetch anything,
-# and that is its own review with its own probe of what is already staged on
-# each account. It is reported as a finding, not acted on here. Note before
-# anyone acts on it: the helper is still needed to PUSH as the App identity and
-# to reach the account's own PRIVATE project repo, so the question is not "is
-# it still needed" (it is) but "must it be present BEFORE the first payload
-# arrives" (it need no longer be). Those are different questions and only the
-# second one decides the slot.
-#
-# It is also the file propagation.test.sh's own doctrine names as the motivating
-# case: written 2026-08-06 for accounts that had no way to receive it. Giving it
-# a channel is that finding being closed, not the bound being eroded. The bound
-# is now FULL: the next addition must retire one of these four or raise the
-# bound deliberately, which is exactly the conversation it was built to force.
+# TRAP: the bound is spent. selfdev-gh-app.sh takes the fourth and last slot,
+#   as the git CREDENTIAL HELPER: an account with no payload cannot
+#   authenticate to git and therefore cannot FETCH a payload, so it must be
+#   present before anything else can arrive. Classifying it PAYLOAD would be
+#   circular -- the build delivering the credential needed to fetch the build.
+#   That argument depends on hf7y/verbs being PRIVATE; it went public later,
+#   so the classification is now re-openable (#108).
 PROP_BOOTSTRAP_SCRIPTS="
 install-verb-build.sh
 selfdev-release-tick.sh
@@ -176,20 +128,9 @@ lib/selfdev-app-key.sh
 # all do. LOCAL's members are repo-wide CI gates and estate-wide surveys; a
 # script whose first argument is an account name does not belong among them.
 #
-# NOTE FOR ANY FUTURE EDITOR OF THESE LISTS: they are newline-separated strings
-# consumed by `for s in $LIST`, NOT shell code. A `#` comment placed INSIDE the
-# quotes does not comment anything -- it closes the string and the rest of the
-# list executes as commands. That is not hypothetical; it is what the first
-# draft of this very comment did, and `bin/tests/propagation.test.sh` caught it
-# as 20 lines of "command not found". Comments go ABOVE the assignment.
-# selfdev-app-key.sh is PROVISION, not LOCAL and not PAYLOAD, on the same test
-# every entry here answers: would a host with NO payload installed still need
-# it? Yes -- it is what puts the one GitHub App credential at
-# /etc/selfdev/app.pem in the first place, and nothing on a bare host can mint
-# a token until it has run. It runs AS ROOT ON THE SELF-DEV HOST (like
-# provision-selfdev-user.sh directly above it), not from a hands account over
-# ssh (which is what makes selfdev-credentials.sh LOCAL instead), and
-# setup-selfdev-project.sh calls it as step 5/6.
+# selfdev-app-key.sh is PROVISION: it puts the one GitHub App credential at
+# /etc/selfdev/app.pem, so nothing on a bare host can mint a token until it
+# has run. Runs AS ROOT on the self-dev host.
 PROP_PROVISION_SCRIPTS="
 land-selfdev.sh
 provision-selfdev-user.sh
@@ -332,33 +273,20 @@ PROP_LEAK_BOUND=7
 # one paragraph up: it runs where the ssh credential to the self-dev host is,
 # and an account never publishes a page about its own fleet.
 #
-# playbook.sh IS FILED HERE UNDER PROTEST, like defere.sh above, and with the
-# same issue-number-not-a-sentence rule: hf7y/realisateur#244. Its `push` half
-# is genuinely local -- a human hand, at a keyboard with write access. Its
-# `pull` half is the opposite: it is meant to run on every dispatch account,
-# first thing, before the queue. LOCAL means it does not exist there. Until it
-# is declared as bin/playbook + man/playbook.1 on the bashified branch and
-# added to PAYLOAD (without growing PROP_LEAK_BOUND, see #115's shape), the
-# accounts read their brief with a two-command `gh` snippet written into
-# BATCH_PROMPT instead -- which is retyped logic, which is the defect, which
-# is what #244 is for. Do NOT reclassify this row to PAYLOAD without the man
-# page: that drops it from every build in silence (#85).
-# dexter-liveness.sh and dexter-service-deploy.sh are LOCAL: both need an ssh
-# credential to dexter and a working copy of provision/dexter/. An account
-# neither probes another host nor deploys to one -- it is the thing deployed.
+# playbook.sh is LOCAL UNDER PROTEST (#244): its `push` half is a human at a
+# keyboard, but its `pull` half is meant to run on every dispatch account,
+# where LOCAL means it does not exist. Accounts read their brief with a
+# retyped two-command `gh` snippet in BATCH_PROMPT instead -- that is the
+# defect #244 exists for.
 #
-# monkey-vdi-to-internal.sh and monkey-watch.sh are LOCAL for a sharper version
-# of the same reason: both must run ON THE VM HOST, because both call
-# VBoxManage against the guest. Shipping either to an account would be worse
-# than useless -- monkey-watch's whole purpose is to report monkey being down,
-# which it can only do from somewhere that is not monkey (hf7y/realisateur#274,
-# where the previous publisher could not report an outage because publishing
-# required ssh to the thing that was down). A watcher that ships to its subject
-# is the failure, not the delivery.
-# sunset-coordinator-files.sh is LOCAL because it operates on a CHECKOUT it is
-# handed -- a clone of some other repo, on a branch it cuts and pushes. An
-# account has no such clone and no push right to sixteen foreign repos; the
-# sweep is run once, from a workstation, against fresh clones.
+# dexter-* and monkey-* are LOCAL: they need an ssh credential to another
+# host, or must run ON the VM host (VBoxManage against the guest).
+# monkey-watch's whole purpose is to report monkey being down, which it can
+# only do from somewhere that is not monkey (#274). A watcher that ships to
+# its subject is the failure, not the delivery.
+#
+# sunset-coordinator-files.sh is LOCAL: it operates on a CHECKOUT it is
+# handed. An account has no such clone and no push right to sixteen repos.
 PROP_LOCAL_SCRIPTS="
 sunset-coordinator-files.sh
 dexter-liveness.sh
@@ -399,27 +327,14 @@ verbs-refresh.sh
 no-worktree-lint.sh
 run-suites.sh
 "
-# repo-settings-provision.sh is LOCAL for thermostat-wiring.sh's reason, not
-# bin/shellcheck-lint.sh's. (The `bin/` is load-bearing: a comment line whose
-# FIRST word is `shellcheck` is parsed as a shellcheck directive, and this one
-# was -- SC1072/SC1073, a parse error on the whole file, which is why every
-# other note in this header spells the path out too.)
-# Its subject is the FLEET: it walks scheduler's whole
-# schedule/*.conf registry and asks GitHub about every registered repo at
-# once. A per-account copy would have each of ten accounts reconfiguring all
-# thirteen repositories on its own clock, which is not ten times the value --
-# it is ten writers on one setting. It also needs a credential no provisioned
-# account holds or should: `gh repo edit` is admin on someone else's repo,
-# where the self-dev accounts are deliberately read-only deploy keys.
-# bin/no-worktree-lint.sh is LOCAL on shellcheck-lint.sh's exact reasoning, and
-# note that scheduler DOES need the same guard and still does not get this file.
-# Its allowlist is compiled in and is about realisateur's tree -- one entry, for
-# bashify/lib/sync-runtime.sh, which exists in no other repository. Shipping it
-# would hand an account a guard excusing a path it does not have, and check B
-# would report that entry stale forever. scheduler carries its own copy
-# (bin/no-worktree-guard.sh) with its own allowlist, the same PORTED-COPY answer
-# hf7y/scheduler#77 gets for shellcheck-lint.sh and for the same reason: what
-# would propagate is the judgement, not the mechanism.
+# repo-settings-provision.sh is LOCAL: its subject is the FLEET (it walks the
+# whole registry), and a per-account copy would be ten writers on one
+# setting. It also needs admin on someone else's repo, which self-dev
+# accounts deliberately do not hold.
+#
+# bin/no-worktree-lint.sh is LOCAL: its allowlist is compiled in and is about
+# realisateur's tree. scheduler carries its own copy with its own allowlist --
+# what propagates is the judgement, not the mechanism (scheduler#77).
 #
 # bin/shellcheck-lint.sh is LOCAL because it lints THIS REPOSITORY'S OWN SOURCE.
 # Its file selection is `git ls-files` against its own ROOT and its baseline is

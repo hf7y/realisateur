@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ownership-audit.test.sh -- the suite for bin/ownership-audit.sh.
 #
-#
+# TRAPS (the rest of this header is in the vault):
 # WHY A FABRICATED TREE AND NOT THIS ONE. The number this guard produces is
 # supposed to change as mechanism migrates out. A suite that asserted "the
 # share is 82.0%" would go red the first time somebody did the right thing,
@@ -12,17 +12,8 @@
 # things that must stay true at any share: the ratchet is not stale, and while
 # any foreign mechanism remains --strict does not exit 0.
 #
-# IT IS WATCHED REFUSING AND WATCHED PERMITTING, which after #144 is half the
-# file. A guard that only ever refuses is easy to write and worthless -- and a
-# guard that stops refusing is worse than none, which is the standing argument
-# in bin/tests/guard-estate.test.sh. So sections 2, 2b, 3, 4 and 6b watch it
-# refuse (a parked path, a parked path paid for with a deletion elsewhere, a
-# reclassification, an undone migration, an unread new file), and 5 and 6
-# watch it permit (a repair inside a recorded path, a suite for a recorded
-# script, a table a recorded script reads) -- with 6b differing from 6 by one
-# line of reference, so "attached" is a test and not a word.
-#
 # usage: ./bin/tests/ownership-audit.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

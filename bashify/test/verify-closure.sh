@@ -1,27 +1,19 @@
 #!/usr/bin/env bash
 # verify-closure.sh -- the guard that makes the CLEAN column a move-list.
 #
-# THE LOAD-BEARING ASSERTIONS ARE A1, A2 AND B1.
-#
-# A1: a script that itself scores ZERO but sources a library naming a vendor
-#     must classify ESSENTIAL, and must be reported as a FALSE NEGATIVE. This
-#     is scheduler/bin/scheduler-run, reproduced as a fixture. Without it the
-#     migration moves the model dispatcher onto the branch that guarantees it
-#     holds none.
-#
+# TRAPS (the rest of this header is in the vault):
 # A2: `source "$CONF"` -- a path that is runtime state -- must classify
 #     UNRESOLVED and must NEVER be CLEAN. Treating an unresolvable source as
 #     "no dependency" rebuilds A1 one layer down, which is the failure mode
 #     that is easy to write and impossible to see.
-#
 # B1: a project name matching nothing must EXIT 1. A checker reporting clean
 #     about something it never looked at is this ecosystem's most-recorded
 #     failure, and a filter is where it hides best. (verify-sync.sh calls the
 #     same assertion B4 and treats it the same way.)
-#
 # Hermetic: builds fixture repos and a fixture schedule dir in a temp dir,
 # points BASHIFY_SCHED at it. Never reads the live ecosystem, never writes
 # outside its temp dir.
+
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"   # bashify/

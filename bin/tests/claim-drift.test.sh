@@ -1,51 +1,12 @@
 #!/usr/bin/env bash
 #
-# claim-drift.test.sh -- witness for bin/claim-drift.sh.
-#
+# TRAPS (the rest of this header is in the vault):
 # Offline, zero AI, no network. Every case builds a fixture directory holding
 # the two JSON documents the script reads (a `gh pr view` payload and an issue
 # timeline) and puts a fake `gh` at the front of PATH that serves them. It
 # never reads the live tracker, so it says the same thing on every host and in
 # CI -- which is the property three suites in this repository lacked until
 # 2026-08-07, when wiring them to CI is what made them admit it.
-#
-# THE LOAD-BEARING CASE IS B1. It is the original incident, replayed: a PR
-# opened NOT as a draft (so it carries no `ready_for_review` event to anchor
-# against), reported as done, and then grown. Live proof that the shape is real
-# rather than hypothetical: hf7y/realisateur#98 was opened non-draft at
-# 2026-08-07T21:29:10Z and took four more commits afterwards. A mechanism that
-# only anchors on `ready_for_review` sees NOTHING there, because that event
-# does not exist -- which is why B1 exists and why it is not the same test as
-# A2.
-#
-# C1/D1 are the other half of the bar, and they are assertions about what the
-# mechanism must NOT do. Growth after "done" is legitimate -- addressing review
-# is the ordinary case -- so a draft PR and a PR converted BACK to draft must
-# stay silent even under --strict. A guard that flags legitimate work gets
-# routed around within a week, and then it protects nothing while looking like
-# it does.
-#
-# Cases:
-#   A1 ready_for_review, no commits after       -> CURRENT, exit 0
-#   A2 ready_for_review, commits after          -> DRIFTED
-#   A3 ...and --strict gates on it              -> exit 1
-#   A4 ...and it prints the immutable claim sha and the head it moved to
-#   B1 opened non-draft, commits after          -> DRIFTED (THE INCIDENT)
-#   B2 ...and names the anchor as the opening, not a ready event
-#   C1 draft PR, commits galore, --strict       -> exit 0, UNCLAIMED
-#   C2 ...and says so in words
-#   D1 ready, then converted BACK to draft      -> exit 0 under --strict
-#   E1 ready, grown, re-readied                 -> CURRENT again, exit 0
-#   F1 gh unavailable                           -> BLIND, exit 6 under --strict
-#   F2 ...and says it cannot see, not that nothing drifted
-#   G1 a MERGED pr                              -> SETTLED, never DRIFTED
-#   H1 unknown flag                             -> exit 2
-#   H2 no PR and no --all                       -> exit 2
-#   I1 the surfacing half exists: a workflow invokes this script on
-#      pull_request. Without it the script is a thing someone must remember to
-#      run, which is the prose discipline this replaces.
-#   I2 ...and it re-runs on the events that CHANGE the answer
-#      (ready_for_review / converted_to_draft are NOT in the default set).
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh

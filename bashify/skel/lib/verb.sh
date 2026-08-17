@@ -1,108 +1,19 @@
 #!/usr/bin/env bash
 # verb.sh -- the shared runtime every bashified utility sources.
 #
+# TRAPS (the rest of this header is in the vault):
 # One copy of the argument grammar, the cost boundary, and the failure
 # vocabulary, so nineteen utilities cannot drift into nineteen dialects.
 # Config is read here and nowhere else.
-#
-# WHAT --summon ACTUALLY IS (read this before the cost boundary below;
-# stating it only as a cost boundary is what made it misread -- Zach,
-# interactive, 2026-07-31):
-#
-#   A summon is how a verb WRITES ITSELF FROM THE INSIDE.
-#
-#   In this ecosystem the man page is written BEFORE the utility works, and
-#   the utility is judged against the page. So a page routinely contracts an
-#   action with no mechanism behind it yet. That is the normal case, not a
-#   defect. When a caller invokes such an action:
-#
-#     without --summon  the verb exits 3 and PRINTS THE SUMMON it would have
-#                       made. Nothing is spent. The gap is named, not hidden.
-#     with --summon     an agent is summoned to perform the action AND to
-#                       leave behind a durable mechanism that performs it
-#                       WITHOUT an agent next time (basheur Law 2: every
-#                       summon leaves residue; residue becomes an impl).
-#
-#   So the flag does not merely buy one answer. It buys the answer plus the
-#   machine that makes the next answer free. A verb carrying --summon is a
-#   verb still under construction by its own callers, and the correct
-#   direction of travel is that the flag stops costing anything, one
-#   subcommand at a time, because the mechanism now exists.
-#
 #   Escalate through basheur -- `basheur run --summon <contract>` -- never by
 #   contacting a model directly. basheur is the contract store that decides
 #   MECHANIZED (exec the impl, spend nothing, say so) versus AGENT (summon).
 #   A verb that calls a model itself has re-animated its own project, which
 #   is what Law 3 forbids.
-#
 # THE COST BOUNDARY (the second thing this file exists for):
 #   Nothing in a bashified utility may spend money implicitly. A utility
 #   that CAN spend declares VERB_CAN_SUMMON=1 and gains --summon; one that
 #   cannot does not carry the flag at all.
-#
-#   --summon means "spend IF AND ONLY IF the contract cannot be fulfilled
-#   mechanically" -- a grant of permission, never an instruction to spend.
-#   On an already-mechanized action it costs zero and says so on stderr.
-#   The other reading ("spend because I said so") looks identical at the
-#   prompt and diverges completely in the bill: under it, de-animation stops
-#   showing up in the only place it was ever going to show up.
-#
-#   Because nearly every verb can now escalate, the presence of --summon no
-#   longer sorts tools into spending and non-spending. The informative
-#   question moved from WHETHER a tool spends to WHICH OF ITS SUBCOMMANDS do,
-#   which is why a man page must name them and the page test checks it.
-#
-#   Short form is deliberately ABSENT. `-s` collides with existing tools
-#   and `-S` differs from it by one shift key, which is an unacceptable
-#   property for the only flag that spends real money. Typing the whole
-#   word IS the deliberateness.
-#
-# ===========================================================================
-# DE-FORKED 2026-08-02. This file is the UNION of four dialects.
-# ===========================================================================
-# The header above says this exists "so nineteen utilities cannot drift into
-# nineteen dialects." It had drifted into FOUR, and the canonical skeleton was
-# running in only two of the seven repos. Measured, not asserted:
-#
-#   105 lines  ecosim, realisateur, vim-arcade
-#   155 lines  bibliothecaire, scheduler          <- was the skeleton
-#   128 lines  senechal                           (+ write vocabulary)
-#   184 lines  gardien                            (+ refusal, measured cost)
-#
-# The 105-line copy was API-IDENTICAL to the skeleton -- same functions, same
-# variables; only comments and output wording differed. It was simply older.
-# The other two are genuine supersets in different directions, and both are
-# adopted here because each was already being re-invented locally:
-#
-#   verb_refuse / exit 7 was re-implemented BY HAND in bibliothecaire's
-#   bin/fonde and senechal's bin/installe, independently, because the shared
-#   runtime did not carry it. Three copies of a thing is the evidence that it
-#   belongs in one.
-#
-# WHAT ADOPTING IT DECIDES. gardien's copy recorded exit 7 as "PROPOSED
-# ecosystem-wide, see realisateur QUESTIONS -- until it is decided there, this
-# file is the only copy carrying it, and that divergence is deliberate and
-# recorded." Adopting it here DECIDES that proposal, in the direction the
-# evidence had already gone without waiting for a ruling. Said out loud rather
-# than folded in quietly, because a proposal adopted by merge is indistinguish-
-# able from one nobody ever ruled on.
-#
-# WHAT IS DELIBERATELY *NOT* ADOPTED, and this is the important one.
-# gardien's `verb_gap_or_summon` is NOT here. It calls `claude -p` directly.
-# Read line 32 of this file: escalate through basheur, "never by contacting a
-# model directly... a verb that calls a model itself has re-animated its own
-# project, which is what Law 3 forbids." Merging it verbatim would propagate a
-# violation of this runtime's own stated law into every repo that sources it.
-#
-#   gardien's `bin/garde` calls it at 4 sites, so GARDIEN CANNOT BE DE-FORKED
-#   onto this runtime until that is resolved, and the drift guard reports it
-#   as a finding rather than exempting it. The fix is not mechanical: the
-#   function's second argument is a free-text prompt, while `basheur run
-#   --summon <contract>` takes a CONTRACT NAME, so all four call sites change
-#   shape. That is its own piece of work.
-#
-#   A guard that quietly exempted gardien would be worse than the fork: the
-#   fork is at least visible.
 
 set -uo pipefail
 

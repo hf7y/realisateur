@@ -1,34 +1,14 @@
 #!/usr/bin/env bash
 #
-# reach-lint.test.sh -- witness for bin/reach-lint.sh's --strict /
-# --strict-reach exit-code plumbing. reach-lint.sh's two checks (A scope
-# declaration, B reach) and their exit-code wiring were already correct
-# before this file existed -- confirmed by reading the script and by the
-# fact that install-shims.sh already relies on `reach-lint.sh --strict-reach`
-# exit status. This file closes the missing-negative-test gap: no test
-# anywhere exercised either exit path before this.
-#
+# TRAPS (the rest of this header is in the vault):
 # Offline, zero AI, no network: a fixture scheduler registry (schedule/*.conf)
 # per case, plus fixture .claude/commands/*.md files. USER_CMD_DIR is pointed
 # at a directory that deliberately does not exist, so a real ~/.claude/commands
 # on the machine running this test can never leak in and make a case flaky.
 #
-# Cases:
-#   A clean scan (scope: project, no named commands)
-#       -> --strict AND --strict-reach both exit 0
-#   B scope-undeclared only (no frontmatter, no fenced commands) -- check A
-#     dirty, check B clean
-#       -> --strict exits 1 (check A FLAGged)
-#       -> --strict-reach STAYS exit 0 -- this is the documented split
-#          (check A is a convention other repos haven't adopted; a caller
-#          that only cares about reach must not be held hostage by it)
-#   C unreachable command (scope: user, fenced block names a command that
-#     resolves nowhere) -- check B dirty
-#       -> --strict AND --strict-reach both exit 1
-#   D scope: user file naming only a real, resolvable command -- clean
-#       -> --strict AND --strict-reach both exit 0
-#
+# exit status. This file closes the missing-negative-test gap: no test
 # Usage: bin/tests/reach-lint.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
