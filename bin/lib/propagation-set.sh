@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # propagation-set.sh -- THE DEV/PROD CONTRACT, in one place.
 #
-# THE DECISION (2026-08-07, Zach-directed). Self-dev accounts do NOT pull
-# fresh clones of realisateur. `main` IS NOT A DEPLOY REF; everything they use
-# reaches them through the nightly verb build.
+# THE DECISION (2026-08-07, Zach-directed; the desired-state frame it belongs
+# to is #134). Self-dev accounts do NOT pull fresh clones of realisateur.
+# `main` IS NOT A DEPLOY REF; everything they use reaches them through the
+# nightly verb build.
 #
 # The argument is what it buys the DEV side, not agent safety. If live accounts
 # pull `main` on a tick, every commit is a deployment and `main` must turn

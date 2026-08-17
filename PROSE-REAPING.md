@@ -46,8 +46,9 @@ answers *"why did this end up this way?"* rather than *"what will break if I
 touch it?"*
 
 The private `hf7y/ecosystem1-vault` remote **is** the vault (Zach-directed,
-2026-08-12, reversing an earlier "do not push"). Commit **and push**; an
-unpushed deposit is not deposited. A local clone is a cache, resolved in this
+2026-08-12, reversing an earlier "do not push"; recorded in #212, which is
+also what noticed that nothing was watching for an unpushed deposit). Commit
+**and push**; an unpushed deposit is not deposited. A local clone is a cache, resolved in this
 order by `consigne` (realisateur), `fonde` (bibliothecaire) and `fauche`
 (gardien) — one shared variable, deliberately, so a caller pointing one door
 somewhere cannot silently leave another pointing elsewhere:

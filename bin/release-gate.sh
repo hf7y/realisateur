@@ -6,7 +6,9 @@
 # GATE: none -- calls `gh` against live default branches; the fixture is in its own suite
 #
 # Zach, 2026-08-07: a red `main` must STOP RELEASES. A release channel that
-# ships from a broken tree is a faster way to distribute a break.
+# ships from a broken tree is a faster way to distribute a break. The rollout
+# that decides which repos can satisfy this at all is #285 -- 5 of 12 rostered
+# repos have any CI, so most cannot yet be gated on a green default branch.
 #
 # GREEN = every check run attached to the EXACT CURRENT HEAD SHA of the
 # project's default branch has concluded successfully. Freshness falls out of
