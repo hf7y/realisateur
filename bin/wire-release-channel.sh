@@ -75,9 +75,7 @@ run_as_acct() {
 # STAGGER, so ten accounts do not all fetch in the same minute.
 # selfdev-release-tick.sh's default CRON_SPEC is a fixed `41 5 * * *`, which is
 # right for the one account it was written for and wrong for a fleet: wiring
-# the band would put ten simultaneous clones of hf7y/verbs and ten symlink
-# switches into one minute on one VM guest, every night. The tick already
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cron_spec_for() {
   [ -z "${TICK_CRON_SPEC:-}" ] || { printf '%s' "$TICK_CRON_SPEC"; return; }
   local m; m=$(( $(cksum <<<"$1" | cut -d' ' -f1) % 60 ))
@@ -139,9 +137,7 @@ wire_one() {
 # ---------------------------------------------------------------------------
 # --host. Same three acts as wire_one -- bootstrap, adopt, clock -- against
 # host-scoped paths, plus one wire_one does not need: a witness that the LINKS
-# resolve. Per account, `installe` owns the bin directory and --link is off, so
-# there is nothing to witness; here the links ARE the deliverable, and a pin
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 TICK_ENV=(
   "VERB_BUILD_ROOT=$HOST_BUILD_ROOT"
   "INSTALLE_BIN=$HOST_BIN"
@@ -183,10 +179,7 @@ wire_host() {
   # FIRST ADOPTION, here rather than left to the clock. wire_one defers it
   # ("first adoption is a separate act") because an account already had verbs
   # from its landing and could wait a night for the pin to move. This host has
-  # NONE: leaving it to the tick means /usr/local/bin stays empty until 05:xx
-  # tomorrow, and the whole point of the mode is that `ssh <host> <verb>` works
-  # when the run finishes. Delegated to the tick, which delegates the switch to
-  # install-verb-build.sh -- no second implementation of "adopt".
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   before="$(readlink "$HOST_BUILD_ROOT/current" 2>/dev/null || echo '<none>')"
   echo "  ..      adopting (pin before: $before)"
   env "${TICK_ENV[@]}" "$tick" --apply 2>&1 | sed 's/^/     /'

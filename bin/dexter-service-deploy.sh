@@ -54,9 +54,7 @@ for d in $SEARCH; do [ -d "$d" ] && { SRC="$d"; break; }; done
 # --- THE ONE-OWNER CHECK ----------------------------------------------------
 # zaxon's data/ holds a WhatsApp linked-device session. Two processes holding
 # it means WhatsApp logs the link out, and recovering costs a QR scan on Zach's
-# phone. The `hermes` distro runs the old copy, so it must be DOWN before this
-# starts the new one. This is the difference between a migration and an
-# outage, so it is a refusal rather than a warning.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$NAME" = "zaxon" ]; then
   running="$(ssh -n "$HOST" 'sudo -n systemctl restart systemd-binfmt 2>/dev/null; cd /mnt/c && /mnt/c/Windows/System32/wsl.exe -l -q --running 2>/dev/null | tr -d "\0\r"' || true)"
   case "$running" in

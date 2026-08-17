@@ -120,9 +120,7 @@ lib/selfdev-app-key.sh
 # --- PROVISIONING: root-side, runs from a hands account, never on the -------
 # --- consumer's clock. Not bootstrap: these stand an account UP, once.
 #
-# selfdev-gh-app-register.sh is filed here and not LOCAL, which is a close call
-# worth naming: LOCAL also admits "operator scripts a human runs from a hands
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PROP_PROVISION_SCRIPTS="
 land-selfdev.sh
 provision-selfdev-user.sh
@@ -155,9 +153,7 @@ gh-sign.sh
 # --- THE LEAK, with a bound on it -------------------------------------------
 # PAYLOAD-class scripts that are NOT yet declared on any bashified branch.
 # realisateur's bashified branch declares THREE verbs (arpente, epluche,
-# juge); the seven below reach accounts as clone-backed shims instead, which is
-# `main` acting as a deploy ref through the back door.
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PROP_PAYLOAD_PENDING="
 check-project-busy.sh
 closeout-lint.sh
@@ -171,9 +167,7 @@ PROP_LEAK_BOUND=7
 # --- LOCAL: never leaves this repo ------------------------------------------
 # release-gate.sh and publish-release-verdict.sh are LOCAL because they run in
 # the release pipeline (GitHub Actions checks realisateur out to get them), not
-# on a consumer. An account never gates or publishes; it only reads the result.
-#
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PROP_LOCAL_SCRIPTS="
 sunset-coordinator-files.sh
 dexter-liveness.sh
@@ -217,9 +211,7 @@ run-suites.sh
 # repo-settings-provision.sh is LOCAL: its subject is the FLEET (it walks the
 # whole registry), and a per-account copy would be ten writers on one
 # setting. It also needs admin on someone else's repo, which self-dev
-# accounts deliberately do not hold.
-#
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 # prop_channel <script-basename> -- prints bootstrap|provision|payload|local,
 # or nothing (rc 1) when the script is unclassified. Callers MUST treat rc 1

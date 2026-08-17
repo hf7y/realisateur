@@ -44,9 +44,7 @@ esac
 # THE BUILD, NOT A DEV CLONE.
 #
 # Until 2026-08-05 this defaulted to
-# ${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/ecosim/bin/ecosim-sensor --
-# a development checkout. Two things were wrong with that, and only the
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SENSOR="${ECOSIM_SENSOR_BIN:-${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}/current/ecosim/bin/sonde}"
 # Overridable so a test can point the whole state directory somewhere
 # disposable. It used to be a bare $HOME path, which meant the only way to
@@ -61,9 +59,7 @@ ts() { date -Is; }
 # --- the durable archive: rotate by month, seal the closed ones -------------
 # ROTATION, NOT A TRIM: #53 made never-trimmed the point (a rolling window
 # cannot answer "what did the sensors say during the migration"), and nothing
-# here drops a byte. What was wrong was ONE file forever -- 753,341 bytes over
-# 45 runs on mandark, ~290 MB/year at the armed */30 cadence.
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 ARCHIVE="$STATE_DIR/archive-$(date -u +%Y-%m).jsonl"
 
 # MIGRATION, one time. The pre-rotation archive is RENAMED -- not deleted, and
@@ -136,9 +132,7 @@ cp "$OUT" "$LATEST" 2>/dev/null || true
 # --- the durable archive ------------------------------------------------
 # $LOG is TRIMMED to 5000 lines before every run -- about 2.6 days at this
 # cadence -- and $LATEST keeps only the most recent run. NEITHER is a record.
-# This is the one that is: append-only, never trimmed, JSONL. It is rotated
-# monthly and closed months are gzipped (see $ARCHIVE above); rotation moves
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 timeout 600 "$SENSOR" run --json > "$AOUT" 2>/dev/null
 arc=$?
 alines="$(wc -l < "$AOUT" 2>/dev/null || echo 0)"
@@ -146,9 +140,7 @@ alines="$(wc -l < "$AOUT" 2>/dev/null || echo 0)"
 # The run-boundary record is why a FAILED probe stays visible. Without it an
 # empty archive block is indistinguishable from "no run happened" -- the same
 # silence-is-not-success fault the missing-sensor branch above guards against.
-#
-# It is ALSO what already makes a run individually addressable -- which is why
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 printf '{"ts": "%s", "record": "run", "rc": %s, "json_rc": %s, "lines": %s, "host": "%s"}\n' \
   "$(ts)" "$rc" "$arc" "${alines:-0}" "$(hostname -s)" >> "$ARCHIVE"
 [ -s "$AOUT" ] && cat "$AOUT" >> "$ARCHIVE"

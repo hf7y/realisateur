@@ -67,10 +67,7 @@ act() { printf '  ..    %s\n' "$*"; }
 # The hook, generated rather than shipped as a file of its own: a second file
 # in the bootstrap set is another copy that rots. The LIB PATH is baked in at
 # install time and the hook sources it, so the hook holds no copy of the
-# answer -- only of where to ask.
-#
-# `git interpret-trailers` does the parsing, so a message that already carries
-# the trailer (an amend, a rebase, a cherry-pick) does not collect a second.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 write_hook() {
   mkdir -p "$HOOK_DIR" || return 1
   cat > "$HOOK" <<EOF
@@ -109,9 +106,7 @@ fi
 # --- who owns core.hooksPath -----------------------------------------------
 # `git config --get` exits 1 for "not set" and something else for "could not
 # read the file at all". Folding both into an empty string would read an
-# UNPARSEABLE config as an empty slot -- and then --apply would write into it.
-# Found by a fixture with a malformed line, 2026-08-13; the same stderr
-# conflation selfdev-release-tick.sh's crontab read exists to avoid.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cur="$(git config --global core.hooksPath 2>/dev/null)"; cfg_rc=$?
 if [ "$cfg_rc" -gt 1 ]; then
   bad "cannot read this account's global git config (git config exited $cfg_rc). Nothing was changed -- an unreadable config is not an empty one."

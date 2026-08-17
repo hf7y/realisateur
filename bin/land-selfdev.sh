@@ -70,10 +70,7 @@ elif [ -d "$PROJECTS/scheduler" ]; then
   # The fallback is not wrong by itself: mandark deliberately has no host file
   # and reads the shared one, which is documented in _paced.dexter.conf's own
   # header. What matters is WHAT would be inherited. Falling back onto a file
-  # with ENABLED rows means this host silently starts dispatching another
-  # machine's projects; falling back onto an inert file is merely untidy.
-  # Graded on that, rather than on the presence of a file, so the loud verdict
-  # stays rare enough to be worth reading.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   enabled=$(grep -cE '^[a-z][^|]*\|1\|' "$SHARED_PACED" 2>/dev/null || echo 0)
   if [ "${enabled:-0}" -gt 0 ]; then
     bad "no schedule/_paced.$HOST.conf, and the shared _paced.conf has $enabled ENABLED row(s) -- this host would silently dispatch another machine's rotation"
@@ -87,9 +84,7 @@ fi
 # THREE WAYS THIS USER CAN BE AUTHENTICATED, and the check must know all of
 # them or it reports a false gap on the shape we actually use.
 #
-#   1. ~/.claude/.credentials.json   the interactive OAuth login. EXPIRES.
-#   2. ~/.claude/settings.json       an "env" block carrying
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CRED="$HOME/.claude/.credentials.json"
 SETTINGS="$HOME/.claude/settings.json"
 auth=""
@@ -139,9 +134,7 @@ mkdir -p "$PROJECTS"
 # Credentials come BEFORE the clone that needs them, per repo, derived from
 # the same loop -- added 2026-08-03 after ecosim's four deploy keys turned out
 # to have been made by hand and written down nowhere ("we can't do this for
-# every install", Zach). wire-selfdev-git.sh is idempotent, so a re-land is
-# free; it is looked for NEXT TO THIS SCRIPT because both are copied onto a
-# bare host together, not installed.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 WIRE="$(dirname "$0")/wire-selfdev-git.sh"
 
 wire_repo() {
@@ -180,9 +173,7 @@ clone_or_update scheduler   "https://github.com/$GH_OWNER/scheduler.git"
 # EVERY OTHER REPO IS DERIVED, NOT TYPED. schedule/<p>.conf already declares
 # REPO_URL per project -- that IS the registry. A typed list here would be a
 # second source that drifts from it, which is the failure realisateur's own
-# bin/lib/verb-set.sh exists to avoid ("derive from repo state, never from a
-# typed list"). Only projects named in SELFDEV_PROJECTS are landed, so this
-# does not drag all nineteen onto a host that wants one.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 for p in ${SELFDEV_PROJECTS:-senechal ecosim}; do
   conf="$PROJECTS/scheduler/schedule/$p.conf"
   if [ ! -f "$conf" ]; then bad "$p: no schedule/$p.conf -- not a registered project"; continue; fi
@@ -252,10 +243,7 @@ if [ -x "$PROJECTS/realisateur/bin/install-shims.sh" ]; then
   # A nonzero exit here is NOT necessarily a failed install: install-shims.sh
   # also exits nonzero when it FLAGs, and its standing flag on a fresh account
   # is "subagent-closeout.sh is installed but not referenced in
-  # ~/.claude/settings.json". That is a true finding and deliberately not
-  # auto-fixed (settings.json is the human's file, per that script's header) --
-  # but reporting it as "install-shims.sh failed" sent a reader hunting a
-  # broken installer on 2026-08-04. Say which it was.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   shim_out="$(REPO="$PROJECTS/realisateur" "$PROJECTS/realisateur/bin/install-shims.sh" 2>&1)"; shim_rc=$?
   printf '%s\n' "$shim_out"
   if [ "$shim_rc" -eq 0 ]; then

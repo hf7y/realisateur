@@ -20,10 +20,7 @@ set -uo pipefail
 # ############################################################################
 # THE SUNSET. Two weeks from the day this was written (2026-08-10), Zach-set.
 # Overridable ONLY to let the test suite exercise both sides of the date --
-# bin/tests/served-not-cloned.test.sh does exactly that. Moving it in the file
-# is not a maintenance action; it is a decision to re-commit, and it should
-# come with a commit message that says so.
-# ############################################################################
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SUNSET="${SERVED_SUNSET:-2026-08-24}"
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
@@ -156,9 +153,7 @@ probe_livebrief() {
 # 5. DONEBRAKES -- the verdict changes what happens next. `verdict.sh
 #    classify` already returns 0 for DONE, meaning "bar met; stop dispatching,
 #    this is success" -- and no dispatcher branches on it. DONE was recorded 9
-#    times across 4 accounts in one day and stopped nothing; bibliothecaire
-#    recorded it on six consecutive runs and was re-dispatched every time
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 probe_donebrakes() {
   [ -d "$SCHED/bin" ] || { row BLIND donebrakes "no $SCHED/bin to search"; return; }
   local hit
@@ -233,9 +228,7 @@ probe_oneroster() {
 # 9. SELFSERVE -- `dose <project>` is reachable and self-installing on the
 #    self-dev host. Zach, 2026-08-11: "I should be able to ssh zach@monkey and
 #    run dose ecosim and the newest ecosim self-installs, updates, starts
-#    clearing issues."
-#
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 probe_selfserve() {
   [ -d "$SCHED/.git" ] || { row BLIND selfserve "no scheduler checkout at $SCHED"; return; }
   local verbs
@@ -259,9 +252,7 @@ probe_clonefree() {
   # SERVED_FLEET_CRONTABS: read the fleet's crontab content from a file
   # instead of over ssh. Exists so bin/tests/served-not-cloned.test.sh can
   # exercise BOTH sides of this probe with no host, no ssh and no sudo --
-  # same reasoning as install-verbs.sh's INSTALLE_* and the tick's TICK_*.
-  # Without it the MET path would be untested, and "passes on the redesign"
-  # would be a claim rather than a witnessed fact.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ -n "${SERVED_FLEET_CRONTABS:-}" ]; then
     [ -f "$SERVED_FLEET_CRONTABS" ] \
       || { row BLIND clonefree "SERVED_FLEET_CRONTABS names $SERVED_FLEET_CRONTABS, which does not exist"; return; }

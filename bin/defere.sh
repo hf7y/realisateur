@@ -60,9 +60,7 @@ have() { command -v "$1" >/dev/null 2>&1; }
 # ---------------------------------------------------------------------------
 # THE LEDGER FILE -- per branch, inside .git, so it is never committed and
 # never leaks between branches. A session that files six items and then has to
-# remember all six to write the PR body has re-created the problem in a
-# smaller box, so the accumulation is the script's job, not the author's.
-# ---------------------------------------------------------------------------
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 ledger_path() {
   local gd br
   gd="$(git rev-parse --git-dir 2>/dev/null)" || return 1

@@ -16,9 +16,7 @@ UID_MAX="${SELFDEV_UID_MAX:-3099}"
 # Where the credential is read FROM. The invoking user's own, by default --
 # one identity, one quota, which is the accepted topology.
 # RUN AS ROOT, OR AS A USER WHO CAN SUDO -- both work, and the difference
-# matters for exactly one thing: whose credential gets copied.
-#
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CRED_HOME="$HOME"
 if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
   CRED_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
@@ -143,9 +141,7 @@ PY
 # --- the OTHER credential ------------------------------------------------------
 # gh, on the same argument as the claude token above, and added 2026-08-03 for
 # the same reason the rest of this script exists: bibliothecaire was the second
-# account, and this was the step still being done by hand.
-#
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 GH_SRC="${SELFDEV_GH_HOSTS:-$CRED_HOME/.config/gh/hosts.yml}"
 if [ -r "$GH_SRC" ]; then
   # No `MODE` guard here: --check has already exited above. Everything from

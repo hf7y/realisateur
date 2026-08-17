@@ -129,7 +129,7 @@ else
     # test and its own GAPS.md all name it, and counting those as downstream
     # callers made every amendment to a real verb unpassable: `installe`
     # scored 6 invocations, all of them itself. Two independent tests, either
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     if { [ -n "$OWNER_GITDIR" ] \
          && [ "$(cd "$path" && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = "$OWNER_GITDIR" ]; } \
        || { [ -n "$OWNER_SLUG" ] && [ "$(amend_repo_slug "$path" || true)" = "$OWNER_SLUG" ]; }; then
@@ -158,7 +158,7 @@ else
       # backtick belongs to the shell alphabet above, so a script explaining
       # itself -- "# `bashify check` rules code 1 a reserve" -- scored as an
       # invocation of bashify. That is the same defect already fixed for
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+      #   [rest: vault:realisateur/guard-archaeology-20260817.md]
       case "$(printf '%s' "$line" | sed 's/^[[:space:]]*//')" in
         '#'*) PROSE=$((PROSE+1)); continue ;;
       esac

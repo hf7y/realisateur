@@ -94,9 +94,7 @@ fi
 # --- fetch the meta-repo ------------------------------------------------
 # BOUNDED, because this runs unattended. Against an UNROUTABLE host the
 # kernel's TCP retry took 2m15s to give up -- measured 2026-08-07 against
-# 192.0.2.1 (TEST-NET-1) -- so the BLIND verdict was correct and arrived far
-# too late to be one. A human at a terminal hits Ctrl-C; cron does not, and
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 NET_TIMEOUT="${VERB_BUILD_NET_TIMEOUT:-45}"
 export GIT_TERMINAL_PROMPT=0
 mkdir -p "$BUILD_ROOT" || die "cannot create $BUILD_ROOT"
@@ -153,9 +151,7 @@ fi
 # --- verify every verb the manifest promised ----------------------------
 # Against the manifest, not against what happened to land. A build is a
 # promise about a SET; verifying only what is present cannot notice a verb
-# that is absent, which is `deploy-drift-check.sh`'s intersection bug
-# (DEXTER-MIGRATION-NOTES: check the DECLARED set, never the intersection,
-# or absence reports clean).
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 say "== build $BUILD_ID =="
 missing=0
 while IFS=$'\t' read -r project verb sha _; do
@@ -191,9 +187,7 @@ say "current -> $BUILD_ID"
 # --- the ~/.local/bin links, written once -------------------------------
 # Off by default: `installe` (senechal) owns ~/.local/bin and its manifest,
 # and this script does not get to quietly take that over. --link is for a
-# host with no installe yet, or for the migration sitting where the two are
-# reconciled deliberately. Anything present that is not ours is reported
-# and left alone, never clobbered.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$LINK" -eq 1 ]; then
   mkdir -p "$BIN"
   linked=0; skipped=0
@@ -217,7 +211,7 @@ if [ "$LINK" -eq 1 ]; then
   # The loop above only ever ADDS: it walks the NEW manifest, so a verb a
   # nightly build dropped keeps its old link, now pointing at
   # `current/<project>/bin/<verb>` -- which after the switch above does not
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   wanted="$(grep -v '^#' "$DEST/manifest.tsv" | cut -f2)"
   dropped=0
   for have in "$BIN"/*; do

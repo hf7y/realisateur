@@ -163,17 +163,13 @@ drifted=0; current=0; unclaimed=0; settled=0; blind=0; undecided=0; overcautious
 # Whether the body declares itself at all -- one line over the shared
 # grammar_declaration(), which bin/gh-sign.sh enforces at the write. This file
 # used to carry TWO functions that differed only in return shape, each with
-# its own copy of the first-line parse, and a third copy lived in
-# bin/deferral-ledger.sh. The parse is now in one place and the callers below
-# ask it different questions.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 declares_itself() { [ "$(grammar_declaration "$1")" != none ]; }
 
 # THE OVERCAUTIOUS CHECK. UNDECIDED (below) catches a ready PR that asks for
 # nothing while silently wanting attention. This is the mirror failure: a
 # ready PR that raises a DECISION nobody needs to make. Both are the same
-# defect from opposite sides -- the classification not matching what the
-# diff actually needs -- and 2026-08-10 supplied a live instance: a
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 is_additive_only_diff() {
   local file='' is_new=0 adds=0 dels=0 saw_file=0
   judge() {
@@ -344,10 +340,7 @@ if [ "$STRICT" -eq 1 ]; then
   # overcautious never gates: it's a suggestion to reduce friction, and a
   # mechanism that BLOCKS on "you asked for review when you maybe didn't need
   # to" would just add the friction it exists to catch, one level up.
-  # Both are findings, so both must move the exit code -- `guard-estate.test.sh`
-  # asserts exit-code-tracks-findings over the whole population, and a verdict
-  # that prints but does not gate is the `silence-audit` defect (74 FLAGs,
-  # exit 0) this estate spent 2026-08-07 removing.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   [ "$drifted" -gt 0 ] || [ "$undecided" -gt 0 ] && exit 1
 fi
 exit 0

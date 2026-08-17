@@ -42,9 +42,7 @@ ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 # WHAT COUNTS AS EXECUTABLE CODE IS THE SHEBANG, NOT THE FILENAME.
 #
 # This selected `'*.sh' 'bin/*'` until 2026-08-07, and that missed an entire
-# shape: an extensionless executable outside the repo-root bin/. The cost was
-# not hypothetical. This lint was written (#91) because bashify/lib/coin.sh
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 files=()
 while IFS= read -r f; do
   case "$f" in archive/*) continue ;; esac

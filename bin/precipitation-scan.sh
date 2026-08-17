@@ -38,9 +38,7 @@ FOCUS_DIR="${FOCUS_DIR:-$SCHED_ROOT/focus}"   # overridable for fixture tests
 # BLIND, not FATAL -- reworded 2026-08-07. The exit code was already right;
 # the WORD was not, and the word is what a reader acts on. "FATAL" reads as
 # "this tool is broken"; the true statement is "I could not look, so I am
-# telling you nothing rather than telling you nothing is wrong". Found by
-# bin/tests/guard-estate.test.sh check D, which requires a non-zero exit with
-# no findings to say which of the three world-states it is in.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 [ -d "$FOCUS_DIR" ] || { echo "precipitation-scan: BLIND: scheduler focus/ not found at $FOCUS_DIR" >&2; echo "precipitation-scan: this is 'I cannot see', NOT 'nothing to report'." >&2; exit 2; }
 
 # Tunables -- printed below so any run is reproducible from its own output.
@@ -151,7 +149,7 @@ awk -v min_score="$MIN_SCORE" -v min_shared="$MIN_SHARED" \
   # content -- an injected HTML-comment footer (inject-suggestions.sh appends
   # one to every focus file) or a new `## ` section. Without this the LAST
   # entry in each file absorbs that footer, and every file`s last entry then
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   /^[ \t]*<!--/ || /^## / { started = 0 }
   started { cur_text = cur_text " " $0 }
   END {
