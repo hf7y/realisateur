@@ -12,7 +12,6 @@
 # SEEDED 2026-08-16 against origin/bashified at 8504b21, main at b79d681.
 # Rows are `pair <path on bashified> <path on main>`.
 pair bin/closeout-lint.sh bin/closeout-lint.sh
-pair bin/hygiene-lint.sh bin/retired/hygiene-lint.sh
 pair bin/precipitation-scan.sh bin/precipitation-scan.sh
 pair bin/reach-lint.sh bin/reach-lint.sh
 pair bin/lib/conf.sh bin/lib/conf.sh

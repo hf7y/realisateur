@@ -64,7 +64,6 @@ file bin/selfdev-gh-app.sh
 file bin/selfdev-release-tick.sh
 file bin/session-marker.sh
 file bin/setup-selfdev-project.sh
-file bin/suite-docs-lint.sh
 file bin/tests/claim-drift.test.sh
 file bin/tests/cli-guard.test.sh
 file bin/tests/closeout-lint.test.sh
@@ -83,7 +82,6 @@ file bin/tests/release-gate.test.sh
 file bin/tests/release-ledger.test.sh
 file bin/tests/selfdev-gh-app-register.test.sh
 file bin/tests/selfdev-gh-app.test.sh
-file bin/tests/suite-docs-lint.test.sh
 file bin/tests/verb-build-test.sh
 file bin/tests/verb-set.test.sh
 file bin/wire-selfdev-git.sh

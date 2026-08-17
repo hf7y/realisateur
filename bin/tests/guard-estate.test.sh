@@ -1,154 +1,32 @@
 #!/usr/bin/env bash
 # guard-estate.test.sh -- a test over the guard POPULATION, not over one guard.
 #
+# Every guard is argued about one at a time and one at a time the argument is
+# always winnable. The population is what got bad, so the bar has to FAIL when
+# a guard is added below it rather than live in a document.
 #
-# ============================================================================
-# WHY A TEST OVER THE ESTATE AND NOT OVER A GUARD
-# ============================================================================
+# THE POPULATION IS DERIVED, NOT LISTED. A list is an append point every
+# concurrent PR contends for, and a guard can be added below the bar by simply
+# not adding it. Derivation is by NAME SHAPE over bin/*.sh: -lint, -audit,
+# -gate, -drift, -check, -scan, -survey, -wiring, -ledger. Anything matching
+# MUST declare itself, including `# GUARD: no -- <why>` if the name is a
+# coincidence. Anything not matching may opt IN with `# GUARD:`.
+# A0 closes the dodge: any bin/*.sh whose header says it "refuses", "flags",
+# "audits" or "gates" without a `# GUARD:` line fails.
 #
-# Every guard here already gets argued about one at a time, and one at a time
-# the argument is always winnable: this one is hand-run but useful, that one
-# exits 0 but the header explains why, this other one reads the live checkout
-# but only because it is a survey. Each excuse is locally reasonable. The
-# population is what got bad.
+# THE PROPERTIES:
+#  A DECLARED        declares what question it answers
+#  B RUNNER IS REAL  the runner it names exists and mentions it
+#  C TEST IS REAL    the suite it names exists and mentions it
+#  D EXIT TRACKS     in the gating mode, findings>0 => rc!=0, rc==0 => no findings
+#    FINDINGS
+#  E BLIND != CLEAN  not-looking must not grade as clean, and prints BEFORE findings
+#  F TREE-HONOURING  pointed at a temp tree, must not report on the live checkout
 #
-# MEASURED 2026-08-07, before this file existed, over the 16 guard-shaped
-# scripts in bin/:
-#
-#   closeout-lint      12 branches reported as unmerged work at risk.
-#                      ALL TWELVE had been merged weeks earlier -- squash-merge
-#                      makes "is this commit reachable from a remote ref?"
-#                      permanently unanswerable, so it gained one false alarm
-#                      per merged PR forever. The same run printed
-#                      "BLIND [worktrees] 13 linked worktree(s) NOT examined"
-#                      -- one quiet line above twelve loud wrong ones.
-#   hardcoded-home-lint  reported "no hardcoded home in code" while
-#                      bashify/bin/bashify carried /home/<name>/... Its
-#                      selector could not see extensionless executables. It
-#                      had no test and no runner.
-#   install-shims.test  passed for months by auditing the live shared checkout
-#   verb-set.test      instead of the branch under test. Same for verb-set.
-#   silence-audit      74 FLAGs, exit 0, pointed at an EMPTY temp repo -- it
-#                      audited ~zach regardless of where it was pointed. Four
-#                      of those FLAGs are its own source scanned by itself.
-#                      CLAUDE.md's checklist has required it clean since it
-#                      was written; it has never once been passable.
-#   hygiene-lint       110 FLAGs across 13 projects, exit 0, from inside an
-#                      empty temp repo.
-#
-# The through-line is one sentence: A GUARD THAT IS WRONG OFTEN ENOUGH TRAINS
-# PEOPLE TO IGNORE IT, AND THEN A TRUE FINDING IS IGNORED TOO. Three suites
-# sat red on main for weeks, documented so thoroughly in a header that they
-# became furniture, and then blocked four PRs in one afternoon.
-#
-# So the bar cannot live in a document that each new guard's author is
-# expected to have read. It has to FAIL when a guard is added below it. That
-# is the only difference between this file and a paragraph in CONTRIBUTING.
-#
-# ============================================================================
-# HOW THE POPULATION IS DERIVED -- and why not from a list
-# ============================================================================
-#
-# Not from a list in this file. A list is an append point every concurrent PR
-# must contend for (bin/suite-docs-lint.sh has the numbers: three conflict
-# events in one day, all in one region of one file), and worse, a guard can be
-# added below the bar simply by not adding it to the list -- which is the
-# omission this whole file exists to make impossible.
-#
-# Derivation is by NAME SHAPE over bin/*.sh: -lint, -audit, -gate, -drift,
-# -check, -scan, -survey, -wiring, -ledger. Anything matching MUST declare
-# itself, including declaring `# GUARD: no -- <why>` if the name is a
-# coincidence (install-silence-audit.sh installs one, it is not one). Anything
-# NOT matching may opt IN by declaring `# GUARD:` -- markdown-cost.sh does.
-#
-# The dodge this closes: naming a new guard `bin/verify-things.sh` to escape
-# the shape. It does not escape -- check A0 fails any bin/*.sh whose header
-# says it "refuses", "flags", "audits" or "gates" without a `# GUARD:` line.
-#
-# ============================================================================
-# THE FIVE PROPERTIES, and the specific past failure each one would have caught
-# ============================================================================
-#
-#  A DECLARED         every guard-shaped script declares what question it
-#                     answers. hardcoded-home-lint shipped with no runner and
-#                     no test because nothing ever asked it to say so.
-#  B RUNNER IS REAL   the runner it names must EXIST and must actually mention
-#                     it. A guard nothing runs is documentation with an exit
-#                     code; six of these were hand-run only.
-#  C TEST IS REAL     the suite it names must exist and must mention it.
-#                     silence-audit is named in CLAUDE.md's mandatory
-#                     checklist and has never had a test.
-#  D EXIT TRACKS      in the mode declared as gating, findings > 0 MUST mean
-#    FINDINGS         rc != 0, and rc == 0 MUST mean no findings printed.
-#                     This is the one Zach prioritised. silence-audit printing
-#                     74 FLAGs and exiting 0 is the archetype; a guard whose
-#                     exit code does not track its findings cannot gate
-#                     anything, and every CI job that "ran" it proved nothing.
-#  E BLIND != CLEAN   an admission of not-looking must not grade as clean, and
-#                     must be printed before the findings. closeout-lint put
-#                     "13 worktrees NOT examined" one line above twelve false
-#                     alarms and exited 0. Its own noise buried its own
-#                     admission.
-#  F TREE-HONOURING   pointed at a temp tree, a guard must not report on the
-#                     live checkout. This is the most common bug class in the
-#                     estate right now: 9 of 11 guards probed on 2026-08-07
-#                     ignored where they were pointed. A guard whose scope knob
-#                     is a flag rather than cwd says so on its own `# GATE:`
-#                     line -- `strict --repo $TREE` -- so that "I was pointed
-#                     somewhere else" and "I ignored where I was pointed" stay
-#                     distinguishable.
-#  G FRESHNESS        see THE METABOLISM below.
-#
-# ============================================================================
-# THE METABOLISM -- why the estate gets repainted instead of accumulating
-# ============================================================================
-#
-# Zach, 2026-08-07: "a general metabolism where things are remade on a rhythm,
-# like a bridge that gets repainted from end to end every season."
-#
-# A calendar reminder cannot do this and a documented ritual has already
-# failed here repeatedly, so the rhythm is two assertions in check G, run by
-# CI on every pull request:
-#
-#   RHYTHM      the NEWEST `# VERIFIED:` stamp in the estate must be no more
-#               than GUARD_RHYTHM_DAYS old. If nobody has re-verified ANY
-#               guard in that window, CI goes red -- on whatever PR is open at
-#               the time, which is the point. Repainting is not something you
-#               remember to do; it is something the build stops for.
-#
-#   SPAN        no single guard's stamp may be older than GUARD_SPAN_DAYS.
-#               Without this you could satisfy RHYTHM forever by repainting
-#               the same easy plank. This is what forces the painters to reach
-#               the far end of the bridge.
-#
-# Why this pair and not "every guard must be stamped within N days": because
-# that produces a BURST. Stamp twenty guards today and in N days all twenty
-# expire at once, CI is red until someone re-verifies twenty things in an
-# afternoon, and what actually happens is that the window gets widened or the
-# check gets deleted. RHYTHM+SPAN has no burst: one repaint satisfies RHYTHM,
-# and SPAN comes due one guard at a time in the order they were last touched.
-#
-# A stamp is `# VERIFIED: YYYY-MM-DD via <command>` -- the same shape
-# CLAUDE.md already requires for claims about system state, now machine-read.
-# The `via <command>` half is not decoration: re-stamping is meant to cost a
-# re-probe. A stamp with no command is refused.
-#
-# WHAT REPAINTING MEANS is deliberately not defined here, because a definition
-# would be prose and would decay. The mechanism only forces the guard to be
-# opened, re-run, and either re-stamped or retired. Most repaints will end in
-# retirement, which is the intended bias: this estate's failure mode is
-# accumulation, not scarcity.
-#
-# ============================================================================
-# THE THREE BOUNDS
-# ============================================================================
-#
-# Some guards legitimately have no automatic runner, no dedicated suite, or no
-# safely-executable gating mode. Pretending otherwise would just produce
-# fictional declarations. So each is allowed AND COUNTED, against a bound that
-# may shrink and must never grow -- the PROP_LEAK_BOUND idiom already used by
-# bin/lib/propagation-set.sh. A ratchet, not an exemption: the next guard that
-# wants to be hand-run only has to retire one that already is.
+# THE THREE BOUNDS. Some guards legitimately have no runner, no suite, or no
+# safely-executable gating mode. Each is allowed AND COUNTED against a bound
+# that may shrink and must never grow. A ratchet, not an exemption: the next
+# guard that wants to be hand-run has to retire one that already is.
 #
 # usage: ./bin/tests/guard-estate.test.sh
 set -uo pipefail
@@ -178,11 +56,6 @@ GUARD_UNGATED_BOUND="${GUARD_UNGATED_BOUND:-9}"     # not safely executable here
 # is invisible to checks B..G, so it should be a temporary, dated concession to
 # a concurrent branch and nothing else.
 GUARD_UNDECLARED_BOUND="${GUARD_UNDECLARED_BOUND:-0}"
-
-# --- the metabolism ---------------------------------------------------------
-GUARD_RHYTHM_DAYS="${GUARD_RHYTHM_DAYS:-30}"
-GUARD_SPAN_DAYS="${GUARD_SPAN_DAYS:-365}"
-
 
 # How far into a file a declaration may be. Same reasoning as
 # suite-docs-lint.sh: it is a HEADER contract; a reader must meet it before

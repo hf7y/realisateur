@@ -116,38 +116,49 @@ mapfile -t GLOBAL_COMMANDS < <(
   done
 )
 
-# SHIMMED = every bin/<name>.sh those files name, plus every bare token in
-# CLAUDE.md's propagated "Ecosystem protocols" block that matches one of our
-# own bin scripts. Anything a global command tells a session to run must be
-# reachable from a repo that has no realisateur checkout.
+# SHIMMED = every bin/<name>.sh the global command files name, plus the
+# ecosystem-protocol commands named explicitly below.
+#
+# THE PROTOCOL COMMANDS ARE A LIST, NOT A GREP. Until 2026-08-17 the second
+# half of this derivation grepped backticked tokens out of BUILD-DISCIPLINE.md
+# and kept any that matched a bin/<t>.sh. That made PROSE LOAD-BEARING: editing
+# a document silently added or deleted a working guard. `closeout-lint` was
+# reachable only through one sentence in that file's essay half, so reaping the
+# essay would have uninstalled it with no error anywhere. Zach named the shape
+# on 2026-08-14 (hf7y/realisateur#264): "install-shims.sh derived every shim by
+# grepping backticked tokens out of the stamped block in CLAUDE.md was an
+# atrocious design."
+#
+# A name here must have a bin/<name>.sh; PROTOCOL_MISSING below fails loud if
+# it does not, so this list cannot rot into naming something that is gone.
+PROTOCOL_COMMANDS=(
+  check-project-busy
+  claim-drift
+  closeout-lint
+  discipline
+  focus-commit
+  notify-senechal
+  silence-audit
+)
+
 mapfile -t SHIMMED < <(
   {
     for n in "${GLOBAL_COMMANDS[@]:-}"; do
       [ -n "${n:-}" ] && grep -o 'bin/[a-z0-9-]*\.sh' "$CMD_SRC/$n.md" 2>/dev/null
     done | sed 's|bin/||; s|\.sh||'
-    # FIRST TOKEN of each backticked span, not the whole span. Every command
-    # in the propagated block is written with its arguments -- `focus-commit
-    # <repo> ...`, `notify-senechal '<what>'`, `silence-audit --strict` --
-    # so a pattern anchored to a closing backtick matched NOTHING, and this
-    # entire half of the derivation had been dead since it was written. It
-    # looked like coverage: the three shims it was supposed to produce
-    # existed anyway because ideate.md/cloture.md name them, so the silence
-    # was indistinguishable from success. silence-audit is the first command
-    # named ONLY here, and it is what exposed this -- it had to be
-    # hand-copied to ~/.local/bin, which is the failure install-shims exists
-    # to retire. Existence of bin/<token>.sh is still the filter, so a prose
-    # word can never become a shim.
-    # READ FROM BUILD-DISCIPLINE.md, NOT CLAUDE.md. Until 2026-08-14 the
-    # protocols block was STAMPED into CLAUDE.md and this line grepped the
-    # stamp. `discipline` retired the stamp, so CLAUDE.md now carries a
-    # one-line pointer and none of the command names -- grepping it would have
-    # silently dropped the silence-audit / consulte / focus-commit shims, i.e.
-    # deleted working guards as a side effect of a docs change. The names live
-    # where the text lives.
-    grep -oP '`\K[a-z][a-z0-9-]*(?=[`[:space:]])' "$REPO/BUILD-DISCIPLINE.md" 2>/dev/null \
-      | while read -r t; do [ -f "$REPO/bin/$t.sh" ] && echo "$t"; done
+    printf '%s\n' "${PROTOCOL_COMMANDS[@]}"
   } | sort -u
 )
+
+PROTOCOL_MISSING=()
+for n in "${PROTOCOL_COMMANDS[@]}"; do
+  [ -f "$REPO/bin/$n.sh" ] || PROTOCOL_MISSING+=("$n")
+done
+if [ "${#PROTOCOL_MISSING[@]}" -gt 0 ]; then
+  printf 'install-shims: FAIL: PROTOCOL_COMMANDS names %d script(s) that do not exist: %s\n' \
+    "${#PROTOCOL_MISSING[@]}" "${PROTOCOL_MISSING[*]}" >&2
+  exit 1
+fi
 
 CHECK_ONLY=0
 [ "${1:-}" = "--check" ] && CHECK_ONLY=1

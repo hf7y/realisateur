@@ -1,98 +1,24 @@
 #!/usr/bin/env bash
 # propagation-set.sh -- THE DEV/PROD CONTRACT, in one place.
 #
-# ============================================================================
-# THE DECISION (2026-08-07, Zach-directed)
-# ============================================================================
+# THE DECISION (2026-08-07, Zach-directed). Self-dev accounts do NOT pull
+# fresh clones of realisateur. `main` IS NOT A DEPLOY REF; everything they use
+# reaches them through the nightly verb build.
 #
-# The question: do the self-dev accounts pull fresh clones of realisateur --
-# making `main` the deploy ref for live agents -- or does everything they use
-# reach them through the nightly verb build?
+# The argument is what it buys the DEV side, not agent safety. If live accounts
+# pull `main` on a tick, every commit is a deployment and `main` must turn
+# conservative to protect them. Separating them is what lets `main` STAY FAST.
 #
-# ANSWER: the build. `main` IS NOT A DEPLOY REF, and the reason is not agent
-# safety.
+# PULL, NOT PUSH. The clock lives on the CONSUMER, in the account's own
+# crontab, running as the account. bin/tests/propagation.test.sh asserts this
+# mechanically -- the tick must contain no `sudo -u` and no `ssh` on its apply
+# path -- so the doctrine is enforced, not merely written here.
 #
-# Zach's framing, which corrected a draft of this file that had settled for a
-# clone-with-a-clock: interactive development here produces a CONSUMABLE that
-# agents pick up "in a controlled, stable way, and then build on." That is a
-# dev/prod split with a release channel between them.
+# BOOTSTRAP AND PAYLOAD. A build cannot deliver its own installer, so a small,
+# near-immutable bootstrap is installed once per account by
+# setup-selfdev-project.sh. It is bounded and asserted to stay bounded
+# (PROP_LEAK_BOUND); everything else is payload and arrives versioned.
 #
-# The prize is what it buys the DEV side. If four live accounts pull `main` on
-# a tick, every commit is a deployment, and `main` must then turn conservative
-# to protect them -- reviews get heavier, risky refactors get deferred, and the
-# repo whose entire value is fast iteration starts behaving like a production
-# branch. Separating them is what lets `main` STAY FAST. Agent stability is the
-# second-order benefit, not the argument.
-#
-# Rejected counter-argument: `main` is already the de facto deploy ref via
-# install-shims.sh. Blessing that would make the leak permanent; it is named
-# below as debt, bounded by bin/tests/propagation.test.sh.
-#
-# A CHANNEL WITH NO CLOCK IS NOT A CHANNEL (measured 2026-08-07).
-#
-# ============================================================================
-# PULL, NOT PUSH
-# ============================================================================
-#
-# The clock lives on the CONSUMER, in the account's own crontab, running as
-# the account. Not on a hands account reaching in over ssh + sudo.
-#
-# Push needs a human holding the right credential, does not scale past four
-# accounts, and leaves no trace on the consumer side -- so the account cannot
-# answer "what version am I on and when did I last check" without someone
-# else's shell history. Pull lets the account VERIFY BEFORE ADOPTING (which is
-# the property that makes an atomic switch possible at all) and leaves the
-# record where the consumer is. Measured cost of push, same day: getting one
-# key into `ecosim` needed a hand `scp` and the permission layer blocked it
-# first.
-#
-# `bin/tests/propagation.test.sh` asserts this mechanically -- the tick must
-# contain no `sudo -u` and no `ssh` on its apply path. A doctrine that is only
-# written down is a doctrine that gets edged back the first time push is more
-# convenient.
-#
-# ============================================================================
-# BOOTSTRAP AND PAYLOAD
-# ============================================================================
-#
-# A build cannot deliver its own installer, so something must exist on the
-# account first. The industrial shape (gradlew, rustup) is a SMALL,
-# NEAR-IMMUTABLE bootstrap checked into the consumer whose only job is to
-# find, verify and install a versioned payload.
-#
-# Copying the whole toolset into N accounts would just relocate the rot. The
-# bootstrap is therefore bounded and asserted to stay bounded: it changes
-# rarely, so its own staleness does not matter, which is the only reason a
-# copy is acceptable at all. Everything else is payload and arrives versioned.
-#
-# It is installed ONCE per account by `setup-selfdev-project.sh`, which
-# already runs exactly once per account and is already the place per-account
-# credentials and clones are established.
-#
-# ============================================================================
-# THE DECIDER -- one question, asked once, no per-file adjudication
-# ============================================================================
-#
-#   Would this script still be needed on a host that has NO PAYLOAD INSTALLED?
-#
-#   YES -> BOOTSTRAP. It finds, verifies, installs or repairs the payload, or
-#          it is the clock that does so. Bounded set; growth is a review event.
-#   NO  -> PAYLOAD. It is tooling an agent uses once the surface exists, so it
-#          travels as a verb in a dated, named, atomically-switched build.
-#   Never leaves this repo -> LOCAL. Linters CI gates, and operator scripts a
-#          human runs from a hands account against the live estate.
-#
-# A rule that needs a human to adjudicate per file is not a rule, so the
-# answer is written ONCE, here. propagation.test.sh fails CI if any bin/*.sh
-# is unclassified, classified twice, or named here but deleted. A new script
-# cannot be merged with no propagation path -- which is exactly the state
-# bin/selfdev-gh-app.sh was written into on 2026-08-06, for accounts that had
-# no way to receive it, with nothing anywhere noticing.
-
-# --- the release channel ----------------------------------------------------
-# One repo, one credential, one clone. VERB-DISTRIBUTION.md 5: this is what
-# retires the per-repo deploy-key sprawl (four hand-made keys per account,
-# "we can't do this for every install").
 PROP_RELEASE_REPO="hf7y/verbs"
 PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
 
@@ -287,7 +213,6 @@ PROP_PAYLOAD_SCRIPTS="
 check-project-busy.sh
 closeout-lint.sh
 focus-commit.sh
-retired/hygiene-lint.sh
 notify-senechal.sh
 precipitation-scan.sh
 silence-audit.sh
@@ -336,7 +261,6 @@ PROP_PAYLOAD_PENDING="
 check-project-busy.sh
 closeout-lint.sh
 focus-commit.sh
-retired/hygiene-lint.sh
 notify-senechal.sh
 precipitation-scan.sh
 silence-audit.sh
@@ -462,7 +386,6 @@ ownership-audit.sh
 port-markdown-cost.sh
 reach-lint.sh
 discipline.sh
-suite-docs-lint.sh
 thermostat-wiring.sh
 path-provenance-audit.sh
 selfdev-agent-survey.sh
