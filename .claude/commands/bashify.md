@@ -11,10 +11,11 @@ unnecessary. The agency is not destroyed; it is **moved**.
 A verb, once coined with a definition, exists. **The man page is written before
 the tool works**, and the tool is then forced to become true to it.
 
-Standing placement facts (2026-07-30, Zach-directed): mandark is no longer a
-dev box; dexter VMs host agentic activity; prose goes to `bibliothecaire`. A
-bashified project keeps its man page, its contract, its test and its `GAPS.md`
--- prose left in a bashified repo is unreaped agency.
+Standing placement facts (2026-07-30, Zach-directed; the host layout they
+assume is #250's subject): mandark is no longer a dev box; dexter VMs host
+agentic activity; prose goes to `bibliothecaire`. A bashified project keeps
+its man page, its contract, its test and its `GAPS.md` -- prose left in a
+bashified repo is unreaped agency.
 
 ---
 
