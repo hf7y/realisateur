@@ -38,7 +38,7 @@ Hunt, ranked by what yielded:
 - an instruction to write a retired surface
 - a mandate contradicted by a guard — run the guards, then read the doctrine telling you the opposite
 
-> **Prose must never be load-bearing.** In realisateur, `install-shims.sh`
+> **Prose must never be load-bearing.** In realisateur, the shim installer
 > derived shim names by grepping a doc, so one sentence in an essay was the
 > only thing installing a working guard; and `ownership-audit` attached files
 > by *mentioning them*, so trimming a header **detached** a suite. Fix that
