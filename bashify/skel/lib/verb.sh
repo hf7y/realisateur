@@ -14,6 +14,15 @@
 #   Nothing in a bashified utility may spend money implicitly. A utility
 #   that CAN spend declares VERB_CAN_SUMMON=1 and gains --summon; one that
 #   cannot does not carry the flag at all.
+# TRAP: gardien's `verb_gap_or_summon` is DELIBERATELY NOT HERE, because it
+#   calls `claude -p` directly. Merging it verbatim would propagate a
+#   violation of this runtime's own stated law into every repo that sources
+#   this file. gardien's `bin/garde` calls it at 4 sites, so gardien cannot
+#   be de-forked onto this runtime until that is resolved, and the drift
+#   guard reports it as a finding rather than exempting it.
+#   bashify/test/verify-emit.sh F2 asserts a vendor token is present here on
+#   purpose: the purge exemption has to cover the vendor half, and if this
+#   paragraph is ever reworded away that assertion goes stale LOUDLY.
 
 set -uo pipefail
 

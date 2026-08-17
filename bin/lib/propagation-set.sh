@@ -27,7 +27,7 @@
 #   Comments go ABOVE the assignment.
 #
 # TRAP: a comment line whose FIRST word is `shellcheck` is parsed as a
-#   shellcheck directive -- SC1072/SC1073, a parse error on the whole file.
+#   `shellcheck` directive -- SC1072/SC1073, a parse error on the whole file.
 #   Spell the path as `bin/shellcheck-lint.sh`, never bare.
 #
 # TRAP: do not reclassify a row to PAYLOAD without a matching man page. That

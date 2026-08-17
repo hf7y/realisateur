@@ -298,7 +298,7 @@ EOF
 # many lines a file gained but not what is in them. Thresholds re-derived across
 # 21 repos (see #299): ratio alone qualifies 101 committed files, so the
 # 150-line floor is what makes the rule safe.
-cm_added=0; cm_total=0; cm_files=''
+cm_added=0; cm_deleted=0; cm_total=0; cm_files=''
 cur_lang=''; cur_n=0; cur_path=''
 flush_cm() {
   [ -n "$cur_path" ] && [ "$cur_n" -gt 0 ] && cm_files="$cm_files $cur_path:$cur_n"
@@ -318,7 +318,19 @@ while IFS= read -r line; do
     '+++ '*|'--- '*|'+++'|'@@'*|'diff --git '*|'index '*) continue ;;
   esac
   [ -n "$cur_lang" ] || continue
-  case "$line" in '+'*) ;; *) continue ;; esac
+  case "$line" in
+    '-'*)
+      # Deletions are counted for ONE purpose: telling a reap from a cost.
+      # They never enter cm_total, so the ratio below is still over ADDED
+      # lines only and the threshold keeps exactly its original meaning.
+      d="${line#-}"
+      ds="${d#"${d%%[![:space:]]*}"}"
+      [ -n "$ds" ] || continue
+      is_comment "$cur_lang" "$d" && cm_deleted=$((cm_deleted + 1))
+      continue ;;
+    '+'*) ;;
+    *) continue ;;
+  esac
   line="${line#+}"
   s="${line#"${line%%[![:space:]]*}"}"
   [ -n "$s" ] || continue          # blanks count as neither, both sides
@@ -391,7 +403,16 @@ if [ "$cm_total" -gt 0 ]; then
   cm_pct=$(( cm_added * 100 / cm_total ))
   printf '  %d of %d added non-markdown line(s) are comments -- %d%% (flags at %d%% and %d lines)\n' \
     "$cm_added" "$cm_total" "$cm_pct" "$CM_MAX_PCT" "$CM_FLOOR"
-  if [ "$cm_added" -ge "$CM_FLOOR" ] && [ $(( cm_added * 100 )) -ge $(( CM_MAX_PCT * cm_total )) ]; then
+  if [ "$cm_deleted" -ge "$cm_added" ] && [ "$cm_added" -gt 0 ]; then
+    # A REAP IS NOT A COST -- the exemption the markdown ratio above has
+    # carried since #231, applied to the axis it was missing on. This check
+    # prices ADDED comment lines, so a pass that deletes 4795 lines of header
+    # essay and puts back 318 lines of TRAP statement scores 74% comments and
+    # FLAGS: the guard taxing the exact behaviour it exists to produce. #287
+    # fixed this for markdown and left check 3 asymmetric.
+    printf '  net comments: -%d line(s) (added %d, deleted %d) -- a reap, not a cost.\n' \
+      "$((cm_deleted - cm_added))" "$cm_added" "$cm_deleted"
+  elif [ "$cm_added" -ge "$CM_FLOOR" ] && [ $(( cm_added * 100 )) -ge $(( CM_MAX_PCT * cm_total )) ]; then
     printf '  FLAG [comment-ratio] this diff adds %d comment line(s) at %d%% of its non-markdown lines.\n' \
       "$cm_added" "$cm_pct"
     printf '        contributing file(s) (path:added-comment-lines):\n'
