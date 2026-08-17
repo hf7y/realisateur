@@ -39,10 +39,7 @@ GUARD_UNGATED_BOUND="${GUARD_UNGATED_BOUND:-9}"     # not safely executable here
 # UNDECLARED IS ZERO, and it earned the right to be. It was briefly 1, for
 # bin/closeout-lint.sh, which was being rewritten concurrently on
 # hf7y/realisateur#99 -- counting it was the honest move while another branch
-# owned the file. #99 landed (fca3332) and it, and #99's own new
-# bin/suite-docs-lint.sh, are now declared. Raising this above 0 means a guard
-# is invisible to checks B..G, so it should be a temporary, dated concession to
-# a concurrent branch and nothing else.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 GUARD_UNDECLARED_BOUND="${GUARD_UNDECLARED_BOUND:-0}"
 
 # How far into a file a declaration may be. Same reasoning as
@@ -96,9 +93,7 @@ fi
 # A0 -- the rename dodge, closed BEHAVIOURALLY rather than by prose.
 #
 # The first draft of this check read the header for words like "refuses" and
-# "gates on". It flagged ten installers and provisioners, every one of them a
-# false positive -- which is the exact failure this whole file is about,
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 for f in "$BIN"/*.sh; do
   [ -e "$f" ] || continue
   n="$(basename "$f")"
@@ -204,9 +199,7 @@ chmod +x "$WORK/stub/gh" "$WORK/stub/ssh"
 # Sets the GLOBALS `OUT` and `RC`. Deliberately not `out=$(run_sandboxed ...)`:
 # command substitution runs the function in a SUBSHELL, so an rc assigned
 # inside it never reaches the caller. The first draft of this file did exactly
-# that and died on `RC: unbound variable` -- which is the good outcome; had RC
-# merely been stale, every D assertion would have been graded against another
-# guard's exit code and this file would have reported a green estate.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 run_sandboxed() {
   local s="$1"; shift
   OUT="$(cd "$WORK/tree" && env -i \
@@ -267,9 +260,7 @@ for n in $GUARDS; do
     # A non-zero exit with no findings and no admission of blindness is the
     # mirror image of D1: it is unreadable. A caller cannot tell a refusal
     # from a failure from a finding. (Non-zero WITH a BLIND line is correct
-    # and is what E1 rewards -- silence-audit uses 3, hardcoded-home-lint 2;
-    # this deliberately does not care which number, only that the output says
-    # which of the three world-states it is in.)
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
     bad "D2 $n: exited $rc having reported neither a finding nor a BLIND"
   else
     ok "D1 $n: rc=$rc, findings=$cnt -- consistent"

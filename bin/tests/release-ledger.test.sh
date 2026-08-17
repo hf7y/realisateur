@@ -180,9 +180,7 @@ echo "-- 7. A STALE SUCCESS IS NOT A FRESH ONE -------------------------------"
 # ===========================================================================
 # THE 2026-08-07 FAILURE, REPRODUCED. The publisher died on its own argument
 # parser and published nothing. The endpoint went on serving the previous
-# night's CUT with blocked_streak 0. It was NINETEEN HOURS OLD -- inside the
-# 30h window -- so this script said `emitter alive` and selfdev-release-tick
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mkledger "$T/stalecut.tsv" <<'EOF'
 43 CUT nightly
 19 CUT nightly

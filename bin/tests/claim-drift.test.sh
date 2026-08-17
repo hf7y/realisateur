@@ -44,9 +44,7 @@ chmod +x "$TMP/deadgh/gh"
 # A PATH with no `jq` on it. It cannot simply be an empty directory: the
 # script needs bash, readlink and dirname before it reaches any check at all,
 # so emptying PATH tests "bash is missing", not "jq is missing" -- the first
-# draft of this case did exactly that and scored 127. Each tool the absence
-# under test does NOT concern is linked in by name, which also documents the
-# script's real external dependencies.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mkdir -p "$TMP/nojq"
 for t in bash readlink dirname tr cat; do ln -sf "$(command -v "$t")" "$TMP/nojq/$t"; done
 ln -sf "$TMP/shim/gh" "$TMP/nojq/gh"
@@ -72,10 +70,7 @@ pr_json() { # <number> <state> <isDraft> <createdAt> <headRefOid> <commits-json>
   # The body defaults to a CONFORMING first line so the drift cases above keep
   # testing drift and nothing else. Section J supplies its own bodies; if the
   # default were non-conforming, every case would fail for two reasons at once
-  # and neither verdict would be evidence about the other.
-  # `${7-...}` and NOT `${7:-...}`: the colon form substitutes the default for
-  # an EMPTY argument as well as an unset one, so case J5 -- the empty body --
-  # silently received the conforming default and passed by testing nothing.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local body="${7-DECISION: merge this, it is a clean fix.}"
   printf '{"number":%s,"title":"t","url":"https://x/pull/%s","state":"%s","isDraft":%s,"createdAt":"%s","headRefOid":"%s","commits":%s,"body":%s}' \
     "$1" "$1" "$2" "$3" "$4" "$5" "$6" "$(printf '%s' "$body" | jq -Rs .)"

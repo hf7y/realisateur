@@ -83,10 +83,7 @@ has "B5 the deletions are not in the count"  "$RUN_OUT" "0 of 10 added line(s) a
 # B6: THE REWRITE-AS-REAP. B5 only covers a diff that adds NO prose. A real
 # reap replaces a long stale passage with a short correct one, so it is
 # markdown-only and therefore 100% markdown -- over any threshold, forever.
-# That flagged hf7y/realisateur#231, which removed 330 lines of prose
-# defending retired mechanisms and put back 155, and it would have flagged
-# every future reap identically. A guard that fails the work it exists to
-# encourage stops being read.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 newrepo rewriter
 lines 200 "$T/rewriter/DOC.md" 'a long stale passage about a retired mechanism'
 G "$T/rewriter" add -A
@@ -103,9 +100,7 @@ hasnt "B6 and raises no ratio FLAG"                         "$RUN_OUT" "FLAG [ma
 # B6b: THE PRODUCER FIX (#287). #187 makes a reap incomplete until it also
 # repoints the command file that WROTE the surface being deleted, and that
 # edit adds a net line or two. Under a one-line "grew" trigger the mandatory
-# step disqualified the exemption, so every correct reap PR failed:
-# senechal#280 deleted 1,662 net lines and scored 97% because
-# .claude/commands/nightly-batch.md gained ONE net line.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 newrepo producer
 mkdir -p "$T/producer/.claude/commands"
 lines 200 "$T/producer/DOC.md" 'a retired prose surface'

@@ -144,9 +144,7 @@ echo "== 3b. THE LIVE SUNSET, WITH NO OVERRIDE ================================"
 # THIS is the case that makes the self-destruct real. Every case above drives
 # the date through SERVED_SUNSET, so none of them can ever fire on their own --
 # a suite that only tests a sunset it controls has tested nothing about the
-# actual deadline. This one runs `--strict` with NO override, so it reads the
-# date compiled into the script against today.
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 rc=0
 O="$(bash "$SCRIPT" --strict 2>&1)" || rc=$?
 if [ "$rc" -eq 0 ]; then

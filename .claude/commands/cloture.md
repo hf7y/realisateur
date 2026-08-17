@@ -45,37 +45,32 @@ Run:
 closeout-lint
 ```
 
-first (zero AI; offline but for its section-B `gh` query) — it already
-does the hard part: distinguishing a genuinely unpushed branch from one
-that's squash-merged, stale-pointer, or checked out in someone else's
-worktree, and dirt this run made from dirt that predates it
-(`note`/`skip`/`BLIND`, not `FLAG`). For anything it does NOT clear:
+first (zero AI, offline but for its section-B `gh` query). It already does the
+hard part: telling a genuinely unpushed branch from one that is squash-merged,
+stale-pointer or checked out elsewhere, and dirt this run made from dirt that
+predates it (`note`/`skip`/`BLIND`, not `FLAG`). For anything it does not clear:
 
-- **Uncommitted changes it FLAGged** → commit (per `CLAUDE.md`'s
-  commit-message-via-file rule) or discard deliberately, never leave
-  sitting. A `note [pre-existing-dirty]` is NOT that: those paths
-  predate this session, and committing or reverting them adopts or
-  destroys a concurrent run's work.
-- **Committed but unpushed, no PR** → push and open one. Even a one-line
-  draft PR beats a branch only this host knows exists.
-- **Pushed with an open PR already** → re-read the PR body against
-  `claim-drift.sh --convention` before closing: does it still say what's
-  actually true right now (draft vs. ready, `DECISION:` vs. no-decision)?
-  A PR that drifted out of sync with its own claim during this session is
-  exactly what `claim-drift.sh <n>` checks — run it on anything you
-  touched.
-
-(`hygiene-lint` ran here until it was retired: hf7y/realisateur#265.)
+- **Uncommitted changes it FLAGged** -> commit (via a message file) or discard
+  deliberately. A `note [pre-existing-dirty]` is NOT that: those paths predate
+  this session, and committing or reverting them adopts or destroys a
+  concurrent run's work.
+- **Committed but unpushed, no PR** -> push and open one. A one-line draft PR
+  beats a branch only this host knows exists.
+- **Pushed with an open PR** -> re-read the body against
+  `claim-drift --convention`: does it still say what is true now (draft vs
+  ready, `DECISION:` vs none)? Run `claim-drift <n>` on anything you touched.
 
 ## 2. Name the philosophy delta, or say "none"
 
-Did this session change what this ecosystem *believes* — a rule, a
-doctrine file (`vault:realisateur/UNIVERSE.md`, `BUILD-DISCIPLINE.md`, `vault:realisateur/PRECIPITATION.md`,
-`vault:realisateur/STABILITY-MILESTONES.md`, `vault:realisateur/PLAYBOOK.md`, `CLAUDE.md`
-itself)? If yes, name the delta in one sentence and confirm the file was
-actually edited and is part of a commit/PR from step 1 — not just
-described in chat. If no, **say "philosophy delta: none" explicitly.**
-Silence here is indistinguishable from forgetting to look.
+Did this session change what the ecosystem *believes* -- a rule in
+`BUILD-DISCIPLINE.md`, `PROSE-REAPING.md`, `SCHEDULER.md` or `CLAUDE.md`?
+Those four are the doctrine still in this repo; the rest were consigned to the
+vault in #366 and cannot be edited as part of a commit here.
+
+If yes: name the delta in one sentence and confirm the file was actually
+edited and is in a commit or PR from step 1, not merely described in chat. If
+no, **say "philosophy delta: none" explicitly** -- silence here is
+indistinguishable from forgetting to look.
 
 ## 3. Every cross-project write, and every piece of residue, is a GitHub issue or a PR — not repo prose
 
@@ -111,41 +106,28 @@ repo that isn't this one) rather than a row in a file:
   than a rule, it's an issue. If it's neither — just interesting — it
   does not need a durable home at all.
 
-**Retire check, run it every time:** grep the session for "deferred",
-"BUSY", "left undone", "next session should" — those words catch the
-common phrasings, but they are a floor, not the rule itself. **The rule
-is structural, not lexical: every FLAG, gap, or defect this session
-named and did not fix — regardless of the words used to name it (also
-catches "not fixed here", "worth doing", "flagging this", "didn't get
-to", "out of scope for now", and every future paraphrase of the same
-non-action) — needs either an issue URL or a PR URL from this step
-before step 4 runs.** Realisateur#165, 2026-08-11: a `/cloture` close
-named a real shim-drift defect with the sentence "Not something I
-fixed — flagging it" and stopped there. That sentence doesn't contain
-"deferred" or "BUSY", so it would have passed a literal grep of those
-four words — and it was, in fact, exactly the un-filed residue this
-section exists to catch. Zach had to ask "who did you tell about this?"
-to surface it. **A close that names a defect and does not attach a URL
-to it has not routed the defect, no matter how the sentence is worded.**
-If you catch yourself writing a sentence in step 4 that describes a
-problem without a link next to it, that is the signal to stop and file
-it before continuing — not a style choice about how much detail the
-close needs.
+**Retire check, every time.** Grepping the session for "deferred", "BUSY",
+"left undone" catches the common phrasings, but the rule is **structural, not
+lexical**: every FLAG, gap or defect this session named and did not fix --
+whatever words named it -- needs an issue URL or a PR URL before step 4.
+
+realisateur#165, 2026-08-11: a close named a real shim-drift defect with
+*"Not something I fixed -- flagging it"* and stopped. That sentence contains
+none of the trigger words and was exactly the un-filed residue this step
+exists to catch; Zach had to ask "who did you tell about this?" **A close that
+names a defect and attaches no URL has not routed it, however it is worded.**
 
 ## 4. Close
 
-Before writing anything: re-read what you are about to say. **Every
-clause that names a problem, gap, defect, or FLAG must be immediately
-followed by an issue/PR URL or the words "documented exception" with
-the step-1 reasoning** — never left as a bare statement of fact. If a
-clause fails that test, go back and file it (step 3) before finishing
-this step. This is the same check as the retire check above, applied a
-second time, at the point where it actually matters: what you are about
-to hand Zach, not what you did five minutes ago.
+Before writing anything, re-read what you are about to say. **Every clause
+naming a problem, gap, defect or FLAG must be immediately followed by an
+issue/PR URL, or the words "documented exception" with the step-1 reasoning.**
+Never a bare statement of fact. If a clause fails that test, go file it
+(step 3) before finishing. Same check as the retire check, applied where it
+matters: to what you are about to hand Zach.
 
-State plainly, with **links, not descriptions**: which branches got a PR
-and which URL, which issues got filed and which URL, what was pushed and
-where (with revert shas per `CLAUDE.md`'s push-permission clause), and
-what was deliberately left as a documented exception from step 1 and
-why. Zach should never have to ask whether something landed — the answer
-is a URL in the close, not a sentence promising one exists.
+State plainly, with **links, not descriptions**: which branches got a PR and
+which URL, which issues got filed and which URL, what was pushed and where
+(with revert shas), and what was left as a documented exception and why. Zach
+should never have to ask whether something landed -- the answer is a URL, not
+a sentence promising one exists.

@@ -30,9 +30,7 @@ g() { git -c init.defaultBranch=main -c user.email=t@t -c user.name=t "$@" >/dev
 # --- fixture projects ----------------------------------------------------
 # A project's bashified branch carries bin/<verb> (executable), man/<verb>.1,
 # and lib/verb.sh which the verb SOURCES. That last file is the point: the
-# assemble step once copied only bin/ and man/, every verb in the build was
-# broken, and -f && -x passed anyway. If the whole-tree copy regresses, the
-# --help witness here fails exactly as it did in production.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mkrepo() {
     local repo="$1"; shift
     local d="$FIX/$repo.git"
@@ -206,9 +204,7 @@ check "...and the departed project is pruned" \
 # --- 5. a bashified branch that MOVED -----------------------------------
 # The manifest pins a sha; the tree must be assembled from THAT sha. A cut
 # after a merge lands must pick up the new one, and the old sha must remain
-# fetchable in case the branch moves mid-run.
-# A comment, not a command: an appended command would (correctly) fail the
-# --help witness and this test is about the sha, not about the witness.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 printf '# CHANGED\n' >> "$FIX/alpha.git/bin/aa"
 g -C "$FIX/alpha.git" add -A
 g -C "$FIX/alpha.git" commit -m "alpha moves"
@@ -272,10 +268,7 @@ check "no readable repositories is BLIND, not a zero-verb build" "$?" "1"
 # --- 10. a HALF-declaration is named, and refuses -----------------------
 # The defect this pair of cases exists for: `ecosim-sensor` was an executable
 # with no page on a bashified branch, so it fell out of the END loop, then
-# `[ -n "$verbs" ] || continue` skipped the project, and no count, name or
-# manifest row said anything. It was missing from every build ever cut, and
-# what a host saw instead was `WRAPPER_NO_SENSOR` -- a symptom that reads as a
-# stale build (realisateur#66) and is nothing of the kind.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mkrepo epsilon ea
 add_half_exec epsilon ee
 printf 'epsilon\n' > "$TMP/repolist"
@@ -309,9 +302,7 @@ esac
 # --- 11. the opt-out, and the decision travelling in the manifest -------
 # An installer is not a verb and must not be nagged about forever; a row in
 # lib/not-a-verb.tsv is how a project says so ONCE. The row is not a silence:
-# what it buys is a line in the manifest instead of a refusal, because "what
-# did this build decide not to include, and why" belongs with the artifact
-# every account consumes, not on the terminal of whoever ran the cut.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 printf 'epsilon\tee\tfixture installer, not a verb\nepsilon\tpp\tfixture stray page\n' \
     > "$TMP/not-a-verb.tsv"
 cut >"$TMP/m11" 2>"$TMP/e11"
@@ -351,9 +342,7 @@ check "...and every row is <project><TAB><name><TAB><why>" \
 # --- 14. the CHANNEL check is WIRED, not merely present -----------------
 # Section 6a runs bin/verb-kind-lint.sh over the tree this script just
 # assembled. Asserted here rather than only in that lint's own suite,
-# because the failure being guarded against is not a broken lint -- it is a
-# correct lint nothing calls. guard-estate.test.sh check B exists for
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mkrepo theta tv
 printf '#!/usr/bin/env bash\n# KIND: product\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "tv\\n"\n' \
     > "$FIX/theta.git/bin/tv"

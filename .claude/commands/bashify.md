@@ -4,32 +4,17 @@ description: Bashify a project -- survey what it does, coin its verbs, write the
 argument-hint: "[project-name] [verb]"
 ---
 
-**bashify** is the verb of `basheur`. To bashify a thing is to state what
-it does as a contract a shell can hold, so that the agent standing in for
-it becomes unnecessary.
+**bashify** is the verb of `basheur`. To bashify a thing is to state what it
+does as a contract a shell can hold, so the agent standing in for it becomes
+unnecessary. The agency is not destroyed; it is **moved**.
 
-This is an **eschatological** command, and that is not decoration -- it
-sets what "done" means. `/bashify` reaps agentic activity out of a project
-and suspends it in documentation. The agent that used to run inside the
-project does not survive the pass. What survives is the man page, and the
-utility that page describes. The agency is not destroyed; it is **moved**:
-reborn on a dexter VM, with a different purpose, no longer welded to this
-repo.
+A verb, once coined with a definition, exists. **The man page is written before
+the tool works**, and the tool is then forced to become true to it.
 
-Standing placement facts this command assumes (2026-07-30, Zach-directed):
-- **mandark is no longer a dev box.** Personal agents only. Do not queue
-  agentic dev work onto it, and do not build anything whose steady state
-  requires it.
-- **dexter VMs host agentic activity.** One of them is research.
-- **Prose goes to `bibliothecaire`.** A bashified project keeps its man
-  page, its contract, its test, and its `GAPS.md` -- nothing else. Every
-  other document is research material and belongs in bibliothecaire, where
-  Obsidian's linking is what integrates it. Prose left in a bashified repo
-  is unreaped agency.
-
-A verb, once coined with a definition, exists. Speaking it manifests it.
-That is the whole mechanism: **the man page is written before the tool
-works**, and the tool is then forced to become true to it.
+Standing placement facts (2026-07-30, Zach-directed): mandark is no longer a
+dev box; dexter VMs host agentic activity; prose goes to `bibliothecaire`. A
+bashified project keeps its man page, its contract, its test and its `GAPS.md`
+-- prose left in a bashified repo is unreaped agency.
 
 ---
 
@@ -59,38 +44,29 @@ consume it.
 
 ## 1. Survey -- what does this project actually do?
 
-Read the repo and answer, in writing, one question: **what can a human ask
-this project for?** Not what its code is organised into -- what a caller
-would want out of it.
+Answer one question in writing: **what can a human ask this project for?**
+Not what its code is organised into -- what a caller would want out of it.
 
-- Discover real entry points across **all** languages and **all**
-  directories. Globbing `bin|scripts|tools` for `*.sh` is the known-bad
-  pass: it found 3 of senechal's 23 scripts, and it miscounted Python and
-  Node argv entry points as "no entry point at all". A project whose front
-  door is `argparse` is already mechanized; what it lacks is a verb
-  surface, which is a much smaller job -- say which of the two you found.
-- Cluster the capabilities **by domain a caller would name**, not by
-  directory. The seams are real: `crt` is a voice loop, a book-game
-  funnel, and a deploy surface; those are three verbs, not 98
-  subcommands under one.
-- Name what the project does that is **not mechanizable yet** -- that is
-  the residue of genuine agency, and it becomes exit 3 (`needs-summon`),
-  not a silent omission.
+- Discover entry points across **all** languages and **all** directories.
+  Globbing `bin|scripts|tools` for `*.sh` is the known-bad pass: it found 3 of
+  senechal's 23 scripts and miscounted argv entry points as "no entry point".
+  A project whose front door is `argparse` is already mechanized; what it
+  lacks is a verb surface, a much smaller job. Say which of the two you found.
+- Cluster capabilities **by domain a caller would name**, not by directory.
+  `crt` is a voice loop, a book-game funnel and a deploy surface -- three
+  verbs, not 98 subcommands under one.
+- Name what is **not mechanizable yet**: that is genuine agency, and it
+  becomes exit 3 (`needs-summon`), not a silent omission.
 
 ## 2. Coin the verbs
 
-The naming rule, ecosystem-wide: **French noun = animate** (a project, an
-agent). **French imperative verb = inanimate** (a tool). The part of
-speech alone tells a reader whether the thing they are invoking has
-agency. Coining a verb is therefore a claim that the thing is *dead* --
-which is the point of this command.
+The naming rule: **French noun = animate** (a project, an agent); **French
+imperative verb = inanimate** (a tool). Coining a verb is a claim that the
+thing is *dead*, which is the point of this command.
 
-Hard constraints:
-- **Pure ASCII.** `répartis` is unusable at a prompt. Rule out accents.
-- **Unclaimed on `PATH`** -- check with `command -v` before assigning, on
-  this host, now.
-- **One domain per verb.** If you cannot write the NAME line of the man
-  page in one clause without "and", it is two verbs.
+- **Pure ASCII.** `repartis` not `repartis` with an accent -- unusable at a prompt.
+- **Unclaimed on `PATH`** -- `command -v` on this host, now.
+- **One domain per verb.** If the NAME line needs an "and", it is two verbs.
 
 ## 3. Write the man page -- this is the deliverable
 
@@ -154,11 +130,10 @@ the flag at all -- so `--help` alone answers "can this cost me anything?"
 ## 4. The man page test -- what makes a man page *successful*
 
 A man page is a **contract**, so it is testable, and a page that cannot be
-tested has not been written yet. A page passes when a competent stranger
-with no access to the repo can predict the tool's behavior from the page
-alone, **and every prediction is machine-checkable**. These nine rows are
-that test. Score them explicitly; a page is not done until every row
-passes or its failure is written into `GAPS.md`.
+tested has not been written yet. It passes when a competent stranger with no
+access to the repo can predict the tool's behaviour from the page alone, and
+every prediction is machine-checkable. Score these nine rows explicitly; a
+page is not done until every row passes or its failure is in `GAPS.md`.
 
 1. **NAME is one clause.** `<verb> - <imperative, one domain>`. An "and"
    in the NAME line fails the row and means step 2 was done wrong.
@@ -220,36 +195,21 @@ which are real, per project. The end state is self-contained.
 
 ## 6. Fulfilling the contract vs. modifying the contract
 
-These are different acts with different gates, and conflating them is how
-a contract stops meaning anything. State which one you are doing, every
-time, in the commit message.
+Different acts, different gates. **State which one, in the commit message.**
 
-**Fulfilling** -- the page stays byte-identical; the implementation moves
-toward it. No permission needed. This is the default and most work is
-this. Success is measured by the step-4 rows going from fail to pass with
-the page untouched.
+**Fulfilling** -- the page stays byte-identical, the implementation moves
+toward it. No permission needed; this is the default. Success is the step-4
+rows going fail -> pass with the page untouched.
 
-**Modifying** -- the page changes, so the promise changes. This is not a
-free action. It requires, mechanically:
-1. **A stated reason** in the commit: what the tool learned that the page
-   did not know.
-2. **The old page preserved**, not overwritten in place -- `git` holds it,
-   and the commit must name the change, so a reader can see the promise
-   move.
-3. **A re-run of the full step-4 test** against the new page. Changing the
-   contract to match a broken implementation is the failure mode this gate
-   exists to catch; if the only thing that changed is that the tool could
-   not do it, that is exit 4 and a `GAPS.md` line, **not** a page edit.
-4. **Callers checked.** If another verb pipes into this one, a changed
-   promise breaks it silently. Grep for the verb name across bashified
-   branches before committing.
-
-That four-step gate is itself mechanical, which means **it can be
-bashified** -- and should be. `bashify` modifying contracts is the same
-operation as `bashify` modifying anything else, and it is the strongest
-proof the verb is real: the tool that de-animates other projects submits
-to its own contract. Until that check is a script, run the four steps by
-hand and say in the report that you did, so the gap is visible.
+**Modifying** -- the page changes, so the promise changes. Requires, all four:
+1. a stated reason in the commit: what the tool learned that the page did not;
+2. the old page preserved in `git`, not overwritten silently;
+3. a re-run of the full step-4 test against the new page -- changing the
+   contract to match a broken implementation is the failure this gate exists
+   for, and "the tool could not do it" is exit 4 and a `GAPS.md` line, **not**
+   a page edit;
+4. callers checked -- grep the verb name across bashified branches, because a
+   changed promise breaks a piping caller silently.
 
 ## 7. Prose out, insight to bibliothecaire
 
@@ -260,16 +220,10 @@ deleting it, and rather than leaving it in the bashified tree. Obsidian's
 linking is what turns those notes into something integrable -- so write
 them as linkable notes, not as a dump.
 
-**Deleting `.scheduler/` prose breaks the registry, and nothing checks.**
-`scheduler/focus/<project>.md` and `scheduler/questions/<project>.md` are
-**symlinks** into the project's own `.scheduler/`, so a reap that consigns
-and removes that prose leaves two dangling links behind it. This has
-happened on both reaps run so far -- bibliothecaire's went unnoticed for a
-day -- so sweep them as part of the pass, and verify with:
-
-```
-for f in focus/*.md questions/*.md; do [ -e "$f" ] || echo "DANGLING: $f"; done
-```
+Do not scaffold or sweep `.scheduler/FOCUS.md`, `QUESTIONS.md` or
+`BLOCKERS.md` -- retired ecosystem-wide by hf7y/scheduler#66 on 2026-08-07,
+along with the `scheduler/focus/` and `scheduler/questions/` symlinks that
+used to point at them. Findings go to that project's issue tracker.
 
 `vim-arcade` is becoming the universe this vocabulary lives in: a verb
 coined here is a verb spoken there. Note new verbs in a form vim-arcade can
@@ -277,37 +231,27 @@ pick up rather than assuming it will re-derive them.
 
 ## 8. Branch, never main; and never extract
 
-The pass emits a **`bashified` branch**, off the project's own default
-branch, built in a `git worktree` so no human's working tree is ever
-touched -- two projects were bashified while Zach had live sessions open
-in both.
+The pass emits a **`bashified` branch**, off the project's own default branch,
+so every removed thing is one `git log <default-branch>` away in the same
+repository.
 
-The purge is total *because* it is a branch: every removed thing is one
-`git log <default-branch>` away in the same repository. **Extracting a
-`bashified` branch into a standalone repo destroys the archive that makes
-the purge safe**, and leaves defensive code standing with no visible
-reason, which is how hard-won guards get deleted by the next reader. Every
-README and man page says so; keep saying it.
+**Extracting a `bashified` branch into a standalone repo destroys the archive
+that makes the purge safe**, and leaves defensive code standing with no visible
+reason -- which is how hard-won guards get deleted by the next reader.
 
 ## 9. Report
 
-End with, explicitly:
-- Verbs coined (with the `command -v` check that showed each unclaimed).
-- The step-4 man page test **scored row by row**, per verb -- and which
-  rows were checked by machine vs. by eye.
-- Which subcommands are wrappers and which are real.
-- Contracts moved `AGENT` → `MECHANIZED`, and the `basheur status` ratio
-  before and after.
-- Whether this pass **fulfilled** or **modified** any contract, naming
-  each.
-- What was moved to bibliothecaire, and what was deferred because it was
-  BUSY.
-- What is deliberately not done -- especially anything not wired to
-  `PATH`, since wiring a verb into the machine is a **human decision** and
-  a machine-wide config change: if you do wire one, run
-  `notify-senechal '<what, where, who owns it>'`.
+End with, explicitly: verbs coined (with the `command -v` check that showed
+each unclaimed); the step-4 test **scored row by row**, per verb, saying which
+rows were checked by machine and which by eye; which subcommands are wrappers
+and which are real; contracts moved `AGENT` -> `MECHANIZED` with the
+`basheur status` ratio before and after; whether the pass **fulfilled** or
+**modified** any contract, naming each; what was moved to bibliothecaire and
+what was deferred as BUSY; and what is deliberately not done -- especially
+anything not wired to `PATH`, since wiring a verb into the machine is a human
+decision and a machine-wide config change (`notify-senechal <door> <field>=<value>`).
 
-Never report a verb as working on the strength of an exit code alone. The
-witness is a named test row or a human-sensible output -- that is
-`BUILD-DISCIPLINE.md`, and this command is the one most able to violate it
-quietly, because a tool that does nothing passes almost everything.
+**Never report a verb as working on the strength of an exit code alone.** The
+witness is a named test row or a human-sensible output. This command is the
+one most able to violate that quietly, because a tool that does nothing passes
+almost everything.

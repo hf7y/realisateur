@@ -130,9 +130,7 @@ has "F warns the App may exist keyless" "$outF" "may exist"
 # --- G: no code ever arrives ----------------------------------------------------
 # Nothing drives the callback. The script's OWN --timeout is what expires here,
 # not an external one: `timeout 4 <script>` kills the script but leaves its
-# python child holding the pipe, so the command substitution never returns and
-# the suite hangs. That is a property of the wrapper, not of the code under
-# test, and it hid case G entirely for one run.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 outG="$(run env SELFDEV_GH_API="http://127.0.0.1:$STUBPORT" BROWSER=true \
         "$SCRIPT" ecosim --port 18799 --timeout 2 --out "$T/outG" 2>&1)"; rcG=$?
 [ "$rcG" -ne 0 ] && ok "G exits non-zero when no code arrives" \

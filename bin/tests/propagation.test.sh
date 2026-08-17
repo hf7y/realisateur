@@ -342,9 +342,7 @@ echo "-- 5b. THE SWITCH IS DELEGATED, NEVER REIMPLEMENTED --------------------"
 # ===========================================================================
 # install-verb-build.sh verifies every verb the manifest promises and discards
 # an incomplete build rather than switching to it -- 17 hermetic cases already
-# cover that. A second implementation of the atomic switch would be a second
-# answer to "which build am I on", and hand-rewriting a tested atomic switch
-# is how the 2026-07-29 total dispatch outage happened.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 TICK_SRC="$(cat "$TICK")"
 hasnt "the tick contains no symlink switching of its own" "$TICK_SRC" "ln -sfn"
 hasnt "the tick contains no atomic-rename of its own" "$TICK_SRC" "mv -Tf"
@@ -493,10 +491,7 @@ has "a private pin still wins over the host-wide one while it exists" "$O" "Verb
 # --- EVERY commit, not just the mandated ones ------------------------------
 # focus-commit.sh stamps FOCUS.md and QUESTIONS.md. That is the ecosystem's
 # highest-volume artifact and it was the right first target, but it is not
-# "the work": an account's actual output is code commits, and none of them
-# carried a build id. stamp-verb-build.sh wires the same trailer into
-# core.hooksPath so every commit the account makes gets one, with no per-repo
-# step and nothing for an agent to remember.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STAMPER="$REPO/bin/stamp-verb-build.sh"
 SHOME="$T/stamphome"; mkdir -p "$SHOME"
 : > "$SHOME/gitconfig"
@@ -552,9 +547,7 @@ has "--retire unsets it, verified by re-reading the config" "$O" "re-read"
 # ONE READER, with a NAMED exemption list rather than a loose rule.
 #
 # Two scripts legitimately resolve the pin path because they OWN the build
-# layout -- they create it, repoint it, or read a payload out of it. (It was
-# three until 2026-08-08, when relink-verbs-to-build.sh was retired to the
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PIN_OWNERS="install-verb-build.sh ecosim-sensor-tick.sh"
 strays=""
 for f in "$REPO"/bin/*.sh; do

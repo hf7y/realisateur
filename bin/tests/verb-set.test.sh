@@ -36,9 +36,7 @@ export INSTALLE_MANIFEST="$WORK/manifest.tsv"
 # The registry. Set EXPLICITLY, and every fixture project is registered in it,
 # so the registration check (section F) contributes no finding to sections C/D.
 # Left at its default it would resolve inside the fixture, find nothing, and
-# report BLIND -- which would then satisfy C1's exit-1 assertion for a reason
-# that has nothing to do with absence. That is the same "passes for the wrong
-# reason" trap C1 was already rewritten once to escape.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 export SCHEDULE_DIR="$WORK/schedule"
 mkdir -p "$INSTALLE_PROJECTS" "$INSTALLE_BIN" "$SCHEDULE_DIR"
 register() { printf 'PROJECT="%s"\n' "$1" > "$SCHEDULE_DIR/$1.conf"; }
@@ -138,10 +136,7 @@ check "C2 the mixed fixture also exits 1" "$rc" "1"
 # ANCHORED TO THE ROW, not to the word. The standing footer says "Re-run with
 # --apply to install the ABSENT rows", so a bare `grep ABSENT` matches the
 # prose and passes even when no verb was reported absent at all -- which is how
-# this assertion first scored green against an intersection mutant. Same shape
-# as `bashify check` row 6, recorded in bashify/GAPS.md: the row's PASS text
-# said one thing while the page said the opposite, and only reading the text
-# rather than the count caught it.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 has   "C3 an ABSENT ROW exists for bbb"  "$out" '^ABSENT  *bbb'
 has   "C4 the ABSENT row names the declaring project" "$out" '^ABSENT  *bbb  *alpha'
 has   "C5 a COLLISION ROW exists for aaa" "$out" '^COLLISION  *aaa'
@@ -177,9 +172,7 @@ printf -- '-- E. the generator refuses a name another project declares\n'
 # coin resolves the project through scheduler's registry, so use a registered
 # one and point it at a throwaway repo via BASHIFY_REPO. The claim check runs
 # BEFORE any refusal that could write, so nothing is created either way.
-#
-# `register scheduler` IS THE FIX FOR E2..E5, AND IT IS NOT COSMETIC.
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 register scheduler
 SCRATCH="$WORK/scratch"; mkdir -p "$SCRATCH"; G "$SCRATCH" init -q -b main
 echo x > "$SCRATCH/README.md"; G "$SCRATCH" add -A; G "$SCRATCH" commit -qm init
