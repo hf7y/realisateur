@@ -98,7 +98,7 @@ OWN_HOMELESS="bashify"
 
 # --- the areas the audit derives its population from ------------------------
 # Mechanism only. Root *.md, *.idea and archive/ are prose and are priced by
-# bin/markdown-cost.sh, which is a different question with a different guard.
+# the prose guard in hf7y/etalon, a different question with a different guard.
 OWN_AREAS="
 bin
 hooks
@@ -172,7 +172,6 @@ bin/tests/selfdev-permissions-provision.test.sh realisateur
 bin/selfdev-hooks-provision.sh             realisateur
 bin/tests/selfdev-hooks-provision.test.sh  realisateur
 bin/discipline.sh                          realisateur
-bin/port-markdown-cost.sh                  realisateur
 bin/consigne                               realisateur
 bin/tests/consigne.test.sh                 realisateur
 bin/tests/bashify-coin.test.sh             bashify
@@ -180,6 +179,7 @@ bin/ownership-audit.sh                     realisateur
 bin/lib/ownership-set.sh                   realisateur
 bin/tests/guard-estate.test.sh             realisateur
 .github/workflows/tests.yml                realisateur
+.github/workflows/prose.yml                realisateur
 .claude/commands/ideate.md                 realisateur
 .claude/commands/reap.md                   realisateur
 .claude/commands/nightly-batch.md          realisateur
@@ -243,7 +243,6 @@ bin/tests/rot-ratchet.test.sh              realisateur
 bin/directive-prose.sh                     realisateur
 bin/tests/directive-prose.test.sh          realisateur
 bin/hardcoded-home-lint.sh                 bashify
-bin/markdown-cost.sh                       bashify
 bin/lib/cli-guard.sh                       bashify
 hooks                                      bashify
 bashify                                    bashify

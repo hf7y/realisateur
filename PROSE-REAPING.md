@@ -125,7 +125,7 @@ reach its remote?
    (`#213`).
 7. Verify **behaviour is unchanged**: for a config file, a byte-identical
    preview from whatever consumes it, plus its witness tests.
-8. Report the before/after count from `bin/markdown-cost.sh --census`, and
+8. Report the before/after count from the repo's `.prose-ratchet`, and
    **the list of expired-premise paragraphs with the mechanism each was
    defending**. That list is a deliverable, not a footnote.
 

@@ -10,10 +10,14 @@ Reap `$ARGUMENTS`. Three targets: **prose in half, foreign mechanism in half,
 
 ## 1. Measure first
 
-`bash bin/markdown-cost.sh --census` · `gh issue list --state open | length` ·
-`bash bin/ownership-audit.sh`. Write the three numbers down; every later claim
-is against them. A missing guard is a finding — port it with
-`bin/port-markdown-cost.sh`, then **run its suite**.
+`gh issue list --state open | length` · `bash bin/ownership-audit.sh` · and the
+prose count from the repo's `.prose-ratchet`. Write the three numbers down;
+every later claim is against them.
+
+**A repo with no prose guard adopts one in six lines**, calling
+`hf7y/etalon/.github/workflows/guard.yml@main`. Never copy the script: it is
+maintained in `hf7y/etalon` and nowhere else, and every vendored copy this
+estate has made has drifted or shipped broken.
 
 ## 2. Cut the generators, not the output
 
