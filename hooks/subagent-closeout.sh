@@ -67,15 +67,60 @@ if grep -qE '"stop_hook_active"[[:space:]]*:[[:space:]]*true' <<<"$payload"; the
   exit 0
 fi
 
-# cwd is the only field we need. Fall back to $PWD if the payload lacks it.
+# cwd is the SESSION's cwd, not necessarily the tree a subagent worked in --
+# a worktree-isolated or freshly-cloned subagent writes elsewhere entirely.
+# Fall back to $PWD if the payload lacks it.
 cwd="$(sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p;q' <<<"$payload")"
 [ -n "$cwd" ] || cwd="$PWD"
 [ -d "$cwd" ] || { log "cwd from payload is not a directory: $cwd"; exit 1; }
 
+# agent_transcript_path (SubagentStop payload field) is the SUBAGENT's own
+# transcript -- distinct from the session's. Used below to find trees it
+# actually wrote to, when they are not cwd (#363).
+agent_transcript="$(sed -n 's/.*"agent_transcript_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p;q' <<<"$payload")"
+
 command -v git >/dev/null 2>&1 || { log "git not on PATH -- cannot check tree state"; exit 1; }
 
-# Not a git repo is not a violation; there is simply nothing to check.
-git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
+# #363: cwd alone misses a subagent that cloned or was worktree-isolated
+# somewhere else -- the observed failure went both directions: cwd's
+# pre-existing, unrelated branches got reported as this run's findings
+# (false positive), and a tree the subagent actually dirtied went unchecked
+# entirely (false negative, the one that loses work). Write/Edit/NotebookEdit
+# tool calls in the subagent's OWN transcript carry an unambiguous absolute
+# file_path -- far more reliable than trying to parse `git clone`/`cd` out of
+# free-form Bash commands, which this deliberately does not attempt.
+discover_written_trees() {
+  local transcript="$1" exclude="$2"
+  [ -n "$transcript" ] && [ -r "$transcript" ] || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  jq -r '
+    select(.message.content != null) |
+    .message.content[]? |
+    select(.type == "tool_use") |
+    select(.name == "Write" or .name == "Edit" or .name == "NotebookEdit") |
+    .input.file_path // empty
+  ' "$transcript" 2>/dev/null |
+  while IFS= read -r fp; do
+    [ -n "$fp" ] || continue
+    d="$(dirname -- "$fp" 2>/dev/null)" || continue
+    root="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null)" || continue
+    [ -n "$root" ] && [ "$root" != "$exclude" ] && printf '%s\n' "$root"
+  done | sort -u
+}
+
+trees=("$cwd")
+while IFS= read -r extra; do
+  [ -n "$extra" ] && trees+=("$extra")
+done < <(discover_written_trees "$agent_transcript" "$cwd")
+
+# Not a git repo is not a violation; there is simply nothing to check. Only
+# collapses to a no-op when EVERY discovered tree is a non-repo -- one real
+# repo among them still needs auditing.
+any_repo=0
+for t in "${trees[@]}"; do
+  git -C "$t" rev-parse --is-inside-work-tree >/dev/null 2>&1 && any_repo=1
+done
+[ "$any_repo" -eq 1 ] || exit 0
 
 advice() {
   echo
@@ -105,23 +150,36 @@ LINT="$(command -v closeout-lint 2>/dev/null || true)"
 lint_help=""
 [ -n "$LINT" ] && lint_help="$("$LINT" --help 2>/dev/null || true)"
 if [ -n "$LINT" ] && [[ "$lint_help" == *"--repo"* ]]; then
-  out="$("$LINT" --strict --allow-blind --repo "$cwd" 2>&1)"
-  rc=$?
-  case "$rc" in
-    0) exit 0 ;;
-    1) : ;;  # FLAG(s) -- fall through and block
-    *)
-      log "closeout-lint exited $rc, which this hook does not interpret."
-      log "Refusing to report clean on a result it cannot read."
-      printf '%s\n' "$out" >&2
-      exit 1
-      ;;
-  esac
+  blocked=0
+  report=""
+  for t in "${trees[@]}"; do
+    git -C "$t" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
+    out="$("$LINT" --strict --allow-blind --repo "$t" 2>&1)"
+    rc=$?
+    case "$rc" in
+      0) continue ;;
+      1) blocked=1
+         report+="  tree: $t"$'\n'
+         report+="$(printf '%s\n' "$out" | grep -E '^\s*(FLAG|BLIND) \[' || printf '%s\n' "$out")"
+         report+=$'\n\n'
+         ;;
+      *)
+        log "closeout-lint exited $rc on $t, which this hook does not interpret."
+        log "Refusing to report clean on a result it cannot read."
+        printf '%s\n' "$out" >&2
+        exit 1
+        ;;
+    esac
+  done
+  [ "$blocked" -eq 0 ] && exit 0
   {
     echo "BLOCKED: closeout-lint --strict found work this run did not make durable."
-    echo "  tree: $cwd"
+    if [ "${#trees[@]}" -gt 1 ]; then
+      echo "  (${#trees[@]} trees checked -- cwd plus trees this agent's own"
+      echo "  transcript shows it wrote to, per #363)"
+    fi
     echo
-    printf '%s\n' "$out" | grep -E '^\s*(FLAG|BLIND) \[' || printf '%s\n' "$out"
+    printf '%s' "$report"
     advice
   } >&2
   exit 2
@@ -132,21 +190,31 @@ log "closeout-lint --repo is not installed; checking the working tree only."
 log "  UNPUSHED COMMITS AND HOST-ONLY BRANCHES ARE NOT BEING CHECKED."
 log "  Fix: run realisateur/bin/install-shims.sh once its --repo support is on main."
 
-dirty="$(git -C "$cwd" status --porcelain 2>/dev/null)"
-rc=$?
-if [ $rc -ne 0 ]; then
-  log "git status failed in $cwd (rc=$rc) -- refusing to report clean on a failed probe"
-  exit 1
-fi
+dirty_report=""
+dirty_total=0
+for t in "${trees[@]}"; do
+  git -C "$t" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
+  dirty="$(git -C "$t" status --porcelain 2>/dev/null)"
+  rc=$?
+  if [ $rc -ne 0 ]; then
+    log "git status failed in $t (rc=$rc) -- refusing to report clean on a failed probe"
+    exit 1
+  fi
+  [ -z "$dirty" ] && continue
+  count="$(printf '%s\n' "$dirty" | grep -c .)"
+  dirty_total=$((dirty_total + count))
+  dirty_report+="  tree: $t ($count uncommitted change(s))"$'\n'
+  dirty_report+="$(printf '%s\n' "$dirty" | head -20)"
+  [ "$count" -gt 20 ] && dirty_report+=$'\n'"  ... and $((count - 20)) more"
+  dirty_report+=$'\n\n'
+done
 
-[ -z "$dirty" ] && exit 0
+[ "$dirty_total" -eq 0 ] && exit 0
 
-count="$(printf '%s\n' "$dirty" | grep -c .)"
 {
-  echo "BLOCKED: you are leaving $count uncommitted change(s) in $cwd."
+  echo "BLOCKED: you are leaving $dirty_total uncommitted change(s)."
   echo
-  printf '%s\n' "$dirty" | head -20
-  [ "$count" -gt 20 ] && echo "  ... and $((count - 20)) more"
+  printf '%s' "$dirty_report"
   advice
 } >&2
 
