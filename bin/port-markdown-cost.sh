@@ -1,33 +1,7 @@
 #!/usr/bin/env bash
 # port-markdown-cost.sh -- give another repo the same markdown ratchet.
 #
-# Not a guard: it emits no findings and gates nothing in this repo's own CI.
-# It is a one-shot installer, run by hand once per target repo (or again to
-# pick up an update to bin/markdown-cost.sh itself).
-#
-#
-# WHY THIS EXISTS. bin/markdown-cost.sh (realisateur#176) prices prose against
-# mechanism on every PR here, and nothing else in the estate has it. It was
-# built generic on purpose -- its only repo-specific state is the MD_ALLOW
-# allowlist inside it, and it locates its own library via
-# `dirname "${BASH_SOURCE[0]}"`, so it works unmodified wherever it lands, as
-# long as its lib/ sits next to it. This script is the one place that copies
-# it, so "port it to project X" is a command instead of a hand-carry that
-# drifts the moment someone retypes it (BUILD-DISCIPLINE.md: "config read
-# from one source, not retyped per file" applies to a rollout as much as to a
-# hostname).
-#
-# WHAT IT DOES. Copies three files into <target-repo>/<dest>/, preserving the
-# relative layout markdown-cost.sh and its test already assume:
-#   <dest>/markdown-cost.sh
-#   <dest>/lib/cli-guard.sh
-#   <dest>/tests/markdown-cost.test.sh   (default) or <dest>/test-markdown-cost.sh
-#                                         with --test-style flat
-# Then, if the target has no .github/workflows/markdown-cost.yml yet, writes
-# one that fetches origin/main and runs the guard on every pull request. If
-# one already exists, it is left alone and this script says so -- CI wiring
-# varies too much per repo to overwrite blindly.
-#
+# TRAPS (the rest of this header is in the vault):
 # IT NEVER OVERWRITES A FILE THAT HAS DIVERGED. A target file that already
 # exists and is byte-identical is a silent no-op (re-running this is safe).
 # One that exists and DIFFERS is left untouched and reported -- pass --force
@@ -35,9 +9,7 @@
 # fork of the guard is worse than doing nothing.
 #
 # Usage:
-#   port-markdown-cost.sh <target-repo-path> [--dest <dir>] [--test-style nested|flat] [--force]
-#
-#   port-markdown-cost.sh ../senechal --dest tools --test-style flat
+
 set -uo pipefail
 
 CLI_NAME='port-markdown-cost.sh'

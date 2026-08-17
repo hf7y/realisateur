@@ -1,50 +1,14 @@
 #!/usr/bin/env bash
-#
-# propagation.test.sh -- THE DEV/PROD DOCTRINE, AS A GUARD.
-#
-# Zach, 2026-08-07, directing this work: "creates a test script rather than
-# prose to document the philosophy." So the propagation doctrine is not a
-# markdown section a future session may or may not read. It is these
-# assertions, and CI globs bin/tests/*.sh, so violating it stops a merge.
-#
-# The doctrine, six sentences, one per section:
-#
-#   1. EVERY ARTIFACT HAS EXACTLY ONE DECLARED CHANNEL.
-#      bin/selfdev-gh-app.sh was written on 2026-08-06 for accounts that had
-#      no way to receive it, and nothing anywhere noticed.
-#
-#   2. `main` IS NOT A DEPLOY REF, AND THE LEAK MAY NOT GROW.
-#      Ten realisateur commands reach accounts as shims that exec into the
-#      realisateur clone. That is `main` deploying through the back door. The
-#      count is bounded and the bound may only be lowered.
-#
-#   3. A CHANNEL WITH NO CLOCK IS NOT A CHANNEL.
-#      Probed 2026-08-07: scheduler was current on every armed account because
 #      usage-paced-runner.sh pulls it every tick. realisateur was 15 commits
-#      behind on all four self-dev accounts because nothing pulled it ever.
-#      Same repos, same hosts, same credentials. The only difference was a
-#      clock.
 #
-#   4. A STOPPED CLOCK IS A FINDING, NOT A SILENCE.
-#      The checker must detect that the fixer died -- offline, no ssh, no
-#      network -- or the estate learns about dead propagation the way it
-#      learned about this one: a human reading a sha by hand.
-#
-#   5. PULL, NOT PUSH.
-#      The consumer owns its clock. Asserted mechanically, because a doctrine
-#      that is only written down gets edged back the first time push is more
-#      convenient.
-#
-#   6. "FOUND NOTHING" IS NOT "NOTHING IS WRONG."
-#      MONKEY.md 5's `garde` reported "nothing pending -- every set is already
-#      copied and proven" with nothing reachable.
-#
+# TRAPS (the rest of this header is in the vault):
 # HERMETIC. No network, no ssh, no sudo, no read of the live machine. Fixture
 # homes under a temp dir, a fake installer, HOME/TICK_STATE/VERB_BUILD_ROOT
 # redirected. A suite that needed the real estate to be healthy could not tell
 # its own passing from the estate's.
 #
 # Usage: bin/tests/propagation.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -97,7 +61,7 @@ done
 [ -z "$dupes" ] && ok "no script is declared in two channels" \
                 || bad "declared in more than one channel:$dupes"
 
-# Retirement must propagate to the roster. VERB-DISTRIBUTION.md 6 records the
+# Retirement must propagate to the roster. vault:realisateur/VERB-DISTRIBUTION.md 6 records the
 # identical bug inside cut-verb-build.sh: a project that CHANGED was handled,
 # a project that LEFT was not, so every consumer kept installing a verb the
 # manifest no longer named. A roster naming a deleted file is that shape.
@@ -126,12 +90,7 @@ echo "-- 2. main IS NOT A DEPLOY REF, AND THE LEAK MAY NOT GROW --------------"
 # The prize in separating dev from prod is that `main` gets to STAY FAST. If
 # four live accounts pull `main` on a tick, every commit is a deployment and
 # `main` must turn conservative to protect them -- backwards for a repo whose
-# value is iteration speed.
-#
-# realisateur's bashified branch declares three verbs. Ten payload-class
-# scripts reach accounts as shims that exec into the realisateur CLONE
-# instead. That is `main` deploying through the back door, and it is measured
-# debt, not an accepted design.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 n_leak=$(echo $PROP_PAYLOAD_PENDING | wc -w)
 if [ "$n_leak" -le "$PROP_LEAK_BOUND" ]; then
   ok "clone-backed payload leak is $n_leak, within the bound of $PROP_LEAK_BOUND"
@@ -186,12 +145,7 @@ rc "--install-cadence --check exits 0 (it reported, it did not fail)" 0 "$R"
 # A per-account clock is retired when ONE host-wide channel feeds every
 # account. The precondition is checked from INSIDE the account, because a
 # $HOME/.local/bin entry earlier on that account's PATH shadows the host-wide
-# directory -- and retiring there would leave it with no clock AND no verbs.
-#
-# `crontab` is SHIMMED onto PATH for these cases. Without it the apply path
-# would edit the crontab of whoever runs the suite: proven the hard way on
-# 2026-08-13, when a fixture run with HOME redirected deleted the real tick
-# line out of zach@mandark's crontab, because HOME does not redirect crontab.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 RH="$T/retirehome"; mkdir -p "$RH/.local/share/verb-builds/B" "$T/hostbin" "$T/shim"
 ln -s B "$RH/.local/share/verb-builds/current"
 printf '#!/bin/sh\nexit 0\n' > "$T/hostbin/dose"; chmod +x "$T/hostbin/dose"
@@ -458,11 +412,7 @@ echo "-- 5d. BLIND MUST ARRIVE IN TIME TO BE A VERDICT -----------------------"
 # realisateur#54. install-verb-build.sh reached the right verdict against an
 # unroutable host and took 2m15s to do it (measured 2026-08-07 against
 # 192.0.2.1, TEST-NET-1) -- the kernel's TCP retry, unbounded. A human hits
-# Ctrl-C; a nightly cron tick does not, so the fail-open design above quietly
-# became "stall for two minutes every night, in the dark".
-#
-# Asserted with a 1-second bound so the suite stays fast and offline. What is
-# being tested is that the bound EXISTS and is honoured, not the wall time.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 INST="$REPO/bin/install-verb-build.sh"
 t0=$(date +%s)
 O="$(VERB_BUILD_ROOT="$T/blindroot" VERB_BUILD_NET_TIMEOUT=1 \
@@ -501,11 +451,7 @@ echo "-- 6b. EVERY ARTIFACT RECORDS THE BUILD THAT PRODUCED IT ---------------"
 # "What was ecosim running when it did that?" has to be answerable from the
 # artifact alone, later, by someone who was not there. The value already
 # existed (the pin); nothing recorded it at the moment work was created.
-#
-# THE DISTINCTION THE WHOLE MECHANISM RESTS ON: an artifact with NO trailer
-# (nothing stamped it) and one stamped `unknown` (the stamper ran and told
-# the truth) mean opposite things. A guess -- "the latest build", "the one in
-# the manifest" -- destroys that while looking like an improvement.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 BR="$T/pinned/.local/share/verb-builds"     # has current -> 2026-08-06T043915Z
 O="$(VERB_BUILD_ROOT="$BR" bash -c '. '"$SET_LIB"'; prop_build_trailer')"
@@ -608,13 +554,7 @@ has "--retire unsets it, verified by re-reading the config" "$O" "re-read"
 # Two scripts legitimately resolve the pin path because they OWN the build
 # layout -- they create it, repoint it, or read a payload out of it. (It was
 # three until 2026-08-08, when relink-verbs-to-build.sh was retired to the
-# vault: zero `bashified` worktrees remained to migrate off. See
-# ecosystem1/realisateur/RETIRED-2026-08-08.md.) They are
-# listed here by name so that adding a fourth is a visible review event and
-# not a quiet convenience. Everything that merely wants to KNOW the build id
-# must call prop_build_trailer(), or the ecosystem acquires a second answer
-# to "which build am I on" -- the one-fact-two-readers shape MONKEY.md 10
-# found five times in one day.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 PIN_OWNERS="install-verb-build.sh ecosim-sensor-tick.sh"
 strays=""
 for f in "$REPO"/bin/*.sh; do

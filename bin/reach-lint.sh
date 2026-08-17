@@ -10,39 +10,15 @@
 # GUARD-TEST: bin/tests/reach-lint.test.sh
 # GATE: strict
 #
-# The 2026-07-27 failure it exists to prevent: /ideate and /cloture lived in
-# realisateur/.claude/commands only, and six of the nine scripts they told a
-# session to run had no PATH shim. Nothing flagged it, because a
-# project-scoped command that works in its own repo emits no signal at all.
-# The gap was an UNASKED QUESTION, not drift.
-#
-# Two checks:
-#
+# TRAPS (the rest of this header is in the vault):
 #   A. SCOPE DECLARATION -- every command file must state, in frontmatter,
 #      `scope: project` or `scope: user`. Nobody ever decided /ideate should
 #      be realisateur-only; the question was never posed. This check does not
 #      judge which answer is right -- it refuses to let silence stand in for
 #      one, same stance as the `# verified <date> via <cmd>` stamp.
 #
-#   B. REACH -- for every `scope: user` file (and everything already
-#      installed under ~/.claude/commands), every command it names must
-#      resolve from a neutral cwd. A user-level command runs in repos that
-#      have no realisateur checkout and no relative bin/, so a name that only
-#      resolves from inside this repo is a broken instruction there.
-#
-# Candidate command tokens, chosen for zero false positives rather than
-# coverage: (1) the first word of a line inside a fenced code block, and
-# (2) a backticked bare token that matches a realisateur bin/<tok>.sh, with
-# or without the .sh. Prose words like `parked` or `active` match neither.
-#
 # Usage:
-#   reach-lint.sh                scan every registered project + ~/.claude/commands
-#   reach-lint.sh --strict       exit 1 if ANY check FLAGged (for hooks)
-#   reach-lint.sh --strict-reach exit 1 only if check B FLAGged. Check A is a
-#                                new convention other repos have not adopted
-#                                yet, so a caller that only cares whether its
-#                                own instructions are reachable must not be
-#                                held hostage by another project frontmatter.
+
 set -uo pipefail
 
 CLI_NAME='reach-lint.sh'
@@ -143,10 +119,7 @@ echo " of this script for the failure it was written after.)"
 # Read through lib/conf.sh: the raw `grep -oP` this replaces returned the
 # LITERAL `$HOME/Documents/Projects/<name>`, so `[ -d "$repo" ]` was false for
 # every project on every host and this loop collected NOTHING -- after which
-# check A printed "(no project command files found)" and the script exited 0.
-# A lint that scanned zero files and reported clean. Same defect as #73's
-# named scripts; this one the issue never named, found by sweeping for the
-# shape instead of working from the list.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cmd_files=()
 confs=0    # confs that carry a PROJECT_REPO_PATH at all
 repos=0    # ...of those, how many name a directory that exists
@@ -170,15 +143,7 @@ done
 # match impossible. Two neighbouring states are deliberately NOT blind:
 #   confs==0  no scheduler registry on this host at all. install-shims.sh runs
 #             this on such hosts (and CI is one), where check B still means
-#             something because it reads ~/.claude/commands, not the registry.
-#             Calling that blind broke install-shims.test.sh D5 -- caught in CI
-#             by the first version of this guard, which tested `repos==0` alone.
-#   repos>0, no command files
-#             a real, clean answer about a real set; check A below says so.
-#
-# 3 matches bin/hygiene-lint.sh and bin/silence-audit.sh. Deliberately not 1
-# (which means "--strict and something FLAGged") and not 2 (lib/cli-guard.sh's
-# usage error): "I could not look" is a third answer and needs a third code.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$confs" -gt 0 ] && [ "$repos" -eq 0 ]; then
   echo
   echo "  BLIND: $confs registered project(s) under $SCHED_ROOT/schedule/ carry a"

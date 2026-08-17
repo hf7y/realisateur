@@ -7,7 +7,7 @@
 # happened once in this ecosystem:
 #
 #   * switch to a build that is missing a verb          (2026-07-29 outage)
-#   * report "up to date" when it could not look        (garde, MONKEY.md 5)
+#   * report "up to date" when it could not look        (garde, vault:realisateur/MONKEY.md 5)
 #   * install an empty verb set and exit 0              (install-shims, 08-02)
 #   * clobber a link another installer owns             (installe's manifest)
 #
@@ -149,11 +149,7 @@ check "...and after a rollback the SAME link resolves to the older build" \
 # Test 7 proves an EXISTING verb follows `current` for free. It says nothing
 # about a build whose verb SET changed, which is the question an operator
 # actually asks of a nightly channel: "a verb was added last night -- do the
-# accounts have it, or does somebody have to go and link it?"
-#
-# Asked on 2026-08-13 of the live estate and unanswerable there: the two
-# builds on monkey either side of that date carry the identical 33 verbs, so
-# nothing had ever exercised the path. Hence a fixture that does.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mk_build "2026-08-08T0130Z" "vim-arcade:entraine senechal:installe scheduler:arme bibliothecaire:consulte"
 run --build 2026-08-08T0130Z --apply --link >/dev/null 2>&1
 check "a verb ADDED by the nightly build is linked with no hand step" \

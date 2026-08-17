@@ -2,6 +2,7 @@
 # install-verbs.sh -- the DECLARED SET of the ecosystem's verb surface, and
 # whether this host actually has it.
 #
+# TRAPS (the rest of this header is in the vault):
 # WHY THIS EXISTS
 # ---------------
 # `installe` (senechal's verb) is the mechanism: it links one verb into
@@ -9,17 +10,6 @@
 # not own, and can retire what it installed. It works, it is on PATH, and it
 # owns 23 bashified verbs today. This script does NOT replace it and never
 # creates a link itself -- every write goes through `installe`.
-#
-# What `installe` has no notion of is a DECLARED SET. Its manifest records
-# what WAS installed, not what SHOULD be; `installe verb <project> <name>`
-# requires the caller to already know every project and every verb name; and
-# the manifest lives in ~/.local/share, which is host state, not repo state,
-# so it does not travel. On a bare host nothing can re-derive the verb
-# surface -- which is scheduler's 2026-07-29 outage one level up. That was one
-# hand-installed symlink (`~/.local/bin/usage-paced-runner.sh`) that no code in
-# any repo ever created; deleting it was a total dispatch outage, and no check
-# on the machine could say it should have been there.
-#
 # THE RULE THIS ENFORCES, from DEXTER-MIGRATION-NOTES-20260729.md:
 #   check the DECLARED set, never the intersection, or absence reports clean.
 # scheduler/bin/deploy-drift-check.sh checks the intersection: it iterates its
@@ -27,14 +17,7 @@
 # SHOULD exist but does not is never iterated over. With no overlap at all it
 # prints "nothing to check" and exits 0 -- an exit-0 no-op inside the guard
 # meant to catch deploy problems.
-#
-# The declaration is DERIVED, not typed, and the derivation lives in
-# bin/lib/verb-set.sh because `bashify coin`/`emit` need the same answer when
-# they ask "is this name taken?". A hand-maintained list is what produced the
-# 2026-07-27 shim gap: three shims existed because three were typed.
-#
-# PREFLIGHT BY DEFAULT. It arms nothing without --apply, in office
-# bootstrap.sh's shape.
+
 set -uo pipefail
 
 CLI_NAME='install-verbs.sh'
@@ -142,19 +125,10 @@ fi
 
 # ------------------------------------------------------------- registration --
 # THE CLASSIFICATION, RE-CHECKED. A verb is a UTILITY's finished form; a
-# product's finished form is an event outside the computer (WAITING-ROOM.md).
+# product's finished form is an event outside the computer (vault:realisateur/WAITING-ROOM.md).
 # In this ecosystem the registry IS that classification -- a project is a
 # utility iff scheduler/schedule/<project>.conf exists.
-#
-# That rule was already enforced, and still failed. `bashify emit`
-# (bashify/bin/bashify:104) and `bashify coin` (bashify/lib/coin.sh:45) both
-# refuse an unregistered project -- but only at MINT time, and never again. So
-# a project deregistered AFTER being bashified kept its verb forever and
-# nothing anywhere re-asked. On 2026-08-02 that was 9 verbs across 4 projects,
-# 7 of them live on PATH, including a name collision between two of them.
-#
-# A guard that fires once is a guard that has already stopped guarding. This
-# asks every run.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 SCHEDULE_DIR="${SCHEDULE_DIR:-$PROJECTS/scheduler/schedule}"
 note "-- registration (the registry is what 'utility' means here) -----------"
 if [ ! -d "$SCHEDULE_DIR" ]; then

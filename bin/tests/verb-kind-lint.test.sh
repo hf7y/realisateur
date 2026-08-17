@@ -348,12 +348,7 @@ echo "== 9. THE 2026-08-06T003928Z MANIFEST, WITH ITS ONE PRODUCT DECLARED =="
 # except vim-arcade/vim-arcade, which is given `# KIND: product` -- the
 # declaration the project's own header prose has made in English since
 # 2026-08-05 ("It is named `vim-arcade` now because it is not a verb")
-# without anything mechanical being able to read it.
-#
-# The assertion is that this build produces EXACTLY ONE violation. Not
-# zero (the product is in the wrong channel) and not thirty-two (a
-# French-name detector or a project-level rule would sweep entraine in with
-# it, and entraine belongs exactly where it is).
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 b="$(new_build real)"
 while read -r p v; do
   [ -n "$p" ] || continue
@@ -415,10 +410,7 @@ echo "== 10. THIS GUARD AND lib/not-a-verb.tsv GRADE DISJOINT POPULATIONS =="
 # list of executables that are deliberately not verbs. The reasonable review
 # question is whether this guard should honour it instead of holding a second
 # opinion about the same command. It cannot: not-a-verb.tsv exempts HALF
-# declarations, which cut-verb-build.sh omits from the manifest entirely, and
-# this guard grades manifest rows. The claim is checkable, so it is checked
-# here rather than asserted in a comment that would go quietly false the first
-# time either file changed shape.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 NAV="$REPO/bin/lib/not-a-verb.tsv"
 if [ ! -f "$NAV" ]; then
   bad "bin/lib/not-a-verb.tsv is missing -- the file this guard's header reasons about"

@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 #
-# (Relocated verbatim from the per-suite ledger that used to live in
-# .github/workflows/tests.yml. It says the same thing; it now says it in the
-# one file that changes when this suite does.)
-# selfdev-gh-app.test.sh -- offline witness for bin/selfdev-gh-app.sh.
-#
+# TRAPS (the rest of this header is in the vault):
 # The parts of that script that can be wrong SILENTLY are the crypto and the
 # config resolution, not the HTTP: a malformed JWT comes back from GitHub as a
 # bare 401 that reads exactly like a revoked key, and a config file that is
@@ -14,22 +10,8 @@
 # every case either stops before the first curl or points $SELFDEV_GH_API at a
 # port nothing is listening on.
 #
-# Cases:
-#   A  no App ID configured            -> FATAL naming SELFDEV_APP_ID, exit 5
-#   B  App ID set, key missing         -> FATAL naming the key path, exit 5
-#   C  key present but not a key       -> FATAL, exit 5 (openssl refuses)
-#   D  --check with a real keypair     -> reports the config, key and tools OK
-#   E  the JWT itself                  -> three dot-separated segments, header
-#      is RS256/JWT, payload iss is the App ID, iat is in the PAST, exp within
-#      GitHub's 10-minute ceiling, and the signature VERIFIES against the
-#      public key (this is the case that would have caught a b64url that left
-#      '=' padding or '+/' in place)
-#   F  env var beats config file       -> SELFDEV_APP_ID wins over the conf
-#   G  key with loose permissions      -> --check says BAD, exit 5
-#   G2 host-wide key (0640, group selfdev) -> --check says OK, not BAD
-#   G3 0640 outside the selfdev group  -> --check says BAD, exit 5
-#
 # Usage: bin/tests/selfdev-gh-app.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -51,12 +33,7 @@ openssl rsa -in "$T/app.pem" -pubout -out "$T/app.pub.pem" 2>/dev/null
 # pointed at the fixture conf, so neither a real ~/.config/selfdev nor the
 # host-wide /etc/selfdev on the machine running this test can leak in.
 #
-# The conf override became load-bearing on 2026-08-12: the credential is
-# host-wide now (/etc/selfdev/gh-app.conf, bin/lib/selfdev-app-key.sh), so
-# redirecting HOME alone no longer redirects where the script looks -- these
-# cases silently read nothing and every JWT assertion failed on an empty
-# string. $SELFDEV_APP_CONF is the supported way to say "this conf, this
-# invocation", and it is exactly what a test should be using.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 FIXTURE_CONF="$T/home/.config/selfdev/gh-app.conf"
 run() { env HOME="$T/home" XDG_CACHE_HOME="$T/cache" SELFDEV_APP_CONF="$FIXTURE_CONF" "$@"; }
 mkdir -p "$T/home/.config/selfdev" "$T/cache"
@@ -190,12 +167,7 @@ eq  "H2 exits 5" "$rcH2" "5"
 # naming it -- which is how ONE App key came to sit on disk under four names,
 # and why `selfdev-credentials.sh --apply` could not find it (realisateur#209).
 # Placement is bin/selfdev-app-key.sh's job now, host-wide and as root, and
-# --adopt hands the key to it rather than keeping a second implementation.
-#
-# What is asserted here is the REFUSAL, because that is what an unprivileged
-# caller gets and it is the path a person actually hits. The placement itself
-# needs root and is exercised live, the same split selfdev-app-key.test.sh
-# makes for the same reason.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 outI="$(run env SELFDEV_GH_API="http://127.0.0.1:1" "$SCRIPT" --adopt \
         --account acct2 --key "$T/app.pem" --app-id 4520255 2>&1)"; rcI=$?
 has "I prints the fingerprint"  "$outI" "fingerprint:"
@@ -279,21 +251,7 @@ has "J --wire writes a helper git will call as '<self> --credential <op>'" "$out
 #
 #   user.name  = unattended-monkey[bot]
 #   user.email = 314444911+unattended-monkey[bot]@users.noreply.github.com
-#
-# Correct under the ORIGINAL one-App-per-account design, where the bot WAS the
-# account. Wrong under the fleet model chosen the same day -- ONE App across
-# ten accounts -- because it makes every account author identically and
-# `git log` stops being able to answer which agent did anything.
-#
-# THE SHAPE OF THE MISS, which is the reason this section is written the way it
-# is: the suite already exercised --wire and passed. It never asserted anything
-# about WHICH identity was written, so a wrong-but-present value sailed through.
-# Every assertion below therefore names a VALUE, not a presence.
-#
-# AUTHOR and PUSHER are two layers: author is purely local git config and must
-# be the account; pusher is the App token and GitHub attributes it with no
-# configuration at all. Both are obtainable at once, and the old code threw the
-# first away to duplicate the second.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 echo
 echo "-- K: --wire sets AUTHOR=account, PUSHER=App -----------------------------"
 

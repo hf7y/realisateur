@@ -2,29 +2,7 @@
 # consigne.test.sh -- the two doors must be one implementation, and the second
 # half of a reaping pass must be countable.
 #
-#
-# ===========================================================================
-# WHAT THIS SUITE IS FOR
-# ===========================================================================
-#
-# `consigne` claims to be backwards compatible with `fonde consign`. That claim
-# is worth exactly as much as what observes it, and the thing being claimed is
-# not a behaviour this repository can run: the mechanism lives in another
-# project (bibliothecaire's lib/consign-prose.sh) and is not present in CI.
-#
-# So the claim is pinned WHERE IT IS ACTUALLY MADE -- at the call boundary.
-# `bin/fonde`'s do_consign runs, verbatim:
-#
-#     bash "$impl" "$VAULT" "$@"
-#
-# Case B asserts that `consigne` produces the same three things: the same
-# program, the same vault as its first argument, and the caller's paths after
-# it, in order, unmangled. Case C asserts that whatever that program exits
-# with is what `consigne` exits with -- every code in fonde's published
-# contract, individually. Together those are the whole of "same inputs, same
-# vault semantics, same exit codes where they carry meaning", because
-# everything downstream of that call IS the same program.
-#
+# TRAPS (the rest of this header is in the vault):
 # THE END-TO-END RUN AGAINST THE REAL MECHANISM IS NOT HERE, AND SAYING WHY IS
 # PART OF THE TEST. It cannot be hermetic: it needs bibliothecaire installed.
 # It was run by hand on mandark against the real lib/consign-prose.sh and the
@@ -253,13 +231,7 @@ echo "-- F. IT IS NOT A SECOND IMPLEMENTATION --------------------------------"
 # The first draft (#121, b81de52) copied files with `cp` and committed them,
 # which produced vault notes with no provenance -- notes `status` above cannot
 # classify at all. If any of these ever appear here, there are two deposits.
-# COMMENTS ARE STRIPPED FIRST, and that is not a convenience. This very file,
-# and the header of bin/consigne, both have to NAME the things being forbidden
-# in order to explain why they are forbidden. Scanning the raw text makes the
-# explanation trip the guard -- which is exactly what guard-estate check E's
-# first draft did, firing on its own preamble within ten minutes of being
-# written (bin/claim-drift.sh's declares_itself comment records it). So this
-# reads CODE.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 SRC_TEXT="$(grep -v '^[[:space:]]*#' "$CONSIGNE")"
 hasnt "it does not run git push"   "$SRC_TEXT" "git push"
 hasnt "it does not run git commit" "$SRC_TEXT" "git commit"

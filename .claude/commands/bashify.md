@@ -46,7 +46,7 @@ Read first, always offline:
 - `/home/zach/Documents/Projects/realisateur/BASHIFY-REPORT-20260730.md`
   -- what the first worldwide pass actually found, including the
   headline finding it had to withdraw.
-- `/home/zach/Documents/Projects/realisateur/RESEARCH-VERB-ECOSYSTEM-20260730.md`
+- `/home/zach/Documents/Projects/vault:realisateur/RESEARCH-VERB-ECOSYSTEM-20260730.md`
   -- why one project gets **several small verbs**, not one large one.
 - `basheur list` and `basheur status` -- existing contracts and the
   de-animation ratio.

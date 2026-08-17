@@ -1,36 +1,5 @@
 #!/usr/bin/env bash
 # provision-selfdev-user.sh -- add a self-dev project account to this host.
-#
-# RUN THIS ON THE SELF-DEV HOST, as a user who can sudo. It creates ONE unix
-# account for ONE project, exactly as MONKEY.md describes the topology, and
-# copies the shared Claude credential into it so the account can actually
-# spend a token.
-#
-#   ./provision-selfdev-user.sh <project>              --check (default)
-#   ./provision-selfdev-user.sh <project> --apply
-#
-# WHY THIS EXISTS. `ecosim`, the first such account, was created by hand in a
-# root sitting on 2026-08-03. Every step was reconstructed from memory into a
-# shell, and two of them were wrong in ways that only showed up later:
-#
-#   * `install -d -m 755 -o ecosim ... /home/ecosim/.local/bin` chowns only the
-#     FINAL component, so /home/ecosim/.local stayed root-owned and the paced
-#     runner could not create its own lockfile. The first dispatch died on it.
-#   * the credential was placed by three separate ad-hoc commands, none of
-#     which was written down anywhere a second account could reuse.
-#
-# Zach, 2026-08-03, on the topology: "each account shares one claude auth token
-# that has been copied. should get copied automatically." This is that.
-#
-# WHAT IT DELIBERATELY DOES NOT DO:
-#   * no sudo for the project account. A self-dev user needs nothing outside
-#     $HOME; if a run believes otherwise that is a finding to surface, not a
-#     capability to pre-grant. (The office's `romulus` has blanket NOPASSWD
-#     because it binds a port and manages a service. This is not that.)
-#   * no clone, no install, no crontab. `bin/land-selfdev.sh` does those, as
-#     the project user, and stops before arming dispatch.
-#   * no rotation edit. Adding a participant is realisateur's judgment and
-#     lands in schedule/_paced.<host>.conf through a reviewed change.
 
 set -uo pipefail
 
@@ -39,7 +8,7 @@ MODE="${2:---check}"
 case "$PROJECT" in ""|-*) echo "usage: $0 <project> [--check|--apply]" >&2; exit 2 ;; esac
 case "$MODE" in --check|--apply) ;; *) echo "usage: $0 <project> [--check|--apply]" >&2; exit 2 ;; esac
 
-# The uid band MONKEY.md reserves for self-dev projects: clear of the human
+# The uid band vault:realisateur/MONKEY.md reserves for self-dev projects: clear of the human
 # 1000s and of the office's romulus=1001, so a future merge of conventions
 # cannot collide.
 UID_MIN="${SELFDEV_UID_MIN:-3000}"
@@ -49,12 +18,7 @@ UID_MAX="${SELFDEV_UID_MAX:-3099}"
 # RUN AS ROOT, OR AS A USER WHO CAN SUDO -- both work, and the difference
 # matters for exactly one thing: whose credential gets copied.
 #
-# Under `sudo bash provision-selfdev-user.sh ...` (which is how an unattended
-# caller with no tty must invoke it, since sudo's timestamp is per-tty and
-# `sudo -v` buys nothing here), $HOME is root's. Looking for the credential
-# there would silently find nothing and provision an account that cannot spend
-# a token -- the exact failure this script exists to prevent. So when running
-# as root, fall back to SUDO_USER's home.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 CRED_HOME="$HOME"
 if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
   CRED_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
@@ -181,19 +145,7 @@ PY
 # the same reason the rest of this script exists: bibliothecaire was the second
 # account, and this was the step still being done by hand.
 #
-# WHY AN ACCOUNT NEEDS IT AT ALL. Two distinct jobs, and only the first is
-# obvious. (1) bin/wire-selfdev-git.sh registers this account's per-repo deploy
-# keys through `gh`, so without a token the account cannot obtain the git
-# credentials it needs to clone anything private. (2) the work itself: the
-# request queues these projects run on ARE GitHub issues -- bibliothecaire's
-# brief is literally "work the issues labelled request", and ecosim filed #26
-# and #27 the same way. An account with no gh is an account that cannot be
-# asked for anything and cannot answer.
-#
-# THE TOKEN IS SHARED, not minted. Same topology as the claude credential, and
-# the same accepted consequence: one identity, one audit trail. Least privilege
-# between REPOS is bought by per-repo deploy keys (see wire-selfdev-git.sh), not
-# by giving each account a different GitHub identity.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 GH_SRC="${SELFDEV_GH_HOSTS:-$CRED_HOME/.config/gh/hosts.yml}"
 if [ -r "$GH_SRC" ]; then
   # No `MODE` guard here: --check has already exited above. Everything from

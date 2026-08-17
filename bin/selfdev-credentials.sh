@@ -3,22 +3,8 @@
 # SIDE against one declared baseline, and converge one account to it.
 #
 # RUNNER: no -- needs `ssh $CRED_HOST` + passwordless `sudo -n -u <account>`
-# across the whole live uid 3000-3099 fleet (ten accounts, root-adjacent), the
-# same constraint bin/selfdev-agent-survey.sh's own `# GUARD: no` line names
-# for the identical shape: no CI job and no hook can ever reach it. --audit is
-# signals, not a build gate -- it exits non-zero on drift so a human's shell
-# (or a cron entry) can branch on it, same stance as
-# hygiene-lint.sh/selfdev-agent-survey.sh: a FLAG here is something to look
-# at, not a proven bug at the moment it is printed. Its PARSING/GRADING logic
-# (the part with a right answer independent of live machine state) is real,
-# hermetic, unit-tested code -- see bin/tests/selfdev-credentials.test.sh --
-# and the live-fleet run itself is exercised as an integration check the same
-# way selfdev-agent-survey.sh and selfdev-release-tick.sh --survey are.
 #
-# ============================================================================
-# WHY THIS EXISTS
-# ============================================================================
-#
+# TRAPS (the rest of this header is in the vault):
 # Measured 2026-08-11: ecosim's `gh` credential was a fine-grained PAT missing
 # the Pull-requests permission -- 403 on the ENTIRE Pull-requests API, read
 # and write. `gh issue list` kept working, so every automated signal an
@@ -29,71 +15,14 @@
 # (provision-selfdev-user.sh, wire-selfdev-git.sh, selfdev-gh-app.sh) check
 # THAT account in isolation and always have. THE ACTUAL DEFECT WAS THAT
 # NOTHING COMPARED THE TEN. This is that comparison, run on a clock.
-#
-# ============================================================================
-# THE BASELINE, AND WHERE IT LIVES
-# ============================================================================
-#
-# bin/lib/selfdev-credentials-set.sh -- ONE declared shape (BUILD-DISCIPLINE's
-# "config read from one source, not retyped per file"), plus the DECLARED,
-# DATED grant table for any account that legitimately needs to differ.
-# ecosim's `ecosim.pem` and `github_pat` are NOT declared there -- undeclared
-# drift is exactly what this tool exists to surface instead of tolerate.
-#
-# ============================================================================
-# THE SYMMETRY RULE, MECHANIZED
-# ============================================================================
-#
-# Zach, 2026-08-11: "why does vim-arcade need to write to scheduler repo
-# instead of filing issues? ... [make them] symmetrical with the option to add
-# extra permissions using the script utility." WRITE on an account's own repo,
-# READ on the shared ones, anything else through a front door
-# (scheduler -i / notify-senechal / consulte), never a cross-repo push. This
-# was prose before today, repeated in wire-selfdev-git.sh's own header and
-# nowhere checked against what GitHub actually granted. The "deploy-key
-# symmetry" section below reads `gh repo deploy-key list` for every repo in
-# scope and asserts read_only=false on an account's own repo, true elsewhere.
-#
-# ============================================================================
-# TWO CREDENTIAL SYSTEMS, LAYERED -- REPORTED, NOT DECIDED
-# ============================================================================
-#
-# bin/selfdev-gh-app.sh's own header argues a long-lived secret at rest is
-# what the App exists to eliminate -- an installation token expires in one
-# hour and is minted on demand. hf7y/scheduler#103 (merged 2026-08-11) now
-# mints an App token at dispatch, which makes the shared `gho_` token copied
-# into every account's ~/.config/gh/hosts.yml redundant on that path. This
-# tool REPORTS that every run. It does not remove the token, under --apply or
-# any other mode: BUILD-DISCIPLINE.md pattern 1, and stated directly for this
-# change -- deciding whether and when to retire it is a separate question.
-#
-# ============================================================================
-# --audit vs --apply
-# ============================================================================
-#
 # --audit (default) is READ-ONLY throughout: it never writes to the fleet, so
 # it needs no notify-senechal and is safe to run unattended on a clock. It is
 # the mode that would have caught ecosim on day one.
 #
-# --apply <account> converges ONE account: copies a missing app.pem/gh-app.conf
-# from a canonical local source (the same shared-credential-copy shape
-# provision-selfdev-user.sh already uses for the claude/gh tokens), and
-# delegates git-wiring gaps to that account's OWN wire-selfdev-git.sh --apply
-# -- never reimplementing key registration. It NEVER touches
-# ~/.config/gh/hosts.yml and NEVER deletes an "extra" file: removing a working
-# credential is a decision, not a side effect of converging. Idempotent:
-# nothing to converge reports "nothing to do" and exits 0. Applying credential
-# changes to a live account is machine-wide config -- notify-senechal is owed
-# for any real --apply run against the fleet (see the header's own act() line
-# below); --audit needs none.
-#
 # usage:
-#   selfdev-credentials.sh [--audit]      side-by-side fleet audit (default)
-#   selfdev-credentials.sh --apply <account>   converge ONE account
-#
 # exit (audit):  0 clean   1 drift or a per-account BLIND   3 fleet BLIND
 # exit (apply):  0 converged / nothing to do   5 a step failed
-#                2 usage error (cli-guard)
+
 set -uo pipefail
 
 CLI_NAME='selfdev-credentials.sh'
@@ -138,24 +67,7 @@ act()   { printf '  DO    %s\n' "$*"; }
 # ============================================================================
 #
 # Everything it reads is a FILE or a git config -- never a secret's own bytes
-# beyond a prefix classification (cred_classify_token), so a token never
-# transits this pipe whole. One ssh call gathers every account in one pass;
-# an optional account-name filter narrows it to one, for --apply.
-#
-# WHY VALUES ARRIVE AS ARGUMENTS, NOT CLOSED-OVER VARIABLES. `sudo`'s
-# `env_reset` (Ubuntu default, confirmed live 2026-08-11 on monkey) means NO
-# variable from the calling shell survives into the target account's process
-# -- only argv does. `probe_one` inside the remote script was first written
-# referencing `$CRED_GH_OWNER`/`$CRED_SHARED_REPOS` directly and measured
-# EVERY account's git wiring as 0/3 for every repo, silently: the loop that
-# should have iterated the three shared repos ran zero times because the
-# variable it iterated was empty in the sudo'd process, and the printf
-# columns simply shifted left with nothing announcing it. That is BUILD-
-# DISCIPLINE.md pattern 14 (a probe reporting a negative it never actually
-# checked for) reproduced live while building this file. Fixed by passing
-# owner and repos as `probe_one`'s own positional arguments, propagated
-# through `sudo -n -u "$acct" bash -c "$(declare -f probe_one); probe_one \"\$@\"" _ ...`
-# -- verified against the real fleet before this comment was written.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 fetch_remote() { # fetch_remote [account-filter]
   # "-" IS THE NO-FILTER SENTINEL. NEVER AN EMPTY STRING.
   #
@@ -349,16 +261,7 @@ cred_grade_account() {
 # ============================================================================
 #
 # Everything above reads local CONFIG (is a url.insteadOf rewrite present).
-# This reads what GitHub actually GRANTED, which can diverge from it --
-# proven live 2026-08-11: ecosim's own-repo git wiring measured 0/3 (the
-# config check above), while its deploy key IS registered on GitHub with
-# read_only=false. Two different failure surfaces; both are checked because
-# they can fail independently.
-#
-# Runs from wherever --audit runs, NOT via the sudo'd account: listing a
-# repo's deploy keys needs push access to that repo, which a self-dev account
-# deliberately does not hold on the three shared ones. Gracefully BLIND, never
-# silently skipped, if gh/jq are missing or unauthenticated.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 cred_check_deploy_keys() { # cred_check_deploy_keys <account>...
   if ! command -v "$CRED_GH_BIN" >/dev/null 2>&1; then
     blind "deploy-key symmetry: '$CRED_GH_BIN' not on PATH -- could not check GitHub-side read/write permissions"
@@ -377,14 +280,7 @@ cred_check_deploy_keys() { # cred_check_deploy_keys <account>...
   # because one unix user per project is the whole monkey design, and their
   # own repo IS a shared repo -- so the two halves of the symmetry rule gave
   # opposite answers for exactly those accounts and the audit reported a
-  # permanent, unfixable FLAG pair (realisateur#210).
-  #
-  # Zach, 2026-08-12: "210 should just be settled where you can have writes to
-  # your own repo. obviously they can push to themselves."
-  #
-  # So the shared-repo pass skips the account that OWNS the repo; the own-repo
-  # pass below still checks it, and still demands WRITE. Nothing goes
-  # unchecked -- the account is graded once, by the rule that applies to it.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   local repo acct others
   for repo in $CRED_SHARED_REPOS; do
     others=""
@@ -548,18 +444,7 @@ cmd_apply() {
   # This block used to copy a private app.pem + gh-app.conf into the account,
   # from `$CRED_APP_PEM_SRC` (default ~/.config/selfdev/app.pem on THIS host).
   # That default path never existed here -- selfdev-gh-app.sh --adopt writes
-  # ~/.config/selfdev/<host>/<host>.pem -- so the one step this command exists
-  # for reported "cannot converge without a human, a new App key needs a
-  # browser click" while the key sat two directories away (realisateur#209).
-  # It also installed the conf VERBATIM, whose SELFDEV_APP_KEY line names a
-  # per-account path, so a straight copy produced exactly the mismatch the
-  # audit half then flagged. Both failures were the same root cause: one key
-  # with a different name in every script that touched it.
-  #
-  # There is no source path to get wrong any more. The credential is one
-  # host-wide file, bin/selfdev-app-key.sh owns placing it, and this delegates
-  # -- the same "already exists and is already tested" rule the rest of this
-  # command follows for wire-selfdev-git.sh.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   if [ "$pem" != "ok:600" ] || [ "$conf" = missing ]; then
     act "placing the host-wide App credential and adding $acct to group $CRED_APP_GROUP (selfdev-app-key.sh --apply)"
     if "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \

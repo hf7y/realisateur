@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 #
-# release-gate.test.sh -- witness for bin/release-gate.sh's four states and
-# their exit codes.
-#
+# TRAPS (the rest of this header is in the vault):
 # WHY A FAKE `gh` AND NOT THE REAL ONE. The gate's whole job is to be right
 # about GitHub's answer, so a suite that asks GitHub cannot distinguish its
 # own passing from the org happening to be green today -- and the two states
@@ -10,19 +8,8 @@
 # a real repository at all. cut-verb-build-test.sh already established this
 # shape here: a fake `gh` on a controlled path, fixture answers, no network.
 #
-# THE FOUR STATES, and why each has its own assertion:
-#   GREEN    checks exist for HEAD and all succeeded          -> exit 0
-#   RED      a check for HEAD failed                          -> exit 1
-#   PENDING  a check for HEAD has not concluded               -> exit 4
-#   UNGATED  no checks exist for HEAD (the project has no CI)  -> exit 0, counted
-#   BLIND    GitHub could not be asked                        -> exit 3
-#
-# The one that matters most is that UNGATED is neither GREEN nor RED. Nine of
-# the twelve projects carrying a `bashified` branch had no CI at all when this
-# was written, so folding UNGATED into RED blocks every cut forever and
-# folding it into GREEN is the found-nothing/nothing-is-wrong conflation.
-#
 # Usage: bin/tests/release-gate.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -39,12 +26,7 @@ echo "release-gate.test.sh"
 # Answers are read from $T/answers/<project>. One line: the check-runs
 # conclusions, verbatim, as the real --jq join would produce. The literal
 # token BLIND makes the api call fail instead.
-#
-# IT RETURNS REAL JSON AND APPLIES THE GATE'S OWN --jq EXPRESSION TO IT.
-# The first version of this fake returned the already-reduced string the gate
-# expected, which meant the jq filters -- where the `total_count` trap lives --
-# were never executed by anything. A fixture that answers in the shape GitHub
-# actually returns is what makes the trap assertions below real.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 FAKEGH="$T/gh"
 cat > "$FAKEGH" <<'EOF'
 #!/usr/bin/env bash
@@ -210,16 +192,7 @@ echo "-- THE EVIDENCE SURFACES: WHAT THE TOKEN CAN ACTUALLY READ -------------"
 # /commits/{sha}/check-runs, which needs the fine-grained permission
 # `Checks: Read`. VERBS_READ_TOKEN holds "actions, code, commit statuses,
 # metadata" -- and when Zach went to grant Checks, THERE IS NO SUCH CATEGORY
-# on that token's settings page. So the gate reported
-#
-#     0 green, 0 red, 0 pending, 1 ungated, 11 blind
-#
-# on a green main. It looked like a public/private split and was not: the one
-# readable project was simply the only PUBLIC one.
-#
-# NONE OF THIS WAS TESTABLE BEFORE, because the fake `gh` answered whatever
-# endpoint the gate asked for. The endpoint was never an assertion, so a
-# permission mismatch could only surface on a real cut, at night, silently.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 : > "$QUERYLOG"
 set_answer sigma "success"
 gate sigma >/dev/null 2>&1
@@ -317,7 +290,7 @@ echo
 echo "-- THE PROJECT LIST COMES FROM THE MANIFEST ----------------------------"
 # No second derivation: the gate checks exactly what the build made. A gate
 # that enumerated projects itself could disagree with the build about what is
-# in the build, which is the one-fact-two-readers shape MONKEY.md 10 found
+# in the build, which is the one-fact-two-readers shape vault:realisateur/MONKEY.md 10 found
 # five times in a day.
 set_answer nu "success"
 set_answer xi "failure"

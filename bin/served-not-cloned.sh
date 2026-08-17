@@ -5,123 +5,16 @@
 # RUNNER: bin/tests/served-not-cloned.test.sh
 # GUARD-TEST: bin/tests/served-not-cloned.test.sh
 # GATE: strict
-#   `--strict` is the SUNSET CHECK ALONE: no scheduler checkout, no GitHub, no
-#   ssh, no fleet -- just today's date against SUNSET. That is what makes the
-#   self-destruct real rather than a paragraph. From 2026-08-24 the tests
-#   workflow goes red on every pull request and the ONLY thing that clears it
-#   is deleting this file. The seven vision probes stay operator-run, because
-#   they need a scheduler checkout CI does not have; a run that cannot see the
-#   estate is BLIND, and BLIND is never green here.
 #
-# ############################################################################
-# THE VISION, IN ONE SENTENCE
-# ############################################################################
-#
-#   The scheduler stops being a thing every account CLONES and becomes a verb
-#   every account is SERVED.
-#
-# That is a claim about the whole ecosystem, not about one repo's file layout,
-# and the rest of this header is why.
-#
-# ############################################################################
-# WHY THIS IS THE ECOSYSTEM'S SHAPE AND NOT THE SCHEDULER'S PROBLEM
-# ############################################################################
-#
-# Every project here has already learned the same lesson under a different
-# name, and each time it was learned it was written down as a door:
-#
-#   bibliothecaire   `consulte` files an issue on its queue. The asking
-#                    account needs no clone of bibliothecaire and no push
-#                    access to any branch of it. Before the door existed, a
-#                    request sat staged and uncommitted on a clone for two
-#                    days because the account that wanted to ask held no
-#                    credential (2026-08-04).
-#   senechal         `notify-senechal` files through senechal's own front
-#                    door and confirms the note reached its remote. The rule
-#                    it encodes: the project that GENERATES machine config
-#                    owns it; senechal owns KNOWING it exists.
-#   realisateur      the verb release channel. `cut-verb-build.sh` assembles
-#                    a dated build; `install-verb-build.sh` verifies every
-#                    verb the manifest promises and repoints ONE symlink,
-#                    atomically, or discards the build; `selfdev-release-tick`
-#                    is the consumer's clock. An account holds a small
-#                    near-immutable bootstrap and is SERVED everything else.
-#
-# Three doors, one shape: A FRONT DOOR WITH A CLOCK, INSTEAD OF A CLONE WITH
-# A HOPE. The scheduler is the last large thing in the estate that still
-# travels as a copy, and it is the one that dispatches every other project's
-# work -- so its distribution model is the estate's distribution model.
-#
-# ############################################################################
-# WHAT THE COPY ACTUALLY COSTS -- measured 2026-08-10, not supposed
-# ############################################################################
-#
-#  1. A DIRTY FILE IS AN INDEFINITE OUTAGE. Ten accounts each hold a full
-#     clone of a 3,465-line `bin/scheduler` plus 24 scripts, and dispatch runs
-#     out of it. `usage-paced-runner.sh`'s pull-before-dispatch is fail-loud-
-#     not-block by design, so ONE uncommitted file in one account's clone
-#     means that account silently never receives another instruction update.
-#     vim-arcade has been in exactly that state, and the dirty file is
-#     `BLOCKERS.md` -- the file recording what blocks us IS what blocks us
-#     (hf7y/scheduler#61, #70, #75). Under a served model there is no
-#     per-account clone to go dirty; the failure mode stops being fixed and
-#     starts being impossible.
-#
-#  2. THE INSTRUCTION GETS RETYPED. Commit 9cfd130 hand-typed one identical
-#     32-line STANDING RULES block into three accounts' BATCH_PROMPTs,
-#     byte-for-byte, with no shared source. Measured across the live fleet the
-#     same day: vim-arcade and ecosim share 65 identical prompt lines,
-#     vim-arcade and bibliothecaire 27, bibliothecaire and ecosim 27. An edit
-#     to one silently stops applying to the others, and nothing says so.
-#
-#  3. THE BRIEF GOES STALE AND NOTHING NOTICES. ecosim's live prompt says
-#     "Start with #34"; that issue is CLOSED. vim-arcade's names #74 and #75;
-#     both CLOSED. A prompt typed once and dispatched forever cannot track the
-#     state it points at. Generated-from-live-state retires the whole class.
-#
-#  4. NOBODY CAN NAME WHAT IS RUNNING. A clone is whatever that account last
-#     happened to pull. A build is a dated id every account can report, hold
-#     while others move past it, and roll back to BY NAME. "I am on
-#     2026-08-10T032316Z" is a bug report; "I am on some sha" is archaeology.
-#
-# ############################################################################
-# WHY THIS FILE FAILS TODAY, ON PURPOSE, AND WHY IT DELETES ITSELF
-# ############################################################################
-#
-# bin/thermostat-wiring.sh -- the estate's other vision probe -- refuses to be
-# a conformance test, and its reasoning is right and worth quoting:
-#
-#     "A check nobody expects to be green is a document with an exit code."
-#
-# Seven suites had been red long enough that red stopped meaning anything;
-# `pivot.sh`'s `ci` MOVE exists because of it. So thermostat-wiring is a
-# RATCHET: it asserts only that the vision is no further away than last time.
-#
-# This file is the other half, and it is deliberately the thing that one
-# argues against -- a check that is red on day one -- with the one addition
-# that makes red honest: A DEADLINE. It is not a permanent conformance test.
-# It is a COMMITMENT with an expiry stamped into it.
-#
-#   * Until SUNSET it exits 1 while the vision is unmet. Red means "we said we
-#     would do this and have not yet", which is information, and it is only
-#     information because it cannot last.
-#   * On the day the redesign lands it exits 0.
-#   * FROM SUNSET ONWARD it exits 4 no matter what the probes say, and the
-#     only thing that makes it green again is `git rm` on this file.
-#
-# That is the difference between a red check and a rotting one. A ratchet
-# tolerates a vision indefinitely; this refuses to. If the redesign has not
-# happened by SUNSET, the correct response is still deletion -- delete it and
-# say in the commit message that the estate chose not to do this. A vision
-# nobody will commit to a date on is not a plan, and carrying its probe around
-# for another month would be the same prose-instead-of-mechanism failure the
-# redesign exists to end.
+# TRAP: BLIND is never green. These probes need a scheduler checkout CI does
+#   not have; a run that cannot see the estate is BLIND (exit 2), not met.
+# TRAP: this file deliberately does NOT tolerate a vision indefinitely --
+#   bin/thermostat-wiring.sh is the half that does. If the redesign has not
+#   landed, this is meant to keep saying so.
 #
 # usage:  served-not-cloned.sh [--fleet] [--strict] [--quiet]
 # exit:   0 vision met      1 UNMET (expected until the redesign lands)
-#         2 BLIND (a probe could not be run -- never counted as met)
-#         4 SUNSET REACHED -- delete this file
-#         --strict is the sunset check alone: no repo, no network. The CI gate.
+
 set -uo pipefail
 
 # ############################################################################
@@ -265,15 +158,7 @@ probe_livebrief() {
 #    this is success" -- and no dispatcher branches on it. DONE was recorded 9
 #    times across 4 accounts in one day and stopped nothing; bibliothecaire
 #    recorded it on six consecutive runs and was re-dispatched every time
-#    (hf7y/scheduler#54). The agents answer correctly and nothing listens.
-#
-#    SEARCHED ACROSS THE TREE, NOT IN ONE NAMED FILE. The first draft of this
-#    probe read `bin/usage-paced-runner.sh` specifically -- so it went BLIND
-#    forever the moment the redesign retired that file, and the check could
-#    never have gone green. Its own test suite caught that, which is the
-#    argument for testing the MET path rather than only the red one: a probe
-#    whose success condition depends on the thing the vision deletes is not a
-#    probe, it is a trap.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 probe_donebrakes() {
   [ -d "$SCHED/bin" ] || { row BLIND donebrakes "no $SCHED/bin to search"; return; }
   local hit
@@ -350,20 +235,7 @@ probe_oneroster() {
 #    run dose ecosim and the newest ecosim self-installs, updates, starts
 #    clearing issues."
 #
-#    TWO THINGS MAKE THIS FAIL TODAY and both are invisible from inside the
-#    repo, which is why this is a probe and not a paragraph:
-#      1. ~/.local/bin is NOT on monkey's non-interactive PATH, so
-#         `ssh monkey dose ...` cannot find a verb installed there even when
-#         it is installed correctly. Measured 2026-08-11: PATH over ssh is
-#         /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin plus
-#         games and snap. Nothing under $HOME.
-#      2. zach@monkey's scheduler checkout is on a FEATURE BRANCH
-#         (probe-after-runnability-20260806) five days behind main -- so a
-#         dose that read its truth from the local clone would read stale
-#         config on the very host the command is typed on. Reading the roster
-#         from GitHub is what makes it a bomb rather than a clone-follower.
-#
-#    Local half only (the repo half); the fleet half belongs to --fleet.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 probe_selfserve() {
   [ -d "$SCHED/.git" ] || { row BLIND selfserve "no scheduler checkout at $SCHED"; return; }
   local verbs

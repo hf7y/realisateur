@@ -46,28 +46,7 @@ esac
 # Until 2026-08-05 this defaulted to
 # ${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/ecosim/bin/ecosim-sensor --
 # a development checkout. Two things were wrong with that, and only the
-# second is obvious:
-#
-#   1. It pinned the clone. A */30 cron line reaching into
-#      ~/Documents/Projects made ecosim unremovable from mandark, which
-#      `fauche check` reported as the single reason to KEEP it.
-#   2. It read a MOVING target. Measured 2026-08-05: that clone was 12
-#      commits behind origin/main, so this monitor had been running a
-#      12-commit-stale sensor and nothing said so. A build is pinned to a
-#      named sha in verb-builds/current/manifest.tsv, and adopting a new one
-#      is a deliberate act with a record.
-#
-# The missing-binary branch below is unchanged and still fails LOUD, so if
-# the build is absent this reports BLIND rather than degrading to a no-op.
-# ECOSIM_SENSOR_BIN still overrides, for running against a working clone.
-# REPOINTED 2026-08-07 to `sonde`, ecosim's front door (hf7y/ecosim#30, Zach:
-# "make sonde the front door and deprecate ecosim-sensor"). The old path,
-# .../current/ecosim/bin/ecosim-sensor, correctly does not exist in any build:
-# ecosim-sensor is CARRIED tooling on the `bashified` branch, deliberately
-# page-less so the declaration rule keeps it off the ecosystem PATH. This
-# monitor had therefore been reporting BLIND WRAPPER_NO_SENSOR rather than
-# sensing anything -- and that was read for two days as "ecosim was silently
-# dropped from the verb build", which it never was.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 SENSOR="${ECOSIM_SENSOR_BIN:-${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}/current/ecosim/bin/sonde}"
 # Overridable so a test can point the whole state directory somewhere
 # disposable. It used to be a bare $HOME path, which meant the only way to
@@ -84,12 +63,7 @@ ts() { date -Is; }
 # cannot answer "what did the sensors say during the migration"), and nothing
 # here drops a byte. What was wrong was ONE file forever -- 753,341 bytes over
 # 45 runs on mandark, ~290 MB/year at the armed */30 cadence.
-# BY MONTH, NOT SIZE: archive-2026-08.jsonl.gz IS the index for that question;
-# archive.3.jsonl answers nothing anyone asks. The boundary is UTC so it is the
-# same on mandark/dexter/monkey; each record's own `ts` is local, so a reader
-# needing the exact edge filters on the data, not the filename.
-# Whole record, sealed and open months alike, in one command:
-#   zcat -f "$STATE_DIR"/archive-*.jsonl.gz "$STATE_DIR"/archive-*.jsonl
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 ARCHIVE="$STATE_DIR/archive-$(date -u +%Y-%m).jsonl"
 
 # MIGRATION, one time. The pre-rotation archive is RENAMED -- not deleted, and
@@ -164,23 +138,7 @@ cp "$OUT" "$LATEST" 2>/dev/null || true
 # cadence -- and $LATEST keeps only the most recent run. NEITHER is a record.
 # This is the one that is: append-only, never trimmed, JSONL. It is rotated
 # monthly and closed months are gzipped (see $ARCHIVE above); rotation moves
-# bytes between files and drops none.
-#
-# WHY IT LIVES HERE AND NOT IN ecosim/sensors/. The contract's own archival
-# mode, `run --log`, appends into ecosim's repo. That is exactly the wrong
-# place during a migration whose PURPOSE is deleting dev clones: the record
-# would die with the thing it recorded. $STATE_DIR is realisateur's own, so
-# nothing crosses a repo boundary -- ecosim still "writes only into
-# ecosim/sensors/ and its own stdout" (SENSOR-CONTRACT.md section 5), and this
-# wrapper owns what it chooses to keep.
-#
-# A SECOND PROBE, deliberately, not a reformat of $OUT. `run` emits line
-# protocol and `run --json` emits JSONL; the contract does not promise the two
-# are inter-convertible, and it explicitly refuses to stabilise the human prose
-# ("Parse the symbol, never the prose"). Deriving one from the other would be
-# parsing exactly what was declared unstable. Both probes are offline, ~10s,
-# and cost no quota. They can observe slightly different states; that skew is
-# the price, and it is smaller than the cost of parsing an unpromised format.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 timeout 600 "$SENSOR" run --json > "$AOUT" 2>/dev/null
 arc=$?
 alines="$(wc -l < "$AOUT" 2>/dev/null || echo 0)"
@@ -190,19 +148,7 @@ alines="$(wc -l < "$AOUT" 2>/dev/null || echo 0)"
 # silence-is-not-success fault the missing-sensor branch above guards against.
 #
 # It is ALSO what already makes a run individually addressable -- which is why
-# rotation was the only thing outstanding: every line a run contributes lies
-# between its boundary record and the next, keyed by a (ts, host) unique at any
-# cadence coarser than a second. No per-line run id needed, and none invented.
-#
-# TWO exit codes, on purpose. Measured 2026-08-05 on identical state:
-#   ecosim-sensor run          -> rc=3 (BLIND)
-#   ecosim-sensor run --json   -> rc=0
-# `--json` does not honour the exit-code half of SENSOR-CONTRACT v1 section 2
-# (0 OK / 1 WARN / 2 CRIT / 3 BLIND, BLIND beats CRIT). Filed on ecosim. Until
-# it is fixed, `rc` here is the AUTHORITATIVE line-protocol verdict and
-# `json_rc` is what the archival mode claimed -- recorded rather than
-# reconciled, so the discrepancy stays visible in the data instead of being
-# quietly papered over by whichever one this wrapper happened to trust.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 printf '{"ts": "%s", "record": "run", "rc": %s, "json_rc": %s, "lines": %s, "host": "%s"}\n' \
   "$(ts)" "$rc" "$arc" "${alines:-0}" "$(hostname -s)" >> "$ARCHIVE"
 [ -s "$AOUT" ] && cat "$AOUT" >> "$ARCHIVE"
@@ -211,12 +157,7 @@ printf '{"ts": "%s", "record": "run", "rc": %s, "json_rc": %s, "lines": %s, "hos
 # legacy codes on purpose: raw 3 means BLIND upstream but needs-summon here,
 # so passing them through would report a read failure as a request for money
 # (man/sonde.1, EXIT STATUS). Code 3 is deliberately unreachable from sonde.
-#
-# This mapping is the load-bearing half of the repoint. A bare repoint leaving
-# the old case in place would send sonde's WARN (8) and CRIT (9) into the
-# catch-all and render a real severity as "unexpected rc" -- a finding
-# swallowed into the wrong symbol, quietly, which is this monitor's whole
-# failure mode.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 case "$rc" in
   0) verdict="OK" ;;
   8) verdict="WARN" ;;

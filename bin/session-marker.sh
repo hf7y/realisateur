@@ -3,43 +3,7 @@
 # registered project, so that project's unattended jobs can defer instead of
 # editing files out from under a live session.
 #
-# REALISATEUR-OWNED entry in a machine-wide config surface, same convention as
-# the `# >>> realisateur-owned` block in Zach's crontab. senechal owns
-# *knowing* this exists (its 2026-07-24 mission widening: shared-host
-# script/autostart ownership -- no unattributable leftovers); realisateur owns
-# what it does. Wired from ~/.claude/settings.json SessionStart/SessionEnd.
-#
-# WHY A MARKER AND NOT flock
-# --------------------------
-# scheduler's lib/sweep-loop-common.sh holds a real flock for a job's
-# duration, which is correct there: the holder is one long-running process.
-# A session hook is NOT that -- it fires, exits, and the session outlives it,
-# so there is no process to hold an fd. The alternative (spawn a detached
-# flock holder) reintroduces the exact problem it solves: SessionEnd is NOT
-# guaranteed to fire on crash or SIGKILL (confirmed against the hooks
-# reference, 2026-07-26), so a held lock would orphan and wedge that
-# project's batch permanently and SILENTLY.
-#
-# So: a marker file whose LIVENESS IS A PID PROBE. `release` is the fast
-# path, not the correctness guarantee -- a crashed session's marker is dead
-# the moment its pid is, and every reader checks `kill -0` rather than the
-# file's existence. Self-healing by construction; nothing to clean up.
-#
-# Deliberately mirrors the `<PROJECT_KEY>.active` marker sweep-loop-common.sh
-# already writes next to its lock, and lands in the SAME directory, so one
-# place answers "is anything writing to this project right now."
-#
-# Usage (from hooks; reads the hook's JSON on stdin):
-#   session-marker.sh acquire      < hook JSON
-#   session-marker.sh release      < hook JSON
-#   session-marker.sh probe <project>     -- for humans/scripts
-#   session-marker.sh resolve <dir>       -- which project is <dir> in?
-#
-# Exit status is always 0 on the hook paths: a hook that fails must never
-# block a session from starting. Problems are reported to stderr only.
-# `resolve` exists BECAUSE of that: same resolution, honest exit code, so a
-# guard or a human can ask "does this still work".
-#
+# TRAPS (the rest of this header is in the vault):
 # EIGHT DAYS OF NO-OP, 2026-08-03 -> 2026-08-11 (#73). resolve_project read
 # the conf with `grep -oP`, which does not expand shell variables, so `repo`
 # was the LITERAL `$HOME/Documents/Projects/<name>` and the `case` below could
@@ -52,6 +16,9 @@
 # no human. Eight days of dispatch with that deferral off, in the direction
 # this file's own header calls "the dangerous one" -- silently, because "not a
 # registered project" is ALSO the normal answer. Hence the counters below.
+#
+# Usage (from hooks; reads the hook's JSON on stdin):
+
 set -uo pipefail
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -68,13 +35,7 @@ action="${1:-}"
 # that matches nothing is the common case (unrelated work on this machine) and
 # must be a fast, silent no-op: this hook runs on EVERY session start.
 #
-# Reads through lib/conf.sh, which expands $HOME BY NAME, never by eval: a
-# conf is a file this repo does not own. The counters are the guard, and the
-# reason this no longer returns early: one lookup cannot tell "your cwd is not
-# a registered project" from "no conf here can EVER match", and those were the
-# same silent `return 1` for eight days. ~20 small reads buys that distinction.
-# Sets RESOLVE_HIT as well as printing it -- `x=$(resolve_project ...)` is a
-# SUBSHELL and the counters would not survive it.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 RESOLVE_CONFS=0   # confs that carry a PROJECT_REPO_PATH at all
 RESOLVE_LIVE=0    # ...of those, how many name a directory that exists
 RESOLVE_HIT=""    # the matched PROJECT_KEY, empty when nothing matched
@@ -137,19 +98,7 @@ case "$action" in
       # 2026-07-27, it is not. The hook runs under a short-lived intermediate
       # shell, so PPID dies seconds after acquire while the session runs on.
       # Observed live: marker held pid=429191 (dead) while the session process
-      # was 429162 (alive), and `check-project-busy scheduler` therefore said
-      # "free" with a human actively editing the repo.
-      #
-      # That direction of failure is the dangerous one. This marker exists so
-      # unattended jobs DEFER to a person; reading "free" while someone is
-      # working is the exact race it was built to prevent, and it was silent
-      # -- the probe's own "stale marker ... SessionEnd never fired" wording
-      # made a structural bug look like an ordinary crashed session.
-      #
-      # $$ is still wrong (this script exits immediately). Walk up instead and
-      # record the nearest ancestor that IS the session. Bounded depth, and
-      # falls back to PPID rather than writing nothing: a marker with a
-      # short-lived pid is still strictly better than no marker at all.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
       session_pid() {
         local p="${PPID}" d=0 comm
         while [ -n "$p" ] && [ "$p" -gt 1 ] 2>/dev/null && [ "$d" -lt 12 ]; do

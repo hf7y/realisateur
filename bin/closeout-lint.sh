@@ -151,12 +151,7 @@ now="$(date +%s)"
 # no explicit names) that discovers ZERO projects is ambiguous the same way
 # hygiene-lint.sh's equivalent loop was until 2026-08-07: it might mean "the
 # registry is empty" or it might mean "$SCHED_ROOT/schedule doesn't exist on
-# this host" -- e.g. mandark, which no longer holds a scheduler checkout.
-# Both produced the SAME zero-iteration, zero-finding, exit-0 result as a
-# session that really did touch nothing. cli_require_matched (lib/cli-guard.sh)
-# only catches this when project NAMES were given and none matched; a bare
-# sweep skips that check entirely. Counted as BLIND, same as every other
-# domain this script could not read.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ -z "$REPO_ARG" ] && [ "${#want[@]}" -eq 0 ] && [ "${#projects[@]}" -eq 0 ]; then
   blind=$((blind+1))
   registry_blind=1
@@ -169,20 +164,7 @@ cutoff=$(( HOURS * 3600 ))
 # The dirty-tree rule below assumed "uncommitted changes at close are this
 # run's unfinished work" -- true for a solo session, false for a shared
 # checkout, now the normal case. On 2026-08-11 a subagent was blocked at close
-# over two paths already in its session-start `git status` snapshot, and every
-# remedy offered was wrong: commit adopts another session's work under your name
-# (the 2026-07-25 incident CLAUDE.md's subagent rules exist for), revert
-# destroys it, and it had nothing to push. Mechanical test: does every dirty
-# path's mtime PREDATE the session?
-#
-# THE ANCHOR IS THE SESSION PROCESS, not session-marker.sh's marker file --
-# SessionEnd is not guaranteed to fire, so that file goes stale silently (this
-# box had one reading 2026-08-03 beside a session running since 19:59 that
-# evening) while a live process's start cannot. Same ancestor walk and
-# `claude|claude.exe` match session-marker.sh uses, and it finds the SESSION,
-# not the subagent (a Task subagent is not its own process): an earlier anchor,
-# so more paths count as this run's and the teeth stay. UNKNOWN IS NOT CLEAN --
-# no anchor (cron, CI) leaves the FLAG as it was before this change.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 session_start_epoch() { # -> epoch seconds on stdout, or nothing and exit 1
   local raw="$SESSION_START" p="${PPID}" d=0 comm et
   if [ -n "$raw" ]; then
@@ -274,12 +256,7 @@ while [ "$i" -lt "${#projects[@]}" ]; do
       # belong to a still-running concurrent agent in this same worktree, so
       # it stays a note -- FLAGging it would make this guard red during every
       # parallel session, and red by default is furniture. Dirt that predates
-      # this session's own start is different: whatever agent left it had
-      # already exited before this run even began, so nothing is left to
-      # adopt or clean it (#150; CLAUDE.md subagent rule, 2026-07-25 incident
-      # -- "a dirty tree at exit is a failed run, not a handoff"). Before this
-      # split, both cases printed the identical unconditional note, so a
-      # genuinely abandoned worktree read exactly like one mid-run.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
       wdirty_all="$(git -C "$w" status --porcelain 2>/dev/null)"
       if [ -n "$wdirty_all" ]; then
         wdcount="$(printf '%s\n' "$wdirty_all" | grep -c .)"
@@ -351,23 +328,7 @@ EOF
   # HEAD alone until 2026-08-01 and scheduler carried three host-only `paced/*`
   # branches through a whole session unmentioned. A HOST-ONLY BRANCH IS A
   # BLOCKER (Zach, 2026-08-01), tested against the remote REF and never the
-  # tracking config. SCOPE (2026-08-05, Zach; senechal evidence): these rules
-  # assert a negative over every ref in refs/heads/, wider than the run being
-  # gated, and two consequences were seen for real -- a CONCURRENT worktree's
-  # branch flagged (implied remedy: publish another agent's in-flight work), and
-  # a stale pointer called lost work when its tip was already on a remote.
-  # Neither goes silent; both just do not FLAG.
-  #
-  # ATTRIBUTION, COUNTED NOT ENUMERATED (#106). `git worktree list --porcelain`
-  # is the only mechanical answer to "whose branch is this", and it already
-  # suppressed the FLAG -- what it did not do was stay quiet: 22 worktrees gave
-  # 20 `skip` lines of ~180 characters in a 99-line report whose only real
-  # finding was one line. So: ONE counted line that still names them. Two
-  # halves of #106's shape are DECLINED, both because #99 landed after it was
-  # filed -- (a) not a BLIND, since #99 made every readable worktree READ
-  # above, unpushed commits and all, which IS this loop's question (A8, G3);
-  # (b) the FLAG is not narrowed to the current worktree's HEAD, because a
-  # branch checked out NOWHERE is attributable to nobody (E3/F2/I4).
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   wt_owner="$(git -C "$repo" worktree list --porcelain 2>/dev/null \
         | awk -v m="$repo" '
             /^worktree /{p=substr($0,10)}
@@ -385,25 +346,7 @@ EOF
   # THE NUMBERS. This section reported 12 [host-only-branch] FLAGs against the
   # realisateur checkout -- "unmerged work at risk" -- and all 12 were PRs
   # squash-merged with their upstream branch deleted: zero true positives. It
-  # was wrong in both directions, too, exempting 13 more by coincidence rather
-  # than by knowing (#99 carries the full reconciliation).
-  # THE CAUSE IS THAT SQUASH REWRITES: GitHub lands the content
-  # under a DIFFERENT sha and deletes the branch, so `on_a_remote` is correctly
-  # answered NO for work that landed. THE ANSWERABLE QUESTION is "is this
-  # branch's CONTENT already on the default branch?" -- reconstruct what the
-  # squash produced (a commit whose tree is the tip's, parented on the merge
-  # base) and ask `git cherry` for a patch-identical one.
-  #
-  # OFFLINE ON PURPOSE: `gh pr list --head` would answer from the authority and
-  # was rejected as the PRIMARY test, because a guard that hard-requires the
-  # network goes blind on a plane, in a container and on the deploy-key
-  # accounts, and one that then FLAGs everything is the same noise by another
-  # route. It identifies all 12 offline; a branch merged since the last fetch
-  # still FLAGs, the honest answer for a clone that has not looked.
-  # IT WRITES ONE UNREFERENCED OBJECT per candidate branch -- `git commit-tree`
-  # makes a loose commit no ref points at, which `git gc` prunes -- and
-  # supplies its own identity, because a CI runner has none and commit-tree
-  # would fail with "empty ident name" exactly where CI runs.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   default_remote="$(git -C "$repo" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null)"
   if [ -z "$default_remote" ]; then
     for c in origin/main origin/master; do

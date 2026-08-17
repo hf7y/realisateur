@@ -5,8 +5,7 @@
 # GUARD-TEST: none -- it carries its own --self-test with fixtures, which is not a suite CI globs; closing this is the next repaint due
 # GATE: strict --target $TREE
 #
-# Offline-first (zero AI), writes nothing, exits 0 unless --strict.
-#
+# TRAPS (the rest of this header is in the vault):
 # WHAT IS MISSING THAT THIS SUPPLIES
 # ----------------------------------
 # Every existing survey here answers "what is the state of the projects?".
@@ -20,84 +19,8 @@
 # output symbols. That is the entire thesis of this script, and it is why
 # it audits MECHANISMS rather than projects.
 #
-# The cost of getting this wrong is asymmetric in the expensive direction
-# (BUILD-DISCIPLINE pattern 14): these tools fail toward alarm, and alarm is
-# routed to the scarcest organ in the system, which is Zach's attention.
-#
-# CHECKS -- each names the domain it read, and reports BLIND when it could
-# not read that domain rather than reporting clean.
-#
-#   [mute-null]         a script scans a domain and has no branch for the
-#                       domain being empty -- so "found nothing" and "the
-#                       glob did not match" print identically (nothing).
-#   [self-witness]      a scheduled entry sends all output to /dev/null, so
-#                       the only evidence it ran is what it writes about
-#                       itself. Pattern 9 moved down a level: the actor is
-#                       sole source of truth for whether it RAN.
-#   [home-scoped]       a sensor resolves job state under $HOME while the
-#                       ecosystem dispatches from more than one account, so
-#                       it silently reports on half the ecosystem as if it
-#                       were the whole. Found live 2026-07-28.
-#   [stderr-silenced]   a privileged/probing command with 2>/dev/null --
-#                       turns "permission denied" into "clean".
-#   [unwired]           an executable mechanism named by no crontab, no
-#                       command file, no systemd unit and no other script.
-#                       Built, never dispatched.
-#   [prose-only-rule]   a doc asserts a checkable rule for which no
-#                       executable check exists -- an unretired layer
-#                       waiting to happen.
-#
-# RETIRED 2026-08-07: [retirement-open]. It asked whether a `RETIRES:` claim's
-# literal still occurred anywhere, which CANNOT REACH ZERO BY CONSTRUCTION --
-# declaring a retirement writes the literal into a file, so the check counted
-# its own paperwork as proof the retirement had not happened. 52 of the 74
-# FLAGs on the estate the morning it was retired were this, all false, all the
-# same four claims re-emitted once per project. Its self-test passed
-# throughout, because the fixture held one declaration in an otherwise empty
-# repository -- a shape production never has.
-#
-# WHAT IS GIVEN UP: nothing was being checked. "Names what it retires" is now
-# carried by the repository idiom (a change that retires something names it)
-# and, for the guard estate specifically, by bin/tests/guard-estate.test.sh,
-# which fails when a guard is deleted while something still names it as its
-# runner or its test.
-#
 # Usage:
-#   silence-audit.sh                  audit the whole ecosystem
-#   silence-audit.sh <project>        audit one registered project
-#   silence-audit.sh --target <dir>   audit THAT TREE, ignoring the registry
-#   silence-audit.sh --strict         exit 1 if any FLAG (for hooks/CI)
-#   silence-audit.sh --self-test      run the built-in fixtures, exit 1 on fail
-#
-# --target EXISTS BECAUSE THE DEFAULT CANNOT ANSWER "IS MY BRANCH CLEAN?".
-# Without it every mode above resolves its subjects through the REGISTRY --
-# scheduler's schedule/*.conf, whose PROJECT_REPO_PATH is each project's live
-# shared checkout. So `silence-audit --strict`, run from a branch checkout by
-# an author asking whether their change is clean, read ~/Documents/Projects/*
-# and never opened the tree it was invoked in: it answered a question nobody
-# asked, in the voice of the one they did. Measured 2026-08-10 from a mktemp
-# tree: every path in the report was under the live checkout, and three
-# consecutive runs disagreed with each other because other agents were
-# writing to those checkouts while it read them. That is guard-estate check F
-# (a guard must honour the tree it is pointed at), and CLAUDE.md has required
-# `silence-audit --strict` clean since the day it was written -- against a
-# tree the author may not have touched. hf7y/realisateur#107.
-#
-# The registry default is KEPT, because the estate survey is what this script
-# is for and what bin/hygiene-lint.sh section 12 dispatches. The scope knob is
-# a flag, and the `# GATE:` line above declares it, which is exactly the
-# convention bin/tests/guard-estate.test.sh reads for guards whose scope is
-# not cwd (bin/ownership-audit.sh: `# GATE: strict --repo $TREE`).
-#
-# Exit codes: 0 clean-or-advisory, 1 --strict with FLAGs or self-test fail,
-#             3 BLIND (parsed zero mechanisms -- see below).
-#
-# BLIND is non-negotiable and is the whole point. A checker that scans an
-# empty domain and prints nothing reads exactly like a checker that scanned
-# everything and found everything healthy. If this script parses zero
-# mechanisms it exits 3 and says so, because that is the same defect it
-# exists to find, and a tool that commits its own named failure mode is
-# worth nothing.
+
 set -uo pipefail
 
 PROJECTS_ROOT="${PROJECTS_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}}"
@@ -119,11 +42,7 @@ SELFTEST=0   # deliberately NOT read from the environment. It used to be, and
              # until the harness killed them -- a mute hang, found 2026-07-28
              # while building this. An env-readable mode flag is the same
              # class of defect this script audits: a state the caller cannot
-             # see from the outside.
-# A LOOP, not a `case "${1:-}"`. The single-argument form could not express
-# `--strict --target <dir>` -- it read argument one and dropped the rest in
-# silence, so the gating mode and the scope knob were mutually exclusive and
-# nothing said so.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 while [ $# -gt 0 ]; do
   case "$1" in
     --strict)    STRICT=1 ;;
@@ -211,17 +130,7 @@ project_repos() {
   # in its own tree rather than in a row somebody has to remember to add.
   #
   # This used to source scheduler's schedule/*.conf for PROJECT_REPO_PATH,
-  # which forced a scheduler CHECKOUT onto every host that ran this guard --
-  # cut-verb-build.sh names that same coupling in its own header as "the
-  # single data dependency that still forces a scheduler clone onto hosts that
-  # otherwise need none". On mandark there was no such clone, so this parsed
-  # zero projects and exited BLIND on every run: a close-out row in ~19
-  # CLAUDE.md files that could not be satisfied on the machine it was run from.
-  # Cloning scheduler to satisfy it would be a shim; reading the marker is the
-  # registry doing its job.
-  #
-  # Local trees only, no network: this guard reads mechanisms out of trees it
-  # can open, so a project it cannot read is not one it could audit anyway.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   for tree in "$PROJECTS_ROOT"/*; do
     [ -d "$tree" ] || continue
     name="$(basename "$tree")"
@@ -231,10 +140,7 @@ project_repos() {
       # silently treating it as one is how this guard would narrow its own
       # domain without saying so. wtul carries .agent-project on its default
       # branch and a local clone here did not -- a stale clone, not a
-      # declaration. So a git tree that does not declare itself is NAMED on
-      # stderr rather than skipped in silence.
-      # project_repos runs twice (once to count, once to iterate), so the
-      # notice is deduped rather than printed twice per tree.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
       if [ -d "$tree/.git" ] && ! grep -qxF "$name" "$UNDECLARED_SEEN" 2>/dev/null; then
         echo "$name" >>"$UNDECLARED_SEEN"
         printf 'undeclared: %s (no %s -- stale clone, or not a project)\n' \
@@ -275,14 +181,7 @@ check_mute_null() {
       # its match and exits while echo is still writing -- so the WRITER's
       # SIGPIPE death, not the reader's verdict, became the answer. Measured
       # 2026-08-11 on byte-identical input: five consecutive evaluations of
-      # these two lines over the same three unmodified scripts returned 0 and
-      # 141 at random, and the whole audit's FLAG count flapped 13/14/16
-      # between runs seconds apart. Both directions were wrong -- a 141 on the
-      # first line skipped a scanner silently, a 141 on the second FLAGGED a
-      # script that does have an empty-domain branch. A guard whose verdict is
-      # a coin flip reports "nothing there" for "the pipe closed early", which
-      # is this script's own thesis, committed by this script.
-      # does it scan a domain?
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
       grep -qE 'mapfile -t [A-Za-z_]+ < <\(|for [A-Za-z_]+ in .*\*|for [A-Za-z_]+ in \$\(' <<<"$body" || continue
       # does it have any empty-domain signal at all?
       grep -qiE 'BLIND|NOT[- ]PROBEABLE|no .* found|nothing to |none found|-eq 0 \]|\[ -z "\$' <<<"$body" && continue
@@ -366,29 +265,7 @@ check_unwired() {
   #
   # "Anywhere in the repo" was "$repo/bin" until 2026-08-11, which left
   # tests/ outside the domain -- so a script whose only caller is its own
-  # witness read as "named by no crontab, doc, conf, unit or sibling script"
-  # while tests/run-all.sh globbed that witness and ran it every pass. Live
-  # hit: hf7y/scheduler#85's bin/roster-target.sh, named on line 2 of
-  # tests/roster-target-witness.sh, flagged [unwired] anyway. That is the
-  # witness-backed pattern this estate keeps asking for, being told it is the
-  # broken one -- and the scripts that escaped did so by being mentioned in a
-  # README table, so the check was measuring a documentation habit.
-  #
-  # Widened rather than given a fifth grep for tests/ specifically (the two
-  # options hf7y/realisateur#138 offers). One domain is cheaper to read and
-  # picks up examples/ and hooks/ for free; the cost is that a mention in a
-  # script that never runs now counts as wiring. That cost is already paid --
-  # scheduler's bin/check-witness-lint.sh header is explicit that grep proves
-  # a check is MENTIONED, not that it RUNS, which is why it reads runtime
-  # witnesses instead of doing static analysis. So the distinction this grep
-  # would have to make is one the estate has already ruled statically
-  # undecidable, and the expensive direction of the error is the false alarm:
-  # these tools fail toward alarm, and alarm is routed to Zach's attention.
-  #
-  # .git is excluded for speed. worktrees/ is excluded because a worktree is a
-  # stale COPY of this repo, not a caller of it: counting it would let a
-  # deleted caller keep a dead script looking wired from nine directories at
-  # once (scheduler carries 9; the estate carries 21).
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   local name repo sh base crontab_blob
   crontab_blob="$(read_crontabs)"
   while IFS=$'\t' read -r name repo; do
@@ -495,10 +372,7 @@ EOF
   # This case replaces the old "conf with a literal $HOME" regression: that
   # bug existed because a conf was SCRAPED for PROJECT_REPO_PATH and handed
   # back the five characters `$HOME`, so every project resolved to a directory
-  # that did not exist and the guard reported BLIND on every host, forever.
-  # Reading `.agent-project` in a tree cannot reproduce it -- the tree is the
-  # path. What CAN still go wrong is the opposite: counting a directory that
-  # never declared itself. Assert both halves.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   mkdir -p "$tmp/reg2/declared/bin" "$tmp/reg2/undeclared/bin"
   : > "$tmp/reg2/declared/.agent-project"
   printf '#!/usr/bin/env bash\nls /etc >/dev/null\n' >"$tmp/reg2/undeclared/bin/x.sh"
@@ -570,11 +444,7 @@ if [ "$SELFTEST" = 1 ]; then self_test; exit $?; fi
 # The noisy self-trigger. BUILD-DISCIPLINE pattern 2 (build-but-don't-wire)
 # is the failure this project regenerates most often, and an auditor that
 # sits unwired while reporting on everyone else's wiring is the joke writing
-# itself. So this script asks the [unwired] question about ITSELF first, on
-# every single run, and refuses to be quiet about the answer.
-#
-# It cannot be satisfied by a doc mentioning it: the test is whether some
-# DISPATCHER names it -- a crontab line, a systemd unit, or hygiene-lint.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 self_wiring_banner() {
   local me hits=0
   me="$(basename "${BASH_SOURCE[0]}")"

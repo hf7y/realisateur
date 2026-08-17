@@ -2,35 +2,16 @@
 # coin.sh -- add ONE verb to a bashified branch that already carries verbs.
 #
 # RUNNER: bin/tests/bashify-coin.test.sh
-#   It lives under bin/tests/ and not bashify/test/ because .github/workflows/
-#   tests.yml globs bin/tests/*.sh only -- bashify/test/verify-*.sh is run by
-#   no workflow at all (hf7y/realisateur#157). A suite for the estate's only
-#   new-verb door, filed where nothing executes it, would be the same failure
-#   tests/run-all.sh was written to end.
 #
-# Written 2026-08-01 at its own call site. The doctrine is now ONE NOUN, MANY
-# VERBS (RESEARCH-VERB-ECOSYSTEM-20260730.md): a project is a noun, a noun does
-# several things, and forcing each noun to expose exactly one verb was the
-# bashify pass's shortcut rather than a decision.
-#
+# TRAPS (the rest of this header is in the vault):
 # `emit` never learned that. It opens with `git rm -r .` and rebuilds the whole
 # branch from the default branch's tooling, so running it against a branch that
 # has since grown verbs by hand DESTROYS them. That is not a bug in emit -- it
 # is emit doing exactly what a bootstrap does. What was missing is the second
 # act: adding one verb without touching the ones already there.
 #
-# The division of labour:
-#   emit  -- bootstrap a bashified branch that does not exist yet
-#   coin  -- add one verb to a bashified branch that does
-#
-# It deliberately does NOT write a man page. `bashify page` does that, against
-# a live command, which is the page-first method this family documents: the
-# verb is coined, the page is written against it, the page is checked. `fauche`
-# was made in exactly that order (gardien e15ce01, then 544b83a).
-#
 # usage: coin.sh <project> <verb> <summary>
 # exit:  0 coined   2 usage   4 gap   5 broken   6 blind
-#        7 refused -- the branch is not in a state where coining is the act
 
 set -uo pipefail
 
@@ -40,10 +21,7 @@ ROOT="$(cd "$SELF/.." && pwd)"                                            # real
 # with no override, so `coin` could not see the registry from ANY other
 # account -- including the uid 3000-3099 accounts the monkey dispatch runs
 # under, where $HOME is /home/<project>. It failed as `gap` (exit 4, "not
-# registered") rather than as blind, so the account looked like it had no
-# projects instead of no path. Same resolution order as milestone-audit.sh,
-# steward-survey.sh, precipitation-scan.sh and notify-senechal.sh; caught by
-# bin/tests/verb-set.test.sh once it ran in CI rather than only on zach's box.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SCHED="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 # ONE NAME FOR THE REGISTRY DIRECTORY, not one per file. bin/install-verbs.sh
 # reads `SCHEDULE_DIR` (defaulting to the same place), and coin did not, so a
@@ -79,14 +57,7 @@ conf="$SCHEDULE_DIR/$PROJ.conf"
 # characters `$HOME/Documents/...`: grep does not expand shell variables and
 # nothing downstream did either. So the very next check, `[ -d "$REPO/.git" ]`,
 # was false for every project on every host, and coin answered
-#
-#     coin: BLIND: scheduler has no git repository at $HOME/Documents/Projects/scheduler
-#
-# A path with a literal `$HOME` in it is not a path anyone typed. `bashify
-# coin` is the ONLY door for a new verb here, so for as long as this line stood
-# no new verb could be cut, from any host, by anyone -- which is why bin/consigne
-# merged in #121 and reached no host's PATH (#162 asks for exactly this command).
-# ONE reader, shared with bin/'s scripts: bin/lib/conf.sh. hf7y/realisateur#143.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 . "$ROOT/bin/lib/conf.sh"
 REPO="${BASHIFY_REPO:-$(conf_repo_path "$conf" || true)}"
 [ -n "$REPO" ] || blind "$PROJ names no PROJECT_REPO_PATH and BASHIFY_REPO is unset"
@@ -104,12 +75,7 @@ fi
 # so on a host where nothing is installed it finds nothing and every name looks
 # free. That is not hypothetical: the 2026-07-30 pass installed nothing on
 # PATH, `command -v range` came back empty twice, and `range` was assigned to
-# both bibliothecaire and secretaire with unrelated meanings. Only one can own
-# the name; secretaire's won, and bibliothecaire's verb is unreachable. The
-# report for that pass says "all verbs confirmed unclaimed on PATH before
-# assignment" -- true, and still a collision, because PATH was the wrong
-# register to confirm against.
-# shellcheck source=../../bin/lib/verb-set.sh
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 if [ -r "$SELF/../bin/lib/verb-set.sh" ]; then
   . "$SELF/../bin/lib/verb-set.sh"
   _claimants="$(verb_set_claimants "$VERB" | grep -vx "$PROJ" || true)"
@@ -134,24 +100,7 @@ git -C "$REPO" rev-parse --verify -q bashified >/dev/null 2>&1 \
 # refs/heads/bashified, and it is the second reason coin was dead estate-wide
 # on 2026-08-11: PR #156 removed all 30 worktrees that morning and added
 # bin/no-worktree-lint.sh so a thirty-first cannot appear. Nothing recreates
-# them, so the awk returned empty and coin exited BLIND for every project on
-# every host -- with a message that was true, permanent and unactionable.
-#
-# A CLONE, exactly as `bashify emit` was converted on the same day (see
-# bashify.sh's "WHY A CLONE AND NOT A WORKTREE"). It keeps the property the
-# worktree was chosen for -- the human's working tree and index untouched even
-# mid-session -- and drops the one that caused the growth: it registers nothing
-# in $REPO.
-#
-# THE PUBLISH BELOW IS NOT NEW BEHAVIOUR, it is the same behaviour ported.
-# Under a worktree the coin landed in a working copy sharing $REPO's ref store,
-# so it was already reachable from $REPO. A clone has its own ref store, so the
-# same reachability must be an explicit push -- to $REPO, the LOCAL repository,
-# never to a remote. `git show bashified:bin/<verb>` reads it and
-# `git update-ref` undoes it, so "read it before it becomes history" survives
-# the change. Leaving it uncommitted in a temp clone instead would be strictly
-# worse than the worktree it replaces: a change nobody can find is not a change
-# anyone can review.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 WORK="${BASHIFY_WORK:-${TMPDIR:-/tmp}/bashify-coin}"
 WT="$WORK/$PROJ"
 rm -rf "$WT"; mkdir -p "$WORK"
@@ -168,15 +117,7 @@ git clone -q --branch bashified --single-branch "$REPO" "$WT" 2>/dev/null \
 # coin landing on top of uncommitted work makes the two indistinguishable in
 # the commit. That was a real hazard when $WT was a long-lived worktree
 # somebody might have been editing. $WT is now a clone made twenty lines ago
-# and discarded at the end, so it is pristine by construction and the check
-# could never fire again.
-#
-# Deleted rather than kept: "a check nobody expects to be green is a document
-# with an exit code" (bin/thermostat-wiring.sh), and the inverse is as true --
-# a check nobody expects to be RED is a comment pretending to be a guard, and
-# the next reader has to disprove it before trusting anything near it. The
-# hazard is gone because the shape changed. That is worth a paragraph, not a
-# branch.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 
 # ---- the runtime the coined verb will source -------------------------------
 # It sources the BRANCH'S OWN lib/verb.sh, not the skeleton's. The runtimes
@@ -202,26 +143,7 @@ cat <<EOF
 #
 # KIND: verb
 # A coined name is a thing you tell the machine to do, which is this estate's
-# own criterion (bin/verb-kind-lint.sh: "a VERB is a thing you tell the machine
-# to do, a PRODUCT is a thing with a name of its own"). If what gets built here
-# turns out to be a product -- its own name, its own cadence, like vim-arcade --
-# change this to \`# KIND: product\` and keep it out of the workchain manifest.
-#
-# THIS LINE IS LOAD-BEARING, not decoration. bin/cut-verb-build.sh runs
-# verb-kind-lint against the assembled build and dies the whole cut on any
-# undeclared command, and bin/verb-kind-lint.ratchet grandfathers exactly the
-# 33 commands present on 2026-08-11 under "THIS IS THE LAST FREE RE-SEED". So a
-# verb coined without it does not fail its own project -- it fails that night's
-# build for all twelve. The template emits it so nobody has to remember.
-#
-# Coined $(date +%Y-%m-%d) by \`bashify coin\` onto a branch that already carried
-# verbs. It costs nothing to run and reaches no paid service.
-#
-# This is a COINED verb, not a discovered one: it wraps no legacy script,
-# because it was named before an implementation existed. Every subcommand
-# below therefore reports GAP (exit 4) until it is built at its own call
-# site. That is the point -- a subcommand that exits 0 having done nothing is
-# the worst failure available, and a GAP names what is missing on stderr.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 
 SELF="\$(cd "\$(dirname "\$(readlink -f "\${BASH_SOURCE[0]}")")/.." && pwd)"
 

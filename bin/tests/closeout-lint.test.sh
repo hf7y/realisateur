@@ -1,28 +1,14 @@
 #!/usr/bin/env bash
 #
-# closeout-lint.test.sh -- witness for bin/closeout-lint.sh. Offline, zero AI:
-# a throwaway registry (schedule/*.conf), real bare remotes and clones, a
-# scratch BLOCKERS.md and stub `gh` binaries, driving every check in BOTH
-# directions -- it must FLAG the bad state AND stay quiet on the good one. The
-# case roster is the banners and assertion names below, which print on every
-# run; a hand-maintained list restating them is the duplication tests.yml's
-# per-suite ledger was deleted for, and had gone stale describing #139's check.
-#
+# TRAPS (the rest of this header is in the vault):
 # A STALE FIXTURE READS AS A BROKEN SCRIPT: this suite was red on its first CI
 # run (46/3, 2026-08-07) and the script was right both times -- two fixtures
 # had stopped building the states A4 and E3 name. Fixed by changing FIXTURES,
 # never an assertion. No case rests on absence alone either: every `hasnt` is
 # paired with a positive assertion on the same fixture.
 #
-# Mutation-verified, each against the assertion that catches it: remove the
-# BLIND gate -> E4; ignore --allow-blind -> E5; restore the age gate under
-# --repo -> E3; stop skipping B/C -> E2; remove host-only-branch -> A4; reword
-# the unpushed count -> A3; remove worktree detection -> A8/A9; exempt dirt
-# unconditionally -> H2; call an unknown session start clean -> H3; FLAG only
-# the current worktree's branches -> I4; let B FLAG unreached -> B3/B4/B7; drop the
-# worktree-dirty mtime split -> G2b/G2c.
-#
 # Usage: bin/tests/closeout-lint.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

@@ -11,16 +11,7 @@
 # GUARD-TEST: none -- no suite; it ranks signals and asserts nothing, which is why it is a readout and not a gate
 # GATE: default
 #
-# WHY THIS EXISTS
-# ---------------
-# The retired ecosystem-survey.sh ranked the backlog OLDEST-FIRST -- one
-# signal, and by UNIVERSE.md's own account the weakest of the three: "re-arrival in the same
-# shape is a stronger 'ready to build' signal than age (oldest-first),
-# enthusiasm (newest-first), or any self-report of certainty."
-#
-# This script senses the other two signals named in
-# realisateur/PRECIPITATION.md:
-#
+# TRAPS (the rest of this header is in the vault):
 #   RE-ARRIVAL  -- the SAME idea returning to the SAME project. Repetition is
 #                  only a promotion signal when the shape is STABLE; an idea
 #                  that returns in a different shape each time is still
@@ -28,33 +19,7 @@
 #                  4.6). This script cannot judge shape stability -- it
 #                  surfaces the candidate pair/chain and the terms they share
 #                  so a session can make that call in one glance.
-#
-#   CLUSTER     -- DIFFERENT ideas, across DIFFERENT projects, piling onto one
-#                  interface. Per UNIVERSE.md's Ashby reading, that is the
-#                  signature of an interface whose disturbance variety exceeds
-#                  its regulator variety. The correct response to a cluster is
-#                  NOT to promote its members -- it is to name the missing
-#                  regulator they are all leaking around, as a new entry that
-#                  subsumes them. (This is how the multi-writer FOCUS-file
-#                  regulator was found by hand: three friction incidents, one
-#                  unnamed cause.)
-#
-# Like every sibling survey: findings are SIGNALS, not verdicts. This script
-# writes NOTHING and reorders NOTHING. A silent reorder is indistinguishable
-# from forgetting the older item existed (/ideate 4.5) -- so promotion stays a
-# stated human/session decision, stamped per PRECIPITATION.md.
-#
-# THE THREE REPORTS
-#   A. Stamp ledger      -- confirmed, durable signals already written into
-#                           the files as `(re-arrival: d1, d2)` / `[iface: x]`.
-#                           High precision, zero inference. Read this first.
-#   B. Re-arrival cands  -- inferred same-project repeats. Noisy by design.
-#   C. Cluster cands     -- inferred cross-project interface pressure.
-#
-# Reports B and C are inference over prose; A is fact. As sessions confirm
-# candidates and stamp them, signal migrates from B/C into A -- precision
-# accretes on the entries that actually mattered, and nothing is demanded at
-# intake time. That is the intended direction of travel.
+
 set -uo pipefail
 
 CLI_NAME='precipitation-scan.sh'
@@ -96,23 +61,20 @@ INCLUDE_LOGS="${INCLUDE_LOGS:-0}"
 # a large fraction of the corpus because it touches everything -- it is a HUB,
 # not a cluster member, and left in it joins every cluster to every other.
 # Same information-theoretic move as the ubiquity cutoff, one level up.
-# 0.10 tuned against the 2026-07-26 corpus (212 entries): generic
-# infra-vocabulary clusters ("daily setup install reachable") drop out, the
-# real multi-writer FOCUS-file cluster survives. 0.08 is the sharpest/
-# strictest setting; 0.20 lets the omnibus session records back in.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 HUBFRAC="${HUBFRAC:-0.10}"
 MAX_CLUSTERS="${MAX_CLUSTERS:-6}"
 
 echo "precipitation-scan -- $(date '+%Y-%m-%d %H:%M')"
 echo "(offline-first: no claude calls -- findings are SIGNALS, not verdicts."
-echo " Doctrine: realisateur/PRECIPITATION.md. Promotion is always STATED.)"
+echo " Doctrine: vault:realisateur/PRECIPITATION.md. Promotion is always STATED.)"
 echo "(tunables: MIN_SCORE=$MIN_SCORE MIN_SHARED=$MIN_SHARED UBIQUITY=$UBIQUITY MIN_TERMLEN=$MIN_TERMLEN)"
 
 # ---------------------------------------------------------------- report A
 echo
 echo "############################################################"
 echo "== A. STAMP LEDGER (confirmed signals, no inference) =="
-echo "(written by prior sessions per PRECIPITATION.md; these are FACTS about"
+echo "(written by prior sessions per vault:realisateur/PRECIPITATION.md; these are FACTS about"
 echo " what was already judged, not guesses. Promote from here first.)"
 echo
 
@@ -189,11 +151,7 @@ awk -v min_score="$MIN_SCORE" -v min_shared="$MIN_SHARED" \
   # content -- an injected HTML-comment footer (inject-suggestions.sh appends
   # one to every focus file) or a new `## ` section. Without this the LAST
   # entry in each file absorbs that footer, and every file`s last entry then
-  # shares its vocabulary: on 2026-07-26 that manufactured a 5-project
-  # "cluster" whose members were a tmux title tweak and a ROADMAP migration.
-  # stop ACCUMULATING here, but keep `pending` set so the entry itself is
-  # still recorded -- clearing `pending` too would silently DROP every
-  # footer-terminated entry (30 of 212 on first attempt).
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   /^[ \t]*<!--/ || /^## / { started = 0 }
   started { cur_text = cur_text " " $0 }
   END {
@@ -273,7 +231,7 @@ awk -v min_score="$MIN_SCORE" -v min_shared="$MIN_SHARED" \
     printf "\n############################################################\n"
     printf "== C. INTERFACE-CLUSTER CANDIDATES (different ideas, one interface) ==\n"
     printf "(INFERRED. Distinct asks across DIFFERENT projects converging on one\n"
-    printf " place. Per UNIVERSE.md/Ashby: a cluster marks an interface whose\n"
+    printf " place. Per vault:realisateur/UNIVERSE.md/Ashby: a cluster marks an interface whose\n"
     printf " disturbance variety exceeds its regulator variety. Do NOT promote\n"
     printf " the members -- NAME THE MISSING REGULATOR they are leaking around,\n"
     printf " file it as one entry, and tag the members `[iface: <name>]` so the\n"
@@ -390,4 +348,4 @@ echo " never as a verdict. Confirming one means WRITING it down: a"
 echo " \`(re-arrival: <dates>)\` stamp or an \`[iface: <name>]\` tag, plus the"
 echo " stated promotion (what got passed over, and why) in the project's own"
 echo " FOCUS.md. Unstamped, the same candidate is re-inferred from scratch"
-echo " next run and the judgment is lost -- see PRECIPITATION.md.)"
+echo " next run and the judgment is lost -- see vault:realisateur/PRECIPITATION.md.)"

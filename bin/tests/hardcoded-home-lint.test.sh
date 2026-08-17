@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# hardcoded-home-lint.test.sh -- the guard, and the shape it used to miss.
-#
+# TRAPS (the rest of this header is in the vault):
 # WHY THIS FILE EXISTS. bin/hardcoded-home-lint.sh was written on 2026-08-07
 # (#91) to refuse an absolute path into a named user's home, after
 # `SCHED="/home/zach/Documents/Projects/scheduler"` in bashify/lib/coin.sh was
@@ -10,19 +9,8 @@
 # .github/workflows/ ever executed it, so its only witness was a green line
 # printed by hand, once.
 #
-# It was wrong. It selected `git ls-files -- '*.sh' 'bin/*'`, which does not
-# match an extensionless executable outside the repo-root bin/ --  and
-# `bashify/bin/bashify`, the front door of the very family the guard was
-# written about, carried the SAME two hardcoded paths the whole time. The lint
-# printed "72 tracked files, no hardcoded home in code" over a set that
-# excluded the defect. That is the more expensive failure mode of the two: a
-# guard reporting clean retires the worry that would otherwise find the bug.
-#
-# THE LOAD-BEARING ASSERTION IS H5: an extensionless executable in a NESTED
-# bin/ is scanned. Everything else is scaffolding. A version of this file
-# without H5 would pass against the selection that shipped the blind spot.
-#
 # usage: ./bin/tests/hardcoded-home-lint.test.sh
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

@@ -3,6 +3,7 @@
 # this ecosystem, and on 2026-08-11 it was dead on every project from every
 # host, for two independent reasons at once.
 #
+# TRAPS (the rest of this header is in the vault):
 # 1. THE PATH WAS NEVER EXPANDED. coin read the registry with
 #        grep -oP '^PROJECT_REPO_PATH=\K.*' | tr -d '"'
 #    which returns the LITERAL characters `$HOME/Documents/...`. The next
@@ -13,19 +14,7 @@
 #    bashify/. bin/tests/conf.test.sh's section C would have caught it, except
 #    its population was `bin/*.sh` only -- a ratchet that stopped at a
 #    directory boundary. That glob now includes bashify/.
-#
-# 2. IT REQUIRED A WORKTREE THAT NO LONGER EXISTS. coin located the bashified
-#    branch by scanning `git worktree list` for it. PR #156 removed all 30
-#    worktrees that morning and added bin/no-worktree-lint.sh so a
-#    thirty-first cannot appear, so the scan returned empty and coin exited
-#    BLIND -- with a message that was true, permanent, and unactionable.
-#
-# WHAT IT COST, so the test is not abstract: bin/consigne was written,
-# reviewed and merged in #121, and reached NO host's PATH, because graduating
-# it needs `bashify coin` (hf7y/realisateur#162 says so in as many words).
-# A verb that cannot be coined is a verb that cannot ship, and this estate's
-# entire distribution story runs through that one command.
-#
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

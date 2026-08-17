@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 #
-# Contract test for cut-verb-build.sh -- the DERIVING half of the pair.
-# (bin/tests/verb-build-test.sh covers install-verb-build.sh, the consuming
-# half. They share no fixtures on purpose: the two halves must be able to
-# disagree, and a fixture in common would hide it.)
-#
+# TRAPS (the rest of this header is in the vault):
 # Hermetic. No network, no GitHub, no `gh`:
 #   * a fake `gh` earlier on PATH answers `auth status`, `repo list` and the
 #     tree API out of local fixture repositories;
@@ -12,36 +8,7 @@
 #     so ls-remote and fetch reach those same fixtures.
 # The suite therefore cannot pass because the network happened to be up,
 # which is the failure mode the script under test exists to refuse.
-#
-# THE CLAIMS WORTH FAILING OVER
-# Each of these was either a live defect found on 2026-08-04 or a promise
-# VERB-DISTRIBUTION.md makes to consumers:
-#
-#   * a project that STOPS declaring verbs leaves the build.   <- was broken
-#     Without this the meta-repo re-commits a retired project's verbs every
-#     night and archiving a repo -- the documented retirement mechanism --
-#     does nothing to the tree consumers install.
-#   * the shrink refusal fires in CI, where there is no ~/.local/share
-#     build root and the previous build is the meta-repo checkout itself.
-#                                                              <- was broken
-#   * assembling twice into one directory is idempotent.
-#   * a bashified branch that MOVED is re-assembled at the new sha.
-#   * --dry-run cannot produce an artifact, because its read is short by
-#     construction.
-#   * a verb name declared by two projects is still refused.
-#   * a HALF-declared name -- an executable bin/<n> with no man/<n>.1, or a
-#     man/<n>.1 with no executable bin/<n> -- is NAMED and REFUSES the cut.
-#                                                              <- was broken
-#     It was omitted from every build in silence, which is how ecosim's
-#     `ecosim-sensor` missed every build ever cut and surfaced weeks later,
-#     on another host, as a wrapper failing on a path that never existed.
-#   * the genuinely-not-a-verb case opts out by NAME in lib/not-a-verb.tsv,
-#     and every such decision -- exempted or unresolved -- is written into the
-#     MANIFEST, because the build is what travels to the accounts.
-#   * every command in the ASSEMBLED tree declares its channel, and a
-#     `# KIND: product` is refused a place in the workchain cut. That check
-#     is bin/verb-kind-lint.sh and it is asserted here because the failure
-#     mode is a correct lint nothing calls.
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -200,7 +167,7 @@ check "...and the tree is unchanged" \
 
 # --- 3. RETIREMENT: a project that stops declaring leaves the build ------
 # Archiving a repository is how a project says "I am no longer a
-# participant" (VERB-DISTRIBUTION.md section 5), and to `gh repo list
+# participant" (vault:realisateur/VERB-DISTRIBUTION.md section 5), and to `gh repo list
 # --no-archived` that is exactly this: the name stops coming back.
 printf 'alpha\nbeta\n' > "$TMP/repolist"
 cut --assemble "$OUT" --allow-shrink >/dev/null 2>"$TMP/e3"
@@ -386,17 +353,7 @@ check "...and every row is <project><TAB><name><TAB><why>" \
 # assembled. Asserted here rather than only in that lint's own suite,
 # because the failure being guarded against is not a broken lint -- it is a
 # correct lint nothing calls. guard-estate.test.sh check B exists for
-# exactly that, and six of the guards surveyed on 2026-08-07 were hand-run
-# only.
-#
-# The population is DISJOINT from sections 10-13 above and that is the whole
-# relationship between the two files. lib/not-a-verb.tsv exempts a HALF
-# declaration -- bin/<n> with no man/<n>.1 -- which by construction never
-# reaches the manifest. verb-kind-lint grades manifest rows, i.e. names that
-# carried BOTH halves. No name can be in both populations, so the channel
-# check reads no exemption file: there is nothing in one for it to find.
-#
-# 14a. A PRODUCT must not ride the workchain cut.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 mkrepo theta tv
 printf '#!/usr/bin/env bash\n# KIND: product\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "tv\\n"\n' \
     > "$FIX/theta.git/bin/tv"

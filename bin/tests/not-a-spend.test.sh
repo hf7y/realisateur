@@ -31,7 +31,7 @@ done < "$LEDGER"
 
 # --- can closure.sh see a real estate here? ------------------------------
 out="$(timeout 120 bash "$C" realisateur x 2>/dev/null)"
-if ! grep -qE 'bin/retired/hygiene-lint\.sh' <<<"$out"; then
+if ! grep -qE 'bin/closeout-lint\.sh' <<<"$out"; then
   echo "  SKIP: closure.sh cannot score realisateur here (no sibling checkouts /"
   echo "        no bashified branch). Cases 2,3,4,6 need a real estate; 1 and 5 ran."
 summary
@@ -39,13 +39,13 @@ summary
 fi
 
 # --- 2. a signed file's verdict changes ----------------------------------
-grep -qE 'COMMENT-ONLY.*bin/retired/hygiene-lint\.sh' <<<"$out" \
-  && ok "a signed lint is no longer ESSENTIAL" || bad "retired/hygiene-lint.sh did not clear"
+grep -qE 'COMMENT-ONLY.*bin/closeout-lint\.sh' <<<"$out" \
+  && ok "a signed lint is no longer ESSENTIAL" || bad "closeout-lint.sh did not clear"
 
 # --- 3. THE MEASUREMENT IS UNCHANGED -------------------------------------
 # The count must still be reported. An exemption that also hid the number
 # would leave a reader unable to see what they are trusting.
-grep -qE 'bin/retired/hygiene-lint\.sh' <<<"$out" && grep -qE 'self=1[0-9].*bin/retired/hygiene-lint\.sh' <<<"$out" \
+grep -qE 'bin/closeout-lint\.sh' <<<"$out" && grep -qE 'self=[0-9].*bin/closeout-lint\.sh' <<<"$out" \
   && ok "the raw score is still printed alongside the softened verdict" \
   || bad "the exemption hid the measurement, not just the verdict"
 
@@ -73,7 +73,7 @@ grep -q 'not_a_spend "$proj" "$rel"' "$C" \
 # grep matched -- which is how this case reported a broken exemption when the
 # exemption was fine and the test was not. Same trap as reading $? after a pipe.
 noledger="$(NOT_A_SPEND_TSV=/dev/null timeout 120 bash "$C" realisateur x 2>/dev/null)"
-grep -qE 'ESSENTIAL.*bin/retired/hygiene-lint\.sh' <<<"$noledger" \
+grep -qE 'ESSENTIAL.*bin/closeout-lint\.sh' <<<"$noledger" \
   && ok "with the ledger absent, the same file is ESSENTIAL again (not vacuous)" \
   || bad "the verdict does not depend on the ledger -- something else cleared it"
 

@@ -52,34 +52,14 @@ eq "A5  no PROJECT_REPO_PATH returns 1" "$?" "1"
 # This section exercised restamp-discipline.sh end to end against a fixture
 # ecosystem, including its "a pass that reached nothing exits nonzero" guard.
 # The script is gone: `discipline` prints the one file at the point of use
-# instead of stamping copies into 17 repos (BUILD-DISCIPLINE.md,
-# "## The baseline"). Its replacement's tests live in bin/tests/discipline.test.sh.
-#
-# The B4 guard is NOT lost -- it is the shape that mattered here and it is
-# carried over: discipline.test.sh asserts the command refuses to print an
-# empty or truncated baseline and exit 0.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 # --- C: the population ratchet -----------------------------------------------
 # WHY A RATCHET AND NOT A LIST. lib/conf.sh's header used to NAME the four
 # scripts still on the raw grep; by 2026-08-11 it was wrong in both directions
 # (two retired in b3fef3d, one fixed, three others never named). A list of who
 # has a defect decays as fast as the code moves. So the assertion is the
-# SHAPE, tree-wide. Coarse on purpose: hygiene-lint.sh and closeout-lint.sh
-# expand with their own open-coded `case` blocks and pass, because this tests
-# for the defect, not for one particular caller.
-#
-# THE POPULATION IS WHY THIS ONLY HALF-WORKED. Until 2026-08-11 the scan read
-# `bin/*.sh` and `bin/lib/*.sh` and nothing else, so it was green all the while
-# SIX readers in bashify/ carried the raw grep -- hf7y/realisateur#143, open
-# since 2026-08-09 and describing them exactly. One of the six was
-# bashify/lib/coin.sh, the ONLY door for a new verb in this ecosystem, which
-# meant no new verb could be cut from any host by anyone; `bin/consigne` merged
-# in #121 and reached no host's PATH for that reason (#162).
-#
-# A ratchet is only as good as its population, and a population that stops at a
-# directory boundary is a list wearing a ratchet's clothes. bashify/ is in the
-# glob now. Any future tree of scripts that reads the registry belongs here too
-# -- the cost of forgetting is not a red test, it is a green one.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 printf '\nC. no script in bin/ or bashify/ extracts PROJECT_REPO_PATH without expanding it\n'
 c_bad=""
 c_scanned=0
@@ -120,10 +100,7 @@ fi
 # D1 is the defect: until 2026-08-11 resolution returned nothing for every
 # directory on every host, so no marker was written and scheduler's
 # interactive-deferral guard read every repo as free. D3 is the half that
-# keeps it fixed -- a registry resolving to NOTHING must be reportable as "I
-# could not look", distinct from D2 ("not a registered project") and from
-# success. Hook paths still exit 0 (a SessionStart hook must not block a
-# session), which is why `resolve` exists to carry the honest code.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 printf '\nD. session-marker.sh resolves, and says so when it cannot\n'
 SM="$REPO/bin/session-marker.sh"
 D="$T/sm"; mkdir -p "$D/home/Documents/Projects/demo/sub" "$D/sched/schedule"

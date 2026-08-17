@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# repo-settings-provision.test.sh -- witness for bin/repo-settings-provision.sh.
-#
+# TRAPS (the rest of this header is in the vault):
 # Cases:
 #   A both settings already true            -> "ok", 0 drift
 #   B both settings false                   -> DRIFT, --strict exits 1
@@ -15,15 +14,8 @@
 #     that reads as "0 drifted, 0 BLIND, out of 0 project(s)" and looks like
 #     compliance -- exits 2 and says nothing was measured.
 #
-# ON F AND G TOGETHER, because the pair is the point. F's original assertion
-# ran bare against the whole fixture registry, which contains gone-proj, and
-# pinned exit 0 -- so it was pinning "reported a repo it could not read, and
-# graded that clean". bin/tests/guard-estate.test.sh case E1 is the authority
-# that says that is wrong, and it is what went red. F now runs against the
-# three READABLE projects, which is what it was always about (drift alone does
-# not gate without --strict); G asserts the half F was accidentally denying.
-#
 # Usage: bin/tests/repo-settings-provision.test.sh   (exit 0 = all pass)
+
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

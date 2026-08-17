@@ -2,36 +2,25 @@
 # pivot.sh -- install/uninstall the 2026-08-07 pivot. This file is the
 # argument. There is no companion document, on purpose.
 #
-# ---------------------------------------------------------------------------
-# THE ONE RULE THIS FILE ENFORCES ON ITSELF
-#
+# TRAPS (the rest of this header is in the vault):
 # A MOVE is admitted here only if it can state three things: two mechanisms it
 # RETIRES, one mechanism it ADDS, and how to put back exactly what it removed.
 # `install` refuses any MOVE that cannot. That refusal is the whole philosophy
 # in executable form, and it is checked at run time rather than promised in a
 # heading:
-#
 #   - A mechanism that cannot be removed is not a mechanism, it is a monument.
 #   - An addition that retires nothing is accumulation. This ecosystem
 #     accumulated 42 issues in one day and shipped one `git merge --ff-only`.
 #   - Prose describing a change is not the change. So the description IS the
 #     script, and if the script is wrong the description cannot be right.
-#
-# ---------------------------------------------------------------------------
-# WHY THE UNINSTALL PATH IS FIRST-CLASS
-#
 # On 2026-08-06, 26 pull requests merged and five of six dispatchers ran older
 # code for a day; one was frozen for eighteen hours because the engine wrote
 # into its own source tree and then refused to pull past its own writing. Every
 # individual piece was careful. Nothing owned the step after "merged".
 #
-# The response to that is not a better memo. It is that every change here can
-# be reversed by one command, so reversing costs less than arguing, so nobody
-# has to defend a mechanism to remove it.
-#
 # usage:  pivot.sh status | install | uninstall [MOVE...]
 # exit:   0 done   1 a MOVE failed   2 usage   3 BLIND (could not determine
-#         state -- never reported as success)
+
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"

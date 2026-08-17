@@ -2,21 +2,7 @@
 # setup-selfdev-project.sh -- stand up ONE new self-dev project account, end to
 # end, in a single root command.
 #
-# RUN ON THE SELF-DEV HOST, AS ROOT (or via sudo):
-#
-#   sudo bash bin/setup-selfdev-project.sh <project> [--check|--apply] [--no-key]
-#
-# WHY THIS EXISTS. Zach, 2026-08-04, on what was still manual: "what is keeping
-# this from being automated? lack of passwordless root on monkey?" Mostly yes --
-# and the honest follow-up was that the three things needing root were the SAME
-# requirement three times, spread across three sittings. This collapses them.
-#
-# `bibliothecaire`, account #2, took three interactive root sittings on
-# 2026-08-04: create the account, install a key so the rest could be driven,
-# copy the gh credential (a second run of the provisioner, after it learned to).
-# Everything else ran unprivileged. This script is those three, in order, plus
-# the unprivileged remainder, so account #3 is one command instead of an evening.
-#
+# TRAPS (the rest of this header is in the vault):
 # WHAT IT RUNS, in order, each already proven on its own:
 #   1. bin/provision-selfdev-user.sh <p> --apply   (root)  account + creds
 #   2. the hands key into <p>'s authorized_keys    (root)  see --no-key
@@ -28,44 +14,7 @@
 #      block, without which the account's first unattended night cannot write
 #      .claude/** at all (hf7y/realisateur#282)
 #   8. bin/selfdev-hooks-provision.sh              (root)  the SubagentStop hook (#272)
-#
-# Step 3 is a GATE, not a sequence point: every repo that fails to wire is
-# named and the run stops there rather than landing an account on credentials
-# that were already proven not to work. See the comment at "3/8" for what that
-# cost before it did.
-#
-# WHY STEP 5 IS HERE AND NOWHERE ELSE. The account consumes tooling from the
-# verb release channel (`hf7y/verbs` build tags), not from a clone of any
-# repo's `main` -- see bin/lib/propagation-set.sh for that decision and why
-# `main` staying fast is the point of it. A build cannot deliver its own
-# installer, so a small, near-immutable BOOTSTRAP has to exist on the account
-# first: install-verb-build.sh, selfdev-release-tick.sh, and two libs. Four
-# files, copied once, whose only job is to find, verify and install a
-# versioned payload -- the gradlew/rustup shape.
-#
-# This script is the natural and only correct home for that copy, because it
-# is the one thing that already runs EXACTLY ONCE PER ACCOUNT. Putting it in
-# land-selfdev.sh would re-copy on every landing; putting it in the tick would
-# make the bootstrap install itself, which is the circularity the bootstrap
-# exists to cut.
-#
-# The clock goes in the ACCOUNT'S OWN crontab, installed BY the account. Pull,
-# not push: a hands account reaching into a 0700 home over sudo does not scale
-# past four accounts and leaves no record on the consumer side, so the account
-# cannot answer "what version am I on, and when did I last look" without
-# somebody else's shell history.
-#
-# WHAT IT DELIBERATELY DOES NOT DO: arm dispatch. That is a row in
-# schedule/_paced.<host>.conf going from 0 to 1, it is a judgment about how a
-# shared weekly quota is spent, and it stays a separate reviewed act. This
-# script stops exactly where land-selfdev.sh stops, for the same reason.
-#
-# ABOUT STEP 2 (--no-key to skip). It copies the INVOKING human's
-# authorized_keys into the project account, so the account can be driven over
-# ssh without a further root sitting. This is not a privilege increase: the key
-# it copies already belongs to a user who can sudo to root on this host, and
-# therefore to this account. It IS a real grant, so it is one flag to decline
-# and it is logged as an action rather than done quietly.
+
 set -uo pipefail
 
 PROJECT="${1:-}"; shift 2>/dev/null || true
@@ -143,7 +92,7 @@ fi
 # Run as the project user with a LOGIN-shaped PATH. Ubuntu's .profile only adds
 # ~/.local/bin at login, and `sudo -u x cmd` is not one -- that omission is what
 # made land-selfdev.sh report "FATAL: installe is not on PATH" from the script
-# that had just linked it (MONKEY.md 8.1).
+# that had just linked it (vault:realisateur/MONKEY.md 8.1).
 run_as() {
   sudo -u "$PROJECT" -H env -i \
     HOME="$HOME_DIR" USER="$PROJECT" LOGNAME="$PROJECT" \
@@ -157,12 +106,7 @@ run_as() {
 # clone, e.g. bibliothecaire's -- and every project home is 0700 (provisioned
 # that way on purpose: "repos and working state are isolated per project").
 # `sudo -u "$PROJECT"` therefore cannot read, let alone execute, a sibling
-# script living under a different account's home: it fails as
-# "Permission denied", not as a missing file, which looks like a broken
-# install rather than what it is. Found running this script for real the
-# first time, account #4 (vim-arcade, 2026-08-04). Fix: copy the two
-# unprivileged scripts into THIS account's own home, owned by it, before
-# calling them as it.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 STAGE="$HOME_DIR/.selfdev-setup"
 install -d -m 700 -o "$PROJECT" -g "$PROJECT" "$STAGE"
 install -m 700 -o "$PROJECT" -g "$PROJECT" \
@@ -174,20 +118,7 @@ say "3/8 git credentials, per repo"
 # wired alias and exits 5 on `BAD WITNESS FAILED: ... the wiring is not live`.
 # That exit went into `| sed`, and this script sets `set -uo pipefail` but never
 # `set -e` and read neither $? nor PIPESTATUS -- so a repo whose credentials
-# demonstrably did NOT work was indistinguishable from one that wired cleanly,
-# and provisioning walked on to "4/5 land" and "5/5 release bootstrap".
-#
-# Not theoretical: account #4 (vim-arcade) provisioned "successfully" on
-# 2026-08-04 with one repo's wiring broken by the 0700 sibling-staging bug
-# fixed the same day in 05be4fc. Nothing said so at provisioning time; it
-# surfaced on that account's first scheduled run. realisateur#120, from
-# vim-arcade#74, which twice concluded the fix belongs here.
-#
-# EVERY failing repo, not the first. The loop runs all four and refuses
-# afterwards, because "senechal failed" and "senechal and scheduler failed" are
-# different amounts of re-work and stopping early hides the difference. rc is
-# read IMMEDIATELY after the pipeline: any command in between -- an echo, a
-# test -- replaces PIPESTATUS.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 wire_failed=""
 for repo in realisateur scheduler senechal "$PROJECT"; do
   access=""
@@ -218,19 +149,7 @@ run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
 # It was inline here, which meant the only way to give an account a clock was
 # to run account creation at it -- so nine of monkey's ten accounts never got
 # one and the release channel sat at one consumer for five days. That script
-# has the whole argument; this is the same code with a second caller.
-# --- 5. the App credential, host-wide ---------------------------------------
-# secretaire (account #13, 2026-08-12) was provisioned end to end by this
-# script and came out with NO App credential at all -- the audit caught it,
-# not this script, and the account could not mint an installation token.
-# Every step here installed something per-account; the App key was the one
-# thing nobody's step owned.
-#
-# It is host-wide now (bin/lib/selfdev-app-key.sh), so this is not a copy per
-# account: it is "make sure this host has the one key, and that THIS account
-# is in the group that can read it". Idempotent, so provisioning account #14
-# on a host that already has the key just adds the group membership and
-# witnesses the read.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 say "5/8 the GitHub App credential (host-wide)"
 if [ -x "$HERE/selfdev-app-key.sh" ]; then
   # rc read from the command, not from a pipeline whose last stage is `sed`.
@@ -256,10 +175,7 @@ say "6/8 release bootstrap + clock"
 # Without this, the account's FIRST unattended night hits the harness's
 # sensitive-file gate on any `.claude/**` write and cannot record what it did
 # (hf7y/realisateur#282, worked example: vim-arcade@monkey 2026-08-04 shipped
-# real work and could write neither its own notes nor the settings file that
-# would have granted it -- an agent cannot self-grant, which is the point of
-# the gate). Provisioning it here is what stops account #15 repeating it; the
-# fourteen that existed before this step were converged by the same script.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 say "7/8 permissions block"
 ACCOUNTS="$PROJECT" "$HERE/selfdev-permissions-provision.sh" --apply --strict \
   || echo "  WARN    $PROJECT still has no permissions block -- its first unattended run will not be able to write .claude/**"

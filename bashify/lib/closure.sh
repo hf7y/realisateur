@@ -1,41 +1,10 @@
 #!/usr/bin/env bash
 # closure.sh -- score a wrapped script's TRANSITIVE SOURCE CLOSURE, not the file.
 #
-# WHY THIS EXISTS
-# ---------------
-# The migration rule is "a wrapped script moves onto the bashified branch iff it
-# passes the purge guard." The purge guard scores files INDIVIDUALLY and is
-# blind to `source`. So:
-#
-#   scheduler/bin/scheduler-run                          scores 0   -> passes
-#   scheduler/bin/scheduler-run:93  source lib/sweep-loop-common.sh
-#   scheduler/lib/sweep-loop-common.sh                   scores 35  -> `claude -p`
-#
-# A script whose entire job is dispatching a model passes the guard, because
-# the naming is one `source` away. Under the migration rule it would be
-# classified CLEAN and moved onto a branch whose stated guarantee is that it
-# contains no such thing -- false in exactly the way the guard exists to
-# prevent. That is a FALSE NEGATIVE, and it is worse than the false-positive
-# class fixed by anchoring on 2026-08-02: a false positive blocks a commit and
-# gets looked at, a false negative ships.
-#
+# TRAPS (the rest of this header is in the vault):
 # The `lib/` exclusion in surface_discover is what makes this reachable at all:
 # a library is not caller-facing, so it is never discovered, so it is never
 # scored -- and nothing propagated its score back to the scripts that source it.
-#
-# WHAT "CLOSURE" MEANS HERE, exactly
-# ----------------------------------
-# A script's closure is itself plus every file it sources, transitively. A
-# script is movable iff EVERY member of its closure is vendor-free. Both halves
-# matter, and for different reasons:
-#
-#   - if a sourced library names a vendor and moves too, the branch's guarantee
-#     is false;
-#   - if it does not move, the script on the branch sources a file that is not
-#     there, and is broken.
-#
-# There is no third option where a dirty library is simply ignored.
-#
 # THE HONEST FAILURE MODE -- and it is loud
 # -----------------------------------------
 # `source "$CONF"` cannot be resolved from source text; the path is runtime
@@ -44,8 +13,8 @@
 # Such a script is reported UNRESOLVED and is NEVER CLEAN. scheduler-run has
 # one of these too, at line 44 -- so it fails this tool twice, for two
 # independent reasons.
-#
 # Read-only. Never writes to any repository, never checks anything out.
+
 set -uo pipefail
 
 # not_a_spend <project> <relpath> -- is this file's vocabulary signed for?
@@ -100,11 +69,7 @@ done
 # Comment lines are excluded; everything else is taken at face value. Over-
 # inclusion (a `source` inside a heredoc) adds a dependency, which can only
 # make a script look dirtier -- the safe direction for a guarantee of absence.
-# A first cut stopped the argument at the first `)`, which truncated the very
-# common `. "$(dirname "$0")/../lib/x.sh"` to `"$(dirname "$0"` and reported it
-# UNRESOLVED. Take the whole remainder of the line instead and strip only what
-# genuinely cannot be part of a path: a redirection, a list operator, or a
-# trailing comment.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 _source_args() {
   grep -vE '^[[:space:]]*#' "$1" 2>/dev/null \
     | sed -nE -e 's/^[[:space:]]*(source|\.)[[:space:]]+(.*)$/\2/p' \
@@ -118,10 +83,7 @@ _source_args() {
 # Prints a repo-relative path, or `!UNRESOLVED`, or `!EXTERNAL:<path>`.
 #
 # The variable rule is deliberate and stated: a leading `$VAR/` or `$(...)/ `
-# is treated as SOME root, and the suffix after the first `/` is tried against
-# every plausible root. If the argument has no `/` at all -- `source "$CONF"`
-# -- there is no suffix to try and it is UNRESOLVED, full stop. This is a
-# heuristic; its failure mode is a loud UNRESOLVED, never a quiet pass.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 _resolve() {
   local repo="$1" rel="$2" raw="$3" sfx cand dir prev
   local V=$'\001'   # stands in for "some expansion", so it can never contain /
@@ -239,13 +201,7 @@ for conf in "$SCHED"/schedule/*.conf; do
     # NAME what it audits. realisateur/bin/hygiene-lint.sh's highest-scoring
     # line is `echo "(offline-first: no claude calls ...)"` -- it fails a spend
     # guard by saying it does not spend.
-    #
-    # The measurement above is left ALONE and still reports the real count. Only
-    # the VERDICT consults the ledger, so a reader still sees what the file
-    # contains and sees that a human signed for it. bashify/lib/surface.sh:54
-    # predicted exactly this ("it fails loudly and gets an exemption, which is
-    # the right way round for a guarantee of absence") and left the door
-    # unbuilt; this is the door, and it is per-file, never a wider regex.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
     nunres="${#UNRES[@]}"
     if   [ "$worst_code" -gt 0 ]; then class=ESSENTIAL
     elif [ "$nunres" -gt 0 ];     then class=UNRESOLVED

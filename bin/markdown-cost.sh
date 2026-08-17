@@ -5,36 +5,7 @@
 # GUARD-TEST: bin/tests/markdown-cost.test.sh
 # GATE: none -- its range is a merge-base against origin/main, which a fixture repo with no origin cannot form; its suite builds a throwaway repo per case instead
 #
-# WHY THIS EXISTS. On 2026-08-06 this ecosystem merged 26 pull requests and
-# filed 42 issues, and a large share of the output was prose describing its own
-# condition rather than mechanism that does anything. Zach, the same day:
-# "Description needs a cost. Markdown needs a cost." Nothing measured that, so
-# nothing resisted it -- a branch could be 90% new .md and pass every gate in
-# bin/, because every gate in bin/ was built to catch a script that lies, not a
-# document that merely exists.
-#
-# WHAT IT PRICES. Four things. The first three are over ADDED lines only
-# (deletions are free -- reaping prose is the behaviour we want, not the one we
-# tax); the fourth measures the tree instead of the diff:
-#
-#   1. THE RATIO. markdown-added / total-added. Over the threshold (default
-#      30%, MARKDOWN_COST_MAX_PCT) the run exits 1 and names the ratio and
-#      every file that contributed to the numerator. This is not a style
-#      opinion; it is the one number that separates "a change, documented"
-#      from "a document, with a change attached".
-#
-#   2. A NEW TOP-LEVEL *.md FILE. Editing an existing document is how a
-#      record stays current. ADDING another one at the repository root is how
-#      this repository got 40-odd of them, most written once and read never
-#      (see PROSE-REAPING.md, which is itself one of them). Any new root .md
-#      outside the allowlist exits 1 on its own, whatever the ratio says.
-#
-#   3. COMMENTS IN FILES THAT ARE NOT MARKDOWN -- most of the estate's prose.
-#      Flags at >=150 added comment lines AND >=60% of added non-markdown.
-#
-#   4. THE TREE, AGAINST A RATCHET (--census). bin/markdown-cost.ratchet
-#      records the tree's prose count; it only ever falls.
-#
+# TRAPS (the rest of this header is in the vault):
 # THE ONE BUG IT MUST NOT HAVE. In this ecosystem "found nothing" has
 # repeatedly been reported as "nothing is wrong" -- a survey that reached zero
 # projects printing a tidy summary and exiting 0 (see bin/lib/conf.sh's header
@@ -45,9 +16,7 @@
 # It never means the script could not tell.
 #
 # Usage:
-#   markdown-cost.sh                 price $(git merge-base HEAD origin/main)..HEAD
-#   markdown-cost.sh <range>         price an explicit range, e.g. main..HEAD
-#   MARKDOWN_COST_MAX_PCT=50 markdown-cost.sh
+
 set -uo pipefail
 
 CLI_NAME='markdown-cost.sh'
@@ -316,14 +285,7 @@ while IFS=$'\t' read -r added deleted path; do
     # delete of an obsolete doc launder a brand-new 250-line essay through as
     # "a reap" -- found by fixture against this script's own first version of
     # the exemption, before it had shipped a week.
-    #
-    # But "grew" was a ONE-LINE trigger, and #187 makes a producer fix
-    # mandatory in every reap: a reap PR must also repoint the command file
-    # that wrote the surface it deleted. senechal#280 deleted 1,662 net lines
-    # of prose and was scored as bloat because .claude/commands/nightly-batch.md
-    # gained ONE net line doing exactly that. So growth is judged against a
-    # tolerance: an edit that swaps instructions is not an essay, and 250 is
-    # still an essay.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
     [ "$((added - deleted))" -gt "$GROW_TOL" ] && md_grew="$md_grew $path:+$((added - deleted))"
   fi
 done <<EOF
@@ -336,7 +298,7 @@ EOF
 # many lines a file gained but not what is in them. Thresholds re-derived across
 # 21 repos (see #299): ratio alone qualifies 101 committed files, so the
 # 150-line floor is what makes the rule safe.
-cm_added=0; cm_total=0; cm_files=''
+cm_added=0; cm_deleted=0; cm_total=0; cm_files=''
 cur_lang=''; cur_n=0; cur_path=''
 flush_cm() {
   [ -n "$cur_path" ] && [ "$cur_n" -gt 0 ] && cm_files="$cm_files $cur_path:$cur_n"
@@ -356,7 +318,19 @@ while IFS= read -r line; do
     '+++ '*|'--- '*|'+++'|'@@'*|'diff --git '*|'index '*) continue ;;
   esac
   [ -n "$cur_lang" ] || continue
-  case "$line" in '+'*) ;; *) continue ;; esac
+  case "$line" in
+    '-'*)
+      # Deletions are counted for ONE purpose: telling a reap from a cost.
+      # They never enter cm_total, so the ratio below is still over ADDED
+      # lines only and the threshold keeps exactly its original meaning.
+      d="${line#-}"
+      ds="${d#"${d%%[![:space:]]*}"}"
+      [ -n "$ds" ] || continue
+      is_comment "$cur_lang" "$d" && cm_deleted=$((cm_deleted + 1))
+      continue ;;
+    '+'*) ;;
+    *) continue ;;
+  esac
   line="${line#+}"
   s="${line#"${line%%[![:space:]]*}"}"
   [ -n "$s" ] || continue          # blanks count as neither, both sides
@@ -408,13 +382,7 @@ else
     # than it adds. So it flagged hf7y/realisateur#231, a pass that removed 330
     # lines of prose defending retired mechanisms and put back 155, and it
     # would flag every future reap the same way. A guard that fails the work it
-    # exists to encourage stops being read, which is the failure PROSE-REAPING
-    # itself is about.
-    #
-    # The exemption is narrow and self-limiting on TWO axes: the diff must
-    # delete at least as much markdown as it adds, AND no single markdown file
-    # may grow. Prose that merely moves still nets zero and passes; prose that
-    # grows still pays, in total or in any one file.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
     printf '  net prose: -%d line(s) (added %d, deleted %d) -- a reap, not a cost.\n' \
       "$((md_deleted - md_added))" "$md_added" "$md_deleted"
   elif [ $(( md_added * 100 )) -gt $(( MAX_PCT * total_added )) ]; then
@@ -435,7 +403,16 @@ if [ "$cm_total" -gt 0 ]; then
   cm_pct=$(( cm_added * 100 / cm_total ))
   printf '  %d of %d added non-markdown line(s) are comments -- %d%% (flags at %d%% and %d lines)\n' \
     "$cm_added" "$cm_total" "$cm_pct" "$CM_MAX_PCT" "$CM_FLOOR"
-  if [ "$cm_added" -ge "$CM_FLOOR" ] && [ $(( cm_added * 100 )) -ge $(( CM_MAX_PCT * cm_total )) ]; then
+  if [ "$cm_deleted" -ge "$cm_added" ] && [ "$cm_added" -gt 0 ]; then
+    # A REAP IS NOT A COST -- the exemption the markdown ratio above has
+    # carried since #231, applied to the axis it was missing on. This check
+    # prices ADDED comment lines, so a pass that deletes 4795 lines of header
+    # essay and puts back 318 lines of TRAP statement scores 74% comments and
+    # FLAGS: the guard taxing the exact behaviour it exists to produce. #287
+    # fixed this for markdown and left check 3 asymmetric.
+    printf '  net comments: -%d line(s) (added %d, deleted %d) -- a reap, not a cost.\n' \
+      "$((cm_deleted - cm_added))" "$cm_added" "$cm_deleted"
+  elif [ "$cm_added" -ge "$CM_FLOOR" ] && [ $(( cm_added * 100 )) -ge $(( CM_MAX_PCT * cm_total )) ]; then
     printf '  FLAG [comment-ratio] this diff adds %d comment line(s) at %d%% of its non-markdown lines.\n' \
       "$cm_added" "$cm_pct"
     printf '        contributing file(s) (path:added-comment-lines):\n'

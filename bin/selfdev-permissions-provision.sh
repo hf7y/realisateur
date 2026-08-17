@@ -7,57 +7,18 @@
 # GUARD-TEST: bin/tests/selfdev-permissions-provision.test.sh
 # GATE: strict
 #
-# WHY THIS EXISTS. hf7y/realisateur#282: THE-FLOOR.md documents self-dev
-# accounts as running defaultMode auto with deny rules layered on.
-# bin/setup-selfdev-project.sh wrote no permissions block at all, so none had
-# one -- probed 2026-08-15, 13 of 14 accounts on monkey had no `permissions`
-# key whatsoever.
-#
+# TRAPS (the rest of this header is in the vault):
 # The cost, from #282's worked example (vim-arcade@monkey's first night): the
 # run shipped real work and two writes were REFUSED -- one recording what it
 # had done, one creating the settings file that would have granted it. The gate
 # fails closed, and an agent cannot self-grant, which is the point of it. Only
 # a human-authorised pass like this one can close it.
-#
-# THE DENY FLOOR, decided on #282. Zach, 2026-08-15: "whatever allows them to
-# keep going within unattended scope best" -- so it denies only what is
-# IRREVERSIBLE or reaches OUTSIDE the account, and allows the rest: a gate that
-# stops ordinary work unattended is the defect being fixed, not the fix.
-#
-#   force push          rewrites published history; these accounts share remotes
-#   push to main        CLAUDE.md: rejected for everyone anyway. Agents trying
-#                       it cost 5 failed runs and 15 stranded salvage branches
-#   gh pr merge --admin routes around a required check -- a human call every
-#                       time (#125), and #288 is what unattended merging cost
-#   repo delete/archive irreversible, and reaches every consumer
-#   crontab             shared machine state; an agent already modified one
-#                       under a second account (2026-07-25). Channel is
-#                       notify-senechal
-#   sudo                the account boundary IS the blast radius
-#   recursive deletes of / or $HOME
-#                       unrecoverable; no backup is proven (THE-FLOOR 2.2)
-#   READING the App key and gh hosts.yml
-#                       the account authenticates through them and never needs
-#                       to read them; a read is how one lands in an issue body
-#
-# The allow list is short on purpose: `.claude/**` writes are what #282 is
-# about, and the two network reads are what bibliothecaire already had.
-#
-# Usage:
-#   selfdev-permissions-provision.sh              report drift, change nothing
-#   selfdev-permissions-provision.sh --apply      write the block
-#   selfdev-permissions-provision.sh --strict     exit 1 if any account drifts
-#   selfdev-permissions-provision.sh --print      print the block and exit
-#
 # Runs ON the host that owns the accounts (monkey). Every read and write of
 # another account's file goes through sudo; the script never edits a file it
 # can reach without one, so it cannot quietly rewrite the invoking user's own
 # settings.
 #
-# Env overrides (used by the test suite, not normally set):
-#   HOME_ROOT=/home   where account home directories live
-#   ACCOUNTS="a b"    the accounts to visit (default: the roster below)
-#   SUDO=sudo         the privilege command (the suite sets it empty)
+# Usage:
 
 set -uo pipefail
 

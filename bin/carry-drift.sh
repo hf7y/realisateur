@@ -1,52 +1,26 @@
 #!/usr/bin/env bash
 # carry-drift.sh -- a file carried onto `bashified` is a REPLICA of the one on
 # `main`, byte for byte, or it is a second copy of the same fact.
+# VERIFIED: 2026-08-16 via bash bin/carry-drift.sh (3 ok, 5 ratcheted, 0 findings) and its suite
 #
 # GUARD: does every file the bashified branch carries still match its original?
 # RUNNER: .github/workflows/tests.yml -- job carry-drift, against origin/bashified
 # GUARD-TEST: bin/tests/carry-drift.test.sh
 # GATE: default --repo $TREE
-# VERIFIED: 2026-08-16 via bash bin/carry-drift.sh (3 ok, 5 ratcheted, 0 findings) and its suite
 #
-# WHY IT EXISTS
-# -------------
-# The verb build is cut from each project's `bashified` branch, so anything an
-# account must be able to run without a checkout has to be ON that branch. For
-# realisateur that means a handful of files exist twice: once on `main`, where
-# they are edited, and once on `bashified`, where they ship.
-#
-# Nothing compared them. Measured 2026-08-16, the first time anything did:
-#
-#   bin/closeout-lint.sh       572 lines carried vs 613 on main
-#   bin/precipitation-scan.sh  395 vs 393
-#   bin/reach-lint.sh          253 vs 251
-#   bin/lib/conf.sh             85 vs  89
-#   bin/hygiene-lint.sh        differs
-#   bin/lib/cli-guard.sh       identical -- one of six
-#
-# None of the drift is deliberate: the carried copies are simply older, and
-# they carry paragraphs `main` has since corrected -- conf.sh's copy still
-# describes restamp-discipline.sh in the present tense two days after it was
-# retired. An account running the carried lint is running last month's rules
-# and nothing anywhere says so.
-#
+# TRAPS (the rest of this header is in the vault):
 # Zach, 2026-08-16, deciding hf7y/realisateur#330: "it cannot be several
 # copies, one per repo that will drift inevitably; this needs to be one single,
 # stable location where policy changes automatically reach." One home is
 # `main`. This makes every other copy mechanical: `--carry` writes them, and
 # the comparison below is what stops one being edited in place.
-#
-# WHAT IS NOT A CARRY. A file that exists only on `bashified` -- bin/arpente,
-# man/*, lib/verb.sh, the branch's own tests -- is branch-native and is not
-# graded. The pairing is DERIVED (same path under bin/, else bin/retired/),
-# so a new carry is guarded the day it lands with nothing to remember to add.
-#
 # CARRIES is the typed part, and it says something derivation cannot: this
 # file MUST BE THERE. Derivation can only grade what is already on the branch,
 # so a carry that was never made looks exactly like a file nobody wanted --
 # which is #327 in one sentence: the shim merged, nothing linked it, every
 # check stayed green. A declared row that is absent is a MISSING finding, and
 # `--carry` creates it.
+
 set -uo pipefail
 
 CLI_NAME='carry-drift.sh'

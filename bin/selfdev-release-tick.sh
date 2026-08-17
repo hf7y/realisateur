@@ -2,83 +2,12 @@
 # selfdev-release-tick.sh -- the clock on the consumer side of the release
 # channel, and the alarm that fires when the clock stops.
 #
-# ============================================================================
-# WHY THIS EXISTS, AND WHY IT IS SO SMALL
-# ============================================================================
-#
-# The release channel was already built. `cut-verb-build.sh` assembles every
-# project's verbs into a dated build in `hf7y/verbs`; `build-verbs.yml` cuts
-# one nightly; `install-verb-build.sh` fetches a build by id, verifies every
-# verb the manifest promises, and repoints ONE symlink atomically or discards
-# the build entirely. All of it works, and all of it is tested (31 + 17 cases
-# across two hermetic suites).
-#
+# TRAPS (the rest of this header is in the vault):
 # Probed 2026-08-07: builds had been cut nightly since 2026-08-05 and
 # `~/.local/share/verb-builds/` did not exist on a single one of the ten
 # accounts on `monkey`. Zero consumers. Meanwhile every account's realisateur
 # clone sat 15 commits behind `origin/main` and ten ecosystem commands on
 # every account's PATH exec'd into it, successfully and silently.
-#
-# Nothing was broken. Nothing had a clock.
-#
-# So this script adds the clock and NOTHING ELSE. It does not fetch a build,
-# does not verify a manifest, does not move `current`. It calls
-# `install-verb-build.sh`, which does all three and has been tested doing
-# them. A second implementation of the switch would be a second answer to
-# "which build am I on", which is the one question a bug report must be able
-# to answer -- and rewriting a tested atomic-switch by hand is how the
-# 2026-07-29 dispatch outage happened.
-#
-# `bin/tests/propagation.test.sh` asserts the delegation mechanically: this
-# file must contain no symlink-switching of its own.
-#
-# ============================================================================
-# WHERE THIS RUNS CHANGED ON 2026-08-13 -- READ THIS BEFORE THE SECTION BELOW
-# ============================================================================
-#
-# The section that follows describes the PER-ACCOUNT shape: one tick in each
-# account's own crontab, one private pin per account. That shape is RETIRED on
-# monkey. hf7y/realisateur#180 moved every one of the 13 accounts to a single
-# host-wide channel -- the host build root's `current` link, under
-# /usr/local/share, resolved into /usr/local/bin and moved by ONE tick in
-# ROOT's crontab -- and `--retire-cadence`
-# is what took each account off its own.
-#
-# The doctrine below is UNCHANGED by that and is why the host tick is still a
-# tick and not a push: the consumer still owns its clock, verifies before
-# adopting, and records what it did. What changed is WHO the consumer is. It is
-# the host, once, instead of every account, thirteen times, converging on the
-# identical build.
-#
-# The per-account shape is still SUPPORTED, because a host that has not
-# migrated is a real state -- --install-cadence still installs it and --survey
-# still grades it. It is no longer the default and it is not what monkey runs.
-#
-# ============================================================================
-# PULL, NOT PUSH -- THE CONSUMER OWNS ITS CLOCK
-# ============================================================================
-#
-# No ssh. No sudo. No hands account reaching into a 0700 home. The account
-# owns its clock, checks its own pin, and adopts on its own terms. That is
-# what lets it VERIFY BEFORE ADOPTING, and it is what leaves the record where
-# the consumer is rather than in someone else's shell history.
-#
-# `--survey` is the one read-only operator view, and it is read-only by
-# construction: it runs `--check` on each account and writes nothing anywhere.
-#
-# ============================================================================
-# FAIL-OPEN ON OPERATION, FAIL-CLOSED ON ADOPTION
-# ============================================================================
-#
-# These are different questions and they get different answers.
-#
-# ADOPTION is fail-closed, and it already is: `install-verb-build.sh` verifies
-# every verb the manifest promises, and a build missing any of them is
-# `rm -rf`'d with `current` unchanged. Half-adopting a verb set is the one
-# failure with no local recovery -- scheduler's 2026-07-29 TOTAL dispatch
-# outage was ONE missing symlink that no check on the machine could say
-# should have existed.
-#
 # OPERATION is fail-open: an unreachable release channel does NOT stop the
 # account. It keeps running the build it already has, which was fully verified
 # when it was installed, and this tick exits 3 BLIND and says so. BUILD-
@@ -88,38 +17,8 @@
 # running is a known, named, rollback-able state. Exit 3 and a status line are
 # the loudness; halting would buy nothing and cost a night's work.
 #
-# The one place refusal IS correct is a compatibility-boundary crossing, and
-# today that boundary is the manifest: `cut-verb-build.sh` refuses a build
-# that SHRINKS without --allow-shrink, so the verb NAME SET -- the interface
-# agents build against -- cannot silently narrow underneath them. A build
-# whose verb SEMANTICS changed is not yet detectable by anything, and that is
-# named as open rather than papered over.
-#
-# ============================================================================
-# THE ALARM: A STOPPED CLOCK IS A FINDING
-# ============================================================================
-#
-# Every mechanism here has been built before in some form, and the failure was
-# never that it did the wrong thing -- it was that it stopped, and nothing
-# said so. `land-selfdev.sh:175` already fast-forwards every clone; it could
-# be un-run forever and nothing anywhere was observably worse off.
-#
-# So --apply records itself, and --check GRADES THAT RECORD'S AGE as a
-# first-class row, offline, with no network and no ssh. A propagation that
-# has not run in TICK_MAX_AGE_H hours is a finding with an exit code. The
-# checker detects that the fixer died.
-#
-# ============================================================================
 # EXIT CODES
-#   0  on the current build, and the clock is alive
-#   1  findings: a newer build exists, the clock is dead, or the bootstrap is
-#      incomplete. Something a human or the next tick must act on.
-#   2  usage error (cli-guard)
-#   3  BLIND -- could not reach the release channel, or could not look at all.
-#      NOT "up to date". The `garde` shape from MONKEY.md 5, where skipping
-#      unreachable destinations made "nothing pending" indistinguishable from
-#      "everything is proven".
-# ============================================================================
+
 set -uo pipefail
 
 CLI_NAME='selfdev-release-tick.sh'
@@ -156,23 +55,14 @@ CRON_SPEC="${TICK_CRON_SPEC:-41 5 * * *}"
 # Empty for a per-account tick: its defaults ARE the account's own paths.
 #
 # The host-scoped tick needs it, because every path it works on is deliberately
-# NOT this process's default -- and cron does not inherit the shell that
-# installed the entry. The alternative is a second copy of this script with
-# different constants baked in, which is one fact with two readers. `VAR=val
-# cmd` in the command field is already this estate's idiom: the paced runner's
-# own line reads `0 */6 * * * PACED_MAX_PER_TICK=1 .../usage-paced-runner.sh`.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CRON_ENV="${TICK_CRON_ENV:-}"
 RELEASE_STATUS_URL="${RELEASE_STATUS_URL:-https://hf7y.com/verbs/status.json}"
 # Whether adoption also writes the bin links. OFF by default and it stays off
 # for a per-ACCOUNT tick, because `installe` owns that account's ~/.local/bin
 # and install-verb-build.sh's --link exists to not clobber it.
 #
-# It is ON for the HOST-scoped tick wire-release-channel.sh --host installs,
-# where the link directory is /usr/local/bin -- a directory installe does not
-# manage, on the only PATH entry a non-interactive `ssh <host> <verb>` sees.
-# Adopting a build nothing links is a pin that moves and a PATH that does not,
-# which is a channel with a clock and no consumer: the exact shape
-# propagation-set.sh was written about.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 TICK_LINK="${TICK_LINK:-0}"
 SURVEY_HOST="${TICK_SURVEY_HOST:-monkey}"
 SURVEY_PASSWD="${TICK_SURVEY_PASSWD:-/etc/passwd}"
@@ -304,11 +194,7 @@ install_cadence() {
   # crontab writes "no crontab for <user>" there and exits 1 -- that is the
   # answer, not an error -- but so does a permission failure, and silencing
   # both makes them one event. That conflation is bin/silence-audit.sh's
-  # [stderr-silenced] rule ("turns permission denied into clean"), and here it
-  # would be load-bearing: `cur` is what gets written BACK, so reading it as
-  # empty when it is merely unreadable would erase every other entry in the
-  # crontab. The grep -vF below removes the noise line either way, because a
-  # message from cron does not carry our tag.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   cur="$(crontab -l 2>&1 || true)"
   case "$cur" in *"no crontab for"*) cur="" ;; esac
   new="$(printf '%s\n' "$cur" | grep -vF "$CRON_TAG")"
@@ -329,14 +215,7 @@ install_cadence() {
 # per-account clock and private build root now that one host-wide channel
 # feeds every account. This exists as a COMMAND rather than as twelve hand
 # edits because the crontab read-modify-write is the part that goes wrong --
-# #179 fixed a stderr bug in install_cadence that could have erased the rest
-# of an account's crontab, and a hand-edit reintroduces that risk per account.
-#
-# Fails CLOSED on the precondition: an account whose PATH does not reach the
-# host-wide channel would be left with no clock and no verbs at all. That is
-# checked per account, from inside the account, because a $HOME/.local/bin
-# entry earlier on its PATH shadows /usr/local/bin -- the mandark situation.
-# ---------------------------------------------------------------------------
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 retire_cadence() {
   echo "-- retire cadence (account $(id -un)) ---------------------------------"
   local probe; probe="$(command -v "$HOST_PROBE_VERB" 2>/dev/null || true)"
@@ -396,12 +275,7 @@ retire_cadence() {
   # -- 33 of them on the realisateur account on 2026-08-13, from the hand
   # retire that preceded this flag. A dangling link is skipped by PATH search
   # so the host-wide verb still wins, which is precisely why nobody notices:
-  # it is invisible debris that makes `installe list` describe a state the
-  # account is not in.
-  #
-  # `installe retire` is the front door for an entry in that directory, so it
-  # is used when it is reachable. The direct unlink is the fallback, not the
-  # preference, and it says so when it takes it.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   local shim tgt inst
   inst="$(command -v installe 2>/dev/null || true)"
   if [ -d "$LOCAL_BIN" ]; then
@@ -569,10 +443,7 @@ if [ "$MODE" = apply ] && [ "$pin_rc" = 1 ]; then
   # verifies every verb the manifest promises and discards an incomplete
   # build rather than switching to it. Fail-CLOSED, here, deliberately.
   # The optional flag is an ARRAY appended after the literal call, not folded
-  # into it: bin/tests/propagation.test.sh 5b asserts delegation by matching
-  # `"$inst" --latest --apply` in this file, and a refactor that spelled the
-  # same call a different way would silently retire that check rather than
-  # fail it. Keeping the literal intact is the cheaper half of the bargain.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   link_arg=(); [ "$TICK_LINK" = 1 ] && link_arg=(--link)
   if "$inst" --latest --apply "${link_arg[@]}" 2>&1 | sed 's/^/        /'; then
     after="$(current_pin)"

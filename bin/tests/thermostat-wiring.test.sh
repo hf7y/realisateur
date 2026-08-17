@@ -1,39 +1,16 @@
 #!/usr/bin/env bash
 #
+# TRAPS (the rest of this header is in the vault):
 # NOT WIRED TO CI: bin/thermostat-wiring.sh ITSELF. It probes the estate -- the
 # scheduler checkout, the issue tracker -- which a container cannot see, so
 # every ratcheted check would go BLIND and CI would be red for a reason that
 # says nothing about the branch. It is a HOST gate, run where the estate exists.
 # This suite is what CI can honestly assert about it.
-#
-# thermostat-wiring.test.sh -- witness for bin/thermostat-wiring.sh.
-#
 # Offline, zero AI, no network: every case builds a throwaway copy of the
 # script beside a throwaway scheduler repository, and points it at that. It
 # never reads the live estate, so it says the same thing on every host and in
 # CI. `gh` is forced off PATH so the provenance check is deterministically
 # BLIND rather than dependent on the real tracker.
-#
-# THE LOAD-BEARING ASSERTIONS ARE B, C AND D. A ratchet whose regression path
-# is untested is not a ratchet, it is a print statement -- and this ecosystem
-# has twice mistaken a recorded claim for a fact (see the liveness-probe and
-# verify-the-harness-first cases). The whole value of the mechanism is that
-# putting BLOCKERS.md back fails a build. B proves it does.
-#
-# Cases:
-#   A1 nothing ratcheted, checks unmet          -> exit 0 (a new gauge is
-#      not a failing build; that is what makes it survivable)
-#   A2 ...and still reports the unmet count in words
-#   B1 a ratcheted check that now fails         -> exit 1 REGRESSION
-#   B2 ...names the check that regressed
-#   C1 a ratcheted check that cannot be probed  -> exit 2 BLIND, never 0
-#   C2 ...says "I cannot see", not "nothing regressed"
-#   C3 a NON-ratcheted check that cannot be probed does not fail the build
-#   D1 --accept refuses while something is regressed -> exit 1
-#   D2 --accept never drops an id already in the ratchet (no silent lowering)
-#   E1 --strict with checks unmet               -> exit 3
-#   E2 an unknown flag                          -> exit 2
-#   F1 a fully-conforming fixture               -> exit 0 and 8/8
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh

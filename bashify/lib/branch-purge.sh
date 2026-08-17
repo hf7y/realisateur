@@ -1,61 +1,20 @@
 #!/usr/bin/env bash
 # branch-purge.sh -- does each bashified branch still keep its own promise?
 #
+# TRAPS (the rest of this header is in the vault):
 # WHY THIS EXISTS
 # ---------------
 # Every bashified branch opens its README with "This branch is a total purge:
 # it keeps the tool and nothing else." bashify.sh enforces that -- ONCE, at
 # emit, against the tree it is about to commit, refusing at exit 5 if anything
 # matches.
-#
-# Nothing ever asks again.
-#
 # The doctrine changed on 2026-07-30 to one noun, many verbs, so a branch
 # GROWING after emit is now the expected state rather than an odd one:
 # `bashify coin` adds verbs, and emit itself refuses to run against a branch
 # carrying more than one because it would delete them. So the guard runs at
 # the exact moment the branch is smallest, and never again over the whole
 # period it is actually being added to.
-#
-# Measured 2026-08-02, across all seven branches as they stand:
-#
-#   bibliothecaire 12   gardien 5   scheduler 3   senechal 2
-#   ecosim 1            vim-arcade 1              realisateur 0
-#
-# Twenty-four files naming a vendor or an agent, on branches whose stated
-# guarantee is that they contain none. This is the same shape as the runtime
-# fork: a promise checked once, then left to drift, with nothing that ever
-# asked whether it was still true.
-#
-# EXEMPTIONS ARE DERIVED WHERE POSSIBLE, RECORDED WHERE NOT
-# ---------------------------------------------------------
-# A guard that cries wolf is a guard someone eventually switches off -- this
-# repo's own words, from the anchoring fix. Some of these mentions are
-# load-bearing: lib/verb.sh's uses of "agent" ARE the documentation of the
-# --summon mechanism, and deleting them deletes the explanation of how a verb
-# completes itself.
-#
-# So there are exactly two ways to be exempt:
-#
-#   1. DERIVED -- lib/verb.sh, and only while BYTE-IDENTICAL to the skeleton.
-#      bashify.sh already makes byte-identity load-bearing for this same
-#      exemption; a looser test here would silently widen it.
-#   2. RECORDED -- an entry in PURGE-EXEMPT.tsv, keyed project+path, with a
-#      written justification. This is the DEPENDS.overrides.tsv pattern already
-#      chosen for judgements that have no mechanical signal: the bulk stays
-#      derived, the genuine judgement becomes explicit, small and reviewable.
-#
-# A file matching the pattern with NO exemption FAILS. A newly appearing one
-# fails until a human classifies it once, which is the property that makes the
-# record stay honest.
-#
-# AND THE EXEMPTIONS THEMSELVES ARE CHECKED. An entry naming a file that no
-# longer matches, or no longer exists on the branch, is reported as STALE.
-# "Retired entries actually removed, not left live" is a build-discipline row,
-# and an exemption list is the single easiest place in a codebase to leave a
-# dead entry standing forever.
-#
-# Read-only. Never writes to any repository, never checks anything out.
+
 set -uo pipefail
 
 CLI_NAME='branch-purge.sh'

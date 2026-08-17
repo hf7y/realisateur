@@ -88,12 +88,7 @@ echo "-- B. cred_grade_account: pure grading, no network --------------------"
 # NOT `res="$(grade ...)"`: a first draft packed everything into one
 # \x1f-delimited string and unpacked it with `read`, which stops at the
 # FIRST NEWLINE regardless of IFS -- cred_grade_account's own output is
-# multi-line (a table row, then zero or more FLAG lines), so `read` silently
-# truncated the captured text to just the first line and every content
-# assertion below failed against text that had already been cut off before
-# the assertion ever ran. Globals set by a DIRECTLY CALLED function (not
-# `$(...)`, which forks a subshell whose assignments never reach the caller
-# -- see the sibling note this replaced) sidestep both problems at once.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 grade() {
   GRADE_OUT="$(cred_grade_account "$1" "$2" 2>&1)"; GRADE_RC=$?
   GRADE_FLAGS="$(grep -c '^  FLAG \[drift\]' <<<"$GRADE_OUT" || true)"
@@ -219,21 +214,7 @@ STUB="$T/stub"; mkdir -p "$STUB"
 # any OTHER invocation (cmd_apply's one-shot commands) as "log it, succeed" --
 # see section E, which inspects this log for the delegated commands rather
 # than trusting a bare exit code.
-#
-# `flat="$*"` DELIBERATELY THROWS AWAY the argv boundaries this stub was
-# actually invoked with, then re-derives them by joining with one space and
-# re-splitting -- reproducing the ONE property of REAL ssh that broke this
-# script against the live fleet: ssh joins every argument after the remote
-# command into ONE STRING and the remote shell re-parses THAT STRING, so a
-# caller's argv boundaries do not survive the trip. An empty-string argument
-# contributes zero characters to the join and VANISHES, shifting every later
-# argument one position left. A first draft of this stub used "$@" directly
-# (real, boundary-preserving argv), which cannot fail this way no matter what
-# the script under test does -- it would have stayed green through the exact
-# regression found live while building this suite. Every fetch_remote-shaped
-# case below is therefore also a regression test for that bug: if
-# fetch_remote's "-" sentinel default is ever reverted to plain "${1:-}",
-# these fixtures (named for accounts, never for "hf7y" or a repo) go BLIND.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 cat > "$STUB/ssh" <<'STUBSH'
 #!/usr/bin/env bash
 LOG="${STUB_LOG:-/dev/null}"
@@ -361,17 +342,7 @@ echo "-- D3. deploy-key symmetry grading -- the read_only field-name regression"
 # `gh repo deploy-key list --json title,readOnly` on gh 2.45.0 VALIDATES
 # "readOnly" as a real field name (an unknown one is refused, and the
 # refusal's own error text names "readOnly" as correct) and then does not
-# actually filter by it -- the call returns the endpoint's raw default shape,
-# where the key is `read_only` (snake_case). `.readOnly` on that object is
-# always `null`. The `case "$want:$ro"` statement had THREE arms and no
-# default, so `ro=null` matched NONE of them and the entire symmetry section
-# printed nothing at all for a live 13-repo run: not ok, not FLAG, not BLIND
-# -- exactly the silent-negative shape BUILD-DISCIPLINE.md's pattern 14
-# names, and worse than a wrong answer because nothing said a check had even
-# run. These fixtures use the REAL shape (read_only, no readOnly key at all)
-# on purpose, rather than the readOnly shape D2 already covers, so a future
-# edit cannot silently go back to trusting the field gh's validator claims
-# rather than the field gh's endpoint actually sends.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 STUB_JSON_realword='[{"title":"monkey-realword-realword","read_only":false}]'
 O="$(STUB_ROWS='realword	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \

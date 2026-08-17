@@ -23,12 +23,7 @@ SURFACE_AGENT='agent'
 #
 # `llm` and `gpt` are three-letter substrings of ordinary English and ordinary
 # code. Unanchored they matched `re.fu[llm]atch` and `nKi[llM]ode` across this
-# estate -- neither names a vendor, and each would have blocked a commit or
-# marked a movable script unmovable.
-#
-# A TRAILING anchor is NOT applied: `\b(llm)` still catches `LLMs`, `claudes`,
-# `assistants`. Anchoring the tail would let a plural evade, which is a real
-# evasion; leaving it open rejects only mid-word noise, which never is one.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SURFACE_RE_VENDOR="\\b(${SURFACE_VENDORS})"
 
 # `agent` carries NO anchor at all, and that asymmetry with the vendor half is
@@ -36,23 +31,7 @@ SURFACE_RE_VENDOR="\\b(${SURFACE_VENDORS})"
 #
 # The two halves fail in opposite directions. `llm`/`gpt` are three-letter
 # substrings of ordinary English, so they need a leading anchor or they match
-# `fu[llm]atch`. `agent` is a whole English word whose compounds are all
-# genuinely agent-naming -- `subagent`, `agents`, `agentic`, `agentish` -- so an
-# anchor on either side is an EVASION, not precision.
-#
-# Measured 2026-08-02 across all seven bashified branches, both directions:
-#
-#   - widening `\bagent\b` -> `agent` changed the verdict on ZERO files. Every
-#     file containing a compound already contained a bare `agent`, so nothing
-#     newly fails and no false positive is introduced.
-#   - the reverse mattered: with `\bagent\b` on the PATH guard,
-#     realisateur/hooks/sub[agent]-closeout.sh flips from purged to EXPOSED --
-#     a subcommand named after an agent on a branch promising none. That one
-#     file is the whole reason this is not anchored.
-#
-# The theoretical cost is a word like `reagent`. None exists in this estate;
-# if one ever does it fails loudly and gets an exemption, which is the right
-# way round for a guarantee of absence.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 SURFACE_RE_AGENT="${SURFACE_AGENT}"
 
 # The single pattern for "does this name an agent or a vendor".
@@ -71,10 +50,7 @@ surface_names_vendor() {
 # integer; prints 0 for an unreadable file rather than failing, because the
 # callers all treat "cannot read" separately and louder than "scored zero".
 # `grep -c` PRINTS the count and EXITS 1 when the count is zero, so the
-# obvious `|| printf 0` fallback emits "0\n0" -- a string that is not `0`, and
-# every downstream integer test then misfires silently. That is how the first
-# run of closure.sh reported "no false negatives" about a script it had
-# correctly condemned.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 surface_score() {
   local n
   [ -r "$1" ] || { printf '0'; return 0; }
@@ -98,14 +74,7 @@ surface_score_code() {
 #
 # Discovery must not assume bin/. senechal keeps its tooling in health/ and
 # remedies/; an earlier glob reading only bin|scripts|tools found 3 of its 23
-# scripts. Take every tracked .sh anywhere, plus anything in the usual
-# executable dirs, minus tests and libraries (not caller-facing).
-#
-# THE `lib/` EXCLUSION IS WHY THE CLOSURE TOOL EXISTS. A library is not a
-# subcommand, so it is not discovered, so it is never scored -- and a script
-# that sources one inherits nothing from it. See lib/closure.sh.
-#
-# surface_discover <repo> [scope]
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 surface_discover() {
   local repo="$1" scope="${2:-}"
   ( cd "$repo" 2>/dev/null || return 1

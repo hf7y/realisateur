@@ -2,53 +2,11 @@
 # selfdev-gh-app-register.sh -- register a self-dev GitHub App from a manifest
 # and capture its private key, without anyone typing into a settings form.
 #
-#   selfdev-gh-app-register.sh <account> [--repo R] [--reader] [--owner O]
-#                              [--org] [--port N] [--timeout S] [--out DIR]
-#                              [--manifest-only]
-#
-# WHY THIS EXISTS. bin/selfdev-gh-app.sh consumes an App; something has to
-# produce one. Doing that by hand is ~10 form fields, a permissions matrix and
-# a one-time key download PER ACCOUNT, which is precisely the shape Zach
-# rejected for the deploy keys on 2026-08-03 -- *"we can't do this for every
-# install."* The same argument applies one layer up again.
-#
-# WHAT IS AND IS NOT AUTOMATABLE. Verified against GitHub's REST docs
-# 2026-08-07, not remembered:
-#   * App creation      -- automatable via the MANIFEST FLOW. The manifest is
-#                          POSTed to /settings/apps/new, a human confirms, and
-#                          POST /app-manifests/<code>/conversions returns the
-#                          app id, slug, client id/secret, webhook secret AND
-#                          the `pem`. This is the ONLY way to obtain a private
-#                          key programmatically -- there is no endpoint that
-#                          mints one for an app that already exists, so an App
-#                          created by hand can never have its key scripted.
-#   * Installation      -- NOT automatable. No REST endpoint creates an
-#                          installation; a human clicks. This is a hard wall,
-#                          not a gap in this script, and it is why the last
-#                          thing printed is an install URL rather than a claim
-#                          of success.
-#   * Everything after  -- automatable, and is: key placement, gh-app.conf,
-#                          `selfdev-gh-app.sh --check`.
-# Net cost: TWO browser clicks per account. Not zero. Bounded, and the same
-# two regardless of how many repos the account touches.
-#
+# TRAPS (the rest of this header is in the vault):
 # THE CODE EXPIRES IN ONE HOUR and is single-use. If the exchange fails, the
 # App still EXISTS on GitHub with no key you hold -- delete it and re-run
 # rather than trying to recover it, because a key cannot be re-minted.
-#
-# WHY A LOCAL CALLBACK. GitHub redirects the BROWSER to redirect_url, so that
-# URL must be reachable from wherever the browser is -- 127.0.0.1 on this host.
-# Run this where the browser is (mandark), then carry the .pem to the self-dev
-# account. --manifest-only writes the form and stops, for a host with no
-# browser at all.
-#
-# RUN IT IN A REAL TERMINAL, not inside a sandboxed or containerised shell.
-# Both halves of this flow cross the process boundary: the browser must open a
-# file this script wrote, and must reach a loopback port this script is
-# listening on. A shell with a private /tmp or a private network namespace
-# breaks one or both, and the failure is silent from the script's side -- it
-# goes on waiting for a redirect that is being delivered to a different
-# 127.0.0.1. Measured on mandark 2026-08-07.
+
 set -uo pipefail
 
 ACCOUNT=""; REPO=""; ROLE="writer"; PORT="8721"; OUT=""; MANIFEST_ONLY=0; IS_ORG=0; NO_OPEN=0
@@ -90,7 +48,7 @@ for c in python3 curl jq; do
   command -v "$c" >/dev/null || { echo "${0##*/}: FATAL: $c is required and not on PATH" >&2; exit 5; }
 done
 
-# The permission split from MONKEY.md §11. A WRITER is installed on the
+# The permission split from vault:realisateur/MONKEY.md §11. A WRITER is installed on the
 # account's own repo alone; a READER is installed across the shared repos. The
 # two cannot be one App: permissions are per-App, so a single App installed
 # everywhere with Contents:write is write EVERYWHERE.
@@ -137,10 +95,7 @@ FORM="$T/register.html"
 #
 # Under $HOME and NOT /tmp, deliberately. /tmp is not reliably the same
 # directory for the script and for the browser -- a sandboxed or namespaced
-# shell gets a private one, and the symptom is a browser reporting the file
-# does not exist at a path the script can `ls`. Measured 2026-08-07 on
-# mandark, on the first real run of this script. $HOME is the one directory
-# both are guaranteed to agree on.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 KEEPDIR="${XDG_CACHE_HOME:-$HOME/.cache}/selfdev"
 mkdir -p "$KEEPDIR"
 KEEP="$KEEPDIR/register-$ACCOUNT-$$.html"

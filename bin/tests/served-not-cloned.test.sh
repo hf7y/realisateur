@@ -146,13 +146,7 @@ echo "== 3b. THE LIVE SUNSET, WITH NO OVERRIDE ================================"
 # a suite that only tests a sunset it controls has tested nothing about the
 # actual deadline. This one runs `--strict` with NO override, so it reads the
 # date compiled into the script against today.
-#
-# From 2026-08-24 it goes red on every pull request, and the only thing that
-# clears it is `git rm` on bin/served-not-cloned.sh and this file. That is the
-# whole point: the deletion is enforced by the build rather than remembered.
-# If you are reading this because CI went red on a change that has nothing to
-# do with the scheduler -- that is not a bug, that is the sunset. Delete both
-# files and say in the commit whether the redesign landed.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 rc=0
 O="$(bash "$SCRIPT" --strict 2>&1)" || rc=$?
 if [ "$rc" -eq 0 ]; then

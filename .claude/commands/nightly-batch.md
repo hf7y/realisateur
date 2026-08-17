@@ -26,12 +26,12 @@ previous nightly run left work in progress (check the last report under
 
 **Run `bin/precipitation-scan.sh`** (offline, no AI cost) before reasoning
 about anything else. It ranks promotion signals across every registered
-project's `FOCUS.md` -- re-arrival candidates and interface clusters,
-doctrine in `PRECIPITATION.md`. **In an unattended pass, treat reports B and
+project's open issues -- re-arrival candidates and interface clusters,
+doctrine in `vault:realisateur/PRECIPITATION.md`. **In an unattended pass, treat reports B and
 C as READ-ONLY.** They are inference over prose, and their most convincing
 output is the most likely to be wrong -- a 5-project "cluster" on 2026-07-26
 turned out to be a shared boilerplate footer (worked example in
-`PRECIPITATION.md`). Confirming a candidate means opening its members and
+`vault:realisateur/PRECIPITATION.md`). Confirming a candidate means opening its members and
 judging shape stability, which is an `/ideate` job with a human present, not
 a batch one. What this pass MAY do: file a striking candidate as an issue
 for the next interactive pass to judge. What it must NOT do: stamp `(re-arrival: …)`/`[iface: …]`, reorder
@@ -74,14 +74,12 @@ An empty inbox is now the **normal** state, not an exception. Intake is
 bursty; most nights there is nothing dropped.
 
 **The failure mode this section exists to prevent** (observed 2026-07-26,
-seven batch runs in one day): with no inbox artifact to work on, the pass
-goes looking for work in the only place left — realisateur itself — and
-builds another lint, guard, or record *about its own batch process*. Each
-one is real, tested, committed code, which is what makes it hard to see.
-But that day produced five new scripts for realisateur's own workflow and
-**zero** commits into any of the twelve scaffolded projects. That is a
-productive treadmill: the organ that exists to perceive the ecosystem
-spent the night perceiving itself.
+seven batch runs in one day): with no artifact to work on, the pass goes
+looking for work in the only place left -- realisateur itself -- and builds
+another lint, guard or record *about its own batch process*. Each one is real,
+tested, committed code, which is what makes it hard to see. That day produced
+five new scripts for realisateur's own workflow and **zero** commits into any
+of the twelve scaffolded projects.
 
 So when there is no artifact to process, the job is **stewardship of the
 other projects**, and the output is *routing*, not building:
@@ -141,7 +139,7 @@ For each unarchived artifact:
   `~/Documents/Projects/` before creating a new one -- an artifact might
   be an addition to something already scaffolded, not a brand-new project.
 - **If it's an addition to an existing project, apply park-by-default
-  triage** (see `STABILITY-MILESTONES.md`): is this idea required to reach
+  triage** (see `vault:realisateur/STABILITY-MILESTONES.md`): is this idea required to reach
   that project's *current* stability milestone (its open `milestone`-
   labelled issue)? If **yes**, it's `active` -- build/queue it normally. If
   **no**, **park it**: `bin/defere.sh '<one line>' --project <name>` to
@@ -155,7 +153,7 @@ For each unarchived artifact:
   init` it, write a minimal README describing the inferred idea and
   initial scaffolding (actual code/structure appropriate to what was
   inferred -- don't leave it as just a README). Its **stability
-  milestone** (canonical shape in `STABILITY-MILESTONES.md`) is the
+  milestone** (canonical shape in `vault:realisateur/STABILITY-MILESTONES.md`) is the
   inferred **v1 core** of the idea, filed as a `milestone` issue,
   `status: not-started`. That milestone is what every later idea against
   the project gets park-by-default-triaged against.

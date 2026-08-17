@@ -3,79 +3,7 @@
 # its own dispatch run, vs. what its own prompt claims it does?
 #
 # RUNNER: no -- the `-survey` name matches guard-estate.test.sh's shape rule,
-# and this is the opt-out it provides for a name that is not a gate. It cannot
-# be one: it needs root on the self-dev host, a live `gh` token per account,
-# and ten accounts to walk, so no CI job and no hook can ever run it. Its own
-# header says the rest -- signals, not verdicts; a GAP here is something to
-# look at, not a proven bug. What it does instead of gating is exit non-zero
-# when it found something, so a human's shell can branch on it without
-# scraping the text.
-#
-# RUN ON THE SELF-DEV HOST, AS ROOT (or via sudo):
-#   sudo bash bin/selfdev-agent-survey.sh
-#
-# Offline against nothing -- it shells out to git, gh and sudo -u <account>
-# for every row, so it costs real wall-clock and a live GitHub token per
-# account. READ-ONLY throughout: no commit, no push, no gh mutation, no
-# crontab or file write. Signals, not verdicts, same stance as
-# hygiene-lint.sh/no-self-dev.sh -- a GAP here is something to look at, not
-# a proven bug.
-#
-# THE FOUR EXPECTED BEHAVIORS (Zach, 2026-08-10). A self-dev run should:
-#   1. RECONCILE  -- diff local checkout against origin, converge on it
-#   2. ISSUES     -- look at its repo's open issues
-#   3. PRS        -- look at its repo's open pull requests
-#   4. WORKS      -- act on what it found (close/merge/comment/push)
-# This walks every account in the self-dev uid band (same band
-# provision-selfdev-user.sh creates accounts in) and checks each behavior
-# two ways: does the account's OWN dispatch prompt claim to do it, and does
-# its OWN recent run log show evidence it actually did. The two can disagree
-# in either direction -- that disagreement is the finding.
-#
-# WHY THIS EXISTS. PR hf7y/ecosim#41 sat ready-to-review and untouched
-# through three of ecosim's own dispatch ticks: its loop re-checks a fixed
-# issue queue but has no PR sweep at all, so a ready PR on its own repo is
-# currently invisible to it by construction. That was found by hand, one
-# account at a time. Before rewriting the self-dev prompt/dispatch logic
-# fleet-wide, get the SAME read on every account in one pass, mechanically,
-# so the rewrite is aimed at measured gaps instead of the one gap that
-# happened to get noticed.
-#
-# ADDITIONAL FAILURE SURFACES (2026-08-10, from the ecosim/vim-arcade
-# global-instruction-mechanism discussion). Four more things turned out to
-# be true of the monkey fleet the first version of this script could not
-# see, because it only ever read $repo/.claude/commands/*.md -- which,
-# ecosim.conf's own header admits, is "an unadapted copy of realisateur's
-# template" nothing actually dispatches for a scheduler-run-based account.
-# The REAL prompt lives in that account's OWN clone of the `scheduler` repo,
-# at schedule/<acct>.conf's BATCH_PROMPT, sourced fresh by scheduler-run on
-# every tick. So:
-#   - PROMPT SOURCE now prefers that conf's BATCH_PROMPT (sourced the same
-#     way scheduler-run sources it) over the command-file copy, falling
-#     back only if no scheduler clone/conf is found.
-#   - DUPLICATED PROSE: commit hf7y/scheduler@9cfd130 hand-typed an
-#     identical "STANDING RULES" block into three separate accounts'
-#     BATCH_PROMPT strings, byte-for-byte, with no shared source -- a
-#     future edit to one and not the others is invisible until someone
-#     diffs them by hand. Checked cross-account, once, after the per-account
-#     loop (a single account's own claims/evidence read can't see this;
-#     it's a property of the FLEET).
-#   - STALE PROMPT REFS: prompts that hardcode a specific issue number
-#     ("Start with #34") never get revisited once that issue closes -- the
-#     ecosim/vim-arcade briefs do exactly this. Checked live against
-#     GitHub's actual issue state.
-#   - PULL-BLOCKED: the pull-before-dispatch step in usage-paced-runner.sh
-#     is fail-loud-not-block by design -- a dirty or diverged scheduler
-#     clone means that account silently never receives ANY global
-#     instruction update, indefinitely, until a human notices. This is the
-#     mechanical precondition for every fix above actually reaching an
-#     account; check it directly rather than assuming a push landed.
-#   - DRAFT-PR-BLIND: a prompt can claim PR awareness (classify_prs) via
-#     "gh pr list" and still never mention "draft" -- which is exactly the
-#     autonomy-merge engine's own blind spot (lib/autonomy-merge.sh walks
-#     LOCAL branches, never checks GitHub's draft/ready state at all). If
-#     draft PRs exist and the prompt is silent on the word, that gap is
-#     real, not assumed.
+
 set -uo pipefail
 
 CLI_NAME='selfdev-agent-survey.sh'
@@ -121,12 +49,7 @@ classify_draft_aware() { grep -qiE '\bdraft\b' <<<"$1" && echo yes || echo no; }
 # JSON regardless of how many records it holds. Pure, offline-testable, and
 # extracted for exactly that reason: this was `grep -c '"number"'` until
 # 2026-08-10, and `grep -c` counts LINES, not matches. Every account in the
-# fleet therefore reported `ISSUES open=1` -- ecosim's real 3, chezz's real
-# 11 and gardien's real 7 all rendered as the same digit, and the survey read
-# as a fleet with a uniform one-issue backlog. A survey whose headline number
-# is a boolean wearing a count's clothes is worse than one that prints
-# nothing. Same `grep -o | wc -l` idiom the PR counts below already used
-# correctly; no jq dependency added.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 json_field_count() { grep -o "\"$2\"" <<<"$1" | wc -l | tr -d ' '; }
 
 # Pure two-blob comparator for the cross-account duplication check: count of
@@ -247,23 +170,7 @@ $(cat "$f")"
   # script's own reads against the fleet rather than trusting its columns:
   #
   # 1. WRONG DIR, for exactly the accounts that matter. The glob was
-  #    `*-nightly-batch/{sweep,run}.log`. The three ARMED accounts dispatch
-  #    through `usage-paced-runner.sh`, which writes
-  #    `.local/share/scheduler-paced-runner/run.log` -- a name that does not
-  #    end in `-nightly-batch` and so was never read. bibliothecaire, which
-  #    had run that very morning, reported "no log found" and therefore
-  #    `issues claims=yes evidence=no <- claims it, no recent evidence`: a
-  #    GAP manufactured by the instrument. Match ANY job dir; the job's name
-  #    is the scheduler's to choose and this script does not get to assume it.
-  #
-  # 2. NO RECENCY WINDOW. chezz, crt and baudin were paused on 2026-08-06
-  #    (hf7y/scheduler@9006134) and their last log is from that day, so four
-  #    days later they still read `evidence=yes` off work that has not
-  #    happened since. That is the inverse of the caveat this script already
-  #    prints: a quiet night can look like a blind spot, and a STOPPED
-  #    account looks exactly like a working one. Evidence older than the
-  #    window is reported and then NOT counted -- an account that stopped
-  #    should read as stopped.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   local newest_log_age="" f_age
   for f in "$home"/.local/share/*/sweep.log "$home"/.local/share/*/run.log "$home"/reports/*/LATEST.md; do
     [ -f "$f" ] || continue

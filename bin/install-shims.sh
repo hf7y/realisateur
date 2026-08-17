@@ -31,12 +31,7 @@ cli_guard "$@"
 # bin/token-usage.sh. Those answer "where am I"; this one answers "what should
 # the INSTALLED shim point at", and the answer must be a stable checkout
 # rather than whatever tree the installer happened to be invoked from.
-# Deriving it from BASH_SOURCE would let a run inside .claude/worktrees/*
-# silently repoint every shim on PATH at a temporary worktree.
-#
-# Overridable by environment for tests only (bin/tests/*, which also override
-# HOME so nothing real is written). Not a migration hook: a second host wants
-# its own stable path here, set once, not inherited from a caller's cwd.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 REPO="${REPO:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/realisateur}"
 
 # A SOURCE OF TRUTH THAT IS NOT THERE IS A HARD FAILURE, NOT A FLAG.
@@ -44,35 +39,7 @@ REPO="${REPO:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/realisateur}"
 # Found 2026-08-02 while bootstrapping dexter, and it is the reason the
 # 2026-08-02 snapshot could say "nothing in the ecosystem knows how to install
 # itself onto a bare machine" while realisateur was the one project that
-# shipped an installer. Run on dexter as `bash ~/realisateur/bin/
-# install-shims.sh`, with no REPO set, this defaulted to mandark's path -- a
-# directory that does not exist on that host -- printed two FLAGs about the
-# hooks it could not find, installed NOTHING, and **exited 0**.
-#
-# ~/.local/bin was still exactly `claude node npm npx` afterwards and
-# ~/.claude/{commands,hooks} were empty, while the caller was told the run
-# succeeded. That is an exit-0 no-op on the installer itself: the single
-# failure mode this ecosystem's doctrine names as worse than a crash, in the
-# script whose whole job is making the guards exist.
-#
-# The comment above is right that REPO must not be derived from BASH_SOURCE --
-# that would let a run inside .claude/worktrees/* repoint every shim on PATH at
-# a temporary worktree. The override is the migration path, exactly as line 38
-# says ("a second host wants its own stable path here, set once"). What was
-# missing is that choosing a path nobody ever validated is indistinguishable
-# from choosing the right one, right up until nothing is installed.
-# `-e "$REPO/.git"`, NOT `-d`. In a linked worktree (and in a submodule)
-# `.git` is a FILE containing `gitdir: ...`, so the `-d` form this line used
-# until 2026-08-07 refused every worktree with "does not name a realisateur
-# checkout" -- which is false: a worktree is a checkout. That is not a
-# hypothetical: every agent in this repo works in .claude/worktrees/*, and
-# bin/tests/install-shims.test.sh now passes its own tree as REPO, so the
-# wrong predicate made the suite fail from the only place it is ever run.
-#
-# This does NOT reopen the worktree hazard the header above names. That hazard
-# is about DERIVING REPO from BASH_SOURCE, which this script still refuses to
-# do; reaching here at all means someone set REPO explicitly. E1/E2 still
-# refuse a directory that is no checkout at all.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 if [ ! -d "$REPO/bin" ] || [ ! -e "$REPO/.git" ]; then
   printf '%s: REPO does not name a realisateur checkout: %s\n' \
     "${0##*/}" "$REPO" >&2
@@ -86,14 +53,7 @@ fi
 # dir; without the override the test silently ran against the REAL
 # ~/.local/bin, ~/.claude/commands and ~/.claude/hooks -- writing to live
 # machine config to assert something about a temp directory, and failing three
-# assertions because the files it examined were never the files it wrote.
-#
-# It regressed exactly that way on 2026-08-02: `4eb0caf` added the overrides
-# for BIN_DEST/CMD_DEST together with the test that needs them, `f990f87`
-# edited the same block from the pre-4eb0caf base, and git merged both with no
-# textual conflict -- so the hardcoded lines won and the overrides vanished
-# while every test still "passed" on each branch alone. A semantic collision
-# no conflict marker would have shown. Keep these as `${VAR:-...}`.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 BIN_DEST="${BIN_DEST:-$HOME/.local/bin}"
 CMD_SRC="$REPO/.claude/commands"
 CMD_DEST="${CMD_DEST:-$HOME/.claude/commands}"
@@ -116,38 +76,40 @@ mapfile -t GLOBAL_COMMANDS < <(
   done
 )
 
-# SHIMMED = every bin/<name>.sh those files name, plus every bare token in
-# CLAUDE.md's propagated "Ecosystem protocols" block that matches one of our
-# own bin scripts. Anything a global command tells a session to run must be
-# reachable from a repo that has no realisateur checkout.
+# SHIMMED = every bin/<name>.sh the global command files name, plus the
+# ecosystem-protocol commands named explicitly below.
+#
+# THE PROTOCOL COMMANDS ARE A LIST, NOT A GREP. Until 2026-08-17 the second
+# half of this derivation grepped backticked tokens out of BUILD-DISCIPLINE.md
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+PROTOCOL_COMMANDS=(
+  check-project-busy
+  claim-drift
+  closeout-lint
+  discipline
+  focus-commit
+  notify-senechal
+  silence-audit
+)
+
 mapfile -t SHIMMED < <(
   {
     for n in "${GLOBAL_COMMANDS[@]:-}"; do
       [ -n "${n:-}" ] && grep -o 'bin/[a-z0-9-]*\.sh' "$CMD_SRC/$n.md" 2>/dev/null
     done | sed 's|bin/||; s|\.sh||'
-    # FIRST TOKEN of each backticked span, not the whole span. Every command
-    # in the propagated block is written with its arguments -- `focus-commit
-    # <repo> ...`, `notify-senechal '<what>'`, `silence-audit --strict` --
-    # so a pattern anchored to a closing backtick matched NOTHING, and this
-    # entire half of the derivation had been dead since it was written. It
-    # looked like coverage: the three shims it was supposed to produce
-    # existed anyway because ideate.md/cloture.md name them, so the silence
-    # was indistinguishable from success. silence-audit is the first command
-    # named ONLY here, and it is what exposed this -- it had to be
-    # hand-copied to ~/.local/bin, which is the failure install-shims exists
-    # to retire. Existence of bin/<token>.sh is still the filter, so a prose
-    # word can never become a shim.
-    # READ FROM BUILD-DISCIPLINE.md, NOT CLAUDE.md. Until 2026-08-14 the
-    # protocols block was STAMPED into CLAUDE.md and this line grepped the
-    # stamp. `discipline` retired the stamp, so CLAUDE.md now carries a
-    # one-line pointer and none of the command names -- grepping it would have
-    # silently dropped the silence-audit / consulte / focus-commit shims, i.e.
-    # deleted working guards as a side effect of a docs change. The names live
-    # where the text lives.
-    grep -oP '`\K[a-z][a-z0-9-]*(?=[`[:space:]])' "$REPO/BUILD-DISCIPLINE.md" 2>/dev/null \
-      | while read -r t; do [ -f "$REPO/bin/$t.sh" ] && echo "$t"; done
+    printf '%s\n' "${PROTOCOL_COMMANDS[@]}"
   } | sort -u
 )
+
+PROTOCOL_MISSING=()
+for n in "${PROTOCOL_COMMANDS[@]}"; do
+  [ -f "$REPO/bin/$n.sh" ] || PROTOCOL_MISSING+=("$n")
+done
+if [ "${#PROTOCOL_MISSING[@]}" -gt 0 ]; then
+  printf 'install-shims: FAIL: PROTOCOL_COMMANDS names %d script(s) that do not exist: %s\n' \
+    "${#PROTOCOL_MISSING[@]}" "${PROTOCOL_MISSING[*]}" >&2
+  exit 1
+fi
 
 CHECK_ONLY=0
 [ "${1:-}" = "--check" ] && CHECK_ONLY=1
@@ -224,14 +186,7 @@ install_file() {
   # because both checks below follow it: `-f`/`cat` read through to the TARGET
   # (so a symlink pointing at this repo's own source compares source-vs-shim,
   # always differs, and never short-circuits), and then `> "$path"` writes
-  # through to that same target.
-  #
-  # Hit for real on 2026-08-01: a hand-made
-  #   ln -s $REPO/bin/silence-audit.sh ~/.local/bin/silence-audit
-  # made this function overwrite bin/silence-audit.sh with a shim that exec'd
-  # itself. Infinite recursion, source destroyed -- and the run printed
-  # "written silence-audit" and exited 0, so nothing anywhere reported a fault.
-  # That silent-success-on-destruction is BUILD-DISCIPLINE's first row.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   if [ -L "$path" ]; then
     local target; target="$(readlink "$path")"
     if [ "$CHECK_ONLY" = 1 ]; then
@@ -271,15 +226,7 @@ done
 # accounts after realisateur#267 moved its script under bin/retired/ -- a
 # command on PATH whose target no longer exists, on every account, reported by
 # nothing. hf7y/groc-mangr#3 recorded this same shape a week earlier
-# ("orphaned shims on PATH: ecosystem-survey, milestone-audit, steward-survey,
-# sources deleted in realisateur#101") and it was fixed by hand, per host,
-# which is why it came straight back.
-#
-# ONLY OUR OWN. The marker line render_shim writes is the whole safety
-# argument: this removes files this installer generated and nothing else, so a
-# hand-written script or another project's command in ~/.local/bin is never
-# touched. A prune that could delete a stranger's file would be a worse defect
-# than the orphan it fixes.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 prune_orphans() {
   local f base
   for f in "$BIN_DEST"/*; do
@@ -313,11 +260,7 @@ done
 # hand on 2026-08-01 and tracked in NO repo, which is the same defect that
 # broke the dexter bootstrap in July -- `usage-paced-runner.sh` was a symlink
 # hand-made once that nothing in any repo created, so a bare host could not
-# receive it and deleting it was a total outage. A guard that only exists in
-# ~/.claude cannot be reproduced on a second host and cannot be reviewed.
-#
-# Derived by glob, not typed: the comment on SHIMMED above records that a
-# hand-maintained list is exactly what produced the 2026-07-27 coverage gap.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 note "Claude Code hooks -> $HOOK_DEST"
 shopt -s nullglob
 hook_files=("$HOOK_SRC"/*.sh)

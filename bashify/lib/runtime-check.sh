@@ -1,38 +1,20 @@
 #!/usr/bin/env bash
 # runtime-check.sh -- has any branch's lib/verb.sh drifted from the skeleton?
 #
+# TRAPS (the rest of this header is in the vault):
 # WHY THIS EXISTS
 # ---------------
 # skel/lib/verb.sh says it exists "so nineteen utilities cannot drift into
 # nineteen dialects." It had drifted into FOUR, across ten repos, and the
 # canonical copy was running in only two of them. Nothing noticed for a month
 # because nothing ever asked.
-#
-# The de-fork (2026-08-02) merged those dialects into one union. This is the
-# guard that keeps them merged. Without it the fork simply happens again, and
-# the second time there is no record of which copy was canonical.
-#
 # THE CHECK IS BYTE-IDENTITY, deliberately, and that is not pedantry. The purge
 # guard in bashify.sh already exempts lib/verb.sh's use of the word "agent"
 # ONLY IF the file is byte-identical to the skeleton -- so "identical" is
 # already load-bearing elsewhere in this generator, and a looser check here
 # would silently widen that exemption.
-#
-# A KNOWN, NAMED EXCEPTION -- and it is reported, never exempted.
-# gardien's runtime carries `verb_gap_or_summon`, which calls `claude -p`
-# DIRECTLY. skel/lib/verb.sh's own line 32 says escalate through basheur,
-# "never by contacting a model directly... a verb that calls a model itself has
-# re-animated its own project, which is what Law 3 forbids." So gardien cannot
-# adopt the union until that function is rewritten to route through basheur --
-# a real change, because `basheur run --summon <contract>` takes a contract
-# name while the function takes a free-text prompt, so all four call sites in
-# bin/garde change shape.
-#
-# This script does NOT special-case gardien. It reports it as DRIFT with that
-# reason attached. An exemption list is how a temporary divergence becomes
-# permanent: the entry stops being read, and the fork stops being visible.
-#
 # Offline, read-only, zero cost. It never writes to any repository.
+
 set -uo pipefail
 
 CLI_NAME='runtime-check.sh'

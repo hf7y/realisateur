@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #
+# TRAPS (the rest of this header is in the vault):
 # WAS RED WHEN CI FIRST RAN IT (30/4, run 31217552355); CLOSED 2026-08-07, and
 # the first diagnosis was REFUTED, which is the lesson. The hardcoded
 # `SCHED="/home/zach/Documents/Projects/scheduler"` was real, but c8fc45e (#89)
@@ -12,28 +13,8 @@
 # bin/install-verbs.sh reads, instead of retyping the registry join, and reports
 # BLIND rather than "no registered project" when the registry is absent.
 #
-# verb-set.test.sh -- the declared set, and the two defects it closes.
-#
-# THE LOAD-BEARING ASSERTION IS C1: a declared verb that is NOT installed makes
-# install-verbs exit 1. Everything else is scaffolding.
-#
-# That case is precisely what scheduler/bin/deploy-drift-check.sh cannot see.
-# It iterates its own bin/ and `continue`s when the installed file is absent,
-# so a link that SHOULD exist but does not is never examined; with no overlap
-# at all it prints "nothing to check" and exits 0. A version of this test that
-# only checked "install-verbs runs and prints rows" would pass against an
-# intersection check too, and would therefore prove nothing.
-#
-# The second defect is B2/B3: `bashify coin` asked `command -v` -- the HOST's
-# PATH -- whether a verb name was free. Declarations live in repos, so on a
-# host where nothing is installed every name reads as free. That is how `range`
-# was assigned to both bibliothecaire and secretaire on 2026-07-30.
-#
-# Hermetic: builds its own project fixtures in a temp dir and overrides
-# INSTALLE_PROJECTS / INSTALLE_BIN / INSTALLE_MANIFEST, so it never reads the
-# live ecosystem and never writes to ~/.local/bin.
-#
 # usage: ./bin/tests/verb-set.test.sh
+
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
@@ -198,15 +179,7 @@ printf -- '-- E. the generator refuses a name another project declares\n'
 # BEFORE any refusal that could write, so nothing is created either way.
 #
 # `register scheduler` IS THE FIX FOR E2..E5, AND IT IS NOT COSMETIC.
-# This block named the project `scheduler` and never put it in the FIXTURE
-# registry -- it relied on coin finding it in the LIVE one. That worked only
-# while bashify/lib/coin.sh hardcoded /home/zach/Documents/Projects/scheduler,
-# i.e. only on one machine, which is the same defect section D of
-# install-shims.test.sh had. c8fc45e (#89) fixed coin to resolve the registry
-# from the environment; from then on coin correctly looked in this suite's own
-# INSTALLE_PROJECTS, found no scheduler.conf, and died at exit 2 "no
-# registered project" before ever reaching the claim check E2..E5 assert on.
-# The four reds were the harness pointing at a machine, not a defect in coin.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 register scheduler
 SCRATCH="$WORK/scratch"; mkdir -p "$SCRATCH"; G "$SCRATCH" init -q -b main
 echo x > "$SCRATCH/README.md"; G "$SCRATCH" add -A; G "$SCRATCH" commit -qm init

@@ -4,13 +4,7 @@
 #
 # KIND: LOCAL
 #
-# WHY THIS EXISTS. Every self-dev account on monkey adopts builds from a cron
-# tick. mandark -- the machine Zach types on -- has none (#117). The channel
-# works and `install-verb-build.sh` does the fetch/verify/switch, tested; what
-# is missing is anything that ever ASKS. So this asks, and delegates every
-# write. It moves no symlink of its own -- a second implementation of the
-# atomic switch would be a second answer to "which build am I on".
-#
+# TRAPS (the rest of this header is in the vault):
 # WHAT IT ADDS over `install-verb-build.sh --check`:
 #   - AGE. A channel can be up to date and months old: if the nightly cutter
 #     stops, --check says "up to date" forever. Stale-and-current is a finding.
@@ -21,19 +15,6 @@
 #   - DANGLING links, which PATH search skips in silence.
 #
 # Usage:
-#   verbs-refresh.sh            report: which build, how old, anything newer
-#   verbs-refresh.sh --apply    pull the newest build and switch to it
-#   verbs-refresh.sh --quiet    print ONE line, and only when something is
-#                               wrong -- for a shell rc file. Silent when fine.
-#
-# To be nagged at login, add to ~/.bashrc:
-#   ~/Documents/Projects/realisateur/bin/verbs-refresh.sh --quiet
-#
-# Env overrides (used by the test suite, not normally set):
-#   BUILD_ROOT=...   verb-build root (default ~/.local/share/verb-builds)
-#   VERB_BIN=...     the PATH dir holding verb links (default ~/.local/bin)
-#   INSTALL_VERB_BUILD=...  path to the tool every write is delegated to
-#   STALE_DAYS=14    how old a current build may be before it is a finding
 
 set -uo pipefail
 

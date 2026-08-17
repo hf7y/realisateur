@@ -3,16 +3,13 @@ scope: user
 description: Session-closing rite -- reconcile every branch against the remote, run the closeout lint, file residue as issues/PRs (never repo prose), surface decisions. Does not build.
 ---
 
-`/cloture` is the closing counterpart to `/ideate`'s opening posture: a
-general rhythm to run after a big job, so a session ends "clear to clear"
-instead of trailing off. Designed 2026-07-26 (name Zach's own call);
-revised 2026-08-10 on two counts: a session can end with local branches
-that reconcile cleanly on lint yet still have no PR/draft PR at all (the
-lint checks "is the content safe", not "can the next reader find it
-without asking"), and repo prose (FOCUS.md/BLOCKERS.md/QUESTIONS.md rows)
-had become the default residue channel when GitHub issues and PR bodies
-already are one, are searchable, and don't need this repo (or a sibling
-repo) to keep growing to hold them.
+`/cloture` is the closing counterpart to `/ideate`'s opening posture: a rhythm
+to run after a big job, so a session ends "clear to clear" instead of trailing
+off. A session can end with local branches that reconcile cleanly on lint yet
+have no PR at all -- the lint checks "is the content safe", not "can the next
+reader find it without asking". Repo prose is never the residue channel:
+GitHub issues and PR bodies already are one, are searchable, and do not need
+this repo to keep growing to hold them.
 
 **Posture: report, route, and surface — do NOT build.** If closing
 reveals unfinished work, file it where something dispatches from (a
@@ -73,8 +70,8 @@ worktree, and dirt this run made from dirt that predates it
 ## 2. Name the philosophy delta, or say "none"
 
 Did this session change what this ecosystem *believes* — a rule, a
-doctrine file (`UNIVERSE.md`, `BUILD-DISCIPLINE.md`, `PRECIPITATION.md`,
-`STABILITY-MILESTONES.md`, `PLAYBOOK.md`, `CLAUDE.md`
+doctrine file (`vault:realisateur/UNIVERSE.md`, `BUILD-DISCIPLINE.md`, `vault:realisateur/PRECIPITATION.md`,
+`vault:realisateur/STABILITY-MILESTONES.md`, `vault:realisateur/PLAYBOOK.md`, `CLAUDE.md`
 itself)? If yes, name the delta in one sentence and confirm the file was
 actually edited and is part of a commit/PR from step 1 — not just
 described in chat. If no, **say "philosophy delta: none" explicitly.**

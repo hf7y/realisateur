@@ -5,6 +5,7 @@
 # GUARD-TEST: bin/tests/claim-drift.test.sh
 # GATE: none -- every path calls `gh` against a live PR; the fixture is in its own suite
 #
+# TRAPS (the rest of this header is in the vault):
 # THE FAILURE THIS CLOSES. An agent reported work COMPLETE and pointed at a
 # pull request. The PR was not a draft. Then more commits landed on it. The
 # thing reviewed -- or approved, or merely believed finished -- was not the
@@ -12,69 +13,17 @@
 # and silently false afterwards, and NOTHING anywhere marked the moment it went
 # stale. Live instance, not a hypothetical: hf7y/realisateur#98 was opened
 # non-draft at 2026-08-07T21:29:10Z and took four more commits after.
-#
-# The repository has already tried prose for this and lost twice: a subagent
-# that reported "completed" and then woke and wrote more (vim-arcade 5b5783e,
-# 2026-08-04), and the recorded lesson that "the first 'completed' may not be
-# the report". A rule people are supposed to remember has now failed enough
-# times to count as measured.
-#
-# WHAT IT DELIBERATELY DOES NOT DO -- and this is the design, not a caveat.
-# It does not forbid growth after "done". Addressing review feedback is
-# legitimate and ordinary, and a mechanism that blocked it would be worked
-# around inside a week -- which is WORSE than no mechanism, because it looks
-# like protection while being routinely bypassed. It refuses nothing, blocks
-# no push, and cannot deny anything: it only makes the claim DETECTABLY STALE.
-# What is forbidden here is not growth. It is SILENT growth -- the claim
-# standing unchallenged while the artifact moves underneath it.
-#
 # WHERE THE CLAIM LIVES, which is the whole trick. A completion claim written
 # in prose to a human cannot be checked later by anyone. So the claim is not
 # prose: it is the PR's own draft state, which GitHub already records with a
 # timestamp and which nobody has to remember to write down.
-#
 #   a DRAFT pull request claims nothing        -> it can never drift
 #   marking it READY is the commitment point   -> that instant is the anchor
 #   a PR OPENED non-draft claims done at its opening
 #
-# That last line is the one that matters, and it is why anchoring on the
-# `ready_for_review` timeline event alone is not enough: a PR opened non-draft
-# never emits that event, so a check that looks only for it sees nothing on
-# exactly the PRs that exhibit the problem. Measured, not assumed -- neither
-# open PR in this repository on 2026-08-07 had one.
-#
-# WITHDRAWING AND RE-MAKING A CLAIM is therefore a first-class, one-gesture
-# act with no new artifact to maintain: convert back to draft while you work
-# (the flag clears -- see case D of the suite), mark ready again when you are
-# done (the anchor moves to the new instant, and the PR reads CURRENT again).
-# Growth stays legal. Growth while still claiming to be finished does not.
-#
-# HOW IT SURFACES. .github/workflows/claim-drift.yml runs this on every
-# pull_request event INCLUDING ready_for_review and converted_to_draft, which
-# are not in the default set. A drifted claim is a red check on the PR -- and
-# it blocks nothing at all: branch protection on main (live since 2026-08-08,
-# see THE MECHANISM below) requires `suites` and `markdown-cost`, and this
-# job (`claim`) is not among the required contexts. That is deliberate, not
-# the leftover of an earlier "this repo cannot have branch protection at all"
-# state (true only briefly, probed 2026-08-07, obsolete a day later) -- a
-# drifted claim is a signal for the human reading the PR, not a build
-# failure. It is a light, which is exactly what was asked for.
-#
-# The CITABLE half falls out for free: for a claimed PR this prints the
-# IMMUTABLE sha the claim was made about. A report that says "done, PR #98 at
-# a49d0f4d" is self-falsifying -- anyone, later, by hand or by this script,
-# can compare that sha to the head and see the claim has gone stale. A report
-# that cites nothing immutable cannot be checked at all, which is the same
-# principle as stamping a released artifact with what produced it, aimed at
-# claims instead of at artifacts.
-#
-# NAMED FOR ITS SIBLING. deploy-drift.sh asks whether a running deployment is
-# still what we merged. This asks whether a completion claim is still what is
-# on the branch. Same question, same vocabulary, other end of the pipe.
-#
 # usage: `--help`, from CLI_USAGE below. One source.
-#
 # exit codes: `--help`, from CLI_EXITS below. One source.
+
 set -uo pipefail
 
 CLI_NAME='claim-drift.sh'
@@ -98,12 +47,7 @@ cli_guard "$@"
 #
 # Why a flag and not a paragraph in a brief: on 2026-08-07 this convention was
 # retyped from memory into eight agent briefs by one coordinator, who then
-# invented a SECOND, conflicting meaning ("draft = needs a decision") in a
-# throwaway answer an hour later. Nothing was wrong with any single retyping;
-# the defect is that retyping was the distribution mechanism. A spawner can now
-# reference this instead of recalling it, and the guard below enforces the same
-# text it prints -- so a brief that paraphrases it wrongly produces a red check
-# rather than silent drift.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 print_convention() {
   cat <<'CONV'
 PULL REQUEST CONVENTION -- canonical. Reference this; do not paraphrase it.
@@ -229,20 +173,7 @@ declares_itself() { [ "$(grammar_declaration "$1")" != none ]; }
 # ready PR that raises a DECISION nobody needs to make. Both are the same
 # defect from opposite sides -- the classification not matching what the
 # diff actually needs -- and 2026-08-10 supplied a live instance: a
-# read-only survey script plus a prose-to-vault move (already sanctioned by
-# PROSE-REAPING.md) got a `DECISION:` line and blocked auto-merge for a
-# change that altered no running account's behavior at all.
-#
-# "No guard can read intent" (this file's own convention text) still holds --
-# this does not decide whether a decision is warranted. It flags the one
-# shape that is mechanically checkable without reading intent: EVERY changed
-# file is either brand new, or an existing `.md` file whose diff removes at
-# least as many lines as it adds (a prose trim/reap, not new prose). A diff
-# shaped entirely like that cannot have changed any EXISTING script's or
-# config's behavior, because nothing existing was touched except to shrink
-# documentation. That is a necessary condition for "no decision was really
-# needed", not a sufficient one -- so this prints a FLAG, never gates
-# --strict, and never overrides the author's own classification.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 is_additive_only_diff() {
   local file='' is_new=0 adds=0 dels=0 saw_file=0
   judge() {

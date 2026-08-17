@@ -4,21 +4,8 @@
 # RUNNER: .github/workflows/tests.yml
 # GUARD-TEST: bin/tests/directive-prose.test.sh
 # GATE: none -- cli-guard.sh exits 2 under guard-estate's stripped sandbox
-#       before any range is resolved, so it cannot be gated there yet. NOT the
-#       reason first given: the merge-base is only the DEFAULT range and
-#       argument one is an explicit one, so the exemption is soft. See #307.
 #
-# hf7y/crt#39 was filed from a comment that had sat in a scheduler config for
-# ten days saying, in its own words, "recorded rather than acted on". It was
-# the only record of a Zach decision anywhere: deleting the prose would have
-# destroyed the decision, and keeping it changed nothing, because no consumer
-# reads a config comment.
-#
-# So: an ADDED line that records a decision must carry an issue reference
-# (`#123` or `owner/repo#123`) on it or within three lines of it. Deletions
-# are free. The issue is the consumer; the prose is then a copy, not the
-# record.
-#
+# TRAPS (the rest of this header is in the vault):
 # THE PATTERNS ARE THE WHOLE DESIGN, and they are narrow on purpose. Derived
 # 2026-08-15 by grepping the estate (baudin crt realisateur senechal wtul
 # maitre) for every candidate and reading the hits. Rejected, with counts,
@@ -33,9 +20,7 @@
 #
 # usage:  directive-prose.sh [<range>]
 # exit:   0  no uncited decision prose was added
-#         1  an added line records a decision and cites no issue
-#         2  usage error (cli-guard.sh)
-#         3  the range or the diff could not be read -- NEVER "found nothing"
+
 set -uo pipefail
 
 CLI_NAME='directive-prose.sh'

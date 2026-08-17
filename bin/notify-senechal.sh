@@ -2,56 +2,15 @@
 # notify-senechal.sh <text> -- file a machine-config change through senechal's
 # own front door, and make sure it actually LANDED where senechal reads it.
 #
-# THE STANDING RULE THIS MECHANIZES (Zach-directed, reaffirmed 2026-07-26):
-# realisateur GENERATES machine-wide config (crontab entries, ~/.claude
-# settings hooks, systemd units, autostart, WM config, marker files under
-# ~/.local/share); senechal OWNS KNOWING IT EXISTS. Ownership of the thing
-# itself stays with realisateur -- precedent is the `# >>> realisateur-owned`
-# block inside Zach's crontab: one project owning its own entry inside a
-# shared machine-config surface.
-#
-# WHY THE FRONT DOOR AND NOT A DIRECT WRITE:
-# `scheduler -i senechal` is the one interface senechal publishes for inbound
-# notes. Going around it means guessing where senechal keeps its inbox, which
-# is precisely the coupling the split below exists to prevent. Since
-# scheduler#22 it files a GitHub ISSUE rather than pushing a file, so this
-# script needs no senechal clone and no write access to a default branch.
-#
-# `--- 2.` re-reads the issue from GitHub rather than trusting exit 0 and a
-# URL we printed ourselves: verify where the consumer reads it.
-#
-# WHO OWNS WHAT IN THIS FILE (Zach's call, 2026-07-27) -- read before editing:
-#
-#   realisateur owns the PROTOCOL. That this guard exists at all, that it is
-#   one of a family of three (with check-project-busy, focus-commit), that
-#   the family is propagated as a baseline and shimmed onto PATH, and that
-#   calling it is mandatory when machine-wide config changes. Structure,
-#   existence, distribution.
-#
+# TRAPS (the rest of this header is in the vault):
 #   senechal owns the CONTRACT -- everything below the `--- 2.` line: what
 #   "landed" means and which surface the consumer actually reads. That is now
 #   its issue queue rather than a file in its tree, which is a smaller and
 #   more stable contract than the one it replaces: an issue URL cannot be
 #   moved by senechal reorganising its own repository.
 #
-# Why split it rather than leave it all here: this script encoded senechal's
-# read-path in realisateur's repo, so if senechal moved its inbox its own
-# front door would break and it would be structurally unable to fix it. Not
-# hypothetical -- realisateur made exactly that .claude/ -> .scheduler/ move
-# on 2026-07-26. The 2026-07-27 SIGPIPE bug was the same seam: a defect in
-# senechal's verification logic that only senechal noticed, requiring an edit
-# to another project's repo to fix.
-#
-# Practical rule: a change to step 2 is senechal's to make, unannounced. A
-# change to step 1, to the guard family, or to how this is installed is
-# realisateur's. Cross-write to the other when you touch its half.
-#
 # Usage (TYPED since 2026-08-16 -- this door does not accept prose):
-#   bin/notify-senechal.sh <door> <field>=<value> ...
-#   bin/notify-senechal.sh --doors     # the doors senechal publishes, and their fields
-#
-# Exit 0 ONLY if the note is on senechal's remote. Every other path exits
-# non-zero with a stated reason -- no exit-0 no-op.
+
 set -uo pipefail
 
 # WHERE PROJECTS LIVE IS A PROPERTY OF THE HOST, NOT OF ZACH'S LAPTOP.
@@ -59,16 +18,7 @@ set -uo pipefail
 # wrong everywhere else. On `monkey` -- the self-dev host stood up 2026-08-03,
 # one unix user per project -- this guard died with
 #
-#   notify-senechal: FAIL: scheduler front door not found/executable at
-#   /home/zach/Documents/Projects/scheduler/bin/scheduler
-#
-# so a machine-scoped change made on monkey could not be filed AT ALL. That is
-# the guard whose entire job is filing, structurally unable to do it on the
-# host the ecosystem is moving to. It failed loud, which is the only reason
-# this is a fix and not an incident.
-#
-# INSTALLE_PROJECTS is the name install-verbs.sh, verb-set.sh, installe and
-# land-selfdev.sh already share for this, so there are not two answers.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 PROJECTS_ROOT="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}"
 SCHED_ROOT="${SCHED_ROOT:-$PROJECTS_ROOT/scheduler}"
 
@@ -79,17 +29,7 @@ die() { printf 'notify-senechal: FAIL: %s\n' "$*" >&2; exit 1; }
 #
 # A paragraph had to be transcribed into senechal's schema by hand before any
 # consumer there could read it. Full rationale: senechal#323. There is no
-# free-text fallback on purpose -- it would be the path of least resistance and
-# every filing would take it. If no door fits, ADD one to senechal's
-# registry/front-doors.json.
-#
-# The schema is FETCHED, never copied: hardcoding a senechal contract here is
-# what took their issue-janitor blind for a day (senechal#221).
-#
-# Fetched with `gh api`, NOT curl: senechal is PRIVATE, so an unauthenticated
-# raw.githubusercontent.com GET 404s -- indistinguishable from "renamed", and
-# it killed every filing on the first real call. `gh` was already required
-# below, and carries the token.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 DOORS_REPO="${NOTIFY_DOORS_REPO:-hf7y/senechal}"
 DOORS_PATH="${NOTIFY_DOORS_PATH:-registry/front-doors.json}"
 DOORS_URL="$DOORS_REPO/$DOORS_PATH"
@@ -242,44 +182,7 @@ command -v gh >/dev/null 2>&1 || die "gh is not on PATH -- cannot file, and coul
 # THE FRONT DOOR IS GITHUB (Zach, 2026-08-05; scheduler#22). `scheduler -i`
 # no longer appends to a local .scheduler/FOCUS.md and pushes -- it files a
 # GitHub issue labelled `idea`. Everything this script used to do after the
-# call was verification of a COMMIT: fetch, merge-base containment, a
-# SIGPIPE-safe blob read of FOCUS.md, and a rebase-with-content-verification
-# path for the behind case. None of that has a subject any more, so it is
-# deleted rather than left switched off.
-#
-# What it buys, beyond simplicity: this script no longer needs a senechal
-# CLONE on the host it runs from. That clone was the last thing pinning
-# senechal to every machine, and it was pinned by the one command the estate
-# protocol requires every project to call.
-#
-# It also fixes MONKEY.md 8.1(2) from the other side: a self-dev account
-# holds a READ-ONLY deploy key on senechal, so the old push could never work
-# and `installe` exited 8 on all 25 verbs while the change itself had landed.
-# Filing an issue needs no write access to any default branch.
-# SHALLOW FIX, 2026-08-12, Zach-directed: file with `gh` directly instead of
-# shelling out to `scheduler -i`.
-#
-# WHY. `scheduler -i` is bin/scheduler, the 3,522-line monolith hf7y/scheduler#34
-# is sunsetting -- and it lives in a CHECKOUT. This command is the one every
-# project protocol requires, so that single call was pinning a scheduler clone
-# onto every host that must be able to notify. Filing the issue is the part
-# `scheduler -i` does last and least; the labels below are the part that
-# matters, and `gh` can stamp those directly.
-#
-# THE LABEL IS A SENSOR, NOT METADATA, and it is the reason this is not just
-# `gh issue create`. From realisateur/bin/thermostat-wiring.sh:147 -- "the
-# provenance label is the thermostat's actual sensor. Every actor in this
-# estate is `hf7y` (realisateur#40, #86), so authorship cannot answer 'did a
-# human ask for this, or did an agent find it' ... An unlabelled issue reads as
-# a Zach directive, i.e. it errors toward dispatching MORE." Git authorship
-# cannot carry provenance here because every actor is the same account, so
-# `from:<project>` is the only channel that can. Dropping it would not be
-# untidy; it would make every machine note read as a human instruction.
-#
-# THIS IS NOT THE PRINCIPLED SHAPE -- see hf7y/realisateur#196. One door, as a
-# French verb, taking a destination, with notify-senechal and `consulte` as
-# thin callers. Both already implement "file a machine-authored note, labelled
-# with its origin, and prove it landed", twice.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 DEST_REPO="${NOTIFY_SENECHAL_REPO:-hf7y/senechal}"
 FROM_PROJECT="${NOTIFY_FROM_PROJECT:-realisateur}"
 
@@ -294,29 +197,7 @@ title="$(printf '%s' "$text" | head -1 | cut -c1-72)"
 #
 #   ---
 #   filed <YYYY-MM-DD HH:MM> via `<tool>` on <host>
-#
-# and senechal's tools/issue-janitor.py keys on it as gate 2 of seven. That
-# footer is the ONLY thing distinguishing a machine receipt from a
-# human-written issue: every actor in this estate is the same `hf7y` account,
-# so authorship cannot answer it and the label cannot either (senechal#75 is
-# `idea`-labelled, machine-filed, and real work).
-#
-# Filing with `gh` directly dropped it. Nothing errored -- a missing footer
-# means "not machine-filed", so the janitor did not fail, it went BLIND:
-# 0 of 28 swept, exit 0, reading as a clean inbox rather than a broken broom.
-# Thirteen receipts were closed by hand on 2026-08-13 before it was noticed.
-#
-# Emitted byte-identically to `scheduler -i`'s version and pinned against
-# senechal's own FOOTER_RE by bin/tests/notify-senechal-footer.test.sh.
-# Changing this shape silently disables a tool in another repo -- if it must
-# change, change FOOTER_RE in the same breath.
-#
-# The triage paragraph sits AFTER the footer on purpose: the janitor strips
-# from the footer onward, so text below can never be read as part of the
-# receipt body that gate 4 anchors against.
-#
-# THE FENCED BLOCK IS THE FILING -- absorb-notices.py reads exactly this fence,
-# which is why it sits ABOVE the footer, inside the receipt body.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 body="$(printf '%s\n\n```senechal-door\n%s\n```\n\n---\nfiled %s via `notify-senechal` on %s\n\nsenechal absorbs this with `tools/absorb-notices.py --write`; closing IS the\nacknowledgement. If it was REJECTED, the payload above is wrong or the entry\nalready exists -- fix it at the caller, not by hand here.\n' \
   "$text" "$payload" "$(date '+%Y-%m-%d %H:%M')" "$(hostname -s 2>/dev/null || hostname)")"
 

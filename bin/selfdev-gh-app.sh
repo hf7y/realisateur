@@ -2,25 +2,7 @@
 # selfdev-gh-app.sh -- mint a short-lived GitHub App installation token for a
 # self-dev account, and prove GitHub answers to it.
 #
-#   selfdev-gh-app.sh --check              probe the wiring, write nothing (default)
-#   selfdev-gh-app.sh --token [--repos a,b]  print an installation token to stdout
-#   selfdev-gh-app.sh --identity           print the App actor -- the PUSHER, not
-#                                          the author. See "AUTHOR AND PUSHER"
-#                                          below: --wire no longer writes this
-#                                          into git's author fields.
-#   selfdev-gh-app.sh --jwt                print the App JWT only (401 debugging)
-#   selfdev-gh-app.sh --adopt --account <name> --key <file.pem> --app-id <id>
-#                                          install a freshly downloaded key at
-#                                          mode 600, write its conf, and prove it
-#   selfdev-gh-app.sh --credential <op>    git credential helper. Git appends the
-#                                          operation itself: `get` mints, and
-#                                          `store`/`erase` are no-ops that exit 0.
-#   selfdev-gh-app.sh --wire               write git config: the credential helper
-#                                          (PUSHER = the App) and the git author
-#                                          (AUTHOR = this account, from `id -un`).
-#                                          Never clobbers an existing identity
-#                                          silently -- it preserves and reports it.
-#
+# TRAPS (the rest of this header is in the vault):
 # WHY THIS EXISTS. bin/wire-selfdev-git.sh gives a self-dev account per-repo
 # deploy keys. Those grant ACCESS and confer no IDENTITY: a deploy-key push is
 # attributed to whatever author string the commit carries, so agent work and
@@ -30,29 +12,7 @@
 # that one missing distinction. A GitHub App installation has its own actor --
 # `<app-slug>[bot]` -- so the attribution is made by GitHub, not asserted by
 # the committer, and cannot be spoofed by setting user.email.
-#
-# WHY A TOKEN AND NOT A PAT. An installation token expires in ONE HOUR and is
-# minted from a private key on demand. There is no long-lived secret to leak
-# into a tracked file, a crontab line, or a log -- the thing at rest is a key
-# that is useless without the App's installation, and the thing in flight is
-# dead by the next scheduler tick. A PAT is the opposite on both counts.
-#
-# WHAT THIS DOES NOT SOLVE. App permissions are per-APP, not per-repo: one App
-# cannot be read-write on a project's own repo and read-only on realisateur.
-# Deploy keys can express that and this cannot, which is why this is an
-# ADDITION to wire-selfdev-git.sh and not a replacement for it. The intended
-# shape is TWO Apps -- a writer installed on the account's own repos, and a
-# reader/filer installed on the shared ones -- selected by $SELFDEV_APP_ID.
-# `--repos` narrows a single mint below the installation's own repo list, which
-# is the only least-privilege lever available inside one App.
-#
-# CONFIG. Read from ONE place, per BUILD-DISCIPLINE: ~/.config/selfdev/gh-app.conf
-# (overridable with $SELFDEV_APP_CONF), a plain shell fragment:
-#     SELFDEV_APP_ID=4520255
-#     SELFDEV_APP_KEY=$HOME/.config/selfdev/monkey-self-dev.pem
-#     SELFDEV_GH_OWNER=hf7y
-# Environment variables of the same names win over the file, so a scheduler job
-# can carry a different App without editing anything.
+
 set -uo pipefail
 
 # GIT APPENDS AN OPERATION TO ITS CREDENTIAL HELPER, AND THIS PARSER USED TO
@@ -101,13 +61,7 @@ done
 # line said `$HOME/.config/selfdev/gh-app.conf`, i.e. one copy of one key per
 # account (thirteen on monkey), and three other scripts spelled the same fact
 # three other ways; converging an account failed because the writer and the
-# reader disagreed (realisateur#209). Now: $SELFDEV_APP_CONF, else
-# /etc/selfdev/gh-app.conf, host-wide.
-#
-# Sourced by PATH when this file is installed as a lone copy under
-# ~/.local/libexec/selfdev/ (the release bootstrap copies both), and by
-# directory otherwise -- a bootstrap that only works from a full checkout is
-# not a bootstrap.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 _sd_lib="$(dirname "${BASH_SOURCE[0]}")/lib/selfdev-app-key.sh"
 [ -r "$_sd_lib" ] || _sd_lib="$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh"
 if [ -r "$_sd_lib" ]; then
@@ -234,52 +188,7 @@ mint_token() {
 # ============================================================================
 #
 # Found live 2026-08-07: `--wire` had set ecosim@monkey's GLOBAL git identity
-# to `unattended-monkey[bot] <314444911+unattended-monkey[bot]@users.noreply.
-# github.com>`. Under the ORIGINAL design -- one App per account -- that was
-# correct, because the bot WAS the account. Under the fleet model chosen the
-# same day -- ONE App across all ten accounts -- it makes every account author
-# identically, and `git log` can no longer answer which agent did anything.
-#
-# That is not cosmetic. The argument for one App over ten was: a per-App
-# identity buys CRYPTOGRAPHIC attribution, we only need BOOKKEEPING
-# attribution, and a per-agent commit author gives that for free. Setting the
-# author to the bot deletes the free half and leaves the fleet with neither.
-#
-# THE MODEL, stated once so neither layer gets rebuilt out of the other:
-#
-#   AUTHOR   who wrote the commit. PURELY LOCAL GIT CONFIG. GitHub has no say
-#            in it and only displays it. Must be the ACCOUNT -- ecosim, chezz,
-#            crt -- because that is the fact nothing else records.
-#   PUSHER   what credential delivered it. The App installation token. GitHub
-#            attributes the push event to `<app-slug>[bot]` REGARDLESS OF
-#            AUTHOR, automatically, with no configuration at all.
-#
-# Both are available at once, and that is the whole point: `git log` answers
-# "which agent did this", GitHub's push event answers "did this come from the
-# fleet". Setting the author to the bot threw away the first in order to
-# duplicate the second.
-#
-# --- the ACCOUNT identity: the AUTHOR half ----------------------------------
-#
-# NAME: `id -un`, deliberately, and NOT `$USER`. $USER is an ordinary
-# environment variable inherited across `sudo -u` and `su` without `-`, which
-# is exactly how these uid-3000 accounts are stood up -- so it can name the
-# provisioning operator while running as the account, and the failure is
-# silent and permanent (it lands in every commit). `id -un` asks the kernel
-# about the effective uid and cannot be inherited from anywhere.
-#
-# EMAIL: `<account>@selfdev.invalid`. `.invalid` is reserved by RFC 2606
-# precisely so it can never resolve, which makes the address HONEST -- it does
-# not pretend to be a mailbox, and nothing will ever try to deliver to it. It
-# is greppable, it sorts, and it says what the identity is.
-#
-# THE TRADEOFF, stated rather than buried: this address does NOT link to a
-# GitHub profile. A `<id>+<name>@users.noreply.github.com` address would, and
-# is the reason bot_identity() below uses one. But the only such address
-# available here is the BOT's, and using it would make every commit claim to
-# be authored by an identity that did not act -- buying a clickable avatar at
-# the cost of a true record. These are machine identities; the record is worth
-# more than the avatar. Overridable for anyone who weighs it the other way.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 SELFDEV_EMAIL_DOMAIN="${SELFDEV_EMAIL_DOMAIN:-selfdev.invalid}"
 
 account_identity() {
@@ -386,12 +295,7 @@ case "$MODE" in
         # as it was documented before git's operation argument was honoured.
         # `exit 5`, matching --token and --identity two branches down.
         # mint_token flattens die()'s 5 to `return 1` internally, so every
-        # caller restates the FATAL code; this one said 1 and was the only
-        # caller in the file that did. Git treats any non-zero as "no
-        # credential" so nothing downstream cares -- but the operator
-        # hand-running the helper does, and one script with two answers for
-        # its own FATAL code is how a missing key gets debugged as a revoked
-        # one.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
         tok="$(mint_token)" || exit 5
         printf 'username=x-access-token\npassword=%s\n' "$tok"
         ;;

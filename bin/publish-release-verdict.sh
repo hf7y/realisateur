@@ -158,10 +158,7 @@ DECISIONS="CUT NO_CHANGE BLOCKED ERROR"
 # `cron: '30 1 * * *'` -- once every 24 hours. GRACE covers a slow assemble
 # plus a late runner; it is not a fudge factor for a channel that is behaving
 # badly, and widening it is a decision to be told about a dead emitter later.
-# Consumers derive their staleness verdict from `valid_until` below rather
-# than from a constant of their own, so this number and the cron expression
-# are the only two things that have to agree, instead of this number and one
-# constant per account.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PUBLISH_CADENCE_H="${PUBLISH_CADENCE_H:-24}"
 PUBLISH_GRACE_H="${PUBLISH_GRACE_H:-4}"
 
@@ -226,16 +223,27 @@ fi
 # recompute them and get the same answer. A published number that cannot be
 # rederived from the published data is a number nobody can check.
 RENDER="$WORK/status.json"
-python3 - "$RENDER" <<PY
-import json, sys
-prev = json.loads('''$PREV_HISTORY''')
+# THE DELIMITER IS QUOTED AND EVERY VALUE ARRIVES THROUGH THE ENVIRONMENT.
+# It was `<<PY`, unquoted, so the shell expanded the whole body before python
+# saw it -- including the backticks in this block's own comments. Every gated
+# cut printed `publish-release-verdict.sh: line 229: decision: command not
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+PREV_HISTORY="$PREV_HISTORY" NOW="$NOW" DECISION="$DECISION" REASON="$REASON" \
+MAIN_SHA="$MAIN_SHA" CI_RUN="$CI_RUN" BUILD_ID="$BUILD_ID" \
+VALID_UNTIL="$VALID_UNTIL" HISTORY_MAX="$HISTORY_MAX" \
+PUBLISH_CADENCE_H="$PUBLISH_CADENCE_H" PUBLISH_GRACE_H="$PUBLISH_GRACE_H" \
+DECISIONS="$DECISIONS" \
+python3 - "$RENDER" <<'PY'
+import json, os, sys
+env = os.environ
+prev = json.loads(env["PREV_HISTORY"])
 row = {
-  "at": "$NOW", "decision": "$DECISION",
-  "reason": """$REASON""".strip() or "<none>",
-  "main_sha": "$MAIN_SHA", "ci_run": "$CI_RUN",
-  "build_id": "$BUILD_ID" if "$BUILD_ID" != "-" else None,
+  "at": env["NOW"], "decision": env["DECISION"],
+  "reason": env["REASON"].strip() or "<none>",
+  "main_sha": env["MAIN_SHA"], "ci_run": env["CI_RUN"],
+  "build_id": env["BUILD_ID"] if env["BUILD_ID"] != "-" else None,
 }
-history = ([row] + prev)[:$HISTORY_MAX]
+history = ([row] + prev)[:int(env["HISTORY_MAX"])]
 # Streak: consecutive non-productive verdicts from the newest backwards.
 # NO_CHANGE breaks it -- a quiet night is healthy, not blocked.
 streak = 0
@@ -248,16 +256,16 @@ last_cut = next((r for r in history if r.get("decision") == "CUT"), None)
 doc = {
   # schema 2 adds valid_until/cadence_hours. Bumped rather than left at 1
   # because a consumer that reads valid_until and one that does not are
-  # different consumers, and "which of them am I talking to" has to be
+  # different consumers, and which of them am I talking to has to be
   # answerable from the document.
   "schema": 2,
-  "generated": "$NOW",
+  "generated": env["NOW"],
   # WHEN THIS DOCUMENT STOPS BEING EVIDENCE. Past it, a consumer must grade
-  # the channel BAD regardless of `decision` -- a stale success is the
-  # failure mode this field exists to close.
-  "valid_until": "$VALID_UNTIL",
-  "cadence_hours": $PUBLISH_CADENCE_H,
-  "grace_hours": $PUBLISH_GRACE_H,
+  # the channel BAD regardless of decision -- a stale success is the failure
+  # mode this field exists to close.
+  "valid_until": env["VALID_UNTIL"],
+  "cadence_hours": int(env["PUBLISH_CADENCE_H"]),
+  "grace_hours": int(env["PUBLISH_GRACE_H"]),
   "decision": row["decision"],
   "reason": row["reason"],
   "main_sha": row["main_sha"],
@@ -265,7 +273,7 @@ doc = {
   "build_id": row["build_id"],
   "blocked_streak": streak,
   "last_cut": last_cut,
-  "decisions_enum": "$DECISIONS".split(),
+  "decisions_enum": env["DECISIONS"].split(),
   "history": history,
 }
 json.dump(doc, open(sys.argv[1], "w"), indent=2)
