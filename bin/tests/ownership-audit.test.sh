@@ -31,12 +31,7 @@ trap 'rm -rf "$WORK"' EXIT
 # 10 lines / 40 lines / 5 lines, so every count below is checkable by hand.
 #
 # The ledger written below is a FABRICATION, not a copy, and that is the point
-# (see HERMETICITY). It restates two rules from bin/lib/ownership-set.sh --
-# longest-prefix lookup, and `own_derived_from`'s "a suite follows its
-# subject" -- because a lookup that behaves differently from the real one
-# would make every assertion here a claim about the fixture. If those two
-# rules change shape in the real ledger, this fixture is the thing that has to
-# change with them; nothing else in the suite hardcodes an owner.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 mk_tree() {
   local t="$1"
   rm -rf "$t"; mkdir -p "$t/bin/lib" "$t/bin/tests"
@@ -215,12 +210,7 @@ echo "== 5. GROWTH INSIDE A RECORDED PATH IS PERMITTED, AND IS REPORTED ========
 # be asked to do -- and under the count-only bar it was arithmetically
 # unmergeable (#144: twelve lines of headroom against a 533-line fix, and
 # --accept refusing by design).
-#
-# The share bar is what still bounds this, and it bounds it TIGHTLY right
-# after an accept: growing a foreign file raises the share unless realisateur
-# grows too. So the fixture reproduces the real tree's situation rather than
-# wishing it away -- bank some realisateur growth first, then spend the slack
-# on a repair. Growth is permitted UNDER the recorded share, never through it.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 T="$WORK/t5"; mk_tree "$T"
 G="$(mk_guard "$WORK/g5")"
 rm "$T/bin/nobodys.sh"; ( cd "$T" && git add -A && git commit -qm rm ) >/dev/null 2>&1

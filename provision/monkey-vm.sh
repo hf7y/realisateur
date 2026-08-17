@@ -76,15 +76,7 @@ act()  { printf '  DO      %s\n' "$*"; }
 # stdin happens to be something with content -- a piped script, a heredoc, a
 # `while read` loop's input -- VBoxManage consumes it and it is gone.
 #
-# Found by running this very script as `ssh dexter 'bash -s' < monkey-vm.sh`:
-# execution stopped dead after the version line, because the FIRST vbm call ate
-# the remaining ~200 lines of the script off stdin. It looked exactly like a
-# crash and was not one. gardien's media-test.sh already carries an assertion
-# for this same class ("an ssh that reads stdin sits on the collision path
-# without -n"); this is the same bug wearing a hypervisor.
-#
-# The ancestor nomac-vm.sh has the same latent defect. It never fired there
-# because that script was always run as a file, never piped.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 vbm()  { "$VBM" "$@" 2>&1 < /dev/null | tr -d '\r'; }
 
 # Windows path -> WSL path, for ANY drive letter. The ancestor hardcoded
@@ -293,17 +285,7 @@ ok "installer started"
 # been wrong in both directions.
 #
 # The ancestor printed 127.0.0.1 unconditionally. The first version of THIS
-# script "corrected" that to a derived default-route address, on the reasoning
-# that under WSL2 NAT the loopback inside WSL is not the Windows host's. On
-# dexter that correction was WRONG and the ancestor was right: WSL2 here has
-# localhost forwarding, so 127.0.0.1:2225 reaches the guest, while the derived
-# 192.168.0.1 (the LAN router, not the Windows host) refused the connection.
-#
-# The lesson is not "use 127.0.0.1". It is that the address depends on WSL2's
-# networking mode, which this script cannot know -- so it TRIES them and
-# reports what answered. A hint that was tested is worth printing; a hint that
-# was reasoned about is how twenty minutes goes into debugging an sshd that
-# was fine all along.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 echo
 echo "-- finding the address that actually reaches the guest --"
 GUESS_HOSTS=(127.0.0.1)

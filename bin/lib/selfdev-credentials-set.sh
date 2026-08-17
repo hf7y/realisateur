@@ -48,14 +48,7 @@ CRED_BASELINE_FILES="app.pem gh-app.conf"
 # itself beyond a substring test. Pure, offline-testable.
 #
 #   gho      a `gho_` OAuth token -- the shared, copied credential every
-#            account but ecosim carries today. Flagged redundant (see above),
-#            never stripped.
-#   pat      a `github_pat_` fine-grained PAT -- ecosim's shape, live
-#            2026-08-11. Not baseline; a real divergence unless CRED_GRANTS
-#            names it.
-#   other    present, and neither of the above -- a classic PAT
-#            (`ghp_`) or something this baseline has never seen.
-#   missing  no oauth_token line at all.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 cred_classify_token() {
   local line="$1"
   case "$line" in

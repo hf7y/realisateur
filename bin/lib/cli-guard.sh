@@ -75,25 +75,7 @@ cli_guard() {
         # gated cut (2026-08-07).
         #
         # cli_guard walks EVERY element of argv, values included -- it has to,
-        # because it does not know which flags take a value. So a value that
-        # begins with `-` reaches the `-*)` arm below. Almost always that is
-        # correct and desirable: `--reason --apply` is a misparse worth dying
-        # on. A bare `-` is the one exception, because in this estate it is
-        # not a near-miss on anything -- it is the DOCUMENTED sentinel that
-        # publish-release-verdict.sh and release-ledger.sh both use for "no
-        # build id", and it is their own default value for that field.
-        #
-        # WHAT IT COST. build-verbs.yml invokes the publisher with
-        # `--build-id "${CUT_BUILD:--}"`. CUT_BUILD is empty on every night
-        # that does NOT cut -- which is every BLOCKED, ERROR and NO_CHANGE
-        # night, i.e. exactly the nights the verdict channel was built for. So
-        # the publisher died `unknown flag: -`, exit 2, and published nothing.
-        # The endpoint went on serving the previous CUT verdict, and the
-        # consumer graded a broken gate as "release channel healthy".
-        #
-        # It is NOT waved through: with CLI_POSITIONAL=none it still dies, and
-        # it dies naming itself rather than as an "unknown flag", so a script
-        # that genuinely takes no arguments is no laxer than it was.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
         [ "${CLI_POSITIONAL:-none}" = none ] && \
           cli_die "unexpected argument: '-' (this tool takes no positional arguments)"
         ;;
@@ -116,11 +98,7 @@ cli_guard() {
 #
 # The SECOND silent failure in the project-filter scripts, and the subtler one.
 # hygiene-lint/closeout-lint/milestone-audit take project names as positional
-# arguments and filter their scan to them. A name matching nothing -- a typo, a
-# renamed project, a project that was never registered -- produced an empty
-# scan, a clean header, and exit 0. Indistinguishable from "I checked it and it
-# is fine", which is the worst thing a lint can say about something it never
-# looked at.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cli_require_matched() {
   local -n _cli_want="$1" _cli_got="$2"
   [ "${#_cli_want[@]}" -gt 0 ] || return 0

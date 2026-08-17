@@ -17,14 +17,7 @@ gh_slug() {
 # <branch> is the base branch the caller's local HEAD tracks (e.g. "main").
 # <content-file> is the FULL desired contents of CLAUDE.md (not a diff).
 # <msgfile>'s first line becomes the PR title AND the commit message subject
-# (contents-API commits are one line; the PR body carries the rest of the
-# file as -F/--body-file so the full rationale still lands somewhere).
-#
-# Every step is independently fallible (branch already exists from a half-run,
-# repo has no CLAUDE.md on the base branch yet, token lacks scope, checks
-# required) -- each `|| return 1` hands the caller back to its existing "PUSH
-# FAILED, committed locally only; resolve by hand" path, so a failure here is
-# never worse than the failure this function exists to route around.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 api_restamp_push() {
   local repo="$1" slug="$2" branch="$3" content="$4" msgfile="$5"
   local base_sha file_sha new_branch title pr_url

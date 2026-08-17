@@ -179,15 +179,7 @@ printf -- '-- E. the generator refuses a name another project declares\n'
 # BEFORE any refusal that could write, so nothing is created either way.
 #
 # `register scheduler` IS THE FIX FOR E2..E5, AND IT IS NOT COSMETIC.
-# This block named the project `scheduler` and never put it in the FIXTURE
-# registry -- it relied on coin finding it in the LIVE one. That worked only
-# while bashify/lib/coin.sh hardcoded /home/zach/Documents/Projects/scheduler,
-# i.e. only on one machine, which is the same defect section D of
-# install-shims.test.sh had. c8fc45e (#89) fixed coin to resolve the registry
-# from the environment; from then on coin correctly looked in this suite's own
-# INSTALLE_PROJECTS, found no scheduler.conf, and died at exit 2 "no
-# registered project" before ever reaching the claim check E2..E5 assert on.
-# The four reds were the harness pointing at a machine, not a defect in coin.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 register scheduler
 SCRATCH="$WORK/scratch"; mkdir -p "$SCRATCH"; G "$SCRATCH" init -q -b main
 echo x > "$SCRATCH/README.md"; G "$SCRATCH" add -A; G "$SCRATCH" commit -qm init

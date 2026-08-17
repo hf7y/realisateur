@@ -26,7 +26,7 @@ previous nightly run left work in progress (check the last report under
 
 **Run `bin/precipitation-scan.sh`** (offline, no AI cost) before reasoning
 about anything else. It ranks promotion signals across every registered
-project's `FOCUS.md` -- re-arrival candidates and interface clusters,
+project's open issues -- re-arrival candidates and interface clusters,
 doctrine in `vault:realisateur/PRECIPITATION.md`. **In an unattended pass, treat reports B and
 C as READ-ONLY.** They are inference over prose, and their most convincing
 output is the most likely to be wrong -- a 5-project "cluster" on 2026-07-26
@@ -74,14 +74,12 @@ An empty inbox is now the **normal** state, not an exception. Intake is
 bursty; most nights there is nothing dropped.
 
 **The failure mode this section exists to prevent** (observed 2026-07-26,
-seven batch runs in one day): with no inbox artifact to work on, the pass
-goes looking for work in the only place left — realisateur itself — and
-builds another lint, guard, or record *about its own batch process*. Each
-one is real, tested, committed code, which is what makes it hard to see.
-But that day produced five new scripts for realisateur's own workflow and
-**zero** commits into any of the twelve scaffolded projects. That is a
-productive treadmill: the organ that exists to perceive the ecosystem
-spent the night perceiving itself.
+seven batch runs in one day): with no artifact to work on, the pass goes
+looking for work in the only place left -- realisateur itself -- and builds
+another lint, guard or record *about its own batch process*. Each one is real,
+tested, committed code, which is what makes it hard to see. That day produced
+five new scripts for realisateur's own workflow and **zero** commits into any
+of the twelve scaffolded projects.
 
 So when there is no artifact to process, the job is **stewardship of the
 other projects**, and the output is *routing*, not building:

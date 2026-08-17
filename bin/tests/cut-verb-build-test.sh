@@ -353,17 +353,7 @@ check "...and every row is <project><TAB><name><TAB><why>" \
 # assembled. Asserted here rather than only in that lint's own suite,
 # because the failure being guarded against is not a broken lint -- it is a
 # correct lint nothing calls. guard-estate.test.sh check B exists for
-# exactly that, and six of the guards surveyed on 2026-08-07 were hand-run
-# only.
-#
-# The population is DISJOINT from sections 10-13 above and that is the whole
-# relationship between the two files. lib/not-a-verb.tsv exempts a HALF
-# declaration -- bin/<n> with no man/<n>.1 -- which by construction never
-# reaches the manifest. verb-kind-lint grades manifest rows, i.e. names that
-# carried BOTH halves. No name can be in both populations, so the channel
-# check reads no exemption file: there is nothing in one for it to find.
-#
-# 14a. A PRODUCT must not ride the workchain cut.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 mkrepo theta tv
 printf '#!/usr/bin/env bash\n# KIND: product\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "tv\\n"\n' \
     > "$FIX/theta.git/bin/tv"

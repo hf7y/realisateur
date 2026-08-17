@@ -97,13 +97,7 @@ say "GATE 2 -- TWO COPIES"
 # recoverability -- does this history exist anywhere but this disk -- and
 # uncommitted edits are work in progress, which is a moving target by design
 # and is somebody's active session, not a fault. (Checked 2026-08-01 against
-# dcp-gate-site, a project created that afternoon and still being edited.)
-# The agent-side version of that concern is enforced per-run by the
-# SubagentStop dirty-tree hook, not here.
-#
-# COMMITTED-BUT-UNPUSHED *is* a failure: that is exactly the state basheur was
-# in on 2026-08-01, when two commits existed in precisely one directory on one
-# 91%-full disk, and the repo had no GitHub remote at all.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 bad=""; dirty_info=""
 for d in "$PROJECTS"/*/; do
   [ -d "$d/.git" ] || continue
@@ -123,11 +117,7 @@ else notmet "2.1 every repo has a non-local origin, nothing unpushed" "$bad"; fi
 #
 # `garde media list` exits 6 when no destination is reachable, and prints
 # "BLIND: ... the REMOTE column above is unknown, not empty". Its PENDING rows
-# then mean "I could not look", NOT "there is no copy". An earlier version of
-# this script counted those rows and reported 15 sets uncovered while the
-# backup was in fact intact -- collapsing could-not-look into nothing-there,
-# which is the precise failure ecosim exists to name and silence-audit exists
-# to catch. Check the exit code BEFORE reading the rows.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 gl="$(garde media list 2>/dev/null)"; grc=$?
 if [ "$grc" = 6 ]; then
   unprov "2.2 backup coverage is UNKNOWN -- garde is BLIND (exit 6)" \
@@ -185,17 +175,7 @@ say "GATE 3 -- ONE LOOP, WATCHED"
 # drew the line this gate actually cares about: MECHANISMS RUN ON A CLOCK,
 # AGENTS RUN WHEN THERE IS WORK. A mechanism is cheap, deterministic and free,
 # so a timer is the right trigger; an agent costs tokens and needs something to
-# decide, so pending work is the right trigger and a clock is merely the
-# cheapest wrong one.
-#
-# Under that rule ZERO enabled agents is not a failure -- it is the correct
-# state when nothing is pending, and it is what unpacing gardien produced after
-# its first run correctly found nothing to do. What must hold is the CEILING:
-# never more than one agent armed at a time, the dispatcher present so work can
-# be picked up when it appears, and no FREEZE silently swallowing dispatch.
-# grep -c PRINTS 0 and EXITS 1 on no-match, so `|| echo 0` yields "0\n0" and
-# every numeric test after it explodes. Masked until the count was legitimately
-# zero, which is exactly the state this gate now has to handle.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 en="$(grep -cE '^[a-z][a-z-]*\|1\|' "$SCHED/schedule/_paced.conf" 2>/dev/null || true)"; en="${en:-0}"
 frz=0; [ -e "$SCHED/schedule/FREEZE" ] && frz=1
 if [ "$en" -le 1 ] && [ "$disp" = 1 ] && [ "$frz" = 0 ]; then
@@ -236,11 +216,7 @@ else
   # mere existence of a non-main branch. An earlier version accepted any branch
   # with a recent commit and reported 3.3 MET on `bashified` -- a branch from
   # hand-driven bashify work -- on an evening when the 18:00 tick had SKIPped
-  # the only enabled participant on an expired dead-man switch. A gate that
-  # passes because unrelated work happened is worse than no gate.
-  #
-  # run.log lines: `DISPATCH [i/n] <name> -> <cmd>` then `DONE <name> rc=<n>
-  # outcome=<...>`. A tick that holds, freezes, or skips logs none of these.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   proj="$(grep -oE '^[a-z][a-z-]*(?=\|1\|)' "$SCHED/schedule/_paced.conf" 2>/dev/null \
           || grep -E '^[a-z][a-z-]*\|1\|' "$SCHED/schedule/_paced.conf" 2>/dev/null | cut -d'|' -f1 | head -1)"
   proj="${proj:-gardien}"
@@ -257,16 +233,7 @@ else
     #
     # On 2026-08-01 the first run read its FOCUS.md, found a standing directive
     # that the work it would otherwise have done was retired, and correctly
-    # built nothing -- "building further gardien.py features tonight would
-    # directly contradict FOCUS.md's standing directive". The run before it had
-    # installed the very systemd units that directive retired. A gate requiring
-    # a commit would have scored the reckless run a pass and the careful one a
-    # fail, and would reward an agent for manufacturing work to satisfy it.
-    #
-    # What 3.3 actually protects is that an unattended run is SAFE and
-    # LEGIBLE: it finished, it left nothing uncommitted, it put nothing on
-    # main, it broke no units, and it left a record a human can read. Whether
-    # it produced a commit is the project's business, not the floor's.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
     dirty="$(git -C "$PROJECTS/$proj" status --porcelain 2>/dev/null | grep -c . || true)"
     fail="$(systemctl --user list-units --state=failed --no-legend 2>/dev/null | grep -c . || true)"
     # Window from when the run actually STARTED, not a flat 18h. A human

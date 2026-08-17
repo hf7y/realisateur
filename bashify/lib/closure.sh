@@ -69,11 +69,7 @@ done
 # Comment lines are excluded; everything else is taken at face value. Over-
 # inclusion (a `source` inside a heredoc) adds a dependency, which can only
 # make a script look dirtier -- the safe direction for a guarantee of absence.
-# A first cut stopped the argument at the first `)`, which truncated the very
-# common `. "$(dirname "$0")/../lib/x.sh"` to `"$(dirname "$0"` and reported it
-# UNRESOLVED. Take the whole remainder of the line instead and strip only what
-# genuinely cannot be part of a path: a redirection, a list operator, or a
-# trailing comment.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 _source_args() {
   grep -vE '^[[:space:]]*#' "$1" 2>/dev/null \
     | sed -nE -e 's/^[[:space:]]*(source|\.)[[:space:]]+(.*)$/\2/p' \
@@ -87,10 +83,7 @@ _source_args() {
 # Prints a repo-relative path, or `!UNRESOLVED`, or `!EXTERNAL:<path>`.
 #
 # The variable rule is deliberate and stated: a leading `$VAR/` or `$(...)/ `
-# is treated as SOME root, and the suffix after the first `/` is tried against
-# every plausible root. If the argument has no `/` at all -- `source "$CONF"`
-# -- there is no suffix to try and it is UNRESOLVED, full stop. This is a
-# heuristic; its failure mode is a loud UNRESOLVED, never a quiet pass.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 _resolve() {
   local repo="$1" rel="$2" raw="$3" sfx cand dir prev
   local V=$'\001'   # stands in for "some expansion", so it can never contain /
@@ -208,13 +201,7 @@ for conf in "$SCHED"/schedule/*.conf; do
     # NAME what it audits. realisateur/bin/hygiene-lint.sh's highest-scoring
     # line is `echo "(offline-first: no claude calls ...)"` -- it fails a spend
     # guard by saying it does not spend.
-    #
-    # The measurement above is left ALONE and still reports the real count. Only
-    # the VERDICT consults the ledger, so a reader still sees what the file
-    # contains and sees that a human signed for it. bashify/lib/surface.sh:54
-    # predicted exactly this ("it fails loudly and gets an exemption, which is
-    # the right way round for a guarantee of absence") and left the door
-    # unbuilt; this is the door, and it is per-file, never a wider regex.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
     nunres="${#UNRES[@]}"
     if   [ "$worst_code" -gt 0 ]; then class=ESSENTIAL
     elif [ "$nunres" -gt 0 ];     then class=UNRESOLVED

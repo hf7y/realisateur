@@ -179,12 +179,7 @@ else
   # drivers", frozen -- two screenshots twenty minutes apart were BYTE
   # IDENTICAL -- and a single `controlvm reset` booted it straight through to a
   # healthy system with root mounted rw. The original script stopped there and
-  # messaged Zach, which was safe but cost him the trip back.
-  #
-  # A reset is safe to attempt precisely BECAUSE the boot never got far enough
-  # to mount root read-write: there is nothing dirty to lose. It is bounded to
-  # ONE attempt so a genuinely broken image cannot become a reboot loop that
-  # looks like progress.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   say "    no banner after $((BOOT_WAIT_SECS/60)) min -- capturing console, then ONE reset"
   vbm controlvm "$VM" screenshotpng 'C:\Users\Public\monkey-recovery-hung-boot.png' | sed 's/^/    /'
   vbm controlvm "$VM" reset | sed 's/^/    /'

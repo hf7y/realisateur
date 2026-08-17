@@ -285,14 +285,7 @@ while IFS=$'\t' read -r added deleted path; do
     # delete of an obsolete doc launder a brand-new 250-line essay through as
     # "a reap" -- found by fixture against this script's own first version of
     # the exemption, before it had shipped a week.
-    #
-    # But "grew" was a ONE-LINE trigger, and #187 makes a producer fix
-    # mandatory in every reap: a reap PR must also repoint the command file
-    # that wrote the surface it deleted. senechal#280 deleted 1,662 net lines
-    # of prose and was scored as bloat because .claude/commands/nightly-batch.md
-    # gained ONE net line doing exactly that. So growth is judged against a
-    # tolerance: an edit that swaps instructions is not an essay, and 250 is
-    # still an essay.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
     [ "$((added - deleted))" -gt "$GROW_TOL" ] && md_grew="$md_grew $path:+$((added - deleted))"
   fi
 done <<EOF
@@ -377,13 +370,7 @@ else
     # than it adds. So it flagged hf7y/realisateur#231, a pass that removed 330
     # lines of prose defending retired mechanisms and put back 155, and it
     # would flag every future reap the same way. A guard that fails the work it
-    # exists to encourage stops being read, which is the failure PROSE-REAPING
-    # itself is about.
-    #
-    # The exemption is narrow and self-limiting on TWO axes: the diff must
-    # delete at least as much markdown as it adds, AND no single markdown file
-    # may grow. Prose that merely moves still nets zero and passes; prose that
-    # grows still pays, in total or in any one file.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
     printf '  net prose: -%d line(s) (added %d, deleted %d) -- a reap, not a cost.\n' \
       "$((md_deleted - md_added))" "$md_added" "$md_deleted"
   elif [ $(( md_added * 100 )) -gt $(( MAX_PCT * total_added )) ]; then

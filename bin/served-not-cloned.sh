@@ -158,15 +158,7 @@ probe_livebrief() {
 #    this is success" -- and no dispatcher branches on it. DONE was recorded 9
 #    times across 4 accounts in one day and stopped nothing; bibliothecaire
 #    recorded it on six consecutive runs and was re-dispatched every time
-#    (hf7y/scheduler#54). The agents answer correctly and nothing listens.
-#
-#    SEARCHED ACROSS THE TREE, NOT IN ONE NAMED FILE. The first draft of this
-#    probe read `bin/usage-paced-runner.sh` specifically -- so it went BLIND
-#    forever the moment the redesign retired that file, and the check could
-#    never have gone green. Its own test suite caught that, which is the
-#    argument for testing the MET path rather than only the red one: a probe
-#    whose success condition depends on the thing the vision deletes is not a
-#    probe, it is a trap.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 probe_donebrakes() {
   [ -d "$SCHED/bin" ] || { row BLIND donebrakes "no $SCHED/bin to search"; return; }
   local hit
@@ -243,20 +235,7 @@ probe_oneroster() {
 #    run dose ecosim and the newest ecosim self-installs, updates, starts
 #    clearing issues."
 #
-#    TWO THINGS MAKE THIS FAIL TODAY and both are invisible from inside the
-#    repo, which is why this is a probe and not a paragraph:
-#      1. ~/.local/bin is NOT on monkey's non-interactive PATH, so
-#         `ssh monkey dose ...` cannot find a verb installed there even when
-#         it is installed correctly. Measured 2026-08-11: PATH over ssh is
-#         /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin plus
-#         games and snap. Nothing under $HOME.
-#      2. zach@monkey's scheduler checkout is on a FEATURE BRANCH
-#         (probe-after-runnability-20260806) five days behind main -- so a
-#         dose that read its truth from the local clone would read stale
-#         config on the very host the command is typed on. Reading the roster
-#         from GitHub is what makes it a bomb rather than a clone-follower.
-#
-#    Local half only (the repo half); the fleet half belongs to --fleet.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 probe_selfserve() {
   [ -d "$SCHED/.git" ] || { row BLIND selfserve "no scheduler checkout at $SCHED"; return; }
   local verbs

@@ -55,11 +55,7 @@ OWNER="${DECISION_ROT_OWNER:-hf7y}"
 # -- the fifteen projects dispatch actually reads -- plus the three ecosystem
 # repos that carry decisions but are never dispatched (`verbs` is the verb
 # build channel; `front-door` and `basheur` are ecosystem infrastructure).
-# Held here rather than fetched from scheduler because this script must run
-# from any account with only `gh`, including the read-only deploy-key ones,
-# and because a network read of another repo's config is a second thing that
-# can fail silently. Re-derive, do not trust:
-#   gh api repos/hf7y/scheduler/contents/schedule -q '.[].name'
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 ROSTER=(
   baudin bibliothecaire chezz crt ecosim gardien groc-mangr nine-speakers
   realisateur scheduler secretaire senechal sequestria vim-arcade wtul

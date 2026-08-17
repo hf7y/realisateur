@@ -55,23 +55,14 @@ CRON_SPEC="${TICK_CRON_SPEC:-41 5 * * *}"
 # Empty for a per-account tick: its defaults ARE the account's own paths.
 #
 # The host-scoped tick needs it, because every path it works on is deliberately
-# NOT this process's default -- and cron does not inherit the shell that
-# installed the entry. The alternative is a second copy of this script with
-# different constants baked in, which is one fact with two readers. `VAR=val
-# cmd` in the command field is already this estate's idiom: the paced runner's
-# own line reads `0 */6 * * * PACED_MAX_PER_TICK=1 .../usage-paced-runner.sh`.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CRON_ENV="${TICK_CRON_ENV:-}"
 RELEASE_STATUS_URL="${RELEASE_STATUS_URL:-https://hf7y.com/verbs/status.json}"
 # Whether adoption also writes the bin links. OFF by default and it stays off
 # for a per-ACCOUNT tick, because `installe` owns that account's ~/.local/bin
 # and install-verb-build.sh's --link exists to not clobber it.
 #
-# It is ON for the HOST-scoped tick wire-release-channel.sh --host installs,
-# where the link directory is /usr/local/bin -- a directory installe does not
-# manage, on the only PATH entry a non-interactive `ssh <host> <verb>` sees.
-# Adopting a build nothing links is a pin that moves and a PATH that does not,
-# which is a channel with a clock and no consumer: the exact shape
-# propagation-set.sh was written about.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 TICK_LINK="${TICK_LINK:-0}"
 SURVEY_HOST="${TICK_SURVEY_HOST:-monkey}"
 SURVEY_PASSWD="${TICK_SURVEY_PASSWD:-/etc/passwd}"
@@ -203,11 +194,7 @@ install_cadence() {
   # crontab writes "no crontab for <user>" there and exits 1 -- that is the
   # answer, not an error -- but so does a permission failure, and silencing
   # both makes them one event. That conflation is bin/silence-audit.sh's
-  # [stderr-silenced] rule ("turns permission denied into clean"), and here it
-  # would be load-bearing: `cur` is what gets written BACK, so reading it as
-  # empty when it is merely unreadable would erase every other entry in the
-  # crontab. The grep -vF below removes the noise line either way, because a
-  # message from cron does not carry our tag.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   cur="$(crontab -l 2>&1 || true)"
   case "$cur" in *"no crontab for"*) cur="" ;; esac
   new="$(printf '%s\n' "$cur" | grep -vF "$CRON_TAG")"
@@ -228,14 +215,7 @@ install_cadence() {
 # per-account clock and private build root now that one host-wide channel
 # feeds every account. This exists as a COMMAND rather than as twelve hand
 # edits because the crontab read-modify-write is the part that goes wrong --
-# #179 fixed a stderr bug in install_cadence that could have erased the rest
-# of an account's crontab, and a hand-edit reintroduces that risk per account.
-#
-# Fails CLOSED on the precondition: an account whose PATH does not reach the
-# host-wide channel would be left with no clock and no verbs at all. That is
-# checked per account, from inside the account, because a $HOME/.local/bin
-# entry earlier on its PATH shadows /usr/local/bin -- the mandark situation.
-# ---------------------------------------------------------------------------
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 retire_cadence() {
   echo "-- retire cadence (account $(id -un)) ---------------------------------"
   local probe; probe="$(command -v "$HOST_PROBE_VERB" 2>/dev/null || true)"
@@ -295,12 +275,7 @@ retire_cadence() {
   # -- 33 of them on the realisateur account on 2026-08-13, from the hand
   # retire that preceded this flag. A dangling link is skipped by PATH search
   # so the host-wide verb still wins, which is precisely why nobody notices:
-  # it is invisible debris that makes `installe list` describe a state the
-  # account is not in.
-  #
-  # `installe retire` is the front door for an entry in that directory, so it
-  # is used when it is reachable. The direct unlink is the fallback, not the
-  # preference, and it says so when it takes it.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   local shim tgt inst
   inst="$(command -v installe 2>/dev/null || true)"
   if [ -d "$LOCAL_BIN" ]; then
@@ -468,10 +443,7 @@ if [ "$MODE" = apply ] && [ "$pin_rc" = 1 ]; then
   # verifies every verb the manifest promises and discards an incomplete
   # build rather than switching to it. Fail-CLOSED, here, deliberately.
   # The optional flag is an ARRAY appended after the literal call, not folded
-  # into it: bin/tests/propagation.test.sh 5b asserts delegation by matching
-  # `"$inst" --latest --apply` in this file, and a refactor that spelled the
-  # same call a different way would silently retire that check rather than
-  # fail it. Keeping the literal intact is the cheaper half of the bargain.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   link_arg=(); [ "$TICK_LINK" = 1 ] && link_arg=(--link)
   if "$inst" --latest --apply "${link_arg[@]}" 2>&1 | sed 's/^/        /'; then
     after="$(current_pin)"

@@ -68,12 +68,7 @@ done
 # Two input adapters, ONE set of grading rules. A separate implementation for
 # the live path would be a second answer to "is the channel healthy", and the
 # live path is the one nobody exercises by hand.
-#
-# NOTHING IS CACHED. The document is fetched into a temp file that dies with
-# the process. Writing it into the home directory and grading that copy would
-# recreate, one layer down, the exact drifting-file problem the URL exists to
-# remove: a consumer would then grade a snapshot of a verdict rather than the
-# verdict.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ -n "$URL" ]; then
   [ -z "$LEDGER" ] || { printf '%s: --url and --ledger are exclusive\n' "$CLI_NAME" >&2; exit 2; }
   _tmpdir="$(mktemp -d)"; trap 'rm -rf "$_tmpdir"' EXIT

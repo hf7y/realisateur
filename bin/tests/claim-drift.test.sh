@@ -211,11 +211,7 @@ fi
 # A READY pull request is a completion claim (section A). This asserts the
 # second half of the convention: a claim must also say what it asks of the
 # reader. Not a style rule -- Zach's stated failure mode is "if it's a PR not a
-# draft, I'm just going to merge it without reading", so a ready PR whose first
-# line does not classify itself is one he cannot triage without opening it.
-#
-# The classification is the AUTHOR's, declared, not inferred: no guard can read
-# intent. Both forms are one line and both are checkable.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 echo
 echo "J. a ready PR classifies itself in line one"
 

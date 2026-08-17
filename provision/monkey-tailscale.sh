@@ -70,15 +70,7 @@ on_monkey() {
 # WHY NOT AN ENVIRONMENT VARIABLE, which is what the first version did and is
 # the bug this function exists to make impossible: `FOO=x ssh host 'echo $FOO'`
 # sets FOO on the LOCAL side. ssh does not forward arbitrary environment
-# without SendEnv/AcceptEnv configured at both ends, so `$TS_AUTHKEY` arrived
-# on monkey EMPTY, `tailscale up --authkey=` fell back to interactive browser
-# login, and the run hung until a human killed it.
-#
-# WHY NOT ARGV: a secret in a command line is visible in `ps` on BOTH hosts,
-# and here it would also sit inside the base64 payload of the outer ssh
-# command, which is worse because it looks encrypted and is not.
-#
-# STDIN crosses both hops untouched and appears in no process listing.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 push_secret() {                 # $1 = filename under $HOME on monkey
   ssh -o BatchMode=yes -o ConnectTimeout=10 "$JUMP" \
     "ssh -i $KEYFILE -o BatchMode=yes -o ConnectTimeout=10 -p $PORT \

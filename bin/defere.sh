@@ -163,10 +163,7 @@ fi
 # on `issue create` -- otherwise the front door emits bodies the front door
 # refuses. Each route implies its own declaration:
 #   --project      routed and owned; nothing to weigh -> NO-DECISION
-#   --human        a person is required, and named     -> DECISION
-#   --unroutable   the ownership map has a hole        -> DECISION
-# The DEFERRED block is `- none` because filing IS the destination: this issue
-# is where the work went, so it has left nothing further behind.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 case "$LEDGER_KIND" in
   project) DECLARE="NO-DECISION: @$DECIDER -- routed to $DEST and owned there; nothing here needs a call" ;;
   *)       DECLARE="DECISION: @$DECIDER -- $WHAT" ;;

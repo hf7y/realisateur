@@ -33,12 +33,7 @@ openssl rsa -in "$T/app.pem" -pubout -out "$T/app.pub.pem" 2>/dev/null
 # pointed at the fixture conf, so neither a real ~/.config/selfdev nor the
 # host-wide /etc/selfdev on the machine running this test can leak in.
 #
-# The conf override became load-bearing on 2026-08-12: the credential is
-# host-wide now (/etc/selfdev/gh-app.conf, bin/lib/selfdev-app-key.sh), so
-# redirecting HOME alone no longer redirects where the script looks -- these
-# cases silently read nothing and every JWT assertion failed on an empty
-# string. $SELFDEV_APP_CONF is the supported way to say "this conf, this
-# invocation", and it is exactly what a test should be using.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 FIXTURE_CONF="$T/home/.config/selfdev/gh-app.conf"
 run() { env HOME="$T/home" XDG_CACHE_HOME="$T/cache" SELFDEV_APP_CONF="$FIXTURE_CONF" "$@"; }
 mkdir -p "$T/home/.config/selfdev" "$T/cache"
@@ -172,12 +167,7 @@ eq  "H2 exits 5" "$rcH2" "5"
 # naming it -- which is how ONE App key came to sit on disk under four names,
 # and why `selfdev-credentials.sh --apply` could not find it (realisateur#209).
 # Placement is bin/selfdev-app-key.sh's job now, host-wide and as root, and
-# --adopt hands the key to it rather than keeping a second implementation.
-#
-# What is asserted here is the REFUSAL, because that is what an unprivileged
-# caller gets and it is the path a person actually hits. The placement itself
-# needs root and is exercised live, the same split selfdev-app-key.test.sh
-# makes for the same reason.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 outI="$(run env SELFDEV_GH_API="http://127.0.0.1:1" "$SCRIPT" --adopt \
         --account acct2 --key "$T/app.pem" --app-id 4520255 2>&1)"; rcI=$?
 has "I prints the fingerprint"  "$outI" "fingerprint:"
@@ -261,21 +251,7 @@ has "J --wire writes a helper git will call as '<self> --credential <op>'" "$out
 #
 #   user.name  = unattended-monkey[bot]
 #   user.email = 314444911+unattended-monkey[bot]@users.noreply.github.com
-#
-# Correct under the ORIGINAL one-App-per-account design, where the bot WAS the
-# account. Wrong under the fleet model chosen the same day -- ONE App across
-# ten accounts -- because it makes every account author identically and
-# `git log` stops being able to answer which agent did anything.
-#
-# THE SHAPE OF THE MISS, which is the reason this section is written the way it
-# is: the suite already exercised --wire and passed. It never asserted anything
-# about WHICH identity was written, so a wrong-but-present value sailed through.
-# Every assertion below therefore names a VALUE, not a presence.
-#
-# AUTHOR and PUSHER are two layers: author is purely local git config and must
-# be the account; pusher is the App token and GitHub attributes it with no
-# configuration at all. Both are obtainable at once, and the old code threw the
-# first away to duplicate the second.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 echo
 echo "-- K: --wire sets AUTHOR=account, PUSHER=App -----------------------------"
 

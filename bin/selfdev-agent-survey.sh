@@ -49,12 +49,7 @@ classify_draft_aware() { grep -qiE '\bdraft\b' <<<"$1" && echo yes || echo no; }
 # JSON regardless of how many records it holds. Pure, offline-testable, and
 # extracted for exactly that reason: this was `grep -c '"number"'` until
 # 2026-08-10, and `grep -c` counts LINES, not matches. Every account in the
-# fleet therefore reported `ISSUES open=1` -- ecosim's real 3, chezz's real
-# 11 and gardien's real 7 all rendered as the same digit, and the survey read
-# as a fleet with a uniform one-issue backlog. A survey whose headline number
-# is a boolean wearing a count's clothes is worse than one that prints
-# nothing. Same `grep -o | wc -l` idiom the PR counts below already used
-# correctly; no jq dependency added.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 json_field_count() { grep -o "\"$2\"" <<<"$1" | wc -l | tr -d ' '; }
 
 # Pure two-blob comparator for the cross-account duplication check: count of
@@ -175,23 +170,7 @@ $(cat "$f")"
   # script's own reads against the fleet rather than trusting its columns:
   #
   # 1. WRONG DIR, for exactly the accounts that matter. The glob was
-  #    `*-nightly-batch/{sweep,run}.log`. The three ARMED accounts dispatch
-  #    through `usage-paced-runner.sh`, which writes
-  #    `.local/share/scheduler-paced-runner/run.log` -- a name that does not
-  #    end in `-nightly-batch` and so was never read. bibliothecaire, which
-  #    had run that very morning, reported "no log found" and therefore
-  #    `issues claims=yes evidence=no <- claims it, no recent evidence`: a
-  #    GAP manufactured by the instrument. Match ANY job dir; the job's name
-  #    is the scheduler's to choose and this script does not get to assume it.
-  #
-  # 2. NO RECENCY WINDOW. chezz, crt and baudin were paused on 2026-08-06
-  #    (hf7y/scheduler@9006134) and their last log is from that day, so four
-  #    days later they still read `evidence=yes` off work that has not
-  #    happened since. That is the inverse of the caveat this script already
-  #    prints: a quiet night can look like a blind spot, and a STOPPED
-  #    account looks exactly like a working one. Evidence older than the
-  #    window is reported and then NOT counted -- an account that stopped
-  #    should read as stopped.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   local newest_log_age="" f_age
   for f in "$home"/.local/share/*/sweep.log "$home"/.local/share/*/run.log "$home"/reports/*/LATEST.md; do
     [ -f "$f" ] || continue

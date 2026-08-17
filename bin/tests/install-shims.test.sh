@@ -39,20 +39,7 @@ CANARY_SUM="$(md5sum < "$CANARY")"
 # Until 2026-08-07 this passed only BIN_DEST and CMD_DEST. install-shims.sh
 # does not self-locate on purpose (see its header), so with REPO unset it fell
 # back to bin/install-shims.sh:40 --
-#     REPO="${REPO:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/realisateur}"
-# -- the LIVE SHARED CHECKOUT. On a developer machine that path exists, so
-# section D passed by auditing whatever was checked out at ~/Documents/
-# Projects/realisateur rather than the branch this file lives on. A green D
-# was never evidence about this branch's code, and could not go red for a
-# defect introduced on it. In a container the path is absent and the script
-# exits 5 -- which is how the workflow surfaced it (D2, D3, D5).
-# HOOK_DEST and CLAUDE_SETTINGS are redirected too, and they are not optional.
-# Passing REPO is what makes this run reach install-shims.sh's hook section at
-# all; before that it died at the checkout check, so the two missing overrides
-# were inert. With REPO passed and them unset, a test asserting things about a
-# temp directory would install into the REAL ~/.claude/hooks and read the real
-# settings.json -- the exact live-machine write install-shims.sh:72 says these
-# overrides exist to prevent, reintroduced by fixing a different line.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 run_shims() {
   REPO="$REPO" BIN_DEST="$WORK/bin" CMD_DEST="$WORK/cmds" \
     HOOK_DEST="$WORK/hooks" CLAUDE_SETTINGS="$WORK/settings.json" \
@@ -107,11 +94,7 @@ printf -- '\n-- E. a REPO that is not a checkout (2026-08-02 dexter bootstrap)\n
 # defaulted to mandark's path, which does not exist there. It printed FLAGs
 # about hooks it could not find, installed nothing, and EXITED 0 -- while
 # ~/.local/bin was still exactly `claude node npm npx`. The installer whose
-# job is making guards exist was itself an exit-0 no-op.
-#
-# E1 is the load-bearing one. E2 and E3 exist because "exits nonzero" alone
-# would also pass if it failed for some unrelated reason, and because the
-# whole point is that it must not have written anything on the way out.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mkdir -p "$WORK/notarepo"
 rc="$(BIN_DEST="$WORK/ebin" CMD_DEST="$WORK/ecmds" REPO="$WORK/notarepo" \
       bash "$SHIMS" >"$WORK/eout" 2>"$WORK/eerr"; printf '%s' "$?")"

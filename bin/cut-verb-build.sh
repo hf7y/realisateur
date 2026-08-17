@@ -60,12 +60,7 @@ die() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
 # statement in here so the judgement is reviewable next to the rule it bends
 # (lib/verb-set.sh states the rule; lib/not-a-verb.tsv states its exceptions),
 # and so adding one is a diff a reader can see rather than a line in a 470-line
-# script.
-#
-# ABSENT MEANS NOTHING IS EXEMPT, which fails toward the refusal rather than
-# away from it -- a broken checkout produces a loud build, never a quiet one.
-# It still says so, because "no exemptions apply" and "the file was not there"
-# are the two states this ecosystem keeps conflating.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 NOT_A_VERB="${VERB_NOT_A_VERB_FILE:-$(dirname "${BASH_SOURCE[0]}")/lib/not-a-verb.tsv}"
 exempt=''
 if [ -f "$NOT_A_VERB" ]; then
@@ -113,17 +108,7 @@ gh auth status >/dev/null 2>&1 \
 # tomorrow joins the build with nobody editing a file. The private repos
 # are why authentication is checked above and not merely hoped for.
 #
-# --no-archived is not tidiness; it is the RETIREMENT MECHANISM. Deriving
-# live from the account means a repository nobody has opened in a year still
-# declares its verbs forever, and a host-local scan never had to think about
-# that because a dormant project simply was not cloned. Archiving is how a
-# project says "I am no longer a participant" -- reversibly, in one place,
-# visible to everyone.
-#
-# Found the hard way 2026-08-04: `cueille` was declared by BOTH
-# bibliothecaire and quatre-vingt-douze. quatre-vingt-douze had already been
-# folded into bibliothecaire by decision, but nothing mechanical recorded
-# that, so it kept declaring a verb it no longer owned.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 say "reading $OWNER's repositories ..."
 repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].name' 2>/dev/null)" \
   || die "cannot list $OWNER's repositories -- BLIND, not empty."
@@ -134,14 +119,7 @@ repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].nam
 # Distinct from the verb set, and the difference is the whole reason this
 # exists. Measured 2026-08-12: 46 non-archived repos, 12 declaring verbs, 13
 # registered as projects in scheduler/schedule/*.conf. The org is full of
-# things that are not agent projects -- lilypond, songbook, portfolio,
-# hf7y.github.io, and `verbs` itself -- so "every repo" is not a registry.
-# And the verb set is not one either: chezz is a real registered project whose
-# bashified branch was retired, so it declares nothing and would vanish.
-#
-# A repo is a project iff it carries `.agent-project` on its default branch --
-# self-declared, like a verb. One GraphQL query resolves the path across every
-# repo, so the registry costs one call at any org size.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
 registry=""
 _gql='query($owner:String!){ user(login:$owner){ repositories(first:100, isFork:false, ownerAffiliations:OWNER){
@@ -178,12 +156,7 @@ for repo in $repos; do
   # has no bashified branch" and "ls-remote could not read this repo at all"
   # both come out as an empty sha and mean opposite things: the first is the
   # normal answer for most repos, the second is blindness.
-  # git's stderr is CAPTURED, not discarded. It was `2>/dev/null`, and on
-  # 2026-08-05 the first real CI build refused with seventeen lines of
-  # "listed by the API but git could not read it" and no way to tell an
-  # auth denial from a missing repo from a network fault -- three causes,
-  # one message, three completely different fixes. A diagnostic that
-  # filters the evidence it exists to report is a blind spot, not tidiness.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   giterr="$tmp/giterr"
   refs="$(git ls-remote "https://github.com/$OWNER/$repo.git" refs/heads/bashified 2>"$giterr")"
   if [ $? -ne 0 ]; then
@@ -226,10 +199,7 @@ for repo in $repos; do
   # as verb-set.sh: executable bin/<n> AND man/<n>.1. bibliothecaire's
   # bin/page92.py is executable, has no page, and correctly is not a verb --
   # which is why it has a row in lib/not-a-verb.tsv and not a man page.
-  #
-  # BOTH HALVES COME OUT OF THE SAME PASS. The END block used to be one loop
-  # over the intersection; the difference was computed and thrown away in the
-  # same breath. Emitting it costs two more loops over data awk already has.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   decl="$(printf '%s\n' "$tree" | awk '
       $1 == "100755" && $2 ~ /^bin\/[^\/]+$/ { n = substr($2, 5); exec_[n] = 1 }
       $2 ~ /^man\/[^\/]+\.1$/ { n = $2; sub(/^man\//, "", n); sub(/\.1$/, "", n); page[n] = 1 }
@@ -304,16 +274,7 @@ fi
 #
 # A human at a terminal has one under $BUILD_ROOT/current. CI DOES NOT: a
 # GitHub Actions runner is a fresh machine every night, $BUILD_ROOT never
-# exists, prev_count stayed 0 -- and so the shrink refusal, the check whose
-# whole purpose is to catch a NIGHTLY build that lost a project to a flaked
-# API call, was a no-op in the one place it was ever going to matter. Found
-# 2026-08-04 while hardening the workflow, before the meta-repo had cut a
-# single build.
-#
-# The previous build is not missing in CI, it is merely somewhere else: the
-# meta-repo checkout being assembled INTO carries the last build's own
-# manifest.tsv. So --assemble supplies the comparison, and the LARGER of the
-# two records wins -- a shrink is a shrink whichever one noticed it.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 prev_count=0
 prev_where='(no previous build)'
 if [ -L "$BUILD_ROOT/current" ] && [ -f "$BUILD_ROOT/current/manifest.tsv" ]; then
@@ -347,12 +308,7 @@ manifest="$tmp/manifest.tsv"
   # script's own shape check are unaffected -- the manifest's data rows stay
   # exactly "one verb per line" and nothing downstream has to learn a second
   # row type.
-  #
-  # ABSENCE IS NOT EMPTINESS. If the marker query was BLIND, no rows are
-  # written at all and there is no `registry: 0` line to misread. A consumer
-  # that finds no registry block has learned "this build could not look",
-  # which is a different instruction from "there are no projects" -- and the
-  # second one, acted on by a lint, means scan nothing and report clean.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ -n "$registry" ]; then
     printf '# registry: %d project(s) carrying %s on their default branch.\n' \
            "$(printf '%s\n' "$registry" | grep -c .)" "$REGISTRY_MARKER"
@@ -382,10 +338,7 @@ manifest="$tmp/manifest.tsv"
 # Four tab-separated fields, a 40-hex sha, and a repo_url that names the
 # project it claims to come from. This is cheap and it is the only part of
 # the pipeline a credential-less CI can exercise (see --dry-run), so it is
-# checked on EVERY run rather than only on dry ones: a malformed row reaches
-# install-verb-build.sh as a verb it will look for and not find, and that
-# consumer is required to discard the whole build over it. Better to refuse
-# to emit than to make a downstream host prove the build wrong.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 shape_bad=0
 while IFS= read -r line; do
   case "$line" in '#'*|'') continue ;; esac
@@ -429,12 +382,7 @@ say "derived $verb_count verb(s) from $projects project(s)"
 # <project>/man/<verb>.1, so a consumer clones ONE repository instead of
 # fetching from N. This is what makes a new self-dev account need read on
 # one repo rather than four hand-made per-repo deploy keys
-# (vault:realisateur/MONKEY.md §8.1: "the credentials were a memory, not a
-# script").
-#
-# Assembled from the SHA, never the branch name -- `bashified` may have
-# moved since the manifest was derived minutes ago, and committing a tree
-# the manifest does not describe would make the pin a lie.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 if [ -n "$ASSEMBLE" ]; then
   mkdir -p "$ASSEMBLE" || die "cannot create $ASSEMBLE"
   # Only ever prune paths this build owns. A blanket wipe of $ASSEMBLE
@@ -449,22 +397,7 @@ if [ -n "$ASSEMBLE" ]; then
   # Each project directory is rm -rf'd and re-copied below, so a project
   # that CHANGED is handled. A project that LEFT was not: nothing removed
   # its directory, so its verbs stayed in the meta-repo tree, git add -A
-  # re-committed them every night, and every consumer kept installing a
-  # verb the manifest no longer names. That is not a cosmetic leak -- it
-  # silently voids the retirement mechanism vault:realisateur/VERB-DISTRIBUTION.md section 5
-  # rests on. `quatre-vingt-douze` was archived on 2026-08-04 precisely so
-  # that `cueille` would stop being declared twice; with this loop missing,
-  # archiving it would have removed the row from the manifest and left the
-  # executable sitting in the build.
-  #
-  # Verified 2026-08-04: three assembles into one directory, with a fake
-  # `quatre-vingt-douze/bin/cueille` planted between runs; it survived all
-  # of them. bin/tests/cut-verb-build-test.sh now holds that case.
-  #
-  # The previous build's OWN manifest is the authority on what to prune --
-  # never a directory listing. $ASSEMBLE also contains the meta-repo's
-  # README, its .github/ and its .git, and guessing which top-level entries
-  # are projects would eventually delete one of those.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   if [ -f "$ASSEMBLE/manifest.tsv" ]; then
     awk -F'\t' '!/^#/ && NF>=1 && $1 != "" {print $1}' "$ASSEMBLE/manifest.tsv" \
       | sort -u > "$tmp/prev-projects"
@@ -497,19 +430,7 @@ if [ -n "$ASSEMBLE" ]; then
     # This copied only bin/ and man/ first, on the reasoning that a build's
     # job is to be executable. Every verb in the resulting build was broken:
     #
-    #   ./sequestria/bin/capte: line 19: .../sequestria/lib/verb.sh:
-    #       No such file or directory
-    #   ./sequestria/bin/capte: line 31: verb_parse: command not found
-    #
-    # Verbs source `lib/verb.sh` from their project root, and each project
-    # carries its OWN copy (they have already forked -- gardien-garde's is
-    # uniquely richer). So the lib travels per project or not at all.
-    #
-    # Copying the tree wholesale rather than adding `lib` to the list,
-    # because the next such dependency would fail exactly the same way and
-    # the bashified branch is already a total purge -- the whole tree is
-    # ~30K per project. Guessing which subdirectories matter is what broke
-    # this once already.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
     rm -rf "$work/.git"
     cp -a "$work/." "$ASSEMBLE/$project/"
     say "  assembled $project at ${sha:0:12}"
@@ -523,14 +444,7 @@ if [ -n "$ASSEMBLE" ]; then
   # THE EXECUTABLE BIT IS NOT A WITNESS. This check was `-f && -x` and it
   # passed on a build in which EVERY VERB WAS BROKEN -- the lib/ omission
   # above. The file existed and was executable; it just could not run.
-  # BUILD-DISCIPLINE's rule ("'working' backed by a test name or human-sense
-  # witness, not exit code alone") applies to the builder as much as to what
-  # it builds, so the witness is now: the verb runs, prints its own name,
-  # and does not report a missing file or an undefined function.
-  #
-  # `--help` is the safe invocation: every bashified verb routes it through
-  # lib/verb.sh or lib/cli-guard.sh before doing any work. Bounded by
-  # timeout so one hung verb cannot hang the nightly build.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   bad=0
   while IFS=$'\t' read -r project verb _ _; do
     [ -n "${verb:-}" ] || continue
@@ -559,24 +473,7 @@ if [ -n "$ASSEMBLE" ]; then
   # which is the only place in this pipeline where the files are on local
   # disk and their headers can be read for free. Section 2 reads the git
   # TREE listing (paths and modes), not blobs, so asking this question there
-  # would cost one extra API call per verb inside the loop whose flakes
-  # already produce the BLIND refusals above.
-  #
-  # WHAT IT REFUSES. A product declaring `# KIND: product` must not ride the
-  # nightly workchain cut: this build is deliberately built NOT to move
-  # between cuts (see provision/verbs-meta/build-verbs.yml, "that stability
-  # is the feature"), and a product wants the opposite. And a command that
-  # declares NOTHING and was not in the build when the grandfather ratchet
-  # was seeded is refused on its first night, which is what stops the next
-  # product entering the same way this one did.
-  #
-  # NOT run under --dry-run: a dry run's read is short by an unknown amount
-  # by construction, so its manifest is the wrong population to grade.
-  #
-  # This lint lives in realisateur beside this script, so it is found
-  # relative to THIS file rather than looked up on PATH -- CI stages this
-  # repository at a path of its own choosing and there is no `verb-kind-lint`
-  # on a runner's PATH.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   kindlint="$(dirname "${BASH_SOURCE[0]}")/verb-kind-lint.sh"
   if [ ! -f "$kindlint" ]; then
     # A missing guard is a finding, not an inconvenience.

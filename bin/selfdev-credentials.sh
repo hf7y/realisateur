@@ -67,24 +67,7 @@ act()   { printf '  DO    %s\n' "$*"; }
 # ============================================================================
 #
 # Everything it reads is a FILE or a git config -- never a secret's own bytes
-# beyond a prefix classification (cred_classify_token), so a token never
-# transits this pipe whole. One ssh call gathers every account in one pass;
-# an optional account-name filter narrows it to one, for --apply.
-#
-# WHY VALUES ARRIVE AS ARGUMENTS, NOT CLOSED-OVER VARIABLES. `sudo`'s
-# `env_reset` (Ubuntu default, confirmed live 2026-08-11 on monkey) means NO
-# variable from the calling shell survives into the target account's process
-# -- only argv does. `probe_one` inside the remote script was first written
-# referencing `$CRED_GH_OWNER`/`$CRED_SHARED_REPOS` directly and measured
-# EVERY account's git wiring as 0/3 for every repo, silently: the loop that
-# should have iterated the three shared repos ran zero times because the
-# variable it iterated was empty in the sudo'd process, and the printf
-# columns simply shifted left with nothing announcing it. That is BUILD-
-# DISCIPLINE.md pattern 14 (a probe reporting a negative it never actually
-# checked for) reproduced live while building this file. Fixed by passing
-# owner and repos as `probe_one`'s own positional arguments, propagated
-# through `sudo -n -u "$acct" bash -c "$(declare -f probe_one); probe_one \"\$@\"" _ ...`
-# -- verified against the real fleet before this comment was written.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 fetch_remote() { # fetch_remote [account-filter]
   # "-" IS THE NO-FILTER SENTINEL. NEVER AN EMPTY STRING.
   #
@@ -278,16 +261,7 @@ cred_grade_account() {
 # ============================================================================
 #
 # Everything above reads local CONFIG (is a url.insteadOf rewrite present).
-# This reads what GitHub actually GRANTED, which can diverge from it --
-# proven live 2026-08-11: ecosim's own-repo git wiring measured 0/3 (the
-# config check above), while its deploy key IS registered on GitHub with
-# read_only=false. Two different failure surfaces; both are checked because
-# they can fail independently.
-#
-# Runs from wherever --audit runs, NOT via the sudo'd account: listing a
-# repo's deploy keys needs push access to that repo, which a self-dev account
-# deliberately does not hold on the three shared ones. Gracefully BLIND, never
-# silently skipped, if gh/jq are missing or unauthenticated.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 cred_check_deploy_keys() { # cred_check_deploy_keys <account>...
   if ! command -v "$CRED_GH_BIN" >/dev/null 2>&1; then
     blind "deploy-key symmetry: '$CRED_GH_BIN' not on PATH -- could not check GitHub-side read/write permissions"
@@ -306,14 +280,7 @@ cred_check_deploy_keys() { # cred_check_deploy_keys <account>...
   # because one unix user per project is the whole monkey design, and their
   # own repo IS a shared repo -- so the two halves of the symmetry rule gave
   # opposite answers for exactly those accounts and the audit reported a
-  # permanent, unfixable FLAG pair (realisateur#210).
-  #
-  # Zach, 2026-08-12: "210 should just be settled where you can have writes to
-  # your own repo. obviously they can push to themselves."
-  #
-  # So the shared-repo pass skips the account that OWNS the repo; the own-repo
-  # pass below still checks it, and still demands WRITE. Nothing goes
-  # unchecked -- the account is graded once, by the rule that applies to it.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   local repo acct others
   for repo in $CRED_SHARED_REPOS; do
     others=""
@@ -477,18 +444,7 @@ cmd_apply() {
   # This block used to copy a private app.pem + gh-app.conf into the account,
   # from `$CRED_APP_PEM_SRC` (default ~/.config/selfdev/app.pem on THIS host).
   # That default path never existed here -- selfdev-gh-app.sh --adopt writes
-  # ~/.config/selfdev/<host>/<host>.pem -- so the one step this command exists
-  # for reported "cannot converge without a human, a new App key needs a
-  # browser click" while the key sat two directories away (realisateur#209).
-  # It also installed the conf VERBATIM, whose SELFDEV_APP_KEY line names a
-  # per-account path, so a straight copy produced exactly the mismatch the
-  # audit half then flagged. Both failures were the same root cause: one key
-  # with a different name in every script that touched it.
-  #
-  # There is no source path to get wrong any more. The credential is one
-  # host-wide file, bin/selfdev-app-key.sh owns placing it, and this delegates
-  # -- the same "already exists and is already tested" rule the rest of this
-  # command follows for wire-selfdev-git.sh.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   if [ "$pem" != "ok:600" ] || [ "$conf" = missing ]; then
     act "placing the host-wide App credential and adding $acct to group $CRED_APP_GROUP (selfdev-app-key.sh --apply)"
     if "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \

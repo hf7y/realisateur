@@ -54,21 +54,7 @@ rm -rf "$WT"; mkdir -p "$WORK"
 #
 # WHY A CLONE AND NOT A WORKTREE (changed 2026-08-11, hf7y/realisateur#69).
 # This was `git worktree add -b bashified "$WT" "$DEFAULT"`, and it never
-# removed the worktree it created: the removal below fires only on the NEXT
-# emit for the SAME project. So one `bashify emit` left one linked worktree
-# registered in that project's .git/worktrees, indefinitely, under a /tmp path
-# no operator thinks to look at. Estate count: 18 linked worktrees on
-# 2026-08-06, 30 by 2026-08-11 after the directories had been cleared once.
-#
-# A clone keeps the property the worktree was chosen for -- the project's
-# working tree and index are never touched -- and drops the one that caused
-# the growth: it registers nothing in $REPO. The finished branch is published
-# with an explicit push below, which is the same act that `git branch -D
-# bashified` plus a worktree commit used to perform implicitly through the
-# shared .git.
-#
-# The remove/prune pair is KEPT rather than deleted: it is now the only thing
-# that clears registrations left behind by every emit before this change.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 DEFAULT="$(git -C "$REPO" symbolic-ref --short HEAD 2>/dev/null || echo main)"
 git -C "$REPO" worktree remove --force "$WT" 2>/dev/null
 git -C "$REPO" worktree prune 2>/dev/null
@@ -83,11 +69,7 @@ git -C "$WT" checkout -q -b bashified --no-track "origin/$DEFAULT" 2>/dev/null |
 # Discovery must not assume bin/. senechal keeps its tooling in health/ and
 # remedies/; an earlier glob that only read bin|scripts|tools found 3 of its
 # 23 scripts and would have shipped a utility silently missing most of the
-# project. Take every tracked .sh anywhere, plus anything in the usual
-# executable dirs, minus tests and libraries (not caller-facing).
-# The rule itself is surface_discover in lib/surface.sh, because lib/closure.sh
-# must partition EXACTLY the same set: a closure computed over a different set
-# of scripts than the one that moves would answer a question nobody asked.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mapfile -t SCRIPTS < <(surface_discover "$REPO" "$SCOPE")
 
 # Dedupe by basename: two scripts sharing a stem would emit two `case` arms
@@ -142,12 +124,7 @@ cat <<EOF
 # $VERB -- $SUMMARY
 #
 # A plain shell utility. It costs nothing to run and reaches no paid service
-# except where a subcommand explicitly declares a summon.
-#
-# The subcommand table below was DISCOVERED from tooling that actually exists
-# in this tree, not invented. A subcommand backed by a script execs it. One
-# the contract names but has nothing behind it reports GAP (exit 4) rather
-# than pretending, because an exit-0 no-op is the worst failure available.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 SELF="\$(cd "\$(dirname "\$(readlink -f "\${BASH_SOURCE[0]}")")/.." && pwd)"
 
@@ -371,27 +348,7 @@ printf '## Verify\n\n```\n./test/contract-test.sh bin/%s\n```\n' "$VERB"
 # the one thing that must never be asserted without a check.
 # THE ONE EXEMPTION, and why it is safe. `lib/verb.sh` is not discovered
 # material -- this generator writes it, from `skel/lib/verb.sh`, and its
-# mentions of the word "agent" ARE the documentation of `--summon`: the
-# mechanism by which a verb completes itself. Satisfying the guard on that
-# file means deleting the explanation of the mechanism, so the guard was
-# UNSATISFIABLE and `emit` exited 5 for every project, on every run, for two
-# days -- while `bashify list` went on reporting emit MECHANIZED, because
-# `_state` only asks whether the file is executable.
-#
-# The exemption is bounded TWO ways, so it cannot be used to smuggle
-# anything: it covers exactly one path, and it applies only if the file is
-# BYTE-IDENTICAL to the skel this generator just copied. A modified
-# lib/verb.sh is checked like anything else.
-#
-# It was bounded a THIRD way until 2026-08-02 -- "only to the generic English
-# word `agent`, never to a vendor name" -- and that third bound is deleted,
-# not merely relaxed. It is the direct cause of the two-day outage described
-# above and of its recurrence recorded below; a word-level bound on a
-# byte-identical file adds no safety, because byte-identity to a reviewed,
-# version-controlled skeleton already proves the bytes came from the tool.
-# What it adds is a way for the guard to become UNSATISFIABLE the moment the
-# skeleton's own prose changes. The sentence is called out here because it
-# was still being quoted as live doctrine after the behaviour had changed.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 VERB_SH_CLEAN=0
 if cmp -s "$SKEL/lib/verb.sh" "$WT/lib/verb.sh"; then VERB_SH_CLEAN=1; fi
 # THE VENDOR LIST IS LEADING-WORD-ANCHORED, since 2026-08-02, and the anchor is
@@ -399,49 +356,7 @@ if cmp -s "$SKEL/lib/verb.sh" "$WT/lib/verb.sh"; then VERB_SH_CLEAN=1; fi
 #
 # Unanchored, `llm` and `gpt` are three-letter substrings that occur inside
 # ordinary English and ordinary code. Measured across the seven bashified
-# repos, the old pattern matched:
-#
-#   ecosim   bin/migration-watch.py            re.fu[llm]atch
-#   senechal remedies/plasma-panel-visible.sh  re.fu[llm]atch
-#   senechal journal/2026-07-31.json           nKi[llM]ode
-#
-# None of those names a vendor. Every one would have been reported as "this
-# file still names an agent" and blocked a commit, or -- worse, and this is the
-# real cost -- classified a perfectly movable script as unmovable during the
-# self-containment migration, on the strength of the letters in `fullmatch`.
-#
-# A guard that cries wolf is a guard someone eventually switches off. The
-# `\bagent\b` half below was word-bounded from the start; the vendor half was
-# not, and the asymmetry was simply an oversight.
-#
-# LEADING boundary only, deliberately: `\b(llm)` still catches `LLMs`,
-# `claudes`, `assistants`. Trailing anchors would let a plural through, which
-# is a real evasion; a leading anchor rejects only mid-word noise, which never
-# is one.
-# THE EXEMPTION COVERS THE WHOLE PATTERN, not the `agent` half. Corrected
-# 2026-08-02, and the bug it fixes is this one, AGAIN:
-#
-#   The exemption above was bounded three ways, one of which was "it applies
-#   only to the generic English word `agent`, never to a vendor name." Then the
-#   de-fork (8f83801) added this line to the skeleton, for good reason:
-#
-#     # gardien's `verb_gap_or_summon` is NOT here. It calls `claude -p` ...
-#
-#   `claude` is a vendor name, and the vendor grep had no exemption at all, for
-#   any path, ever. So EVERY `bashify emit` exited 5 -- for every project, on
-#   every run -- while `bashify list` went on reporting emit MECHANIZED,
-#   because `_state` only asks whether the file is executable.
-#
-# That is verbatim the failure this same header already describes happening for
-# two days before. It recurred because the bound was written against a WORD
-# when the property that actually makes the exemption safe is BYTE-IDENTITY:
-# the file must equal the skel this generator just copied. A reviewed,
-# version-controlled skeleton cannot smuggle anything, whatever words it uses,
-# and the word-level bound only ever added a way for the guard to become
-# unsatisfiable when the skeleton's prose changed.
-#
-# Reproduced on a throwaway registry before and after the fix -- see
-# test/verify-emit.sh, which is the end-to-end run this generator never had.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 LEAK="$(cd "$WT" && {
     grep -rilE "$SURFACE_RE_VENDOR" . 2>/dev/null
     grep -rilE "$SURFACE_RE_AGENT" . 2>/dev/null

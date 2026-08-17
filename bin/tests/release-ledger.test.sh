@@ -182,14 +182,7 @@ echo "-- 7. A STALE SUCCESS IS NOT A FRESH ONE -------------------------------"
 # parser and published nothing. The endpoint went on serving the previous
 # night's CUT with blocked_streak 0. It was NINETEEN HOURS OLD -- inside the
 # 30h window -- so this script said `emitter alive` and selfdev-release-tick
-# said `release channel healthy`. On the one night the gate was broken, the
-# channel showed a confident green.
-#
-# The window is not the fix and this suite says so in an assertion rather than
-# in a comment: a 19h-old verdict from a NIGHTLY emitter is legitimately fresh,
-# and the first case below asserts it still grades that way. What changed is
-# that the document now declares its own expiry, and a document past it is BAD
-# whatever `decision` says.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 mkledger "$T/stalecut.tsv" <<'EOF'
 43 CUT nightly
 19 CUT nightly

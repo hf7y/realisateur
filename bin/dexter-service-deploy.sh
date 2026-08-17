@@ -33,12 +33,7 @@ services visible from here: $(find "$HERE/provision/dexter" "$HOME"/Documents/Pr
 # freight belongs to whichever project owns the service (bin/lib/ownership-set.sh
 # has the ledger). zaxon is crt's, so its Dockerfile and compose.yaml live in
 # hf7y/crt -- not here. This searches this repo first, then sibling checkouts,
-# so each project ships its own service and no project's mechanism gets parked
-# in this one.
-# DEXTER_SERVICE_PATH is a colon-separated list of extra roots, searched FIRST.
-# It exists for a worktree or an uncloned owner, and it is what the test suite
-# points at a fixture -- so the refusal below is exercised without needing any
-# project's real files on the machine running the test.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SEARCH=""
 if [ -n "${DEXTER_SERVICE_PATH:-}" ]; then
   IFS=: read -ra _roots <<< "$DEXTER_SERVICE_PATH"

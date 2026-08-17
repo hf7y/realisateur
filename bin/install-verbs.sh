@@ -128,16 +128,7 @@ fi
 # product's finished form is an event outside the computer (vault:realisateur/WAITING-ROOM.md).
 # In this ecosystem the registry IS that classification -- a project is a
 # utility iff scheduler/schedule/<project>.conf exists.
-#
-# That rule was already enforced, and still failed. `bashify emit`
-# (bashify/bin/bashify:104) and `bashify coin` (bashify/lib/coin.sh:45) both
-# refuse an unregistered project -- but only at MINT time, and never again. So
-# a project deregistered AFTER being bashified kept its verb forever and
-# nothing anywhere re-asked. On 2026-08-02 that was 9 verbs across 4 projects,
-# 7 of them live on PATH, including a name collision between two of them.
-#
-# A guard that fires once is a guard that has already stopped guarding. This
-# asks every run.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 SCHEDULE_DIR="${SCHEDULE_DIR:-$PROJECTS/scheduler/schedule}"
 note "-- registration (the registry is what 'utility' means here) -----------"
 if [ ! -d "$SCHEDULE_DIR" ]; then

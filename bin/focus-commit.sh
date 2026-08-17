@@ -82,15 +82,7 @@ fi
 # artifact alone, months later, by someone who was not there. A git trailer
 # survives the clone, the cherry-pick and the patch, and no human maintains
 # it.
-#
-# The trailer is ALWAYS emitted, and says `unknown` when this host has no
-# build adopted rather than guessing a plausible id -- because an artifact
-# with no trailer (nothing stamped it) and one stamped `unknown` (the stamper
-# ran and told the truth) mean opposite things, and a guess destroys that
-# distinction while looking like an improvement.
-#
-# Appended to a COPY: msgfile is the caller's, and this script must not
-# rewrite a file it was only handed to read.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 _lib="$(dirname "${BASH_SOURCE[0]}")/lib/propagation-set.sh"
 if [ -r "$_lib" ]; then
   # shellcheck source=lib/propagation-set.sh

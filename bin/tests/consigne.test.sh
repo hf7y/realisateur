@@ -231,13 +231,7 @@ echo "-- F. IT IS NOT A SECOND IMPLEMENTATION --------------------------------"
 # The first draft (#121, b81de52) copied files with `cp` and committed them,
 # which produced vault notes with no provenance -- notes `status` above cannot
 # classify at all. If any of these ever appear here, there are two deposits.
-# COMMENTS ARE STRIPPED FIRST, and that is not a convenience. This very file,
-# and the header of bin/consigne, both have to NAME the things being forbidden
-# in order to explain why they are forbidden. Scanning the raw text makes the
-# explanation trip the guard -- which is exactly what guard-estate check E's
-# first draft did, firing on its own preamble within ten minutes of being
-# written (bin/claim-drift.sh's declares_itself comment records it). So this
-# reads CODE.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 SRC_TEXT="$(grep -v '^[[:space:]]*#' "$CONSIGNE")"
 hasnt "it does not run git push"   "$SRC_TEXT" "git push"
 hasnt "it does not run git commit" "$SRC_TEXT" "git commit"

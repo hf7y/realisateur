@@ -89,10 +89,7 @@ if [ "$dup_count" -ge 5 ]; then ok "duplication: shared STANDING RULES block det
 # The regression this pins: `grep -c '"number"'` counts LINES, and gh emits
 # the whole array on one, so every account in the 2026-08-10 fleet run
 # reported `ISSUES open=1` -- chezz's real 11 and gardien's real 7 included.
-# A count that saturates at 1 reads as a finding ("uniform backlog") rather
-# than as a broken instrument, so it must be exercised on MULTI-record
-# single-line JSON specifically; a fixture with one record per line would
-# pass against the very bug it is meant to catch.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 GH_ISSUES_ONELINE='[{"number":12},{"number":9},{"number":7},{"number":3}]'
 eq "json count: 4 issues on one line" "$(json_field_count "$GH_ISSUES_ONELINE" number)" 4
 eq "json count: empty list is 0"      "$(json_field_count '[]' number)" 0

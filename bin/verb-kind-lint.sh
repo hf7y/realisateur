@@ -48,26 +48,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # This resolved the host's own adopted-build pin (the path PROP_PIN_PATH
 # names in bin/lib/propagation-set.sh), so a bare run graded "whatever this
 # machine happens to have adopted". Two things were wrong with it and only
-# one is cosmetic.
-#
-# That the sentence above cannot simply WRITE the path is the guard working:
-# propagation.test.sh greps every bin/*.sh for it, prose included, because a
-# second reader is a second reader whether or not it is reachable code.
-#
-# bin/lib/propagation-set.sh names the pin as a fact with ONE reader
-# (prop_current_pin), and lists by name the two scripts allowed to resolve
-# the layout directly because they own it: install-verb-build.sh and
-# ecosim-sensor-tick.sh. This guard owns no part of that layout -- it grades
-# a directory. Becoming a third reader would buy nothing and cost the
-# one-fact-one-reader property that file exists to hold.
-#
-# And every caller already names its tree: cut-verb-build.sh section 6a
-# passes the tree it JUST assembled (never the host's adopted build -- they
-# are different trees and grading the wrong one is the whole defect), the
-# GATE line above passes $TREE, and this guard's suite passes a fixture. The
-# default had no caller. It was a way to be pointed at something by accident,
-# which is what #140 took away from silence-audit for the same reason: honour
-# the tree you are pointed at, and refuse to guess one.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 BUILD=''
 RATCHET="${VERB_KIND_RATCHET:-$ROOT/bin/verb-kind-lint.ratchet}"
 ACCEPT=0
@@ -267,14 +248,7 @@ fi
 # whatever the ratchet was holding, so on the day this landed -- 33 rows, all
 # 33 grandfathered, none declaring anything -- it printed
 #
-#   verb-kind-lint.sh: 33 command(s), each declaring its channel; ...
-#   verb-kind-lint.sh: 33 command(s) still owed a declaration, held by the ratchet.
-#
-# two contradictory sentences, the false one first. A summary that claims the
-# property the OWED lines directly above it deny is the same defect those OWED
-# lines exist to prevent: a guard exiting 0 while saying something untrue about
-# what it found. So the sentence is only spoken when it is true, and otherwise
-# the counts are split and the debt is named in the same breath.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 if [ "${#GRANDFATHERED[@]}" -eq 0 ]; then
   say "$CLI_NAME: $rows command(s), each declaring its channel; no product in the workchain build."
 else

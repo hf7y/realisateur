@@ -95,10 +95,7 @@ FORM="$T/register.html"
 #
 # Under $HOME and NOT /tmp, deliberately. /tmp is not reliably the same
 # directory for the script and for the browser -- a sandboxed or namespaced
-# shell gets a private one, and the symptom is a browser reporting the file
-# does not exist at a path the script can `ls`. Measured 2026-08-07 on
-# mandark, on the first real run of this script. $HOME is the one directory
-# both are guaranteed to agree on.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 KEEPDIR="${XDG_CACHE_HOME:-$HOME/.cache}/selfdev"
 mkdir -p "$KEEPDIR"
 KEEP="$KEEPDIR/register-$ACCOUNT-$$.html"

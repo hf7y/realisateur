@@ -26,12 +26,7 @@ echo "release-gate.test.sh"
 # Answers are read from $T/answers/<project>. One line: the check-runs
 # conclusions, verbatim, as the real --jq join would produce. The literal
 # token BLIND makes the api call fail instead.
-#
-# IT RETURNS REAL JSON AND APPLIES THE GATE'S OWN --jq EXPRESSION TO IT.
-# The first version of this fake returned the already-reduced string the gate
-# expected, which meant the jq filters -- where the `total_count` trap lives --
-# were never executed by anything. A fixture that answers in the shape GitHub
-# actually returns is what makes the trap assertions below real.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 FAKEGH="$T/gh"
 cat > "$FAKEGH" <<'EOF'
 #!/usr/bin/env bash
@@ -197,16 +192,7 @@ echo "-- THE EVIDENCE SURFACES: WHAT THE TOKEN CAN ACTUALLY READ -------------"
 # /commits/{sha}/check-runs, which needs the fine-grained permission
 # `Checks: Read`. VERBS_READ_TOKEN holds "actions, code, commit statuses,
 # metadata" -- and when Zach went to grant Checks, THERE IS NO SUCH CATEGORY
-# on that token's settings page. So the gate reported
-#
-#     0 green, 0 red, 0 pending, 1 ungated, 11 blind
-#
-# on a green main. It looked like a public/private split and was not: the one
-# readable project was simply the only PUBLIC one.
-#
-# NONE OF THIS WAS TESTABLE BEFORE, because the fake `gh` answered whatever
-# endpoint the gate asked for. The endpoint was never an assertion, so a
-# permission mismatch could only surface on a real cut, at night, silently.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 : > "$QUERYLOG"
 set_answer sigma "success"
 gate sigma >/dev/null 2>&1

@@ -89,16 +89,7 @@ fi
 #
 #   1. ~/.claude/.credentials.json   the interactive OAuth login. EXPIRES.
 #   2. ~/.claude/settings.json       an "env" block carrying
-#                                    CLAUDE_CODE_OAUTH_TOKEN, from
-#                                    `claude setup-token`. Long-lived, and the
-#                                    only one that survives cron without the
-#                                    secret going into a crontab or a repo --
-#                                    claude reads it itself, so a plain argv
-#                                    command inherits nothing and still works.
-#   3. $CLAUDE_CODE_OAUTH_TOKEN      already exported in this environment.
-#
-# Mode is checked on whichever file carries it: a world-readable token is a
-# finding, not a detail.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 CRED="$HOME/.claude/.credentials.json"
 SETTINGS="$HOME/.claude/settings.json"
 auth=""

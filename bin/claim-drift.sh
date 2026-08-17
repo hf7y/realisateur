@@ -47,12 +47,7 @@ cli_guard "$@"
 #
 # Why a flag and not a paragraph in a brief: on 2026-08-07 this convention was
 # retyped from memory into eight agent briefs by one coordinator, who then
-# invented a SECOND, conflicting meaning ("draft = needs a decision") in a
-# throwaway answer an hour later. Nothing was wrong with any single retyping;
-# the defect is that retyping was the distribution mechanism. A spawner can now
-# reference this instead of recalling it, and the guard below enforces the same
-# text it prints -- so a brief that paraphrases it wrongly produces a red check
-# rather than silent drift.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 print_convention() {
   cat <<'CONV'
 PULL REQUEST CONVENTION -- canonical. Reference this; do not paraphrase it.
@@ -178,20 +173,7 @@ declares_itself() { [ "$(grammar_declaration "$1")" != none ]; }
 # ready PR that raises a DECISION nobody needs to make. Both are the same
 # defect from opposite sides -- the classification not matching what the
 # diff actually needs -- and 2026-08-10 supplied a live instance: a
-# read-only survey script plus a prose-to-vault move (already sanctioned by
-# PROSE-REAPING.md) got a `DECISION:` line and blocked auto-merge for a
-# change that altered no running account's behavior at all.
-#
-# "No guard can read intent" (this file's own convention text) still holds --
-# this does not decide whether a decision is warranted. It flags the one
-# shape that is mechanically checkable without reading intent: EVERY changed
-# file is either brand new, or an existing `.md` file whose diff removes at
-# least as many lines as it adds (a prose trim/reap, not new prose). A diff
-# shaped entirely like that cannot have changed any EXISTING script's or
-# config's behavior, because nothing existing was touched except to shrink
-# documentation. That is a necessary condition for "no decision was really
-# needed", not a sufficient one -- so this prints a FLAG, never gates
-# --strict, and never overrides the author's own classification.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 is_additive_only_diff() {
   local file='' is_new=0 adds=0 dels=0 saw_file=0
   judge() {

@@ -107,12 +107,7 @@ for p in $PROJECTS; do
   # SURFACE 1: GitHub Actions workflow runs, for THIS sha only. A run against
   # any other commit is not evidence about this one, and `?head_sha=` is what
   # keeps it that way -- the rejected alternative 2 above is precisely what
-  # dropping that filter would produce.
-  #
-  # Workflow-run level, not job level: a run's `.conclusion` already
-  # aggregates its jobs, so a failed job is a failed run. One row per
-  # workflow instead of one per job, carrying the same verdict.
-  # ------------------------------------------------------------------------
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   runs="$("$GH" api "repos/$OWNER/$p/actions/runs?head_sha=$sha&per_page=100" \
             --jq '[.workflow_runs[] | (.conclusion // ("!" + .status))] | join(",")' 2>/dev/null)"
   rc_runs=$?

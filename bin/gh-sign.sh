@@ -36,10 +36,7 @@ MARKER='<!-- agent:'
 # new number: bin/verbs-refresh.sh's STALE_DAYS, against a nightly cutter and
 # a tick that adopts within 26 hours.
 #
-# There is no environment override, on purpose. A documented override turns a
-# guard into a toll booth -- Zach, 2026-08-15, in hf7y/realisateur#321. The
-# build root IS overridable: that is a path, not a policy, and the suite needs
-# it.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STALE_DAYS=14
 BUILD_ROOTS="${GH_SIGN_BUILD_ROOTS:-/usr/local/share/verb-builds ${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"
 
@@ -48,15 +45,7 @@ BUILD_ROOTS="${GH_SIGN_BUILD_ROOTS:-/usr/local/share/verb-builds ${XDG_DATA_HOME
 # id/hostname/date/readlink; under a stripped PATH all four were "command not
 # found", degrading the stamp to `?@?` AND stopping the shim recognising
 # ITSELF. `id -un` first, $USER only as fallback: $USER is caller-settable.
-#
-# The trailing field is which COPY of the policy wrote this and how old --
-# `build <id>`, `... STALE 46d`, or `unbuilt`. Without it a body says who
-# wrote it and nothing about what rules were in force.
-#
-# `TZ=UTC` PREFIXES the printf; it does not merely precede it. `local TZ=UTC`
-# was here and is a no-op when TZ is unset -- `local` makes a shell variable
-# and `printf %(...)T` formats through libc, which reads the ENVIRONMENT, so
-# every stamp carried localtime wearing a `Z`. The suite pinned the SHAPE.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 stamp() {
   local who
   who="$(id -un 2>/dev/null)" || who="${USER:-${LOGNAME:-?}}"
@@ -112,13 +101,7 @@ real_gh() {
 # no lib/ beside it. Resolving it needs readlink, the external this file cannot
 # rely on -- so it RECOGNISES itself among the builds with the same `-ef` inode
 # test real_gh() uses. Builtins only: a glob, `-ef`, parameter expansion.
-#
-# NOT a second reader of the host pin, and must not become one: it never asks
-# which build the host is ON (prop_build_trailer() owns that), only which build
-# this FILE is IN -- which the pin cannot answer for an unlinked copy.
-#
-# Sets SELF and BUILD_ID, or leaves BUILD_ID empty: not running from a build at
-# all. Reported, never guessed at, never treated as fresh.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 SELF="${BASH_SOURCE[0]}"
 BUILD_ID=''
 locate_self() {

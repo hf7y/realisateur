@@ -35,13 +35,7 @@ action="${1:-}"
 # that matches nothing is the common case (unrelated work on this machine) and
 # must be a fast, silent no-op: this hook runs on EVERY session start.
 #
-# Reads through lib/conf.sh, which expands $HOME BY NAME, never by eval: a
-# conf is a file this repo does not own. The counters are the guard, and the
-# reason this no longer returns early: one lookup cannot tell "your cwd is not
-# a registered project" from "no conf here can EVER match", and those were the
-# same silent `return 1` for eight days. ~20 small reads buys that distinction.
-# Sets RESOLVE_HIT as well as printing it -- `x=$(resolve_project ...)` is a
-# SUBSHELL and the counters would not survive it.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 RESOLVE_CONFS=0   # confs that carry a PROJECT_REPO_PATH at all
 RESOLVE_LIVE=0    # ...of those, how many name a directory that exists
 RESOLVE_HIT=""    # the matched PROJECT_KEY, empty when nothing matched
@@ -104,19 +98,7 @@ case "$action" in
       # 2026-07-27, it is not. The hook runs under a short-lived intermediate
       # shell, so PPID dies seconds after acquire while the session runs on.
       # Observed live: marker held pid=429191 (dead) while the session process
-      # was 429162 (alive), and `check-project-busy scheduler` therefore said
-      # "free" with a human actively editing the repo.
-      #
-      # That direction of failure is the dangerous one. This marker exists so
-      # unattended jobs DEFER to a person; reading "free" while someone is
-      # working is the exact race it was built to prevent, and it was silent
-      # -- the probe's own "stale marker ... SessionEnd never fired" wording
-      # made a structural bug look like an ordinary crashed session.
-      #
-      # $$ is still wrong (this script exits immediately). Walk up instead and
-      # record the nearest ancestor that IS the session. Bounded depth, and
-      # falls back to PPID rather than writing nothing: a marker with a
-      # short-lived pid is still strictly better than no marker at all.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
       session_pid() {
         local p="${PPID}" d=0 comm
         while [ -n "$p" ] && [ "$p" -gt 1 ] 2>/dev/null && [ "$d" -lt 12 ]; do

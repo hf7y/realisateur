@@ -95,15 +95,7 @@ bashify         NO REPO -- see OWN_HOMELESS below
 # reason to call it realisateur's; it is the finding. `gh repo list hf7y`
 # on 2026-08-08 returned 45 repositories and it was not among them.
 #
-#   bashify   28 commits, its own bin/, lib/, man/, skel/ and 7-file test
-#             suite, living as a subdirectory of another project. It is the
-#             generator every other project's verb surface is cut by.
-#
-# There were two. `office` is gone -- not by being reclassified, which is the
-# dodge R4 exists to close, but because office-economy/ LEFT THE TREE on
-# 2026-08-08 (vault: ecosystem1/realisateur/RETIRED-2026-08-08.md). A homeless
-# receiver disappears when its files do, and in no other way: the number this
-# audit ratchets must not improve by declaring a receiver imaginary.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 OWN_HOMELESS="bashify"
 
 # --- the areas the audit derives its population from ------------------------
@@ -123,45 +115,14 @@ bashify
 # `realisateur` means MISSION-UNIQUE: no other project could hold it without
 # becoming realisateur. Any other owner means DELEGABLE, and the reason must
 # say what makes it that project's rather than merely adjacent to it.
-#
-# NOTE FOR ANY FUTURE EDITOR: this is a newline-separated data string consumed
-# by a `while read` loop, NOT shell code. A `#` inside the quotes closes
-# nothing and comments nothing. Comments go above the assignment -- the trap
-# propagation-set.sh records having fallen into, and its test caught, as 20
-# lines of "command not found".
-#
-# A BACKTICK PAIR INSIDE THE QUOTES IS COMMAND SUBSTITUTION, not shell code
-# either but executed all the same: OWN_MINE/OWN_THEIRS are double-quoted, so
-# bash runs whatever sits between a `` `...` `` pair and splices in its
-# output before the string is ever read. The consigne row lost the words
-# `bibliothecaire` and `status` this way (confirmed live 2026-08-11 --
-# sourcing this file printed two "command not found" errors and the row's
-# prose was silently missing both words). Escape a literal backtick as \` or
-# it disappears the same way.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 
 # ---- MISSION-UNIQUE: sense, triage, scaffold -------------------------------
 #
 # THE COUNTER-ARGUMENT FOR bashify, weighed and recorded rather than omitted,
 # because the rows above are a judgement and the next reader deserves the other
 # side. bin/hardcoded-home-lint.sh sits under `bashify` described as a "generic
-# shell lint", and running shellcheck over a tree is at least as generic --
-# hf7y/scheduler#77 asks for exactly this guard, which is the definition of a
-# verb by this ledger's own test.
-#
-# What settles it the other way: the portable part is about forty lines of the
-# two hundred. The VALUE is .shellcheckrc's disable list and the ratchet, and
-# both are a judgement about which codes are idiom in THIS codebase, argued
-# from THIS codebase's incidents. bin/lib/propagation-set.sh makes the same
-# call for the same reason and #77 is written as a PORTED COPY with a
-# re-derived list, not a propagated one. A file whose substance is one repo's
-# judgement is that repo's file.
-#
-# Noted because the ownership ratchet ALSO pushed this way -- `bashify` would
-# have added ~374 foreign lines against a bar that --accept can only lower, so
-# that classification would stand red indefinitely. That pressure is not the
-# reason given above, and if a reader decides the bashify case is stronger,
-# the honest move is to raise the bar deliberately, not to leave the row
-# wrong.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 OWN_MINE="
 .agent-project                             realisateur
 bin/tests/registry-marker.test.sh          realisateur
@@ -305,18 +266,7 @@ bin/tests/verb-build-test.sh               verbs
 # or nothing (rc 1) when the path matches none. rc 1 IS the finding; a caller
 # that swallows it has reintroduced the opt-in list this file refuses to be.
 #
-# A SUITE FOLLOWS ITS SUBJECT. bin/tests/X.test.sh is owned by whoever owns
-# bin/X.sh -- derived, not listed, because a listed suite is a second place to
-# forget and would let a foreign script's tests be quietly re-homed here while
-# the script itself moved out. Suites whose name maps to nothing (a suite over
-# a whole population rather than one script) still need an explicit row.
-#
-# own_derived_from <path> -- prints the path whose row gave <path> its owner,
-# when the owner was DERIVED rather than declared for <path> itself; rc 1 when
-# nothing derived it. Same rule as the branch below, and deliberately the ONLY
-# copy of the candidate list: bin/ownership-audit.sh has to ask which file a
-# derived one follows (a suite for a script already here is not a new foreign
-# path), and a second list over there would be a second answer to drift from.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 own_derived_from() {
   local p="$1" b cand
   case "$p" in
@@ -325,11 +275,18 @@ own_derived_from() {
   esac
   b="${p#bin/tests/}"
   b="${b%.test.sh}"; b="${b%-test.sh}"; b="${b%.sh}"
-  for cand in "bin/$b.sh" "bin/lib/$b.sh" "bin/lib/$b-set.sh"; do
-    [ "$cand" = "$p" ] && continue
-    if own_owner "$cand" >/dev/null 2>&1; then printf '%s\n' "$cand"; return 0; fi
+  # A suite may name an ASPECT of its subject: notify-senechal-footer.test.sh
+  # tests bin/notify-senechal.sh. Try the full stem first, then strip one
+  # trailing -segment at a time. This is STRUCTURAL on purpose. That suite used
+  # to attach through the READ BY relation instead -- a sentence in
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  while :; do
+    for cand in "bin/$b.sh" "bin/lib/$b.sh" "bin/lib/$b-set.sh"; do
+      [ "$cand" = "$p" ] && continue
+      if own_owner "$cand" >/dev/null 2>&1; then printf '%s\n' "$cand"; return 0; fi
+    done
+    case "$b" in *-*) b="${b%-*}" ;; *) return 1 ;; esac
   done
-  return 1
 }
 
 own_owner() {

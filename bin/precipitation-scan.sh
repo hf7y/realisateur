@@ -61,10 +61,7 @@ INCLUDE_LOGS="${INCLUDE_LOGS:-0}"
 # a large fraction of the corpus because it touches everything -- it is a HUB,
 # not a cluster member, and left in it joins every cluster to every other.
 # Same information-theoretic move as the ubiquity cutoff, one level up.
-# 0.10 tuned against the 2026-07-26 corpus (212 entries): generic
-# infra-vocabulary clusters ("daily setup install reachable") drop out, the
-# real multi-writer FOCUS-file cluster survives. 0.08 is the sharpest/
-# strictest setting; 0.20 lets the omnibus session records back in.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 HUBFRAC="${HUBFRAC:-0.10}"
 MAX_CLUSTERS="${MAX_CLUSTERS:-6}"
 
@@ -154,11 +151,7 @@ awk -v min_score="$MIN_SCORE" -v min_shared="$MIN_SHARED" \
   # content -- an injected HTML-comment footer (inject-suggestions.sh appends
   # one to every focus file) or a new `## ` section. Without this the LAST
   # entry in each file absorbs that footer, and every file`s last entry then
-  # shares its vocabulary: on 2026-07-26 that manufactured a 5-project
-  # "cluster" whose members were a tmux title tweak and a ROADMAP migration.
-  # stop ACCUMULATING here, but keep `pending` set so the entry itself is
-  # still recorded -- clearing `pending` too would silently DROP every
-  # footer-terminated entry (30 of 212 on first attempt).
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
   /^[ \t]*<!--/ || /^## / { started = 0 }
   started { cur_text = cur_text " " $0 }
   END {

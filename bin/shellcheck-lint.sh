@@ -57,10 +57,7 @@ command -v shellcheck >/dev/null 2>&1 || {
 # tree cannot turn the guard red, and a deleted one cannot keep it red.
 # `*.sh` misses the extensionless executables in bin/ (the verbs), so those are
 # selected by SHEBANG rather than by name -- reading the file is the only
-# honest way to ask "is this shell".
-#
-# archive/ is excluded: it is retired code kept as evidence, and a guard that
-# demands retired code be maintained is a guard that gets disabled.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cd "$ROOT" || { echo "BLIND: cannot cd to $ROOT" >&2; exit 2; }
 
 mapfile -t FILES < <(
@@ -100,18 +97,7 @@ baseline=""
 # retire them, and change wording. A baseline accepted under one version can
 # therefore show phantom regressions under another, and the reader's first
 # guess will be that their branch broke something.
-#
-# This was live on the day the guard was written. The baseline was accepted
-# locally with 0.10.0 while .github/workflows/tests.yml's ubuntu-latest runner
-# had 0.9.0 -- the run passed, but only because the two happened to agree on
-# these 11 pairs. That is luck, and luck that reports green is the kind this
-# repository keeps paying for.
-#
-# It WARNS rather than fails. Failing would break CI the moment GitHub bumps
-# the runner image, which is a change nobody here made and cannot fix from this
-# repo -- a guard that goes red for that is a guard that gets disabled. A
-# genuine skew still surfaces, loudly, as the first thing said on the
-# regression path.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 SC_VERSION="$(shellcheck --version 2>/dev/null | awk '/^version:/{print $2}')"
 SC_ACCEPTED=""
 [ -f "$RATCHET" ] && SC_ACCEPTED="$(awk '/^# shellcheck-version /{print $3}' "$RATCHET")"

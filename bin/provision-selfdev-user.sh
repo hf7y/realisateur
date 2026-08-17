@@ -18,12 +18,7 @@ UID_MAX="${SELFDEV_UID_MAX:-3099}"
 # RUN AS ROOT, OR AS A USER WHO CAN SUDO -- both work, and the difference
 # matters for exactly one thing: whose credential gets copied.
 #
-# Under `sudo bash provision-selfdev-user.sh ...` (which is how an unattended
-# caller with no tty must invoke it, since sudo's timestamp is per-tty and
-# `sudo -v` buys nothing here), $HOME is root's. Looking for the credential
-# there would silently find nothing and provision an account that cannot spend
-# a token -- the exact failure this script exists to prevent. So when running
-# as root, fall back to SUDO_USER's home.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 CRED_HOME="$HOME"
 if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
   CRED_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
@@ -150,19 +145,7 @@ PY
 # the same reason the rest of this script exists: bibliothecaire was the second
 # account, and this was the step still being done by hand.
 #
-# WHY AN ACCOUNT NEEDS IT AT ALL. Two distinct jobs, and only the first is
-# obvious. (1) bin/wire-selfdev-git.sh registers this account's per-repo deploy
-# keys through `gh`, so without a token the account cannot obtain the git
-# credentials it needs to clone anything private. (2) the work itself: the
-# request queues these projects run on ARE GitHub issues -- bibliothecaire's
-# brief is literally "work the issues labelled request", and ecosim filed #26
-# and #27 the same way. An account with no gh is an account that cannot be
-# asked for anything and cannot answer.
-#
-# THE TOKEN IS SHARED, not minted. Same topology as the claude credential, and
-# the same accepted consequence: one identity, one audit trail. Least privilege
-# between REPOS is bought by per-repo deploy keys (see wire-selfdev-git.sh), not
-# by giving each account a different GitHub identity.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 GH_SRC="${SELFDEV_GH_HOSTS:-$CRED_HOME/.config/gh/hosts.yml}"
 if [ -r "$GH_SRC" ]; then
   # No `MODE` guard here: --check has already exited above. Everything from

@@ -98,14 +98,7 @@ fi
 # The first draft of this check read the header for words like "refuses" and
 # "gates on". It flagged ten installers and provisioners, every one of them a
 # false positive -- which is the exact failure this whole file is about,
-# reproduced inside the file itself within an hour of writing it. Deleted.
-#
-# What replaces it is the guard's OUTPUT VOCABULARY, taken from the body, not
-# the prose: a script that emits `FLAG [`, `N FLAG(s)` or `violation(s)` is
-# reporting findings to a reader, whatever it is called. Measured over bin/ on
-# 2026-08-07 this matches five files, four of which are already guard-shaped;
-# the fifth is markdown-cost.sh, which is a guard with a non-guard name. Zero
-# false positives.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 for f in "$BIN"/*.sh; do
   [ -e "$f" ] || continue
   n="$(basename "$f")"
@@ -192,11 +185,7 @@ fi
 # D/E/F. THE EXECUTED CHECKS
 # ============================================================================
 #
-# One hermetic sandbox, reused. HOME, cwd, SCHED_ROOT and XDG_DATA_HOME all
-# point inside it; `gh` and `ssh` are stubs that fail loudly; PATH does not
-# include this repo. A guard run here can see NOTHING it is supposed to
-# report on -- so every finding it prints about the live estate is proof it
-# went and read the live estate instead of the tree it was given.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/home" "$WORK/tree" "$WORK/stub" "$WORK/sched/schedule"
@@ -258,12 +247,7 @@ for n in $GUARDS; do
       # the sandbox tree. This is how a guard declares its scope knob when the
       # knob is a flag rather than cwd: `# GATE: strict --repo $TREE`.
       #
-      # Added because F1 fired on closeout-lint.sh, and was WRONG to. Run with
-      # no arguments it defaults to the repository it lives in and reports on
-      # that -- which is its documented contract (hooks/subagent-closeout.sh
-      # passes `--repo "$cwd"`), not the fall-back-to-the-live-checkout defect
-      # F1 exists to catch. A guard-about-guards that cannot tell those two
-      # apart is the thing it is auditing, so the fix is here, not there.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
       extra="${mode#strict}"; extra="${extra//\$TREE/$WORK/tree}"
       # shellcheck disable=SC2086
       run_sandboxed "$BIN/$n" --strict $extra ;;

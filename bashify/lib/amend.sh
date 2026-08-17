@@ -35,10 +35,7 @@ broke() { printf 'amend: BROKEN: %s\n' "$*" >&2; exit 5; }
 # Same shape as scheduler's lib/run-record.sh:run_record_repo_slug (#158),
 # reimplemented here rather than sourced because that lib lives in a
 # different project's repo. Matches github.com and the self-dev SSH host
-# aliases (github-<account>), so a plain https clone and an aliased ssh clone
-# of the same GitHub repo resolve to the same slug. Prints nothing and
-# returns 1 for a remote this can't place -- callers must treat empty as
-# "unknown", not as a slug that matches nothing.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 amend_repo_slug() {
   local url; url="$(git -C "$1" remote get-url origin 2>/dev/null)" || return 1
   case "$url" in
@@ -132,12 +129,7 @@ else
     # test and its own GAPS.md all name it, and counting those as downstream
     # callers made every amendment to a real verb unpassable: `installe`
     # scored 6 invocations, all of them itself. Two independent tests, either
-    # one enough (#115): common git dir catches a WORKTREE of the owner;
-    # matching normalised `origin` slugs catches a CLONE of it, which a
-    # common-git-dir test cannot -- a fresh `git clone` has its own git dir by
-    # construction. Neither subsumes the other: a worktree can have no remote
-    # of its own (falls through to the gitdir test), and a clone has no common
-    # git dir with its origin (falls through to the slug test).
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
     if { [ -n "$OWNER_GITDIR" ] \
          && [ "$(cd "$path" && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" = "$OWNER_GITDIR" ]; } \
        || { [ -n "$OWNER_SLUG" ] && [ "$(amend_repo_slug "$path" || true)" = "$OWNER_SLUG" ]; }; then
@@ -166,11 +158,7 @@ else
       # backtick belongs to the shell alphabet above, so a script explaining
       # itself -- "# `bashify check` rules code 1 a reserve" -- scored as an
       # invocation of bashify. That is the same defect already fixed for
-      # markdown two lines up, in the one place it was not looked for: prose
-      # inside code. It made this gate unsatisfiable in the same way, since
-      # the only way to pass was for another project to delete its comment.
-      # A comment executes nothing; classifying it as a caller is a claim
-      # about the file that reading the file refutes.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
       case "$(printf '%s' "$line" | sed 's/^[[:space:]]*//')" in
         '#'*) PROSE=$((PROSE+1)); continue ;;
       esac

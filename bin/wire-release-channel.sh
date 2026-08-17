@@ -77,13 +77,7 @@ run_as_acct() {
 # right for the one account it was written for and wrong for a fleet: wiring
 # the band would put ten simultaneous clones of hf7y/verbs and ten symlink
 # switches into one minute on one VM guest, every night. The tick already
-# exposes TICK_CRON_SPEC for exactly this, so the fix is to pass it, not to
-# edit the tick.
-#
-# DERIVED FROM THE NAME, not from a counter, so it is STABLE: re-running this
-# script puts an account back on the same minute, and standing up an eleventh
-# account does not move the other ten. An index into the sorted band would
-# renumber everyone the first time a name sorted earlier than an existing one.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 cron_spec_for() {
   [ -z "${TICK_CRON_SPEC:-}" ] || { printf '%s' "$TICK_CRON_SPEC"; return; }
   local m; m=$(( $(cksum <<<"$1" | cut -d' ' -f1) % 60 ))
@@ -94,11 +88,7 @@ cron_spec_for() {
 #
 # Not `2>/dev/null`. An empty crontab writes "no crontab for <user>" to stderr
 # and exits 1 -- that is the ANSWER, not an error. But a permission failure
-# writes there too, and silencing both makes them the same event. That is
-# precisely what bin/silence-audit.sh's [stderr-silenced] rule is about: "turns
-# permission denied into clean". The grep below is unaffected either way (no
-# error message contains the tag), so the only thing the silence bought was
-# hiding the reason from the branch whose whole job is to report it.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 crontab_of() { # crontab_of [account] -- the crontab, or why it could not be read
   if [ -n "${1:-}" ]; then sudo -u "$1" crontab -l 2>&1; else crontab -l 2>&1; fi
 }
@@ -151,14 +141,7 @@ wire_one() {
 # host-scoped paths, plus one wire_one does not need: a witness that the LINKS
 # resolve. Per account, `installe` owns the bin directory and --link is off, so
 # there is nothing to witness; here the links ARE the deliverable, and a pin
-# that moved while /usr/local/bin stayed empty is precisely the shape that
-# looks healthy from every report and delivers nothing to a user's PATH.
-# ---------------------------------------------------------------------------
-# The environment BOTH the first adoption and the cron line need, written ONCE.
-# An array, so `env "${TICK_ENV[@]}"` needs no word-splitting and `${TICK_ENV[*]}`
-# still yields the single string cron wants ahead of the command. Two spellings
-# of the same four settings is how the run that installs the clock and the clock
-# itself end up disagreeing about which build root they mean.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 TICK_ENV=(
   "VERB_BUILD_ROOT=$HOST_BUILD_ROOT"
   "INSTALLE_BIN=$HOST_BIN"

@@ -118,12 +118,7 @@ find_producers() {
   # producers invisible -- they are *.mjs (scripts/, test/) and CLAUDE.md.
   #
   # Two exclusions matter and are not cosmetic:
-  #   - the retired files themselves. A FOCUS.md that mentions FOCUS.md is the
-  #     thing being removed, not a producer of it.
-  #   - this script and its test. They necessarily contain the patterns they
-  #     search for, so without this the mechanism permanently blocks itself in
-  #     realisateur and can never report clean.
-  # Code is scanned broadly: any language can read or write these paths.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   local pat='\.scheduler/|FOCUS\.md|QUESTIONS\.md|BLOCKERS\.md'
   local matches code_matches doc_matches code_files
   code_files=$(grep -rIlE "$pat" \
@@ -158,39 +153,7 @@ find_producers() {
   # every code hit is rationale prose -- "see FOCUS.md #8", "the 2026-07-21
   # .claude/FOCUS.md end-goal", a dated note explaining why a threshold is what
   # it is. Those lines read nothing and write nothing, so deleting the files
-  # cannot regenerate them and fixing them accomplishes nothing. Counting them
-  # reported 123 blocking producers in scheduler, 117 in realisateur and 62 in
-  # crt on 2026-08-15, which put the sunset out of reach in ten of sixteen
-  # repos. Only a line of live code that names the path can bring a file back.
-  #
-  # The pass tracks BLOCK comments, not just line comments, because most of
-  # those references sit in the BODY of a python module docstring or a /* */
-  # block -- a line starting with an ordinary word, which no line-comment test
-  # can see. It is deliberately approximate in the safe direction: a match on
-  # a line that is partly code still counts as a producer.
-  #
-  # Markdown is NOT filtered: an instruction file has no code, and its prose
-  # IS its mechanism.
-  # PYTHON IS TOKENIZED, NOT PATTERN-MATCHED. The awk parity heuristic
-  # (count the triple-quote delimiters on a line, toggle on an odd count)
-  # desyncs on any line with a quote in prose, a single-line docstring, or a
-  # file mixing both delimiters -- and once desynced, every line after it
-  # flips. That produced the one failure mode a guard over a destructive
-  # operation cannot have: NONDETERMINISM. On ecosim,
-  # bin/migration-watch.py:196/:257/:1165 blocked, then silently stopped
-  # blocking after unrelated edits elsewhere in the file, those lines
-  # unchanged. On senechal.py, 506 and 525 were flagged inside an indented
-  # docstring while the identical reference at 146 was correctly suppressed.
-  # Two agents on the same commit could disagree and neither would be wrong.
-  #
-  # python's own tokenizer decides instead. Note what it does NOT strip:
-  # ordinary string literals. open(".scheduler/FOCUS.md") is a producer and
-  # the path lives in a STRING token. Only COMMENTs and DOCSTRINGs -- a string
-  # standing alone as a statement -- are prose. A file that fails to tokenize
-  # has nothing stripped, so it errs toward blocking.
-  #
-  # Which scanner a file gets follows the LANGUAGE, and for the extensionless
-  # scripts above, the shebang is the only thing that says so.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   local py_files other_files py_matches awk_matches scanner
   py_files=$(printf '%s\n' "$code_files" | while IFS= read -r f; do
       [ -n "$f" ] || continue
@@ -257,14 +220,7 @@ PYSCANNER
   #
   # The pattern reaches awk through the ENVIRONMENT, never through -v. It is a
   # grep ERE containing a backslash-dot, and awk's -v PROCESSES escape
-  # sequences: -v both warned and degraded backslash-dot to "." = any
-  # character. The .scheduler/ alternative then matched
-  # "Projects/scheduler/schedule" -- a path to a SIBLING CHECKOUT -- in
-  # basheur's impl/project-evidence and crt's crt-present-morning-report.py.
-  # A false positive nobody can legitimately fix blocks --apply forever, which
-  # is worse than a miss. This is the fourth double-escaping bug in this file;
-  # ENVIRON has no escape layer to get wrong, which is why it is used rather
-  # than doubling the backslashes and hoping the next reader keeps the count.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   awk_matches=$(printf '%s\n' "$other_files" | grep -v '^$' | tr '\n' '\0' \
     | SUNSET_PAT="$pat" xargs -0 -r awk 'BEGIN { pat = ENVIRON["SUNSET_PAT"] }
       FNR==1 { inblk=0; inpy=0 }
@@ -302,12 +258,7 @@ PYSCANNER
   # the instruction -- and baudin's README.md then said "see `.claude/FOCUS.md`
   # for current priority". The scan saw nothing and the agent was still sent to
   # the dead path, because nightly-batch.md named no retired path itself. So
-  # the hop starts from the instruction FILES, not from their matches, and
-  # every .md they name is scanned too.
-  #
-  # It stops at one hop deliberately. Past one, "a file that mentions a file"
-  # is the whole repo, and the guard goes back to being unsatisfiable -- the
-  # failure this script has already had twice.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
   local hop_files hop_matches=""
   # shellcheck disable=SC2086  # deliberate word-splitting: a list of paths
   hop_files=$(grep -rhoE '[A-Za-z0-9_./-]+\.md' \

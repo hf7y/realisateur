@@ -158,10 +158,7 @@ DECISIONS="CUT NO_CHANGE BLOCKED ERROR"
 # `cron: '30 1 * * *'` -- once every 24 hours. GRACE covers a slow assemble
 # plus a late runner; it is not a fudge factor for a channel that is behaving
 # badly, and widening it is a decision to be told about a dead emitter later.
-# Consumers derive their staleness verdict from `valid_until` below rather
-# than from a constant of their own, so this number and the cron expression
-# are the only two things that have to agree, instead of this number and one
-# constant per account.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PUBLISH_CADENCE_H="${PUBLISH_CADENCE_H:-24}"
 PUBLISH_GRACE_H="${PUBLISH_GRACE_H:-4}"
 
@@ -230,12 +227,7 @@ RENDER="$WORK/status.json"
 # It was `<<PY`, unquoted, so the shell expanded the whole body before python
 # saw it -- including the backticks in this block's own comments. Every gated
 # cut printed `publish-release-verdict.sh: line 229: decision: command not
-# found` to the CI log, immediately before publishing a correct verdict (seen
-# live in hf7y/verbs run 31991990648, 2026-08-17). Interpolating shell values
-# into a python source string is also an injection: a REASON containing a
-# quote produced invalid python, not a quoted string. See #365, and
-# BUILD-DISCIPLINE.md pattern 12 -- prose that gets evaluated instead of
-# stored.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PREV_HISTORY="$PREV_HISTORY" NOW="$NOW" DECISION="$DECISION" REASON="$REASON" \
 MAIN_SHA="$MAIN_SHA" CI_RUN="$CI_RUN" BUILD_ID="$BUILD_ID" \
 VALID_UNTIL="$VALID_UNTIL" HISTORY_MAX="$HISTORY_MAX" \

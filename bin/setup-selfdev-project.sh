@@ -106,12 +106,7 @@ run_as() {
 # clone, e.g. bibliothecaire's -- and every project home is 0700 (provisioned
 # that way on purpose: "repos and working state are isolated per project").
 # `sudo -u "$PROJECT"` therefore cannot read, let alone execute, a sibling
-# script living under a different account's home: it fails as
-# "Permission denied", not as a missing file, which looks like a broken
-# install rather than what it is. Found running this script for real the
-# first time, account #4 (vim-arcade, 2026-08-04). Fix: copy the two
-# unprivileged scripts into THIS account's own home, owned by it, before
-# calling them as it.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 STAGE="$HOME_DIR/.selfdev-setup"
 install -d -m 700 -o "$PROJECT" -g "$PROJECT" "$STAGE"
 install -m 700 -o "$PROJECT" -g "$PROJECT" \
@@ -123,20 +118,7 @@ say "3/8 git credentials, per repo"
 # wired alias and exits 5 on `BAD WITNESS FAILED: ... the wiring is not live`.
 # That exit went into `| sed`, and this script sets `set -uo pipefail` but never
 # `set -e` and read neither $? nor PIPESTATUS -- so a repo whose credentials
-# demonstrably did NOT work was indistinguishable from one that wired cleanly,
-# and provisioning walked on to "4/5 land" and "5/5 release bootstrap".
-#
-# Not theoretical: account #4 (vim-arcade) provisioned "successfully" on
-# 2026-08-04 with one repo's wiring broken by the 0700 sibling-staging bug
-# fixed the same day in 05be4fc. Nothing said so at provisioning time; it
-# surfaced on that account's first scheduled run. realisateur#120, from
-# vim-arcade#74, which twice concluded the fix belongs here.
-#
-# EVERY failing repo, not the first. The loop runs all four and refuses
-# afterwards, because "senechal failed" and "senechal and scheduler failed" are
-# different amounts of re-work and stopping early hides the difference. rc is
-# read IMMEDIATELY after the pipeline: any command in between -- an echo, a
-# test -- replaces PIPESTATUS.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 wire_failed=""
 for repo in realisateur scheduler senechal "$PROJECT"; do
   access=""
@@ -167,19 +149,7 @@ run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
 # It was inline here, which meant the only way to give an account a clock was
 # to run account creation at it -- so nine of monkey's ten accounts never got
 # one and the release channel sat at one consumer for five days. That script
-# has the whole argument; this is the same code with a second caller.
-# --- 5. the App credential, host-wide ---------------------------------------
-# secretaire (account #13, 2026-08-12) was provisioned end to end by this
-# script and came out with NO App credential at all -- the audit caught it,
-# not this script, and the account could not mint an installation token.
-# Every step here installed something per-account; the App key was the one
-# thing nobody's step owned.
-#
-# It is host-wide now (bin/lib/selfdev-app-key.sh), so this is not a copy per
-# account: it is "make sure this host has the one key, and that THIS account
-# is in the group that can read it". Idempotent, so provisioning account #14
-# on a host that already has the key just adds the group membership and
-# witnesses the read.
+#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
 say "5/8 the GitHub App credential (host-wide)"
 if [ -x "$HERE/selfdev-app-key.sh" ]; then
   # rc read from the command, not from a pipeline whose last stage is `sed`.
@@ -205,10 +175,7 @@ say "6/8 release bootstrap + clock"
 # Without this, the account's FIRST unattended night hits the harness's
 # sensitive-file gate on any `.claude/**` write and cannot record what it did
 # (hf7y/realisateur#282, worked example: vim-arcade@monkey 2026-08-04 shipped
-# real work and could write neither its own notes nor the settings file that
-# would have granted it -- an agent cannot self-grant, which is the point of
-# the gate). Provisioning it here is what stops account #15 repeating it; the
-# fourteen that existed before this step were converged by the same script.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 say "7/8 permissions block"
 ACCOUNTS="$PROJECT" "$HERE/selfdev-permissions-provision.sh" --apply --strict \
   || echo "  WARN    $PROJECT still has no permissions block -- its first unattended run will not be able to write .claude/**"
