@@ -470,6 +470,9 @@ self_wiring_banner() {
 
 # ---------------------------------------------------------------- run
 echo "silence-audit -- $(date -Is)"
+echo "purpose: null-discriminator lint -- flags mechanisms that collapse"
+echo "  nothing-there, could-not-look and did-not-look onto one output"
+echo "  symbol (silence). Offline, writes nothing, exits 0 unless --strict."
 if [ -n "$TARGET_GIVEN" ]; then
   echo "domain: the tree this run was pointed at -- ${TARGET:-$TARGET_GIVEN} (registry NOT read)"
 else
