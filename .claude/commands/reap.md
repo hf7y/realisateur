@@ -24,6 +24,7 @@ what mandates it and it regrows by the next PR.
 **Add no guard, no convention, no document.** Zach, 2026-08-17: *"Do not
 establish new policies that will go stale. Delete the old policy they would
 contradict instead."* Enforcement is whatever ratchet already exists.
+Recorded in hf7y/realisateur#366, which is the pass that applied it.
 
 Hunt, ranked by what yielded:
 
