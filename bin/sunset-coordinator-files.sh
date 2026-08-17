@@ -17,7 +17,6 @@
 # immediately, undoing the sunset. The script refuses to proceed until
 # producers are fixed upstream.
 #
-# Usage:
 
 set -uo pipefail
 

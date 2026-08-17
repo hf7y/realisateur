@@ -19,7 +19,6 @@
 # requiring a context no workflow produces wedges every PR, which is worse than
 # the bug. That list is hf7y/realisateur#285's worklist, measured.
 #
-# Usage:
 
 set -uo pipefail
 

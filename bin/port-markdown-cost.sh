@@ -8,7 +8,6 @@
 # to take the incoming version anyway. Silently clobbering a repo's local
 # fork of the guard is worse than doing nothing.
 #
-# Usage:
 
 set -uo pipefail
 
@@ -29,7 +28,14 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_SCRIPT="$HERE/markdown-cost.sh"
 SRC_LIB="$HERE/lib/cli-guard.sh"
 SRC_TEST="$HERE/tests/markdown-cost.test.sh"
-for f in "$SRC_SCRIPT" "$SRC_LIB" "$SRC_TEST"; do
+# The suite sources bin/tests/lib/harness.sh for ok/bad/eq/summary. Porting the
+# test without it ships a suite that cannot run: senechal's ported copy died on
+# `summary: command not found` / `fail: unbound variable` (#305). A test that
+# exits non-zero for a missing helper is indistinguishable from one that failed,
+# which is the exit-code-does-not-track-findings defect this estate keeps paying
+# for -- so the harness travels WITH the test, always.
+SRC_HARNESS="$HERE/tests/lib/harness.sh"
+for f in "$SRC_SCRIPT" "$SRC_LIB" "$SRC_TEST" "$SRC_HARNESS"; do
   [ -r "$f" ] || die2 "source file missing or unreadable: $f"
 done
 
@@ -60,8 +66,10 @@ DEST_SCRIPT="$TARGET/$DEST/markdown-cost.sh"
 DEST_LIB="$TARGET/$DEST/lib/cli-guard.sh"
 if [ "$TEST_STYLE" = flat ]; then
   DEST_TEST="$TARGET/$DEST/test-markdown-cost.sh"
+  DEST_HARNESS="$TARGET/$DEST/lib/harness.sh"
 else
   DEST_TEST="$TARGET/$DEST/tests/markdown-cost.test.sh"
+  DEST_HARNESS="$TARGET/$DEST/tests/lib/harness.sh"
 fi
 
 rc=0
@@ -95,13 +103,16 @@ install() {
 install_test() {
   if [ "$TEST_STYLE" = flat ]; then
     local tmp; tmp="$(mktemp)"
-    sed 's#SCRIPT="\$(cd "\$(dirname "\$0")/\.\." && pwd)/markdown-cost\.sh"#SCRIPT="$(cd "$(dirname "$0")" \&\& pwd)/markdown-cost.sh"#' \
+    # Flat style also puts the harness beside the test rather than in tests/lib.
+    sed -e 's#SCRIPT="\$(cd "\$(dirname "\$0")/\.\." && pwd)/markdown-cost\.sh"#SCRIPT="$(cd "$(dirname "$0")" \&\& pwd)/markdown-cost.sh"#' \
+        -e 's#/lib/harness\.sh#/harness.sh#' \
       "$SRC_TEST" > "$tmp"
     install "$tmp" "$DEST_TEST"
     rm -f "$tmp"
   else
     install "$SRC_TEST" "$DEST_TEST"
   fi
+  install "$SRC_HARNESS" "$DEST_HARNESS"
 }
 
 printf 'porting markdown-cost to %s (dest=%s, test-style=%s)\n' "$TARGET" "$DEST" "$TEST_STYLE"

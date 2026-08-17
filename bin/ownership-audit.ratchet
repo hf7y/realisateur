@@ -1,15 +1,15 @@
 # ownership-audit.ratchet -- the foreign surface when last accepted.
-# Lowered by --accept, never raised by any flag. See bin/ownership-audit.sh.
-# accepted 2026-08-07T23:55:39-05:00
-foreignlines 21181
-foreignshare 797
+# The SHARE and the FILE LIST are bars and --accept only ever improves
+# them; the line count is the baseline growth is measured from.
+# See bin/ownership-audit.sh.
+# accepted 2026-08-17T03:15:37-05:00
+foreignlines 19944
+foreignshare 563
 file .claude/commands/bashify.md
 file .claude/commands/cloture.md
 file .github/workflows/claim-drift.yml
 file .github/workflows/deferral-ledger.yml
 file .github/workflows/verb-build-smoke.yml
-file bashify/DEPENDS.md
-file bashify/GAPS.md
 file bashify/PURGE-EXEMPT.tsv
 file bashify/bashify.sh
 file bashify/bin/bashify
@@ -37,18 +37,18 @@ file bin/claim-drift.sh
 file bin/closeout-lint.sh
 file bin/cut-verb-build.sh
 file bin/defere.sh
-file bin/deferral-ledger.sh
 file bin/deploy-drift.sh
 file bin/ecosim-sensor-tick.sh
 file bin/focus-commit.sh
-file bin/gh-comment.sh
 file bin/hardcoded-home-lint.sh
 file bin/install-shims.sh
 file bin/install-verb-build.sh
 file bin/install-verbs.sh
 file bin/land-selfdev.sh
+file bin/lib/body-grammar.sh
 file bin/lib/cli-guard.sh
 file bin/lib/conf.sh
+file bin/lib/not-a-verb.tsv
 file bin/lib/propagation-set.sh
 file bin/lib/verb-set.sh
 file bin/markdown-cost.sh
@@ -64,17 +64,19 @@ file bin/selfdev-gh-app.sh
 file bin/selfdev-release-tick.sh
 file bin/session-marker.sh
 file bin/setup-selfdev-project.sh
+file bin/tests/bashify-coin.test.sh
+file bin/tests/body-grammar.test.sh
 file bin/tests/claim-drift.test.sh
 file bin/tests/cli-guard.test.sh
 file bin/tests/closeout-lint.test.sh
 file bin/tests/conf.test.sh
 file bin/tests/cut-verb-build-test.sh
-file bin/tests/deferral-ledger.test.sh
+file bin/tests/ecosim-sensor-tick.test.sh
 file bin/tests/focus-commit.test.sh
-file bin/tests/gh-comment.test.sh
 file bin/tests/hardcoded-home-lint.test.sh
 file bin/tests/install-shims.test.sh
 file bin/tests/markdown-cost.test.sh
+file bin/tests/notify-senechal-footer.test.sh
 file bin/tests/path-provenance-audit.test.sh
 file bin/tests/propagation.test.sh
 file bin/tests/release-channel-wiring.test.sh
@@ -82,6 +84,7 @@ file bin/tests/release-gate.test.sh
 file bin/tests/release-ledger.test.sh
 file bin/tests/selfdev-gh-app-register.test.sh
 file bin/tests/selfdev-gh-app.test.sh
+file bin/tests/setup-selfdev-project.test.sh
 file bin/tests/verb-build-test.sh
 file bin/tests/verb-set.test.sh
 file bin/wire-selfdev-git.sh

@@ -19,7 +19,6 @@
 # output symbols. That is the entire thesis of this script, and it is why
 # it audits MECHANISMS rather than projects.
 #
-# Usage:
 
 set -uo pipefail
 

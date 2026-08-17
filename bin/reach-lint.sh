@@ -17,7 +17,6 @@
 #      judge which answer is right -- it refuses to let silence stand in for
 #      one, same stance as the `# verified <date> via <cmd>` stamp.
 #
-# Usage:
 
 set -uo pipefail
 
