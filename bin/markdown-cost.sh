@@ -37,21 +37,7 @@ cli_guard "$@"
 # --- the allowlist, in ONE place ---------------------------------------------
 # Read from here by both call sites (the ratio's numerator and the new-root-
 # document check). Retyping it per call site is how the two checks drift apart
-# and one of them starts taxing CLAUDE.md while the other does not.
-# Patterns are glob patterns matched against the repo-relative path.
-# `.claude/commands/*` are AGENT INSTRUCTIONS, and this estate's other guards
-# already classify them as mechanism: bin/lib/ownership-set.sh lists
-# .claude/commands in OWN_AREAS ("mechanism only"), install-shims.sh installs
-# them, and bin/reach-lint.sh validates that every command they name resolves.
-# Only this guard called them prose, so adding one scored 100% markdown and
-# could never pass the ratio -- there was no way to add a command file at all.
-# Two guards disagreeing about what a file IS is the duplicated-truth row of
-# BUILD-DISCIPLINE.md; this resolves it toward the classification three other
-# mechanisms already use.
-#
-# It is NOT a licence to dump prose there: --census still counts every line of
-# them against the tree ratchet, which only ever falls. What is exempted is the
-# per-diff RATIO, not the total.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 MD_ALLOW=( 'README.md' 'CLAUDE.md' 'man/*' '.claude/commands/*' )
 
 md_allowlisted() { # <path> -> 0 if the allowlist covers it
@@ -208,10 +194,7 @@ if [ "${1:-}" = --census ] || [ "${1:-}" = --accept ]; then
   # THE BASELINE ITSELF ONLY FALLS. Raising it by hand was an affordance this
   # guard printed in its own FLAG, and it was taken twice in one day -- once
   # to fit three guards, once to fit a rollout -- each time with a written
-  # case, each time unreviewed, because the PR carrying the raise merged
-  # itself (#288/#319). An escape hatch used on the schedule of the thing it
-  # is supposed to restrain is not oversight, it is a toll booth. There is no
-  # flag to override this: reap prose, or the number stands.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ -n "$mb" ]; then
     prev="$(git show "$mb:${RATCHET#"$(git rev-parse --show-toplevel)/"}" 2>/dev/null | grep -v '^#' | tr -d '[:space:]')"
     case "$prev" in ''|*[!0-9]*) prev='' ;; esac
@@ -295,9 +278,7 @@ while IFS=$'\t' read -r added deleted path; do
     # PER FILE, not just in total: a file that GREW is named here even when
     # some other file shrank by more. Repo-wide netting alone let a 300-line
     # delete of an obsolete doc launder a brand-new 250-line essay through as
-    # "a reap" -- found by fixture against this script's own first version of
-    # the exemption, before it had shipped a week.
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     [ "$((added - deleted))" -gt "$GROW_TOL" ] && md_grew="$md_grew $path:+$((added - deleted))"
   fi
 done <<EOF
@@ -307,9 +288,7 @@ EOF
 # --- added comment lines, in files that are not markdown ---------------------
 # The ratio above cannot see these: to it a 400-line header added to a shell
 # script is 400 lines of code. Read from the patch, not numstat, which knows how
-# many lines a file gained but not what is in them. Thresholds re-derived across
-# 21 repos (see #299): ratio alone qualifies 101 committed files, so the
-# 150-line floor is what makes the rule safe.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cm_added=0; cm_deleted=0; cm_total=0; cm_files=''
 cur_lang=''; cur_n=0; cur_path=''
 flush_cm() {
@@ -392,9 +371,7 @@ else
     # A REAP IS NOT A COST. This guard prices ADDED prose, which makes any
     # markdown-only diff 100% markdown -- including one that deletes far more
     # than it adds. So it flagged hf7y/realisateur#231, a pass that removed 330
-    # lines of prose defending retired mechanisms and put back 155, and it
-    # would flag every future reap the same way. A guard that fails the work it
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     printf '  net prose: -%d line(s) (added %d, deleted %d) -- a reap, not a cost.\n' \
       "$((md_deleted - md_added))" "$md_added" "$md_deleted"
   elif [ $(( md_added * 100 )) -gt $(( MAX_PCT * total_added )) ]; then

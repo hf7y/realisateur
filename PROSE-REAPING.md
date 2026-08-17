@@ -46,16 +46,23 @@ answers *"why did this end up this way?"* rather than *"what will break if I
 touch it?"*
 
 The private `hf7y/ecosystem1-vault` remote **is** the vault (Zach-directed,
-2026-08-12, reversing an earlier "do not push"; recorded in #212, which is
-also what noticed that nothing was watching for an unpushed deposit). Commit
-**and push**; an unpushed deposit is not deposited. A local clone is a cache, resolved in this
-order by `consigne` (realisateur), `fonde` (bibliothecaire) and `fauche`
-(gardien) — one shared variable, deliberately, so a caller pointing one door
-somewhere cannot silently leave another pointing elsewhere:
+2026-08-12, reversing "do not push"; #212). Commit **and push** — an unpushed
+deposit is not deposited. A local clone is only a cache, resolved in this order
+by `consigne`, `fonde` and `fauche`, which share one variable deliberately so a
+caller pointing one door somewhere cannot leave another pointing elsewhere:
 
     --vault <path>          highest precedence, per invocation
     $BIBLIOTHECAIRE_VAULT   one variable, shared across all three
     /srv/ecosystem1-vault   the default
+
+**The `vault:` notation.** `vault:<project>/<file>` names a path inside the
+**remote**, never one on disk — mandark holds no clone and
+`/srv/ecosystem1-vault` exists only on monkey, so a citation assuming either is
+dangling for most readers. Resolve with
+`gh api repos/hf7y/ecosystem1-vault/contents/<path>`. **This is the only
+definition**; hf7y/ecosim#73 read these as pointing at a file that "does not
+exist anywhere on disk", which was true of the disk and of the notation being
+undefined, not of the deposit.
 
 **GitHub issues** — the work. One actionable item, one issue, in that
 project's repo.

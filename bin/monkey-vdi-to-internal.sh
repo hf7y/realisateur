@@ -110,9 +110,7 @@ say "    powered off"
 # --- 2. clone ---------------------------------------------------------------
 # READ from D:, WRITE to C:. Retried, because at 19.7 MB/s this is a ~13 minute
 # continuous read off a drive that resets every 5-10 minutes -- a failed clone
-# is the EXPECTED case, not the exceptional one. A partial destination is
-# deleted before each retry so a short file can never be mistaken for a good
-# one. Deleting the DESTINATION is safe; the source is never a target.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mkdir -p "$(dirname "$DST_WSL")"
 SRC_BYTES="$(stat -c %s "/mnt/d/VirtualBox VMs/monkey/monkey.vdi" 2>/dev/null || echo 0)"
 say "2/5 cloning ($((SRC_BYTES/1024/1024)) MB source, expect ~13 min at measured 19.7 MB/s)"
@@ -177,9 +175,7 @@ else
   # ONE RESET, THEN GIVE UP. Learned the hard way on the 2026-08-14 run: the
   # first boot after the move hung in initramfs at "Begin: Loading essential
   # drivers", frozen -- two screenshots twenty minutes apart were BYTE
-  # IDENTICAL -- and a single `controlvm reset` booted it straight through to a
-  # healthy system with root mounted rw. The original script stopped there and
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   say "    no banner after $((BOOT_WAIT_SECS/60)) min -- capturing console, then ONE reset"
   vbm controlvm "$VM" screenshotpng 'C:\Users\Public\monkey-recovery-hung-boot.png' | sed 's/^/    /'
   vbm controlvm "$VM" reset | sed 's/^/    /'

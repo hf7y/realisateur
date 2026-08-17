@@ -80,9 +80,7 @@ fi
 # --- 1b. stamp the commit with the verb build that produced it -------------
 # "What was ecosim running when it wrote that?" has to be answerable from the
 # artifact alone, months later, by someone who was not there. A git trailer
-# survives the clone, the cherry-pick and the patch, and no human maintains
-# it.
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 _lib="$(dirname "${BASH_SOURCE[0]}")/lib/propagation-set.sh"
 if [ -r "$_lib" ]; then
   # shellcheck source=lib/propagation-set.sh

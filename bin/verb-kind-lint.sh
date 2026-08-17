@@ -46,9 +46,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # --build IS REQUIRED. There is deliberately no default.
 #
 # This resolved the host's own adopted-build pin (the path PROP_PIN_PATH
-# names in bin/lib/propagation-set.sh), so a bare run graded "whatever this
-# machine happens to have adopted". Two things were wrong with it and only
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 BUILD=''
 RATCHET="${VERB_KIND_RATCHET:-$ROOT/bin/verb-kind-lint.ratchet}"
 ACCEPT=0
@@ -85,10 +83,7 @@ MANIFEST="$BUILD/manifest.tsv"
 # `grep -c` PRINTS 0 and EXITS 1 when it matches nothing, so the obvious
 # `|| echo 0` fallback appends a SECOND zero and rows becomes "0\n0". The
 # empty-manifest case still reached BLIND, but by accident: `[ "0\n0" -gt 0 ]`
-# is an integer-expression ERROR, and bash's own diagnostic printed above the
-# admission. Right verdict, wrong mechanism, and a reader had to decode a
-# shell error to see it. `|| true` swallows the exit status without adding
-# output; the empty guard covers grep failing to print at all.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 rows="$(grep -cv '^#' "$MANIFEST" 2>/dev/null || true)"
 [ -n "$rows" ] || rows=0
 [ "$rows" -gt 0 ] || blind "$MANIFEST has no rows. A build with no commands is an unreadable build, not an ecosystem with none."
@@ -154,9 +149,7 @@ for d in ${DECLARED_VERBS+"${DECLARED_VERBS[@]}"}; do say "  ok    $d: verb"; do
 # The grandfathered set is named EVERY run -- an entry that goes quiet is one
 # nobody ever retires -- but on ONE line, not one loud line each carrying fix
 # instructions. All of them live in 12 OTHER projects' repositories and cannot
-# be fixed from here, so 33 lines of instruction per cut addressed an audience
-# that could not act on them (#159). The debt stays visible; the nagging does
-# not.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "${#GRANDFATHERED[@]}" -gt 0 ]; then
   loud "  OWED  ${#GRANDFATHERED[@]} undeclared, held by the ratchet: ${GRANDFATHERED[*]}"
   loud "        each needs '# KIND: verb' or '# KIND: product' in its own project's file"
@@ -246,9 +239,7 @@ fi
 # THE CLEAN LINE MAY NOT OVERSTATE WHAT WAS VERIFIED, and the unconditional
 # version of it did. It read "$rows command(s), each declaring its channel"
 # whatever the ratchet was holding, so on the day this landed -- 33 rows, all
-# 33 grandfathered, none declaring anything -- it printed
-#
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "${#GRANDFATHERED[@]}" -eq 0 ]; then
   say "$CLI_NAME: $rows command(s), each declaring its channel; no product in the workchain build."
 else

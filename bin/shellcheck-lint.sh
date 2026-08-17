@@ -95,9 +95,7 @@ baseline=""
 # VERSION SKEW. A ratchet is a comparison, and comparing findings across two
 # linter versions compares two different questions: releases add checks,
 # retire them, and change wording. A baseline accepted under one version can
-# therefore show phantom regressions under another, and the reader's first
-# guess will be that their branch broke something.
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SC_VERSION="$(shellcheck --version 2>/dev/null | awk '/^version:/{print $2}')"
 SC_ACCEPTED=""
 [ -f "$RATCHET" ] && SC_ACCEPTED="$(awk '/^# shellcheck-version /{print $3}' "$RATCHET")"

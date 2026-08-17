@@ -95,9 +95,7 @@ say "GATE 2 -- TWO COPIES"
 # 2.1  Every repo has a reachable non-local origin, is 0-ahead of it, and clean.
 # A DIRTY tree is deliberately NOT a failure here. THE FLOOR gate 2 is about
 # recoverability -- does this history exist anywhere but this disk -- and
-# uncommitted edits are work in progress, which is a moving target by design
-# and is somebody's active session, not a fault. (Checked 2026-08-01 against
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 bad=""; dirty_info=""
 for d in "$PROJECTS"/*/; do
   [ -d "$d/.git" ] || continue
@@ -128,17 +126,12 @@ elif [ "$DO_RESTORE" = 1 ]; then
   # PENDING is reported as drift, NOT as failure. On a machine anyone is
   # working on, files appear between the copy and the verify -- on 2026-08-01
   # three sets sat 1-4 files behind while a live session edited them, minutes
-  # after a full run had shown none pending. "Zero PENDING" is true only
-  # momentarily and would make this gate flap. The nightly closes drift; what
-  # this gate must prove is that the destination can be READ BACK.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   npend="$(printf '%s' "$gl" | grep -c 'PENDING' || true)"
   # Pull one real file back off the destination and diff it. Chosen from a set
   # that is small and stable; the point is the round trip, not the file.
   # garde lays each SET DOWN UNDER ITS SET NAME at the destination root, not
-  # under its source path: the set `Projects` (path ~/Documents/Projects) lands
-  # at <root>/Projects, NOT <root>/Documents/Projects. Getting that wrong made
-  # this check report a restore failure on 2026-08-01 when the backup was fine
-  # -- a false NOT MET, which erodes trust in the gate as surely as a false MET.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   src="$HOME/Documents/Projects/realisateur/README.md"
   rem="/mnt/d/gardien-media/mandark/Projects/realisateur/README.md"
   tmp="$(mktemp)"
@@ -173,9 +166,7 @@ say "GATE 3 -- ONE LOOP, WATCHED"
 # 3.1  Generated crontab, exactly one enabled participant.
 # 3.1 asked for "exactly one enabled participant" until 2026-08-01, when Zach
 # drew the line this gate actually cares about: MECHANISMS RUN ON A CLOCK,
-# AGENTS RUN WHEN THERE IS WORK. A mechanism is cheap, deterministic and free,
-# so a timer is the right trigger; an agent costs tokens and needs something to
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 en="$(grep -cE '^[a-z][a-z-]*\|1\|' "$SCHED/schedule/_paced.conf" 2>/dev/null || true)"; en="${en:-0}"
 frz=0; [ -e "$SCHED/schedule/FREEZE" ] && frz=1
 if [ "$en" -le 1 ] && [ "$disp" = 1 ] && [ "$frz" = 0 ]; then
@@ -216,7 +207,7 @@ else
   # mere existence of a non-main branch. An earlier version accepted any branch
   # with a recent commit and reported 3.3 MET on `bashified` -- a branch from
   # hand-driven bashify work -- on an evening when the 18:00 tick had SKIPped
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   proj="$(grep -oE '^[a-z][a-z-]*(?=\|1\|)' "$SCHED/schedule/_paced.conf" 2>/dev/null \
           || grep -E '^[a-z][a-z-]*\|1\|' "$SCHED/schedule/_paced.conf" 2>/dev/null | cut -d'|' -f1 | head -1)"
   proj="${proj:-gardien}"
@@ -231,9 +222,7 @@ else
     # vault:realisateur/THE-FLOOR.md 3.3 as written asks for "a commit on a branch". That is the
     # WRONG criterion and this check deliberately does not enforce it.
     #
-    # On 2026-08-01 the first run read its FOCUS.md, found a standing directive
-    # that the work it would otherwise have done was retired, and correctly
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     dirty="$(git -C "$PROJECTS/$proj" status --porcelain 2>/dev/null | grep -c . || true)"
     fail="$(systemctl --user list-units --state=failed --no-legend 2>/dev/null | grep -c . || true)"
     # Window from when the run actually STARTED, not a flat 18h. A human

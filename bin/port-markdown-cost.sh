@@ -31,9 +31,7 @@ SRC_TEST="$HERE/tests/markdown-cost.test.sh"
 # The suite sources bin/tests/lib/harness.sh for ok/bad/eq/summary. Porting the
 # test without it ships a suite that cannot run: senechal's ported copy died on
 # `summary: command not found` / `fail: unbound variable` (#305). A test that
-# exits non-zero for a missing helper is indistinguishable from one that failed,
-# which is the exit-code-does-not-track-findings defect this estate keeps paying
-# for -- so the harness travels WITH the test, always.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SRC_HARNESS="$HERE/tests/lib/harness.sh"
 for f in "$SRC_SCRIPT" "$SRC_LIB" "$SRC_TEST" "$SRC_HARNESS"; do
   [ -r "$f" ] || die2 "source file missing or unreadable: $f"
@@ -151,6 +149,13 @@ jobs:
 
       - name: Price the prose in this diff
         run: bash $DEST/markdown-cost.sh
+
+      # BOTH STEPS, OR THE RATCHET IS A FILE NOTHING READS. The step above
+      # prices what this PR adds; this one holds the TREE against
+      # $DEST/markdown-cost.ratchet, which only falls. Found by hf7y/ecosim
+      # validating its own port (hf7y/ecosim#73).
+      - name: Prose ratchet -- the tree may not grow
+        run: bash $DEST/markdown-cost.sh --census
 EOF
   printf '  wrote   %s\n' "$WORKFLOW"
 fi

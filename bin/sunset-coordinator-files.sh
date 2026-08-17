@@ -92,10 +92,7 @@ git rev-parse --git-dir >/dev/null 2>&1 || die "not a git repo: $repo"
 # A DRY RUN NEEDS NO BRANCH. Only --apply cuts one, so only --apply requires
 # one. Demanding it up front made the script unusable against exactly the
 # checkouts you most want to scan -- a CI checkout (this repo's own `suites`
-# job runs detached, and test A failed there while passing locally), a pinned
-# clone, a tag. The refusal is kept, moved down to the step that actually cuts
-# the branch -- which is also AFTER the producer scan, so PRODUCERS FOUND stays
-# the first thing --apply reports. It was reporting the wrong blocker.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 branch="$(git symbolic-ref --quiet --short HEAD || true)"
 
 repo_name="$(basename "$(git rev-parse --show-toplevel)")"
@@ -103,10 +100,7 @@ repo_name="$(basename "$(git rev-parse --show-toplevel)")"
 # ============================================================================
 # PART A: FIND PRODUCERS -- anything that reads or writes .scheduler/ or
 # retired .claude/ coordinator files (FOCUS.md, QUESTIONS.md, BLOCKERS.md)
-#
-# We search ACTIVE code locations only: shell scripts, workflows, commands
-# files. We SKIP archive/, retired/, and pure documentation.
-# ============================================================================
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 # Filenames that were retired on 2026-08-07
 
@@ -115,9 +109,7 @@ find_producers() {
   # One scan, every language a producer can be written in. The earlier version
   # searched only *.sh/*.yml plus .claude/commands, which made chezz's real
   # producers invisible -- they are *.mjs (scripts/, test/) and CLAUDE.md.
-  #
-  # Two exclusions matter and are not cosmetic:
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local pat='\.scheduler/|FOCUS\.md|QUESTIONS\.md|BLOCKERS\.md'
   local matches code_matches doc_matches code_files
   code_files=$(grep -rIlE "$pat" \
@@ -136,9 +128,7 @@ find_producers() {
   # EXTENSIONLESS EXECUTABLES. Selecting code by extension misses the shebang
   # scripts that are usually a repo's front door: scheduler's `bin/scheduler`
   # is 3,659 lines with ~40 live read/write sites on the retired paths and was
-  # invisible here, so the tool would have reported that repo READY and --apply
-  # would have deleted files the next `scheduler ask` writes straight back.
-  # That is the exact regeneration producers-first exists to prevent.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   shebang_files=$(git ls-files 2>/dev/null | while IFS= read -r f; do
     case "$f" in *.*|'') continue ;; esac
     [ -f "$f" ] || continue
@@ -150,9 +140,7 @@ find_producers() {
   # A COMMENT IS NOT A PRODUCER, and this is the difference between a usable
   # mechanism and one that can never report clean. Across the estate almost
   # every code hit is rationale prose -- "see FOCUS.md #8", "the 2026-07-21
-  # .claude/FOCUS.md end-goal", a dated note explaining why a threshold is what
-  # it is. Those lines read nothing and write nothing, so deleting the files
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local py_files other_files py_matches awk_matches scanner
   py_files=$(printf '%s\n' "$code_files" | while IFS= read -r f; do
       [ -n "$f" ] || continue
@@ -217,9 +205,7 @@ PYSCANNER
   # awk still handles shell/js/yaml, where a comment really is "the line starts
   # with a marker" or a /* */ block -- no ambiguity to desync on.
   #
-  # The pattern reaches awk through the ENVIRONMENT, never through -v. It is a
-  # grep ERE containing a backslash-dot, and awk's -v PROCESSES escape
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   awk_matches=$(printf '%s\n' "$other_files" | grep -v '^$' | tr '\n' '\0' \
     | SUNSET_PAT="$pat" xargs -0 -r awk 'BEGIN { pat = ENVIRON["SUNSET_PAT"] }
       FNR==1 { inblk=0; inpy=0 }
@@ -239,9 +225,7 @@ PYSCANNER
   # Markdown is scanned NARROWLY, and the distinction is the whole point:
   # a slash-command file or CLAUDE.md INSTRUCTS an agent to read or write
   # these paths, so it is a producer. A retrospective that merely mentions
-  # FOCUS.md in prose is not. Scanning all *.md flags vault:realisateur/MONKEY.md, vault:realisateur/PLAYBOOK.md
-  # and vault:realisateur/THE-FLOOR.md for narrating history, which blocks the sunset forever
-  # on files that produce nothing.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local doc_targets='./.claude/commands ./.scheduler/commands ./CLAUDE.md ./AGENTS.md'
   # shellcheck disable=SC2086  # deliberate word-splitting: a list of paths
   doc_matches=$(grep -rInE "$pat" \
@@ -255,9 +239,7 @@ PYSCANNER
   # ONE HOP, and only one. An instruction file that says "read README.md in
   # full and trust it over your own assumptions" has made README.md part of
   # the instruction -- and baudin's README.md then said "see `.claude/FOCUS.md`
-  # for current priority". The scan saw nothing and the agent was still sent to
-  # the dead path, because nightly-batch.md named no retired path itself. So
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local hop_files hop_matches=""
   # shellcheck disable=SC2086  # deliberate word-splitting: a list of paths
   hop_files=$(grep -rhoE '[A-Za-z0-9_./-]+\.md' \
@@ -288,10 +270,7 @@ PYSCANNER
 # ============================================================================
 # PART B: CHECK FOR FILES -- what would be removed
 #
-# Remove:
-#   - .scheduler/ directory (if it exists)
-#   - .claude/FOCUS.md, .claude/QUESTIONS.md, .claude/BLOCKERS.md (if they exist)
-# ============================================================================
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 find_targets() {
   local found=0

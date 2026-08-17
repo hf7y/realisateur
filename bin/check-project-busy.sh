@@ -64,9 +64,7 @@ shopt -s nullglob
 # -- 1. THE CANONICAL PER-PROJECT LOCK ---------------------------------------
 # scheduler's lib/sweep-loop-common.sh already keys a lock by PROJECT_KEY
 # rather than job name -- its own comment: that is "what makes every tier/job
-# for one project contend for the same slot." Every registered project's every
-# job takes it automatically through that one shared library, so this is the
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 registry_dir="$share_dir/scheduler-registry"
 reg_lock="$registry_dir/$project.lock"
 if [ -f "$reg_lock" ] && ! flock -n "$reg_lock" -c true 2>/dev/null; then

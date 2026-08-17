@@ -32,10 +32,7 @@ CRED_SHARED_REPOS="realisateur scheduler senechal"
 # --- the fleet-wide App, per vault:realisateur/MONKEY.md 11.1 -------------------------------
 # One App across all ten accounts, decided 2026-08-07. An account whose
 # gh-app.conf declares a DIFFERENT id or owner is not obviously wrong (the
-# decision has a stated revisit trigger) but it IS a divergence from every
-# sibling, and this baseline is what "divergence" is measured against.
-# The group that can read the host-wide key. Named here because the audit
-# reports it in its own remedy text; owned by bin/lib/selfdev-app-key.sh.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CRED_APP_GROUP="${CRED_APP_GROUP:-selfdev}"
 CRED_APP_ID="${CRED_APP_ID:-4521586}"
 CRED_GH_OWNER="${CRED_GH_OWNER:-hf7y}"
@@ -46,9 +43,7 @@ CRED_BASELINE_FILES="app.pem gh-app.conf"
 # cred_classify_token <line> -- given the raw `oauth_token:` line from
 # hosts.yml (or empty), classify its SHAPE without ever handling the secret
 # itself beyond a substring test. Pure, offline-testable.
-#
-#   gho      a `gho_` OAuth token -- the shared, copied credential every
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cred_classify_token() {
   local line="$1"
   case "$line" in
@@ -62,9 +57,7 @@ cred_classify_token() {
 # cred_own_repo <account> -- the repo this account should hold WRITE on.
 # Today every account's own repo is named identically to the account
 # (vault:realisateur/MONKEY.md 11.1: "every account had a matching hf7y/<name> repo; none was
-# missing, and none was invented") -- but a future account could reasonably
-# want a different repo name, so this is a single function or an override
-# in CRED_GRANTS's own vocabulary, not eleven hardcoded assumptions.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cred_own_repo() {
   printf '%s' "$1"
 }

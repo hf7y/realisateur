@@ -93,9 +93,7 @@ bashify         NO REPO -- see OWN_HOMELESS below
 # --- the receivers that do not exist yet ------------------------------------
 # One foreign area names a receiver that has no repository. That is not a
 # reason to call it realisateur's; it is the finding. `gh repo list hf7y`
-# on 2026-08-08 returned 45 repositories and it was not among them.
-#
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 OWN_HOMELESS="bashify"
 
 # --- the areas the audit derives its population from ------------------------
@@ -113,16 +111,12 @@ bashify
 # --- THE LEDGER -------------------------------------------------------------
 # Rows are `<path-prefix> <owner> <reason>`, longest prefix wins. Owner
 # `realisateur` means MISSION-UNIQUE: no other project could hold it without
-# becoming realisateur. Any other owner means DELEGABLE, and the reason must
-# say what makes it that project's rather than merely adjacent to it.
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 # ---- MISSION-UNIQUE: sense, triage, scaffold -------------------------------
 #
 # THE COUNTER-ARGUMENT FOR bashify, weighed and recorded rather than omitted,
-# because the rows above are a judgement and the next reader deserves the other
-# side. bin/hardcoded-home-lint.sh sits under `bashify` described as a "generic
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 OWN_MINE="
 .agent-project                             realisateur
 bin/tests/registry-marker.test.sh          realisateur
@@ -265,9 +259,7 @@ bin/tests/verb-build-test.sh               verbs
 # --- lookup -----------------------------------------------------------------
 # own_owner <path> -- prints `<owner> <reason>` for the longest matching row,
 # or nothing (rc 1) when the path matches none. rc 1 IS the finding; a caller
-# that swallows it has reintroduced the opt-in list this file refuses to be.
-#
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 own_derived_from() {
   local p="$1" b cand
   case "$p" in
@@ -280,7 +272,7 @@ own_derived_from() {
   # tests bin/notify-senechal.sh. Try the full stem first, then strip one
   # trailing -segment at a time. This is STRUCTURAL on purpose. That suite used
   # to attach through the READ BY relation instead -- a sentence in
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   while :; do
     for cand in "bin/$b.sh" "bin/lib/$b.sh" "bin/lib/$b-set.sh"; do
       [ "$cand" = "$p" ] && continue

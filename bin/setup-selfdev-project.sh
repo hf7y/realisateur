@@ -104,9 +104,7 @@ run_as() {
 # STAGE, don't reach across accounts. $HERE is whatever checkout this script
 # was invoked from -- typically an EXISTING project account's own realisateur
 # clone, e.g. bibliothecaire's -- and every project home is 0700 (provisioned
-# that way on purpose: "repos and working state are isolated per project").
-# `sudo -u "$PROJECT"` therefore cannot read, let alone execute, a sibling
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STAGE="$HOME_DIR/.selfdev-setup"
 install -d -m 700 -o "$PROJECT" -g "$PROJECT" "$STAGE"
 install -m 700 -o "$PROJECT" -g "$PROJECT" \
@@ -116,9 +114,7 @@ say "3/8 git credentials, per repo"
 # THE PIPE USED TO EAT THE ANSWER. wire-selfdev-git.sh already fails loud on
 # its own: its "6. the witness" section runs `git ls-remote` against the freshly
 # wired alias and exits 5 on `BAD WITNESS FAILED: ... the wiring is not live`.
-# That exit went into `| sed`, and this script sets `set -uo pipefail` but never
-# `set -e` and read neither $? nor PIPESTATUS -- so a repo whose credentials
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 wire_failed=""
 for repo in realisateur scheduler senechal "$PROJECT"; do
   access=""
@@ -147,9 +143,7 @@ run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
 # --- 5. the release bootstrap, and the account's own clock -------------------
 # DELEGATED to bin/wire-release-channel.sh since 2026-08-10, not reimplemented.
 # It was inline here, which meant the only way to give an account a clock was
-# to run account creation at it -- so nine of monkey's ten accounts never got
-# one and the release channel sat at one consumer for five days. That script
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 say "5/8 the GitHub App credential (host-wide)"
 if [ -x "$HERE/selfdev-app-key.sh" ]; then
   # rc read from the command, not from a pipeline whose last stage is `sed`.

@@ -16,9 +16,7 @@ set -uo pipefail
 # WHERE PROJECTS LIVE IS A PROPERTY OF THE HOST, NOT OF ZACH'S LAPTOP.
 # These were absolute paths under /home/zach, which is correct on mandark and
 # wrong everywhere else. On `monkey` -- the self-dev host stood up 2026-08-03,
-# one unix user per project -- this guard died with
-#
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PROJECTS_ROOT="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}"
 SCHED_ROOT="${SCHED_ROOT:-$PROJECTS_ROOT/scheduler}"
 
@@ -27,9 +25,7 @@ die() { printf 'notify-senechal: FAIL: %s\n' "$*" >&2; exit 1; }
 # THIS DOOR NO LONGER ACCEPTS PROSE (Zach-directed, 2026-08-16;
 # hf7y/senechal#323, follow-on hf7y/senechal#324).
 #
-# A paragraph had to be transcribed into senechal's schema by hand before any
-# consumer there could read it. Full rationale: senechal#323. There is no
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 DOORS_REPO="${NOTIFY_DOORS_REPO:-hf7y/senechal}"
 DOORS_PATH="${NOTIFY_DOORS_PATH:-registry/front-doors.json}"
 DOORS_URL="$DOORS_REPO/$DOORS_PATH"
@@ -180,9 +176,7 @@ command -v gh >/dev/null 2>&1 || die "gh is not on PATH -- cannot file, and coul
 # --- 1. file it through the front door, and capture the issue it created ----
 #
 # THE FRONT DOOR IS GITHUB (Zach, 2026-08-05; scheduler#22). `scheduler -i`
-# no longer appends to a local .scheduler/FOCUS.md and pushes -- it files a
-# GitHub issue labelled `idea`. Everything this script used to do after the
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 DEST_REPO="${NOTIFY_SENECHAL_REPO:-hf7y/senechal}"
 FROM_PROJECT="${NOTIFY_FROM_PROJECT:-realisateur}"
 
@@ -195,9 +189,7 @@ title="$(printf '%s' "$text" | head -1 | cut -c1-72)"
 # THE FOOTER IS A GATE, NOT DECORATION (restored 2026-08-13; senechal#221 ->
 # realisateur#220). `scheduler -i` stamped every issue it filed with
 #
-#   ---
-#   filed <YYYY-MM-DD HH:MM> via `<tool>` on <host>
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 body="$(printf '%s\n\n```senechal-door\n%s\n```\n\n---\nfiled %s via `notify-senechal` on %s\n\nsenechal absorbs this with `tools/absorb-notices.py --write`; closing IS the\nacknowledgement. If it was REJECTED, the payload above is wrong or the entry\nalready exists -- fix it at the caller, not by hand here.\n' \
   "$text" "$payload" "$(date '+%Y-%m-%d %H:%M')" "$(hostname -s 2>/dev/null || hostname)")"
 

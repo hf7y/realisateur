@@ -59,9 +59,7 @@ done
 # WHERE THE CREDENTIAL LIVES is answered in ONE place for every reader --
 # bin/lib/selfdev-app-key.sh -- and not re-spelled here. Until 2026-08-12 this
 # line said `$HOME/.config/selfdev/gh-app.conf`, i.e. one copy of one key per
-# account (thirteen on monkey), and three other scripts spelled the same fact
-# three other ways; converging an account failed because the writer and the
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 _sd_lib="$(dirname "${BASH_SOURCE[0]}")/lib/selfdev-app-key.sh"
 [ -r "$_sd_lib" ] || _sd_lib="$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh"
 if [ -r "$_sd_lib" ]; then
@@ -150,9 +148,7 @@ installation_id() {
 # --- the token, with a cache -------------------------------------------------
 # Cached because git invokes a credential helper on EVERY remote operation, and
 # minting per operation would turn one push into three round trips and three
-# audit-log entries. Keyed by App and repo scope so a narrowed mint never gets
-# served a broader cached token. Expiry is treated as 5 minutes early: a token
-# that dies mid-push fails in the least legible way GitHub offers.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mint_token() {
   local jwt inst body cache now exp
   cache="$CACHE_DIR/$(printf '%s|%s|%s' "$APP_ID" "$OWNER" "$REPOS" | openssl dgst -sha256 -hex | awk '{print $NF}').tok"
@@ -186,9 +182,7 @@ mint_token() {
 # ============================================================================
 # AUTHOR AND PUSHER ARE TWO LAYERS, AND --wire USED TO CONFLATE THEM
 # ============================================================================
-#
-# Found live 2026-08-07: `--wire` had set ecosim@monkey's GLOBAL git identity
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SELFDEV_EMAIL_DOMAIN="${SELFDEV_EMAIL_DOMAIN:-selfdev.invalid}"
 
 account_identity() {
@@ -237,10 +231,7 @@ case "$MODE" in
     # ADOPT NO LONGER INVENTS A PATH. It used to write
     # ~/.config/selfdev/<account>/<account>.pem plus a conf naming it -- which
     # is how one App key came to sit on disk under four different names, and
-    # why `selfdev-credentials.sh --apply` could not find it (realisateur#209).
-    # The host-wide placement, the group, and the per-account read witness are
-    # bin/selfdev-app-key.sh's job; this hands the key to it rather than
-    # keeping a second placement implementation alive.
+    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     if [ "$(id -u)" -eq 0 ] && [ -x "$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh" ]; then
       "$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh" --apply --from "$ADOPT_KEY" --app-id "$ADOPT_ID" --owner "$OWNER" \
         || die "selfdev-app-key.sh --apply refused; the key was NOT installed"
@@ -293,9 +284,7 @@ case "$MODE" in
         # `''` is the hand-run form (`selfdev-gh-app.sh --credential`), kept
         # so an operator can still exercise the helper from a terminal exactly
         # as it was documented before git's operation argument was honoured.
-        # `exit 5`, matching --token and --identity two branches down.
-        # mint_token flattens die()'s 5 to `return 1` internally, so every
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+        #   [rest: vault:realisateur/guard-archaeology-20260817.md]
         tok="$(mint_token)" || exit 5
         printf 'username=x-access-token\npassword=%s\n' "$tok"
         ;;

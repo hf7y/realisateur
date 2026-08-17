@@ -37,9 +37,7 @@ REPO="${REPO:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/realisateur}"
 # A SOURCE OF TRUTH THAT IS NOT THERE IS A HARD FAILURE, NOT A FLAG.
 #
 # Found 2026-08-02 while bootstrapping dexter, and it is the reason the
-# 2026-08-02 snapshot could say "nothing in the ecosystem knows how to install
-# itself onto a bare machine" while realisateur was the one project that
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ ! -d "$REPO/bin" ] || [ ! -e "$REPO/.git" ]; then
   printf '%s: REPO does not name a realisateur checkout: %s\n' \
     "${0##*/}" "$REPO" >&2
@@ -51,9 +49,7 @@ fi
 # EVERY destination is env-overridable, and that is a test-safety property, not
 # a convenience. bin/tests/install-shims.test.sh redirects them to a scratch
 # dir; without the override the test silently ran against the REAL
-# ~/.local/bin, ~/.claude/commands and ~/.claude/hooks -- writing to live
-# machine config to assert something about a temp directory, and failing three
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 BIN_DEST="${BIN_DEST:-$HOME/.local/bin}"
 CMD_SRC="$REPO/.claude/commands"
 CMD_DEST="${CMD_DEST:-$HOME/.claude/commands}"
@@ -64,9 +60,7 @@ CLAUDE_SETTINGS="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"
 # Both lists below are DERIVED, not typed. A hand-maintained list is what
 # produced the 2026-07-27 gap: three shims existed because three were typed,
 # and the six survey scripts the command files also name were never noticed.
-#
-# GLOBAL_COMMANDS = every command file declaring `scope: user` in frontmatter
-# (see bin/reach-lint.sh check A). Adding that line is the whole opt-in.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mapfile -t GLOBAL_COMMANDS < <(
   for f in "$CMD_SRC"/*.md; do
     [ -f "$f" ] || continue
@@ -79,9 +73,7 @@ mapfile -t GLOBAL_COMMANDS < <(
 # SHIMMED = every bin/<name>.sh the global command files name, plus the
 # ecosystem-protocol commands named explicitly below.
 #
-# THE PROTOCOL COMMANDS ARE A LIST, NOT A GREP. Until 2026-08-17 the second
-# half of this derivation grepped backticked tokens out of BUILD-DISCIPLINE.md
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PROTOCOL_COMMANDS=(
   check-project-busy
   claim-drift
@@ -184,9 +176,7 @@ install_file() {
   # A symlink at an install target is never something this installer made -- it
   # only ever writes regular files. Left in place it is actively destructive,
   # because both checks below follow it: `-f`/`cat` read through to the TARGET
-  # (so a symlink pointing at this repo's own source compares source-vs-shim,
-  # always differs, and never short-circuits), and then `> "$path"` writes
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ -L "$path" ]; then
     local target; target="$(readlink "$path")"
     if [ "$CHECK_ONLY" = 1 ]; then
@@ -224,9 +214,7 @@ done
 # PRUNE ORPHANS. Installing was only ever half the job: nothing removed a shim
 # whose source had been retired, so `hygiene-lint` stayed live on all 13 monkey
 # accounts after realisateur#267 moved its script under bin/retired/ -- a
-# command on PATH whose target no longer exists, on every account, reported by
-# nothing. hf7y/groc-mangr#3 recorded this same shape a week earlier
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 prune_orphans() {
   local f base
   for f in "$BIN_DEST"/*; do

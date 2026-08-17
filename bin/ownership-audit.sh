@@ -109,9 +109,7 @@ recv_names=""; recv_lines=""
 # rec_now  lines held TODAY by paths the ratchet already records
 # rec_pairs "<owner>|<path>" for each of those, so the READ BY test below can
 #           ask only same-owner recorded files without re-deriving an owner
-# new_rows  "<path>|<lines>|<owner>" for each foreign path the ratchet does not
-#           record. `|` is safe: git does not track a path containing one here,
-#           and an owner is a single bare word by the ledger's own format.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 rec_now=0; rec_pairs=""; new_rows=""
 
 add_recv() {
@@ -133,9 +131,7 @@ while IFS= read -r f; do
   # A .ratchet is a RECORD, not mechanism, and this one is a record of its own
   # measurement: it holds one line per foreign file, so counting it makes the
   # total a function of the answer. Measured while writing this: --accept
-  # recorded 79.7% and the next run of the same tree reported 79.3%, purely
-  # because the file had grown by 140 lines between the two. A number that
-  # moves when nothing moved is not a measurement.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   case "$f" in *.ratchet) continue ;; esac
   n="$(wc -l < "$TREE/$f" 2>/dev/null)" || n=0
   n="${n// /}"
@@ -293,10 +289,7 @@ if [ "$ACCEPT" -eq 1 ]; then
   # WHAT --accept CAN AND CANNOT DO, since growth is now permitted and the
   # recorded LINE COUNT can therefore go up. The bars are the other two, and
   # neither can be worsened by accepting: the share can only fall, because a
-  # risen share is a regression and this refuses on a regression; and the file
-  # list can only gain a path that FOLLOWS one already in it, because a parked
-  # path is a regression too. The line count is a baseline to measure growth
-  # from, not a bar -- see the header.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ "$regression" -eq 1 ]; then
     say "REFUSED: --accept does not record a parked path, a risen share or a reclassification as the new normal. Fix the regression first."
     exit 1
