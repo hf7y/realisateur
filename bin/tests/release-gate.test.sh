@@ -317,7 +317,7 @@ echo
 echo "-- THE PROJECT LIST COMES FROM THE MANIFEST ----------------------------"
 # No second derivation: the gate checks exactly what the build made. A gate
 # that enumerated projects itself could disagree with the build about what is
-# in the build, which is the one-fact-two-readers shape MONKEY.md 10 found
+# in the build, which is the one-fact-two-readers shape vault:realisateur/MONKEY.md 10 found
 # five times in a day.
 set_answer nu "success"
 set_answer xi "failure"

@@ -36,7 +36,7 @@
 #      convenient.
 #
 #   6. "FOUND NOTHING" IS NOT "NOTHING IS WRONG."
-#      MONKEY.md 5's `garde` reported "nothing pending -- every set is already
+#      vault:realisateur/MONKEY.md 5's `garde` reported "nothing pending -- every set is already
 #      copied and proven" with nothing reachable.
 #
 # HERMETIC. No network, no ssh, no sudo, no read of the live machine. Fixture
@@ -97,7 +97,7 @@ done
 [ -z "$dupes" ] && ok "no script is declared in two channels" \
                 || bad "declared in more than one channel:$dupes"
 
-# Retirement must propagate to the roster. VERB-DISTRIBUTION.md 6 records the
+# Retirement must propagate to the roster. vault:realisateur/VERB-DISTRIBUTION.md 6 records the
 # identical bug inside cut-verb-build.sh: a project that CHANGED was handled,
 # a project that LEFT was not, so every consumer kept installing a verb the
 # manifest no longer named. A roster naming a deleted file is that shape.
@@ -613,7 +613,7 @@ has "--retire unsets it, verified by re-reading the config" "$O" "re-read"
 # listed here by name so that adding a fourth is a visible review event and
 # not a quiet convenience. Everything that merely wants to KNOW the build id
 # must call prop_build_trailer(), or the ecosystem acquires a second answer
-# to "which build am I on" -- the one-fact-two-readers shape MONKEY.md 10
+# to "which build am I on" -- the one-fact-two-readers shape vault:realisateur/MONKEY.md 10
 # found five times in one day.
 PIN_OWNERS="install-verb-build.sh ecosim-sensor-tick.sh"
 strays=""

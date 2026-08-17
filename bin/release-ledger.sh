@@ -6,114 +6,13 @@
 # GUARD-TEST: bin/tests/release-ledger.test.sh
 # GATE: none -- reads the published verdict endpoint; the fixture is in its own suite
 #
-# ============================================================================
-# THE PROBLEM THIS INVERTS
-# ============================================================================
+# TRAP: a producer cannot report its own absence. "No new build because
+#   nothing changed" and "no new build because the producer never ran" are
+#   both "nothing new"; you cannot detect an absence by looking at what was
+#   produced. This reads the clock, not the output.
 #
-# Gating the nightly cut on CI green (bin/release-gate.sh) creates a new
-# silent failure, and it is the exact shape this estate keeps paying for:
-#
-#     "no cut tonight because nothing changed"
-#     "no cut tonight because main is broken"
-#
-# are indistinguishable to anything that detects a release by LOOKING FOR A
-# NEW BUILD. Both are "nothing new". You cannot detect an absence by looking
-# for something.
-#
-# So the channel is inverted: it EMITS A VERDICT EVERY NIGHT whether or not
-# it cuts. The two cases stop being two flavours of nothing and become two
-# values in one field.
-#
-#   date            ISO8601 UTC of the run
-#   decision        CUT | NO_CHANGE | BLOCKED | ERROR   (a CLOSED enum)
-#   reason          one line, human, why
-#   main_sha        the realisateur sha the run used
-#   ci_run          the Actions run id, so the evidence is one click away
-#   build_id        the build cut, or `-`
-#
-# Tab-separated, append-only, committed to the meta-repo every run. Consumers
-# already clone `hf7y/verbs` to install builds, so reading it needs no new
-# credential, no `gh`, and no second channel.
-#
-# ============================================================================
-# SIX RULES, EACH FOR A FAILURE THIS WOULD OTHERWISE HAVE
-# ============================================================================
-#
-# 1. DEFAULT-DENY ON THE ENUM. A `decision` this script does not recognise is
-#    BAD, not OK. Otherwise the night someone adds a fifth state, every
-#    consumer in the fleet grades it clean and keeps grading it clean. An
-#    unknown verdict is the one case where silence is guaranteed wrong.
-#
-# 2. TWO CLOCKS, NOT ONE.
-#      - age of the newest VERDICT  -> is the emitter alive?
-#      - age of the newest CUT      -> is the pipeline productive?
-#    Tracking only the first is how "blocked for two weeks" reads as healthy:
-#    a BLOCKED verdict written faithfully every night is a perfectly live
-#    emitter attached to a dead pipeline.
-#
-# 3. ESCALATE ON STREAK, NOT ON A SINGLE NIGHT. One BLOCKED night is normal --
-#    somebody pushed at 5pm. Three consecutive is an outage. Grading a single
-#    BLOCKED as a failure trains everyone to ignore the row, which costs more
-#    than the row was worth.
-#
-# 4. A PRODUCER CANNOT REPORT ITS OWN ABSENCE. This is the one that is easy to
-#    miss and it is why rule 2's first clock lives HERE, on the consumer, and
-#    is keyed on TIME rather than on contents. If the nightly workflow is
-#    disabled, deleted, or unbilled, it does not write ERROR -- it writes
-#    NOTHING, because it did not run. Every check that reads the newest row's
-#    CONTENTS is blind to that. Only "the newest verdict is older than N
-#    hours" catches it, and that predicate is true even when there are no
-#    rows at all.
-#
-#    This repository has already paid for this lesson once: `systemctl
-#    is-enabled` read `disabled` for a live timer-activated unit and nearly
-#    got a running intake pipeline deleted (2026-08-05). The recorded lesson
-#    was "liveness probes, not flags", and a verdict's CONTENTS is a flag.
-#
-# 5. AN EMPTY CHANNEL IS NOT A CLEAN CHANNEL. Zero verdicts is BAD. Same
-#    conflation `deploy-drift.sh` exists to kill and the same one MONKEY.md 5
-#    records `garde` making: "found nothing" is not "nothing is wrong".
-#
-# 7. A STALE SUCCESS IS THE WORST ROW ON THE PAGE, AND THE PRODUCER SETS ITS
-#    EXPIRY. Added 2026-08-07, paid for the same day.
-#
-#    The publisher died on its own argument parser and published nothing. The
-#    endpoint went on serving the previous night's `CUT`, `blocked_streak: 0`.
-#    It was 19h old -- inside this script's window -- so this script printed
-#    `emitter alive` and selfdev-release-tick.sh printed `release channel
-#    healthy (verdict fresh, no blocked streak)`. ON THE ONE NIGHT THE GATE
-#    WAS BROKEN, THE CHANNEL SHOWED A CONFIDENT GREEN.
-#
-#    THE FIX IS NOT A SMALLER WINDOW, and that is the part worth writing
-#    down, because a smaller window is what everybody reaches for first. The
-#    emitter runs ONCE NIGHTLY. A consumer ticking at an arbitrary hour
-#    legitimately sees a verdict anywhere from 0 to 24 hours old. Any
-#    threshold under ~25h false-alarms EVERY DAY, and per
-#    bin/tests/guard-estate.test.sh's whole thesis, a guard that is wrong
-#    every day is a guard that gets ignored on the day it is right. 26h and
-#    30h are not laxness; they are the floor a nightly cadence imposes.
-#
-#    So the window stops being guessed. `valid_until` is written INTO the
-#    document by publish-release-verdict.sh from the emitter's own cadence,
-#    and a document past its own expiry is BAD here regardless of what
-#    `decision` says. One number, set where the cadence is known, instead of
-#    one constant per consumer drifting against a cron expression in another
-#    repository. The constant above survives only as the fallback for a
-#    schema-1 document, and is now the ONLY thing that guesses.
-#
-# 6. UNREADABLE IS NOT EMPTY. A ledger we could not fetch (exit 3, BLIND) and
-#    a ledger that is genuinely empty (exit 1, BAD) are different facts with
-#    different fixes, and this vocabulary is already load-bearing across
-#    install-verb-build.sh and selfdev-release-tick.sh. It is extended here,
-#    not reinvented.
-#
-# ============================================================================
 # EXIT CODES
-#   0  the emitter is alive and the pipeline is not stuck
-#   1  findings: stale emitter, no verdicts, unknown decision, or a streak
-#   2  usage error (cli-guard)
-#   3  BLIND: the ledger could not be read at all. Not "clean".
-# ============================================================================
+
 set -uo pipefail
 
 CLI_NAME='release-ledger.sh'

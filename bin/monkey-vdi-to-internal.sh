@@ -2,10 +2,7 @@
 # monkey-vdi-to-internal.sh -- move monkey's virtual disk off the failing
 # external USB drive onto dexter's internal NVMe, unattended.
 #
-# RUN ON DEXTER, detached, so it survives mandark being suspended:
-#
-#   setsid nohup bash ~/monkey-vdi-to-internal.sh >/dev/null 2>&1 &
-#
+# TRAPS (the rest of this header is in the vault):
 # WHY. `monkey` is a VirtualBox guest hosting 14 self-dev accounts, and its
 # monkey.vdi lives on D: -- a WD Elements USB drive that logged 1580 `disk`
 # Event ID 11 controller errors between 2026-08-07 and 2026-08-14, one every
@@ -17,21 +14,7 @@
 # sshd then reset every connection at key exchange, because it cannot write.
 # Measured read throughput off that drive is 19.7 MB/s -- about 6x slow for a
 # USB3 spinner, which is the resets showing up as latency.
-#
-# THE ONE INVARIANT: THIS NEVER WRITES TO D:. Every step is a read from the
-# failing drive and a write to C:. The original vdi is not moved, not deleted,
-# not modified. The worst outcome this script can produce is "nothing changed".
-# Zach, 2026-08-14: "don't break the drive but otherwise draft a script that
-# can run without mandark."
-#
-# ORDERING IS THE SAFETY. The disk is repointed ONLY after the clone exists and
-# verifies. A half-repointed VM -- attached to a copy that is missing or short
-# -- is the single genuinely bad state, so it is made unreachable rather than
-# handled.
-#
-# It reports to Zach on WhatsApp through zaxon (containers on this host,
-# 127.0.0.1:8643) because the point of running unattended is that nobody is
-# watching a terminal.
+
 set -uo pipefail
 
 VBOX="/mnt/c/Program Files/Oracle/VirtualBox/VBoxManage.exe"
@@ -52,7 +35,7 @@ say() { printf '[%s] %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 
 # Every VBoxManage call gets `< /dev/null` and its output stripped of NULs and
 # CRs. It is a Windows process: it inherits stdin and will silently eat the
-# rest of a piped script (realisateur/MONKEY.md section 7 lost an afternoon to
+# rest of a piped script (vault:realisateur/MONKEY.md section 7 lost an afternoon to
 # exactly this with VBoxManage.exe), and it emits UTF-16-ish CRLF that breaks
 # every downstream grep if not stripped.
 vbm() { "$VBOX" "$@" < /dev/null 2>&1 | tr -d '\0\r'; }

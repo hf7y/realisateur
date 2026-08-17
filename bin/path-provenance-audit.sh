@@ -6,126 +6,18 @@
 # GUARD-TEST: bin/tests/path-provenance-audit.test.sh
 # GATE: strict
 #
-# ---------------------------------------------------------------------------
-# THE FINDING THIS IS THE MECHANISM FOR
-#
-# 2026-08-07, hf7y/realisateur#101 deleted bin/{ecosystem-survey,milestone-
-# audit,steward-survey}.sh. Their ~/.local/bin shims survived. Each one then
-# exited 127, loudly, on every invocation -- and NOTHING ANYWHERE NOTICED.
-# `install-shims.sh --check` reported the estate fine, because it walks the
-# SOURCES and asks whether each has a shim; an orphan is a shim whose source
-# is gone, which that walk cannot express. A human found them by looking.
-#
-# Zach's reading, and the reason this file is not a fix to install-shims:
-# that was never install-shims' job. CLAUDE.md's standing rule is that the
-# project which GENERATES a piece of machine config owns it, and `senechal`
-# owns KNOWING IT EXISTS. An orphaned shim is exactly a thing that exists and
-# is not known. senechal's own ESTATE.md already claims the territory --
-# "senechal owns the gaps: host health, network gear, mail delivery, ORPHANED
-# SCRIPTS" -- and senechal/health/undeclared-footprint.sh already sweeps for
-# undeclared systemd units. Its scope note says, in as many words:
-#
-#     "Crontab lines, XDG autostart entries, and scripts under ~/.local/bin
-#      are not swept here. recense/installe already own the PATH-executable
-#      half."
-#
-# That sentence is the whole defect. `recense` takes a census -- it answers
-# WHAT IS INSTALLED and never asks who put it there. `installe` maintains a
-# manifest of what IT installed and cannot see anything it did not install.
-# Between them they cover neither "who declared this" nor "is its source
-# still there", and the sentence above is why nobody noticed that they don't.
-#
-# ---------------------------------------------------------------------------
-# WHAT "SENECHAL OWNS EVERYTHING ON PATH" IS TAKEN TO MEAN
-#
-# An entry on PATH is ACCOUNTED FOR when both halves hold WITHOUT GUESSING:
-#
-#   OWNER   some project declared it. Either installe's manifest names it, or
-#           the file itself carries a generated-by header naming the project
-#           and script that wrote it.
-#   SOURCE  the thing it delegates to still exists, and is still the thing the
-#           declaration says it is.
-#
-# Neither half alone is ownership. A manifest entry whose target was deleted
-# is a lie in a ledger; a live binary nobody declared is a stranger with a
-# key. The four states that are NOT accounted for are each a distinct finding:
-#
-#   ORPHAN     declared (or symlinked) at a target that no longer exists.
-#              The #101 case. Fails at call time, silently at rest.
-#   DRIFT      installe's manifest says X, the link resolves to Y.
-#   REPO-LINK  a hand-made symlink into a project checkout. Traceable to a
-#              project by luck -- nobody declared it, and it survives only as
-#              long as that dev clone does. MIGRATION-OFF-MANDARK.md is
-#              actively deleting dev clones, so every one of these is an
-#              orphan with a date on it.
-#   UNKNOWN    no declaration anywhere. A human put it here.
-#
-# THE UNIT OF PROVENANCE IS NOT ALWAYS THE FILE. A toolchain manager's shim
-# directory (nvm, rbenv, pyenv, cargo, uv, the estate's own verb build) is
-# declared AS A DIRECTORY: its manager owns every name in it and regenerates
-# them, and demanding a per-file declaration for 14 rbenv shims would produce
-# fiction. So directories are attributed first, and only the hand-managed
-# directories (~/.local/bin, ~/bin) are swept file by file. A PATH directory
-# under $HOME that is neither a recognised toolchain nor a swept estate
-# directory is itself a finding: 28 executables nobody declared is one
-# finding, not twenty-eight.
-#
-# ---------------------------------------------------------------------------
-# WHY THE BAR IS DIFFERENT ON MANDARK AND ON MONKEY
-#
-# Zach named the asymmetry when he commissioned this ("harder on mandark,
-# easier on monkey") and it is the load-bearing design decision here.
-#
-#   PROVISIONED accounts (monkey's uid 3000-3099 project users) were created
-#   from nothing by bin/setup-selfdev-project.sh. Every executable they can
-#   run arrived through a provisioner or through installe. There is no
-#   history, no human, and no excuse. THE BAR IS 100%: accounted == total,
-#   zero unknown, zero repo-link.
-#
-#   DAILY-DRIVER accounts (zach@mandark) have years of hand-installed
-#   binaries -- synergy, yt-dlp, AppImages, a vendored ruby toolchain from a
-#   film project. Demanding provenance for those is not ambitious, it is the
-#   silence-audit failure: CLAUDE.md has required `silence-audit --strict`
-#   clean since the day it was written and that run was NEVER ONCE PASSABLE,
-#   so it became furniture and its true findings went unread with the rest.
-#   A bar that cannot be met does not raise standards; it retires a check.
-#
-#   So the daily-driver class is asked a DIFFERENT QUESTION. Not "is
-#   everything declared" but "is the undeclared set SHRINKING, and is nothing
-#   in it broken". ORPHAN and DRIFT are absolute on every host -- they are
-#   defects, not history. UNKNOWN and REPO-LINK are a debt with a ratcheted
-#   ceiling that may fall and may never rise. That satisfies Zach's actual
-#   ask -- "it alerts on any script it does not know about" -- for everything
-#   NEW, which is the only population an alert can still change, while the
-#   existing debt stays counted and visible instead of being either ignored
-#   or fatal.
-#
-# ---------------------------------------------------------------------------
-# WHY A RATCHET AND NOT A CONFORMANCE TEST
-#
-# Same argument as bin/thermostat-wiring.sh, whose shape this follows: a test
-# that is red on day one and red for weeks teaches people that red means
-# nothing, and this repository has already paid that bill twice (the `ci` MOVE
-# in pivot.sh; the seven suites that sat red long enough to become scenery).
-# So the default assertion is "no further away than last time someone looked".
-# bin/path-provenance-audit.ratchet records what was passing when accepted,
-# plus the numeric ceilings; this exits 1 if any of THEM regressed -- while
-# printing, on every single run, the fraction accounted for and the distance
-# left. `--strict` is the vision assertion and is expected to fail until the
-# vision is met; it is the declared GATE so that the hermetic suite exercises
-# the demanding path.
-#
-# BLIND IS NEVER CLEAN. "I could not census this account" and "this account is
-# clean" are different worlds and any run that confuses them is worthless.
-# Note the line the modelling turns on: "senechal cannot read /home/ecosim/
-# .local/bin from here" is NOT blind -- that question was asked and answered,
-# and the answer is an UNMET piece of the vision (hf7y/senechal#111). BLIND is
-# reserved for a probe that could not be performed at all.
+# TRAP: BLIND IS NEVER CLEAN. "I could not census this account" and "this
+#   account is clean" are different answers; exit 2 is BLIND, never success.
+# TRAP: `installe` maintains a manifest of what IT installed and cannot see
+#   anything it did not. This asks who put a thing there, which is a
+#   different question -- do not fold the two together.
+# TRAP: the ratchet is a ceiling that may fall and may never rise. The
+#   estate-wide clean run this once demanded was NEVER ONCE PASSABLE, and a
+#   bar that cannot be met does not raise standards -- it retires a check.
 #
 # usage:  path-provenance-audit.sh [--strict] [--accept] [--quiet] [--json]
 # exit:   0 no regression   1 REGRESSION against the ratchet
-#         2 BLIND (a probe could not be performed -- never success)
-#         3 --strict and the vision is not fully met (no regression)
+
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
@@ -166,7 +58,7 @@ SENECHAL_CONF="${SENECHAL_CONFIG:-${XDG_CONFIG_HOME:-$HOME_DIR/.config}/senechal
 SWEPT_DIRS="$HOME_DIR/.local/bin $HOME_DIR/bin"
 
 # --- host class -------------------------------------------------------------
-# uid, not hostname. MONKEY.md's provisioned accounts are uid 3000-3099 and
+# uid, not hostname. vault:realisateur/MONKEY.md's provisioned accounts are uid 3000-3099 and
 # that is the fact that makes them provisioned; a hostname test would grade
 # zach@monkey (a hands account with a human's habits) as provisioned, and
 # would grade a future self-dev account on another host as a daily driver.

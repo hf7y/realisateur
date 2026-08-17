@@ -1,36 +1,5 @@
 #!/usr/bin/env bash
 # provision-selfdev-user.sh -- add a self-dev project account to this host.
-#
-# RUN THIS ON THE SELF-DEV HOST, as a user who can sudo. It creates ONE unix
-# account for ONE project, exactly as MONKEY.md describes the topology, and
-# copies the shared Claude credential into it so the account can actually
-# spend a token.
-#
-#   ./provision-selfdev-user.sh <project>              --check (default)
-#   ./provision-selfdev-user.sh <project> --apply
-#
-# WHY THIS EXISTS. `ecosim`, the first such account, was created by hand in a
-# root sitting on 2026-08-03. Every step was reconstructed from memory into a
-# shell, and two of them were wrong in ways that only showed up later:
-#
-#   * `install -d -m 755 -o ecosim ... /home/ecosim/.local/bin` chowns only the
-#     FINAL component, so /home/ecosim/.local stayed root-owned and the paced
-#     runner could not create its own lockfile. The first dispatch died on it.
-#   * the credential was placed by three separate ad-hoc commands, none of
-#     which was written down anywhere a second account could reuse.
-#
-# Zach, 2026-08-03, on the topology: "each account shares one claude auth token
-# that has been copied. should get copied automatically." This is that.
-#
-# WHAT IT DELIBERATELY DOES NOT DO:
-#   * no sudo for the project account. A self-dev user needs nothing outside
-#     $HOME; if a run believes otherwise that is a finding to surface, not a
-#     capability to pre-grant. (The office's `romulus` has blanket NOPASSWD
-#     because it binds a port and manages a service. This is not that.)
-#   * no clone, no install, no crontab. `bin/land-selfdev.sh` does those, as
-#     the project user, and stops before arming dispatch.
-#   * no rotation edit. Adding a participant is realisateur's judgment and
-#     lands in schedule/_paced.<host>.conf through a reviewed change.
 
 set -uo pipefail
 
@@ -39,7 +8,7 @@ MODE="${2:---check}"
 case "$PROJECT" in ""|-*) echo "usage: $0 <project> [--check|--apply]" >&2; exit 2 ;; esac
 case "$MODE" in --check|--apply) ;; *) echo "usage: $0 <project> [--check|--apply]" >&2; exit 2 ;; esac
 
-# The uid band MONKEY.md reserves for self-dev projects: clear of the human
+# The uid band vault:realisateur/MONKEY.md reserves for self-dev projects: clear of the human
 # 1000s and of the office's romulus=1001, so a future merge of conventions
 # cannot collide.
 UID_MIN="${SELFDEV_UID_MIN:-3000}"

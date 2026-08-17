@@ -1,6 +1,6 @@
 # dexter — where work lives on it, and what it runs
 
-*Sibling to `MONKEY.md`, which says where self-dev runs; it lives here, beside
+*Sibling to `vault:realisateur/MONKEY.md`, which says where self-dev runs; it lives here, beside
 the compose files it governs, rather than as another root document.*
 
 * This one says where
@@ -58,7 +58,7 @@ logged in is not a service.
 are the consumables produced by dev agents."* That is the distribution channel
 for services, sitting beside the one that already exists for commands — a
 project declares a verb on its `bashified` branch and the verb build carries it
-to every account (`VERB-DISTRIBUTION.md`); a project that runs a *service*
+to every account (`vault:realisateur/VERB-DISTRIBUTION.md`); a project that runs a *service*
 produces an image and a `compose.yaml` under `/srv/<project>/`, and this host
 runs it. Same shape, different artifact: the repo is the source, the built
 thing is the deliverable, and no service is hand-installed into a userland

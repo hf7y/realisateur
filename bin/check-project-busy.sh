@@ -8,7 +8,7 @@
 # dedicated-clone-vs-working-checkout sync itself robust; this script is
 # realisateur's job: don't cross-write into a project's own FOCUS.md/
 # QUESTIONS.md while that project's own automation is mid-run against the
-# same files, in the same spirit as STABILITY-MILESTONES.md's "a dirty tree
+# same files, in the same spirit as vault:realisateur/STABILITY-MILESTONES.md's "a dirty tree
 # is a stop" rule for crt.
 #
 # Mechanism: every scheduler job dir at ~/.local/share/<job-name>/ holds a

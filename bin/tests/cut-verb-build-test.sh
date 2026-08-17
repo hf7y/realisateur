@@ -15,7 +15,7 @@
 #
 # THE CLAIMS WORTH FAILING OVER
 # Each of these was either a live defect found on 2026-08-04 or a promise
-# VERB-DISTRIBUTION.md makes to consumers:
+# vault:realisateur/VERB-DISTRIBUTION.md makes to consumers:
 #
 #   * a project that STOPS declaring verbs leaves the build.   <- was broken
 #     Without this the meta-repo re-commits a retired project's verbs every
@@ -200,7 +200,7 @@ check "...and the tree is unchanged" \
 
 # --- 3. RETIREMENT: a project that stops declaring leaves the build ------
 # Archiving a repository is how a project says "I am no longer a
-# participant" (VERB-DISTRIBUTION.md section 5), and to `gh repo list
+# participant" (vault:realisateur/VERB-DISTRIBUTION.md section 5), and to `gh repo list
 # --no-archived` that is exactly this: the name stops coming back.
 printf 'alpha\nbeta\n' > "$TMP/repolist"
 cut --assemble "$OUT" --allow-shrink >/dev/null 2>"$TMP/e3"

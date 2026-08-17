@@ -73,8 +73,8 @@ worktree, and dirt this run made from dirt that predates it
 ## 2. Name the philosophy delta, or say "none"
 
 Did this session change what this ecosystem *believes* — a rule, a
-doctrine file (`UNIVERSE.md`, `BUILD-DISCIPLINE.md`, `PRECIPITATION.md`,
-`STABILITY-MILESTONES.md`, `PLAYBOOK.md`, `CLAUDE.md`
+doctrine file (`vault:realisateur/UNIVERSE.md`, `BUILD-DISCIPLINE.md`, `vault:realisateur/PRECIPITATION.md`,
+`vault:realisateur/STABILITY-MILESTONES.md`, `vault:realisateur/PLAYBOOK.md`, `CLAUDE.md`
 itself)? If yes, name the delta in one sentence and confirm the file was
 actually edited and is part of a commit/PR from step 1 — not just
 described in chat. If no, **say "philosophy delta: none" explicitly.**

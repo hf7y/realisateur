@@ -1,121 +1,15 @@
 #!/usr/bin/env bash
 # defere.sh -- file the thing you were about to write a paragraph about.
 #
-#
-# ============================================================================
-# WHY THIS EXISTS, AND WHY IT IS THE PRIMARY DELIVERABLE
-# ============================================================================
-#
-# On 2026-08-07 eight agents deferred roughly ten real work items across
-# hf7y/realisateur#95..#104. Every one of them wrote a careful, well-argued
-# paragraph explaining what it was leaving behind and why. Not one ran
-# `gh issue create`.
-#
-# Read that again, because the usual diagnosis is wrong. This was not
-# laziness and it was not forgetting. Writing "**Orphaned shims** on monkey
-# accounts (`ecosystem-survey`, `milestone-audit`, `steward-survey`) -- named,
-# left." is STRICTLY MORE EFFORT than filing an issue would have been. The
-# agents did the expensive thing and skipped the cheap one.
-#
-# So the incentive is backwards, and no amount of guarding fixes a backwards
-# incentive -- a guard raises the cost of the wrong path, which in a system
-# where the wrong path is already the expensive one just makes everything
-# cost more. The only lever that changes behaviour is making the RIGHT path
-# cheaper than the paragraph. That is this script, and the guard
-# (the DEFERRED grammar in bin/lib/body-grammar.sh, refused at the write by
-# bin/gh-sign.sh) is secondary to it.
-#
-#   defere 'orphaned ecosystem-survey shim on chezz@monkey' --project chezz
-#
-# One line. It files the issue, and prints the ledger line the guard wants,
-# and appends that line to a per-branch ledger so `defere --ledger` at the end
-# of the session emits the whole block ready to paste into the PR body. The
-# compliant path now costs less typing than the sentence describing it.
-#
-# ============================================================================
-# THE ROUTING STATES -- and why "no owner" may not silently mean "Zach"
-# ============================================================================
-#
-# Zach, 2026-08-07: "issues keep coming to Zach, but they should really be
-# bouncing around the self-dev users in a healthy ecosystem."
-#
-# Everything lands on him because there is no other default. An UNROUTABLE
-# finding and a genuinely-needs-a-human finding arrive in the same queue
-# looking identical -- which is exactly the BLIND-grading-as-CLEAN conflation
-# guard-estate check E exists to stop, one level up. A queue that receives
-# both cannot be triaged, so it stops being read, and then the true items in
-# it are missed along with the noise.
-#
-# There is therefore NO DEFAULT ROUTE. Every invocation must name one of
-# three states, and refusing to choose is a usage error rather than a quiet
-# assignment:
-#
-#   --project <name>   the owning project. THE COMMON CASE, and the one the
-#                      brief is really about. A file path or a host usually
-#                      determines it without judgement: `bashify/lib/coin.sh`
-#                      -> bashify; a shim on chezz@monkey -> chezz; a health
-#                      script -> senechal. Files on hf7y/<name>, labelled
-#                      `deferred`, where that project's own self-dev run can
-#                      find it.
-#
-#   --human <why>      it needs a person: a decision, a credential, a `sudo`,
-#                      a judgement about risk. Files on the CALLING repo
-#                      labelled `needs-human`. This queue is allowed to be
-#                      small and is supposed to be.
-#
-#   --unroutable <why> nothing can own it yet, and saying so is the honest
-#                      answer. Files on the CALLING repo labelled
-#                      `unroutable`. IT IS NOT A SYNONYM FOR --human. The
-#                      count of these is itself a finding -- a rising
-#                      unroutable count means the ownership map has a hole,
-#                      which is information you lose the moment you let it
-#                      drain into a person's inbox.
-#
-# ROUTING IS PROBED, NOT ASSUMED. hf7y/realisateur#102 established that every
-# uid 3000-3099 account on monkey has a matching `hf7y/<name>` repository --
-# none missing, none invented. That convention is the routing table, and this
-# script does not cache it: `--project X` resolves to `hf7y/X` and is checked
-# with a live `gh repo view`. A project that does not resolve is refused with
-# the `--unroutable` form printed, NOT silently redirected. A guessed
-# destination is worse than an admitted gap (MEMORY: liveness probes, not
-# flags).
-#
-# ============================================================================
-# IT FILES BY DEFAULT, WHICH INVERTS THIS ESTATE'S USUAL --apply IDIOM
-# ============================================================================
-#
-# Deliberate, and worth naming because it looks like a violation of
-# BUILD-DISCIPLINE's "every guard stops one step short of the irreversible
-# thing". Two reasons it is not:
-#
-#   1. This is not a guard. Nothing here is irreversible or destructive: the
-#      worst outcome is a spurious issue, which costs one click to close.
-#   2. An `--apply` flag would restore the exact cost asymmetry the script
-#      exists to remove. The failure mode being fixed is UNFILED work; making
-#      filing take two attempts optimises against the wrong error.
-#
-# `--dry-run` prints exactly what would be filed and files nothing, for when
-# you want to see the shape first.
-#
-# ============================================================================
-# THE MODEL IT COPIES: bibliothecaire's `consulte`
-# ============================================================================
-#
-# This is not a new pattern. `consulte` files a GitHub issue on
-# hf7y/bibliothecaire labelled `request`, and bibliothecaire's own scheduled
-# run works that queue -- one project, issue-driven intake, actually
-# functioning today. The gap was never the mechanism; it was that the
-# mechanism was built once, for one consumer, and never generalised. This is
-# the generalisation of the CLIENT half. The WORKER half -- something on the
-# other end that drains the queue -- exists only for bibliothecaire, and for
-# realisateur it does not exist at all (there is no `realisateur` account on
-# monkey). See the report accompanying this change: a filed item with no
-# worker is still better than a paragraph, because it is addressable and it
-# accumulates visibly, but it is not the same as done.
+# TRAP: "no owner" may NOT silently mean Zach. There are three routing
+#   states and refusing to choose is a usage error, not a quiet default.
+# TRAP: a project that does not resolve against a live `gh repo view` is
+#   refused with the --unroutable form PRINTED, never silently redirected.
+#   A guessed destination is how a deferral disappears.
 #
 # usage: `--help`, from CLI_USAGE below. One source.
-#
 # exit codes: `--help`, from CLI_EXITS below. One source.
+
 set -uo pipefail
 
 CLI_NAME='defere.sh'

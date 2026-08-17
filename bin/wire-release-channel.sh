@@ -2,128 +2,16 @@
 # wire-release-channel.sh -- give a self-dev account (or every one of them) the
 # release bootstrap and its own clock, so it can adopt verb builds.
 #
-# RUN ON THE SELF-DEV HOST, AS ROOT (or via sudo):
+# TRAP: the bootstrap set is DERIVED from bin/lib/propagation-set.sh, never
+#   typed here. A second list of "what the bootstrap is" drifts from the one
+#   the tick enforces.
+# TRAP: root is needed for exactly one thing pull cannot bootstrap -- putting
+#   the first files into a 0700 home the account cannot fetch into yet.
+# TRAP: an account-creation-time-only change applies to FUTURE accounts only.
+#   Builds were cut nightly for five days while NINE of ten accounts had
+#   never adopted one, silently.
 #
-#   sudo bash bin/wire-release-channel.sh --host [--check|--apply]
-#   sudo bash bin/wire-release-channel.sh --all [--check|--apply]
-#   sudo bash bin/wire-release-channel.sh <account> [--check|--apply]
-#
-# ============================================================================
-# --host: ONE PIN FOR THE MACHINE, AND WHY IT IS NOT THE SAME SHAPE AS --all
-# ============================================================================
-#
-# Zach, 2026-08-11, on being shown that `ssh monkey <verb>` finds nothing:
-# "unless there's a good reason not to, all verbs should be installed this way.
-# change the install logic."
-#
-# THE MEASUREMENT THAT PROMPTED IT. `ssh monkey` yields
-# PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin plus games
-# and snap -- NOTHING under $HOME, because Ubuntu's .profile adds ~/.local/bin
-# at login and a command-form ssh is not one. So on the host that runs five
-# self-dev accounts, zero of the 33 verbs in the current build were reachable
-# as `ssh monkey <verb>`, and /usr/local/bin was empty. The per-ACCOUNT wiring
-# below is not wrong -- it is invisible from outside the account.
-#
-# WHAT --host DOES DIFFERENTLY. The build root is /usr/local/share/verb-builds
-# and the links go into /usr/local/bin, so one pin serves every account on the
-# machine and every non-interactive shell that ssh opens on it.
-#
-# THE TWO CONSEQUENCES, NAMED RATHER THAN DISCOVERED:
-#
-#   1. PER-ACCOUNT ROLLBACK IS GONE. Accounts move to a new build together.
-#      That is a real loss and it is accepted, because nothing was using it and
-#      because VERB-DISTRIBUTION.md section 4's own argument is that every user
-#      path should install THE SAME NAMED THING -- "I am on 2026-08-11T031603Z"
-#      is a bug report, and it stops being one if it is only true of one uid.
-#
-#   2. THE CLOCK HAS TO MOVE WITH THE ARTIFACT. An unprivileged account cannot
-#      write /usr/local, so the five per-account TICK lines become ONE root
-#      tick. This does not abandon propagation-set.sh's "pull, not push": the
-#      pull still happens on the consumer, from the consumer's own crontab,
-#      with no ssh -- there is simply one consumer per host instead of one per
-#      account, for an artifact that is now per host. It is also strictly less
-#      machinery: one nightly clone of hf7y/verbs instead of five.
-#
-# ORDER IS LOAD-BEARING. Adopt and verify /usr/local/bin FIRST; retire the
-# per-account ticks only after. Reversing that leaves five accounts with no
-# verb path at all, which is the failure the release channel exists to prevent.
-# This script therefore retires NOTHING -- see "WHAT IT DOES NOT DO".
-#
-# ============================================================================
-# WHY THIS EXISTS -- a door that was missing, not a channel that was broken
-# ============================================================================
-#
-# The release channel was built, tested and running. `cut-verb-build.sh`
-# assembles every project's verbs into a dated build in `hf7y/verbs`;
-# `build-verbs.yml` cuts one nightly; `install-verb-build.sh` fetches one by
-# id, verifies every verb the manifest promises, and repoints ONE symlink
-# atomically or discards the build; `selfdev-release-tick.sh` is the consumer's
-# clock. None of that needed fixing.
-#
-# What was missing is that the clock could only be installed as the TAIL of
-# `setup-selfdev-project.sh` -- a script that stands an ACCOUNT up, once, from
-# nothing. An account provisioned before the release channel existed therefore
-# had no way to be given a clock short of re-running account creation at it,
-# which nobody was going to do. The cost, measured 2026-08-10 rather than
-# supposed:
-#
-#   $ selfdev-release-tick.sh --survey
-#   ecosim  2026-08-10T032316Z  clock 15h  armed
-#   vim-arcade NONE never none        ... and eight more
-#   1 ok, 9 gap, 0 bad
-#
-# Builds had been cut nightly for five days and NINE of ten accounts had never
-# adopted one. propagation-set.sh's own headline -- A CHANNEL WITH NO CLOCK IS
-# NOT A CHANNEL -- was true of nine tenths of the fleet, in the very estate
-# that wrote it down. The failure was not the clock and not the builds; it was
-# that the only way to install a clock was bundled inside a one-time
-# account-creation script, so it silently applied to future accounts only.
-#
-# ============================================================================
-# WHAT IT DOES NOT DO
-# ============================================================================
-#
-# It ARMS NOTHING. Adopting a verb build is a git fetch and a symlink repoint;
-# it spends no model quota and dispatches no agent. That is what makes it safe
-# to run across the whole uid band while the armed set stays exactly where it
-# is -- and arming remains what it was: a reviewed 0->1 in the scheduler repo's
-# schedule/_paced.<host>.conf, plus that account's own sync-crontab run.
-#
-# It does not fetch, verify or switch a build either. It installs the bootstrap
-# and the clock; `selfdev-release-tick.sh` does the rest, and delegates the
-# switch to `install-verb-build.sh`, which is the one tested implementation of
-# it. A second atomic-switch written here would be a second answer to "which
-# build am I on", the one question a bug report has to be able to answer.
-#
-# --host RETIRES NOTHING. It does not remove a per-account TICK line, delete an
-# account's build root, or touch ~/.local/bin. Every one of those is safe only
-# AFTER /usr/local/bin has been verified to resolve, and "the previous channel
-# was torn down in the same run that stood the new one up" is how a migration
-# turns into an outage with no way back. Retirement is a separate reviewed act
-# with its own issue.
-#
-# ============================================================================
-# PULL, NOT PUSH -- and why root is still the right caller for THIS step
-# ============================================================================
-#
-# propagation-set.sh's doctrine is that the clock lives on the CONSUMER, runs
-# as the account, from the account's own crontab, with no ssh and no sudo on
-# its apply path. That is unchanged: this script installs the tick and then has
-# THE ACCOUNT install its own cron entry, as itself.
-#
-# Root is needed here for the one thing pull cannot bootstrap -- putting the
-# first files into a 0700 home the account cannot fetch them into yet. That is
-# the industrial bootstrap shape (gradlew, rustup) propagation-set.sh already
-# argues for, and it is a one-time act per account, not a clock.
-#
-# ============================================================================
-# THE BOOTSTRAP SET IS DERIVED, NEVER TYPED HERE
-# ============================================================================
-#
-# From bin/lib/propagation-set.sh, the same list bin/tests/propagation.test.sh
-# enforces. A second list of "what the bootstrap is" would drift from the one
-# under test, which is the one-fact-two-readers shape MONKEY.md 10 found five
-# times in a single day.
+
 set -uo pipefail
 
 CLI_NAME='wire-release-channel.sh'
@@ -176,7 +64,7 @@ HOST_STATE="${HOST_TICK_STATE:-/var/lib/selfdev-release}"
 # Run a command AS an account with a LOGIN-shaped PATH. Ubuntu's .profile only
 # adds ~/.local/bin at login and `sudo -u x cmd` is not one -- that omission is
 # what made land-selfdev.sh report "FATAL: installe is not on PATH" from the
-# script that had just linked it (MONKEY.md 8.1).
+# script that had just linked it (vault:realisateur/MONKEY.md 8.1).
 run_as_acct() {
   sudo -u "$1" -H env -i \
     HOME="$2" USER="$1" LOGNAME="$1" \

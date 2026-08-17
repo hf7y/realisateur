@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # focus-commit.sh <repo> <msgfile> <file>... -- atomic FOCUS/QUESTIONS write.
 #
+# TRAPS (the rest of this header is in the vault):
 # Realisateur's own half of the multi-writer FOCUS-file write race (see
 # .scheduler/FOCUS.md's 2026-07-26 write-race entry; scheduler owns the
 # other half -- honest watcher attribution + a live-session probe). FOUR
@@ -8,38 +9,9 @@
 # archived artifact's content during a rename-following rebase and was
 # caught only because a human happened to diff it by hand.
 #
-# WHAT IT RETIRES: the bare `git add` + `git commit -F` + `git push` +
-# hand-rebase sequence for FOCUS.md/QUESTIONS.md writes in this ecosystem's
-# sessions. That sequence is prose discipline carried in session memory,
-# and this file's own doctrine says prose decays -- this is the guard.
-#
-# The three things it does that the bare sequence does not:
-#   1. Commits EXACTLY the named files. Anything else already staged, or a
-#      named file that staged nothing, is a loud abort -- an unrelated
-#      working-tree edit can never ride along inside a FOCUS commit.
-#   2. On a rejected push, does the fetch -> inspect -> rebase itself and
-#      RETRIES, instead of leaving a half-done state for a human to guess at.
-#   3. After the rebase, VERIFIES the rebase did not change what our commits
-#      mean: the set of files our commits touch relative to upstream must be
-#      identical before and after, and each of those files' content must be
-#      byte-identical before and after. This is the check that would have
-#      caught the archive/ rewrite mechanically. Any divergence is a loud
-#      abort that leaves the work intact and un-pushed for a human to read.
-#
 # Usage:
-#   bin/focus-commit.sh <repo> <msgfile> <file>...
-#     <repo>     path to the git repo (files are given relative to it)
-#     <msgfile>  file holding the commit message -- NEVER an inline -m
-#                string, per BUILD-DISCIPLINE's `git commit -F` rule
-#     <file>...  the paths to stage, relative to <repo>
-#
-# Env overrides (tests/fixtures, not normally set):
-#   FOCUS_COMMIT_TRIES=3   how many fetch/rebase/push rounds before giving up
-#   FOCUS_COMMIT_REMOTE=   remote to push to (default: the branch's upstream)
-#
-# Exit 0 only if the commit is on the remote. Every other path exits
-# non-zero with a stated reason -- there is no silent success and no
 # exit-0 no-op.
+
 set -uo pipefail
 
 die() { printf 'focus-commit: FAIL: %s\n' "$*" >&2; exit 1; }

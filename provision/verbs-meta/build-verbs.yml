@@ -12,7 +12,7 @@
 #   A consumer -- zach@mandark, ecosim@monkey, any future account -- then
 #   clones ONE repo (1.6M, measured 2026-08-04) to get the whole verb
 #   surface, instead of fetching from N and needing a credential for each.
-#   MONKEY.md §8.1 records four hand-made per-repo deploy keys per self-dev
+#   vault:realisateur/MONKEY.md §8.1 records four hand-made per-repo deploy keys per self-dev
 #   account, and calls that out as unscalable in Zach's own words: "we can't
 #   do this for every install."
 #

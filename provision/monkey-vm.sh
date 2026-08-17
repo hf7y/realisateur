@@ -336,4 +336,4 @@ echo "hardening), and only then:"
 echo "   bin/land-selfdev.sh --check     # probes, writes nothing"
 echo "   bin/land-selfdev.sh --land"
 echo
-echo "See MONKEY.md for the whole sequence and what each step must witness."
+echo "See vault:realisateur/MONKEY.md for the whole sequence and what each step must witness."

@@ -2,35 +2,6 @@
 # install-honey-plugin.sh -- install the Honey plugin into every self-dev
 # account on this host, and wire it to apply on EVERY session (not only when
 # an agent remembers to type /honey).
-#
-# RUN THIS ON THE SELF-DEV HOST, as a user who can sudo.
-#
-#   ./install-honey-plugin.sh              --check (default)
-#   ./install-honey-plugin.sh --apply
-#   ./install-honey-plugin.sh --apply --mode full     (lite|full|ultra)
-#   ./install-honey-plugin.sh --check --user ecosim   (one account)
-#
-# WHAT "WIRED TO RUN EVERY TIME" MEANS, mechanically. Three things must all be
-# true in the account's own ~/.claude, or the plugin is present and inert:
-#   1. plugins/cache/greenpt/honey/<version>/  -- the payload, with hooks/.
-#   2. settings.json enabledPlugins["honey@greenpt"]=true plus the greenpt
-#      entry in extraKnownMarketplaces; that is what loads hooks/hooks.json,
-#      whose SessionStart entry runs hooks/honey-session.js.
-#   3. .honey-active holding a mode. honey-session.js exits 0 SILENTLY when
-#      that file is missing -- an installed, enabled, hook-registered plugin
-#      that injects nothing. That silent exit is why this script's witness
-#      RUNS the hook as the account and greps its stdout, rather than checking
-#      that files exist.
-#
-# Found on 2026-08-12, and the reason the check is shaped this way: ecosim,
-# vim-arcade and bibliothecaire each had installed_plugins.json naming
-# /home/<u>/.claude/plugins/cache/greenpt/honey/1.3.1, settings.json enabling
-# it, and .honey-active=full -- with cache/greenpt/honey/ EMPTY. Every
-# file-presence check but one passed. Nothing was installed.
-#
-# SOURCE OF TRUTH is the invoking user's marketplace clone. One clone, one
-# pinned version, copied; not a per-account `git clone` that can drift, and
-# not a re-typed version string.
 
 set -uo pipefail
 

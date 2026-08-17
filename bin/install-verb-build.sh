@@ -3,43 +3,17 @@
 # so every user path runs the SAME verbs and none of them move while agents
 # merge the next ones.
 #
-# THE LAYOUT
-#   ~/.local/share/verb-builds/
-#     repo/                      one clone of hf7y/verbs (the meta-repo)
-#     2026-08-05T0130Z/          a build, extracted from tag build/<id>
-#       manifest.tsv             <project> <verb> <sha> <repo_url>
-#       vim-arcade/bin/entraine
-#     2026-08-04T0130Z/          yesterday's, kept for rollback
-#     current -> 2026-08-05T0130Z
-#
-#   ~/.local/bin/entraine -> ~/.local/share/verb-builds/current/vim-arcade/bin/entraine
-#
+# TRAPS (the rest of this header is in the vault):
 # WHY `current` IS A SYMLINK AND THE ~/.local/bin LINKS ARE WRITTEN ONCE
 # Adopting a build, or rolling back, repoints ONE symlink -- so the verb
 # set changes all at once or not at all. N independent `git pull`s cannot
 # express that: they half-succeed, and leave you running a verb set that
 # never existed as a whole and cannot be named in a bug report.
-#
-# WHAT THIS REPLACES
-# A verb today is a symlink into a `bashified` WORKTREE of a full dev clone
-# (senechal bin/installe:194-213). Hence: deleting ~/Documents/Projects/
-# vim-arcade breaks `entraine`, because vim-arcade-verbs/.git is a POINTER
-# into vim-arcade/.git/worktrees/. Measured on mandark 2026-08-04: 807M of
-# dev clones serving 26 verbs whose bashified branches total ~2.3M. A build
-# depends on no dev checkout at all -- which is the whole point, because
-# development now happens on monkey.
-#
-# WHAT IT REFUSES TO DO
-# Switch to a build it has not fully verified. Every verb the manifest
-# promises is confirmed present and executable BEFORE `current` moves; a
-# partial build is discarded, not switched to. scheduler's 2026-07-29 total
-# dispatch outage was ONE missing symlink that no check on the machine
-# could say should have been there.
-#
 # And it never reports "you are up to date" when it could not look. An
 # unreachable remote is BLIND, exit 3 -- the `garde` shape from
-# realisateur/MONKEY.md §5, where skipping unreachable destinations made
+# vault:realisateur/MONKEY.md §5, where skipping unreachable destinations made
 # "nothing pending" indistinguishable from "everything is proven".
+
 set -uo pipefail
 
 CLI_NAME='install-verb-build.sh'

@@ -2,39 +2,13 @@
 # wire-selfdev-git.sh -- give a self-dev account the git credentials it needs
 # to clone and push ONE repo, and prove they work.
 #
-# RUN THIS ON THE SELF-DEV HOST, as the PROJECT USER (not root).
-#
-#   ./wire-selfdev-git.sh <repo> [--check|--apply] [--rw]
-#
-#   <repo>    the GitHub repo name under $SELFDEV_GH_OWNER (default hf7y)
-#   --rw      issue the deploy key read-WRITE. Default is read-only.
-#   --check   (default) probe and print, write nothing
-#
-# WHY THIS EXISTS. `ecosim`, the first self-dev account, was wired by hand on
-# 2026-08-03: four keypairs generated, four deploy keys pasted into GitHub, an
-# ~/.ssh/config.selfdev written, and twelve url.insteadOf lines added to
-# ~/.gitconfig. Every one of those steps was correct and none of them was
-# written down anywhere the SECOND account could reuse -- so account #2 was
-# facing the same afternoon, and account #3 after it.
-#
-# Zach, 2026-08-03, on being shown ecosim's config: "okay but we need to make
-# this a durable fix since we can't do this for every install." This is that.
-# It is the same argument bin/provision-selfdev-user.sh's own header makes
-# about the unix account, applied one layer up.
-#
+# TRAPS (the rest of this header is in the vault):
 # WHY PER-REPO DEPLOY KEYS AND NOT ONE ACCOUNT-WIDE PAT. Least privilege that
 # an account-wide token cannot express: a self-dev project may push to its OWN
 # repo and must only READ realisateur, scheduler and senechal. A PAT that can
 # write one can write all four. This is the shape ecosim was given after that
 # reasoning, and mirroring it keeps ONE pattern on the host rather than two.
-#
-# WHY THE ALIAS HOST. A deploy key is per-repo, so ssh must pick a DIFFERENT
-# key per repo against the same hostname -- which ssh can only do by hostname.
-# Hence `Host github-<repo>` aliases, and url.insteadOf to rewrite every URL
-# spelling onto them, because land-selfdev.sh clones https:// URLs and
-# schedule/<p>.conf declares a mix of https:// and git@ forms. All three
-# spellings are rewritten: a repo reachable under one and not another is the
-# kind of half-wiring that only shows up on the first unattended run.
+
 set -uo pipefail
 
 REPO=""; MODE="--check"; ACCESS="read-only"

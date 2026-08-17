@@ -7,6 +7,7 @@
 # GUARD-TEST: bin/tests/repo-settings-provision.test.sh
 # GATE: strict
 #
+# TRAPS (the rest of this header is in the vault):
 # WHY THIS EXISTS. claim-drift.sh --convention states, as settled ecosystem
 # fact: "allow_auto_merge=true, delete_branch_on_merge=true ... live on
 # hf7y/realisateur since 2026-08-08." That was true of realisateur alone --
@@ -19,31 +20,8 @@
 # a whole /triage-run's Phase 1 to clean up by hand). "Live on realisateur"
 # read as an ecosystem fact; it was one repo's setting.
 #
-# WHAT THIS CHECKS, per registered project with a REPO_URL:
-#   - delete_branch_on_merge: true
-#   - allow_auto_merge: true
-# Nothing else -- branch protection (required checks, no required reviews)
-# is deliberately NOT provisioned here. It names specific check contexts
-# (`suites`, `markdown-cost`) that are realisateur's own CI job names, not a
-# convention every project's CI necessarily shares; forcing it estate-wide
-# would silently wedge a repo whose checks are named differently. That stays
-# a per-project, by-hand decision (or a later, separately-scoped script that
-# reads each project's own CI config rather than assuming realisateur's).
-#
 # Usage:
-#   repo-settings-provision.sh              report drift, change nothing
-#   repo-settings-provision.sh <name>...    report drift for named project(s)
-#   repo-settings-provision.sh --apply [<name>...]   fix the drift found
-#   repo-settings-provision.sh --strict [<name>...]  exit 1 if drift found
-#
-# Bare invocation is READ-ONLY and reports only -- same "a script that
-# mutates without an explicit flag is a hazard" lesson cli-guard.sh's own
-# header names (weight-audit's silent live-apply-and-push). --apply is the
-# only path that calls `gh repo edit`.
-#
-# Env overrides (used by the test suite, not normally set):
-#   SCHED_ROOT=...  scheduler repo (project registry lives in schedule/*.conf)
-#   GH_BIN=gh       the gh binary/stub to invoke
+
 set -uo pipefail
 
 CLI_NAME='repo-settings-provision.sh'

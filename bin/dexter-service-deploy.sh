@@ -4,7 +4,7 @@
 # THE CHANNEL THIS IS HALF OF. Zach, 2026-08-14: "docker containers are the
 # consumables produced by dev agents." Commands already have a channel -- a
 # project declares a verb on its `bashified` branch, the nightly build cuts it,
-# and every account adopts it (VERB-DISTRIBUTION.md). Services had none: they
+# and every account adopts it (vault:realisateur/VERB-DISTRIBUTION.md). Services had none: they
 # were hand-installed into whatever userland their author was sitting in, which
 # is how zaxon ended up in an undocumented WSL distro and stayed dead for ten
 # days. This is the service half: repo -> /srv/<name> -> compose up.

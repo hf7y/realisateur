@@ -2,9 +2,7 @@
 # monkey-watch.sh -- publish monkey's status on a schedule, FROM DEXTER, and
 # alert when it changes state.
 #
-#   monkey-watch.sh            probe and print, publish nothing
-#   monkey-watch.sh --apply    probe, publish to hf7y.com/monkey, alert on change
-#
+# TRAPS (the rest of this header is in the vault):
 # WHY THIS EXISTS (hf7y/realisateur#274). publish-monkey-status.sh runs BY
 # HAND, from mandark, and refuses to publish unless its ssh collection
 # succeeds: "collector returned no accounts. Refusing to publish an empty
@@ -13,25 +11,13 @@
 # accounts were unreachable for hours -- and the page showed a healthy world
 # from before the outage, because publishing REQUIRES the thing that broke.
 # The monitoring inherited the failure it was supposed to report.
-#
-# THE FIX IS WHERE IT RUNS. dexter HOSTS the VM, so `VBoxManage showvminfo`
-# answers even when the guest is dead. That host-side fact is what makes
-# "running but not answering" -- exactly that outage -- distinguishable from
-# "powered off", and it is invisible from inside the guest by definition.
-#
 # THE COLLECTOR IS THE SOURCE OF THE ACCOUNT ROWS. THIS SCRIPT IS NOT.
 # bin/monkey-status-collect.py runs as root ON monkey and probes each
 # account's real crontab and real scheduler ledger: `armed` means that
 # account's own crontab holds a dispatch runner, and a missing ledger means it
 # has never run -- which for an armed account is a finding, not a blank. None
 # of that is derivable from dexter.
-#
-# The FIRST version of this script hand-rolled a thinner payload instead of
-# running the collector, and it broke the page: share/monkey-status.html reads
-# `d.accounts` and got undefined. That is the "claim copied from a document"
-# failure the page exists to avoid, committed by the thing publishing the page.
-# Host-side facts are now ADDED to the collector's document, never substituted
-# for it.
+
 set -uo pipefail
 
 CLI_NAME='monkey-watch'

@@ -1,57 +1,24 @@
 #!/usr/bin/env bash
-# KIND: verb
 # gh-sign.sh -- sign every agent-written GitHub comment/issue AUTOMATICALLY,
 # by standing in front of `gh` on PATH.
 #
+# KIND: verb
+#
+# TRAPS (the rest of this header is in the vault):
 # It appends `<!-- agent: <account>@<host> <ISO8601> -->` to the bodies of
 # `issue comment|create|close` and `pr comment|create`, passing everything else
 # through untouched. Both fields are read from the running process, so there is
 # no argument to get wrong or forget -- it replaced bin/gh-comment.sh, a
 # wrapper that had to be called and never was (20 of 403 comments stamped;
 # measurement and the GitHub App question: hf7y/realisateur#327).
-#
-# It also REFUSES an `issue create`/`pr create` whose body breaks
-# lib/body-grammar.sh: claim-drift.yml and deferral-ledger.yml grade the same
-# text afterwards and are not required on main, so the write is the only place
-# the rule bites.
-#
-# FAIL OPEN ON MACHINERY, CLOSED ON GRAMMAR. No real gh, an unreadable
-# --body-file, an unrecognised subcommand, a missing grammar library: exec the
-# real gh with the ORIGINAL argv. A body breaking a rule the shim could read is
-# the one case it stops.
-#
-# usage: `usage()` below. `gh --help` reaches it only where there is no real gh.
-#
-# HOW IT REACHES A PATH, AND WHY THERE IS EXACTLY ONE COPY (#330)
-# ---------------------------------------------------------------
-# It ships as a VERB: `bashified` carries bin/gh and man/gh.1, the nightly cut
-# builds it, and the host tick links /usr/local/bin/gh at the host's pin --
-# /usr/local/bin being the one directory preceding /usr/bin under cron (a
-# per-account ~/.local/bin shim is inert; usage-paced-runner.sh APPENDS that).
-# The policy has one home, this file on `main`, and every replica is written
-# by `bin/carry-drift.sh --carry` under a byte-identity CI guard, so nothing
-# can drift without a red check. Zach on #330: "it cannot be several copies,
-# one per repo that will drift inevitably."
-#
 # AND IT KNOWS HOW OLD IT IS. Propagation can stop, and a shim silently
 # enforcing last month's policy is worse than none -- so past STALE_DAYS it
 # says so on stderr at every write AND stamps `STALE <n>d` into the body, in
 # the artifact where decision-rot.sh reads it rather than a log nobody opens.
 # It does NOT refuse: see FAIL OPEN above.
 #
-#   gh-sign.sh <any gh argv>        sign if it is a body-carrying write, then exec gh
-#   gh-sign.sh --self-check         prove the shim resolves a real gh that is not itself
-#   gh-sign.sh --stamp              print the stamp this host/account would append
-#   gh-sign.sh --check-body <path>  grade a body against the grammar; `-` reads stdin
-#
-# WHO IS AT THE KEYBOARD, NOT WHICH HOST (2026-08-16, hf7y/scheduler#147).
-# This said "MANDARK IS EXCLUDED, deliberately and permanently: an unsigned
-# comment from Zach's own machine is the signal decision-rot.sh reads". The
-# signal is right; host was a proxy for ACTOR, and agents run on mandark. So
-# an agent comment written there came back from decision-rot as Zach ANSWERING
-# the issue -- its `answer` is the latest owner comment that is NOT stamped.
-# Unsigned is not unattributed; it is attributed to the human. The 66 of 97
-# open issues carrying no marker are the same artefact.
+# usage: `usage()` below. `gh --help` reaches it only where there is no real gh.
+
 set -uo pipefail
 
 # Both halves are load-bearing. CLAUDECODE alone unsigns every cron script

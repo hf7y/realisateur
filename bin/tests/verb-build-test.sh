@@ -7,7 +7,7 @@
 # happened once in this ecosystem:
 #
 #   * switch to a build that is missing a verb          (2026-07-29 outage)
-#   * report "up to date" when it could not look        (garde, MONKEY.md 5)
+#   * report "up to date" when it could not look        (garde, vault:realisateur/MONKEY.md 5)
 #   * install an empty verb set and exit 0              (install-shims, 08-02)
 #   * clobber a link another installer owns             (installe's manifest)
 #

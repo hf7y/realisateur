@@ -2,28 +2,11 @@
 # stamp-verb-build.sh -- record WHICH VERB BUILD an account's work was done
 # with, in the work itself.
 #
-# ============================================================================
-# WHY
-# ============================================================================
-#
-# Thirteen self-dev accounts on monkey run verbs out of one host-wide build,
-# and that build moves nightly. Nothing anywhere records which build a piece
-# of work was produced under. So the question a bug report has to answer --
-# "this commit did the wrong thing; which `dose` was that?" -- is answerable
-# only by guessing from a date, and only while the build directories survive.
-#
+# TRAPS (the rest of this header is in the vault):
 # The estate already learned this lesson once in the other direction:
 # install-verb-build.sh links through `current` so that ONE switch moves every
 # verb, which is exactly what makes the running version invisible afterwards.
 # A channel that converges silently needs its consumers to say what they got.
-#
-# ============================================================================
-# WHAT IT STAMPS, AND WHY THERE
-# ============================================================================
-#
-# A `Verb-Build:` trailer on every commit the account makes. Not a log file, a
-# marker, or a report:
-#
 #   * it travels with the work, into the repo, the PR, and the mirror. A log
 #     under ~/.local/state answers the question only on the machine that still
 #     has that account, which is not where a bug report is read.
@@ -32,24 +15,7 @@
 #   * it cannot drift from the work: it is written at commit time, by the
 #     account doing the committing, from the build that account's PATH is
 #     actually resolving.
-#
-# The hook is installed at core.hooksPath, GLOBALLY for the account, because
-# the alternative is per-clone and a per-clone hook is absent from exactly the
-# clone that was made after the pass ran. Probed 2026-08-13: no self-dev
-# account on monkey sets core.hooksPath or init.templateDir, so this takes an
-# empty slot rather than fighting a hook someone else owns -- and --check
-# refuses rather than clobbering if that ever stops being true.
-#
-# ============================================================================
-# FAIL-OPEN, LOUDLY
-# ============================================================================
-#
-# A hook that cannot resolve a build id does NOT block the commit. Refusing to
-# commit because a symlink is missing would convert a propagation problem into
-# an inability to work, which is the trade BUILD-DISCIPLINE's "fail LOUD, not
-# STOPPED" rule already settled for the release tick. The commit goes through
-# unstamped, and `--check` reports the account as unstamped with an exit code.
-# ============================================================================
+
 set -uo pipefail
 
 CLI_NAME='stamp-verb-build.sh'

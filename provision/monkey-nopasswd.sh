@@ -6,7 +6,7 @@
 # keyboard -- including installing tailscaled, which is the step that would
 # let the estate see monkey at all.
 #
-# WHAT THIS DOES NOT CONTRADICT. MONKEY.md section 2 says "Project users get
+# WHAT THIS DOES NOT CONTRADICT. vault:realisateur/MONKEY.md section 2 says "Project users get
 # no sudo", and calls passwordless root for them "indefensible". That rule is
 # about the PROJECT accounts (ecosim uid 3001, bibliothecaire, chezz), which
 # need nothing outside $HOME and whose nightly agent runs unattended. This

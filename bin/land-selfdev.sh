@@ -229,7 +229,7 @@ done
 # the verb-build layout, and bin/tests/propagation.test.sh case 6b asserts that
 # only the two scripts that OWN that layout resolve it, because "which build am
 # I on" answered independently in several places is the one-fact-two-readers
-# shape MONKEY.md found five times in one day. The layout's owner is
+# shape vault:realisateur/MONKEY.md found five times in one day. The layout's owner is
 # bin/install-verb-build.sh, and it already does exactly this job, atomically,
 # refusing a build it could not fully verify. So the bootstrap became a call to
 # it rather than a reimplementation of its last step.

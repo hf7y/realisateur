@@ -6,30 +6,8 @@
 # GUARD-TEST: bin/tests/retire-check.test.sh
 # GATE: default $TREE/README.md
 #
-# The GATE line points at a FILE, not a checkout, because this guard scans
-# TEXT -- it has no tree to be pointed at. Everything after the mode word in a
-# `# GATE:` line is argv (guard-estate.test.sh substitutes $TREE), so the
-# reason lives here rather than trailing that line, where it would be passed
-# to this script as eight filenames.
-#
-# realisateur#165, 2026-08-11: a `/cloture` close named a real defect with
-# "Not something I fixed -- flagging it" and stopped there, with no issue/PR
-# URL. cloture.md's step 3 already tells a session to grep its own closing
-# text for exactly this shape by hand; this is that grep, as a script that
-# actually runs instead of an instruction that can be skipped.
-#
-# FLOOR, NOT THE RULE -- same caveat cloture.md states about itself. This
-# catches the common phrasings (deferred, BUSY, left undone, next session
-# should, not fixed, flagging, didn't get to, out of scope for now, worth
-# doing), not every paraphrase of "I found something and did not route it".
-# realisateur#165's own sentence contained none of those words, so a text
-# this shape would still slip past -- the human read at /cloture step 4
-# stays the actual backstop.
-#
 # Usage: bin/retire-check.sh [<file>]   reads stdin if <file> is omitted
-#   0  no problem-shaped line lacked a URL/"documented exception" on the
-#      same line
-#   1  at least one did -- each printed to stdout, one per line
+
 set -uo pipefail
 
 CLI_NAME='retire-check.sh'

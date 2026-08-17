@@ -43,7 +43,7 @@ project you are about to touch. `ecosystem-survey`,
 `milestone-audit` and `steward-survey` were RETIRED 2026-08-07
 as four re-implementations of one registry enumeration that nothing ran; each
 project's stability milestone is read from its own FOCUS.md
-`## Stability milestone` section, convention in `STABILITY-MILESTONES.md`.
+`## Stability milestone` section, convention in `vault:realisateur/STABILITY-MILESTONES.md`.
 (`hygiene-lint` ran here until it was retired: hf7y/realisateur#265.)
 
 **Single-project (`$ARGUMENTS` given):** run
@@ -96,7 +96,7 @@ Against the target project's *current* stability milestone (its open
 milestone? If **yes** it's `active`; if **no**, tag it `(parked)` (or
 `(waiting: <dep>)` if it's blocked externally, not by choice) and record
 one line of why it's past the bar. Parking is the default for anything
-beyond the current milestone -- see `STABILITY-MILESTONES.md`. The metric
+beyond the current milestone -- see `vault:realisateur/STABILITY-MILESTONES.md`. The metric
 that matters is the *active*-set draining, not the parked reservoir
 shrinking (a free-fed reservoir is supposed to grow). Promoting a parked
 idea into the active set is a deliberate, stated decision, same as the
@@ -145,7 +145,7 @@ For each decision, the destination is a command, never a file:
 
 ## 4.5. Vision debt -- watch it, and know when to override oldest-first
 
-**The signal ladder is now formalized in `PRECIPITATION.md` and sensed by
+**The signal ladder is now formalized in `vault:realisateur/PRECIPITATION.md` and sensed by
 `bin/precipitation-scan.sh`.** Read
 its three reports during orient, before triaging. In short: age is the
 WEAKEST of five signals; re-arrival-in-the-same-shape is the strongest;

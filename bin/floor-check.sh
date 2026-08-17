@@ -5,21 +5,12 @@
 # GUARD-TEST: none -- every criterion is a live host probe; a fixture would assert only that the fixture was built
 # GATE: none -- DEMOTED 2026-08-07 from gate to readout; see below
 #
-# DEMOTED, NOT DELETED -- 2026-08-07, and the reasoning is worth keeping.
-#
+# TRAPS (the rest of this header is in the vault):
 # It has never once reported MET. Today: 6 unmet, 2 unproven, 1 met. Several
 # criteria are about a dispatch topology this repo has since moved off (gate
 # 1.2 counts agent-dispatching cron lines; gate 3.1 counts armed agents), and
 # the ones that are still right -- gate 2, two copies and a named backup set --
 # are ecosystem operations, not anything a branch can affect.
-#
-# bin/thermostat-wiring.sh's own header names this exact failure mode: "a check
-# nobody expects to be green is a document with an exit code", which is why
-# that one was built as a RATCHET instead. A permanently-red gate is worse than
-# no gate, because it teaches everyone that red is the normal colour -- and
-# this repository has already paid that bill, when three suites sat red on main
-# for weeks and then blocked four PRs in one afternoon.
-#
 # So: it keeps its exit code for an operator who asks it a direct question, and
 # it gates nothing. What is given up is a hard stop on ecosystem stability
 # regressions, which it was never delivering. What still covers the live half:
@@ -27,33 +18,9 @@
 # bin/thermostat-wiring.sh's ratchet (regression from the current standing
 # fails the build, without requiring the vision to be fully realised first).
 #
-# THE FLOOR (realisateur/THE-FLOOR.md) is the ecosystem-scoped stability
-# milestone: nothing runs from a path that no longer exists, every repo's
-# history exists in at least two places, and exactly one cron line dispatches
-# agents, with one project enabled, whose overnight run leaves a clean tree
-# and a commit on a branch.
-#
-# This script exists because THE FLOOR would otherwise be prose, and this
-# ecosystem's recorded pathology is prose outliving the thing it describes.
-# Every criterion here is a probe of live state, never a quotation of a
-# document. Run it to answer "what is between us and the floor" without
-# asking anyone.
-#
 # usage:
-#   bin/floor-check.sh              report every criterion, exit 1 if any unmet
-#   bin/floor-check.sh --quiet      print only the verdict line
-#   bin/floor-check.sh --restore    ALSO run the real restore test for 2.2
-#                                   (pulls a file back off the backup host and
-#                                   diffs it -- costs a few seconds and one ssh)
-#
 # exit: 0 every criterion met   1 one or more unmet   2 usage error
-#
-# 2.2 deserves a note. "The backup ran" is not the criterion; "a file came
-# back" is. Without --restore this script reports 2.2 as UNPROVEN rather than
-# MET, because a copy verified by md5 at write time says nothing about whether
-# the destination can be read back. THE-UNWIRING.md section 5 calls backup
-# failure the one unrecoverable failure mode, so it is the one box that must
-# not be closed by assertion.
+
 set -uo pipefail
 
 QUIET=0; DO_RESTORE=0
@@ -285,7 +252,7 @@ else
            "runner ticked but never dispatched $proj"
     [ -n "$skipped" ] && say "            last: $(printf '%s' "$skipped" | sed 's/^[0-9T:+-]* //')"
   else
-    # THE-FLOOR.md 3.3 as written asks for "a commit on a branch". That is the
+    # vault:realisateur/THE-FLOOR.md 3.3 as written asks for "a commit on a branch". That is the
     # WRONG criterion and this check deliberately does not enforce it.
     #
     # On 2026-08-01 the first run read its FOCUS.md, found a standing directive

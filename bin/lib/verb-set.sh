@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
 # verb-set.sh -- what verbs the ecosystem DECLARES, in one place.
 #
-# WHY THIS EXISTS
-# ---------------
-# Two callers need the same answer and were each answering it differently:
-#
-#   bin/install-verbs.sh   "is every declared verb actually on this host?"
-#   bashify coin / emit    "is this verb name already taken?"
-#
+# TRAPS (the rest of this header is in the vault):
 # The generator answered the second with `command -v <verb>` -- the HOST'S
 # PATH. That is host state, and the declarations are repo state, so the two
 # disagree whenever a verb is declared but not yet installed. On 2026-07-30
@@ -19,32 +13,6 @@
 # unreachable. The report for that pass says "all verbs confirmed unclaimed on
 # PATH before assignment", which was true and still produced a collision --
 # PATH was the wrong thing to confirm against.
-#
-# BUILD-DISCIPLINE's "config read from one source, not retyped per file"
-# applies to a derivation as much as to a hostname, so the rule lives here and
-# both callers source it.
-#
-# THE DECLARATION RULE
-#   a project declares a verb  <=>  its `bashified` branch carries an
-#   executable `bin/<name>` AND a matching `man/<name>.1`
-#
-# Read with `git ls-tree`, so a project needs no checkout of `bashified` for
-# its verbs to count. That is what lets a bare host recover the surface: the
-# declaration lives in the repository, not in ~/.local.
-#
-# The man-page half is the bashify contract's own shape -- every verb ships a
-# page -- and it is what separates a verb from a program that merely lives in
-# bin/. bibliothecaire's `bin/page92.py` is executable, has no page, and is
-# correctly not a verb.
-#
-# USAGE
-#   . "$(dirname "${BASH_SOURCE[0]}")/lib/verb-set.sh"
-#   verb_set_declared                 # rows: <project>\t<verb>
-#   verb_set_claimants <verb>         # projects declaring it, one per line
-#
-# Env: INSTALLE_PROJECTS (default ~/Documents/Projects) -- shares the name
-# `installe` uses, so the checker, the generator and the installer cannot
-# disagree about where projects live.
 
 _verb_set_projects() { printf '%s' "${INSTALLE_PROJECTS:-$HOME/Documents/Projects}"; }
 

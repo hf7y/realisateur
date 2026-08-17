@@ -5,36 +5,7 @@
 # GUARD-TEST: bin/tests/markdown-cost.test.sh
 # GATE: none -- its range is a merge-base against origin/main, which a fixture repo with no origin cannot form; its suite builds a throwaway repo per case instead
 #
-# WHY THIS EXISTS. On 2026-08-06 this ecosystem merged 26 pull requests and
-# filed 42 issues, and a large share of the output was prose describing its own
-# condition rather than mechanism that does anything. Zach, the same day:
-# "Description needs a cost. Markdown needs a cost." Nothing measured that, so
-# nothing resisted it -- a branch could be 90% new .md and pass every gate in
-# bin/, because every gate in bin/ was built to catch a script that lies, not a
-# document that merely exists.
-#
-# WHAT IT PRICES. Four things. The first three are over ADDED lines only
-# (deletions are free -- reaping prose is the behaviour we want, not the one we
-# tax); the fourth measures the tree instead of the diff:
-#
-#   1. THE RATIO. markdown-added / total-added. Over the threshold (default
-#      30%, MARKDOWN_COST_MAX_PCT) the run exits 1 and names the ratio and
-#      every file that contributed to the numerator. This is not a style
-#      opinion; it is the one number that separates "a change, documented"
-#      from "a document, with a change attached".
-#
-#   2. A NEW TOP-LEVEL *.md FILE. Editing an existing document is how a
-#      record stays current. ADDING another one at the repository root is how
-#      this repository got 40-odd of them, most written once and read never
-#      (see PROSE-REAPING.md, which is itself one of them). Any new root .md
-#      outside the allowlist exits 1 on its own, whatever the ratio says.
-#
-#   3. COMMENTS IN FILES THAT ARE NOT MARKDOWN -- most of the estate's prose.
-#      Flags at >=150 added comment lines AND >=60% of added non-markdown.
-#
-#   4. THE TREE, AGAINST A RATCHET (--census). bin/markdown-cost.ratchet
-#      records the tree's prose count; it only ever falls.
-#
+# TRAPS (the rest of this header is in the vault):
 # THE ONE BUG IT MUST NOT HAVE. In this ecosystem "found nothing" has
 # repeatedly been reported as "nothing is wrong" -- a survey that reached zero
 # projects printing a tidy summary and exiting 0 (see bin/lib/conf.sh's header
@@ -45,9 +16,7 @@
 # It never means the script could not tell.
 #
 # Usage:
-#   markdown-cost.sh                 price $(git merge-base HEAD origin/main)..HEAD
-#   markdown-cost.sh <range>         price an explicit range, e.g. main..HEAD
-#   MARKDOWN_COST_MAX_PCT=50 markdown-cost.sh
+
 set -uo pipefail
 
 CLI_NAME='markdown-cost.sh'

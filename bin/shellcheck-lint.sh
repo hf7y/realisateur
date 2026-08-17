@@ -2,77 +2,29 @@
 # bin/shellcheck-lint.sh -- run shellcheck over this repository's own shell,
 # and fail when a NEW class of finding appears in a file that did not have it.
 #
-# THE PATH PREFIX ON THE LINE ABOVE IS LOAD-BEARING, which is the silliest true
-# sentence in this repository. A comment opening with the bare word
-# `shellcheck` is parsed by shellcheck as a DIRECTIVE, so `# shellcheck-lint.sh
-# -- ...` reads as the directive `-lint.sh`, which is invalid, which is
-# SC1072/SC1073 -- two errors emitted by a file for stating its own name. It
-# happened here on the first draft. Any file named shellcheck-* has to
-# introduce itself with a path prefix or a different word.
-#
 # RUNNER: bin/tests/shellcheck-lint.test.sh
 # GUARD-TEST: bin/tests/shellcheck-lint.test.sh
 # GATE: default
 #
-# ---------------------------------------------------------------------------
-# WHY THIS EXISTS AT ALL
-#
-# 19,000 lines of bash across realisateur and scheduler, and until today
-# ShellCheck had never once been RUN against them. It appears in the tree only
-# as inline `# shellcheck source=` directives -- annotations written for a tool
-# nobody invoked. Meanwhile the failure mode this repository documents most
-# often, in BUILD-DISCIPLINE.md's very first row, is the silent failure: the
-# exit-0 no-op, the unguarded `cd`, the check that cannot see and says fine.
-# Those have shellcheck codes. SC2164, SC2181, SC2086, SC2115.
-#
+# TRAPS (the rest of this header is in the vault):
 # The first run found 423 findings. It also found that one of the tree's own
 # suppressions was malformed and had therefore never suppressed anything --
 # see .shellcheckrc's header. That is the argument for running the tool, made
 # by the tool, on the first run.
-#
-# ---------------------------------------------------------------------------
-# WHY A RATCHET AND NOT A CONFORMANCE CHECK
-#
-# Same argument bin/thermostat-wiring.sh makes, and it is not repeated here in
-# full: a check nobody expects to be green is a document with an exit code,
-# and this estate has already priced what a permanently-red suite is worth
-# (the `ci` MOVE in pivot.sh exists because seven suites had been red long
-# enough that red stopped meaning anything).
-#
-# So the assertion is not "shellcheck is clean". It is "no file has acquired a
-# finding it did not have". bin/shellcheck-lint.ratchet records the
-# (file, code) pairs that existed when it was last accepted; anything outside
-# that set is a regression and exits 1.
-#
-# WHY (file, code) AND NOT (file, line, code) OR A COUNT.
-#   A COUNT is gameable in the direction that matters: fix one finding, add
-#   another, and the number is unchanged while the tree got worse in a new
-#   place.
-#   A LINE NUMBER is noise: inserting a comment at the top of a file
-#   invalidates every entry for it, so the ratchet would need re-accepting on
-#   edits that changed nothing, and re-accepting on autopilot is how a
-#   baseline stops being read.
-#   (file, code) is stable under edits and still catches the thing worth
-#   catching -- a file acquiring a KIND of defect it did not have.
-#
-# ---------------------------------------------------------------------------
-# WHAT IT REFUSES TO DO
-#
 # It never reports "I could not look" as "nothing is wrong". shellcheck
 # missing from PATH is BLIND (exit 2), never success -- the recorded pathology
 # is a propagation pass that reached zero projects and exited 0. Matching zero
 # files is BLIND for the same reason: `bin/tests/*.sh matched nothing` was a
 # real CI defect in this repository, and a lint that lints nothing is its twin.
-#
 # It never lowers the ratchet. `--accept` writes the CURRENT set, which is how
 # a baseline is supposed to move, but a run that would REMOVE nothing and ADD
 # entries still reports what it added, so accepting is a visible act rather
 # than a quiet one.
 #
+# exit-0 no-op, the unguarded `cd`, the check that cannot see and says fine.
 # usage:  shellcheck-lint.sh [--strict] [--accept] [--quiet]
 # exit:   0 no new findings   1 REGRESSION (a new file/code pair)
-#         2 BLIND (shellcheck absent, or zero files matched -- never success)
-#         3 --strict and the baseline is non-empty (no regression)
+
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"

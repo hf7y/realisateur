@@ -2,25 +2,7 @@
 # selfdev-gh-app.sh -- mint a short-lived GitHub App installation token for a
 # self-dev account, and prove GitHub answers to it.
 #
-#   selfdev-gh-app.sh --check              probe the wiring, write nothing (default)
-#   selfdev-gh-app.sh --token [--repos a,b]  print an installation token to stdout
-#   selfdev-gh-app.sh --identity           print the App actor -- the PUSHER, not
-#                                          the author. See "AUTHOR AND PUSHER"
-#                                          below: --wire no longer writes this
-#                                          into git's author fields.
-#   selfdev-gh-app.sh --jwt                print the App JWT only (401 debugging)
-#   selfdev-gh-app.sh --adopt --account <name> --key <file.pem> --app-id <id>
-#                                          install a freshly downloaded key at
-#                                          mode 600, write its conf, and prove it
-#   selfdev-gh-app.sh --credential <op>    git credential helper. Git appends the
-#                                          operation itself: `get` mints, and
-#                                          `store`/`erase` are no-ops that exit 0.
-#   selfdev-gh-app.sh --wire               write git config: the credential helper
-#                                          (PUSHER = the App) and the git author
-#                                          (AUTHOR = this account, from `id -un`).
-#                                          Never clobbers an existing identity
-#                                          silently -- it preserves and reports it.
-#
+# TRAPS (the rest of this header is in the vault):
 # WHY THIS EXISTS. bin/wire-selfdev-git.sh gives a self-dev account per-repo
 # deploy keys. Those grant ACCESS and confer no IDENTITY: a deploy-key push is
 # attributed to whatever author string the commit carries, so agent work and
@@ -30,29 +12,7 @@
 # that one missing distinction. A GitHub App installation has its own actor --
 # `<app-slug>[bot]` -- so the attribution is made by GitHub, not asserted by
 # the committer, and cannot be spoofed by setting user.email.
-#
-# WHY A TOKEN AND NOT A PAT. An installation token expires in ONE HOUR and is
-# minted from a private key on demand. There is no long-lived secret to leak
-# into a tracked file, a crontab line, or a log -- the thing at rest is a key
-# that is useless without the App's installation, and the thing in flight is
-# dead by the next scheduler tick. A PAT is the opposite on both counts.
-#
-# WHAT THIS DOES NOT SOLVE. App permissions are per-APP, not per-repo: one App
-# cannot be read-write on a project's own repo and read-only on realisateur.
-# Deploy keys can express that and this cannot, which is why this is an
-# ADDITION to wire-selfdev-git.sh and not a replacement for it. The intended
-# shape is TWO Apps -- a writer installed on the account's own repos, and a
-# reader/filer installed on the shared ones -- selected by $SELFDEV_APP_ID.
-# `--repos` narrows a single mint below the installation's own repo list, which
-# is the only least-privilege lever available inside one App.
-#
-# CONFIG. Read from ONE place, per BUILD-DISCIPLINE: ~/.config/selfdev/gh-app.conf
-# (overridable with $SELFDEV_APP_CONF), a plain shell fragment:
-#     SELFDEV_APP_ID=4520255
-#     SELFDEV_APP_KEY=$HOME/.config/selfdev/monkey-self-dev.pem
-#     SELFDEV_GH_OWNER=hf7y
-# Environment variables of the same names win over the file, so a scheduler job
-# can carry a different App without editing anything.
+
 set -uo pipefail
 
 # GIT APPENDS AN OPERATION TO ITS CREDENTIAL HELPER, AND THIS PARSER USED TO

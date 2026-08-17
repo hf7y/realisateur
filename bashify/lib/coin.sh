@@ -9,7 +9,7 @@
 #   tests/run-all.sh was written to end.
 #
 # Written 2026-08-01 at its own call site. The doctrine is now ONE NOUN, MANY
-# VERBS (RESEARCH-VERB-ECOSYSTEM-20260730.md): a project is a noun, a noun does
+# VERBS (vault:realisateur/RESEARCH-VERB-ECOSYSTEM-20260730.md): a project is a noun, a noun does
 # several things, and forcing each noun to expose exactly one verb was the
 # bashify pass's shortcut rather than a decision.
 #

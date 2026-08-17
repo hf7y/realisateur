@@ -3,43 +3,7 @@
 # registered project, so that project's unattended jobs can defer instead of
 # editing files out from under a live session.
 #
-# REALISATEUR-OWNED entry in a machine-wide config surface, same convention as
-# the `# >>> realisateur-owned` block in Zach's crontab. senechal owns
-# *knowing* this exists (its 2026-07-24 mission widening: shared-host
-# script/autostart ownership -- no unattributable leftovers); realisateur owns
-# what it does. Wired from ~/.claude/settings.json SessionStart/SessionEnd.
-#
-# WHY A MARKER AND NOT flock
-# --------------------------
-# scheduler's lib/sweep-loop-common.sh holds a real flock for a job's
-# duration, which is correct there: the holder is one long-running process.
-# A session hook is NOT that -- it fires, exits, and the session outlives it,
-# so there is no process to hold an fd. The alternative (spawn a detached
-# flock holder) reintroduces the exact problem it solves: SessionEnd is NOT
-# guaranteed to fire on crash or SIGKILL (confirmed against the hooks
-# reference, 2026-07-26), so a held lock would orphan and wedge that
-# project's batch permanently and SILENTLY.
-#
-# So: a marker file whose LIVENESS IS A PID PROBE. `release` is the fast
-# path, not the correctness guarantee -- a crashed session's marker is dead
-# the moment its pid is, and every reader checks `kill -0` rather than the
-# file's existence. Self-healing by construction; nothing to clean up.
-#
-# Deliberately mirrors the `<PROJECT_KEY>.active` marker sweep-loop-common.sh
-# already writes next to its lock, and lands in the SAME directory, so one
-# place answers "is anything writing to this project right now."
-#
-# Usage (from hooks; reads the hook's JSON on stdin):
-#   session-marker.sh acquire      < hook JSON
-#   session-marker.sh release      < hook JSON
-#   session-marker.sh probe <project>     -- for humans/scripts
-#   session-marker.sh resolve <dir>       -- which project is <dir> in?
-#
-# Exit status is always 0 on the hook paths: a hook that fails must never
-# block a session from starting. Problems are reported to stderr only.
-# `resolve` exists BECAUSE of that: same resolution, honest exit code, so a
-# guard or a human can ask "does this still work".
-#
+# TRAPS (the rest of this header is in the vault):
 # EIGHT DAYS OF NO-OP, 2026-08-03 -> 2026-08-11 (#73). resolve_project read
 # the conf with `grep -oP`, which does not expand shell variables, so `repo`
 # was the LITERAL `$HOME/Documents/Projects/<name>` and the `case` below could
@@ -52,6 +16,9 @@
 # no human. Eight days of dispatch with that deferral off, in the direction
 # this file's own header calls "the dangerous one" -- silently, because "not a
 # registered project" is ALSO the normal answer. Hence the counters below.
+#
+# Usage (from hooks; reads the hook's JSON on stdin):
+
 set -uo pipefail
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

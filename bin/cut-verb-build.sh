@@ -429,7 +429,7 @@ say "derived $verb_count verb(s) from $projects project(s)"
 # <project>/man/<verb>.1, so a consumer clones ONE repository instead of
 # fetching from N. This is what makes a new self-dev account need read on
 # one repo rather than four hand-made per-repo deploy keys
-# (realisateur/MONKEY.md §8.1: "the credentials were a memory, not a
+# (vault:realisateur/MONKEY.md §8.1: "the credentials were a memory, not a
 # script").
 #
 # Assembled from the SHA, never the branch name -- `bashified` may have
@@ -451,7 +451,7 @@ if [ -n "$ASSEMBLE" ]; then
   # its directory, so its verbs stayed in the meta-repo tree, git add -A
   # re-committed them every night, and every consumer kept installing a
   # verb the manifest no longer names. That is not a cosmetic leak -- it
-  # silently voids the retirement mechanism VERB-DISTRIBUTION.md section 5
+  # silently voids the retirement mechanism vault:realisateur/VERB-DISTRIBUTION.md section 5
   # rests on. `quatre-vingt-douze` was archived on 2026-08-04 precisely so
   # that `cueille` would stop being declared twice; with this loop missing,
   # archiving it would have removed the row from the manifest and left the

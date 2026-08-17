@@ -2,21 +2,7 @@
 # setup-selfdev-project.sh -- stand up ONE new self-dev project account, end to
 # end, in a single root command.
 #
-# RUN ON THE SELF-DEV HOST, AS ROOT (or via sudo):
-#
-#   sudo bash bin/setup-selfdev-project.sh <project> [--check|--apply] [--no-key]
-#
-# WHY THIS EXISTS. Zach, 2026-08-04, on what was still manual: "what is keeping
-# this from being automated? lack of passwordless root on monkey?" Mostly yes --
-# and the honest follow-up was that the three things needing root were the SAME
-# requirement three times, spread across three sittings. This collapses them.
-#
-# `bibliothecaire`, account #2, took three interactive root sittings on
-# 2026-08-04: create the account, install a key so the rest could be driven,
-# copy the gh credential (a second run of the provisioner, after it learned to).
-# Everything else ran unprivileged. This script is those three, in order, plus
-# the unprivileged remainder, so account #3 is one command instead of an evening.
-#
+# TRAPS (the rest of this header is in the vault):
 # WHAT IT RUNS, in order, each already proven on its own:
 #   1. bin/provision-selfdev-user.sh <p> --apply   (root)  account + creds
 #   2. the hands key into <p>'s authorized_keys    (root)  see --no-key
@@ -28,44 +14,7 @@
 #      block, without which the account's first unattended night cannot write
 #      .claude/** at all (hf7y/realisateur#282)
 #   8. bin/selfdev-hooks-provision.sh              (root)  the SubagentStop hook (#272)
-#
-# Step 3 is a GATE, not a sequence point: every repo that fails to wire is
-# named and the run stops there rather than landing an account on credentials
-# that were already proven not to work. See the comment at "3/8" for what that
-# cost before it did.
-#
-# WHY STEP 5 IS HERE AND NOWHERE ELSE. The account consumes tooling from the
-# verb release channel (`hf7y/verbs` build tags), not from a clone of any
-# repo's `main` -- see bin/lib/propagation-set.sh for that decision and why
-# `main` staying fast is the point of it. A build cannot deliver its own
-# installer, so a small, near-immutable BOOTSTRAP has to exist on the account
-# first: install-verb-build.sh, selfdev-release-tick.sh, and two libs. Four
-# files, copied once, whose only job is to find, verify and install a
-# versioned payload -- the gradlew/rustup shape.
-#
-# This script is the natural and only correct home for that copy, because it
-# is the one thing that already runs EXACTLY ONCE PER ACCOUNT. Putting it in
-# land-selfdev.sh would re-copy on every landing; putting it in the tick would
-# make the bootstrap install itself, which is the circularity the bootstrap
-# exists to cut.
-#
-# The clock goes in the ACCOUNT'S OWN crontab, installed BY the account. Pull,
-# not push: a hands account reaching into a 0700 home over sudo does not scale
-# past four accounts and leaves no record on the consumer side, so the account
-# cannot answer "what version am I on, and when did I last look" without
-# somebody else's shell history.
-#
-# WHAT IT DELIBERATELY DOES NOT DO: arm dispatch. That is a row in
-# schedule/_paced.<host>.conf going from 0 to 1, it is a judgment about how a
-# shared weekly quota is spent, and it stays a separate reviewed act. This
-# script stops exactly where land-selfdev.sh stops, for the same reason.
-#
-# ABOUT STEP 2 (--no-key to skip). It copies the INVOKING human's
-# authorized_keys into the project account, so the account can be driven over
-# ssh without a further root sitting. This is not a privilege increase: the key
-# it copies already belongs to a user who can sudo to root on this host, and
-# therefore to this account. It IS a real grant, so it is one flag to decline
-# and it is logged as an action rather than done quietly.
+
 set -uo pipefail
 
 PROJECT="${1:-}"; shift 2>/dev/null || true
@@ -143,7 +92,7 @@ fi
 # Run as the project user with a LOGIN-shaped PATH. Ubuntu's .profile only adds
 # ~/.local/bin at login, and `sudo -u x cmd` is not one -- that omission is what
 # made land-selfdev.sh report "FATAL: installe is not on PATH" from the script
-# that had just linked it (MONKEY.md 8.1).
+# that had just linked it (vault:realisateur/MONKEY.md 8.1).
 run_as() {
   sudo -u "$PROJECT" -H env -i \
     HOME="$HOME_DIR" USER="$PROJECT" LOGNAME="$PROJECT" \

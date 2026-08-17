@@ -2,56 +2,15 @@
 # notify-senechal.sh <text> -- file a machine-config change through senechal's
 # own front door, and make sure it actually LANDED where senechal reads it.
 #
-# THE STANDING RULE THIS MECHANIZES (Zach-directed, reaffirmed 2026-07-26):
-# realisateur GENERATES machine-wide config (crontab entries, ~/.claude
-# settings hooks, systemd units, autostart, WM config, marker files under
-# ~/.local/share); senechal OWNS KNOWING IT EXISTS. Ownership of the thing
-# itself stays with realisateur -- precedent is the `# >>> realisateur-owned`
-# block inside Zach's crontab: one project owning its own entry inside a
-# shared machine-config surface.
-#
-# WHY THE FRONT DOOR AND NOT A DIRECT WRITE:
-# `scheduler -i senechal` is the one interface senechal publishes for inbound
-# notes. Going around it means guessing where senechal keeps its inbox, which
-# is precisely the coupling the split below exists to prevent. Since
-# scheduler#22 it files a GitHub ISSUE rather than pushing a file, so this
-# script needs no senechal clone and no write access to a default branch.
-#
-# `--- 2.` re-reads the issue from GitHub rather than trusting exit 0 and a
-# URL we printed ourselves: verify where the consumer reads it.
-#
-# WHO OWNS WHAT IN THIS FILE (Zach's call, 2026-07-27) -- read before editing:
-#
-#   realisateur owns the PROTOCOL. That this guard exists at all, that it is
-#   one of a family of three (with check-project-busy, focus-commit), that
-#   the family is propagated as a baseline and shimmed onto PATH, and that
-#   calling it is mandatory when machine-wide config changes. Structure,
-#   existence, distribution.
-#
+# TRAPS (the rest of this header is in the vault):
 #   senechal owns the CONTRACT -- everything below the `--- 2.` line: what
 #   "landed" means and which surface the consumer actually reads. That is now
 #   its issue queue rather than a file in its tree, which is a smaller and
 #   more stable contract than the one it replaces: an issue URL cannot be
 #   moved by senechal reorganising its own repository.
 #
-# Why split it rather than leave it all here: this script encoded senechal's
-# read-path in realisateur's repo, so if senechal moved its inbox its own
-# front door would break and it would be structurally unable to fix it. Not
-# hypothetical -- realisateur made exactly that .claude/ -> .scheduler/ move
-# on 2026-07-26. The 2026-07-27 SIGPIPE bug was the same seam: a defect in
-# senechal's verification logic that only senechal noticed, requiring an edit
-# to another project's repo to fix.
-#
-# Practical rule: a change to step 2 is senechal's to make, unannounced. A
-# change to step 1, to the guard family, or to how this is installed is
-# realisateur's. Cross-write to the other when you touch its half.
-#
 # Usage (TYPED since 2026-08-16 -- this door does not accept prose):
-#   bin/notify-senechal.sh <door> <field>=<value> ...
-#   bin/notify-senechal.sh --doors     # the doors senechal publishes, and their fields
-#
-# Exit 0 ONLY if the note is on senechal's remote. Every other path exits
-# non-zero with a stated reason -- no exit-0 no-op.
+
 set -uo pipefail
 
 # WHERE PROJECTS LIVE IS A PROPERTY OF THE HOST, NOT OF ZACH'S LAPTOP.
@@ -252,7 +211,7 @@ command -v gh >/dev/null 2>&1 || die "gh is not on PATH -- cannot file, and coul
 # senechal to every machine, and it was pinned by the one command the estate
 # protocol requires every project to call.
 #
-# It also fixes MONKEY.md 8.1(2) from the other side: a self-dev account
+# It also fixes vault:realisateur/MONKEY.md 8.1(2) from the other side: a self-dev account
 # holds a READ-ONLY deploy key on senechal, so the old push could never work
 # and `installe` exited 8 on all 25 verbs while the change itself had landed.
 # Filing an issue needs no write access to any default branch.

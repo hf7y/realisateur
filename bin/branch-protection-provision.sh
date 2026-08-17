@@ -7,14 +7,7 @@
 # GUARD-TEST: bin/tests/branch-protection-provision.test.sh
 # GATE: strict
 #
-# WHY THIS EXISTS. hf7y/realisateur#288: `gh pr merge --auto --squash` is the
-# sanctioned merge command, and `--auto` needs a PENDING REQUIRED CHECK to
-# queue behind. With no branch protection there is nothing to wait for, so it
-# either errors ("Pull request is in clean status", hf7y/crt) or MERGES
-# IMMEDIATELY AND SILENTLY, with `autoMergeRequest` null afterwards so it looks
-# like a no-op (hf7y/gardien, hf7y/ecosim). Seven unreviewed merges in one
-# sweep. "Ready and unmerged" was not a reachable state.
-#
+# TRAPS (the rest of this header is in the vault):
 # bin/repo-settings-provision.sh declined this job because it would have to
 # name check contexts, and `suites`/`markdown-cost` are realisateur's own job
 # names -- forcing them estate-wide wedges every repo named differently. That
@@ -22,29 +15,11 @@
 # repo's own check runs from the head of its most recent PR -- evidence a check
 # RUNS ON PULL REQUESTS -- and requires those. (Parsing `on:` out of workflow
 # YAML asserts what a file claims, not what GitHub ran.)
-#
 # A repo with no CI is reported NOCI and left alone, never silently skipped:
 # requiring a context no workflow produces wedges every PR, which is worse than
 # the bug. That list is hf7y/realisateur#285's worklist, measured.
 #
-# --apply writes, per repo with a discoverable context: strict=false and the
-# repo's own contexts; enforce_admins false, so a human can unstick a wedged
-# repo (realisateur's own older ON is left alone); required reviewers NULL,
-# deliberately -- the defect was SILENT merging, not unreviewed merging, and a
-# required reviewer blocks every agent in an estate with one human; no force
-# pushes, no deletions.
-#
-# Bare invocation is READ-ONLY. --apply is the only path that writes.
-#
 # Usage:
-#   branch-protection-provision.sh              report, change nothing
-#   branch-protection-provision.sh <repo>...    report for named repo(s)
-#   branch-protection-provision.sh --apply [<repo>...]   protect what it can
-#   branch-protection-provision.sh --strict [<repo>...]  exit 1 if unprotected
-#
-# Env overrides (used by the test suite, not normally set):
-#   BPP_OWNER=hf7y   the owner whose roster is read
-#   GH_BIN=gh        the gh binary/stub to invoke
 
 set -uo pipefail
 

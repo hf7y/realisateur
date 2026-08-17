@@ -1,6 +1,6 @@
 # provision/verbs-meta — standing up the verb meta-repo
 
-The design and the reasoning are in `realisateur/VERB-DISTRIBUTION.md`.
+The design and the reasoning are in `vault:realisateur/VERB-DISTRIBUTION.md`.
 This file is only the sequence, and what is left of it.
 
 `build-verbs.yml` belongs at `hf7y/verbs/.github/workflows/build-verbs.yml`.
@@ -89,7 +89,7 @@ install-verb-build.sh --rollback <id>      # back to a build already on disk (no
 `--link` (writing `~/.local/bin`) is **off by default**: `installe` owns that
 directory and its manifest, and this script leaves anything installe owns
 alone rather than clobbering it. Reconciling the two is a deliberate sitting
-— see `VERB-DISTRIBUTION.md` §7.
+— see `vault:realisateur/VERB-DISTRIBUTION.md` §7.
 
 ## Retiring this
 

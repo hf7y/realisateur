@@ -2,7 +2,7 @@
 # subagent-closeout.sh -- SubagentStop guard: a dirty tree at exit is a failed run.
 #
 # Installed 2026-08-01, Zach-directed, as THE FLOOR gate 3.2 (realisateur
-# THE-FLOOR.md). Owner: realisateur. senechal notified.
+# vault:realisateur/THE-FLOOR.md). Owner: realisateur. senechal notified.
 #
 # 2026-08-02, Zach-directed: this now CALLS `closeout-lint --strict --repo`
 # instead of reimplementing a subset of it. It previously did its own inline

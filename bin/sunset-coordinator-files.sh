@@ -2,11 +2,7 @@
 # sunset-coordinator-files.sh <repo> [--apply] -- find and remove retired
 # coordination directories (.scheduler/ and .claude/ coordinator files).
 #
-# The sunset: scheduler#66 (2026-08-07) retired FOCUS.md, QUESTIONS.md,
-# BLOCKERS.md and siblings in favour of GitHub issues. These mechanisms
-# worked via side effects on the filesystem -- files deleted while producers
-# still write them just come back.
-#
+# TRAPS (the rest of this header is in the vault):
 # This script has two halves and does the PRODUCER HALF FIRST:
 #   a. PRODUCERS — find every reference to .scheduler/ and retired filenames
 #      across the target repo (shell scripts, .github/workflows/*.yml,
@@ -17,41 +13,12 @@
 #      - the .scheduler/ directory (entire directory)
 #      - .claude/FOCUS.md, .claude/QUESTIONS.md, .claude/BLOCKERS.md
 #        (only these files if present; .claude/ itself stays)
-#
-# A NOTE FOR WHOEVER EDITS THE PATTERN NEXT. This file has had three
-# double-escaping bugs in one day, two of them introduced by the person fixing
-# the previous one. Each was "fixed" by adding another layer of backslashes,
-# and each fix was asserted correct without re-running it against a repo that
-# had the false positive. The pattern now reaches both scanners through the
-# ENVIRONMENT, which has no escape layer to miscount -- do not go back to -v.
-#
-# The regression that should have caught all three is group I: a KNOWN
-# NON-PRODUCER must not match. It did not catch them because the fixture and
-# the fix were written in the same pass, by the same reader, holding the same
-# wrong idea. If you change the pattern, verify against a real clone that
-# exhibited the bug, not only against a fixture you just wrote.
-#
-# Related trap, same shape: CI's pinned shellcheck flags findings that a
-# locally installed older shellcheck does not, so a local "no new findings"
-# is not authoritative here.
-#
-# Default is DRY RUN: prints what would be removed. --apply commits the
-# removal on a new branch.
-#
 # WHY PRODUCERS FIRST: A file deleted with a live producer regenerates
 # immediately, undoing the sunset. The script refuses to proceed until
 # producers are fixed upstream.
 #
 # Usage:
-#   sunset-coordinator-files.sh <repo>           dry-run: show what would be removed
-#   sunset-coordinator-files.sh <repo> --apply   apply the removal
-#
-# Exit codes:
-#   0  nothing to do (already sunset, no producers, no --apply)
-#   1  producers block the removal (live readers/writers remain)
-#   2  work was done (--apply succeeded, changes committed)
-#   3  usage error or other fatal error
-#
+
 set -uo pipefail
 
 die() { printf 'sunset-coordinator-files: FAIL: %s\n' "$*" >&2; exit 3; }
@@ -317,8 +284,8 @@ PYSCANNER
   # Markdown is scanned NARROWLY, and the distinction is the whole point:
   # a slash-command file or CLAUDE.md INSTRUCTS an agent to read or write
   # these paths, so it is a producer. A retrospective that merely mentions
-  # FOCUS.md in prose is not. Scanning all *.md flags MONKEY.md, PLAYBOOK.md
-  # and THE-FLOOR.md for narrating history, which blocks the sunset forever
+  # FOCUS.md in prose is not. Scanning all *.md flags vault:realisateur/MONKEY.md, vault:realisateur/PLAYBOOK.md
+  # and vault:realisateur/THE-FLOOR.md for narrating history, which blocks the sunset forever
   # on files that produce nothing.
   local doc_targets='./.claude/commands ./.scheduler/commands ./CLAUDE.md ./AGENTS.md'
   # shellcheck disable=SC2086  # deliberate word-splitting: a list of paths

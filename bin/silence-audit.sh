@@ -5,8 +5,7 @@
 # GUARD-TEST: none -- it carries its own --self-test with fixtures, which is not a suite CI globs; closing this is the next repaint due
 # GATE: strict --target $TREE
 #
-# Offline-first (zero AI), writes nothing, exits 0 unless --strict.
-#
+# TRAPS (the rest of this header is in the vault):
 # WHAT IS MISSING THAT THIS SUPPLIES
 # ----------------------------------
 # Every existing survey here answers "what is the state of the projects?".
@@ -20,84 +19,8 @@
 # output symbols. That is the entire thesis of this script, and it is why
 # it audits MECHANISMS rather than projects.
 #
-# The cost of getting this wrong is asymmetric in the expensive direction
-# (BUILD-DISCIPLINE pattern 14): these tools fail toward alarm, and alarm is
-# routed to the scarcest organ in the system, which is Zach's attention.
-#
-# CHECKS -- each names the domain it read, and reports BLIND when it could
-# not read that domain rather than reporting clean.
-#
-#   [mute-null]         a script scans a domain and has no branch for the
-#                       domain being empty -- so "found nothing" and "the
-#                       glob did not match" print identically (nothing).
-#   [self-witness]      a scheduled entry sends all output to /dev/null, so
-#                       the only evidence it ran is what it writes about
-#                       itself. Pattern 9 moved down a level: the actor is
-#                       sole source of truth for whether it RAN.
-#   [home-scoped]       a sensor resolves job state under $HOME while the
-#                       ecosystem dispatches from more than one account, so
-#                       it silently reports on half the ecosystem as if it
-#                       were the whole. Found live 2026-07-28.
-#   [stderr-silenced]   a privileged/probing command with 2>/dev/null --
-#                       turns "permission denied" into "clean".
-#   [unwired]           an executable mechanism named by no crontab, no
-#                       command file, no systemd unit and no other script.
-#                       Built, never dispatched.
-#   [prose-only-rule]   a doc asserts a checkable rule for which no
-#                       executable check exists -- an unretired layer
-#                       waiting to happen.
-#
-# RETIRED 2026-08-07: [retirement-open]. It asked whether a `RETIRES:` claim's
-# literal still occurred anywhere, which CANNOT REACH ZERO BY CONSTRUCTION --
-# declaring a retirement writes the literal into a file, so the check counted
-# its own paperwork as proof the retirement had not happened. 52 of the 74
-# FLAGs on the estate the morning it was retired were this, all false, all the
-# same four claims re-emitted once per project. Its self-test passed
-# throughout, because the fixture held one declaration in an otherwise empty
-# repository -- a shape production never has.
-#
-# WHAT IS GIVEN UP: nothing was being checked. "Names what it retires" is now
-# carried by the repository idiom (a change that retires something names it)
-# and, for the guard estate specifically, by bin/tests/guard-estate.test.sh,
-# which fails when a guard is deleted while something still names it as its
-# runner or its test.
-#
 # Usage:
-#   silence-audit.sh                  audit the whole ecosystem
-#   silence-audit.sh <project>        audit one registered project
-#   silence-audit.sh --target <dir>   audit THAT TREE, ignoring the registry
-#   silence-audit.sh --strict         exit 1 if any FLAG (for hooks/CI)
-#   silence-audit.sh --self-test      run the built-in fixtures, exit 1 on fail
-#
-# --target EXISTS BECAUSE THE DEFAULT CANNOT ANSWER "IS MY BRANCH CLEAN?".
-# Without it every mode above resolves its subjects through the REGISTRY --
-# scheduler's schedule/*.conf, whose PROJECT_REPO_PATH is each project's live
-# shared checkout. So `silence-audit --strict`, run from a branch checkout by
-# an author asking whether their change is clean, read ~/Documents/Projects/*
-# and never opened the tree it was invoked in: it answered a question nobody
-# asked, in the voice of the one they did. Measured 2026-08-10 from a mktemp
-# tree: every path in the report was under the live checkout, and three
-# consecutive runs disagreed with each other because other agents were
-# writing to those checkouts while it read them. That is guard-estate check F
-# (a guard must honour the tree it is pointed at), and CLAUDE.md has required
-# `silence-audit --strict` clean since the day it was written -- against a
-# tree the author may not have touched. hf7y/realisateur#107.
-#
-# The registry default is KEPT, because the estate survey is what this script
-# is for and what bin/hygiene-lint.sh section 12 dispatches. The scope knob is
-# a flag, and the `# GATE:` line above declares it, which is exactly the
-# convention bin/tests/guard-estate.test.sh reads for guards whose scope is
-# not cwd (bin/ownership-audit.sh: `# GATE: strict --repo $TREE`).
-#
-# Exit codes: 0 clean-or-advisory, 1 --strict with FLAGs or self-test fail,
-#             3 BLIND (parsed zero mechanisms -- see below).
-#
-# BLIND is non-negotiable and is the whole point. A checker that scans an
-# empty domain and prints nothing reads exactly like a checker that scanned
-# everything and found everything healthy. If this script parses zero
-# mechanisms it exits 3 and says so, because that is the same defect it
-# exists to find, and a tool that commits its own named failure mode is
-# worth nothing.
+
 set -uo pipefail
 
 PROJECTS_ROOT="${PROJECTS_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}}"

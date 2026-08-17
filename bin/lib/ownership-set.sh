@@ -24,12 +24,12 @@
 # THE MISSION TEST -- one question, from this repo's own documents
 # ============================================================================
 #
-# UNIVERSE.md, "The anatomy", line 47, on what this organ is:
+# vault:realisateur/UNIVERSE.md, "The anatomy", line 47, on what this organ is:
 #
 #     realisateur -- perception and judgment. Senses (the offline surveys),
 #     triages (park-by-default), records. It never decides; the human decides.
 #
-# PRECIPITATION.md restates the same boundary as a pair:
+# vault:realisateur/PRECIPITATION.md restates the same boundary as a pair:
 #
 #     Scheduler enforces weights and never sets them; realisateur senses and
 #     never decides.

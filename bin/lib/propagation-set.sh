@@ -157,7 +157,7 @@ selfdev-gh-app.sh
 # Files the bootstrap scripts need alongside them. Named explicitly because
 # `setup-selfdev-project.sh` stages by copy into a 0700 home and a missed
 # dependency there presents as "Permission denied", not "file not found" --
-# the trap MONKEY.md 8.3 records from account #4.
+# the trap vault:realisateur/MONKEY.md 8.3 records from account #4.
 PROP_BOOTSTRAP_SUPPORT="
 lib/cli-guard.sh
 lib/propagation-set.sh
@@ -170,7 +170,7 @@ lib/selfdev-app-key.sh
 # selfdev-gh-app-register.sh is filed here and not LOCAL, which is a close call
 # worth naming: LOCAL also admits "operator scripts a human runs from a hands
 # account", and this is one. PROVISION wins because it is per-ACCOUNT and
-# stands one UP exactly once (two browser clicks per account, MONKEY.md 962) --
+# stands one UP exactly once (two browser clicks per account, vault:realisateur/MONKEY.md 962) --
 # this list's literal definition, and what its neighbours land-selfdev.sh,
 # provision-selfdev-user.sh, setup-selfdev-project.sh and wire-selfdev-git.sh
 # all do. LOCAL's members are repo-wide CI gates and estate-wide surveys; a

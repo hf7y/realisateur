@@ -2,83 +2,12 @@
 # selfdev-release-tick.sh -- the clock on the consumer side of the release
 # channel, and the alarm that fires when the clock stops.
 #
-# ============================================================================
-# WHY THIS EXISTS, AND WHY IT IS SO SMALL
-# ============================================================================
-#
-# The release channel was already built. `cut-verb-build.sh` assembles every
-# project's verbs into a dated build in `hf7y/verbs`; `build-verbs.yml` cuts
-# one nightly; `install-verb-build.sh` fetches a build by id, verifies every
-# verb the manifest promises, and repoints ONE symlink atomically or discards
-# the build entirely. All of it works, and all of it is tested (31 + 17 cases
-# across two hermetic suites).
-#
+# TRAPS (the rest of this header is in the vault):
 # Probed 2026-08-07: builds had been cut nightly since 2026-08-05 and
 # `~/.local/share/verb-builds/` did not exist on a single one of the ten
 # accounts on `monkey`. Zero consumers. Meanwhile every account's realisateur
 # clone sat 15 commits behind `origin/main` and ten ecosystem commands on
 # every account's PATH exec'd into it, successfully and silently.
-#
-# Nothing was broken. Nothing had a clock.
-#
-# So this script adds the clock and NOTHING ELSE. It does not fetch a build,
-# does not verify a manifest, does not move `current`. It calls
-# `install-verb-build.sh`, which does all three and has been tested doing
-# them. A second implementation of the switch would be a second answer to
-# "which build am I on", which is the one question a bug report must be able
-# to answer -- and rewriting a tested atomic-switch by hand is how the
-# 2026-07-29 dispatch outage happened.
-#
-# `bin/tests/propagation.test.sh` asserts the delegation mechanically: this
-# file must contain no symlink-switching of its own.
-#
-# ============================================================================
-# WHERE THIS RUNS CHANGED ON 2026-08-13 -- READ THIS BEFORE THE SECTION BELOW
-# ============================================================================
-#
-# The section that follows describes the PER-ACCOUNT shape: one tick in each
-# account's own crontab, one private pin per account. That shape is RETIRED on
-# monkey. hf7y/realisateur#180 moved every one of the 13 accounts to a single
-# host-wide channel -- the host build root's `current` link, under
-# /usr/local/share, resolved into /usr/local/bin and moved by ONE tick in
-# ROOT's crontab -- and `--retire-cadence`
-# is what took each account off its own.
-#
-# The doctrine below is UNCHANGED by that and is why the host tick is still a
-# tick and not a push: the consumer still owns its clock, verifies before
-# adopting, and records what it did. What changed is WHO the consumer is. It is
-# the host, once, instead of every account, thirteen times, converging on the
-# identical build.
-#
-# The per-account shape is still SUPPORTED, because a host that has not
-# migrated is a real state -- --install-cadence still installs it and --survey
-# still grades it. It is no longer the default and it is not what monkey runs.
-#
-# ============================================================================
-# PULL, NOT PUSH -- THE CONSUMER OWNS ITS CLOCK
-# ============================================================================
-#
-# No ssh. No sudo. No hands account reaching into a 0700 home. The account
-# owns its clock, checks its own pin, and adopts on its own terms. That is
-# what lets it VERIFY BEFORE ADOPTING, and it is what leaves the record where
-# the consumer is rather than in someone else's shell history.
-#
-# `--survey` is the one read-only operator view, and it is read-only by
-# construction: it runs `--check` on each account and writes nothing anywhere.
-#
-# ============================================================================
-# FAIL-OPEN ON OPERATION, FAIL-CLOSED ON ADOPTION
-# ============================================================================
-#
-# These are different questions and they get different answers.
-#
-# ADOPTION is fail-closed, and it already is: `install-verb-build.sh` verifies
-# every verb the manifest promises, and a build missing any of them is
-# `rm -rf`'d with `current` unchanged. Half-adopting a verb set is the one
-# failure with no local recovery -- scheduler's 2026-07-29 TOTAL dispatch
-# outage was ONE missing symlink that no check on the machine could say
-# should have existed.
-#
 # OPERATION is fail-open: an unreachable release channel does NOT stop the
 # account. It keeps running the build it already has, which was fully verified
 # when it was installed, and this tick exits 3 BLIND and says so. BUILD-
@@ -88,38 +17,8 @@
 # running is a known, named, rollback-able state. Exit 3 and a status line are
 # the loudness; halting would buy nothing and cost a night's work.
 #
-# The one place refusal IS correct is a compatibility-boundary crossing, and
-# today that boundary is the manifest: `cut-verb-build.sh` refuses a build
-# that SHRINKS without --allow-shrink, so the verb NAME SET -- the interface
-# agents build against -- cannot silently narrow underneath them. A build
-# whose verb SEMANTICS changed is not yet detectable by anything, and that is
-# named as open rather than papered over.
-#
-# ============================================================================
-# THE ALARM: A STOPPED CLOCK IS A FINDING
-# ============================================================================
-#
-# Every mechanism here has been built before in some form, and the failure was
-# never that it did the wrong thing -- it was that it stopped, and nothing
-# said so. `land-selfdev.sh:175` already fast-forwards every clone; it could
-# be un-run forever and nothing anywhere was observably worse off.
-#
-# So --apply records itself, and --check GRADES THAT RECORD'S AGE as a
-# first-class row, offline, with no network and no ssh. A propagation that
-# has not run in TICK_MAX_AGE_H hours is a finding with an exit code. The
-# checker detects that the fixer died.
-#
-# ============================================================================
 # EXIT CODES
-#   0  on the current build, and the clock is alive
-#   1  findings: a newer build exists, the clock is dead, or the bootstrap is
-#      incomplete. Something a human or the next tick must act on.
-#   2  usage error (cli-guard)
-#   3  BLIND -- could not reach the release channel, or could not look at all.
-#      NOT "up to date". The `garde` shape from MONKEY.md 5, where skipping
-#      unreachable destinations made "nothing pending" indistinguishable from
-#      "everything is proven".
-# ============================================================================
+
 set -uo pipefail
 
 CLI_NAME='selfdev-release-tick.sh'

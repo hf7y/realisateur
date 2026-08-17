@@ -6,32 +6,7 @@
 # GUARD-TEST: bin/tests/thermostat-wiring.test.sh
 # GATE: none -- probes the scheduler checkout and the issue tracker; the tests workflow already declines to wire it for that reason, and its suite fabricates an estate instead
 #
-# ---------------------------------------------------------------------------
-# WHY THIS IS A RATCHET AND NOT A CONFORMANCE TEST
-#
-# The obvious build here is a test that passes when the vision is realised.
-# That test is red on day one and red for weeks, and this ecosystem has
-# already priced what a permanently-red check is worth: the `ci` MOVE in
-# pivot.sh exists because seven suites had been red long enough that red had
-# stopped meaning anything. A check nobody expects to be green is a document
-# with an exit code.
-#
-# So the assertion is not "the vision is met". It is "the vision is no
-# further away than the last time someone looked". bin/thermostat-wiring.ratchet
-# records the checks that were passing when it was last accepted; this script
-# exits 1 if any of THEM has since regressed, and exits 0 otherwise -- while
-# still printing, every single run, exactly how many are left and which.
-#
-# That inverts the incentive the redesign is about. Under a conformance test,
-# an agent that writes a paragraph about BLOCKERS.md changes nothing and the
-# test is red either way, so the paragraph costs nothing. Under a ratchet,
-# the only move that changes this script's output is deleting the file --
-# and once deleted, `--accept` makes the deletion permanent, because putting
-# it back is now a failing build rather than an argument.
-#
-# ---------------------------------------------------------------------------
-# WHAT IT REFUSES TO DO
-#
+# TRAPS (the rest of this header is in the vault):
 # It never reports "I could not see" as "nothing is wrong" (the recorded
 # pathology: a propagation pass that reached zero projects and exited 0).
 # A check that cannot be probed is BLIND, and BLIND on a check the ratchet
@@ -39,13 +14,11 @@
 # absence of a regression. BLIND on a check that was already failing is
 # reported and tolerated: it costs nothing to be unable to measure something
 # that was not yet true.
-#
 # It also never lowers the ratchet. `--accept` raises it or refuses.
 #
 # usage:  thermostat-wiring.sh [--strict] [--accept] [--quiet]
 # exit:   0 no regression   1 REGRESSION against the ratchet
-#         2 BLIND (a ratcheted check could not be probed -- never success)
-#         3 --strict and the vision is not fully met (no regression)
+
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
