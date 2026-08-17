@@ -140,9 +140,7 @@ done
 # BLIND, and exit 3 rather than 0 -- but ONLY on `confs>0 && repos==0`, which
 # is the #73 shape exactly: every conf readable, every path a literal, every
 # match impossible. Two neighbouring states are deliberately NOT blind:
-#   confs==0  no scheduler registry on this host at all. install-shims.sh runs
-#             this on such hosts (and CI is one), where check B still means
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$confs" -gt 0 ] && [ "$repos" -eq 0 ]; then
   echo
   echo "  BLIND: $confs registered project(s) under $SCHED_ROOT/schedule/ carry a"

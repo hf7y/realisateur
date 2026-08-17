@@ -1,5 +1,12 @@
 # CLAUDE.md
 
+## `vault:` in a citation is a remote, not a path
+
+`vault:<project>/<file>` names a path inside the private
+**`hf7y/ecosystem1-vault`** remote. It is not on disk here — mandark holds no
+clone. Read one with `gh api repos/hf7y/ecosystem1-vault/contents/<path>`.
+Defined once in `PROSE-REAPING.md` §2; do not retype the resolution rule.
+
 ## Push permission (2026-08-14, reaped: main is a protected branch)
 
 `main` is protected on the remote (required status checks, `enforce_admins`

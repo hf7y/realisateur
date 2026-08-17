@@ -118,9 +118,7 @@ fi
 # Provenance: who filed each issue. Every actor here is `hf7y` (realisateur#40,
 # #86), so authorship cannot answer it; a filing verb stamping a label can. An
 # unlabelled issue reads as a Zach directive, i.e. errors toward dispatching MORE.
-#
-# NOT "the thermostat's actual sensor" -- what this comment used to claim.
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if command -v gh >/dev/null 2>&1; then
   # gh's status is captured on its OWN line. Piping straight into grep would
   # hand $? to grep, and grep exits 1 on no-match -- so the success case
@@ -148,9 +146,7 @@ if [ -d "$SCHED/.git" ]; then
   # THE PROBE MUST TEST THE PROPERTY, NOT A GUESSED FILENAME. The first pattern
   # here was `scheduler-verdict/.*\.history` -- a path invented when this probe
   # was written, before anything implemented it. hf7y/scheduler#135 shipped the
-  # ledger as lib/run-ledger.sh writing ledger.tsv, and this probe went on
-  # reporting UNMET against a working implementation.
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if git -C "$SCHED" grep -qlE 'scheduler-verdict/.*\.history|ledger_append' -- lib bin 2>/dev/null; then
     record ledger PASS 'an append-only verdict ledger is written'
   else
@@ -163,9 +159,7 @@ fi
 # THE SETPOINT -- the half of §3 provenance cannot see. Labels are an INPUT;
 # this asks whether anything READS them. Until hf7y/scheduler#219 nothing did:
 # the control loop was three brakes and nothing that could say "run this MORE",
-# which is why pace was still a number a human edited in schedule/ROSTER.
-#
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ -d "$SCHED/.git" ]; then
   _runner="$SCHED/bin/usage-paced-runner.sh"
   if [ ! -r "$_runner" ]; then
@@ -188,14 +182,18 @@ else
   record setpoint BLIND "no git repo at $SCHED"
 fi
 
-if [ -f "$ROOT/.github/workflows/tests.yml" ]; then
-  if grep -q 'markdown-cost' "$ROOT/.github/workflows/tests.yml"; then
-    record prosepriced PASS 'CI prices added markdown'
+# The guard moved to hf7y/etalon and is CALLED, not carried, so the witness is
+# a workflow referencing it rather than a script in this tree. Any workflow may
+# do the calling; grepping the whole directory is the point -- pinning it to
+# one filename is what made this check wrong the moment the job moved.
+if [ -d "$ROOT/.github/workflows" ]; then
+  if grep -rqs 'etalon/.github/workflows/guard.yml\|markdown-cost' "$ROOT/.github/workflows/"; then
+    record prosepriced PASS 'CI prices added prose'
   else
-    record prosepriced UNMET 'CI does not run markdown-cost.sh'
+    record prosepriced UNMET 'no workflow calls the prose guard'
   fi
 else
-  record prosepriced BLIND 'no .github/workflows/tests.yml'
+  record prosepriced BLIND 'no .github/workflows/ directory'
 fi
 
 # --- the ratchet -------------------------------------------------------------

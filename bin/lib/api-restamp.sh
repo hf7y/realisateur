@@ -14,9 +14,7 @@ gh_slug() {
 # api_restamp_push <repo> <slug> <branch> <content-file> <msgfile>
 #
 # <branch> is the base branch the caller's local HEAD tracks (e.g. "main").
-# <content-file> is the FULL desired contents of CLAUDE.md (not a diff).
-# <msgfile>'s first line becomes the PR title AND the commit message subject
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 api_restamp_push() {
   local repo="$1" slug="$2" branch="$3" content="$4" msgfile="$5"
   local base_sha file_sha new_branch title pr_url

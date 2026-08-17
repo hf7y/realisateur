@@ -169,10 +169,7 @@ for name in "${names[@]}"; do
   # Drop MATRIX LEGS if any non-matrix context survives. A matrix job reports
   # one context per leg, named `job (1/3)`, and the leg count is part of the
   # name -- so requiring `playwright (3/3)` (live on hf7y/chezz) wedges every
-  # PR the day the matrix is resized to 4, with a required check that can
-  # never report again. The stable sibling jobs are the safe thing to require.
-  # If a repo has ONLY matrix legs, they are kept: a brittle required check
-  # still beats silent self-merging, and it fails loudly rather than quietly.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   stable=()
   for f in ${found[@]+"${found[@]}"}; do
     case "$f" in *' ('*')') ;; *) stable+=("$f") ;; esac

@@ -133,27 +133,19 @@ jobs:
       - name: What ships must equal what main says
         run: bash bin/carry-drift.sh
 
-  markdown-cost:
+
+  # directive-prose is REALISATEUR'S OWN guard, not the estate's: it asserts
+  # that a decision recorded in prose cites an issue. It used to ride inside
+  # the markdown-cost job; that job moved to hf7y/etalon, which carries only
+  # what every repo needs, so this gets its own job rather than travelling
+  # with a guard that is no longer here.
+  directive-prose:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      # The default range is $(git merge-base HEAD origin/main)..HEAD, so
-      # origin/main has to actually exist as a remote-tracking ref. On a PR,
-      # actions/checkout fetches the PR refs; main is not guaranteed among them
-      # even at depth 0.
       - name: Make origin/main resolvable
         run: git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
-
-      - name: Price the prose in this diff
-        run: bash bin/markdown-cost.sh
-
       - name: A decision recorded in prose must cite an issue
         run: bash bin/directive-prose.sh
-      # The diff check cannot see accumulated mass: a repo reaches 57% prose one
-      # under-threshold commit at a time. This one counts the whole tree against
-      # bin/markdown-cost.ratchet, which only falls.
-      - name: Prose ratchet -- the tree may not grow
-        run: bash bin/markdown-cost.sh --census

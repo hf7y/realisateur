@@ -13,9 +13,7 @@ ACCOUNT=""; REPO=""; ROLE="writer"; PORT="8721"; OUT=""; MANIFEST_ONLY=0; IS_ORG
 # Matches GitHub's OWN one-hour manifest-code lifetime, deliberately. A shorter
 # wait is the worst possible setting: the server dies, the human clicks anyway
 # on a code that is still valid, GitHub creates the App, and the pem goes to a
-# closed socket -- an App nobody holds a key for, which cannot be recovered
-# because no endpoint mints a key for an existing App. The first draft of this
-# script waited 10 minutes.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 WAIT="3600"
 OWNER="${SELFDEV_GH_OWNER:-hf7y}"
 # Overridable so the test suite can point the exchange at a local stub. A
@@ -142,9 +140,7 @@ PY
 # Open a browser ONLY on an interactive run. A script that hijacks the desktop
 # from a non-tty context is wrong in every direction: cron, CI, a background
 # job, and -- measured 2026-08-07 -- this script's OWN TEST SUITE, which runs it
-# with a sandboxed $HOME and threw real Firefox tabs at Zach pointing into a
-# fixture temp dir. `-t 1` is the whole guard: if nobody is watching this
-# terminal, printing the path is the most a script may do.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$NO_OPEN" -eq 0 ] && [ -t 1 ] && command -v xdg-open >/dev/null; then
   xdg-open "$KEEP" >/dev/null 2>&1 &
 fi

@@ -240,7 +240,7 @@ for n in $GUARDS; do
       # the sandbox tree. This is how a guard declares its scope knob when the
       # knob is a flag rather than cwd: `# GATE: strict --repo $TREE`.
       #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+      #   [rest: vault:realisateur/guard-archaeology-20260817.md]
       extra="${mode#strict}"; extra="${extra//\$TREE/$WORK/tree}"
       # shellcheck disable=SC2086
       run_sandboxed "$BIN/$n" --strict $extra ;;
@@ -260,7 +260,7 @@ for n in $GUARDS; do
     # A non-zero exit with no findings and no admission of blindness is the
     # mirror image of D1: it is unreadable. A caller cannot tell a refusal
     # from a failure from a finding. (Non-zero WITH a BLIND line is correct
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     bad "D2 $n: exited $rc having reported neither a finding nor a BLIND"
   else
     ok "D1 $n: rc=$rc, findings=$cnt -- consistent"

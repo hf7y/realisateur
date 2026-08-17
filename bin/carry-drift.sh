@@ -57,9 +57,7 @@ done
 # Rows are <path on bashified> <path on main>, and each one asserts BOTH that
 # the file must exist on the branch and what it must equal.
 #
-# `bin/gh` is also the one pair that could not be derived even if it were
-# present: it must be named `gh` to shadow the real binary on PATH, and `main`
-# cannot call it that without shadowing gh for everyone editing this repo.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CARRIES='
 bin/gh	bin/gh-sign.sh
 bin/lib/body-grammar.sh	bin/lib/body-grammar.sh

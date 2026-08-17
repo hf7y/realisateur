@@ -52,10 +52,7 @@ say() { [ "$QUIET" = 1 ] || printf '%s\n' "$*"; }
 # One line, only when something is wrong. Written to be safe in a shell rc:
 # it never blocks on the network in --quiet mode (see the --check gate below).
 # The advice is per-finding, not a blanket "--apply". --apply pulls a build;
-# it does NOT repair a dangling or off-channel link (those are installe's
-# manifest, and clobbering them is what this whole channel refuses to do). A
-# nag that prescribes a command which cannot fix the named problem trains the
-# reader to ignore the nag.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 nag() { printf 'verbs: %s -- %s\n' "$1" "$2" >&2; }
 
 [ -d "$BUILD_ROOT" ] || {

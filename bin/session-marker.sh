@@ -33,9 +33,7 @@ action="${1:-}"
 # Resolve a directory to a registered PROJECT_KEY by matching PROJECT_REPO_PATH
 # in schedule/*.conf -- the one source, same resolution the surveys use. A cwd
 # that matches nothing is the common case (unrelated work on this machine) and
-# must be a fast, silent no-op: this hook runs on EVERY session start.
-#
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 RESOLVE_CONFS=0   # confs that carry a PROJECT_REPO_PATH at all
 RESOLVE_LIVE=0    # ...of those, how many name a directory that exists
 RESOLVE_HIT=""    # the matched PROJECT_KEY, empty when nothing matched
@@ -96,9 +94,7 @@ case "$action" in
       # RETIRES the bare `pid=${PPID}` this used to write. That comment said
       # "the parent is the session process that actually persists" -- measured
       # 2026-07-27, it is not. The hook runs under a short-lived intermediate
-      # shell, so PPID dies seconds after acquire while the session runs on.
-      # Observed live: marker held pid=429191 (dead) while the session process
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+      #   [rest: vault:realisateur/guard-archaeology-20260817.md]
       session_pid() {
         local p="${PPID}" d=0 comm
         while [ -n "$p" ] && [ "$p" -gt 1 ] 2>/dev/null && [ "$d" -lt 12 ]; do

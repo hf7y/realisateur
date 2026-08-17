@@ -99,10 +99,7 @@ act() { printf '  ..    %s\n' "$*"; }
 # ---------------------------------------------------------------------------
 # Locate the installer. Beside this script first (the bootstrap layout on a
 # consumer), then in a realisateur checkout (the dev layout). NOT derived from
-# PATH: a shim on PATH may exec into a clone, and resolving the installer
-# through the very channel we are trying to stop depending on is the circular
-# dependency this whole design exists to cut.
-# ---------------------------------------------------------------------------
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 find_installer() {
   # An override that names a path which is not there is a MISSING installer,
   # not an installer. Returning it anyway would make "bootstrap incomplete"
@@ -151,9 +148,7 @@ check_clock() {
 # ---------------------------------------------------------------------------
 # The pin row. Delegates entirely: install-verb-build.sh --check already
 # prints "yours:" / "latest:" and distinguishes exit 1 (newer exists) from
-# exit 3 (BLIND). Reimplementing that comparison here would be a second source
-# of truth about which build is current.
-# ---------------------------------------------------------------------------
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 check_pin() {
   local inst out rc
   if ! inst="$(find_installer)"; then
@@ -194,7 +189,7 @@ install_cadence() {
   # crontab writes "no crontab for <user>" there and exits 1 -- that is the
   # answer, not an error -- but so does a permission failure, and silencing
   # both makes them one event. That conflation is bin/silence-audit.sh's
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   cur="$(crontab -l 2>&1 || true)"
   case "$cur" in *"no crontab for"*) cur="" ;; esac
   new="$(printf '%s\n' "$cur" | grep -vF "$CRON_TAG")"
@@ -213,9 +208,7 @@ install_cadence() {
 # ---------------------------------------------------------------------------
 # The other half of install_cadence: hf7y/realisateur#180 retires the
 # per-account clock and private build root now that one host-wide channel
-# feeds every account. This exists as a COMMAND rather than as twelve hand
-# edits because the crontab read-modify-write is the part that goes wrong --
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 retire_cadence() {
   echo "-- retire cadence (account $(id -un)) ---------------------------------"
   local probe; probe="$(command -v "$HOST_PROBE_VERB" 2>/dev/null || true)"
@@ -273,9 +266,7 @@ retire_cadence() {
   # The shims that point INTO the build root go before the root itself.
   # Removing the root first leaves a $HOME/.local/bin full of dangling links
   # -- 33 of them on the realisateur account on 2026-08-13, from the hand
-  # retire that preceded this flag. A dangling link is skipped by PATH search
-  # so the host-wide verb still wins, which is precisely why nobody notices:
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local shim tgt inst
   inst="$(command -v installe 2>/dev/null || true)"
   if [ -d "$LOCAL_BIN" ]; then
@@ -311,9 +302,7 @@ retire_cadence() {
 # ---------------------------------------------------------------------------
 # --survey: the read-only operator view. It does not write, does not adopt,
 # and does not need the accounts to trust it -- it runs each account's own
-# --check. Reporting from a hands account is fine; PROPAGATING from one is
-# what this design rejects.
-# ---------------------------------------------------------------------------
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 run_survey() {
   echo "-- fleet survey: $SURVEY_HOST (read-only) -----------------------------"
   local found=0
@@ -353,10 +342,7 @@ EOF
     # THREE STATES, and the middle one is the point. Before hf7y/realisateur#180
     # a missing private pin meant the channel had no consumer here. AFTER it,
     # it is the FINISHED state, and grading it as a gap makes this view report
-    # a completed migration as thirteen findings -- which is how an alarm stops
-    # being read. Probed 2026-08-13, minutes after the migration finished: this
-    # survey said "0 ok, 13 gap" about an estate where every account resolved
-    # every verb.
+    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     if [ "${host:-no}" = yes ] && [ "$pin" = NONE ]; then
       ok "$user: follows the host-wide channel ($HOST_BIN); no private pin or clock to keep"
     elif [ "$pin" = NONE ]; then
@@ -413,9 +399,7 @@ check_clock
 # --- the CHANNEL's own health, read live from the published verdict ---------
 # This is the row that separates "no new build because nothing changed" from
 # "no new build because main is broken". Without it both are just an absence,
-# and the pin check below would say "up to date" for a fleet frozen for a
-# fortnight. Fetched LIVE on every tick and never cached: a cached verdict is
-# a file that drifts, which is the bug this whole design exists to remove.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 echo
 echo "-- release channel (live) ---------------------------------------------"
 led="$(dirname "${BASH_SOURCE[0]}")/release-ledger.sh"
@@ -443,7 +427,7 @@ if [ "$MODE" = apply ] && [ "$pin_rc" = 1 ]; then
   # verifies every verb the manifest promises and discards an incomplete
   # build rather than switching to it. Fail-CLOSED, here, deliberately.
   # The optional flag is an ARRAY appended after the literal call, not folded
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   link_arg=(); [ "$TICK_LINK" = 1 ] && link_arg=(--link)
   if "$inst" --latest --apply "${link_arg[@]}" 2>&1 | sed 's/^/        /'; then
     after="$(current_pin)"

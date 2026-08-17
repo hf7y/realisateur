@@ -162,9 +162,7 @@ cutoff=$(( HOURS * 3600 ))
 # --- WHEN DID THIS SESSION START (hf7y/realisateur#137) ----------------------
 #
 # The dirty-tree rule below assumed "uncommitted changes at close are this
-# run's unfinished work" -- true for a solo session, false for a shared
-# checkout, now the normal case. On 2026-08-11 a subagent was blocked at close
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 session_start_epoch() { # -> epoch seconds on stdout, or nothing and exit 1
   local raw="$SESSION_START" p="${PPID}" d=0 comm et
   if [ -n "$raw" ]; then
@@ -218,9 +216,7 @@ while [ "$i" -lt "${#projects[@]}" ]; do
   # Linked worktrees are READ, and BEFORE the age gate; both halves measured
   # 2026-08-07. A repo's HEAD can be old while a worktree's branch is minutes
   # fresh (that gate hid two unpushed commits on 2026-07-28), and the older rule
-  # -- one `BLIND [worktrees]` line reading nothing -- covered 13 of them above
-  # 12 false FLAGs, all 13 in fact clean. BLIND is kept only for a worktree
-  # that cannot be read at all.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   wt="$(git -C "$repo" worktree list --porcelain 2>/dev/null \
         | awk -v m="$repo" '/^worktree /{p=substr($0,10); if (p != m) print p}')"
   if [ -n "$wt" ]; then
@@ -254,9 +250,7 @@ while [ "$i" -lt "${#projects[@]}" ]; do
       # A DIRTY TREE, mtime-split the same way #137 split the main checkout
       # (dirty_newer_than, above): dirt modified DURING this session could
       # belong to a still-running concurrent agent in this same worktree, so
-      # it stays a note -- FLAGging it would make this guard red during every
-      # parallel session, and red by default is furniture. Dirt that predates
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+      #   [rest: vault:realisateur/guard-archaeology-20260817.md]
       wdirty_all="$(git -C "$w" status --porcelain 2>/dev/null)"
       if [ -n "$wdirty_all" ]; then
         wdcount="$(printf '%s\n' "$wdirty_all" | grep -c .)"
@@ -326,9 +320,7 @@ EOF
   # unpushed: "verified where the consumer reads it" -- the nightly clones the
   # REF, not this tree. EVERY BRANCH, not just the checked-out one: this read
   # HEAD alone until 2026-08-01 and scheduler carried three host-only `paced/*`
-  # branches through a whole session unmentioned. A HOST-ONLY BRANCH IS A
-  # BLOCKER (Zach, 2026-08-01), tested against the remote REF and never the
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   wt_owner="$(git -C "$repo" worktree list --porcelain 2>/dev/null \
         | awk -v m="$repo" '
             /^worktree /{p=substr($0,10)}
@@ -344,9 +336,7 @@ EOF
   # SQUASH-MERGE MAKES `on_a_remote` STRUCTURALLY BLIND (2026-08-07).
   #
   # THE NUMBERS. This section reported 12 [host-only-branch] FLAGs against the
-  # realisateur checkout -- "unmerged work at risk" -- and all 12 were PRs
-  # squash-merged with their upstream branch deleted: zero true positives. It
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   default_remote="$(git -C "$repo" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null)"
   if [ -z "$default_remote" ]; then
     for c in origin/main origin/master; do

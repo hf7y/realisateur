@@ -58,9 +58,7 @@ die() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
 # --- the not-a-verb opt-out, loaded from ONE file -----------------------
 # Rows are <project>\t<name>\t<why>. Read from a file rather than a case
 # statement in here so the judgement is reviewable next to the rule it bends
-# (lib/verb-set.sh states the rule; lib/not-a-verb.tsv states its exceptions),
-# and so adding one is a diff a reader can see rather than a line in a 470-line
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 NOT_A_VERB="${VERB_NOT_A_VERB_FILE:-$(dirname "${BASH_SOURCE[0]}")/lib/not-a-verb.tsv}"
 exempt=''
 if [ -f "$NOT_A_VERB" ]; then
@@ -80,10 +78,7 @@ exempt_reason() {
 # --dry-run is for CI that has NO org credential -- see the smoke workflow.
 # It must therefore be incapable of producing anything a host could install,
 # because a dry run's read is short BY CONSTRUCTION (a token that can only
-# see public repositories derives a build missing every private project),
-# and a short build that looks complete is the exact failure this whole
-# script is built to refuse. So the two flags are mutually exclusive at the
-# argument level rather than "handled" later.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$DRY_RUN" -eq 1 ] && { [ -n "$ASSEMBLE" ] || [ "$WRITE" -eq 1 ]; }; then
   printf '%s: --dry-run cannot be combined with --assemble or --write: a dry run reads with whatever credential it has, so its build is short by an unknown amount and must never become an artifact.\n' \
     "$CLI_NAME" >&2
@@ -93,10 +88,7 @@ fi
 # An unreadable repository must FAIL LOUDLY, never sit waiting for a
 # password. git ls-remote against a repo the credential cannot read will ask
 # a terminal for one; in CI there is no terminal and the job hangs to the
-# six-hour limit, and on a host it stops a nightly cut dead. Refused here,
-# so the call returns non-zero -- which section 2 counts as BLIND rather
-# than as "this project has no bashified branch". Those two look identical
-# in an empty sha and mean opposite things.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 export GIT_TERMINAL_PROMPT=0
 
 command -v gh >/dev/null 2>&1 || die 'gh is not on PATH -- cannot read the declarations. Refusing to cut an empty build.'
@@ -106,9 +98,7 @@ gh auth status >/dev/null 2>&1 \
 # --- 1. which repositories carry a bashified branch ---------------------
 # `gh repo list` rather than a typed list: a project that bashifies itself
 # tomorrow joins the build with nobody editing a file. The private repos
-# are why authentication is checked above and not merely hoped for.
-#
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 say "reading $OWNER's repositories ..."
 repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].name' 2>/dev/null)" \
   || die "cannot list $OWNER's repositories -- BLIND, not empty."
@@ -117,9 +107,7 @@ repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].nam
 # --- 1b. THE REGISTRY: which repos are agent PROJECTS ----------------------
 #
 # Distinct from the verb set, and the difference is the whole reason this
-# exists. Measured 2026-08-12: 46 non-archived repos, 12 declaring verbs, 13
-# registered as projects in scheduler/schedule/*.conf. The org is full of
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
 registry=""
 _gql='query($owner:String!){ user(login:$owner){ repositories(first:100, isFork:false, ownerAffiliations:OWNER){
@@ -156,7 +144,7 @@ for repo in $repos; do
   # has no bashified branch" and "ls-remote could not read this repo at all"
   # both come out as an empty sha and mean opposite things: the first is the
   # normal answer for most repos, the second is blindness.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   giterr="$tmp/giterr"
   refs="$(git ls-remote "https://github.com/$OWNER/$repo.git" refs/heads/bashified 2>"$giterr")"
   if [ $? -ne 0 ]; then
@@ -170,9 +158,7 @@ for repo in $repos; do
         # Reaching this line means `gh repo list` ALREADY returned this repo,
         # so the credential can see it. git then 404ing is not ambiguity --
         # GitHub masks a contents-403 as a 404 for private repos, and a
-        # fine-grained PAT that has Metadata but not Contents produces
-        # exactly this pair. Said definitely, because a hedge here sends the
-        # reader to re-pick repositories in a token that already lists them.
+        #   [rest: vault:realisateur/guard-archaeology-20260817.md]
         hint=" -- but the API LISTED this repo, so the credential sees it and only its CONTENTS are refused. GitHub reports a contents-403 as 404 on a private repo. Fix: grant the fine-grained PAT 'Contents: Read' (Repository permissions), then re-run. Re-selecting repositories will not help; they are already selected." ;;
       *) hint="" ;;
     esac
@@ -199,7 +185,7 @@ for repo in $repos; do
   # as verb-set.sh: executable bin/<n> AND man/<n>.1. bibliothecaire's
   # bin/page92.py is executable, has no page, and correctly is not a verb --
   # which is why it has a row in lib/not-a-verb.tsv and not a man page.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   decl="$(printf '%s\n' "$tree" | awk '
       $1 == "100755" && $2 ~ /^bin\/[^\/]+$/ { n = substr($2, 5); exec_[n] = 1 }
       $2 ~ /^man\/[^\/]+\.1$/ { n = $2; sub(/^man\//, "", n); sub(/\.1$/, "", n); page[n] = 1 }
@@ -272,9 +258,7 @@ fi
 # --- 4. compare against the previous build ------------------------------
 # WHERE "the previous build" LIVES DEPENDS ENTIRELY ON WHO IS RUNNING.
 #
-# A human at a terminal has one under $BUILD_ROOT/current. CI DOES NOT: a
-# GitHub Actions runner is a fresh machine every night, $BUILD_ROOT never
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 prev_count=0
 prev_where='(no previous build)'
 if [ -L "$BUILD_ROOT/current" ] && [ -f "$BUILD_ROOT/current/manifest.tsv" ]; then
@@ -308,7 +292,7 @@ manifest="$tmp/manifest.tsv"
   # script's own shape check are unaffected -- the manifest's data rows stay
   # exactly "one verb per line" and nothing downstream has to learn a second
   # row type.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ -n "$registry" ]; then
     printf '# registry: %d project(s) carrying %s on their default branch.\n' \
            "$(printf '%s\n' "$registry" | grep -c .)" "$REGISTRY_MARKER"
@@ -320,9 +304,7 @@ manifest="$tmp/manifest.tsv"
   # WHAT THIS BUILD DECIDED NOT TO INCLUDE, AND WHY -- in the artifact every
   # account consumes, not only on the terminal of whoever ran the cut. A
   # half-declaration's whole failure mode is that its consequence lands on a
-  # different host, weeks later, as a missing path; the manifest is the one
-  # thing that travels with it. Comment rows, so every consumer's
-  # `grep -v '^#'` and this script's own shape check are unaffected.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ -s "$halves" ]; then
     printf '# %d name(s) on a bashified branch are NOT in this build. NOT-A-VERB rows\n' \
            "$(wc -l < "$halves" | tr -d ' ')"
@@ -380,9 +362,7 @@ say "derived $verb_count verb(s) from $projects project(s)"
 # --- 6. assemble the tree CI commits ------------------------------------
 # The meta-repo's whole content, laid out as <project>/bin/<verb> +
 # <project>/man/<verb>.1, so a consumer clones ONE repository instead of
-# fetching from N. This is what makes a new self-dev account need read on
-# one repo rather than four hand-made per-repo deploy keys
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ -n "$ASSEMBLE" ]; then
   mkdir -p "$ASSEMBLE" || die "cannot create $ASSEMBLE"
   # Only ever prune paths this build owns. A blanket wipe of $ASSEMBLE
@@ -395,9 +375,7 @@ if [ -n "$ASSEMBLE" ]; then
   # WHAT THE PREVIOUS BUILD OWNED, so retirement can actually take effect.
   #
   # Each project directory is rm -rf'd and re-copied below, so a project
-  # that CHANGED is handled. A project that LEFT was not: nothing removed
-  # its directory, so its verbs stayed in the meta-repo tree, git add -A
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ -f "$ASSEMBLE/manifest.tsv" ]; then
     awk -F'\t' '!/^#/ && NF>=1 && $1 != "" {print $1}' "$ASSEMBLE/manifest.tsv" \
       | sort -u > "$tmp/prev-projects"
@@ -428,9 +406,7 @@ if [ -n "$ASSEMBLE" ]; then
     # THE WHOLE bashified TREE, not just bin/ + man/.
     #
     # This copied only bin/ and man/ first, on the reasoning that a build's
-    # job is to be executable. Every verb in the resulting build was broken:
-    #
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     rm -rf "$work/.git"
     cp -a "$work/." "$ASSEMBLE/$project/"
     say "  assembled $project at ${sha:0:12}"
@@ -442,9 +418,7 @@ if [ -n "$ASSEMBLE" ]; then
   # Prove the tree matches the promise before CI is allowed to commit it.
   #
   # THE EXECUTABLE BIT IS NOT A WITNESS. This check was `-f && -x` and it
-  # passed on a build in which EVERY VERB WAS BROKEN -- the lib/ omission
-  # above. The file existed and was executable; it just could not run.
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   bad=0
   while IFS=$'\t' read -r project verb _ _; do
     [ -n "${verb:-}" ] || continue
@@ -471,9 +445,7 @@ if [ -n "$ASSEMBLE" ]; then
   # --- 6a. every command declares which CHANNEL it belongs to -------------
   # bin/verb-kind-lint.sh, run against the tree that was just assembled --
   # which is the only place in this pipeline where the files are on local
-  # disk and their headers can be read for free. Section 2 reads the git
-  # TREE listing (paths and modes), not blobs, so asking this question there
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   kindlint="$(dirname "${BASH_SOURCE[0]}")/verb-kind-lint.sh"
   if [ ! -f "$kindlint" ]; then
     # A missing guard is a finding, not an inconvenience.

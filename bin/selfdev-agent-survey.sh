@@ -141,10 +141,7 @@ survey_account() {
   # -- prompt text: prefer the REAL dispatch prompt over the project's own
   # .claude/commands/*.md. For a scheduler-run-based account the command-
   # file copy is frequently an unadapted template nothing actually
-  # dispatches -- ecosim.conf's own header says exactly that about its own
-  # repo's nightly-batch.md. The prompt that actually reaches `claude -p` is
-  # schedule/<acct>.conf's BATCH_PROMPT in that account's OWN scheduler
-  # clone, sourced the same way bin/scheduler-run sources it.
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local sched_conf="$sched_home/schedule/$acct.conf"
   if [ -f "$sched_conf" ]; then
     prompt_text="$(sudo -u "$acct" bash -c "BATCH_PROMPT=''; SWEEP_PROMPT=''; source '$sched_conf' 2>/dev/null; printf '%s\n%s' \"\$BATCH_PROMPT\" \"\$SWEEP_PROMPT\"" 2>/dev/null)"
@@ -168,9 +165,7 @@ $(cat "$f")"
   # -- recent evidence: the account's own dispatch log, whichever job dir it
   # lands in. TWO CORRECTIONS, both found 2026-08-10 by checking this
   # script's own reads against the fleet rather than trusting its columns:
-  #
-  # 1. WRONG DIR, for exactly the accounts that matter. The glob was
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local newest_log_age="" f_age
   for f in "$home"/.local/share/*/sweep.log "$home"/.local/share/*/run.log "$home"/reports/*/LATEST.md; do
     [ -f "$f" ] || continue

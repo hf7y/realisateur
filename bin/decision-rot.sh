@@ -87,9 +87,7 @@ command -v jq >/dev/null || { echo "decision-rot.sh: jq not on PATH" >&2; exit 3
 # THE PREDICATE, in one jq program, so bin/tests/decision-rot.test.sh can pin
 # it against fixtures with no network. stdin is a `gh issue list --json
 # number,title,state,labels,comments` array.
-#
-# rot_scan <owner>       -> TSV per ROTTING issue: number, answer date, age days, title
-# answered_count <owner> -> the ANSWERED total, same predicate, no state filter
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 DECISION_ROT_JQ='
   # stamped: TRUE iff the body`s LAST NON-BLANK LINE opens with the agent
   # marker. A marker, not a field grammar -- see the header.
