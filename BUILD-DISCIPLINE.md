@@ -28,9 +28,9 @@ claim; what left is the story.
 6. **Cruft on shared hosts.** A script or unit dropped on a host the project
    doesn't own becomes unattributable the moment the project moves on.
 7. **A claim outlives its verification.** Checked once, written as prose,
-   believed long after it stopped being true — by people and by later audits
-   that quote it. The tell: *"I looked and saw nothing"* was never
-   distinguished from *"I did not look."*
+   believed long after it ceased to hold — by people and by later audits that
+   quote it. The tell: *"I looked and saw nothing"* was never distinguished
+   from *"I did not look."*
 8. **Warn-then-continue.** The check detected it, printed it, and proceeded.
    Distinct from silent failure: the code *knew*.
 9. **The actor grades its own homework.** Whoever performs the work must not
