@@ -5,159 +5,35 @@
 # GUARD-TEST: bin/tests/ownership-audit.test.sh
 # GATE: strict --repo $TREE
 #
-# ---------------------------------------------------------------------------
-# THE QUESTION, AND THE ORDER IT HAS TO BE ASKED IN
+# It counts lines of mechanism, attributes each to a project by the mission
+# test in bin/lib/ownership-set.sh, and reports the fraction that is somebody
+# else's. The conclusion people reach for is "realisateur should not
+# self-dev"; that is downstream. This measures the premise.
 #
-# The conclusion people reach for is "realisateur should not self-dev". That
-# is downstream. The premise underneath it is that most of what this repo
-# holds belongs to other projects -- and if the premise is true, the
-# maintenance question dissolves rather than being answered: you do not need a
-# worker for mechanism you should not own.
+# WHY A RATCHET AND NOT A CONFORMANCE TEST. A check red on day one and red for
+# months is a document with an exit code. A cross-repo migration is slow and
+# breaks live paths if rushed, so demanding zero foreign lines by the next
+# build would just get the check disabled. The assertion is: THE FOREIGN
+# FOOTPRINT IS NO LARGER THAN THE LAST TIME SOMEONE LOOKED. --accept only ever
+# ratchets down.
 #
-# So this measures the premise, not the conclusion. It counts lines of
-# mechanism, attributes each to a project by the mission test in
-# bin/lib/ownership-set.sh, and reports the fraction that is somebody else's.
+# TRAP: the bar is the FILE LIST, not the line count (#144, 2026-08-11). A
+#   count cannot tell PARKING (another project's mechanism arrives) from
+#   MAINTENANCE (a foreign file already here gets repaired). It also missed
+#   the real case: park a new 30-line foreign file while deleting 40 elsewhere
+#   and the total goes DOWN. Growth inside an already-recorded path is
+#   maintenance -- reported by name, not a failure.
 #
-# ---------------------------------------------------------------------------
-# WHY A RATCHET AND NOT A CONFORMANCE TEST
+# THE THREE DODGES IT CLOSES:
+#   1. ADD A FILE AND DON'T MENTION IT -- the population is derived from the
+#      tree (git ls-files over OWN_AREAS), never from a list. Unmatched is
+#      UNCLASSIFIED and the bound on unclassified is zero.
+#   2. RECLASSIFY A FOREIGN FILE AS MINE -- the ratchet records foreign file
+#      NAMES. A path may LEAVE the tree (that is the migration we want); it
+#      may not stay and become realisateur's. R4, fails as a regression.
+#   3. CLASSIFY IT HONESTLY AND PARK IT ANYWAY -- R5: a foreign path not in
+#      the ratchet's file list fails, whatever the arithmetic says.
 #
-# Same argument bin/thermostat-wiring.sh makes, and for the same reason it was
-# made there: a check that is red on day one and red for months is a document
-# with an exit code, and this estate has already priced what a permanently-red
-# check costs (seven suites red long enough that red stopped meaning anything;
-# see pivot.sh's `ci` MOVE).
-#
-# A cross-repo migration is slow, needs a human at several steps, and breaks
-# live paths if rushed -- install-shims.sh writes the PATH shims this estate
-# runs on today. Demanding zero foreign lines by the next build would just get
-# the check disabled.
-#
-# The assertion is therefore: THE FOREIGN FOOTPRINT IS NO LARGER THAN THE LAST
-# TIME SOMEONE LOOKED. A pull request that parks another project's mechanism
-# here is a failing build. A pull request that moves some out lowers the bar
-# permanently, because --accept only ever ratchets down.
-#
-# FOOTPRINT, NOT LINE COUNT, AND WHY THAT CHANGED (2026-08-11, #144)
-#
-# It used to be the line count, and the line count could not tell the two
-# things below apart:
-#
-#     PARKING       another project's mechanism arrives here. New maintenance,
-#                   new migration unit, exactly what this guard is for.
-#     MAINTENANCE   a foreign file ALREADY HERE gets repaired, documented or
-#                   tested. No new maintenance -- this repo already carries it
-#                   and carries the bug with it.
-#
-# 74% of this repo's mechanism is foreign, so the second is not a corner case;
-# it is most of the maintenance this repo can be asked to do. Measured on
-# #144: the ratchet stood 12 lines above HEAD, and a pull request fixing two
-# silently-discarded failures in two foreign scripts already recorded here
-# came to +533 foreign lines and was arithmetically unmergeable. --accept
-# could not resolve it either, by design.
-#
-# And the count was not merely blocking the wrong thing, it was MISSING the
-# right thing: park a new 30-line foreign file while deleting 40 lines
-# somewhere else and the total goes DOWN. The guard's own headline case walked
-# straight through it, silently, whenever the arithmetic happened to net out.
-#
-# So the bar moved onto the population the ratchet already records -- the FILE
-# LIST. A foreign path not in that list is PARKED and fails (R5). Growth
-# inside a path already in it is maintenance: reported, every run, by name,
-# and not a failure. See "WHAT STILL NOTICES" below -- the answer must not be
-# "nothing", or this would be a guard that cannot refuse.
-#
-# ---------------------------------------------------------------------------
-# THE THREE DODGES IT CLOSES, AND HOW
-#
-# 1. ADD A FILE AND DON'T MENTION IT. The population is derived from the tree
-#    (git ls-files over OWN_AREAS), never from a list. An unmatched file is
-#    UNCLASSIFIED, and the bound on unclassified is zero. A list is an opt-in,
-#    and the omission is the dodge -- propagation.test.sh's reasoning, reused.
-#
-# 2. RECLASSIFY A FOREIGN FILE AS MINE. Cheaper than moving it and it lowers
-#    the number. So the ratchet records the foreign file NAMES, not just the
-#    count: a path that was foreign may leave the tree (that is a migration,
-#    and it is what we want), but it may not stay in the tree and become
-#    realisateur's. That is R4 below, and it fails as a regression.
-#
-# 3. MENTION IT, CLASSIFY IT HONESTLY, AND PARK IT ANYWAY. Dodge 1 only makes
-#    a new foreign file DECLARED; declaring it was never the same as being
-#    allowed to add it. R5 is the bound: a foreign path that is not in the
-#    ratchet's file list fails, whatever the arithmetic says.
-#
-# ---------------------------------------------------------------------------
-# WHEN A NEW PATH IS NOT A NEW FOOTPRINT
-#
-# A file can be new to the tree and still not be new maintenance, when it
-# would LEAVE WITH a file already recorded -- the migration this guard exists
-# to keep possible carries it out in the same act. Two such relations, both
-# derived, neither a hand-kept exemption list:
-#
-#   FOLLOWS   the ledger did not classify it directly; it took its owner from
-#             another file (bin/lib/ownership-set.sh's "a suite follows its
-#             subject"), and that file is recorded foreign. A test for a
-#             foreign script already here is coverage of maintenance this repo
-#             already owns, and refusing it would mean "you may not test the
-#             foreign mechanism you are stuck with".
-#
-#   READ BY   a recorded foreign file OF THE SAME OWNER names it as a path.
-#             The reference must carry the last two path components, not the
-#             bare basename: `lib/not-a-verb.tsv` is a path, `README.md` is a
-#             coincidence. Same-owner, because a file goes to ONE repo when
-#             its reader does.
-#
-# Neither is silent. Every such path is printed, with its line count and with
-# the recorded file it claims to follow, so a false attachment is on the page
-# rather than inside the arithmetic.
-#
-# ---------------------------------------------------------------------------
-# WHAT STILL NOTICES, NOW THAT GROWTH IS PERMITTED
-#
-# Unbounded growth inside recorded files is a real way to accrete foreign
-# mechanism one line at a time, so this is the list, and it is not empty:
-#
-#   THE SHARE BAR, which is unchanged and still hard. Foreign lines may grow
-#   but the foreign FRACTION may not. Right after an --accept that bound is
-#   tight: any foreign growth not matched by realisateur growth fails. (Today
-#   it is loose -- 73.6% measured against 79.7% recorded, because the
-#   2026-08-08 migration was never banked. Slack in a bar is un-accepted
-#   improvement, and banking it is a human running --accept, not this script
-#   deciding for them.)
-#
-#   THE REPORT. Growth is printed as NOTE lines every run, decomposed into
-#   what grew inside recorded paths and what arrived in new ones, and
-#   bin/tests/ownership-audit.test.sh's witness section prints them into CI.
-#
-#   --strict, unchanged: exit 3 while any foreign mechanism remains at all.
-#
-#   AND THE NEXT --accept, which is where a human looks at the notes and
-#   decides. It cannot launder anything: a parked path or a reclassification
-#   is a regression and --accept refuses on a regression, so the recorded
-#   file list can only gain paths that follow one already in it, and the
-#   recorded SHARE can only go down.
-#
-# ---------------------------------------------------------------------------
-# WHAT IT DELIBERATELY DOES NOT MEASURE
-#
-# Prose. Root *.md and *.idea are 88% of this repo's bytes and none of it is
-# mechanism; bin/markdown-cost.sh already prices prose and this would only
-# produce a second answer to a question that already has one. The claim here
-# is about MECHANISM ownership, and mixing the two would let a documentation
-# commit move a number that is supposed to be about code.
-#
-# It also does not know whether the receiving project WANTS the file. It
-# checks only that the receiver exists and is named. Whether senechal accepts
-# install-shims.sh is a conversation, not a measurement, and pretending
-# otherwise would be the "belongs elsewhere" complaint this repo's own
-# doctrine rejects.
-#
-# usage:  ownership-audit.sh [--repo DIR] [--strict] [--accept] [--quiet]
-# exit:   0 no regression against the ratchet (growth inside recorded paths is
-#           reported as NOTE lines and is not a regression)
-#         1 REGRESSION -- a foreign path was parked here, the foreign share
-#           grew, or a recorded foreign file was reclassified realisateur's
-#         2 BLIND -- could not read a tree or a ledger. NEVER "all clear"
-#         3 --strict and foreign mechanism remains (but nothing regressed)
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
