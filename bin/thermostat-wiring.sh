@@ -182,14 +182,18 @@ else
   record setpoint BLIND "no git repo at $SCHED"
 fi
 
-if [ -f "$ROOT/.github/workflows/tests.yml" ]; then
-  if grep -q 'markdown-cost' "$ROOT/.github/workflows/tests.yml"; then
-    record prosepriced PASS 'CI prices added markdown'
+# The guard moved to hf7y/etalon and is CALLED, not carried, so the witness is
+# a workflow referencing it rather than a script in this tree. Any workflow may
+# do the calling; grepping the whole directory is the point -- pinning it to
+# one filename is what made this check wrong the moment the job moved.
+if [ -d "$ROOT/.github/workflows" ]; then
+  if grep -rqs 'etalon/.github/workflows/guard.yml\|markdown-cost' "$ROOT/.github/workflows/"; then
+    record prosepriced PASS 'CI prices added prose'
   else
-    record prosepriced UNMET 'CI does not run markdown-cost.sh'
+    record prosepriced UNMET 'no workflow calls the prose guard'
   fi
 else
-  record prosepriced BLIND 'no .github/workflows/tests.yml'
+  record prosepriced BLIND 'no .github/workflows/ directory'
 fi
 
 # --- the ratchet -------------------------------------------------------------

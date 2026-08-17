@@ -30,7 +30,7 @@ FAKE="$TMP/realisateur"
 mkdir -p "$FAKE/bin/lib" "$FAKE/.github/workflows"
 cp "$ROOT/bin/thermostat-wiring.sh" "$FAKE/bin/"
 cp "$ROOT/bin/lib/cli-guard.sh"     "$FAKE/bin/lib/"
-echo 'run: bin/markdown-cost.sh' > "$FAKE/.github/workflows/tests.yml"
+mkdir -p "$FAKE/.github/workflows"; echo 'uses: hf7y/etalon/.github/workflows/guard.yml@main' > "$FAKE/.github/workflows/prose.yml"
 
 # --- a throwaway scheduler, in whatever state a case needs -------------------
 # `conforming` builds the repo the redesign is aiming at; `current` builds the

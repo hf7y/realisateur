@@ -190,9 +190,7 @@ publish-release-verdict.sh
 ecosim-sensor-tick.sh
 floor-check.sh
 hardcoded-home-lint.sh
-markdown-cost.sh
 ownership-audit.sh
-port-markdown-cost.sh
 reach-lint.sh
 discipline.sh
 thermostat-wiring.sh

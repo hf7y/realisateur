@@ -2,9 +2,9 @@
 # The SHARE and the FILE LIST are bars and --accept only ever improves
 # them; the line count is the baseline growth is measured from.
 # See bin/ownership-audit.sh.
-# accepted 2026-08-17T03:15:37-05:00
-foreignlines 19944
-foreignshare 563
+# accepted 2026-08-17T11:55:49-05:00
+foreignlines 18860
+foreignshare 553
 file .claude/commands/bashify.md
 file .claude/commands/cloture.md
 file .github/workflows/claim-drift.yml
@@ -51,7 +51,6 @@ file bin/lib/conf.sh
 file bin/lib/not-a-verb.tsv
 file bin/lib/propagation-set.sh
 file bin/lib/verb-set.sh
-file bin/markdown-cost.sh
 file bin/notify-senechal.sh
 file bin/path-provenance-audit.sh
 file bin/pivot.sh
@@ -75,7 +74,6 @@ file bin/tests/ecosim-sensor-tick.test.sh
 file bin/tests/focus-commit.test.sh
 file bin/tests/hardcoded-home-lint.test.sh
 file bin/tests/install-shims.test.sh
-file bin/tests/markdown-cost.test.sh
 file bin/tests/notify-senechal-footer.test.sh
 file bin/tests/path-provenance-audit.test.sh
 file bin/tests/propagation.test.sh
