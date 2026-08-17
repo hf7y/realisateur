@@ -39,7 +39,20 @@ cli_guard "$@"
 # document check). Retyping it per call site is how the two checks drift apart
 # and one of them starts taxing CLAUDE.md while the other does not.
 # Patterns are glob patterns matched against the repo-relative path.
-MD_ALLOW=( 'README.md' 'CLAUDE.md' 'man/*' )
+# `.claude/commands/*` are AGENT INSTRUCTIONS, and this estate's other guards
+# already classify them as mechanism: bin/lib/ownership-set.sh lists
+# .claude/commands in OWN_AREAS ("mechanism only"), install-shims.sh installs
+# them, and bin/reach-lint.sh validates that every command they name resolves.
+# Only this guard called them prose, so adding one scored 100% markdown and
+# could never pass the ratio -- there was no way to add a command file at all.
+# Two guards disagreeing about what a file IS is the duplicated-truth row of
+# BUILD-DISCIPLINE.md; this resolves it toward the classification three other
+# mechanisms already use.
+#
+# It is NOT a licence to dump prose there: --census still counts every line of
+# them against the tree ratchet, which only ever falls. What is exempted is the
+# per-diff RATIO, not the total.
+MD_ALLOW=( 'README.md' 'CLAUDE.md' 'man/*' '.claude/commands/*' )
 
 md_allowlisted() { # <path> -> 0 if the allowlist covers it
   local pat

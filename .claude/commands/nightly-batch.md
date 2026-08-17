@@ -199,9 +199,8 @@ it generates; senechal *owns knowing it exists*. It files a labelled issue
 on `hf7y/senechal` with `gh` directly and reads it back to confirm it
 landed, so it needs no clone of that repo and no push access to it.
 
-`focus-commit` still exists for repos that have not finished migrating off
-`FOCUS.md`/`QUESTIONS.md`. **This repo has.** Do not create those files
-here in order to have something to commit.
+Do not create `FOCUS.md`/`QUESTIONS.md` here in order to have something to
+commit. They are retired (hf7y/scheduler#66).
 
 ## 4. Commit as you go
 
@@ -222,13 +221,17 @@ One issue per item, on `hf7y/realisateur`:
   where a GitHub remote (real credentials) seemed like it might genuinely
   be warranted instead of a local bare one.
 
-## 6. Write the report
+## 6. Report in the run, not in a file
 
-`~/reports/realisateur/$(date +%Y-%m-%d).md`, and update
-`~/reports/realisateur/LATEST.md` to match. Cover: which inbox artifacts
-were processed and what was inferred from each, which new projects were
-scaffolded (and whether scheduler-registered), what was archived, what
-was deliberately left unprocessed and why, and which issues were filed.
+Do NOT write a dated report file. scheduler's standing rule 5 bans it --
+*"NO NEW MARKDOWN FILES. Do not write a handoff, session record, design note,
+sprint summary, or retrospective. Prose is not a deliverable."* This command
+told you to write one until 2026-08-17.
+
+End the run by saying, in the run's own output: which artifacts were
+processed and what was inferred, which projects were scaffolded and whether
+registered, what was archived, what was left and why, and which issues were
+filed. Anything that must survive the run is an ISSUE, not a paragraph.
 
 ## 7. Before finishing
 

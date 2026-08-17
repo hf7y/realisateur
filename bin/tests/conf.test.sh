@@ -57,9 +57,7 @@ eq "A5  no PROJECT_REPO_PATH returns 1" "$?" "1"
 # --- C: the population ratchet -----------------------------------------------
 # WHY A RATCHET AND NOT A LIST. lib/conf.sh's header used to NAME the four
 # scripts still on the raw grep; by 2026-08-11 it was wrong in both directions
-# (two retired in b3fef3d, one fixed, three others never named). A list of who
-# has a defect decays as fast as the code moves. So the assertion is the
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 printf '\nC. no script in bin/ or bashify/ extracts PROJECT_REPO_PATH without expanding it\n'
 c_bad=""
 c_scanned=0

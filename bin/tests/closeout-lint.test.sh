@@ -157,10 +157,7 @@ echo "-- B. today's session record (issues/PRs, not a FOCUS.md row)"
 # B1..B4 used to drive a FOCUS.md check (a dated entry citing a sha, else
 # [no-record]/[record-no-sha]/[no-focus]) that `/cloture` §3, revised
 # 2026-08-10, forbids writing -- and `/cloture` is what RUNS closeout-lint, so
-# clearing the FLAG meant doing the forbidden thing (#139). Not a test weakened
-# to let a change pass: doctrine retired what it measured, and B6 pins the old
-# check gone rather than quiet. $GH_BIN is set ON ITS OWN LINE, never as
-# `GH_BIN=x run ...`: a bash prefix assignment to a FUNCTION persists.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 GH_BIN="$T/gh-found/gh"
 run_rc "$T/blockers-today.md" clean
 has   "B1 a record on the remote passes"       "$RUN_OUT" "ok -- 1 issue(s)/PR(s) created $DAY"
@@ -338,9 +335,7 @@ has   "F2 a genuinely unmerged branch STILL flags"          "$out" "FLAG [host-o
 # F3: the downgrade must not need the network. F1 passing at all is already the
 # offline proof, but pin it explicitly -- a guard that hard-requires a network
 # is its own failure mode. Prepending a nonexistent directory to PATH does not
-# remove the real `gh` already earlier on it, so this used to not exercise the
-# no-gh case it claimed to; use the same GH_BIN-pointed-at-nothing stub B4
-# uses instead, which `command -v` genuinely cannot resolve.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 GH_BIN="$T/nope/gh"
 out="$(run "$T/blockers-today.md" squashed)"
 GH_BIN="$GH_DEFAULT"
@@ -394,9 +389,7 @@ rc    "G2 and it does not gate a concurrent run"     0 "$RUN_RC"
 # G2b/G2c: mtime-split the worktree note the way #137 split the main checkout
 # (#150). An anchor an hour in the future makes the fixture's dirt unambiguously
 # OLDER than this session -- the agent that used the worktree already exited
-# before this run began, so it FLAGs instead of reading as a live concurrent
-# run. Same tree, anchor moved to 1970: every path now postdates the session
-# start, and the original note-only behaviour is preserved.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SESSION_START="$(( $(date +%s) + 3600 ))"
 run_rc "$T/blockers-today.md" --strict --repo "$T/wt_dirty"
 has   "G2b abandoned worktree dirt FLAGs"            "$RUN_OUT" "FLAG [worktree-dirty-abandoned]"
@@ -428,10 +421,7 @@ echo "-- H. a shared checkout's PRE-EXISTING dirt is not this run's (#137)"
 # THE INCIDENT (#137). On 2026-08-11 a subagent was blocked at close over two
 # paths already in its session-start `git status` snapshot, and every remedy
 # offered was wrong: committing adopts another session's work under your name,
-# reverting destroys it, and it had nothing to push. H1..H3 pin the
-# [worktree-dirty] carve-out for the main checkout as a MEASUREMENT (mtime vs
-# session start), not a blanket exemption. $SESSION_START on its own line, same
-# bash reason as $GH_BIN.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 newrepo sharedtree && echo 'another session was here' >> "$T/sharedtree/f.txt"
 
 # H1: an anchor an hour from now is unambiguously later than a file written a
@@ -495,9 +485,7 @@ echo "-- J. an unreadable/absent registry is BLIND, not clean (#232)"
 # A full sweep (no --repo, no explicit names) against a SCHED_ROOT whose
 # schedule/ directory does not exist must not read as "zero repos touched" --
 # that is indistinguishable from "looked at everything, found nothing", the
-# exact conflation E4's BLIND gate exists for elsewhere in this suite.
-# mandark lost its scheduler checkout entirely (hf7y/realisateur#232); this
-# fixture is that state, reached with no fixture registry at all.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 EMPTY="$T/no-such-sched"
 J_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" BLOCKERS_MD="$T/blockers-today.md" HOURS=12 \
   GH_BIN="$GH_DEFAULT" SESSION_START="" "$SCRIPT" 2>&1)"; J_RC=$?

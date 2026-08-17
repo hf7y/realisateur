@@ -85,29 +85,28 @@ a parked idea is a deliberate, stated decision, never a silent reorder.
 ## 4.5. Vision debt, and overriding oldest-first
 
 The signal ladder lives in `bin/precipitation-scan.sh` (doctrine at
-`vault:realisateur/PRECIPITATION.md`). In short: age is the WEAKEST of five
-signals; re-arrival in the same shape is the strongest; an idea re-arriving in a
-DIFFERENT shape each time gets its weight *lowered*; a cross-project cluster is
-answered by naming the missing regulator, not by promoting the cluster's
-members. Stamp a confirmed candidate so the judgment is durable.
+`vault:realisateur/PRECIPITATION.md`): age is the WEAKEST of five signals;
+re-arrival in the same shape is the strongest; an idea re-arriving in a
+DIFFERENT shape each time gets its weight *lowered*; a cross-project cluster
+is answered by naming the missing regulator, not by promoting its members.
+Stamp a confirmed candidate so the judgment is durable.
 
 **Oldest-first is a signal, not a rule.** realisateur's cross-project view is
-exactly what makes it able to judge when a newer idea should jump ahead. When
-overriding, **say which older item was passed over and why, in the issue** — a
-silent reorder is indistinguishable from forgetting the item existed.
+what makes it able to judge when a newer idea should jump ahead. When
+overriding, **say which older item was passed over and why, in the issue** --
+a silent reorder is indistinguishable from forgetting the item existed.
 
 ## 4.6. Stable build vs bigger dream
 
-- **Close to a working, stable core** — near-term shape, unlikely to be
-  discarded by the idea changing under it. Fine for nightly-batch to iterate.
-- **Part of a still-forming dream** — likely to morph before anything built
-  against its current shape survives. Slower iteration is the lever, not "don't
-  build at all".
+**Close to a stable core** -- near-term shape, unlikely to be discarded by the
+idea changing under it; fine for nightly-batch to iterate. **Part of a
+still-forming dream** -- likely to morph before anything built against its
+current shape survives; slower iteration is the lever, not "don't build".
 
-Record this judgment **in the project's milestone issue**. It is no longer a
-`_paced.conf` weight: `scheduler/tempo.sh` paces each project by its ACTIONABLE
-backlog, ROSTER's `rate` is only a ceiling, and `TEMPO_BASE_MIN` is the single
-fleet pace knob. **Never edit a ROSTER row to change pace.**
+Record the judgment **in the project's milestone issue**. It is no longer a
+`_paced.conf` weight: `scheduler/tempo.sh` paces on ACTIONABLE BACKLOG,
+ROSTER's `rate` is only a ceiling, and `TEMPO_BASE_MIN` is the single fleet
+knob. **Never edit a ROSTER row to change pace.**
 
 ## 5. Proposals about scheduler itself go through the front door
 

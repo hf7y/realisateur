@@ -122,9 +122,7 @@ echo "-- F. no registry AT ALL is not blind -- install-shims.sh depends on it"
 # F is the negative that keeps E honest, and it is not hypothetical: the first
 # version of E's guard tested `repos == 0` alone, which made every host with no
 # scheduler registry blind. CI is such a host, and install-shims.sh runs
-# `reach-lint.sh --strict-reach` and flags on any nonzero -- so that version
-# turned install-shims.test.sh D5 red. Check B is still meaningful here: it
-# reads ~/.claude/commands, which has nothing to do with the registry.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mkdir -p "$T/F/sched/schedule"     # exists, but holds no confs
 run "$T/F/sched"
 rc  "F1 a registry with no confs exits 0, not BLIND"  0 "$RUN_RC"

@@ -165,9 +165,7 @@ eq  "H2 exits 5" "$rcH2" "5"
 # --- I: --adopt no longer invents a per-account path ---------------------------
 # It used to install ~/.config/selfdev/<account>/<account>.pem plus a conf
 # naming it -- which is how ONE App key came to sit on disk under four names,
-# and why `selfdev-credentials.sh --apply` could not find it (realisateur#209).
-# Placement is bin/selfdev-app-key.sh's job now, host-wide and as root, and
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 outI="$(run env SELFDEV_GH_API="http://127.0.0.1:1" "$SCRIPT" --adopt \
         --account acct2 --key "$T/app.pem" --app-id 4520255 2>&1)"; rcI=$?
 has "I prints the fingerprint"  "$outI" "fingerprint:"
@@ -249,9 +247,7 @@ has "J --wire writes a helper git will call as '<self> --credential <op>'" "$out
 # --- K: --wire writes the ACCOUNT as author, never the App bot -----------------
 # THE BUG THIS CASE EXISTS FOR, found live on ecosim@monkey 2026-08-07:
 #
-#   user.name  = unattended-monkey[bot]
-#   user.email = 314444911+unattended-monkey[bot]@users.noreply.github.com
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 echo
 echo "-- K: --wire sets AUTHOR=account, PUSHER=App -----------------------------"
 

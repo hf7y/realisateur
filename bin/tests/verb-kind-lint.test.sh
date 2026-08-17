@@ -346,9 +346,7 @@ echo "== 9. THE 2026-08-06T003928Z MANIFEST, WITH ITS ONE PRODUCT DECLARED =="
 # Every project/verb pair below is transcribed from the real build's
 # manifest.tsv (32 verbs, 12 projects). All 32 are given `# KIND: verb`
 # except vim-arcade/vim-arcade, which is given `# KIND: product` -- the
-# declaration the project's own header prose has made in English since
-# 2026-08-05 ("It is named `vim-arcade` now because it is not a verb")
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 b="$(new_build real)"
 while read -r p v; do
   [ -n "$p" ] || continue

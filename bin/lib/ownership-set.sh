@@ -187,6 +187,7 @@ bin/lib/ownership-set.sh                   realisateur
 bin/tests/guard-estate.test.sh             realisateur
 .github/workflows/tests.yml                realisateur
 .claude/commands/ideate.md                 realisateur
+.claude/commands/reap.md                   realisateur
 .claude/commands/nightly-batch.md          realisateur
 bin/selfdev-credentials.sh                 realisateur
 bin/install-honey-plugin.sh                realisateur

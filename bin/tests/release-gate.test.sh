@@ -190,9 +190,7 @@ echo "-- THE EVIDENCE SURFACES: WHAT THE TOKEN CAN ACTUALLY READ -------------"
 # ===========================================================================
 # THE 2026-08-07 FAILURE. The gate asked ONE endpoint,
 # /commits/{sha}/check-runs, which needs the fine-grained permission
-# `Checks: Read`. VERBS_READ_TOKEN holds "actions, code, commit statuses,
-# metadata" -- and when Zach went to grant Checks, THERE IS NO SUCH CATEGORY
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 : > "$QUERYLOG"
 set_answer sigma "success"
 gate sigma >/dev/null 2>&1
@@ -242,10 +240,7 @@ rc "a green Actions run does NOT override a failed commit status" 1 $?
 # --- the `state:"pending"` trap in the combined status endpoint -------------
 # Probed 2026-08-07: a commit with ZERO statuses returns
 #   {"state":"pending","total_count":0,"statuses":[]}
-# Reaching for `.state` -- the obvious field -- makes every project in this
-# org PENDING forever and defers every cut. Presence is decided by
-# total_count. The fake returns exactly that shape, so this is a real test of
-# the real jq filter and not a restatement of the rule.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 set_answer omega "success"     # no set_status -> the zero-status shape above
 O="$(gate omega)"; R=$?
 rc "a commit with zero statuses does NOT read as PENDING (the .state trap)" 0 "$R"

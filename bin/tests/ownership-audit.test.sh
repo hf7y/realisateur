@@ -29,9 +29,7 @@ trap 'rm -rf "$WORK"' EXIT
 # --- a fabricated estate ----------------------------------------------------
 # Three files: one mine, one another project's, one nobody has classified.
 # 10 lines / 40 lines / 5 lines, so every count below is checkable by hand.
-#
-# The ledger written below is a FABRICATION, not a copy, and that is the point
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mk_tree() {
   local t="$1"
   rm -rf "$t"; mkdir -p "$t/bin/lib" "$t/bin/tests"
@@ -208,9 +206,7 @@ echo "== 5. GROWTH INSIDE A RECORDED PATH IS PERMITTED, AND IS REPORTED ========
 # 74% of the real repo's mechanism is another project's, so repairing a
 # foreign file that is already here is most of the maintenance this repo can
 # be asked to do -- and under the count-only bar it was arithmetically
-# unmergeable (#144: twelve lines of headroom against a 533-line fix, and
-# --accept refusing by design).
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 T="$WORK/t5"; mk_tree "$T"
 G="$(mk_guard "$WORK/g5")"
 rm "$T/bin/nobodys.sh"; ( cd "$T" && git add -A && git commit -qm rm ) >/dev/null 2>&1
@@ -315,9 +311,7 @@ echo "== 10. WITNESS -- THE LIVE TREE (read-only) ==============================
 # A backtick pair inside OWN_MINE/OWN_THEIRS is command substitution (the
 # strings are double-quoted, not single-quoted or a heredoc) -- confirmed
 # live 2026-08-11, hf7y/realisateur#170: the consigne row's two backtick-
-# quoted words silently vanished and sourcing printed two "command not
-# found" lines. Nothing else in this suite sources the LIVE ledger, so this
-# is the one place that would catch a backtick regression before it repeats.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 LEDGER_ERR="$(bash -c "source '$REPO/bin/lib/ownership-set.sh'" 2>&1 >/dev/null)"
 [ -z "$LEDGER_ERR" ] && ok "sourcing the live ledger prints nothing to stderr" \
   || bad "sourcing the live ledger printed to stderr (unescaped backtick in a row?): $LEDGER_ERR"

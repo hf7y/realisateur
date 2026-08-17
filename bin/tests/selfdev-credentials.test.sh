@@ -212,9 +212,7 @@ STUB="$T/stub"; mkdir -p "$STUB"
 # A stub `ssh` that answers fetch_remote's `bash -s -- <args...>` shape (the
 # FILTER positional is the 4th token after "--") from $STUB_ROWS, and treats
 # any OTHER invocation (cmd_apply's one-shot commands) as "log it, succeed" --
-# see section E, which inspects this log for the delegated commands rather
-# than trusting a bare exit code.
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cat > "$STUB/ssh" <<'STUBSH'
 #!/usr/bin/env bash
 LOG="${STUB_LOG:-/dev/null}"
@@ -313,10 +311,7 @@ echo "-- D2. deploy-key symmetry grading -- the false/null jq regression ----"
 # ============================================================================
 # THE REGRESSION THIS PINS: jq's `//` treats `false` as falsy, same as
 # `null`. A first draft used `.readOnly // empty`, which turned every
-# legitimate "readOnly": false (a WRITE key -- an account's OWN repo, the
-# case this whole section exists to confirm) into empty output, which the
-# caller read as "no key registered at all". Found live while building this
-# suite, against a real fixture, before this test existed to pin it.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STUB_JSON_solo="$(printf '[{"title":"monkey-solo-solo","readOnly":false}]')"
 O="$(STUB_ROWS='solo	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
@@ -340,9 +335,7 @@ echo "-- D3. deploy-key symmetry grading -- the read_only field-name regression"
 # ============================================================================
 # THE REGRESSION THIS PINS, FOUND LIVE AGAINST THE REAL FLEET (not a fixture):
 # `gh repo deploy-key list --json title,readOnly` on gh 2.45.0 VALIDATES
-# "readOnly" as a real field name (an unknown one is refused, and the
-# refusal's own error text names "readOnly" as correct) and then does not
-#   [rest of this note: vault:realisateur/guard-archaeology-20260817.md]
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STUB_JSON_realword='[{"title":"monkey-realword-realword","read_only":false}]'
 O="$(STUB_ROWS='realword	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
@@ -368,10 +361,7 @@ t_has "real gh shape: a WRITE key on a shared repo is still flagged" "$O" "reali
 # The fail-loud default arm itself: an unrecognized readOnly-shaped value
 # must read as BLIND, never as silence. Exercised directly, not by trying to
 # reproduce a gh version skew: `has()` on the fixture object true either way,
-# so the only path left to the default arm is a value that is a matching
-# title but neither `true` nor `false` under either key name -- constructed
-# here as a broken fixture, the same way a genuinely different future gh
-# response shape would arrive.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 O="$(STUB_ROWS='oddshape	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
      STUB_JSON_realisateur='[{"title":"monkey-oddshape-realisateur","readOnly":"maybe"}]' \
@@ -385,9 +375,7 @@ echo "-- E. --apply: idempotency, converge actions, and refusals ------------"
 # ============================================================================
 # NO FIXTURE SOURCE KEY any more. --apply used to push a private copy of the
 # App key into the account from a local source path, and the source-path knobs
-# are gone with the per-account copies (realisateur#209): the credential is one
-# host-wide file and bin/selfdev-app-key.sh places it. What --apply does now is
-# DELEGATE, so what these cases assert is the delegation, not bytes on stdin.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 LOG="$T/apply.log"; : > "$LOG"
 CLEAN_SINGLE='conv-clean	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y'
