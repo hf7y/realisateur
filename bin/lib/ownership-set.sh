@@ -285,10 +285,8 @@ own_derived_from() {
   while :; do
     for cand in "bin/$b.sh" "bin/lib/$b.sh" "bin/lib/$b-set.sh" "hooks/$b.sh"; do
       [ "$cand" = "$p" ] && continue
-      # `hooks` (unlike bin/bin-lib) is a BLANKET prefix row, so own_owner
-      # matches any hooks/* path whether or not it exists -- a nonexistent
-      # hooks/$b.sh would otherwise derive-match every bin/tests/*.test.sh
-      # whose stem has no real subject. Existence on disk is the guard.
+      # `hooks` is a BLANKET prefix row, matching any hooks/* path whether or
+      # not it exists -- require it to exist, or every stem-less test derives.
       [ -f "${TREE:-.}/$cand" ] || continue
       if own_owner "$cand" >/dev/null 2>&1; then printf '%s\n' "$cand"; return 0; fi
     done

@@ -1,53 +1,32 @@
 #!/usr/bin/env bash
-# subagent-closeout.sh -- SubagentStop guard: a dirty tree at exit is a failed run.
+# subagent-closeout.sh -- SubagentStop guard: a dirty tree at exit is a failed
+# run, not a handoff (CLAUDE.md, since the 2026-07-25 sync-crontab.sh incident:
+# 76 uncommitted lines a subagent left behind, that the next autocommit
+# watcher was positioned to adopt under a human's name). Installed 2026-08-01
+# as THE FLOOR gate 3.2 (vault:realisateur/THE-FLOOR.md). Owner: realisateur.
 #
-# Installed 2026-08-01, Zach-directed, as THE FLOOR gate 3.2 (realisateur
-# vault:realisateur/THE-FLOOR.md). Owner: realisateur. senechal notified.
+# CALLS `closeout-lint --strict --repo` (2026-08-02) rather than reimplementing
+# a subset of it inline: closeout-lint also catches unpushed commits and
+# host-only branches, which a bare `git status --porcelain` cannot see (the
+# 2026-07-27 incident, distinct from 2026-07-25).
 #
-# 2026-08-02, Zach-directed: this now CALLS `closeout-lint --strict --repo`
-# instead of reimplementing a subset of it. It previously did its own inline
-# `git status --porcelain`, which sees a dirty tree and nothing else. The
-# 2026-07-25 incident it was built for (76 uncommitted lines in
-# sync-crontab.sh) is caught either way -- but the 2026-07-27 incident, where
-# a subagent woke after reporting "completed" and wrote outside its mandate,
-# leaves UNPUSHED COMMITS, which the inline check cannot see. So does a
-# host-only branch, which is a blocker under the settled definition of
-# "pushed" and which `fauche`/`transplante` refuse a repo for.
+# CONTRACT. Hook payload as JSON on stdin. Exit 0 lets the subagent stop.
+# Exit 2 BLOCKS the stop and feeds stderr back so it cleans up first.
 #
-# WHY THIS EXISTS. On 2026-07-25 a subagent left 76 uncommitted lines in
-# sync-crontab.sh -- the script that writes crontabs -- without mentioning it,
-# and the next autocommit watcher was positioned to adopt them under a human's
-# name. CLAUDE.md has said "a dirty tree at exit is a failed run" ever since.
-# That sentence was prose for six days and prose does not stop anything. This
-# is the same rule as an exit code.
+# FAILS LOUD, NOT OPEN: an unreadable payload or an unrecognized closeout-lint
+# exit code is exit 1 (visible, non-blocking), never a silent 0.
 #
-# CONTRACT. Reads the hook payload as JSON on stdin. Exit 0 lets the subagent
-# stop. Exit 2 BLOCKS the stop and feeds stderr back to the subagent, which is
-# what makes it go clean up rather than hand off a dirty tree.
+# --allow-blind: from inside a linked worktree `git worktree list` always
+# reports the main checkout, so BLIND is >= 1 BY CONSTRUCTION for any
+# worktree-isolated session -- the standard pattern here. Blocking on that
+# would block every subagent, every run. ecosim watches the BLIND population
+# instead (filed 2026-08-02) -- the right instrument for a signal that's
+# normal in ones and alarming in tens.
 #
-# FAILS LOUD, NOT OPEN. If git is missing, the payload is unreadable, or
-# closeout-lint exits a code this does not understand, it exits 1 (visible
-# error, non-blocking) rather than 0 -- silently passing is BUILD-DISCIPLINE
-# pattern 1, the failure this whole file is an instance of guarding against.
-#
-# WHY --allow-blind, given that BLIND now gates by default. Measured, not
-# assumed: from inside a linked worktree, `git worktree list` always reports
-# the main checkout, so BLIND is >= 1 BY CONSTRUCTION for any worktree-based
-# session -- and worktree isolation is the standard pattern here. On
-# 2026-08-02 every repo probed (realisateur, its worktree, senechal) returned
-# exactly 1 BLIND. A hook that blocked on that would block every subagent on
-# every run, and would be switched off within a day; a guard nobody can live
-# with protects nothing. Watching the BLIND population over time is ecosim's
-# job instead (filed 2026-08-02), which is the right instrument for a signal
-# that is normal in ones and alarming in tens.
-#
-# WHY IT DEGRADES INSTEAD OF HARD-DEPENDING. `closeout-lint --repo` ships in
-# realisateur and reaches this hook through the ~/.local/bin shim, so there is
-# a window where the installed copy predates the flag. Probing for it and
-# falling back to the original inline check keeps the 2026-07-25 protection
-# intact during that window, and says loudly on stderr what is not being
-# checked. Hard-depending would turn "the shim is one commit behind" into
-# "every subagent stop errors".
+# Degrades instead of hard-depending on closeout-lint --repo because the
+# ~/.local/bin shim can lag one commit behind main; probing and falling back
+# to the original inline check keeps the 2026-07-25 protection intact through
+# that window, loudly, rather than erroring every subagent stop.
 set -uo pipefail
 
 log() { printf 'subagent-closeout: %s\n' "$*" >&2; }
@@ -67,28 +46,18 @@ if grep -qE '"stop_hook_active"[[:space:]]*:[[:space:]]*true' <<<"$payload"; the
   exit 0
 fi
 
-# cwd is the SESSION's cwd, not necessarily the tree a subagent worked in --
-# a worktree-isolated or freshly-cloned subagent writes elsewhere entirely.
+# cwd is the SESSION's cwd, not necessarily the tree a subagent worked in.
 # Fall back to $PWD if the payload lacks it.
 cwd="$(sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p;q' <<<"$payload")"
 [ -n "$cwd" ] || cwd="$PWD"
 [ -d "$cwd" ] || { log "cwd from payload is not a directory: $cwd"; exit 1; }
 
-# agent_transcript_path (SubagentStop payload field) is the SUBAGENT's own
-# transcript -- distinct from the session's. Used below to find trees it
-# actually wrote to, when they are not cwd (#363).
+# The SUBAGENT's own transcript, used below to find trees it wrote to (#363).
 agent_transcript="$(sed -n 's/.*"agent_transcript_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p;q' <<<"$payload")"
 
 command -v git >/dev/null 2>&1 || { log "git not on PATH -- cannot check tree state"; exit 1; }
 
-# #363: cwd alone misses a subagent that cloned or was worktree-isolated
-# somewhere else -- the observed failure went both directions: cwd's
-# pre-existing, unrelated branches got reported as this run's findings
-# (false positive), and a tree the subagent actually dirtied went unchecked
-# entirely (false negative, the one that loses work). Write/Edit/NotebookEdit
-# tool calls in the subagent's OWN transcript carry an unambiguous absolute
-# file_path -- far more reliable than trying to parse `git clone`/`cd` out of
-# free-form Bash commands, which this deliberately does not attempt.
+# #363: cwd misses a subagent that cloned or was worktree-isolated elsewhere.
 discover_written_trees() {
   local transcript="$1" exclude="$2"
   [ -n "$transcript" ] && [ -r "$transcript" ] || return 0
@@ -113,9 +82,7 @@ while IFS= read -r extra; do
   [ -n "$extra" ] && trees+=("$extra")
 done < <(discover_written_trees "$agent_transcript" "$cwd")
 
-# Not a git repo is not a violation; there is simply nothing to check. Only
-# collapses to a no-op when EVERY discovered tree is a non-repo -- one real
-# repo among them still needs auditing.
+# Not a git repo is not a violation; no-op only when every tree is a non-repo.
 any_repo=0
 for t in "${trees[@]}"; do
   git -C "$t" rev-parse --is-inside-work-tree >/dev/null 2>&1 && any_repo=1
