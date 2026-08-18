@@ -134,7 +134,6 @@ hasnt "H9 ...and the old name is not written from a hardcoded copy" \
     "$(cat "$T/edits")" "--add-label needs-human"
 
 section "I. a grammar that did not load is BLIND, never an empty grammar"
-# With --apply this would provision nothing and say so in the past tense.
 out="$(ETIQUETTE_GRAMMAR="$T/nope.tsv" bash "$SCRIPT" o/r 2>&1)"; code=$?
 rc  "I1 a missing grammar exits 6 (BLIND), not 0"  6 "$code"
 has "I2 ...and says it could not read the RULES"   "$out" "not \"there are no rules\""
@@ -146,7 +145,6 @@ rc  "I4 an unreadable LABEL list is BLIND, not 'no labels'" 6 \
        GH_LABEL_FAIL="HTTP 403" bash "$SCRIPT" o/r >/dev/null 2>&1; echo $?)"
 
 section "J. the grammar is a floor, not a whitelist"
-# Deleting unrecognised labels is one bad row from erasing a repo's taxonomy.
 printf 'needs-a-person\tOnly a human.\ndeferred\tParked.\ninvented-here\tfixture.\nsomebodys-own-label\tnot ours\n' > "$T/labels.txt"
 : > "$T/edits"; out="$(run --apply 2>&1)"
 hasnt "J1 a label absent from the grammar is never deleted" "$(cat "$T/edits")" "label delete"

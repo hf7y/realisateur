@@ -75,7 +75,6 @@ mapfile -t GRAMMAR < <(grep -v '^#' "$GRAMMAR_FILE" | grep -v '^[[:space:]]*$')
 
 g_field() { printf '%s' "$1" | cut -f"$2"; }
 
-# --- no repo named: print the grammar and stop --------------------------
 if [ -z "$REPO" ]; then
   say "etiquette -- the estate's issue-label grammar"
   say "  one home: $GRAMMAR_FILE"
@@ -90,8 +89,8 @@ if [ -z "$REPO" ]; then
   exit 0
 fi
 
-# The one derived label. Read from the grammar rather than typed here, so this
-# file cannot disagree with labels.tsv about which label it reconciles.
+# Read from the grammar, not typed here, so this file cannot disagree with
+# labels.tsv about which label it reconciles.
 LABEL=''
 for g in "${GRAMMAR[@]}"; do
   [ "$(g_field "$g" 3)" = 'derived:decision' ] && { LABEL="$(g_field "$g" 1)"; break; }
@@ -133,8 +132,8 @@ done
 say ""
 
 # --- 2. does each open issue's derived label match its body? ------------
-# [] means both "missing repo" and "empty one": the exit code is all that
-# separates "nothing waiting" from "could not look".
+# [] means both "missing repo" and "empty one"; only the exit code separates
+# "nothing waiting" from "could not look".
 json="$(gh issue list --repo "$REPO" --state open --limit 200 \
         --json number,title,body,labels 2>&1)" || {
   printf '%s: BLIND -- could not read %s: %s\n' "$CLI_NAME" "$REPO" "$json" >&2
