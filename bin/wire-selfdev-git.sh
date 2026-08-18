@@ -75,7 +75,7 @@ fi
 
 # --- 3. ssh config -----------------------------------------------------------
 # Written to a SEPARATE file that ~/.ssh/config Includes, so this script never
-# rewrites a config a human may also be editing. Same reason focus-commit.sh
+# rewrites a config a human may also be editing -- the multi-writer reason
 # exists: two writers, one file, is how content gets lost.
 if [ -f "$INC" ] && grep -q "^Host $ALIAS\$" "$INC" 2>/dev/null; then
   ok "ssh alias $ALIAS present"

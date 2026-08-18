@@ -61,6 +61,13 @@ done
 CARRIES='
 bin/gh	bin/gh-sign.sh
 bin/lib/body-grammar.sh	bin/lib/body-grammar.sh
+bin/check-project-busy	bin/check-project-busy.sh
+bin/claim-drift	bin/claim-drift.sh
+bin/closeout-lint	bin/closeout-lint.sh
+bin/discipline	bin/discipline.sh
+bin/notify-senechal	bin/notify-senechal.sh
+bin/silence-audit	bin/silence-audit.sh
+BUILD-DISCIPLINE.md	BUILD-DISCIPLINE.md
 '
 
 say()  { printf '%s\n' "$*"; }

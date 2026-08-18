@@ -143,9 +143,7 @@ stamp-verb-build.sh
 PROP_PAYLOAD_SCRIPTS="
 check-project-busy.sh
 closeout-lint.sh
-focus-commit.sh
 notify-senechal.sh
-precipitation-scan.sh
 silence-audit.sh
 gh-sign.sh
 "
@@ -157,9 +155,7 @@ gh-sign.sh
 PROP_PAYLOAD_PENDING="
 check-project-busy.sh
 closeout-lint.sh
-focus-commit.sh
 notify-senechal.sh
-precipitation-scan.sh
 silence-audit.sh
 "
 PROP_LEAK_BOUND=7

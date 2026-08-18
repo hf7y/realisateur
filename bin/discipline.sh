@@ -41,12 +41,13 @@ CLI_USAGE='  discipline              print the whole baseline
   discipline --protocols  print only the ecosystem protocols
   discipline --path       print the file the text is read from'
 
-# Self-locating: this script is reached through a ~/.local/bin shim, so $0 is
-# the shim, not this file. BASH_SOURCE is the real path. Unlike
-# install-shims.sh -- which deliberately is NOT self-locating because it
-# answers "what should the installed shim point at" -- this one answers "where
-# is my own text", and that is always next to this file.
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Self-locating, through a SYMLINK. Installed host-wide, this file is reached
+# as /usr/local/bin/discipline pointing into the verb build, and BASH_SOURCE is
+# then the symlink, whose parent is /usr/local. Without readlink -f, SRC
+# becomes /usr/local/BUILD-DISCIPLINE.md and every invocation dies. The text is
+# always next to the REAL file, never next to the name it was called by.
+# Witness: discipline --path
+HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 SRC="$HERE/BUILD-DISCIPLINE.md"
 
 die() { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }

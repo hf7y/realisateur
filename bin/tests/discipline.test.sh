@@ -36,7 +36,7 @@ printf '%s' "$out" | grep -q '^## Ecosystem protocols' \
 # The protocol COMMAND NAMES must survive, because install-shims.sh derives
 # every shim from these backticked tokens. If they vanish, working guards are
 # deleted as a side effect of a docs edit.
-for c in notify-senechal focus-commit check-project-busy consulte; do
+for c in notify-senechal check-project-busy consulte; do
   printf '%s' "$out" | grep -q "$c" \
     && ok "A5  names \`$c\`" || bad "A5  names \`$c\`"
 done

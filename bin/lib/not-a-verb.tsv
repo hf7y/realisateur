@@ -84,4 +84,3 @@ scheduler	tempo.sh	the pace regulator behind the dispatcher, not a door: its onl
 realisateur	hygiene-lint.sh	the implementation `epluche hygiene-lint` execs, carried onto realisateur's bashified branch by hf7y/realisateur#191 so the verb needs no checkout. Nobody types `hygiene-lint.sh`; they type `epluche hygiene-lint`. It travels in the build to sit BESIDE bin/epluche, not to be on PATH.
 realisateur	closeout-lint.sh	same shape: the implementation behind `epluche closeout-lint`, carried by #191. Its caller is a session close, never a person choosing a command by that name.
 realisateur	reach-lint.sh	same shape: the implementation behind `epluche reach-lint`, carried by #191.
-realisateur	precipitation-scan.sh	the implementation behind `arpente precipitation-scan`, carried by #191. Note bin/precipitation-scan.sh ALSO has a row in bin/lib/not-a-spend.tsv -- the two ledgers answer different questions, and a carried implementation that names a vendor needs both.

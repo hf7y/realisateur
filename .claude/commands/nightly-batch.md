@@ -24,19 +24,15 @@ review step until the morning.
 previous nightly run left work in progress (check the last report under
 `~/reports/realisateur/`), pick up from there rather than starting over.
 
-**Run `bin/precipitation-scan.sh`** (offline, no AI cost) before reasoning
-about anything else. It ranks promotion signals across every registered
-project's open issues -- re-arrival candidates and interface clusters,
-doctrine in `vault:realisateur/PRECIPITATION.md`. **In an unattended pass, treat reports B and
-C as READ-ONLY.** They are inference over prose, and their most convincing
-output is the most likely to be wrong -- a 5-project "cluster" on 2026-07-26
-turned out to be a shared boilerplate footer (worked example in
-`vault:realisateur/PRECIPITATION.md`). Confirming a candidate means opening its members and
-judging shape stability, which is an `/ideate` job with a human present, not
-a batch one. What this pass MAY do: file a striking candidate as an issue
-for the next interactive pass to judge. What it must NOT do: stamp `(re-arrival: …)`/`[iface: …]`, reorder
-anything, or change a weight on the strength of the scan alone. A promotion
-nobody stated is the silent reorder `/ideate` 4.5 forbids.
+**Promotion signals are inference over prose, and the most convincing output
+is the most likely to be wrong** -- a 5-project "cluster" on 2026-07-26 turned
+out to be a shared boilerplate footer (worked example in
+`vault:realisateur/PRECIPITATION.md`). Judging one means opening its members
+and reading them, which is an `/ideate` job with a human present, not a batch
+one. This pass MAY file a striking candidate as an issue for the next
+interactive pass. It must NOT stamp `(re-arrival: …)`/`[iface: …]`, reorder
+anything, or change a weight. A promotion nobody stated is the silent reorder
+`/ideate` 4.5 forbids.
 
 RETIRED 2026-08-07: `ecosystem-survey.sh`, `milestone-audit.sh` and
 `steward-survey.sh`. Four scripts each re-implemented the same

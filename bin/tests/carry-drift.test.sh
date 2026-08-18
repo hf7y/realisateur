@@ -15,6 +15,11 @@ set -uo pipefail
 CD="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/carry-drift.sh"
 harness_tmp
 
+# _decl_rows <carry-drift.sh> -- the guard's own CARRIES table, as <b>TAB<m>.
+_decl_rows() {
+  sed -n "/^CARRIES='/,/^'$/p" "$1" | grep -F "$(printf '\t')"
+}
+
 # A repository with a main worktree and a `bashified` branch carrying two
 # files: one replica, one drifted.
 mk_repo() {
@@ -24,8 +29,15 @@ mk_repo() {
   git -C "$r" config user.email t@t; git -C "$r" config user.name t
   printf 'same\n'    > "$r/bin/lib/cli-guard.sh"
   printf 'main v2\n' > "$r/bin/reach-lint.sh"
-  printf '#!/usr/bin/env bash\necho shim\n' > "$r/bin/gh-sign.sh"
-  printf 'grammar\n' > "$r/bin/lib/body-grammar.sh"
+  # Every DECLARED carry, read out of the guard itself rather than retyped
+  # here: the declaration set grows, and a fixture that lists it by hand goes
+  # stale silently -- every new row then reports BLIND ("declared, and not in
+  # this tree either") and every case below fails for a reason none of them
+  # is about.
+  _decl_rows "$CD" | while IFS=$'\t' read -r _b _m; do
+    case "$_m" in */*) mkdir -p "$r/${_m%/*}" ;; esac
+    printf 'carried %s\n' "$_b" > "$r/$_m"
+  done
   git -C "$r" add -A >/dev/null; git -C "$r" commit -qm main
   git -C "$r" checkout -q --orphan bashified
   git -C "$r" rm -q -rf . >/dev/null 2>&1 || :
@@ -33,10 +45,12 @@ mk_repo() {
   printf 'same\n'    > "$r/bin/lib/cli-guard.sh"
   printf 'main v1\n' > "$r/bin/reach-lint.sh"   # the drift
   printf 'native\n'  > "$r/bin/branch-only"       # branch-native: never graded
-  # the two DECLARED carries, present and matching, so the cases below are
+  # the DECLARED carries, present and matching, so the cases below are
   # about one property each
-  printf '#!/usr/bin/env bash\necho shim\n' > "$r/bin/gh"
-  printf 'grammar\n' > "$r/bin/lib/body-grammar.sh"
+  _decl_rows "$CD" | while IFS=$'\t' read -r _b _m; do
+    case "$_b" in */*) mkdir -p "$r/${_b%/*}" ;; esac
+    printf 'carried %s\n' "$_b" > "$r/$_b"
+  done
   git -C "$r" add -A >/dev/null; git -C "$r" commit -qm carry
   git -C "$r" checkout -q master 2>/dev/null || git -C "$r" checkout -q main
   printf '%s' "$r"
