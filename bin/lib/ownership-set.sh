@@ -232,8 +232,9 @@ bin/closeout-lint.sh                       bashify
 bin/retire-check.sh                        realisateur
 bin/decision-rot.sh                        realisateur
 bin/tests/decision-rot.test.sh             realisateur
-bin/needs-zach.sh                          realisateur
-bin/tests/needs-zach.test.sh               realisateur
+bin/etiquette.sh                           realisateur
+bin/tests/etiquette.test.sh                realisateur
+bin/lib/labels.tsv                         realisateur
 bin/rot-ratchet.sh                         realisateur
 bin/tests/rot-ratchet.test.sh              realisateur
 .github/workflows/rot-ratchet.yml          realisateur
