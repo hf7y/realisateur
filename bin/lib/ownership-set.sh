@@ -198,9 +198,6 @@ OWN_THEIRS="
 bin/install-shims.sh                       senechal
 bin/notify-senechal.sh                     senechal
 bin/tests/notify-senechal-footer.test.sh   senechal
-provision/monkey-vm.sh                     senechal
-provision/monkey-tailscale.sh              senechal
-provision/monkey-nopasswd.sh               senechal
 provision/monkey-scheduler-system.sh       scheduler
 bin/check-project-busy.sh                  scheduler
 bin/deploy-drift.sh                        scheduler
