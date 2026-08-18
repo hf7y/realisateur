@@ -160,13 +160,7 @@ For each unarchived artifact:
   and a root `CLAUDE.md` (adapt the templates in scheduler's `examples/`
   to what the new project actually is -- `CLAUDE.md.template` is the
   "suggest `/ideate <project>` instead of implementing" guardrail, worth
-  every new project having from day one), then register it with the
-  scheduler as `SCHEDULER.md` documents.
-
-  **Dispatch registration is in flux** -- hf7y/realisateur#228 is retiring
-  per-account cron and `usage-paced-runner`. Check that issue before
-  copying a crontab shape out of an older project; do not add a new
-  per-account cron line on monkey without reading it.
+  every new project having from day one).
 - Move the source artifact into `archive/` (create it if missing) once
   acted on, or once a real decision was made not to (note why in the
   report either way).
