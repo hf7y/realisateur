@@ -159,9 +159,9 @@ landed, so it needs no clone of that repo and no push access to it.
 
 ## 4. Commit as you go
 
-Commit realisateur's own repo (inbox archival, any scaffolding that lives
-here) as each artifact is processed, not all in one giant commit at the
-end. Each new project gets its own first commit(s) in its own repo.
+Commit realisateur's own repo as each artifact is processed, not all in one
+giant commit at the end. Each new project gets its own first commit in its own
+repo.
 
 ## 5. Flag what you built, and anything needing the user's own judgment
 
@@ -170,18 +170,16 @@ One issue per item, on `hf7y/realisateur`:
 - **Every new project scaffolded tonight** -- what artifact it came from,
   what was inferred, where it lives, whether it got a scheduler
   registration.
-- **A genuine judgment call needing the user's own decision** -- not
-  "should I build this" (default: yes), but something actually
-  ambiguous: two very different readings of the same artifact, or a case
-  where a GitHub remote (real credentials) seemed like it might genuinely
-  be warranted instead of a local bare one.
+- **A genuine judgment call needing the user's own decision** -- not "should I
+  build this" (default: yes), but something actually ambiguous: two very
+  different readings of one artifact. File it with `DECISION:` as line 1, per
+  `etiquette`, so it lands in the needs-human queue rather than beside it.
 
 ## 6. Report in the run, not in a file
 
 Do NOT write a dated report file. scheduler's standing rule 5 bans it --
 *"NO NEW MARKDOWN FILES. Do not write a handoff, session record, design note,
-sprint summary, or retrospective. Prose is not a deliverable."* This command
-told you to write one until 2026-08-17.
+sprint summary, or retrospective. Prose is not a deliverable."*
 
 End the run by saying, in the run's own output: which artifacts were
 processed and what was inferred, which projects were scaffolded and whether
