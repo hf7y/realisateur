@@ -4,6 +4,12 @@ description: Bashify a project -- survey what it does, coin its verbs, write the
 argument-hint: "[project-name] [verb]"
 ---
 
+<!-- Source of truth: hf7y/realisateur:.claude/commands/bashify.md. Installed
+     verbatim at USER level, so it runs from whatever repo you are in: where
+     the text below says "this repo" it means realisateur, not your cwd. Every
+     command it names is a verb on PATH and is cwd-independent. Do not edit the
+     installed copy -- edit the repository. -->
+
 **bashify** is the verb of `basheur`. To bashify a thing is to state what it
 does as a contract a shell can hold, so the agent standing in for it becomes
 unnecessary. The agency is not destroyed; it is **moved**.

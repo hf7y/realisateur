@@ -4,13 +4,19 @@ description: Halve a repo's prose by deleting the mechanisms that manufacture it
 argument-hint: "<repo-name>"
 ---
 
+<!-- Source of truth: hf7y/realisateur:.claude/commands/reap.md. Installed
+     verbatim at USER level, so it runs from whatever repo you are in: where
+     the text below says "this repo" it means realisateur, not your cwd. Every
+     command it names is a verb on PATH and is cwd-independent. Do not edit the
+     installed copy -- edit the repository. -->
+
 Reap `$ARGUMENTS`. Three targets: **prose in half, foreign mechanism in half,
 75% of issues closed by working them.** realisateur was the test case —
 19,458 → 9,670 prose lines, 50 of 66 issues closed (hf7y/realisateur#366).
 
 ## 1. Measure first
 
-`gh issue list --state open | length` · `bash bin/ownership-audit.sh` · and the
+`gh issue list --state open | length` · `bash bin/ownership-audit.sh` from a realisateur checkout · and the
 prose count from the repo's `.prose-ratchet`. Write the three numbers down;
 every later claim is against them.
 

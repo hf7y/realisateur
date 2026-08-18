@@ -56,7 +56,11 @@ mkdir -p "$META"; g init "$META"
 mk_build "2026-08-04T0130Z" "vim-arcade:entraine senechal:installe"
 mk_build "2026-08-05T0130Z" "vim-arcade:entraine senechal:installe scheduler:arme"
 
-run() { VERB_BUILD_ROOT="$ROOT" INSTALLE_BIN="$BIN" bash "$INSTALL" --remote "file://$META" "$@"; }
+CMD_DEST="$TMP/claude/commands"
+HOOK_DEST="$TMP/claude/hooks"
+run() { VERB_BUILD_ROOT="$ROOT" INSTALLE_BIN="$BIN" \
+        CMD_DEST="$CMD_DEST" HOOK_DEST="$HOOK_DEST" \
+        bash "$INSTALL" --remote "file://$META" "$@"; }
 
 echo "verb-build contract"
 
@@ -183,6 +187,33 @@ for f in "$BIN"/*; do
     case "$(readlink "$f")" in "$ROOT/current/"*) ours=$((ours + 1)) ;; esac
 done
 check "count check: links into the build root match the manifest row count" "$ours" "2"
+
+# --- 9. the non-verb payload: slash commands and hooks ------------------
+# A slash command is a FILE Claude Code reads, not a name on PATH, so it can
+# never be a verb. Before #389 the only installer was bin/install-shims.sh
+# from a realisateur checkout, which is what made the commands the last
+# clone-dependent thing in the estate. --link must carry them too, or
+# "clone-free" is true only of the half that happens to be executable.
+mk_build "2026-08-10T0130Z" "vim-arcade:entraine scheduler:arme"
+mkdir -p "$META/realisateur/commands" "$META/realisateur/hooks"
+printf 'slash body\n' > "$META/realisateur/commands/cloture.md"
+printf '#!/bin/sh\n' > "$META/realisateur/hooks/subagent-closeout.sh"
+g -C "$META" add -A; g -C "$META" commit -m "payload"; g -C "$META" tag -f "build/2026-08-10T0130Z"
+run --build 2026-08-10T0130Z --apply --link >/dev/null 2>&1
+check "a slash command in the build is installed into CMD_DEST" \
+      "$(cat "$CMD_DEST/cloture.md" 2>/dev/null)" "slash body"
+check "...VERBATIM -- byte-identical to what the build carries, so carry-drift can grade it" \
+      "$(cmp -s "$META/realisateur/commands/cloture.md" "$CMD_DEST/cloture.md" && echo same)" "same"
+check "a hook in the build is installed executable into HOOK_DEST" \
+      "$([ -x "$HOOK_DEST/subagent-closeout.sh" ] && echo yes)" "yes"
+
+# A symlink at the destination is never ours, and cp would write THROUGH it
+# and clobber whatever it points at. Same rule as install-shims.sh.
+victim="$TMP/victim.md"; printf 'do not clobber\n' > "$victim"
+ln -sfn "$victim" "$CMD_DEST/cloture.md"
+run --build 2026-08-10T0130Z --apply --link >/dev/null 2>&1
+check "a symlink at the destination is skipped, not written through" \
+      "$(cat "$victim")" "do not clobber"
 
 echo
 summary
