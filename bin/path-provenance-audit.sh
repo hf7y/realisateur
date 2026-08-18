@@ -59,9 +59,7 @@ SWEPT_DIRS="$HOME_DIR/.local/bin $HOME_DIR/bin"
 
 # --- host class -------------------------------------------------------------
 # uid, not hostname. vault:realisateur/MONKEY.md's provisioned accounts are uid 3000-3099 and
-# that is the fact that makes them provisioned; a hostname test would grade
-# zach@monkey (a hands account with a human's habits) as provisioned, and
-# would grade a future self-dev account on another host as a daily driver.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 HOST_CLASS="${PATH_PROVENANCE_CLASS:-}"
 if [ -z "$HOST_CLASS" ]; then
   _uid="$(id -u 2>/dev/null || echo 0)"
@@ -200,9 +198,7 @@ FINDING_LINES=""; CENSUS_JSON=""
 
 # classify one swept entry and fold it into the running totals. Shared by the
 # top-level sweep and the one-level descent into retired-*/ below, so a
-# dangling symlink left behind by a hand retirement is held to the same
-# ORPHAN check as a live shim -- not silently skipped for being in a
-# subdirectory. $1 = actual path to classify, $2 = display name for output.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 sweep_entry() {
   local f="$1" disp="$2" st ow de
   N_TOTAL=$((N_TOTAL + 1))
@@ -242,9 +238,7 @@ while IFS= read -r d; do
     if [ -d "$f" ] && [ ! -L "$f" ]; then
       # A plain subdirectory of a swept dir is not itself a PATH entry, so it
       # is skipped -- except retired-*/, a hand-made holding pen for shims
-      # pulled off PATH rather than deleted outright (see hf7y/realisateur#204).
-      # Its contents dangle exactly like a live shim would once their target
-      # is removed, and nothing else censuses them.
+      #   [rest: vault:realisateur/guard-archaeology-20260817.md]
       case "${f##*/}" in
         retired-*)
           for rf in "$f"/*; do
@@ -343,8 +337,6 @@ fi
 
 # 6. fleetview -- can the provisioned class be measured AT ALL from a host
 #    that has senechal on it? Deliberately NOT modelled as BLIND: the probe
-#    succeeds, and its answer is that the vision is unmet (hf7y/senechal#111).
-# `-d` is asked of the account home, NOT of its .local/bin: an unreadable
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
 _self="$(cd "$HOME_DIR" 2>/dev/null && pwd -P)"
 _fleet_readable=0; _fleet_total=0
@@ -483,9 +475,7 @@ fi
 
 # ORDER: A POSITIVE FINDING OUTRANKS AN INABILITY TO SEE SOMETHING ELSE.
 # Both are non-zero, so neither grades as clean either way -- but if BLIND
-# were tested first, one unreachable probe (`gh` absent on a headless account)
-# would mask the regression the ratchet exists to catch, and the run would
-# report "I could not look" about a build that has a name for what broke.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ -n "$regressed" ]; then
   echo "path-provenance-audit: REGRESSION:$regressed held when the ratchet was accepted." >&2
   [ "$blind" -gt 0 ] && echo "path-provenance-audit: (also BLIND on:$blindlist)" >&2
@@ -494,8 +484,6 @@ fi
 
 # ANY BLIND, not merely a blind on a ratcheted check. bin/thermostat-wiring.sh
 # tolerates the unratcheted case on the argument that it costs nothing to be
-# unable to measure something that was not yet true. That is right for a check
-# about a repository's contents and wrong here: this guard's subject is a live
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$blind" -gt 0 ]; then
   echo "path-provenance-audit: BLIND on:$blindlist" >&2

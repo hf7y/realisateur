@@ -2,8 +2,8 @@
 # The SHARE and the FILE LIST are bars and --accept only ever improves
 # them; the line count is the baseline growth is measured from.
 # See bin/ownership-audit.sh.
-# accepted 2026-08-17T11:55:49-05:00
-foreignlines 18860
+# accepted 2026-08-17T21:28:56-05:00
+foreignlines 18851
 foreignshare 553
 file .claude/commands/bashify.md
 file .claude/commands/cloture.md

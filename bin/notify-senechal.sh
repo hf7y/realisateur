@@ -190,7 +190,10 @@ title="$(printf '%s' "$text" | head -1 | cut -c1-72)"
 # realisateur#220). `scheduler -i` stamped every issue it filed with
 #
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
-body="$(printf '%s\n\n```senechal-door\n%s\n```\n\n---\nfiled %s via `notify-senechal` on %s\n\nsenechal absorbs this with `tools/absorb-notices.py --write`; closing IS the\nacknowledgement. If it was REJECTED, the payload above is wrong or the entry\nalready exists -- fix it at the caller, not by hand here.\n' \
+# TRAP: line 1 and the DEFERRED block satisfy bin/gh-sign.sh, which refuses a
+#   body declaring no DECISION:/NO-DECISION: or carrying no ledger. Delete them
+#   as boilerplate and every call dies wherever the shim is live (#356).
+body="$(printf 'NO-DECISION: @zach -- a typed door note; it records a fact and asks nothing.\n\n%s\n\n```senechal-door\n%s\n```\n\n---\nfiled %s via `notify-senechal` on %s\n\nsenechal absorbs this with `tools/absorb-notices.py --write`; closing IS the\nacknowledgement. If it was REJECTED, the payload above is wrong or the entry\nalready exists -- fix it at the caller, not by hand here.\n\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n' \
   "$text" "$payload" "$(date '+%Y-%m-%d %H:%M')" "$(hostname -s 2>/dev/null || hostname)")"
 
 echo "notify-senechal: filing to $DEST_REPO as from:$FROM_PROJECT ..."
