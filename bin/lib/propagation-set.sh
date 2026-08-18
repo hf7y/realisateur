@@ -143,23 +143,19 @@ stamp-verb-build.sh
 PROP_PAYLOAD_SCRIPTS="
 check-project-busy.sh
 closeout-lint.sh
-focus-commit.sh
 notify-senechal.sh
-precipitation-scan.sh
 silence-audit.sh
 gh-sign.sh
 "
 
 # --- THE LEAK, with a bound on it -------------------------------------------
 # PAYLOAD-class scripts that are NOT yet declared on any bashified branch.
-# realisateur's bashified branch declares THREE verbs (arpente, epluche,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+# realisateur's bashified branch declares TWO verbs: consigne and gh. It was
+# five until arpente, epluche and juge were retired 2026-08-18 (#382).
 PROP_PAYLOAD_PENDING="
 check-project-busy.sh
 closeout-lint.sh
-focus-commit.sh
 notify-senechal.sh
-precipitation-scan.sh
 silence-audit.sh
 "
 PROP_LEAK_BOUND=7
@@ -181,6 +177,7 @@ carry-drift.sh
 defere.sh
 retire-check.sh
 decision-rot.sh
+needs-zach.sh
 rot-ratchet.sh
 directive-prose.sh
 cut-verb-build.sh

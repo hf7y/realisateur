@@ -37,7 +37,7 @@ When dispatching a subagent to do work in this ecosystem:
 
 Run **`discipline`** before marking anything done. It prints the
 build-discipline checklist and the ecosystem protocols — what to do when a
-change reaches outside this repo (senechal, focus-commit, check-project-busy,
+change reaches outside this repo (senechal, check-project-busy,
 consulte). `discipline --checklist` and `discipline --protocols` print one
 half each.
 

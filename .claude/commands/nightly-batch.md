@@ -24,30 +24,19 @@ review step until the morning.
 previous nightly run left work in progress (check the last report under
 `~/reports/realisateur/`), pick up from there rather than starting over.
 
-**Run `bin/precipitation-scan.sh`** (offline, no AI cost) before reasoning
-about anything else. It ranks promotion signals across every registered
-project's open issues -- re-arrival candidates and interface clusters,
-doctrine in `vault:realisateur/PRECIPITATION.md`. **In an unattended pass, treat reports B and
-C as READ-ONLY.** They are inference over prose, and their most convincing
-output is the most likely to be wrong -- a 5-project "cluster" on 2026-07-26
-turned out to be a shared boilerplate footer (worked example in
-`vault:realisateur/PRECIPITATION.md`). Confirming a candidate means opening its members and
-judging shape stability, which is an `/ideate` job with a human present, not
-a batch one. What this pass MAY do: file a striking candidate as an issue
-for the next interactive pass to judge. What it must NOT do: stamp `(re-arrival: …)`/`[iface: …]`, reorder
-anything, or change a weight on the strength of the scan alone. A promotion
-nobody stated is the silent reorder `/ideate` 4.5 forbids.
+**Promotion signals are inference over prose, and the most convincing output
+is the most likely to be wrong** -- a 5-project "cluster" on 2026-07-26 turned
+out to be a shared boilerplate footer (worked example in
+`vault:realisateur/PRECIPITATION.md`). Judging one means opening its members
+and reading them, which is an `/ideate` job with a human present, not a batch
+one. This pass MAY file a striking candidate as an issue for the next
+interactive pass. It must NOT stamp `(re-arrival: …)`/`[iface: …]`, reorder
+anything, or change a weight. A promotion nobody stated is the silent reorder
+`/ideate` 4.5 forbids.
 
-RETIRED 2026-08-07: `ecosystem-survey.sh`, `milestone-audit.sh` and
-`steward-survey.sh`. Four scripts each re-implemented the same
-`schedule/*.conf` enumeration, nothing ran any of them, and two computed the
-same FOCUS.md fact with a character-identical expression and printed it under
-two different names. For per-project git health and open questions use
-`scheduler status <project>` directly, which is what `ecosystem-survey.sh`
-was calling. See `bin/tests/guard-estate.test.sh` for the standard the
-survivors are now held to, and for what is knowingly given up.
-
-(The third survey was `bin/hygiene-lint.sh`, retired: hf7y/realisateur#265.)
+For per-project git health and open questions use `scheduler status
+<project>` directly. The four survey scripts that wrapped it are retired
+(hf7y/realisateur#265); `bin/tests/guard-estate.test.sh` holds the survivors.
 
 **Read the answers on your own issues and process them.** Zach answers by
 commenting and LEAVING THE ISSUE OPEN -- state and labels say nothing about
@@ -104,20 +93,15 @@ reason from outside this loop.
 ## 3. Infer and wire up, one artifact at a time
 
 **Before writing into ANY repo other than realisateur's own, run
-`bin/check-project-busy.sh <project>`** (offline, ~instant -- flock-probes
-that project's own scheduler job locks). If it reports `BUSY: <job-name>`,
-that project's automation is mid-run against the same files RIGHT NOW:
-**defer the write**, note it in the report and in the issue it belongs to,
-and carry on with the rest of this run. This is the
-same guard `/ideate` has used since the 2026-07-24 concurrency finding,
-and it belongs here at least as much: an unattended pass has no human
-watching to notice it just edited a file out from under a live job.
+`check-project-busy <project>`** (offline, ~instant -- flock-probes that
+project's own scheduler job locks). On `BUSY: <job-name>`, that project's
+automation is mid-run against the same files: **defer the write**, note it in
+the issue it belongs to, and carry on. An unattended pass has no human
+watching to notice it edited a file out from under a live job.
 
-Applies to the **scheduler repo too** (`check-project-busy.sh scheduler`)
--- registering a new project edits `schedule/*.conf` and `_paced.conf`
-while scheduler is itself a paced participant with runs of its own.
-Scaffolding a genuinely new project is the one exempt case: nothing is
-dispatching against a repo that did not exist a minute ago.
+Applies to the **scheduler repo too** -- registering a project edits
+`schedule/*.conf` while scheduler is itself a paced participant. Scaffolding a
+genuinely new project is the one exempt case.
 
 For each unarchived artifact:
 
@@ -142,7 +126,7 @@ For each unarchived artifact:
   triage** (see `vault:realisateur/STABILITY-MILESTONES.md`): is this idea required to reach
   that project's *current* stability milestone (its open `milestone`-
   labelled issue)? If **yes**, it's `active` -- build/queue it normally. If
-  **no**, **park it**: `bin/defere.sh '<one line>' --project <name>` to
+  **no**, **park it**: `defere '<one line>' --project <name>` to
   file it as a `deferred` issue, and do NOT build it tonight. Parking is
   the default for anything beyond the current bar --
   building past the milestone unprompted is the failure mode this convention
@@ -172,19 +156,11 @@ For each unarchived artifact:
   nightly iteration (most agent/codebase projects are), wire it into the
   scheduler exactly as `SCHEDULER.md` documents for realisateur itself:
   a GitHub repo under `hf7y` (its issue tracker is where the project's
-  prose lives -- do NOT create `.scheduler/FOCUS.md`, `QUESTIONS.md` or
-  `BLOCKERS.md`; scaffolding them is how the retired surfaces kept being
-  reborn after hf7y/scheduler#66), a `.claude/commands/nightly-batch.md`
+  prose lives), a `.claude/commands/nightly-batch.md`
   and a root `CLAUDE.md` (adapt the templates in scheduler's `examples/`
   to what the new project actually is -- `CLAUDE.md.template` is the
   "suggest `/ideate <project>` instead of implementing" guardrail, worth
-  every new project having from day one), then register it with the
-  scheduler as `SCHEDULER.md` documents.
-
-  **Dispatch registration is in flux** -- hf7y/realisateur#228 is retiring
-  per-account cron and `usage-paced-runner`. Check that issue before
-  copying a crontab shape out of an older project; do not add a new
-  per-account cron line on monkey without reading it.
+  every new project having from day one).
 - Move the source artifact into `archive/` (create it if missing) once
   acted on, or once a real decision was made not to (note why in the
   report either way).
@@ -198,9 +174,6 @@ files under `~/.local/share`. Standing rule: realisateur *owns* the thing
 it generates; senechal *owns knowing it exists*. It files a labelled issue
 on `hf7y/senechal` with `gh` directly and reads it back to confirm it
 landed, so it needs no clone of that repo and no push access to it.
-
-Do not create `FOCUS.md`/`QUESTIONS.md` here in order to have something to
-commit. They are retired (hf7y/scheduler#66).
 
 ## 4. Commit as you go
 

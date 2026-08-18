@@ -2,6 +2,8 @@
 # notify-senechal.sh <text> -- file a machine-config change through senechal's
 # own front door, and make sure it actually LANDED where senechal reads it.
 #
+# KIND: verb
+#
 # TRAPS (the rest of this header is in the vault):
 #   senechal owns the CONTRACT -- everything below the `--- 2.` line: what
 #   "landed" means and which surface the consumer actually reads. That is now
@@ -73,7 +75,9 @@ python3 -c 'import json,sys; json.load(open(sys.argv[1]))["doors"]' "$doors_file
 door="${1:-}"
 case "$door" in
   --help|-h) usage; exit 0 ;;
-  "") usage >&2; die "no door named" ;;
+  # exit 2, not 1: naming no door is a usage error, and this script's own
+  # --help has always documented 2 for it.
+  "") usage >&2; printf 'notify-senechal: no door named\n' >&2; exit 2 ;;
   --doors)
     python3 -c '
 import json, sys
@@ -84,7 +88,9 @@ for name, d in sorted(doors.items()):
         print("    %-8s %s" % (f, d.get("help", {}).get(f, "")))
 ' "$doors_file"
     exit 0 ;;
-  -*) usage >&2; die "'$door' is not a door. Name a door first." ;;
+  # exit 2, not 1: a flag that is not a door is a usage error, and this
+  # script's own --help has always documented 2 for exactly that.
+  -*) usage >&2; printf "notify-senechal: '%s' is not a door. Name a door first.\n" "$door" >&2; exit 2 ;;
   *\ *)
     # A door name is one word. Whitespace means a sentence was passed where a
     # door belongs -- the old prose call, verbatim. Exit 2 (usage), not 1: the
@@ -190,7 +196,10 @@ title="$(printf '%s' "$text" | head -1 | cut -c1-72)"
 # realisateur#220). `scheduler -i` stamped every issue it filed with
 #
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
-body="$(printf '%s\n\n```senechal-door\n%s\n```\n\n---\nfiled %s via `notify-senechal` on %s\n\nsenechal absorbs this with `tools/absorb-notices.py --write`; closing IS the\nacknowledgement. If it was REJECTED, the payload above is wrong or the entry\nalready exists -- fix it at the caller, not by hand here.\n' \
+# TRAP: line 1 and the DEFERRED block satisfy bin/gh-sign.sh, which refuses a
+#   body declaring no DECISION:/NO-DECISION: or carrying no ledger. Delete them
+#   as boilerplate and every call dies wherever the shim is live (#356).
+body="$(printf 'NO-DECISION: @zach -- a typed door note; it records a fact and asks nothing.\n\n%s\n\n```senechal-door\n%s\n```\n\n---\nfiled %s via `notify-senechal` on %s\n\nsenechal absorbs this with `tools/absorb-notices.py --write`; closing IS the\nacknowledgement. If it was REJECTED, the payload above is wrong or the entry\nalready exists -- fix it at the caller, not by hand here.\n\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n' \
   "$text" "$payload" "$(date '+%Y-%m-%d %H:%M')" "$(hostname -s 2>/dev/null || hostname)")"
 
 echo "notify-senechal: filing to $DEST_REPO as from:$FROM_PROJECT ..."

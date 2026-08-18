@@ -90,18 +90,18 @@ run --strict >/dev/null 2>&1; rc "--strict exits 1 when drift found" 1 "$?"
 run --strict clean-proj >/dev/null 2>&1; rc "--strict exits 0 on a clean-only filter" 0 "$?"
 
 # --- G: BLIND is never 0, with or without --strict --------------------------
-rc "bare invocation exits 2 when a repo could not be read" 2 "$rc_got"
+rc "bare invocation exits 6 when a repo could not be read" 6 "$rc_got"
 run clean-proj gone-proj >/dev/null 2>&1
-rc "an unreadable repo alone is BLIND, exit 2, no --strict needed" 2 "$?"
+rc "an unreadable repo alone is BLIND, exit 6, no --strict needed" 6 "$?"
 run --strict clean-proj gone-proj >/dev/null 2>&1
-rc "...and --strict does not turn that blindness into clean either" 2 "$?"
+rc "...and --strict does not turn that blindness into clean either" 6 "$?"
 
 # An EMPTY registry is the shape guard-estate E1 actually caught: the loop
 # never runs, the summary reads "out of 0 project(s)", and exit 0 would say
 # the estate is compliant on the strength of having looked at nothing.
 EMPTY="$(mktemp -d)"; mkdir -p "$EMPTY/schedule"
 out="$(SCHED_ROOT="$EMPTY" GH_BIN="$T/gh" "$SCRIPT" --strict 2>&1)"; rc_empty=$?
-rc "an empty registry is BLIND, exit 2 -- not 'nothing drifted'" 2 "$rc_empty"
+rc "an empty registry is BLIND, exit 6 -- not 'nothing drifted'" 6 "$rc_empty"
 has "...and says so in words" "$out" "BLIND: no registered project with a REPO_URL"
 has "...and says nothing was measured is not clean" "$out" "This is NOT a clean result"
 rm -rf "$EMPTY"

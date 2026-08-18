@@ -149,11 +149,6 @@ not an inconvenience.
   and must say so. The project that generates machine config **owns** it;
   `senechal` owns **knowing it exists**. Do this unasked, and now.
 
-- **Committing this project's `FOCUS.md` / `QUESTIONS.md`** — use
-  `focus-commit <repo> <msgfile> <file>...`, never a bare
-  `git add`/`commit`/`push`. These files have multiple writers and the bare
-  sequence has silently lost content four times.
-
 - **Writing into another project's repo** — run `check-project-busy <project>`
   first. On `BUSY`, defer the write and note what was deferred.
 

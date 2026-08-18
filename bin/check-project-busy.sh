@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # check-project-busy.sh <project> -- offline-first concurrency guard.
 #
+# KIND: verb
+#
 # Answers one narrow question: is a scheduler-dispatched job (nightly-batch,
 # bug-sweep, or a project's own oddly-named batch job) actively running
 # against <project> RIGHT NOW? Realisateur's own half of the 2026-07-24
@@ -27,7 +29,7 @@ CLI_SUMMARY='is a scheduler-dispatched job running against <project> right now?'
 CLI_USAGE='  check-project-busy.sh <project>   probe that project'"'"'s locks; print BUSY or free'
 CLI_FLAGS=''
 CLI_POSITIONAL=any
-. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 
 project="${1:?usage: check-project-busy.sh <project>}"

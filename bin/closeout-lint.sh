@@ -6,6 +6,8 @@
 # and `--repo` skips B so the SubagentStop path stays fully offline. Signals,
 # not verdicts: see $CLI_EXITS below for what each code means.
 #
+# KIND: verb
+#
 # RUNNER: hooks/subagent-closeout.sh bin/tests/closeout-lint.test.sh
 # GUARD-TEST: bin/tests/closeout-lint.test.sh
 # GATE: strict --repo $TREE
@@ -43,7 +45,7 @@ CLI_EXITS='  0  scanned; no --strict given, or --strict given and nothing found
      neither --allow-blind nor an interactive override was given. Matches
      `garde` and `ausculte`, which already use 6 for blind'
 CLI_POSITIONAL=any
-. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 
 SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"

@@ -36,6 +36,8 @@ cli_guard "$@"
 BUILD_ROOT="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"
 REMOTE="${VERB_BUILD_REMOTE:-https://github.com/hf7y/verbs.git}"
 BIN="${INSTALLE_BIN:-$HOME/.local/bin}"
+CMD_DEST="${CMD_DEST:-$HOME/.claude/commands}"
+HOOK_DEST="${HOOK_DEST:-$HOME/.claude/hooks}"
 REPO="$BUILD_ROOT/repo"
 BUILD_ID=''; APPLY=0; LINK=0; LIST=0; CHECK=0; LATEST=0; ROLLBACK=''
 
@@ -240,5 +242,30 @@ if [ "$LINK" -eq 1 ]; then
   if [ "$ours" -ne "$total" ]; then
     say "COUNT MISMATCH: manifest promises $total verb(s), but $ours link(s) in $BIN point into this build root"
   fi
+
+  # --- the non-verb payload: user-level slash commands and hooks ---------
+  # A slash command is a FILE Claude Code reads, so it can never be a verb --
+  # the last clone-dependent thing (#389). COPIED, not symlinked: a dangling
+  # link into a rolled-back build reads as a CORRUPT command file, not an
+  # absent one.
+  installed=0
+  for src_dir in commands hooks; do
+    from="$BUILD_ROOT/current/realisateur/$src_dir"
+    [ -d "$from" ] || continue
+    case "$src_dir" in
+      commands) to="$CMD_DEST"; mode=644 ;;
+      hooks)    to="$HOOK_DEST"; mode=755 ;;
+    esac
+    mkdir -p "$to"
+    for f in "$from"/*; do
+      [ -f "$f" ] || continue
+      dst="$to/$(basename "$f")"
+      # A symlink here is never ours; cp would write THROUGH it.
+      [ -L "$dst" ] && { row SKIP "$(basename "$f")" "symlink -> $(readlink "$dst")"; continue; }
+      cmp -s "$f" "$dst" && continue
+      cp "$f" "$dst" && chmod "$mode" "$dst" && installed=$((installed + 1))
+    done
+  done
+  say "installed $installed command/hook file(s) from this build"
 fi
 exit 0

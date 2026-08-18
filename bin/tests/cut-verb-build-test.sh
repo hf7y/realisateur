@@ -260,6 +260,40 @@ case "$(cat "$TMP/e8")" in
     *) bad "an unreadable repo reads as BLIND" "got: $(cat "$TMP/e8")" ;;
 esac
 
+# --- 8b. a VERBLESS bashified branch is not BLIND -----------------------
+# 2026-08-18: retiring twenty verbs left five repos with no bin/ or man/, and
+# the cut refused -- "5 repository tree(s) did not read" -- because the fetch
+# filtered inside the `gh` call, making "no verbs" indistinguishable from "no
+# answer". The fixture gh could not catch it: the stub returned the whole tree
+# and ignored the filter. The filter now lives in the script, where both see it.
+mkrepo zeta za
+VERBLESS="$FIX/verbless.git"
+rm -rf "$VERBLESS"; mkdir -p "$VERBLESS/docs"
+printf 'this project declares nothing\n' > "$VERBLESS/docs/README.md"
+g init "$VERBLESS"
+g -C "$VERBLESS" checkout -b bashified
+g -C "$VERBLESS" add -A
+g -C "$VERBLESS" commit -m "bashified verbless"
+g -C "$VERBLESS" config uploadpack.allowAnySHA1InWant true
+g -C "$VERBLESS" config uploadpack.allowReachableSHA1InWant true
+
+printf 'zeta\nverbless\n' > "$TMP/repolist"
+cut >"$TMP/m8b" 2>"$TMP/e8b"
+check "a verbless bashified branch does not refuse the build" "$?" "0"
+# A BLIND line NAMING verbless -- the registry is separately BLIND here, so a
+# loose glob over the whole output scores that as this failure.
+if grep -E 'BLIND.*verbless' "$TMP/e8b" "$TMP/m8b" >/dev/null 2>&1; then
+    bad "a verbless repo was scored BLIND" "got: $(grep -E 'BLIND.*verbless' "$TMP/e8b" "$TMP/m8b")"
+else
+    ok "...and is not reported as BLIND"
+fi
+grep -qE 'none +verbless' "$TMP/e8b" "$TMP/m8b" \
+    && ok "...it is reported as declaring no verbs, which is a different answer" \
+    || bad "a verbless repo passed in SILENCE -- it must say so" "got: $(cat "$TMP/e8b")"
+grep -q 'zeta' "$TMP/m8b" \
+    && ok "...while the repo that DOES declare a verb still contributes" \
+    || bad "the verbless repo suppressed a real declaration" "got: $(cat "$TMP/m8b")"
+
 # --- 9. an empty read is never an empty build ---------------------------
 : > "$TMP/repolist"
 cut >/dev/null 2>&1

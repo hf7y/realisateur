@@ -33,7 +33,7 @@ cli_guard "$@"
 
 # The pin has ONE reader in this ecosystem and it is not here. This script
 # resolves no build-root layout of its own -- it calls prop_build_trailer(),
-# the same function focus-commit.sh stamps with, so the two can never disagree
+# the one function every stamped commit goes through, so they cannot disagree
 # about which build an account is on. bin/tests/propagation.test.sh enforces
 # that mechanically by grepping every bin/*.sh for the layout path.
 PROP_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/propagation-set.sh"

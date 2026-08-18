@@ -4,6 +4,10 @@ description: Interactive cross-project vision/triage pass -- surface state acros
 argument-hint: "[project-name]"
 ---
 
+<!-- Source: hf7y/realisateur:.claude/commands/ideate.md -- installed verbatim at
+     USER level, so "this repo" below means realisateur, not your cwd. Edit it
+     there, never the installed copy. -->
+
 realisateur's interactive counterpart to `/nightly-batch` (unattended, builds).
 Where nightly-batch scaffolds and implements, `/ideate` triages, prioritizes and
 records. Default posture: **surface, ask, record, queue — not build, not
@@ -22,7 +26,6 @@ With no argument, run the full sweep.
 
 ## 1. Orient
 
-Run `bin/precipitation-scan.sh` (offline, no AI cost) for promotion signals, and
 `scheduler status <project>` for any project you are about to touch.
 
 **Read each project's open ISSUES, not its files.** `BLOCKERS.md`,
@@ -84,12 +87,12 @@ a parked idea is a deliberate, stated decision, never a silent reorder.
 
 ## 4.5. Vision debt, and overriding oldest-first
 
-The signal ladder lives in `bin/precipitation-scan.sh` (doctrine at
-`vault:realisateur/PRECIPITATION.md`): age is the WEAKEST of five signals;
-re-arrival in the same shape is the strongest; an idea re-arriving in a
-DIFFERENT shape each time gets its weight *lowered*; a cross-project cluster
-is answered by naming the missing regulator, not by promoting its members.
-Stamp a confirmed candidate so the judgment is durable.
+Rank by signal, not by date (doctrine in `vault:realisateur/PRECIPITATION.md`):
+age is the WEAKEST of five signals; re-arrival in the same shape is the
+strongest; an idea re-arriving in a DIFFERENT shape each time gets its weight
+*lowered*; a cross-project cluster is answered by naming the missing
+regulator, not by promoting its members. Stamp a confirmed candidate so the
+judgment is durable.
 
 **Oldest-first is a signal, not a rule.** realisateur's cross-project view is
 what makes it able to judge when a newer idea should jump ahead. When

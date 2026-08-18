@@ -2,6 +2,8 @@
 # discipline.sh -- print the realisateur baseline: the build-discipline
 # checklist and the ecosystem protocols. ONE file, read at the point of use.
 #
+# KIND: verb
+#
 # WHAT THIS RETIRES: bin/restamp-discipline.sh, and the stamped
 # `realisateur-baseline` region in every project's CLAUDE.md.
 #
@@ -41,15 +43,20 @@ CLI_USAGE='  discipline              print the whole baseline
   discipline --protocols  print only the ecosystem protocols
   discipline --path       print the file the text is read from'
 
-# Self-locating: this script is reached through a ~/.local/bin shim, so $0 is
-# the shim, not this file. BASH_SOURCE is the real path. Unlike
-# install-shims.sh -- which deliberately is NOT self-locating because it
-# answers "what should the installed shim point at" -- this one answers "where
-# is my own text", and that is always next to this file.
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Self-locating, through a SYMLINK. Installed host-wide, this file is reached
+# as /usr/local/bin/discipline pointing into the verb build, and BASH_SOURCE is
+# then the symlink, whose parent is /usr/local. Without readlink -f, SRC
+# becomes /usr/local/BUILD-DISCIPLINE.md and every invocation dies. The text is
+# always next to the REAL file, never next to the name it was called by.
+# Witness: discipline --path
+HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 SRC="$HERE/BUILD-DISCIPLINE.md"
 
-die() { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
+die()   { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
+# 2, not 1. "You typed it wrong" and "I looked and something is wrong" are
+# different answers, and a caller that cannot tell them apart retries a
+# finding or reports a typo as one. The estate's usage code is 2 (CONTRACT.md).
+usage() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; printf 'usage:\n%s\n' "$CLI_USAGE" >&2; exit 2; }
 
 case "${1:-}" in
   -h|--help)
@@ -88,7 +95,5 @@ case "${1:-}" in
   '')           printf '%s\n' "$body" ;;
   --checklist)  printf '%s\n' "$body" | awk '/^## Ecosystem protocols/{exit} {print}' ;;
   --protocols)  printf '%s\n' "$body" | awk '/^## Ecosystem protocols/{p=1} p' ;;
-  *)            die "unknown argument: $1
-usage:
-$CLI_USAGE" ;;
+  *)            usage "unknown argument: $1" ;;
 esac

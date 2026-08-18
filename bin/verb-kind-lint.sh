@@ -38,7 +38,7 @@ CLI_FLAGS='--build --accept --quiet'
 CLI_POSITIONAL=any   # flag VALUES (--build <dir>) read as positionals to cli-guard.
 CLI_EXITS='  0  every command declares itself; no product in the workchain build
   1  violation(s)
-  2  BLIND -- could not read the build. NEVER "clean".'
+  6  BLIND -- could not read the build. NEVER "clean".'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
@@ -69,7 +69,7 @@ say()   { [ "$QUIET" -eq 1 ] || printf '%s\n' "$*"; }
 loud()  { printf '%s\n' "$*"; }
 blind() { printf 'BLIND: %s\n' "$*" >&2
           printf '%s: refusing to grade a build it could not read. This is NOT "clean".\n' "$CLI_NAME" >&2
-          exit 2; }
+          exit 6; }
 
 # --- the build --------------------------------------------------------------
 # No --build is a USAGE error (2), not a verdict. It is the same exit code as
