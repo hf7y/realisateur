@@ -43,7 +43,7 @@ CLI_EXITS='  0  scanned; no --strict given, or --strict given and nothing found
      neither --allow-blind nor an interactive override was given. Matches
      `garde` and `ausculte`, which already use 6 for blind'
 CLI_POSITIONAL=any
-. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 
 SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"

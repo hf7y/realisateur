@@ -25,7 +25,7 @@ set -uo pipefail
 PROJECTS_ROOT="${PROJECTS_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}}"
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
 UNDECLARED_SEEN="$(mktemp)"; trap 'rm -f "$UNDECLARED_SEEN"' EXIT
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)" || REPO=""
+REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." 2>/dev/null && pwd)" || REPO=""
 
 STRICT=0
 ONLY=""

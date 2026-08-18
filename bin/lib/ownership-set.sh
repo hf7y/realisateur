@@ -122,7 +122,6 @@ OWN_MINE="
 bin/tests/registry-marker.test.sh          realisateur
 bin/lib/not-a-spend.tsv                    realisateur
 bin/tests/not-a-spend.test.sh              realisateur
-bin/precipitation-scan.sh                  realisateur
 bin/silence-audit.sh                       realisateur
 bin/monkey-vdi-to-internal.sh              realisateur
 bin/monkey-watch.sh                        realisateur
@@ -201,7 +200,6 @@ bin/tests/notify-senechal-footer.test.sh   senechal
 provision/monkey-scheduler-system.sh       scheduler
 bin/check-project-busy.sh                  scheduler
 bin/deploy-drift.sh                        scheduler
-bin/focus-commit.sh                        scheduler
 bin/session-marker.sh                      scheduler
 bin/stamp-verb-build.sh                    realisateur
 bin/pivot.sh                               scheduler

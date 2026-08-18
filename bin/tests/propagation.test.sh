@@ -489,8 +489,7 @@ has "a private pin still wins over the host-wide one while it exists" "$O" "Verb
             || bad "an unknown build produced NO trailer -- unstamped and stamped-unknown are now identical"
 
 # --- EVERY commit, not just the mandated ones ------------------------------
-# focus-commit.sh stamps FOCUS.md and QUESTIONS.md. That is the ecosystem's
-# highest-volume artifact and it was the right first target, but it is not
+# The stamper must work for ANY commit, not only the ones a protocol mandates.
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STAMPER="$REPO/bin/stamp-verb-build.sh"
 SHOME="$T/stamphome"; mkdir -p "$SHOME"
@@ -557,14 +556,6 @@ for f in "$REPO"/bin/*.sh; do
 done
 [ -z "$strays" ] && ok "only the $(echo $PIN_OWNERS | wc -w) layout-owning scripts resolve the pin path directly" \
                  || bad "these read the pin path instead of calling prop_build_trailer():$strays"
-
-# And it is WIRED: focus-commit.sh is the mandated committer for FOCUS.md and
-# QUESTIONS.md across every project, so stamping there stamps the ecosystem's
-# highest-volume artifact with no hand maintenance.
-FC="$(cat "$REPO/bin/focus-commit.sh")"
-has "focus-commit.sh stamps the commits it makes" "$FC" "prop_build_trailer"
-has "...and does not double-stamp a message that already carries one" "$FC" "Verb-Build:"
-hasnt "...and does not rewrite the caller's message file in place" "$FC" 'prop_build_trailer >> "$msgfile"'
 
 # ===========================================================================
 echo

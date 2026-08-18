@@ -73,7 +73,9 @@ python3 -c 'import json,sys; json.load(open(sys.argv[1]))["doors"]' "$doors_file
 door="${1:-}"
 case "$door" in
   --help|-h) usage; exit 0 ;;
-  "") usage >&2; die "no door named" ;;
+  # exit 2, not 1: naming no door is a usage error, and this script's own
+  # --help has always documented 2 for it.
+  "") usage >&2; printf 'notify-senechal: no door named\n' >&2; exit 2 ;;
   --doors)
     python3 -c '
 import json, sys
@@ -84,7 +86,9 @@ for name, d in sorted(doors.items()):
         print("    %-8s %s" % (f, d.get("help", {}).get(f, "")))
 ' "$doors_file"
     exit 0 ;;
-  -*) usage >&2; die "'$door' is not a door. Name a door first." ;;
+  # exit 2, not 1: a flag that is not a door is a usage error, and this
+  # script's own --help has always documented 2 for exactly that.
+  -*) usage >&2; printf "notify-senechal: '%s' is not a door. Name a door first.\n" "$door" >&2; exit 2 ;;
   *\ *)
     # A door name is one word. Whitespace means a sentence was passed where a
     # door belongs -- the old prose call, verbatim. Exit 2 (usage), not 1: the

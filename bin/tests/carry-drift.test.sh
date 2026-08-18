@@ -15,17 +15,30 @@ set -uo pipefail
 CD="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/carry-drift.sh"
 harness_tmp
 
+# _decl_rows <carry-drift.sh> -- the guard's own CARRIES table, as <b>TAB<m>.
+_decl_rows() {
+  sed -n "/^CARRIES='/,/^'$/p" "$1" | grep -F "$(printf '\t')"
+}
+
 # A repository with a main worktree and a `bashified` branch carrying two
 # files: one replica, one drifted.
 mk_repo() {
   local r="$T/$1"; shift
+  local driftroot="${1:-}"   # make root-level carries drift, so --carry writes them
   mkdir -p "$r/bin/lib"
   git -C "$r" init -q 2>/dev/null || git init -q "$r"
   git -C "$r" config user.email t@t; git -C "$r" config user.name t
   printf 'same\n'    > "$r/bin/lib/cli-guard.sh"
   printf 'main v2\n' > "$r/bin/reach-lint.sh"
-  printf '#!/usr/bin/env bash\necho shim\n' > "$r/bin/gh-sign.sh"
-  printf 'grammar\n' > "$r/bin/lib/body-grammar.sh"
+  # Every DECLARED carry, read out of the guard itself rather than retyped
+  # here: the declaration set grows, and a fixture that lists it by hand goes
+  # stale silently -- every new row then reports BLIND ("declared, and not in
+  # this tree either") and every case below fails for a reason none of them
+  # is about.
+  _decl_rows "$CD" | while IFS=$'\t' read -r _b _m; do
+    case "$_m" in */*) mkdir -p "$r/${_m%/*}" ;; esac
+    printf 'carried %s\n' "$_b" > "$r/$_m"
+  done
   git -C "$r" add -A >/dev/null; git -C "$r" commit -qm main
   git -C "$r" checkout -q --orphan bashified
   git -C "$r" rm -q -rf . >/dev/null 2>&1 || :
@@ -33,10 +46,15 @@ mk_repo() {
   printf 'same\n'    > "$r/bin/lib/cli-guard.sh"
   printf 'main v1\n' > "$r/bin/reach-lint.sh"   # the drift
   printf 'native\n'  > "$r/bin/branch-only"       # branch-native: never graded
-  # the two DECLARED carries, present and matching, so the cases below are
+  # the DECLARED carries, present and matching, so the cases below are
   # about one property each
-  printf '#!/usr/bin/env bash\necho shim\n' > "$r/bin/gh"
-  printf 'grammar\n' > "$r/bin/lib/body-grammar.sh"
+  _decl_rows "$CD" | while IFS=$'\t' read -r _b _m; do
+    case "$_b" in */*) mkdir -p "$r/${_b%/*}" ;; esac
+    case "$driftroot:$_b" in
+      ?*:*/*|:*) printf 'carried %s\n' "$_b" > "$r/$_b" ;;
+      *)         printf 'stale %s\n'   "$_b" > "$r/$_b" ;;
+    esac
+  done
   git -C "$r" add -A >/dev/null; git -C "$r" commit -qm carry
   git -C "$r" checkout -q master 2>/dev/null || git -C "$r" checkout -q main
   printf '%s' "$r"
@@ -71,6 +89,20 @@ printf 'main v1\n' > "$T/wt/bin/reach-lint.sh"
 out="$(bash "$CD" --repo "$REPO" --ratchet "$EMPTY_RATCHET" --carry "$T/wt" 2>&1)"
 eq  "D1 the drifted file is overwritten with main's" "$(cat "$T/wt/bin/reach-lint.sh")" "main v2"
 has "D2 ...and it says what it wrote" "$out" "carried  bin/reach-lint.sh"
+
+# D3: a carried path with no directory component. ${b%/*} is the FILE NAME
+# there, so this made a DIRECTORY of that name and cp wrote inside it -- the
+# carry reported success and shipped nothing at the declared path.
+_root="$(_decl_rows "$CD" | awk -F'\t' '$1 !~ /\// {print $1; exit}')"
+if [ -n "$_root" ]; then
+  RREPO="$(mk_repo rootrepo drift)"
+  mkdir -p "$T/wtroot"
+  bash "$CD" --repo "$RREPO" --ratchet "$EMPTY_RATCHET" --carry "$T/wtroot" >/dev/null 2>&1
+  [ -f "$T/wtroot/$_root" ] && ok "D3 a root-level carry lands as a FILE, not a directory" \
+                           || bad "D3 a root-level carry lands as a FILE, not a directory ($_root)"
+else
+  ok "D3 no root-level carry is declared (nothing to check)"
+fi
 
 section "D2. --carry leaves a ratcheted pair alone"
 # Carrying a forgiven pair would smuggle a reviewed change into a run whose

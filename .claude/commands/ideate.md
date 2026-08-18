@@ -22,7 +22,6 @@ With no argument, run the full sweep.
 
 ## 1. Orient
 
-Run `bin/precipitation-scan.sh` (offline, no AI cost) for promotion signals, and
 `scheduler status <project>` for any project you are about to touch.
 
 **Read each project's open ISSUES, not its files.** `BLOCKERS.md`,
@@ -84,12 +83,12 @@ a parked idea is a deliberate, stated decision, never a silent reorder.
 
 ## 4.5. Vision debt, and overriding oldest-first
 
-The signal ladder lives in `bin/precipitation-scan.sh` (doctrine at
-`vault:realisateur/PRECIPITATION.md`): age is the WEAKEST of five signals;
-re-arrival in the same shape is the strongest; an idea re-arriving in a
-DIFFERENT shape each time gets its weight *lowered*; a cross-project cluster
-is answered by naming the missing regulator, not by promoting its members.
-Stamp a confirmed candidate so the judgment is durable.
+Rank by signal, not by date (doctrine in `vault:realisateur/PRECIPITATION.md`):
+age is the WEAKEST of five signals; re-arrival in the same shape is the
+strongest; an idea re-arriving in a DIFFERENT shape each time gets its weight
+*lowered*; a cross-project cluster is answered by naming the missing
+regulator, not by promoting its members. Stamp a confirmed candidate so the
+judgment is durable.
 
 **Oldest-first is a signal, not a rule.** realisateur's cross-project view is
 what makes it able to judge when a newer idea should jump ahead. When

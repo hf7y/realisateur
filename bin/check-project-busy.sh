@@ -27,7 +27,7 @@ CLI_SUMMARY='is a scheduler-dispatched job running against <project> right now?'
 CLI_USAGE='  check-project-busy.sh <project>   probe that project'"'"'s locks; print BUSY or free'
 CLI_FLAGS=''
 CLI_POSITIONAL=any
-. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 
 project="${1:?usage: check-project-busy.sh <project>}"
