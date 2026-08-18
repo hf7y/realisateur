@@ -68,6 +68,11 @@ bin/discipline	bin/discipline.sh
 bin/notify-senechal	bin/notify-senechal.sh
 bin/silence-audit	bin/silence-audit.sh
 BUILD-DISCIPLINE.md	BUILD-DISCIPLINE.md
+commands/bashify.md	.claude/commands/bashify.md
+commands/cloture.md	.claude/commands/cloture.md
+commands/ideate.md	.claude/commands/ideate.md
+commands/reap.md	.claude/commands/reap.md
+hooks/subagent-closeout.sh	hooks/subagent-closeout.sh
 '
 
 say()  { printf '%s\n' "$*"; }

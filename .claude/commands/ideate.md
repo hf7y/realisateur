@@ -4,6 +4,10 @@ description: Interactive cross-project vision/triage pass -- surface state acros
 argument-hint: "[project-name]"
 ---
 
+<!-- Source: hf7y/realisateur:.claude/commands/ideate.md -- installed verbatim at
+     USER level, so "this repo" below means realisateur, not your cwd. Edit it
+     there, never the installed copy. -->
+
 realisateur's interactive counterpart to `/nightly-batch` (unattended, builds).
 Where nightly-batch scaffolds and implements, `/ideate` triages, prioritizes and
 records. Default posture: **surface, ask, record, queue — not build, not
