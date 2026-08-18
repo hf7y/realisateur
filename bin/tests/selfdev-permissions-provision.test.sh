@@ -57,7 +57,7 @@ has  "C: a correct account reports ok"        "$out" "ok    correct"
 has  "D: unparseable settings is BLIND"       "$out" "BLIND broken"
 has  "D: and says it is NOT overwriting it"   "$out" "NOT overwriting"
 hasnt "E: the human's own account is never visited" "$out" "zach"
-rc   "D: BLIND exits 3 even without --strict" 3 "$got"
+rc   "D: BLIND exits 6 even without --strict" 6 "$got"
 
 # --- J: bare invocation changed nothing -------------------------------------
 [ "$(jq -c '.permissions // "absent"' "$T/h1/blank/.claude/settings.json")" = '"absent"' ] \
@@ -97,7 +97,7 @@ has "C: --apply leaves a correct account alone" "$out" "ok    correct"
 mkdir -p "$T/h4"
 # shellcheck disable=SC1007  # empty SUDO on purpose, as above.
 HOME_ROOT="$T/h4" SUDO= "$SCRIPT" >/dev/null 2>&1
-rc "H: no account found exits 3 BLIND" 3 "$?"
+rc "H: no account found exits 6 BLIND" 6 "$?"
 
 # --- I: the block itself ----------------------------------------------------
 printf '%s' "$WANT" | jq -e . >/dev/null 2>&1 && ok "I: --print emits valid JSON" \

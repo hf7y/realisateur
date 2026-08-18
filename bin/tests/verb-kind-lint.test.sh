@@ -199,14 +199,14 @@ RATCHET_FILE=""
 # --- 5. BLIND never grades clean --------------------------------------------
 echo
 echo "== 5. BLIND IS NOT CLEAN =="
-expect "a build directory that does not exist is BLIND, not clean" 3 "$WORK/nope"
+expect "a build directory that does not exist is BLIND, not clean" 6 "$WORK/nope"
 
 b="$(new_build nomanifest)"
 rm -f "$b/manifest.tsv"
-expect "a build tree with no manifest is BLIND, not clean" 3 "$b"
+expect "a build tree with no manifest is BLIND, not clean" 6 "$b"
 
 b="$(new_build emptymanifest)"
-expect "a manifest with no rows is BLIND, not clean" 3 "$b"
+expect "a manifest with no rows is BLIND, not clean" 6 "$b"
 # ...and it reaches that verdict by its OWN logic. `grep -c` prints 0 and
 # exits 1 on no match, so a `|| echo 0` fallback made rows "0\n0" and the
 # guard arrived at BLIND through a bash integer-expression error printed
@@ -222,11 +222,11 @@ b="$(new_build missingfile)"
 add_cmd "$b" scheduler arme '# KIND: verb'
 add_cmd "$b" scheduler dose '# KIND: verb'
 rm -f "$b/scheduler/bin/dose"
-expect "a manifest row whose executable is absent is BLIND, not undeclared" 3 "$b"
+expect "a manifest row whose executable is absent is BLIND, not undeclared" 6 "$b"
 run_lint "$b"
 printf '%s\n' "$OUT" | grep -q 'BLIND' \
   && ok "it says BLIND out loud" \
-  || bad "exit 3 with no BLIND in the output"
+  || bad "exit 6 with no BLIND in the output"
 
 # E from guard-estate: the admission must come BEFORE the findings.
 b="$(new_build blindfirst)"

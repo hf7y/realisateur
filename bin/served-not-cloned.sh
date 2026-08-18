@@ -7,7 +7,7 @@
 # GATE: strict
 #
 # TRAP: BLIND is never green. These probes need a scheduler checkout CI does
-#   not have; a run that cannot see the estate is BLIND (exit 2), not met.
+#   not have; a run that cannot see the estate is BLIND (exit 6), not met.
 # TRAP: this file deliberately does NOT tolerate a vision indefinitely --
 #   bin/thermostat-wiring.sh is the half that does. If the redesign has not
 #   landed, this is meant to keep saying so.
@@ -33,8 +33,8 @@ CLI_USAGE='  served-not-cloned.sh            probe locally (scheduler checkout +
 CLI_FLAGS='--fleet --strict --quiet'
 CLI_EXITS='  0  the vision is met -- this file has done its job, delete it
   1  UNMET -- expected until the redesign lands
-  3  BLIND -- a probe could not be run. NEVER "all clear"
-  4  SUNSET reached: delete this file, whatever the probes say'
+  6  BLIND -- a probe could not be run. NEVER "all clear"
+  8  SUNSET reached: delete this file, whatever the probes say'
 CLI_POSITIONAL=none
 . "$ROOT/bin/lib/cli-guard.sh"
 cli_guard "$@"
@@ -303,7 +303,7 @@ SUNSET REACHED ($SUNSET).
   Moving SUNSET forward in the file is a decision to re-commit, not
   maintenance. Do it deliberately, in a commit that argues for it.
 EOF
-  exit 4
+  exit 8
 fi
 
 # --strict stops here: the sunset has been checked and did not fire, and the
@@ -332,7 +332,7 @@ say "served-not-cloned: $met/$total met, $unmet to go, $blind blind -- sunset $S
 # exists precisely because "we could not see" kept being filed as "fine".
 if [ "$blind" -gt 0 ]; then
   say "  BLIND is not met. Re-run with --fleet, or from a host that can reach $SELFDEV_HOST."
-  exit 3
+  exit 6
 fi
 [ "$unmet" -eq 0 ] || exit 1
 
