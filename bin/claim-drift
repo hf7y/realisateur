@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # claim-drift.sh -- has a pull request grown since it was presented as done?
 #
+# KIND: verb
+#
 # RUNNER: operator -- needs a GitHub credential against live PRs; run in a review pass
 # GUARD-TEST: bin/tests/claim-drift.test.sh
 # GATE: none -- every path calls `gh` against a live PR; the fixture is in its own suite
