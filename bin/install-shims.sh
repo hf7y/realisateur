@@ -6,11 +6,9 @@
 # commands verbs, #385 deleted the shim half, #389 tracks the rename).
 #
 # What survives is the half a verb cannot be: a slash command is a FILE Claude
-# Code reads, not a name on PATH. It is installed VERBATIM -- no rendering, no
-# $REPO in the output -- so the SAME bytes ride onto `bashified`
-# (bin/carry-drift.sh) and install from the verb build on an account with no
-# checkout (bin/install-verb-build.sh --link). This script is the mandark-side
-# convenience now, not the only channel.
+# Code reads. Installed VERBATIM -- no rendering, no $REPO in the output -- so
+# the SAME bytes ride onto `bashified` (carry-drift.sh) and install from the
+# verb build with no checkout at all (install-verb-build.sh --link).
 #
 # Idempotent. Rerun after editing .claude/commands/*.md.
 set -uo pipefail

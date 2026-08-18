@@ -244,11 +244,10 @@ if [ "$LINK" -eq 1 ]; then
   fi
 
   # --- the non-verb payload: user-level slash commands and hooks ---------
-  # A slash command is a FILE Claude Code reads, not a name on PATH, so it can
-  # never be a verb; this is what made it the last clone-dependent thing (#389).
-  # COPIED, not symlinked: a dangling link into a rolled-back build reads as a
-  # CORRUPT command file rather than an absent one, and a copy means `current`
-  # moving cannot change a command mid-session.
+  # A slash command is a FILE Claude Code reads, so it can never be a verb --
+  # the last clone-dependent thing (#389). COPIED, not symlinked: a dangling
+  # link into a rolled-back build reads as a CORRUPT command file, not an
+  # absent one.
   installed=0
   for src_dir in commands hooks; do
     from="$BUILD_ROOT/current/realisateur/$src_dir"

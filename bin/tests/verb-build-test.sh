@@ -189,11 +189,8 @@ done
 check "count check: links into the build root match the manifest row count" "$ours" "2"
 
 # --- 9. the non-verb payload: slash commands and hooks ------------------
-# A slash command is a FILE Claude Code reads, not a name on PATH, so it can
-# never be a verb. Before #389 the only installer was bin/install-shims.sh
-# from a realisateur checkout, which is what made the commands the last
-# clone-dependent thing in the estate. --link must carry them too, or
-# "clone-free" is true only of the half that happens to be executable.
+# --link must carry these too, or "clone-free" is true only of the half that
+# happens to be executable (#389).
 mk_build "2026-08-10T0130Z" "vim-arcade:entraine scheduler:arme"
 mkdir -p "$META/realisateur/commands" "$META/realisateur/hooks"
 printf 'slash body\n' > "$META/realisateur/commands/cloture.md"
