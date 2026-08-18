@@ -32,7 +32,7 @@ mk_repo() {
   mkdir -p "$r/bin/lib"
   printf 'same\n'    > "$r/bin/lib/cli-guard.sh"
   printf 'main v1\n' > "$r/bin/reach-lint.sh"   # the drift
-  printf 'native\n'  > "$r/bin/arpente"          # branch-native: never graded
+  printf 'native\n'  > "$r/bin/branch-only"       # branch-native: never graded
   # the two DECLARED carries, present and matching, so the cases below are
   # about one property each
   printf '#!/usr/bin/env bash\necho shim\n' > "$r/bin/gh"
@@ -54,9 +54,9 @@ has "A2 it names the drifted file"  "$out" "DRIFT     bin/reach-lint.sh"
 has "A3 the replica is reported ok" "$out" "ok        bin/lib/cli-guard.sh"
 
 section "B. what is not a carry is not graded"
-# bin/arpente exists only on bashified. Grading it would demand a file on main
+# bin/branch-only exists only on bashified. Grading it would demand a file on main
 # that is not supposed to exist, which would make every real verb a finding.
-hasnt "B1 a branch-native file produces no row" "$out" "arpente"
+hasnt "B1 a branch-native file produces no row" "$out" "branch-only"
 
 section "C. the ratchet forgives, and only what it names"
 printf 'pair bin/reach-lint.sh bin/reach-lint.sh\n' > "$T/r.ratchet"
