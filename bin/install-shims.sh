@@ -2,8 +2,7 @@
 # install-shims.sh -- install this repo's .claude/commands/*.md as USER-level
 # slash commands, and its hooks/, so every repo gets them.
 #
-# IT INSTALLS NO SHIMS; the name is historical (#264 made the six protocol
-# commands verbs, #385 deleted the shim half, #389 tracks the rename).
+# IT INSTALLS NO SHIMS; the name is historical (#264, #385, #389).
 #
 # What survives is the half a verb cannot be: a slash command is a FILE Claude
 # Code reads. Installed VERBATIM -- no rendering, no $REPO in the output -- so
@@ -51,8 +50,7 @@ HOOK_SRC="$REPO/hooks"
 HOOK_DEST="${HOOK_DEST:-$HOME/.claude/hooks}"
 CLAUDE_SETTINGS="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"
 
-# DERIVED, not typed: a hand-maintained list is what produced the 2026-07-27
-# gap.  [rest: vault:realisateur/guard-archaeology-20260817.md]
+# DERIVED, not typed: a typed list produced the 2026-07-27 gap.
 mapfile -t GLOBAL_COMMANDS < <(
   for f in "$CMD_SRC"/*.md; do
     [ -f "$f" ] || continue
