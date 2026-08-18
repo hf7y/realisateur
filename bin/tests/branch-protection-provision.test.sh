@@ -5,7 +5,7 @@
 #   A already protected with a context      -> "ok", counted protected
 #   B unprotected, has PR checks            -> UNPROT, and --apply writes them
 #   C unprotected, no check ever ran on a PR -> NOCI, never protected
-#   D repo unreadable                       -> BLIND, exit 2, never "ok"
+#   D repo unreadable                       -> BLIND, exit 3, never "ok"
 #   E the 404-BODY TRAP (regression)        -> an unprotected branch is not
 #     read as protected just because `gh api` printed the 404 JSON to stdout
 #   F matrix legs are dropped when a stable sibling context exists
@@ -125,9 +125,9 @@ out="$(run gardien)"
 has "D: unreadable repo reports BLIND" "$out" "BLIND gardien"
 hasnt "D: and is never reported ok"    "$out" "ok    gardien"
 run gardien >/dev/null 2>&1
-rc "D: BLIND exits 2 without --strict" 2 "$?"
+rc "D: BLIND exits 3 without --strict" 3 "$?"
 run --strict gardien >/dev/null 2>&1
-rc "D: BLIND exits 2 with --strict too" 2 "$?"
+rc "D: BLIND exits 3 with --strict too" 3 "$?"
 
 # --- B/apply: --apply writes the repo's OWN contexts, and verifies by re-read
 out="$(run --apply chezz)"

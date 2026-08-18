@@ -33,7 +33,7 @@ CLI_USAGE='  served-not-cloned.sh            probe locally (scheduler checkout +
 CLI_FLAGS='--fleet --strict --quiet'
 CLI_EXITS='  0  the vision is met -- this file has done its job, delete it
   1  UNMET -- expected until the redesign lands
-  2  BLIND -- a probe could not be run. NEVER "all clear"
+  3  BLIND -- a probe could not be run. NEVER "all clear"
   4  SUNSET reached: delete this file, whatever the probes say'
 CLI_POSITIONAL=none
 . "$ROOT/bin/lib/cli-guard.sh"
@@ -332,7 +332,7 @@ say "served-not-cloned: $met/$total met, $unmet to go, $blind blind -- sunset $S
 # exists precisely because "we could not see" kept being filed as "fine".
 if [ "$blind" -gt 0 ]; then
   say "  BLIND is not met. Re-run with --fleet, or from a host that can reach $SELFDEV_HOST."
-  exit 2
+  exit 3
 fi
 [ "$unmet" -eq 0 ] || exit 1
 

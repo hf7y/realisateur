@@ -25,7 +25,7 @@ CLI_FLAGS='--apply --strict --print'
 CLI_EXITS='  0  visited every account; no --strict, or --strict and none drifted
   1  --strict was given and at least one account lacks the block (checked
      after --apply, so --apply --strict verifies its own work)
-  2  BLIND -- an account home exists but its settings could not be read or
+  3  BLIND -- an account home exists but its settings could not be read or
      parsed, or the roster matched no account at all. NEVER 0.'
 CLI_POSITIONAL=any
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
@@ -77,7 +77,7 @@ set -- $ACCOUNTS
 [ "$#" -gt 0 ] || {
   echo "BLIND: no self-dev account found under $HOME_ROOT -- nothing was checked." >&2
   echo "$CLI_NAME: nothing was measured. This is NOT a clean result." >&2
-  exit 2
+  exit 3
 }
 
 echo "selfdev-hooks-provision -- $(date '+%Y-%m-%d %H:%M')"
@@ -145,6 +145,6 @@ done
 echo
 echo "== $okc with the block, $drift drifted, $blind BLIND, out of $# account(s) =="
 
-[ "$blind" -eq 0 ] || { echo "$CLI_NAME: $blind account(s) unreadable -- counts above are NOT trustworthy."; exit 2; }
+[ "$blind" -eq 0 ] || { echo "$CLI_NAME: $blind account(s) unreadable -- counts above are NOT trustworthy."; exit 3; }
 [ "$STRICT" = 1 ] && [ "$drift" -gt 0 ] && exit 1
 exit 0

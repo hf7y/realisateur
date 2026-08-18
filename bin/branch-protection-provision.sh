@@ -33,7 +33,7 @@ CLI_EXITS='  0  read every rostered repo; no --strict given, or --strict given a
      every repo is protected
   1  --strict was given and at least one repo is unprotected (checked after
      --apply, if both are given, so --apply --strict verifies its own work)
-  2  BLIND -- at least one repo could not be read at all, or the roster
+  3  BLIND -- at least one repo could not be read at all, or the roster
      matched nothing. NEVER 0: could-not-look is not clean, and it is not
      gated behind --strict, because a run that saw nothing has established
      nothing whether or not the caller asked it to gate.'
@@ -75,7 +75,7 @@ for p in "${ROSTER[@]}"; do
 done
 cli_require_matched want names
 
-command -v "$GH_BIN" >/dev/null || { echo "$CLI_NAME: $GH_BIN not on PATH" >&2; exit 2; }
+command -v "$GH_BIN" >/dev/null || { echo "$CLI_NAME: $GH_BIN not on PATH" >&2; exit 3; }
 
 echo "branch-protection-provision -- $(date '+%Y-%m-%d %H:%M')"
 if [ "$APPLY" = 1 ]; then
@@ -230,7 +230,7 @@ echo "== $protected protected, $unprotected unprotected ($noci of them with no C
 
 if [ "$blind" -gt 0 ]; then
   echo "$CLI_NAME: $blind repo(s) unreadable -- the counts above are NOT trustworthy."
-  exit 2
+  exit 3
 fi
 if [ "$STRICT" = 1 ] && [ "$unprotected" -gt 0 ]; then
   exit 1

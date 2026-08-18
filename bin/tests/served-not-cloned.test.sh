@@ -159,18 +159,18 @@ echo "== 4. BLIND IS NEVER MET ================================================"
 # The recorded pathology: a pass that reached zero targets and exited 0.
 rc=0
 O="$(SERVED_SCHEDULER_REPO="$AFTER" SERVED_SUNSET=2099-01-01 bash "$SCRIPT" 2>&1)" || rc=$?
-eq "an unprobed fleet exits 2, not 0" "$rc" 2
+eq "an unprobed fleet exits 3, not 0" "$rc" 3
 has "and says BLIND is not met" "$O" "BLIND is not met"
 
 rc=0
 O="$(SERVED_SCHEDULER_REPO="$TMP/nonexistent" SERVED_FLEET_CRONTABS="$TMP/crontabs-after" \
      SERVED_SUNSET=2099-01-01 bash "$SCRIPT" 2>&1)" || rc=$?
-eq "a missing scheduler checkout is BLIND, not met" "$rc" 2
+eq "a missing scheduler checkout is BLIND, not met" "$rc" 3
 
 rc=0
 O="$(SERVED_SCHEDULER_REPO="$AFTER" SERVED_FLEET_CRONTABS="$TMP/no-such-file" \
      SERVED_SUNSET=2099-01-01 bash "$SCRIPT" 2>&1)" || rc=$?
-eq "a fleet dump that is not there is BLIND, not met" "$rc" 2
+eq "a fleet dump that is not there is BLIND, not met" "$rc" 3
 
 echo
 echo "== 5. THE ARGUMENT CONTRACT ============================================="
