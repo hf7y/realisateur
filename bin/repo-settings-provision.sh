@@ -34,7 +34,7 @@ CLI_EXITS='  0  scanned at least one repo and saw all of them; no --strict given
      or --strict given and nothing drifted
   1  --strict was given and at least one repo had drift (before or after
      --apply, if both are given -- --apply then --strict verifies the fix)
-  2  BLIND -- at least one repo could not be read, or the registry named no
+  3  BLIND -- at least one repo could not be read, or the registry named no
      project with a REPO_URL at all. NEVER 0: could-not-look is not clean,
      and it is not gated behind --strict, because a run that saw nothing has
      established nothing whether or not the caller asked it to gate.'
@@ -148,8 +148,8 @@ echo "== ${drifted} drifted, ${blind} BLIND, out of ${#names[@]} project(s) with
 if [ "${#names[@]}" -eq 0 ]; then
   echo "BLIND: no registered project with a REPO_URL under $SCHED_ROOT/schedule/ -- nothing was checked."
   echo "repo-settings-provision: nothing was measured. This is NOT a clean result."
-  exit 2
+  exit 3
 fi
 [ "$STRICT" = 1 ] && [ "$drifted" -gt 0 ] && exit 1
-[ "$blind" -gt 0 ] && exit 2
+[ "$blind" -gt 0 ] && exit 3
 exit 0
