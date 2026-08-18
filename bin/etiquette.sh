@@ -7,21 +7,17 @@
 # GUARD-TEST: bin/tests/etiquette.test.sh
 # GATE: none -- reads live issue trackers; writes only with --apply
 #
-# THE TEXT LIVES IN bin/lib/labels.tsv AND IS NOT DUPLICATED HERE. Zach,
-# 2026-08-18: "Repos need to look into a central place to see the grammar and
-# follow that grammar." A grammar copied into 24 repos is 24 grammars; this is
-# the `discipline` shape instead -- one file, read live, carried by the verb
-# build so a repo needs no checkout to obey it.
+# THE TEXT LIVES IN bin/lib/labels.tsv AND IS NOT DUPLICATED HERE (#397). A
+# grammar copied into 24 repos is 24 grammars; this is the `discipline` shape --
+# one file, read live, carried by the verb build so no checkout is needed.
 #
-# `needs-human` is DERIVED: line 1 declaring `DECISION:` means a person is in
-# the way, `NO-DECISION:` means not. That is grammar_declaration() in
-# bin/lib/body-grammar.sh, which gh-sign enforces at creation. Typed, the
-# label was wrong 3 of 3 (#396); 22 of 24 repos never had it at all (#397).
+# `needs-human` is DERIVED from line 1 by grammar_declaration()
+# (bin/lib/body-grammar.sh), which gh-sign enforces at creation. Typed, it was
+# wrong 3 of 3 (#396) and absent from 22 of 24 repos (#397).
 #
 # TRAP: line 1 declaring NEITHER is UNDECLARED, never read as "no decision".
-# TRAP: a label absent from labels.tsv is REPORTED, never deleted. This
-#   grammar is a floor, not a whitelist, and a tool that deletes labels it
-#   does not recognise is one bad row away from erasing a repo's own taxonomy.
+# TRAP: a label absent from labels.tsv is left alone, never deleted -- a floor,
+#   not a whitelist. Deleting unrecognised labels erases a repo's own taxonomy.
 set -uo pipefail
 
 CLI_NAME='etiquette'
@@ -54,10 +50,8 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-# Self-locating THROUGH THE SYMLINK. Installed host-wide this file is reached
-# as /usr/local/bin/etiquette pointing into the verb build; without readlink -f
-# the grammar would be looked for beside the NAME it was called by, not beside
-# the real file. Same trap discipline.sh documents. Witness: etiquette --path
+# Self-locating THROUGH THE SYMLINK: without readlink -f the grammar is sought
+# beside the NAME it was called by. discipline.sh documents the same trap.
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 GRAMMAR_FILE="${ETIQUETTE_GRAMMAR:-$HERE/bin/lib/labels.tsv}"
 
@@ -66,10 +60,8 @@ row() { printf '  %-11s %-6s %s\n' "$1" "#$2" "${3:-}"; }
 
 [ "$PATH_ONLY" = 1 ] && { printf '%s\n' "$GRAMMAR_FILE"; exit 0; }
 
-# A GRAMMAR THAT IS NOT THERE IS BLIND, NOT AN EMPTY GRAMMAR. Reporting a repo
-# as compliant with a grammar that failed to load is the exit-0 no-op this
-# whole file exists to prevent -- and with --apply it would silently provision
-# nothing and say so in the past tense.
+# A GRAMMAR THAT IS NOT THERE IS BLIND, NOT AN EMPTY ONE: reporting a repo
+# compliant with rules that failed to load is the exit-0 no-op.
 [ -r "$GRAMMAR_FILE" ] || {
   printf '%s: BLIND -- no label grammar at %s\n' "$CLI_NAME" "$GRAMMAR_FILE" >&2
   printf '%s: that is "I could not read the rules", not "there are no rules".\n' "$CLI_NAME" >&2
@@ -121,9 +113,8 @@ say ""
 label_findings=0; provisioned=0
 for g in "${GRAMMAR[@]}"; do
   name="$(g_field "$g" 1)"; color="$(g_field "$g" 2)"; meaning="$(g_field "$g" 4)"
-  # GitHub caps a label description at 100 chars, and the grammar's meaning
-  # column is deliberately longer than that -- the full text lives in the one
-  # home, the description is a pointer to it.
+  # GitHub caps a description at 100 chars; the full meaning stays in the one
+  # home and this is a pointer to it.
   desc="${meaning:0:96}"
   if printf '%s\n' "$have" | cut -f1 | grep -qxF "$name"; then
     continue
