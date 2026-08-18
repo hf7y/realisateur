@@ -5,15 +5,13 @@
 # GUARD-TEST: bin/tests/needs-zach.test.sh
 # GATE: none -- reads live issue trackers
 #
-# THE PREDICATE, and it invents nothing: an open issue whose FIRST NON-EMPTY
-# LINE declares `DECISION:` is waiting on a person; `NO-DECISION:` is not.
-# That is grammar_declaration() in bin/lib/body-grammar.sh -- the rule
-# bin/gh-sign.sh already enforces on every agent-written body at creation.
-# So the label is DERIVED, and this reconciles it. Typed, it was wrong three
-# times out of three on 2026-08-18: #396 has the measurement, #397 the estate.
+# THE PREDICATE invents nothing: line 1 declaring `DECISION:` is waiting on a
+# person, `NO-DECISION:` is not. That is grammar_declaration() in
+# bin/lib/body-grammar.sh, which gh-sign already enforces at creation. So the
+# label is DERIVED, and this reconciles it -- typed, it was wrong 3 of 3
+# (#396), and 22 of 24 repos do not even carry it (#397).
 #
-# TRAP: line 1 declaring NEITHER is UNDECLARED, never quietly read as "no
-# decision" -- nobody can tell whether it needs Zach, which is the question.
+# TRAP: line 1 declaring NEITHER is UNDECLARED, never read as "no decision".
 set -uo pipefail
 
 CLI_NAME='needs-zach.sh'
@@ -47,9 +45,8 @@ done
 say() { printf '%s\n' "$*"; }
 row() { printf '  %-11s %-6s %s\n' "$1" "#$2" "${3:-}"; }
 
-# One request, and its failure is BLIND. `gh issue list` prints [] for a repo
-# that does not exist AND for one with no open issues, so the exit code is the
-# only thing separating "nothing waiting" from "could not look".
+# `gh issue list` prints [] for a missing repo AND for an empty one, so the
+# exit code is all that separates "nothing waiting" from "could not look".
 json="$(gh issue list --repo "$REPO" --state open --limit 200 \
         --json number,title,body,labels 2>&1)" || {
   printf '%s: BLIND -- could not read %s: %s\n' "$CLI_NAME" "$REPO" "$json" >&2

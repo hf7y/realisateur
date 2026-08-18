@@ -80,10 +80,8 @@ indistinguishable from forgetting to look.
 
 **Nothing from this session gets appended to `.scheduler/FOCUS.md`,
 `BLOCKERS.md`, or `QUESTIONS.md`.** Those surfaces were RETIRED by
-hf7y/scheduler#66 on 2026-08-07 and do not exist in this repo. Prose lives
-in issues and PRs — searchable, closeable, and not something every
-project's clone has to carry forever. If you find one of those files
-anywhere, it is a finding (hf7y/realisateur#230), not a destination.
+hf7y/scheduler#66 and do not exist in this repo. Finding one anywhere is a
+finding (hf7y/realisateur#230), not a destination.
 
 For each of the following, file a GitHub issue in the **owning** repo
 (the repo the write/finding/decision is actually about — run

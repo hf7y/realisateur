@@ -3,8 +3,8 @@
 # Contract test for bin/needs-zach.sh: the `needs-human` label is a VIEW of
 # what line 1 declares, and could-not-look is never clean.
 #
-# HERMETICITY: full. A fake `gh` serves a fixture and RECORDS every `issue
-# edit`, so --apply is graded on what it wrote, not on what it printed.
+# HERMETICITY: full. A fake `gh` RECORDS every `issue edit`, so --apply is
+# graded on what it wrote, not what it printed.
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/needs-zach.sh"
@@ -62,8 +62,6 @@ rc  "C1 exit 1" 1 "$code"
 has "C2 reported UNDECLARED"                     "$out" "UNDECLARED  #9"
 eq  "C3 --apply writes NO label for it: the fix is line 1, not a label" "$(wc -l < "$T/edits")" "0"
 
-# D: the declaration must OPEN line 1, or a body quoting the convention
-# exempts itself.
 section "D. the declaration must OPEN line 1"
 cat > "$T/f.json" <<'EOF'
 [{"number":11,"title":"quotes the convention later","body":"Some preamble.\n\nDECISION: @zach -- this is a quotation, not a declaration","labels":[]}]
