@@ -54,7 +54,6 @@ has "B4 ...from the issue that does not" "$(cat "$T/edits")" "issue edit 4"
 eq  "B5 exactly two writes -- the agreeing pair is left alone" "$(wc -l < "$T/edits")" "2"
 
 section "C. a body that declares nothing is UNDECLARED, never 'no decision'"
-# Reading an unanswerable body as `no` is how a label goes quietly wrong.
 cat > "$T/f.json" <<'EOF'
 [{"number":9,"title":"predates the convention","body":"Found while doing something else.","labels":[]}]
 EOF
@@ -63,6 +62,8 @@ rc  "C1 exit 1" 1 "$code"
 has "C2 reported UNDECLARED"                     "$out" "UNDECLARED  #9"
 eq  "C3 --apply writes NO label for it: the fix is line 1, not a label" "$(wc -l < "$T/edits")" "0"
 
+# D: the declaration must OPEN line 1, or a body quoting the convention
+# exempts itself.
 section "D. the declaration must OPEN line 1"
 cat > "$T/f.json" <<'EOF'
 [{"number":11,"title":"quotes the convention later","body":"Some preamble.\n\nDECISION: @zach -- this is a quotation, not a declaration","labels":[]}]

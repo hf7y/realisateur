@@ -34,16 +34,9 @@ interactive pass. It must NOT stamp `(re-arrival: …)`/`[iface: …]`, reorder
 anything, or change a weight. A promotion nobody stated is the silent reorder
 `/ideate` 4.5 forbids.
 
-RETIRED 2026-08-07: `ecosystem-survey.sh`, `milestone-audit.sh` and
-`steward-survey.sh`. Four scripts each re-implemented the same
-`schedule/*.conf` enumeration, nothing ran any of them, and two computed the
-same FOCUS.md fact with a character-identical expression and printed it under
-two different names. For per-project git health and open questions use
-`scheduler status <project>` directly, which is what `ecosystem-survey.sh`
-was calling. See `bin/tests/guard-estate.test.sh` for the standard the
-survivors are now held to, and for what is knowingly given up.
-
-(The third survey was `bin/hygiene-lint.sh`, retired: hf7y/realisateur#265.)
+For per-project git health and open questions use `scheduler status
+<project>` directly. The four survey scripts that wrapped it are retired
+(hf7y/realisateur#265); `bin/tests/guard-estate.test.sh` holds the survivors.
 
 **Read the answers on your own issues and process them.** Zach answers by
 commenting and LEAVING THE ISSUE OPEN -- state and labels say nothing about
@@ -168,9 +161,7 @@ For each unarchived artifact:
   nightly iteration (most agent/codebase projects are), wire it into the
   scheduler exactly as `SCHEDULER.md` documents for realisateur itself:
   a GitHub repo under `hf7y` (its issue tracker is where the project's
-  prose lives -- do NOT create `.scheduler/FOCUS.md`, `QUESTIONS.md` or
-  `BLOCKERS.md`; scaffolding them is how the retired surfaces kept being
-  reborn after hf7y/scheduler#66), a `.claude/commands/nightly-batch.md`
+  prose lives), a `.claude/commands/nightly-batch.md`
   and a root `CLAUDE.md` (adapt the templates in scheduler's `examples/`
   to what the new project actually is -- `CLAUDE.md.template` is the
   "suggest `/ideate <project>` instead of implementing" guardrail, worth
@@ -194,9 +185,6 @@ files under `~/.local/share`. Standing rule: realisateur *owns* the thing
 it generates; senechal *owns knowing it exists*. It files a labelled issue
 on `hf7y/senechal` with `gh` directly and reads it back to confirm it
 landed, so it needs no clone of that repo and no push access to it.
-
-Do not create `FOCUS.md`/`QUESTIONS.md` here in order to have something to
-commit. They are retired (hf7y/scheduler#66).
 
 ## 4. Commit as you go
 
