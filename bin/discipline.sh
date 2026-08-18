@@ -50,7 +50,11 @@ CLI_USAGE='  discipline              print the whole baseline
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 SRC="$HERE/BUILD-DISCIPLINE.md"
 
-die() { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
+die()   { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
+# 2, not 1. "You typed it wrong" and "I looked and something is wrong" are
+# different answers, and a caller that cannot tell them apart retries a
+# finding or reports a typo as one. The estate's usage code is 2 (CONTRACT.md).
+usage() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; printf 'usage:\n%s\n' "$CLI_USAGE" >&2; exit 2; }
 
 case "${1:-}" in
   -h|--help)
@@ -89,7 +93,5 @@ case "${1:-}" in
   '')           printf '%s\n' "$body" ;;
   --checklist)  printf '%s\n' "$body" | awk '/^## Ecosystem protocols/{exit} {print}' ;;
   --protocols)  printf '%s\n' "$body" | awk '/^## Ecosystem protocols/{p=1} p' ;;
-  *)            die "unknown argument: $1
-usage:
-$CLI_USAGE" ;;
+  *)            usage "unknown argument: $1" ;;
 esac

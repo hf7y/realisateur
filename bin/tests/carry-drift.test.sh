@@ -24,6 +24,7 @@ _decl_rows() {
 # files: one replica, one drifted.
 mk_repo() {
   local r="$T/$1"; shift
+  local driftroot="${1:-}"   # make root-level carries drift, so --carry writes them
   mkdir -p "$r/bin/lib"
   git -C "$r" init -q 2>/dev/null || git init -q "$r"
   git -C "$r" config user.email t@t; git -C "$r" config user.name t
@@ -49,7 +50,10 @@ mk_repo() {
   # about one property each
   _decl_rows "$CD" | while IFS=$'\t' read -r _b _m; do
     case "$_b" in */*) mkdir -p "$r/${_b%/*}" ;; esac
-    printf 'carried %s\n' "$_b" > "$r/$_b"
+    case "$driftroot:$_b" in
+      ?*:*/*|:*) printf 'carried %s\n' "$_b" > "$r/$_b" ;;
+      *)         printf 'stale %s\n'   "$_b" > "$r/$_b" ;;
+    esac
   done
   git -C "$r" add -A >/dev/null; git -C "$r" commit -qm carry
   git -C "$r" checkout -q master 2>/dev/null || git -C "$r" checkout -q main
@@ -85,6 +89,20 @@ printf 'main v1\n' > "$T/wt/bin/reach-lint.sh"
 out="$(bash "$CD" --repo "$REPO" --ratchet "$EMPTY_RATCHET" --carry "$T/wt" 2>&1)"
 eq  "D1 the drifted file is overwritten with main's" "$(cat "$T/wt/bin/reach-lint.sh")" "main v2"
 has "D2 ...and it says what it wrote" "$out" "carried  bin/reach-lint.sh"
+
+# D3: a carried path with no directory component. ${b%/*} is the FILE NAME
+# there, so this made a DIRECTORY of that name and cp wrote inside it -- the
+# carry reported success and shipped nothing at the declared path.
+_root="$(_decl_rows "$CD" | awk -F'\t' '$1 !~ /\// {print $1; exit}')"
+if [ -n "$_root" ]; then
+  RREPO="$(mk_repo rootrepo drift)"
+  mkdir -p "$T/wtroot"
+  bash "$CD" --repo "$RREPO" --ratchet "$EMPTY_RATCHET" --carry "$T/wtroot" >/dev/null 2>&1
+  [ -f "$T/wtroot/$_root" ] && ok "D3 a root-level carry lands as a FILE, not a directory" \
+                           || bad "D3 a root-level carry lands as a FILE, not a directory ($_root)"
+else
+  ok "D3 no root-level carry is declared (nothing to check)"
+fi
 
 section "D2. --carry leaves a ratcheted pair alone"
 # Carrying a forgiven pair would smuggle a reviewed change into a run whose

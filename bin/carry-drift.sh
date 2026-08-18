@@ -137,7 +137,16 @@ while read -r b; do
     row DRIFT "$b" "$m -- edited on one side only. Re-carry it: $CLI_NAME --carry <bashified checkout>"
     findings=$((findings + 1))
   fi
-done < <(git -C "$ROOT" ls-tree -r --name-only "$REF" -- bin/ 2>/dev/null)
+done < <(
+  # bin/ is where carries live, but not ALL of them: BUILD-DISCIPLINE.md is
+  # declared at the root, and scanning bin/ alone graded it in NEITHER loop --
+  # this one never saw it, and the declared-but-absent loop below skips
+  # anything that exists. A drifted root-level carry was silently clean.
+  {
+    git -C "$ROOT" ls-tree -r --name-only "$REF" -- bin/ 2>/dev/null
+    printf '%s' "$CARRIES" | grep -v '^[[:space:]]*$' | cut -f1
+  } | sort -u
+)
 
 # --- declared, but not there at all -----------------------------------------
 while IFS=$'\t' read -r b m; do
@@ -170,7 +179,11 @@ if [ -n "$CARRY_TO" ]; then
     # a reviewed change (what 13 accounts enforce) into a run whose stated job
     # is the unforgiven rows. Point --ratchet at an empty file to include them.
     if ratcheted "$b" "$m"; then skipped=$((skipped + 1)); continue; fi
-    mkdir -p "$CARRY_TO/${b%/*}"
+    # A path with no slash (BUILD-DISCIPLINE.md) would make ${b%/*} the FILE
+    # NAME, so this created a directory of that name and cp wrote inside it.
+    # The carry then reported success and shipped nothing at the declared
+    # path. Witness: carry-drift.sh --carry <dir> && ls -ld <dir>/*.md
+    case "$b" in */*) mkdir -p "$CARRY_TO/${b%/*}" ;; esac
     cp -p -- "$ROOT/$m" "$CARRY_TO/$b" && say "  carried  $m -> $CARRY_TO/$b"
   done
   [ "$skipped" -gt 0 ] && say "  $skipped ratcheted pair(s) left alone -- forgiven, and their re-carry is its own review."

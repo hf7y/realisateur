@@ -75,7 +75,10 @@ printf '%s' "$out" | grep -q 'partial' \
 
 # --- D: usage ----------------------------------------------------------------
 "$CMD" --help >/dev/null 2>&1; eq "D1  --help exits 0" "$?" "0"
-"$CMD" --nope  >/dev/null 2>&1; eq "D2  an unknown flag exits nonzero" "$?" "1"
+# 2, not 1. As a verb this is invoked by name on hosts with no checkout, and
+# "you typed it wrong" must be distinguishable from "I looked and the baseline
+# is broken" -- 1 means the text could not be found or came back empty.
+"$CMD" --nope  >/dev/null 2>&1; eq "D2  an unknown flag is a USAGE error (2), not a finding" "$?" "2"
 [ "$("$CMD" --path)" = "$REPO/BUILD-DISCIPLINE.md" ] \
   && ok "D3  --path names the one source" || bad "D3  --path names the one source"
 
