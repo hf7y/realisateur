@@ -101,30 +101,22 @@ For each unarchived artifact:
   ambiguous word, an image with no clear direction), leave it in the
   inbox rather than guessing wildly -- but a genuine partial idea should
   still get a best-effort scaffold, not be skipped for being imperfect.
-- **First check whether the artifact is actually about realisateur's own
-  process/workflow, not a new sibling project** -- e.g. "look into how
-  the scheduler's idea logic could unite with my habit of dropping notes
-  here" is feedback about this repo, not raw material for a new
-  `~/Documents/Projects/<name>/`. Telltale: it names realisateur, the
-  scheduler, or "this folder/workflow" itself as the subject. For these,
-  don't scaffold a project -- research the answer, record the decision
-  where the mechanism it governs lives (or `README.md` if it changes the
-  documented process), then archive the source artifact same as any other
-  processed idea.
+- **First check whether the artifact is about realisateur's own
+  process/workflow, not a new sibling project.** Telltale: it names
+  realisateur, the scheduler, or "this folder/workflow" as the subject. For
+  these, don't scaffold -- research the answer, record the decision where the
+  mechanism it governs lives, then archive the artifact as usual.
 - Check whether a project for this idea already exists under
   `~/Documents/Projects/` before creating a new one -- an artifact might
   be an addition to something already scaffolded, not a brand-new project.
 - **If it's an addition to an existing project, apply park-by-default
-  triage** (see `vault:realisateur/STABILITY-MILESTONES.md`): is this idea required to reach
-  that project's *current* stability milestone (its open `milestone`-
-  labelled issue)? If **yes**, it's `active` -- build/queue it normally. If
-  **no**, **park it**: `defere '<one line>' --project <name>` to
-  file it as a `deferred` issue, and do NOT build it tonight. Parking is
-  the default for anything beyond the current bar --
-  building past the milestone unprompted is the failure mode this convention
-  exists to prevent. A brand-new project is exempt: the inbox idea *is* its
-  v1, so scaffold it and set its first `## Stability milestone` as part of
-  the scaffold (below).
+  triage** (see `vault:realisateur/STABILITY-MILESTONES.md`): is this idea
+  required to reach that project's *current* stability milestone (its open
+  `milestone`-labelled issue)? If **yes**, build/queue it normally. If **no**,
+  **park it**: `defere '<one line>' --project <name>`, and do NOT build it
+  tonight. Building past the milestone unprompted is the failure mode this
+  convention exists to prevent. A brand-new project is exempt: the inbox idea
+  *is* its v1.
 - For a genuinely new idea: create `~/Documents/Projects/<name>/`, `git
   init` it, write a minimal README describing the inferred idea and
   initial scaffolding (actual code/structure appropriate to what was
@@ -136,12 +128,10 @@ For each unarchived artifact:
 - **Point every new project at `discipline`; do NOT copy the checklist in.**
   Its root `CLAUDE.md` gets a one-line pointer to the command. Copying the
   block is what realisateur#263 retired.
-  - Write a baseline `.gitignore` that blocks secrets and build debris
-    before the first `git add`: at minimum
-    `*.env`, `.env`, `secrets/`, `*secret*`, `*cred*`, `*.pem`, `*.key`,
-    `id_rsa*`, plus build/debris `*.img`, `*.img.xz`, `*.iso`, `*.efi`,
-    `*.dmg`, `*.log`, `__pycache__/`, `*.pyc`, `.DS_Store`. Real secrets
-    go in an untracked `.env`/`secrets/`, never a tracked file.
+  - Write a baseline `.gitignore` before the first `git add`: `*.env`, `.env`,
+    `secrets/`, `*secret*`, `*cred*`, `*.pem`, `*.key`, `id_rsa*`, `*.img`,
+    `*.img.xz`, `*.iso`, `*.efi`, `*.dmg`, `*.log`, `__pycache__/`, `*.pyc`,
+    `.DS_Store`. Real secrets go in an untracked `.env`/`secrets/`.
   - Prove it took by RUNNING `discipline` from the new project and seeing the
     full checklist, not by trusting that a file was written.
 - If the new project is the kind of thing that benefits from unattended
