@@ -22,9 +22,8 @@
 # Three of three wrong is not a labelling lapse, it is a hand-maintained
 # index. The body is the one home; this makes the label a view of it.
 #
-# TRAP: an issue whose line 1 declares NEITHER is reported UNDECLARED, never
-# quietly treated as "no decision". Predating the convention is a finding --
-# it means nobody can tell whether it needs Zach, which is the whole question.
+# TRAP: line 1 declaring NEITHER is UNDECLARED, never quietly read as "no
+# decision" -- nobody can tell whether it needs Zach, which is the question.
 set -uo pipefail
 
 CLI_NAME='needs-zach.sh'
