@@ -170,14 +170,22 @@ for repo in $repos; do
   # No bashified branch is a normal answer: most repos are not bashified.
   [ -n "$sha" ] || continue
 
-  tree="$(gh api "repos/$OWNER/$repo/git/trees/$sha?recursive=1" \
-            -q '.tree[] | select(.path|test("^(bin|man)/")) | "\(.mode) \(.path)"' 2>/dev/null)"
-  if [ -z "$tree" ]; then
-    # A repo WITH a bashified branch whose tree will not read is the
-    # ambiguous case: it is either genuinely verbless or a failed call.
-    # Counted as blindness rather than silently contributing zero verbs.
+  # VERBLESS IS NOT BLIND. Filtering to bin/ and man/ inside the fetch made
+  # "the call failed" and "declares no verbs" the same empty string, scored as
+  # blindness -- so retiring a repo's last verb froze the whole estate's build
+  # (2026-08-18: five repos, refused as "did not read", nothing wrong with any
+  # of them). Fetch the WHOLE tree and judge the CALL by it, since a git tree
+  # is never empty; then filter, and let the filter come back empty in peace.
+  whole="$(gh api "repos/$OWNER/$repo/git/trees/$sha?recursive=1" \
+             -q '.tree[] | "\(.mode) \(.path)"' 2>/dev/null)"
+  if [ -z "$whole" ]; then
     say "  BLIND  $repo: bashified is $sha but its tree did not read"
     blind=$((blind + 1))
+    continue
+  fi
+  tree="$(printf '%s\n' "$whole" | grep -E '^[0-9]+ (bin|man)/' || :)"
+  if [ -z "$tree" ]; then
+    say "  none   $repo: bashified carries no bin/ or man/ -- declares no verbs"
     continue
   fi
 
