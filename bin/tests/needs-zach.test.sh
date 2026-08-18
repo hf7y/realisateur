@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 #
 # Contract test for bin/needs-zach.sh: the `needs-human` label is a VIEW of
-# what line 1 of the body declares, and could-not-look is never clean.
+# what line 1 declares, and could-not-look is never clean.
 #
-# HERMETICITY: full. A fake `gh` on PATH serves a fixture and records every
-# `issue edit` it is asked to make, so --apply is graded on what it WROTE, not
-# on what it printed -- the build-but-do-not-wire failure this estate keeps
-# hitting looks exactly like a correct report with no write behind it.
+# HERMETICITY: full. A fake `gh` serves a fixture and RECORDS every `issue
+# edit`, so --apply is graded on what it wrote, not on what it printed.
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/needs-zach.sh"
@@ -56,9 +54,7 @@ has "B4 ...from the issue that does not" "$(cat "$T/edits")" "issue edit 4"
 eq  "B5 exactly two writes -- the agreeing pair is left alone" "$(wc -l < "$T/edits")" "2"
 
 section "C. a body that declares nothing is UNDECLARED, never 'no decision'"
-# The whole question is "does this need Zach". A body predating the convention
-# cannot answer it, and silently reading that as `no` is how a label goes
-# quietly, permanently wrong -- which is what this tool exists to end.
+# Reading an unanswerable body as `no` is how a label goes quietly wrong.
 cat > "$T/f.json" <<'EOF'
 [{"number":9,"title":"predates the convention","body":"Found while doing something else.","labels":[]}]
 EOF

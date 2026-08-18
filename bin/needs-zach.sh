@@ -6,21 +6,11 @@
 # GATE: none -- reads live issue trackers
 #
 # THE PREDICATE, and it invents nothing: an open issue whose FIRST NON-EMPTY
-# LINE declares `DECISION:` is waiting on a person. One declaring
-# `NO-DECISION:` is not. That is grammar_declaration() in
-# bin/lib/body-grammar.sh -- the same rule bin/gh-sign.sh already enforces on
-# every agent-written issue and pull request body at creation time.
-#
-# So the label is DERIVED, and this reconciles it. Before this, it was TYPED,
-# and a typed label rots in exactly one direction -- silently stuck ON:
-#   * realisateur#334 carried `needs-human` on 2026-08-18 with its decision
-#     MADE and SHIPPED (etalon#1 and realisateur#394, both merged). The label
-#     said "Zach must choose"; the truth was "an agent must execute".
-#   * realisateur#373 and #367 both open line 1 with `DECISION: @zach` and
-#     carried NO label at all, so a `--label needs-human` listing showed one
-#     stale row and hid two live ones.
-# Three of three wrong is not a labelling lapse, it is a hand-maintained
-# index. The body is the one home; this makes the label a view of it.
+# LINE declares `DECISION:` is waiting on a person; `NO-DECISION:` is not.
+# That is grammar_declaration() in bin/lib/body-grammar.sh -- the rule
+# bin/gh-sign.sh already enforces on every agent-written body at creation.
+# So the label is DERIVED, and this reconciles it. Typed, it was wrong three
+# times out of three on 2026-08-18: #396 has the measurement, #397 the estate.
 #
 # TRAP: line 1 declaring NEITHER is UNDECLARED, never quietly read as "no
 # decision" -- nobody can tell whether it needs Zach, which is the question.
