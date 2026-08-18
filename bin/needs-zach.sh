@@ -45,8 +45,8 @@ done
 say() { printf '%s\n' "$*"; }
 row() { printf '  %-11s %-6s %s\n' "$1" "#$2" "${3:-}"; }
 
-# `gh issue list` prints [] for a missing repo AND for an empty one, so the
-# exit code is all that separates "nothing waiting" from "could not look".
+# `gh issue list` prints [] for a missing repo AND an empty one, so its exit
+# code is all that separates "nothing waiting" from "could not look".
 json="$(gh issue list --repo "$REPO" --state open --limit 200 \
         --json number,title,body,labels 2>&1)" || {
   printf '%s: BLIND -- could not read %s: %s\n' "$CLI_NAME" "$REPO" "$json" >&2
@@ -86,8 +86,6 @@ done < <(printf '%s' "$json" | jq -r --arg l "$LABEL" \
 
 say ""
 say "$matched issue(s) already agree, $findings finding(s), $changed label(s) written."
-if [ "$findings" -gt 0 ] && [ "$APPLY" -eq 0 ]; then
-  say 'Re-run with --apply to make the label match the body. An UNDECLARED body'
-  say 'is NOT fixed by a label -- edit line 1, which is where the answer lives.'
-fi
+[ "$findings" -gt 0 ] && [ "$APPLY" -eq 0 ] && \
+  say 'Re-run with --apply. An UNDECLARED body is NOT fixed by a label -- edit line 1.'
 [ "$findings" -eq 0 ] || exit 1
