@@ -31,6 +31,7 @@ CLI_EXITS='  0  a complete manifest was derived
 cli_guard "$@"
 
 OWNER="${VERB_BUILD_OWNER:-hf7y}"
+VERB_META_REPO="${VERB_META_REPO:-verbs}"   # holds the published manifest the guard compares against
 BUILD_ROOT="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"
 WRITE=0
 ALLOW_SHRINK=0
@@ -267,11 +268,25 @@ fi
 # WHERE "the previous build" LIVES DEPENDS ENTIRELY ON WHO IS RUNNING.
 #
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
+#
+# The published manifest is read FIRST because it is the only reading that
+# exists everywhere. $BUILD_ROOT is a consumer path; a CI runner has adopted
+# no build, so on the one machine that cuts nightly the local readings are
+# both absent and the guard passed silently through a 35 -> 18 loss (#399).
 prev_count=0
 prev_where='(no previous build)'
+if published="$(gh api "repos/$OWNER/$VERB_META_REPO/contents/manifest.tsv" \
+                  --jq '.content' 2>/dev/null | base64 -d 2>/dev/null)" \
+   && [ -n "$published" ]; then
+  prev_count="$(printf '%s\n' "$published" | grep -cv '^#' || echo 0)"
+  prev_where="github.com/$OWNER/$VERB_META_REPO manifest.tsv"
+fi
 if [ -L "$BUILD_ROOT/current" ] && [ -f "$BUILD_ROOT/current/manifest.tsv" ]; then
-  prev_count="$(grep -cv '^#' "$BUILD_ROOT/current/manifest.tsv" 2>/dev/null || echo 0)"
-  prev_where="$BUILD_ROOT/current/manifest.tsv"
+  local_prev="$(grep -cv '^#' "$BUILD_ROOT/current/manifest.tsv" 2>/dev/null || echo 0)"
+  if [ "$local_prev" -gt "$prev_count" ]; then
+    prev_count="$local_prev"
+    prev_where="$BUILD_ROOT/current/manifest.tsv"
+  fi
 fi
 if [ -n "$ASSEMBLE" ] && [ -f "$ASSEMBLE/manifest.tsv" ]; then
   assembled_prev="$(grep -cv '^#' "$ASSEMBLE/manifest.tsv" 2>/dev/null || echo 0)"
@@ -280,6 +295,8 @@ if [ -n "$ASSEMBLE" ] && [ -f "$ASSEMBLE/manifest.tsv" ]; then
     prev_where="$ASSEMBLE/manifest.tsv"
   fi
 fi
+# A guard with no reference point says so. #399 was silent precisely here.
+[ "$prev_count" -gt 0 ] || say "  note: no previous build readable ($prev_where) -- the shrink guard cannot fire"
 if [ "$prev_count" -gt "$verb_count" ] && [ "$ALLOW_SHRINK" -eq 0 ]; then
   say "  previous build: $prev_count verb(s)  <- $prev_where"
   say "  this build:     $verb_count verb(s)"

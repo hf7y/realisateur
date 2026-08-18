@@ -92,8 +92,16 @@ case "$1 $2" in
   "repo list")   cat "$FIXTURE_REPOLIST"; exit 0 ;;
 esac
 if [ "$1" = api ]; then
-  # repos/<owner>/<repo>/git/trees/<sha>?recursive=1  ->  "<mode> <path>"
   path="$2"
+  # repos/<owner>/verbs/contents/manifest.tsv -> the PUBLISHED manifest,
+  # base64 as the contents API returns it. Absent fixture = a 404, which is
+  # what a cut with no published build behind it actually sees.
+  case "$path" in
+    */contents/manifest.tsv)
+      [ -n "${FIXTURE_PUBLISHED:-}" ] && [ -f "$FIXTURE_PUBLISHED" ] || exit 1
+      base64 -w0 < "$FIXTURE_PUBLISHED"; echo; exit 0 ;;
+  esac
+  # repos/<owner>/<repo>/git/trees/<sha>?recursive=1  ->  "<mode> <path>"
   repo="$(printf '%s' "$path" | awk -F/ '{print $3}')"
   sha="$(printf '%s' "$path" | sed 's#.*/trees/##; s#?.*##')"
   d="$FIXTURE_DIR/$repo.git"
@@ -127,6 +135,7 @@ printf '#project\tname\twhy\n' > "$TMP/not-a-verb.tsv"
 cut() {
     PATH="$TMP/stub:$PATH" \
     FIXTURE_REPOLIST="$TMP/repolist" FIXTURE_DIR="$FIX" \
+    FIXTURE_PUBLISHED="${FIXTURE_PUBLISHED:-}" \
     VERB_NOT_A_VERB_FILE="$TMP/not-a-verb.tsv" \
     VERB_KIND_RATCHET="$TMP/verb-kind.ratchet" \
     GIT_CONFIG_GLOBAL="$TMP/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
@@ -182,11 +191,22 @@ case "$(cat "$TMP/e3")" in
 esac
 
 # --- 4. the shrink refusal must fire in CI ------------------------------
-# CI has no $BUILD_ROOT/current -- it is a fresh runner every night. The
-# previous build is the meta-repo checkout being assembled into. Note
-# --build-root points at a directory that does not exist, so ONLY the
-# assembled manifest can be supplying this refusal.
+# CI is a fresh runner: no $BUILD_ROOT/current, and it assembles into an
+# EMPTY directory, so neither local reading exists. Both were the guard's
+# only reference points until #399, where that combination let a 35 -> 18
+# loss through unremarked. The published manifest is the reading that
+# survives a machine with nothing on it, so it is tested first and alone.
 printf 'alpha\n' > "$TMP/repolist"
+printf 'alpha\taa\nalpha\tab\nbeta\tba\n' > "$TMP/published"
+FIXTURE_PUBLISHED="$TMP/published" \
+  cut --assemble "$TMP/fresh-runner" >/dev/null 2>"$TMP/e0"
+check "a shrinking build is refused on a runner with NOTHING local" "$?" "1"
+case "$(cat "$TMP/e0")" in
+    *"$OWNER/verbs"*) ok "...and it names the published manifest as its source" ;;
+    *) bad "the CI shrink message names the remote" "got: $(head -3 "$TMP/e0")" ;;
+esac
+
+# ...and the local readings still work when they are the only ones there.
 cut --assemble "$OUT" >/dev/null 2>"$TMP/e4"
 check "a shrinking build is refused with no local build root at all" "$?" "1"
 check "...and the assembled tree was NOT touched" \
