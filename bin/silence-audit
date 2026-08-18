@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # silence-audit.sh -- the ecosystem's NULL-DISCRIMINATOR.
 #
+# KIND: verb
+#
 # RUNNER: operator -- surveys every registered project's working checkout
 # GUARD-TEST: none -- it carries its own --self-test with fixtures, which is not a suite CI globs; closing this is the next repaint due
 # GATE: strict --target $TREE

@@ -2,6 +2,8 @@
 # notify-senechal.sh <text> -- file a machine-config change through senechal's
 # own front door, and make sure it actually LANDED where senechal reads it.
 #
+# KIND: verb
+#
 # TRAPS (the rest of this header is in the vault):
 #   senechal owns the CONTRACT -- everything below the `--- 2.` line: what
 #   "landed" means and which surface the consumer actually reads. That is now
