@@ -3,11 +3,9 @@ scope: user
 description: Session-closing rite -- reconcile every branch against the remote, run the closeout lint, file residue as issues/PRs (never repo prose), surface decisions. Does not build.
 ---
 
-<!-- Source of truth: hf7y/realisateur:.claude/commands/cloture.md. Installed
-     verbatim at USER level, so it runs from whatever repo you are in: where
-     the text below says "this repo" it means realisateur, not your cwd. Every
-     command it names is a verb on PATH and is cwd-independent. Do not edit the
-     installed copy -- edit the repository. -->
+<!-- Source: hf7y/realisateur:.claude/commands/cloture.md -- installed verbatim at
+     USER level, so "this repo" below means realisateur, not your cwd. Edit it
+     there, never the installed copy. -->
 
 `/cloture` is the closing counterpart to `/ideate`'s opening posture: a rhythm
 to run after a big job, so a session ends "clear to clear" instead of trailing

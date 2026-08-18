@@ -1,26 +1,16 @@
 #!/usr/bin/env bash
-# install-shims.sh -- render this repo's .claude/commands/*.md as USER-level
-# slash commands (and its hooks), so every repo gets them, not just this one.
+# install-shims.sh -- install this repo's .claude/commands/*.md as USER-level
+# slash commands, and its hooks/, so every repo gets them.
 #
-# IT NO LONGER INSTALLS SHIMS, and the name is now historical. The ecosystem
-# protocol commands -- check-project-busy, claim-drift, closeout-lint,
-# discipline, notify-senechal, silence-audit -- are declared VERBS as of
-# realisateur#264: they are on `bashified` as bin/<name> + man/<name>.1, the
-# nightly cut assembles them, and they install host-wide into /usr/local/bin.
-# A verb needs no clone of this repo; a shim was a file that execed into one,
-# which is exactly what #225 measured on all 13 monkey accounts.
+# IT INSTALLS NO SHIMS; the name is historical (#264 made the six protocol
+# commands verbs, #385 deleted the shim half, #389 tracks the rename).
 #
-# What survives here is the half a verb cannot be: a slash command is a FILE
-# Claude Code reads, not a name on PATH. It is now installed VERBATIM -- no
-# rendering, no $REPO baked into the output -- which is what lets the SAME
-# bytes be carried onto `bashified` (bin/carry-drift.sh) and installed by the
-# verb build on an account with no checkout at all
-# (bin/install-verb-build.sh --link). This script is now the mandark-side
-# convenience, not the only channel: #389.
-#
-# Existing shims are LEFT ALONE. Removing them is a separate, deliberate pass
-# once the verbs are confirmed on a host -- an installer that deletes the
-# working command before its replacement lands is an outage, not a migration.
+# What survives is the half a verb cannot be: a slash command is a FILE Claude
+# Code reads, not a name on PATH. It is installed VERBATIM -- no rendering, no
+# $REPO in the output -- so the SAME bytes ride onto `bashified`
+# (bin/carry-drift.sh) and install from the verb build on an account with no
+# checkout (bin/install-verb-build.sh --link). This script is the mandark-side
+# convenience now, not the only channel.
 #
 # Idempotent. Rerun after editing .claude/commands/*.md.
 set -uo pipefail
@@ -63,10 +53,8 @@ HOOK_SRC="$REPO/hooks"
 HOOK_DEST="${HOOK_DEST:-$HOME/.claude/hooks}"
 CLAUDE_SETTINGS="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"
 
-# Both lists below are DERIVED, not typed. A hand-maintained list is what
-# produced the 2026-07-27 gap: three shims existed because three were typed,
-# and the six survey scripts the command files also name were never noticed.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+# DERIVED, not typed: a hand-maintained list is what produced the 2026-07-27
+# gap.  [rest: vault:realisateur/guard-archaeology-20260817.md]
 mapfile -t GLOBAL_COMMANDS < <(
   for f in "$CMD_SRC"/*.md; do
     [ -f "$f" ] || continue
@@ -76,34 +64,12 @@ mapfile -t GLOBAL_COMMANDS < <(
   done
 )
 
-PROTOCOL_MISSING=()
-for n in "${PROTOCOL_COMMANDS[@]}"; do
-  [ -f "$REPO/bin/$n.sh" ] || PROTOCOL_MISSING+=("$n")
-done
-if [ "${#PROTOCOL_MISSING[@]}" -gt 0 ]; then
-  printf 'install-shims: FAIL: PROTOCOL_COMMANDS names %d script(s) that do not exist: %s\n' \
-    "${#PROTOCOL_MISSING[@]}" "${PROTOCOL_MISSING[*]}" >&2
-  exit 1
-fi
-
 CHECK_ONLY=0
 [ "${1:-}" = "--check" ] && CHECK_ONLY=1
 
 fail=0
 note() { printf '%s\n' "$*"; }
 flag() { printf 'FLAG: %s\n' "$*" >&2; fail=1; }
-
-# A user-level command file is now installed VERBATIM, and that is what makes
-# this repo's slash commands distributable without a checkout: an identical
-# copy can be carried onto `bashified` and installed by the verb build
-# (bin/install-verb-build.sh --link), guarded by bin/carry-drift.sh.
-#
-# It used to be RENDERED: a generated header naming this checkout's path, a sed
-# pass rewriting `bin/foo.sh` to the PATH name, and a trailer explaining what
-# "this repo" meant -- all three needed $REPO, and all three are why #389 could
-# say the commands were the last thing needing a realisateur clone. The header
-# and the trailer are now one HTML comment inside each source file, and the
-# names are written as the PATH names they already are.
 
 install_file() {
   local path="$1" content="$2" mode="$3" label="$4"

@@ -4,11 +4,9 @@ description: Halve a repo's prose by deleting the mechanisms that manufacture it
 argument-hint: "<repo-name>"
 ---
 
-<!-- Source of truth: hf7y/realisateur:.claude/commands/reap.md. Installed
-     verbatim at USER level, so it runs from whatever repo you are in: where
-     the text below says "this repo" it means realisateur, not your cwd. Every
-     command it names is a verb on PATH and is cwd-independent. Do not edit the
-     installed copy -- edit the repository. -->
+<!-- Source: hf7y/realisateur:.claude/commands/reap.md -- installed verbatim at
+     USER level, so "this repo" below means realisateur, not your cwd. Edit it
+     there, never the installed copy. -->
 
 Reap `$ARGUMENTS`. Three targets: **prose in half, foreign mechanism in half,
 75% of issues closed by working them.** realisateur was the test case —

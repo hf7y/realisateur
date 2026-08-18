@@ -244,15 +244,11 @@ if [ "$LINK" -eq 1 ]; then
   fi
 
   # --- the non-verb payload: user-level slash commands and hooks ---------
-  # These are the half a verb cannot be: a slash command is a FILE Claude Code
-  # reads, not something on PATH. Before this, the only way to install one was
-  # bin/install-shims.sh from a realisateur checkout, which is what made the
-  # commands the last clone-dependent thing in the estate (#389).
-  #
-  # COPIED, not symlinked: ~/.claude/commands is a directory the human edits,
-  # and a dangling link into a rolled-back build reads as a corrupt command
-  # file rather than an absent one. A copy also means `current` moving does not
-  # silently change a command mid-session.
+  # A slash command is a FILE Claude Code reads, not a name on PATH, so it can
+  # never be a verb; this is what made it the last clone-dependent thing (#389).
+  # COPIED, not symlinked: a dangling link into a rolled-back build reads as a
+  # CORRUPT command file rather than an absent one, and a copy means `current`
+  # moving cannot change a command mid-session.
   installed=0
   for src_dir in commands hooks; do
     from="$BUILD_ROOT/current/realisateur/$src_dir"
@@ -265,8 +261,7 @@ if [ "$LINK" -eq 1 ]; then
     for f in "$from"/*; do
       [ -f "$f" ] || continue
       dst="$to/$(basename "$f")"
-      # A symlink here is never ours, and writing through it clobbers its
-      # target. Same rule as install-shims.sh install_file().
+      # A symlink here is never ours; cp would write THROUGH it.
       [ -L "$dst" ] && { row SKIP "$(basename "$f")" "symlink -> $(readlink "$dst")"; continue; }
       cmp -s "$f" "$dst" && continue
       cp "$f" "$dst" && chmod "$mode" "$dst" && installed=$((installed + 1))
