@@ -62,33 +62,25 @@ view every image artifact.
 An empty inbox is now the **normal** state, not an exception. Intake is
 bursty; most nights there is nothing dropped.
 
-**The failure mode this section exists to prevent** (observed 2026-07-26,
-seven batch runs in one day): with no artifact to work on, the pass goes
-looking for work in the only place left -- realisateur itself -- and builds
-another lint, guard or record *about its own batch process*. Each one is real,
-tested, committed code, which is what makes it hard to see. That day produced
-five new scripts for realisateur's own workflow and **zero** commits into any
-of the twelve scaffolded projects.
+**The failure mode this prevents:** with no artifact, the pass builds another
+lint or guard *about its own batch process*. Real, tested, committed code,
+which is what makes it hard to see. Seven runs on 2026-07-26 produced five such
+scripts and **zero** commits into any of the twelve scaffolded projects.
 
 So when there is no artifact to process, the job is **stewardship of the
 other projects**, and the output is *routing*, not building:
 
-- Pick the **one** most striking row — a dark high-weight project, a
-  reservoir stranded behind a closed valve, a live weight-1 project whose
-  oldest open idea is weeks old.
-- **File it as an issue.** If it needs a human decision (re-enable?
-  reweight? park the stranded ideas?), the issue IS the question.
-  **Re-enabling a project or changing a weight is not this pass's call** — those are
-  stated decisions, and a batch run making them silently is the reorder
-  `/ideate` §4.5 forbids.
-- Then **stop**. A steward pass that surfaces one thing clearly and
-  builds nothing is a complete, successful run. Say so in the report.
+- Pick the **one** most striking row — a dark high-weight project, a live
+  weight-1 project whose oldest open idea is weeks old.
+- **File it as an issue**, and if it needs a human decision the issue IS the
+  question. **Re-enabling a project or changing a weight is not this pass's
+  call** — a batch run making one silently is the reorder `/ideate` §4.5 forbids.
+- Then **stop**. A steward pass that surfaces one thing and builds nothing is a
+  complete, successful run. Say so in the report.
 
 **Explicitly out of scope on an empty-inbox night:** authoring a new lint,
-survey, guard, or command for realisateur itself. If the pass believes one
-is needed, that belief is the output — file it as an issue for a pass with
-a human present, and do not build it tonight. Realisateur already has five surveys; the sixth needs a stated
-reason from outside this loop.
+survey, guard, or command for realisateur itself. If the pass believes one is
+needed, that belief is the output — file it as an issue, do not build it.
 
 ## 3. Infer and wire up, one artifact at a time
 
