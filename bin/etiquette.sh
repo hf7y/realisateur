@@ -3,6 +3,7 @@
 # and the reconciler that makes a repo match it.
 #
 # KIND: verb
+# RUNNER: no -- a SURVEY, run in a triage pass or ahead of /ideate and /cloture
 # GUARD-TEST: bin/tests/etiquette.test.sh
 # GATE: none -- reads live issue trackers; writes only with --apply
 #
