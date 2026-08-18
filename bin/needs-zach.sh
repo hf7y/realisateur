@@ -6,10 +6,9 @@
 # GATE: none -- reads live issue trackers
 #
 # THE PREDICATE invents nothing: line 1 declaring `DECISION:` is waiting on a
-# person, `NO-DECISION:` is not. That is grammar_declaration() in
-# bin/lib/body-grammar.sh, which gh-sign already enforces at creation. So the
-# label is DERIVED, and this reconciles it -- typed, it was wrong 3 of 3
-# (#396), and 22 of 24 repos do not even carry it (#397).
+# person, `NO-DECISION:` is not -- grammar_declaration() in
+# bin/lib/body-grammar.sh, which gh-sign enforces at creation. So the label is
+# DERIVED. Typed, it was wrong 3 of 3 (#396); 22 of 24 repos lack it (#397).
 #
 # TRAP: line 1 declaring NEITHER is UNDECLARED, never read as "no decision".
 set -uo pipefail
@@ -45,8 +44,8 @@ done
 say() { printf '%s\n' "$*"; }
 row() { printf '  %-11s %-6s %s\n' "$1" "#$2" "${3:-}"; }
 
-# `gh issue list` prints [] for a missing repo AND an empty one, so its exit
-# code is all that separates "nothing waiting" from "could not look".
+# [] means both "missing repo" and "empty one": the exit code is all that
+# separates "nothing waiting" from "could not look".
 json="$(gh issue list --repo "$REPO" --state open --limit 200 \
         --json number,title,body,labels 2>&1)" || {
   printf '%s: BLIND -- could not read %s: %s\n' "$CLI_NAME" "$REPO" "$json" >&2
