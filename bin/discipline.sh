@@ -2,6 +2,8 @@
 # discipline.sh -- print the realisateur baseline: the build-discipline
 # checklist and the ecosystem protocols. ONE file, read at the point of use.
 #
+# KIND: verb
+#
 # WHAT THIS RETIRES: bin/restamp-discipline.sh, and the stamped
 # `realisateur-baseline` region in every project's CLAUDE.md.
 #

@@ -6,6 +6,8 @@
 # and `--repo` skips B so the SubagentStop path stays fully offline. Signals,
 # not verdicts: see $CLI_EXITS below for what each code means.
 #
+# KIND: verb
+#
 # RUNNER: hooks/subagent-closeout.sh bin/tests/closeout-lint.test.sh
 # GUARD-TEST: bin/tests/closeout-lint.test.sh
 # GATE: strict --repo $TREE

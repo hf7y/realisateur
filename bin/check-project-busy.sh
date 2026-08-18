@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # check-project-busy.sh <project> -- offline-first concurrency guard.
 #
+# KIND: verb
+#
 # Answers one narrow question: is a scheduler-dispatched job (nightly-batch,
 # bug-sweep, or a project's own oddly-named batch job) actively running
 # against <project> RIGHT NOW? Realisateur's own half of the 2026-07-24

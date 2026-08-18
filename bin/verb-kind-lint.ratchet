@@ -74,32 +74,12 @@
 #
 # DO NOT add a second entry of this kind without the same paragraph.
 undeclared vim-arcade/vim-arcade
-undeclared baudin/loge
-undeclared bibliothecaire/accroche
 undeclared bibliothecaire/consulte
 undeclared bibliothecaire/cueille
 undeclared bibliothecaire/fonde
-undeclared bibliothecaire/glane
 undeclared bibliothecaire/range
-undeclared bibliothecaire/trie
-undeclared bibliothecaire/verse
-undeclared crt/sonne
 undeclared ecosim/sonde
 undeclared gardien/fauche
 undeclared gardien/garde
-undeclared gardien/transplante
-undeclared groc-mangr/mange
-undeclared nine-speakers/chante
-undeclared scheduler/arme
 undeclared scheduler/dose
-undeclared scheduler/jauge
-undeclared scheduler/rapporte
-undeclared scheduler/relis
-undeclared senechal/ausculte
-undeclared senechal/debarrasse
 undeclared senechal/installe
-undeclared senechal/lance
-undeclared senechal/recense
-undeclared senechal/veille
-undeclared sequestria/capte
-undeclared vim-arcade/entraine
