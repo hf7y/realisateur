@@ -177,6 +177,7 @@ carry-drift.sh
 defere.sh
 retire-check.sh
 decision-rot.sh
+needs-zach.sh
 rot-ratchet.sh
 directive-prose.sh
 cut-verb-build.sh
