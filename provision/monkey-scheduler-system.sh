@@ -29,7 +29,7 @@
 #   ./monkey-scheduler-system.sh --install    idempotent; safe to re-run
 #   ./monkey-scheduler-system.sh --sync       fast-forward /srv/scheduler
 #
-# Requires passwordless sudo on the target (provision/monkey-nopasswd.sh) and
+# Requires passwordless sudo on the target (senechal provision/monkey-nopasswd.sh) and
 # a reachable host. Run from mandark; `monkey` resolves via ~/.ssh/config.
 
 set -euo pipefail
@@ -73,7 +73,7 @@ case "${1:---check}" in
     fi
     sudo -n true 2>/dev/null \
       && printf "  %-8s %s\n" OK "passwordless sudo available" \
-      || printf "  %-8s %s\n" NEEDS "passwordless sudo (run monkey-nopasswd.sh)"
+      || printf "  %-8s %s\n" NEEDS "passwordless sudo (senechal provision/monkey-nopasswd.sh)"
   '
   echo; echo "check only. Nothing changed."
   ;;
