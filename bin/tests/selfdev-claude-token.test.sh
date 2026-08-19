@@ -16,15 +16,15 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 FAKE_TOKEN='sk-ant-oat01-TESTFIXTURE-not-a-real-credential'
 
 mkhome() {  # mkhome <acct> -- a home shaped as provision-selfdev-user.sh leaves it
-  mkdir -p "$TMP/home/$1/.claude"
-  printf '%s' "$FAKE_TOKEN" > "$TMP/home/$1/.claude-token"
-  python3 - "$TMP/home/$1/.claude/settings.json" "$FAKE_TOKEN" <<'PY'
+  mkdir -p "$TMP/accounts/$1/.claude"
+  printf '%s' "$FAKE_TOKEN" > "$TMP/accounts/$1/.claude-token"
+  python3 - "$TMP/accounts/$1/.claude/settings.json" "$FAKE_TOKEN" <<'PY'
 import json, sys, pathlib
 pathlib.Path(sys.argv[1]).write_text(json.dumps(
     {"env": {"CLAUDE_CODE_OAUTH_TOKEN": sys.argv[2]}, "model": "opus"}, indent=2) + "\n")
 PY
 }
-run() { SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" SELFDEV_HOME_ROOT="$TMP/home" \
+run() { SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" SELFDEV_HOME_ROOT="$TMP/accounts" \
         SELFDEV_ACCOUNTS="alpha beta" bash "$TOOL" "$@" 2>&1; }
 
 echo "selfdev-claude-token.test.sh"
@@ -43,12 +43,12 @@ echo "== 2. --check REPORTS THE GAP AND EVERY STALE COPY ==================="
 mkdir -p "$TMP/etc"; mkhome alpha; mkhome beta
 O="$(run --check)"; R=$?
 has "an absent host-wide copy is a GAP" "$O" "has not been installed"
-has "...and every per-account copy is named" "$O" "stale copy: $TMP/home/alpha/.claude-token"
+has "...and every per-account copy is named" "$O" "stale copy: $TMP/accounts/alpha/.claude-token"
 rc  "...and a GAP alone exits 2" 2 "$R"
 
 # ABSENT is a fact; UNREADABLE is a domain we did not read. Only the second
 # is BLIND, and conflating them is how a survey reports clean by not looking.
-O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" SELFDEV_HOME_ROOT="$TMP/home" \
+O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" SELFDEV_HOME_ROOT="$TMP/accounts" \
      SELFDEV_ACCOUNTS="ghost" bash "$TOOL" --check 2>&1)"; R=$?
 has "an account with no home is a fact, not a blindness" "$O" "no copy to hold"
 # Match a BLIND FINDING line, not the tally line, which names BLIND always.
@@ -63,31 +63,31 @@ O="$(run --purge)"; R=$?
 has "purging with no host-wide copy is refused" "$O" "refusing to purge"
 has "...and says what it would cost" "$O" "produce nothing, silently"
 rc  "...and that is BAD, not a no-op" 4 "$R"
-[ -e "$TMP/home/alpha/.claude-token" ] && ok "...and it deleted nothing" \
+[ -e "$TMP/accounts/alpha/.claude-token" ] && ok "...and it deleted nothing" \
                                        || bad "the refusal still removed a file"
 
 echo "== 4. --purge IS DRY RUN UNTIL --apply ==============================="
 printf '%s\n' "$FAKE_TOKEN" > "$TMP/etc/claude-token"
 O="$(run --purge)"; R=$?
 has "a dry run says so" "$O" "DRY RUN"
-has "...and names each file it would shred" "$O" "would shred $TMP/home/alpha/.claude-token"
+has "...and names each file it would shred" "$O" "would shred $TMP/accounts/alpha/.claude-token"
 has "...and the settings key it would strip" "$O" "would strip CLAUDE_CODE_OAUTH_TOKEN"
-[ -e "$TMP/home/alpha/.claude-token" ] && ok "...and changed nothing on disk" \
+[ -e "$TMP/accounts/alpha/.claude-token" ] && ok "...and changed nothing on disk" \
                                        || bad "the DRY RUN deleted a file"
-grep -q CLAUDE_CODE_OAUTH_TOKEN "$TMP/home/beta/.claude/settings.json" \
+grep -q CLAUDE_CODE_OAUTH_TOKEN "$TMP/accounts/beta/.claude/settings.json" \
   && ok "...and left settings.json untouched" || bad "the DRY RUN edited settings.json"
 
 echo "== 5. --purge --apply REMOVES THE COPY, NOT THE CONFIG ==============="
 O="$(run --purge --apply)"; R=$?
-[ -e "$TMP/home/alpha/.claude-token" ] && bad ".claude-token survived --apply" \
+[ -e "$TMP/accounts/alpha/.claude-token" ] && bad ".claude-token survived --apply" \
                                        || ok ".claude-token is gone"
-grep -q CLAUDE_CODE_OAUTH_TOKEN "$TMP/home/alpha/.claude/settings.json" \
+grep -q CLAUDE_CODE_OAUTH_TOKEN "$TMP/accounts/alpha/.claude/settings.json" \
   && bad "the token key survived --apply" || ok "the token key is out of settings.json"
 python3 -c "import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d.get('model')=='opus' else 1)" \
-  "$TMP/home/alpha/.claude/settings.json" \
+  "$TMP/accounts/alpha/.claude/settings.json" \
   && ok "...and every UNRELATED setting is still there (model)" \
   || bad "--apply destroyed unrelated config"
-python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$TMP/home/alpha/.claude/settings.json" \
+python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$TMP/accounts/alpha/.claude/settings.json" \
   && ok "...and the file is still valid JSON" || bad "--apply left invalid JSON"
 rc  "a completed purge exits 0" 0 "$R"
 
