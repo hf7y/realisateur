@@ -28,7 +28,22 @@ cat > "$STUB/rsync" <<'EOF'
 #!/bin/sh
 echo "rsync $*" >> "$STUB_CALLS"
 EOF
-chmod +x "$STUB/ssh" "$STUB/rsync"
+# A fake gh, so the clone-free path is exercised offline. It answers the deploy's
+# two calls -- a recursive tree, then a blob -- for hf7y/crt, which really owns
+# zaxon. GH_BLIND=1 fails every call: unreadable, as opposed to empty.
+cat > "$STUB/gh" <<'EOF'
+#!/bin/sh
+echo "gh $*" >> "$STUB_CALLS"
+[ -n "${GH_BLIND:-}" ] && exit 1
+case "$*" in
+  *"repos/hf7y/crt/git/trees"*)  printf '100644 provision/dexter/zaxon/compose.yaml\n100755 provision/dexter/zaxon/relay.sh\n' ;;
+  *git/trees*)                   printf '100644 README.md\n' ;;
+  *contents/provision/dexter/zaxon/compose.yaml*) printf 'services: {}\n' | base64 | tr -d '\n' ;;
+  *contents/provision/dexter/zaxon/relay.sh*)     printf '#!/bin/sh\n'     | base64 | tr -d '\n' ;;
+  *) exit 1 ;;
+esac
+EOF
+chmod +x "$STUB/ssh" "$STUB/rsync" "$STUB/gh"
 export STUB_REPLY="$STUB/reply" STUB_CALLS="$STUB/calls"
 # A fixture service, so this suite needs no project's real files: zaxon's
 # container lives in hf7y/crt now (crt owns it), which may not be cloned here.
@@ -75,6 +90,24 @@ mkdir -p "$STUB/svc/_testsvc" && printf 'services: {}\n' > "$STUB/svc/_testsvc/c
 out="$(bash "$DEPLOY" _testsvc --dry-run 2>&1)"; rc=$?
 is "an unrelated service deploys while hermes runs" "$rc" "0"
 case "$out" in *"logs the link out"*) bad "zaxon's refusal leaked onto another service";; *) ok "no zaxon refusal for a service with no session";; esac
+
+echo
+echo "== 5. NO CLONE ANYWHERE => READ THE OWNER'S REPO LIVE ====================="
+# dexter holds no checkouts: with the search roots emptied, only GitHub is left.
+: > "$STUB_CALLS"; printf 'Ubuntu\n' > "$STUB_REPLY"
+mkdir -p "$STUB/home"
+out="$(env -u DEXTER_SERVICE_PATH HOME="$STUB/home" bash "$DEPLOY" zaxon --dry-run 2>&1)"; rc=$?
+is "a clone-free dry-run succeeds" "$rc" "0"
+has "it asked the owning repo for the tree" "$(cat "$STUB_CALLS")" "repos/hf7y/crt/git/trees"
+has "and it would still push to /srv" "$out" "/srv/zaxon/"
+
+echo
+echo "== 6. GITHUB UNREADABLE => BLIND (6), NEVER 'no such service' ============="
+: > "$STUB_CALLS"
+out="$(env -u DEXTER_SERVICE_PATH HOME="$STUB/home" GH_BLIND=1 bash "$DEPLOY" zaxon --dry-run 2>&1)"; rc=$?
+is "exits BLIND on the estate's ladder" "$rc" "6"
+has "and says so in those terms" "$out" "BLIND"
+if grep -q '^rsync ' "$STUB_CALLS" 2>/dev/null; then bad "it went blind but still pushed files"; else ok "no rsync ran"; fi
 
 echo
 summary
