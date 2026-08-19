@@ -7,6 +7,9 @@
 #                                                every stale copy still on disk
 #   selfdev-claude-token.sh --install <file>     write /etc/selfdev/claude-token
 #                                                (0640 root:selfdev) from <file>
+#   selfdev-claude-token.sh --install <f> --force-length
+#                                                install even if the length
+#                                                disagrees with the current value
 #   selfdev-claude-token.sh --fanout             LIST the accounts that would
 #                                                be rewritten from the one copy
 #   selfdev-claude-token.sh --fanout --apply     rewrite them
@@ -48,7 +51,7 @@ die()   { printf 'selfdev-claude-token: %s\n' "$*" >&2; exit 1; }
 # silently starts printing code the moment the header is edited.
 usage() { sed -n '2,/^[^#]/p' "${BASH_SOURCE[0]}" | sed '$d; s/^# \{0,1\}//'; }
 
-MODE=""; SRC=""; APPLY=0
+MODE=""; SRC=""; APPLY=0; FORCE_LEN=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --check)   MODE=check ;;
@@ -56,6 +59,7 @@ while [ $# -gt 0 ]; do
     --fanout)  MODE=fanout ;;
     --purge)   MODE=purge ;;
     --apply)   APPLY=1 ;;
+    --force-length) FORCE_LEN=1 ;;
     -h|--help) usage; exit 0 ;;
     *) die "unknown argument: $1 -- try --help" ;;
   esac
@@ -124,8 +128,31 @@ TOKPATH="$(selfdev_token_path)"
 case "$MODE" in
 install)
   [ -r "$SRC" ] || die "cannot read $SRC"
-  tok="$(tr -d '\r\n' < "$SRC")"
+  # Strip ALL whitespace, not just \r\n. A token pasted through a terminal
+  # arrives with a stray leading or trailing SPACE often enough that stripping
+  # only newlines is the difference between a rotation and an outage: on
+  # 2026-08-19 a 110-char paste (108 + space + newline) passed the prefix check
+  # here, reached 15 accounts via --fanout, and every one of them returned
+  # "401 OAuth access token is invalid" until the fleet was rolled back.
+  tok="$(tr -d '[:space:]' < "$SRC")"
   case "$tok" in sk-ant-oat*) ;; *) die "$SRC does not hold an sk-ant-oat* token -- refusing to install it" ;; esac
+
+  # A prefix is not a shape. Compare against the value being REPLACED, which is
+  # the only known-good example this host has; a length that disagrees is the
+  # signature of a truncated or padded paste.
+  if [ -e "$TOKPATH" ] && selfdev_token_readable "$TOKPATH"; then
+    cur_len="$(tr -d '[:space:]' < "$TOKPATH" | wc -c)"
+    new_len="${#tok}"
+    if [ "$cur_len" -ne "$new_len" ] && [ "$FORCE_LEN" -eq 0 ]; then
+      printf 'selfdev-claude-token: REFUSING -- the new value is %d characters, the one it replaces is %d.\n' "$new_len" "$cur_len" >&2
+      printf '  A token that is the wrong length is a bad paste, and --fanout would carry it to every account.\n' >&2
+      printf '  Re-copy it, or pass --force-length if the token format genuinely changed.\n' >&2
+      exit 4
+    fi
+    ok "length matches the value being replaced ($new_len characters)"
+  else
+    gap "no existing value to compare length against -- installing $new_len characters unchecked"
+  fi
   getent group "$SELFDEV_TOKEN_GROUP" >/dev/null || die "no group $SELFDEV_TOKEN_GROUP on this host"
   install -d -m 755 -o root -g root "$SELFDEV_TOKEN_DIR" || die "cannot create $SELFDEV_TOKEN_DIR (run as root)"
   # Via a mode-600 temp file: argv is readable in ps by any local user.

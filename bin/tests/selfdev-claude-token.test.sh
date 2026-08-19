@@ -91,6 +91,41 @@ python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$TMP/accounts/alpha/
   && ok "...and the file is still valid JSON" || bad "--apply left invalid JSON"
 rc  "a completed purge exits 0" 0 "$R"
 
+echo "== 5b. --install VALIDATES SHAPE, NOT JUST PREFIX ===================="
+# The 2026-08-19 outage: 108 chars + a stray space passed the prefix check,
+# reached 15 accounts, and every one returned 401 until the fleet rolled back.
+GOOD='sk-ant-oat01-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+printf '%s\n' "$GOOD" > "$TMP/etc/claude-token"
+
+# The WRITE needs root and the selfdev group, so unprivileged it always stops
+# at that step. That is the point: a padded value must get PAST validation and
+# fail there, not be rejected as the wrong length.
+printf ' %s \n' "$GOOD" > "$TMP/etc/spaced"
+O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" bash "$TOOL" --install "$TMP/etc/spaced" 2>&1)"
+case "$O" in
+  *"characters, the one it replaces is"*) bad "a stray space was read as a length mismatch -- whitespace is not being stripped" ;;
+  *) ok "a value padded with spaces passes validation (all whitespace stripped, not just \\r\\n)" ;;
+esac
+has "...and stops only at the privileged write" "$O" "no group"
+
+printf '%s\n' "${GOOD}EXTRA" > "$TMP/etc/wrong"
+O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" bash "$TOOL" --install "$TMP/etc/wrong" 2>&1)"; R=$?
+rc  "a value of the WRONG LENGTH is refused" 4 "$R"
+has "...and says both lengths" "$O" "characters, the one it replaces is"
+has "...and names what it would have cost" "$O" "carry it to every account"
+[ "$(tr -d '[:space:]' < "$TMP/etc/claude-token")" = "$GOOD" ] \
+  && ok "...and the good value is still in place" || bad "the refusal overwrote the token"
+
+O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" bash "$TOOL" --install "$TMP/etc/wrong" --force-length 2>&1)"
+case "$O" in
+  *"characters, the one it replaces is"*) bad "--force-length did not override the length refusal" ;;
+  *) ok "--force-length overrides it, for a real format change" ;;
+esac
+
+printf 'not-a-token\n' > "$TMP/etc/nope"
+O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" bash "$TOOL" --install "$TMP/etc/nope" 2>&1)"; R=$?
+rc  "a non-oat value is still refused, before any length check" 1 "$R"
+
 echo "== 6. --fanout DERIVES THE COPIES FROM THE ONE FILE =================="
 # Rebuild homes holding the OLD value, and put a DIFFERENT value host-wide.
 OLD="$FAKE_TOKEN"; NEW='sk-ant-oat01-ROTATED-fixture-value'
