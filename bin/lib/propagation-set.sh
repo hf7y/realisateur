@@ -130,6 +130,7 @@ wire-selfdev-git.sh
 wire-release-channel.sh
 selfdev-gh-app-register.sh
 selfdev-app-key.sh
+selfdev-claude-token.sh
 selfdev-permissions-provision.sh
 selfdev-hooks-provision.sh
 install-shims.sh

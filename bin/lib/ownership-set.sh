@@ -191,6 +191,9 @@ bin/selfdev-app-key.sh                     realisateur
 bin/lib/selfdev-app-key.sh                 realisateur
 bin/tests/selfdev-app-key.test.sh          realisateur
 bin/lib/selfdev-credentials-set.sh         realisateur
+bin/selfdev-claude-token.sh                realisateur
+bin/lib/selfdev-claude-token.sh            realisateur
+bin/tests/selfdev-claude-token.test.sh     realisateur
 bin/lib/api-restamp.sh                     realisateur
 bin/tests/api-restamp.test.sh              realisateur
 "
