@@ -141,6 +141,7 @@ stamp-verb-build.sh
 
 # --- PAYLOAD: reaches user paths as a verb, inside a dated build ------------
 PROP_PAYLOAD_SCRIPTS="
+etiquette.sh
 check-project-busy.sh
 closeout-lint.sh
 notify-senechal.sh
@@ -177,7 +178,6 @@ carry-drift.sh
 defere.sh
 retire-check.sh
 decision-rot.sh
-needs-zach.sh
 rot-ratchet.sh
 directive-prose.sh
 cut-verb-build.sh

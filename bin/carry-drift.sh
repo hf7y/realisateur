@@ -67,6 +67,8 @@ bin/closeout-lint	bin/closeout-lint.sh
 bin/discipline	bin/discipline.sh
 bin/notify-senechal	bin/notify-senechal.sh
 bin/silence-audit	bin/silence-audit.sh
+bin/etiquette	bin/etiquette.sh
+bin/lib/labels.tsv	bin/lib/labels.tsv
 BUILD-DISCIPLINE.md	BUILD-DISCIPLINE.md
 commands/bashify.md	.claude/commands/bashify.md
 commands/cloture.md	.claude/commands/cloture.md
