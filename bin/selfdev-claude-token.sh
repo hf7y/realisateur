@@ -16,10 +16,8 @@
 #
 # exit: 0 OK  1 usage  2 GAP (something to do)  4 BAD  6 BLIND (could not look)
 #
-# ORDER MATTERS, and nothing here can enforce it -- this cannot tell a rotated
-# token from an unrotated one. Rotate, --install, --fanout, prove a dispatch,
-# revoke the old value. Purging first only deletes copies of a value that is
-# still live.
+# ORDER MATTERS, unenforceable here: rotate, --install, --fanout, prove a
+# dispatch, revoke. Purging first deletes copies of a value still live.
 #
 # --fanout IS TEMPORARY. Nothing reads the host-wide file at dispatch yet, so
 # --install alone changes nothing and revoking first takes the fleet down
@@ -42,8 +40,7 @@ bad()   { printf '  BAD     %s\n' "$*"; BAD=$((BAD+1)); }
 blind() { printf '  BLIND   %s\n' "$*"; BLIND=$((BLIND+1)); }
 die()   { printf 'selfdev-claude-token: %s\n' "$*" >&2; exit 1; }
 
-# Prints the header comment block, however long it is -- a fixed line range
-# silently starts printing code the moment the header is edited.
+# Prints the whole header: a fixed line range starts printing code once edited.
 usage() { sed -n '2,/^[^#]/p' "${BASH_SOURCE[0]}" | sed '$d; s/^# \{0,1\}//'; }
 
 MODE=""; SRC=""; APPLY=0; FORCE_LEN=0
@@ -128,8 +125,7 @@ install)
   tok="$(tr -d '[:space:]' < "$SRC")"
   case "$tok" in sk-ant-oat*) ;; *) die "$SRC does not hold an sk-ant-oat* token -- refusing to install it" ;; esac
 
-  # A prefix is not a shape. The replaced value is the only known-good example
-  # this host has, so a disagreeing length is a bad paste.
+  # A prefix is not a shape; the replaced value is the only known-good example.
   if [ -e "$TOKPATH" ] && selfdev_token_readable "$TOKPATH"; then
     cur_len="$(tr -d '[:space:]' < "$TOKPATH" | wc -c)"
     new_len="${#tok}"

@@ -46,8 +46,8 @@ has "an absent host-wide copy is a GAP" "$O" "has not been installed"
 has "...and every per-account copy is named" "$O" "stale copy: $TMP/accounts/alpha/.claude-token"
 rc  "...and a GAP alone exits 2" 2 "$R"
 
-# ABSENT is a fact; UNREADABLE is a domain we did not read. Only the second
-# is BLIND, and conflating them is how a survey reports clean by not looking.
+# ABSENT is a fact; only UNREADABLE is BLIND -- conflating them reports clean
+# by not looking.
 O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" SELFDEV_HOME_ROOT="$TMP/accounts" \
      SELFDEV_ACCOUNTS="ghost" bash "$TOOL" --check 2>&1)"; R=$?
 has "an account with no home is a fact, not a blindness" "$O" "no copy to hold"
@@ -137,8 +137,7 @@ has "...and names the accounts it would rewrite" "$O" "would rewrite $TMP/accoun
 grep -q "$OLD" "$TMP/accounts/alpha/.claude-token" \
   && ok "...and changed nothing on disk" || bad "the DRY RUN rewrote a file"
 
-# --fanout writes as each account via sudo -u; unavailable in the suite, so
-# assert the REFUSALS here and leave the write path to the live run.
+# --fanout writes via sudo -u, unavailable here: assert the refusals only.
 rm -f "$TMP/etc/claude-token"
 O="$(run --fanout --apply)"; R=$?
 has "fanout with no host-wide copy is refused" "$O" "run --install first"
