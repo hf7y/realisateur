@@ -8,12 +8,9 @@
 #
 # TRAPS (the rest of this header is in the vault):
 # It never reports "I could not see" as "nothing is wrong" (the recorded
-# pathology: a propagation pass that reached zero projects and exited 0).
-# A check that cannot be probed is BLIND, and BLIND on a check the ratchet
-# depends on is exit 2 -- because an unprobeable check cannot prove the
-# absence of a regression. BLIND on a check that was already failing is
-# reported and tolerated: it costs nothing to be unable to measure something
-# that was not yet true.
+# pathology: a propagation pass that reached zero projects and exited 0). A
+# check that cannot be probed is BLIND: exit 2 if ratcheted (an unprobeable
+# check cannot prove no regression), tolerated if not (nothing yet to lose).
 # It also never lowers the ratchet. `--accept` raises it or refuses.
 #
 # usage:  thermostat-wiring.sh [--strict] [--accept] [--quiet]
@@ -51,6 +48,8 @@ done
 # steward-survey.sh, so this runs under the uid 3000-3099 dispatch accounts
 # where $HOME is /home/<project>. bin/hardcoded-home-lint.sh enforces it.
 SCHED="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
+SCHED_OWNER="${SCHED_OWNER:-hf7y}"
+SCHED_REPO="${SCHED_REPO:-scheduler}"
 
 # --- results -----------------------------------------------------------------
 # Parallel arrays rather than an associative array: this has to run under the
@@ -59,14 +58,102 @@ IDS=(); STATES=(); NOTES=()
 
 record() { IDS+=("$1"); STATES+=("$2"); NOTES+=("$3"); }
 
+# #414: a checkout wins when present; GitHub is the clone-free fallback.
+SCHED_LOCAL=0
+[ -d "$SCHED/.git" ] && SCHED_LOCAL=1
+
+_SCHED_TREE_READ=0
+_SCHED_TREE=""
+sched_tree() {
+  if [ "$_SCHED_TREE_READ" = 0 ]; then
+    _SCHED_TREE_READ=1
+    _SCHED_TREE="$(gh api "repos/$SCHED_OWNER/$SCHED_REPO/git/trees/HEAD?recursive=1" \
+                     -q '.tree[] | "\(.mode) \(.path)"' 2>/dev/null)" || _SCHED_TREE=""
+  fi
+  [ -n "$_SCHED_TREE" ]
+}
+
+sched_file() {
+  if [ "$SCHED_LOCAL" = 1 ]; then
+    cat "$SCHED/$1" 2>/dev/null
+    return
+  fi
+  gh api "repos/$SCHED_OWNER/$SCHED_REPO/contents/$1?ref=HEAD" -q .content 2>/dev/null \
+    | base64 -d 2>/dev/null
+}
+
+_pathspec_match() {
+  local path="$1" pat="$2"
+  case "$pat" in
+    *'*'*|*'?'*|*'['*)
+      # shellcheck disable=SC2254 # deliberate glob: $pat IS the glob pattern here
+      case "$path" in $pat) return 0 ;; esac
+      return 1 ;;
+    *)
+      [ "$path" = "$pat" ] && return 0
+      case "$path" in "$pat"/*) return 0 ;; esac
+      return 1 ;;
+  esac
+}
+
 # tracked <repo> <pathspec>... -- prints matching tracked paths, or returns 2
 # if the repo cannot be read at all. The distinction between "the repo has no
 # such file" (the thing we want) and "there is no repo here" (BLIND) is the
 # entire point; conflating them is how absence gets reported as success.
 tracked() {
   local repo="$1"; shift
+  if [ "$repo" = "$SCHED" ] && [ "$SCHED_LOCAL" = 0 ]; then
+    sched_tree || return 2
+    local path pat
+    while IFS=' ' read -r _ path; do
+      [ -n "$path" ] || continue
+      for pat in "$@"; do
+        if _pathspec_match "$path" "$pat"; then printf '%s\n' "$path"; break; fi
+      done
+    done <<< "$_SCHED_TREE"
+    return 0
+  fi
   [ -d "$repo/.git" ] || return 2
   git -C "$repo" ls-files -- "$@" 2>/dev/null
+}
+
+sched_grep() {
+  local pat="$1"; shift
+  if [ "$SCHED_LOCAL" = 1 ]; then
+    git -C "$SCHED" grep -qlE "$pat" -- "$@" 2>/dev/null && return 0
+    return 1
+  fi
+  sched_tree || return 2
+  local path prefix match
+  while IFS=' ' read -r _ path; do
+    [ -n "$path" ] || continue
+    match=0
+    for prefix in "$@"; do
+      case "$path" in "$prefix"/*) match=1; break ;; esac
+    done
+    [ "$match" = 1 ] || continue
+    sched_file "$path" | grep -qE "$pat" && return 0
+  done <<< "$_SCHED_TREE"
+  return 1
+}
+
+sched_grep_files() {
+  local pat="$1"; shift
+  if [ "$SCHED_LOCAL" = 1 ]; then
+    git -C "$SCHED" grep -lE "$pat" -- "$@" 2>/dev/null
+    return
+  fi
+  sched_tree || return 2
+  local path prefix match
+  while IFS=' ' read -r _ path; do
+    [ -n "$path" ] || continue
+    match=0
+    for prefix in "$@"; do
+      case "$path" in "$prefix"/*) match=1; break ;; esac
+    done
+    [ "$match" = 1 ] || continue
+    sched_file "$path" | grep -qE "$pat" && printf '%s\n' "$path"
+  done <<< "$_SCHED_TREE"
 }
 
 # absent <id> <repo> <human note> <pathspec>...
@@ -101,12 +188,14 @@ absent headless "$SCHED" 'scheduler emits no human-facing report' \
 # --- §3  cadence is measured, not configured --------------------------------
 # The weight field allocates nothing on the only dispatching host (the 0700
 # homes already answered that question) and two scripts USED to write it.
-if [ -f "$SCHED/schedule/_paced.conf" ]; then
+_paced="$(sched_file 'schedule/_paced.conf')"
+if [ -n "$_paced" ]; then
   # Rows are name|enabled|weight|command, so the weight column is field 3.
   # Matching on "a number between pipes" would also fire on a 2-field row and
   # report a weight that is not there.
-  if awk -F'|' '!/^[[:space:]]*(#|$)/ && NF>=4 && $3 ~ /^[0-9]+$/ {n++}
-                END{exit !(n>0)}' "$SCHED/schedule/_paced.conf"; then
+  if printf '%s\n' "$_paced" \
+       | awk -F'|' '!/^[[:space:]]*(#|$)/ && NF>=4 && $3 ~ /^[0-9]+$/ {n++}
+                    END{exit !(n>0)}'; then
     record weight UNMET 'schedule/_paced.conf still carries a weight column'
   else
     record weight PASS 'no weight column'
@@ -114,6 +203,7 @@ if [ -f "$SCHED/schedule/_paced.conf" ]; then
 else
   record weight BLIND "no _paced.conf under $SCHED"
 fi
+unset _paced
 
 # Provenance: who filed each issue. Every actor here is `hf7y` (realisateur#40,
 # #86), so authorship cannot answer it; a filing verb stamping a label can. An
@@ -142,45 +232,39 @@ fi
 # --- §4  prose does not end a run -------------------------------------------
 # The append-only ledger (scheduler#54) is what makes REPETITION observable;
 # without it the verdict is destroyed at dispatch and DONE cannot brake.
-if [ -d "$SCHED/.git" ]; then
-  # THE PROBE MUST TEST THE PROPERTY, NOT A GUESSED FILENAME. The first pattern
-  # here was `scheduler-verdict/.*\.history` -- a path invented when this probe
-  # was written, before anything implemented it. hf7y/scheduler#135 shipped the
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
-  if git -C "$SCHED" grep -qlE 'scheduler-verdict/.*\.history|ledger_append' -- lib bin 2>/dev/null; then
-    record ledger PASS 'an append-only verdict ledger is written'
-  else
-    record ledger UNMET 'no verdict history is appended anywhere in lib/ or bin/'
-  fi
-else
-  record ledger BLIND "no git repo at $SCHED"
-fi
+# THE PROBE MUST TEST THE PROPERTY, NOT A GUESSED FILENAME. The first pattern
+# here was `scheduler-verdict/.*\.history` -- a path invented when this probe
+# was written, before anything implemented it. hf7y/scheduler#135 shipped the
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+sched_grep 'scheduler-verdict/.*\.history|ledger_append' lib bin
+case $? in
+  0) record ledger PASS 'an append-only verdict ledger is written' ;;
+  2) record ledger BLIND "no git repo at $SCHED, and its GitHub tree did not read" ;;
+  *) record ledger UNMET 'no verdict history is appended anywhere in lib/ or bin/' ;;
+esac
 
 # THE SETPOINT -- the half of §3 provenance cannot see. Labels are an INPUT;
 # this asks whether anything READS them. Until hf7y/scheduler#219 nothing did:
 # the control loop was three brakes and nothing that could say "run this MORE",
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
-if [ -d "$SCHED/.git" ]; then
-  _runner="$SCHED/bin/usage-paced-runner.sh"
-  if [ ! -r "$_runner" ]; then
-    record setpoint BLIND "no bin/usage-paced-runner.sh under $SCHED"
-  else
-    _sp=""
-    for _f in $(git -C "$SCHED" grep -lE 'gh issue list' -- bin lib 2>/dev/null); do
-      _b="$(basename "$_f")"
-      grep -qF "\$SELF_DIR/$_b" "$_runner" 2>/dev/null && _sp="$_sp $_b"
-    done
-    if [ -n "$_sp" ]; then
-      record setpoint PASS "the dispatcher runs a tracker-derived setpoint:$_sp"
-    else
-      record setpoint UNMET 'nothing the dispatcher runs reads the issue tracker -- pace is still a number a human edits'
-    fi
-    unset _sp _f _b
-  fi
-  unset _runner
+_runner="$(sched_file 'bin/usage-paced-runner.sh')"
+if [ -z "$_runner" ]; then
+  record setpoint BLIND "no bin/usage-paced-runner.sh under $SCHED"
 else
-  record setpoint BLIND "no git repo at $SCHED"
+  _sp=""
+  while IFS= read -r _f; do
+    [ -n "$_f" ] || continue
+    _b="$(basename "$_f")"
+    printf '%s\n' "$_runner" | grep -qF "\$SELF_DIR/$_b" && _sp="$_sp $_b"
+  done <<< "$(sched_grep_files 'gh issue list' bin lib)"
+  if [ -n "$_sp" ]; then
+    record setpoint PASS "the dispatcher runs a tracker-derived setpoint:$_sp"
+  else
+    record setpoint UNMET 'nothing the dispatcher runs reads the issue tracker -- pace is still a number a human edits'
+  fi
+  unset _sp _f _b
 fi
+unset _runner
 
 # The guard moved to hf7y/etalon and is CALLED, not carried, so the witness is
 # a workflow referencing it rather than a script in this tree. Any workflow may
@@ -216,7 +300,12 @@ total=${#IDS[@]}
 
 if [ "$QUIET" = 0 ]; then
   printf 'thermostat-wiring -- %s\n' "$(date '+%Y-%m-%d %H:%M')"
-  printf '  scheduler: %s\n\n' "$SCHED"
+  if [ "$SCHED_LOCAL" = 1 ]; then
+    printf '  scheduler: %s (checkout)\n\n' "$SCHED"
+  else
+    printf '  scheduler: %s (no checkout -- read live from github.com/%s/%s)\n\n' \
+      "$SCHED" "$SCHED_OWNER" "$SCHED_REPO"
+  fi
   for i in "${!IDS[@]}"; do
     mark=' '; in_ratchet "${IDS[$i]}" && mark='*'
     printf '  %s %-6s %-12s %s\n' "$mark" "${STATES[$i]}" "${IDS[$i]}" "${NOTES[$i]}"
