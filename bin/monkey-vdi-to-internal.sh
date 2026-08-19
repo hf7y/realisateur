@@ -3,17 +3,12 @@
 # external USB drive onto dexter's internal NVMe, unattended.
 #
 # TRAPS (the rest of this header is in the vault):
-# WHY. `monkey` is a VirtualBox guest hosting 14 self-dev accounts, and its
-# monkey.vdi lives on D: -- a WD Elements USB drive that logged 1580 `disk`
-# Event ID 11 controller errors between 2026-08-07 and 2026-08-14, one every
-# 5-10 minutes without pause. On 2026-08-14 ~18:08 one landed on an NTFS
-# transaction-log flush, VirtualBox lost its handle to the vdi, and the guest
-# remounted root read-only:
-#     EXT4-fs (sda2): I/O error while writing superblock
-#     EXT4-fs (sda2): Remounting filesystem read-only
+# WHY. monkey.vdi lived on D:, a WD Elements USB drive that logged 1580 `disk`
+# Event ID 11 errors between 2026-08-07 and 08-14, one every 5-10 minutes. One
+# landed on an NTFS log flush, VirtualBox lost its handle, and the guest
+# remounted root read-only ("EXT4-fs (sda2): Remounting filesystem read-only");
 # sshd then reset every connection at key exchange, because it cannot write.
-# Measured read throughput off that drive is 19.7 MB/s -- about 6x slow for a
-# USB3 spinner, which is the resets showing up as latency.
+# Read throughput off that drive measured 19.7 MB/s, ~6x slow for a USB3 spinner.
 
 set -uo pipefail
 
@@ -40,34 +35,15 @@ say() { printf '[%s] %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 # every downstream grep if not stripped.
 vbm() { "$VBOX" "$@" < /dev/null 2>&1 | tr -d '\0\r'; }
 
+# shellcheck source=lib/zaxon.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/zaxon.sh"
+
 # --- zaxon ------------------------------------------------------------------
-# ask_zach is the only outbound tool; it delivers a WhatsApp message. We are
-# telling rather than asking, so the ticket id is logged and never polled.
-# A notify failure must never change the outcome of the recovery.
+# Telling, not asking: the ticket is logged, never polled. A notify failure
+# must never change the outcome of the recovery -- see bin/lib/zaxon.sh.
 notify() {
-  local msg="$1" url="http://127.0.0.1:8643/mcp" hdr sid body
-  hdr="$(mktemp)"; body="$(mktemp)"
-  curl -s -D "$hdr" -o /dev/null -m 20 \
-    -H 'Content-Type: application/json' -H 'Accept: application/json,text/event-stream' \
-    -X POST "$url" \
-    -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"monkey-recovery","version":"1"}}}' \
-    || { say "notify: initialize failed (recovery unaffected)"; return 0; }
-  sid="$(grep -i '^mcp-session-id:' "$hdr" | tr -d '\r' | awk '{print $2}')"
-  [ -n "$sid" ] || { say "notify: no session id (recovery unaffected)"; return 0; }
-  curl -s -o /dev/null -m 20 -H 'Content-Type: application/json' \
-    -H 'Accept: application/json,text/event-stream' -H "mcp-session-id: $sid" \
-    -X POST "$url" -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
-  # Build the JSON with a real encoder: the message carries newlines and quotes
-  # and a hand-built body would 400 and read like the relay being down.
-  python3 - "$msg" > "$body" <<'PY'
-import json,sys
-print(json.dumps({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{
-  "name":"ask_zach","arguments":{"question":sys.argv[1],"from_agent":"monkey-recovery"}}}))
-PY
-  curl -s -m 30 -H 'Content-Type: application/json' \
-    -H 'Accept: application/json,text/event-stream' -H "mcp-session-id: $sid" \
-    -X POST "$url" --data-binary "@$body" | tr -d '\r' | grep -o 'ticket_id[^,}]*' | head -1
-  rm -f "$hdr" "$body"
+  local tid; tid="$(zaxon_ask "$1" monkey-recovery)"
+  [ -z "$tid" ] || say "notify: ticket $tid"
 }
 
 finish() {  # finish <VERDICT> <message>

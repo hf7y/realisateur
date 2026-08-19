@@ -14,8 +14,7 @@
 #   bin/dexter-liveness.sh --json     # one object, for a status document
 #
 # READ-ONLY: it starts nothing, fixes nothing, writes nothing on dexter, the
-# same stance as senechal's health/*.sh. When `ausculte hosts` exists, this
-# becomes one of its probes.
+# same stance as senechal's health/*.sh; `ausculte hosts` composes it.
 #
 # exit: 0 all good  5 something declared is down  6 BLIND (cannot reach dexter)
 set -uo pipefail
