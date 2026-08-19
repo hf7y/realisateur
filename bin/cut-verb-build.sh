@@ -6,9 +6,8 @@
 # bin/<name> AND a matching man/<name>.1 -- the rule is bin/lib/verb-set.sh's.
 # Opt out by name in bin/lib/not-a-verb.tsv.
 #
-# Every refusal below is deliberate and says so when it fires: an empty build,
-# a shrinking one, and a half-declaration are all HARD failures, because an
-# absent verb and a retired verb are indistinguishable in a manifest.
+# Every refusal below says so when it fires: an absent verb and a retired one
+# are indistinguishable in a manifest.
 set -uo pipefail
 
 CLI_NAME='cut-verb-build.sh'
@@ -76,9 +75,8 @@ exempt_reason() {
     | awk -F'\t' -v p="$1" -v n="$2" '$1 == p && $2 == n { print $3; f = 1; exit } END { exit !f }'
 }
 
-# --dry-run is for CI that has NO org credential -- see the smoke workflow.
-# It must therefore be incapable of producing anything a host could install,
-# because a dry run's read is short BY CONSTRUCTION (a token that can only
+# --dry-run is for CI with NO org credential (the smoke workflow). Its read is
+# short BY CONSTRUCTION, so it must be incapable of producing an installable.
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$DRY_RUN" -eq 1 ] && { [ -n "$ASSEMBLE" ] || [ "$WRITE" -eq 1 ]; }; then
   printf '%s: --dry-run cannot be combined with --assemble or --write: a dry run reads with whatever credential it has, so its build is short by an unknown amount and must never become an artifact.\n' \
@@ -265,23 +263,21 @@ if [ -n "$dupes" ]; then
 fi
 
 # --- 4. compare against the previous build ------------------------------
-# WHERE "the previous build" LIVES DEPENDS ENTIRELY ON WHO IS RUNNING.
-#
+# WHERE IT LIVES DEPENDS ON WHO IS RUNNING. The published manifest is read
+# FIRST -- the only reading that exists everywhere. $BUILD_ROOT is a CONSUMER
+# path: absent on the CI runner that cuts nightly, so #399 lost 17 in silence.
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
-#
-# The published manifest is read FIRST because it is the only reading that
-# exists everywhere. $BUILD_ROOT is a consumer path; a CI runner has adopted
-# no build, so on the one machine that cuts nightly the local readings are
-# both absent and the guard passed silently through a 35 -> 18 loss (#399).
 prev_count=0
-prev_where='(no previous build)'
-if published="$(gh api "repos/$OWNER/$VERB_META_REPO/contents/manifest.tsv" \
+prev_where='(nothing published, nothing local)'
+if [ "$DRY_RUN" -eq 1 ]; then   # a short read grades the credential, not this
+  prev_where='(skipped: --dry-run reads a subset)'
+elif published="$(gh api "repos/$OWNER/$VERB_META_REPO/contents/manifest.tsv" \
                   --jq '.content' 2>/dev/null | base64 -d 2>/dev/null)" \
    && [ -n "$published" ]; then
   prev_count="$(printf '%s\n' "$published" | grep -cv '^#' || echo 0)"
   prev_where="github.com/$OWNER/$VERB_META_REPO manifest.tsv"
 fi
-if [ -L "$BUILD_ROOT/current" ] && [ -f "$BUILD_ROOT/current/manifest.tsv" ]; then
+if [ "$DRY_RUN" -eq 0 ] && [ -L "$BUILD_ROOT/current" ] && [ -f "$BUILD_ROOT/current/manifest.tsv" ]; then
   local_prev="$(grep -cv '^#' "$BUILD_ROOT/current/manifest.tsv" 2>/dev/null || echo 0)"
   if [ "$local_prev" -gt "$prev_count" ]; then
     prev_count="$local_prev"
@@ -295,8 +291,7 @@ if [ -n "$ASSEMBLE" ] && [ -f "$ASSEMBLE/manifest.tsv" ]; then
     prev_where="$ASSEMBLE/manifest.tsv"
   fi
 fi
-# A guard with no reference point says so. #399 was silent precisely here.
-[ "$prev_count" -gt 0 ] || say "  note: no previous build readable ($prev_where) -- the shrink guard cannot fire"
+[ "$prev_count" -gt 0 ] || say "  note: no previous build readable $prev_where -- the shrink guard cannot fire"
 if [ "$prev_count" -gt "$verb_count" ] && [ "$ALLOW_SHRINK" -eq 0 ]; then
   say "  previous build: $prev_count verb(s)  <- $prev_where"
   say "  this build:     $verb_count verb(s)"

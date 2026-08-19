@@ -191,11 +191,7 @@ case "$(cat "$TMP/e3")" in
 esac
 
 # --- 4. the shrink refusal must fire in CI ------------------------------
-# CI is a fresh runner: no $BUILD_ROOT/current, and it assembles into an
-# EMPTY directory, so neither local reading exists. Both were the guard's
-# only reference points until #399, where that combination let a 35 -> 18
-# loss through unremarked. The published manifest is the reading that
-# survives a machine with nothing on it, so it is tested first and alone.
+# A fresh runner has neither local reference point -- that is how #399 passed.
 printf 'alpha\n' > "$TMP/repolist"
 printf 'alpha\taa\nalpha\tab\nbeta\tba\n' > "$TMP/published"
 FIXTURE_PUBLISHED="$TMP/published" \
@@ -204,6 +200,13 @@ check "a shrinking build is refused on a runner with NOTHING local" "$?" "1"
 case "$(cat "$TMP/e0")" in
     *"$OWNER/verbs"*) ok "...and it names the published manifest as its source" ;;
     *) bad "the CI shrink message names the remote" "got: $(head -3 "$TMP/e0")" ;;
+esac
+
+FIXTURE_PUBLISHED="$TMP/published" cut --dry-run >/dev/null 2>"$TMP/e0b"
+check "--dry-run is not graded against the published manifest" "$?" "0"
+case "$(cat "$TMP/e0b")" in
+    *"--dry-run reads a subset"*) ok "...and it SAYS the comparison was skipped" ;;
+    *) bad "the dry run names the skip" "got: $(head -3 "$TMP/e0b")" ;;
 esac
 
 # ...and the local readings still work when they are the only ones there.
