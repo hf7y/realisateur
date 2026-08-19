@@ -190,6 +190,8 @@ bin/tests/selfdev-app-key.test.sh          realisateur
 bin/lib/selfdev-credentials-set.sh         realisateur
 bin/lib/api-restamp.sh                     realisateur
 bin/tests/api-restamp.test.sh              realisateur
+bin/self-merge-audit.sh                    realisateur
+bin/tests/self-merge-audit.test.sh         realisateur
 "
 
 # ---- DELEGABLE -------------------------------------------------------------
