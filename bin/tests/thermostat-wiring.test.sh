@@ -156,6 +156,87 @@ out="$(run '' "$NOSENSOR")"
 has G3 "$out" "UNMET  setpoint"
 
 echo
+echo "== H: no checkout -- read live from GitHub (#414) ==========================="
+# #414: mandark went clone-free (no ~/Documents/Projects/scheduler), and both
+# ratcheted checks that read it went permanently BLIND -- not because
+# anything regressed, but because the guard could only ever look at a sibling
+# checkout. These cases exercise the fallback offline: SCHED_ROOT points at a
+# directory that does not exist, and a stubbed `gh` answers the two calls the
+# fallback makes (a recursive tree, then blobs) with the SAME fixture shapes
+# `mkscheduler` builds locally, so H's expectations mirror F's and G's.
+mkdir -p "$TMP/ghstub"
+cat > "$TMP/ghstub/gh" <<'EOF'
+#!/bin/sh
+# TW_SHAPE=current|conforming picks the fixture; TW_BLIND=1 fails every call
+# (unreadable), never returning an empty-but-successful answer.
+[ -n "${TW_BLIND:-}" ] && exit 1
+case "$*" in
+  *"repos/hf7y/scheduler/git/trees/HEAD?recursive=1"*)
+    if [ "$TW_SHAPE" = current ]; then
+      printf '100644 BLOCKERS.md\n100644 lib/sweep-loop-common.sh\n100755 bin/morning-report.sh\n100644 schedule/_paced.conf\n100755 bin/usage-paced-runner.sh\n'
+    else
+      printf '100644 lib/run-record.sh\n100755 bin/tempo.sh\n100644 schedule/_paced.conf\n100755 bin/usage-paced-runner.sh\n'
+    fi
+    ;;
+  *"repos/hf7y/scheduler/contents/schedule/_paced.conf"*)
+    if [ "$TW_SHAPE" = current ]; then
+      printf 'ecosim|0|2|/x/scheduler-run ecosim batch\n' | base64 | tr -d '\n'
+    else
+      printf 'ecosim|0|/x/scheduler-run ecosim batch\n' | base64 | tr -d '\n'
+    fi ;;
+  *"repos/hf7y/scheduler/contents/lib/run-record.sh"*)
+    printf 'echo "$v" >> "$HOME/.local/share/scheduler-verdict/$p.history"\n' | base64 | tr -d '\n' ;;
+  *"repos/hf7y/scheduler/contents/bin/tempo.sh"*)
+    printf 'gh issue list --repo "$slug" --state open\n' | base64 | tr -d '\n' ;;
+  *"repos/hf7y/scheduler/contents/bin/usage-paced-runner.sh"*)
+    if [ "$TW_SHAPE" = current ]; then
+      printf 'exec "$SELF_DIR/freeze-check.sh" "$name"\n' | base64 | tr -d '\n'
+    else
+      printf '"$SELF_DIR/tempo.sh" "$name" || continue\n' | base64 | tr -d '\n'
+    fi ;;
+  *"issue list"*) exit 1 ;;
+  *) exit 1 ;;
+esac
+EOF
+chmod +x "$TMP/ghstub/gh"
+
+# run_remote <ratchet> <shape> [args...] -- like run(), but SCHED_ROOT names
+# no directory at all and the stubbed gh above is the only source.
+run_remote() {
+  local ratchet="$1" shape="$2"; shift 2
+  printf '%s\n' "$ratchet" > "$FAKE/bin/thermostat-wiring.ratchet"
+  env PATH="$TMP/ghstub:$PATH" SCHED_ROOT="$TMP/no-such-scheduler" TW_SHAPE="$shape" \
+      bash "$FAKE/bin/thermostat-wiring.sh" "$@" 2>&1
+}
+
+# H1: the conforming shape, read live, passes the same eight checks F1 does
+# locally -- ledger and setpoint (#414's two BLIND checks) included.
+out="$(run_remote '' conforming)"; rc=$?
+is    H1  "$rc" 0
+has   H1b "$out" "no checkout -- read live from"
+hasnt H1c "$out" "UNMET  ledger"
+hasnt H1d "$out" "UNMET  setpoint"
+has   H1e "$out" "PASS   ledger"
+has   H1f "$out" "PASS   setpoint"
+
+# H2: the current (unconforming) shape, read live, reports UNMET rather than
+# BLIND -- the fallback can see the tree, it just does not like what is there.
+out="$(run_remote '' current)"; rc=$?
+is  H2  "$rc" 0
+has H2b "$out" "UNMET  blockers"
+has H2c "$out" "UNMET  weight"
+
+# H3: GitHub itself unreadable -- BLIND, and ratcheting it is exit 2, never a
+# silent pass. This is the failure #414 reported; it must stay a failure when
+# the network genuinely cannot be reached, only stop firing when it can.
+printf '%s\n' 'ledger' > "$FAKE/bin/thermostat-wiring.ratchet"
+out="$(env PATH="$TMP/ghstub:$PATH" SCHED_ROOT="$TMP/no-such-scheduler" TW_SHAPE=conforming TW_BLIND=1 \
+      bash "$FAKE/bin/thermostat-wiring.sh" 2>&1)"; rc=$?
+is  H3  "$rc" 2
+has H3b "$out" "cannot see"
+has H3c "$out" "GitHub tree did not read"
+
+echo
 summary
 [ "$fail" = 0 ] || exit 1
 exit 0
