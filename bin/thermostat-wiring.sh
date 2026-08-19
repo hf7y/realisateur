@@ -8,12 +8,9 @@
 #
 # TRAPS (the rest of this header is in the vault):
 # It never reports "I could not see" as "nothing is wrong" (the recorded
-# pathology: a propagation pass that reached zero projects and exited 0).
-# A check that cannot be probed is BLIND, and BLIND on a check the ratchet
-# depends on is exit 2 -- because an unprobeable check cannot prove the
-# absence of a regression. BLIND on a check that was already failing is
-# reported and tolerated: it costs nothing to be unable to measure something
-# that was not yet true.
+# pathology: a propagation pass that reached zero projects and exited 0). A
+# check that cannot be probed is BLIND: exit 2 if ratcheted (an unprobeable
+# check cannot prove no regression), tolerated if not (nothing yet to lose).
 # It also never lowers the ratchet. `--accept` raises it or refuses.
 #
 # usage:  thermostat-wiring.sh [--strict] [--accept] [--quiet]
@@ -61,18 +58,10 @@ IDS=(); STATES=(); NOTES=()
 
 record() { IDS+=("$1"); STATES+=("$2"); NOTES+=("$3"); }
 
-# A checkout wins when one is present (same rule as dexter-service-deploy.sh
-# and cut-verb-build.sh); GitHub is the fallback, not the requirement. This
-# host went clone-free (#264: 120 shims + 14 clones removed) and this guard
-# was written against the pre-clone-free layout, which is #414: two ratcheted
-# checks that read a sibling checkout went permanently BLIND once the clone
-# it depended on was the very thing removed.
+# #414: a checkout wins when present; GitHub is the clone-free fallback.
 SCHED_LOCAL=0
 [ -d "$SCHED/.git" ] && SCHED_LOCAL=1
 
-# sched_tree -- the recursive git tree of $SCHED_OWNER/$SCHED_REPO@HEAD,
-# fetched once and cached. Empty + rc 1 means "could not read", not "empty":
-# a real tree is never empty, so an empty answer is BLIND, never absence.
 _SCHED_TREE_READ=0
 _SCHED_TREE=""
 sched_tree() {
@@ -84,10 +73,6 @@ sched_tree() {
   [ -n "$_SCHED_TREE" ]
 }
 
-# sched_file <path> -- contents from the clone if there is one, else fetched
-# live from GitHub. Prints nothing (and returns nothing distinguishable from
-# "not found") on either genuine absence or an unreadable fetch -- the same
-# ambiguity `[ -f "$SCHED/$path" ]` already had before this existed.
 sched_file() {
   if [ "$SCHED_LOCAL" = 1 ]; then
     cat "$SCHED/$1" 2>/dev/null
@@ -97,10 +82,6 @@ sched_file() {
     | base64 -d 2>/dev/null
 }
 
-# _pathspec_match <path> <pattern> -- a git-ls-files-shaped pathspec matcher
-# for tree paths fetched from the API: a glob pattern (has *, ?  or [) matches
-# by shell glob; a literal pattern matches exactly OR as a leading path
-# segment (git's directory-pathspec behavior for e.g. `focus`).
 _pathspec_match() {
   local path="$1" pat="$2"
   case "$pat" in
@@ -136,9 +117,6 @@ tracked() {
   git -C "$repo" ls-files -- "$@" 2>/dev/null
 }
 
-# sched_grep <pattern> <path-prefix>... -- true if any tracked file under one
-# of the prefixes matches the extended regex. Returns 2, distinctly, when the
-# tree itself could not be read (BLIND), never conflated with "no match".
 sched_grep() {
   local pat="$1"; shift
   if [ "$SCHED_LOCAL" = 1 ]; then
@@ -159,8 +137,6 @@ sched_grep() {
   return 1
 }
 
-# sched_grep_files <pattern> <path-prefix>... -- like sched_grep but prints
-# every matching path instead of stopping at the first.
 sched_grep_files() {
   local pat="$1"; shift
   if [ "$SCHED_LOCAL" = 1 ]; then

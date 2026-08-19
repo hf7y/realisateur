@@ -157,18 +157,10 @@ has G3 "$out" "UNMET  setpoint"
 
 echo
 echo "== H: no checkout -- read live from GitHub (#414) ==========================="
-# #414: mandark went clone-free (no ~/Documents/Projects/scheduler), and both
-# ratcheted checks that read it went permanently BLIND -- not because
-# anything regressed, but because the guard could only ever look at a sibling
-# checkout. These cases exercise the fallback offline: SCHED_ROOT points at a
-# directory that does not exist, and a stubbed `gh` answers the two calls the
-# fallback makes (a recursive tree, then blobs) with the SAME fixture shapes
-# `mkscheduler` builds locally, so H's expectations mirror F's and G's.
+# #414: SCHED_ROOT names no directory; ghstub answers with mkscheduler's own shapes.
 mkdir -p "$TMP/ghstub"
 cat > "$TMP/ghstub/gh" <<'EOF'
 #!/bin/sh
-# TW_SHAPE=current|conforming picks the fixture; TW_BLIND=1 fails every call
-# (unreadable), never returning an empty-but-successful answer.
 [ -n "${TW_BLIND:-}" ] && exit 1
 case "$*" in
   *"repos/hf7y/scheduler/git/trees/HEAD?recursive=1"*)
@@ -200,8 +192,6 @@ esac
 EOF
 chmod +x "$TMP/ghstub/gh"
 
-# run_remote <ratchet> <shape> [args...] -- like run(), but SCHED_ROOT names
-# no directory at all and the stubbed gh above is the only source.
 run_remote() {
   local ratchet="$1" shape="$2"; shift 2
   printf '%s\n' "$ratchet" > "$FAKE/bin/thermostat-wiring.ratchet"
@@ -209,8 +199,6 @@ run_remote() {
       bash "$FAKE/bin/thermostat-wiring.sh" "$@" 2>&1
 }
 
-# H1: the conforming shape, read live, passes the same eight checks F1 does
-# locally -- ledger and setpoint (#414's two BLIND checks) included.
 out="$(run_remote '' conforming)"; rc=$?
 is    H1  "$rc" 0
 has   H1b "$out" "no checkout -- read live from"
@@ -219,16 +207,11 @@ hasnt H1d "$out" "UNMET  setpoint"
 has   H1e "$out" "PASS   ledger"
 has   H1f "$out" "PASS   setpoint"
 
-# H2: the current (unconforming) shape, read live, reports UNMET rather than
-# BLIND -- the fallback can see the tree, it just does not like what is there.
 out="$(run_remote '' current)"; rc=$?
 is  H2  "$rc" 0
 has H2b "$out" "UNMET  blockers"
 has H2c "$out" "UNMET  weight"
 
-# H3: GitHub itself unreadable -- BLIND, and ratcheting it is exit 2, never a
-# silent pass. This is the failure #414 reported; it must stay a failure when
-# the network genuinely cannot be reached, only stop firing when it can.
 printf '%s\n' 'ledger' > "$FAKE/bin/thermostat-wiring.ratchet"
 out="$(env PATH="$TMP/ghstub:$PATH" SCHED_ROOT="$TMP/no-such-scheduler" TW_SHAPE=conforming TW_BLIND=1 \
       bash "$FAKE/bin/thermostat-wiring.sh" 2>&1)"; rc=$?
