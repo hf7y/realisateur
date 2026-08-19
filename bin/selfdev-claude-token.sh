@@ -7,14 +7,27 @@
 #                                                every stale copy still on disk
 #   selfdev-claude-token.sh --install <file>     write /etc/selfdev/claude-token
 #                                                (0640 root:selfdev) from <file>
+#   selfdev-claude-token.sh --fanout             LIST the accounts that would
+#                                                be rewritten from the one copy
+#   selfdev-claude-token.sh --fanout --apply     rewrite them
 #   selfdev-claude-token.sh --purge              LIST the copies that would go
 #   selfdev-claude-token.sh --purge --apply      shred them
 #
 # exit: 0 OK  1 usage  2 GAP (something to do)  4 BAD  6 BLIND (could not look)
 #
 # ORDER MATTERS, and nothing here can enforce it -- this cannot tell a rotated
-# token from an unrotated one. Rotate, --install, prove a dispatch, --purge.
-# Purging first only deletes copies of a value that is still live.
+# token from an unrotated one. Rotate, --install, --fanout, prove a dispatch,
+# revoke the old value. Purging first only deletes copies of a value that is
+# still live.
+#
+# WHY --fanout EXISTS, AND WHY IT IS TEMPORARY. Nothing reads
+# /etc/selfdev/claude-token at dispatch yet; every account still reads its own
+# ~/.claude/settings.json. So --install alone changes nothing, and revoking the
+# old value before the accounts hold the new one takes the whole fleet down
+# silently. --fanout DERIVES those copies from the one file instead of leaving
+# them hand-managed: still N copies, but one source of truth and one command to
+# rotate. It should be deleted the day dispatch reads the host-wide file, and
+# --purge is what deletes the copies then.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,6 +53,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --check)   MODE=check ;;
     --install) MODE=install; SRC="${2:-}"; [ -n "$SRC" ] || die "--install needs a file"; shift ;;
+    --fanout)  MODE=fanout ;;
     --purge)   MODE=purge ;;
     --apply)   APPLY=1 ;;
     -h|--help) usage; exit 0 ;;
@@ -84,6 +98,25 @@ d.get("env", {}).pop("CLAUDE_CODE_OAUTH_TOKEN", None)
 if d.get("env") == {}: d.pop("env")
 p.write_text(json.dumps(d, indent=2) + "\n"); p.chmod(0o600)
 PY
+}
+
+# SETTER_PY -- materialised once, run as each account. A file, not an inline
+# heredoc through `sudo bash -c`: that nesting is where the quoting breaks.
+# Takes the value from a FILE, never argv, which is readable in ps.
+SETTER_PY=""
+make_setter() {
+  SETTER_PY="$(mktemp)"; chmod 644 "$SETTER_PY"
+  cat > "$SETTER_PY" <<'PY'
+import json, pathlib, sys
+p, tokf = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+tok = tokf.read_text().strip()
+d = json.loads(p.read_text()) if p.exists() and p.stat().st_size else {}
+d.setdefault("env", {})["CLAUDE_CODE_OAUTH_TOKEN"] = tok
+p.parent.mkdir(parents=True, exist_ok=True)
+p.write_text(json.dumps(d, indent=2) + "\n")
+p.chmod(0o600)
+PY
+  trap 'rm -f "$SETTER_PY"' EXIT
 }
 
 TOKPATH="$(selfdev_token_path)"
@@ -155,8 +188,45 @@ check)
   echo "unrotated token deletes copies of a value that is still live."
   ;;
 
+fanout)
+  [ "$APPLY" -eq 1 ] || echo "== DRY RUN (no --apply): listing only =="
+  if [ ! -e "$TOKPATH" ]; then
+    bad "nothing to fan out: $TOKPATH does not exist -- run --install first"
+    printf '\n== %d BAD ==\n' "$BAD"; exit 4
+  fi
+  if ! selfdev_token_readable "$TOKPATH"; then
+    blind "cannot read $TOKPATH as $(id -un) -- refusing to fan out a value I cannot verify"
+    printf '\n== %d BLIND ==\n' "$BLIND"; exit 6
+  fi
+  if ! accts="$(selfdev_accounts)"; then
+    blind "no account in uid band $UID_MIN-$UID_MAX -- nothing enumerated, which is not the same as nothing present"
+    printf '\n== %d BLIND ==\n' "$BLIND"; exit 6
+  fi
+  [ "$APPLY" -eq 1 ] && make_setter
+  while read -r a; do
+    [ -n "$a" ] || continue
+    h="$HOME_ROOT/$a"
+    [ -d "$h" ] || { ok "$a has no home under $HOME_ROOT -- skipped"; continue; }
+    if [ "$APPLY" -ne 1 ]; then
+      gap "would rewrite $h/.claude/settings.json and $h/.claude-token from $TOKPATH"
+      continue
+    fi
+    # Written AS the account, so ownership and mode stay the account's own and
+    # no root-owned file is left in a home that must remain self-managed.
+    if install -m 600 -o "$a" -g "$a" "$TOKPATH" "$h/.claude-token" \
+       && sudo -n -u "$a" python3 "$SETTER_PY" "$h/.claude/settings.json" "$h/.claude-token"; then
+      ok "$a rewritten from the one copy"
+    else
+      bad "$a could not be rewritten -- it is now UNKNOWN whether it holds the old or the new value, so re-run --fanout before trusting the fleet"
+    fi
+  done <<<"$accts"
+  echo
+  [ "$APPLY" -eq 1 ] && echo "Re-run bin/tests/../fleet fingerprints, or --check, to witness the change." \
+                     || echo "Re-run with --apply to act."
+  ;;
+
 purge)
-  [ "$APPLY" -eq 1 ] || echo "== DRY RUN (no --apply): listing only ==" 
+  [ "$APPLY" -eq 1 ] || echo "== DRY RUN (no --apply): listing only =="
   if [ ! -e "$TOKPATH" ]; then
     bad "refusing to purge: $TOKPATH does not exist, so purging would leave NO copy of the token anywhere and every account would dispatch and produce nothing, silently"
     printf '\n== %d BAD ==\n' "$BAD"; exit 4

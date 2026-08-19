@@ -91,14 +91,36 @@ python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$TMP/accounts/alpha/
   && ok "...and the file is still valid JSON" || bad "--apply left invalid JSON"
 rc  "a completed purge exits 0" 0 "$R"
 
-echo "== 6. IT NEVER PRINTS THE VALUE ======================================"
-ALL="$(run --check; run --purge; run --purge --apply)"
+echo "== 6. --fanout DERIVES THE COPIES FROM THE ONE FILE =================="
+# Rebuild homes holding the OLD value, and put a DIFFERENT value host-wide.
+OLD="$FAKE_TOKEN"; NEW='sk-ant-oat01-ROTATED-fixture-value'
+mkhome alpha; mkhome beta
+printf '%s\n' "$NEW" > "$TMP/etc/claude-token"
+
+O="$(run --fanout)"; R=$?
+has "a dry run says so" "$O" "DRY RUN"
+has "...and names the accounts it would rewrite" "$O" "would rewrite $TMP/accounts/alpha"
+grep -q "$OLD" "$TMP/accounts/alpha/.claude-token" \
+  && ok "...and changed nothing on disk" || bad "the DRY RUN rewrote a file"
+
+# --fanout writes as each account via sudo -u; unavailable in the suite, so
+# assert the REFUSALS here and leave the write path to the live run.
+rm -f "$TMP/etc/claude-token"
+O="$(run --fanout --apply)"; R=$?
+has "fanout with no host-wide copy is refused" "$O" "run --install first"
+rc  "...and that is BAD, not a silent no-op" 4 "$R"
+grep -q "$OLD" "$TMP/accounts/alpha/.claude-token" \
+  && ok "...and it rewrote nothing" || bad "the refusal still touched a home"
+printf '%s\n' "$NEW" > "$TMP/etc/claude-token"
+
+echo "== 7. IT NEVER PRINTS THE VALUE ======================================"
+ALL="$(run --check; run --purge; run --fanout; run --fanout --apply; run --purge --apply)"
 case "$ALL" in
-  *"$FAKE_TOKEN"*) bad "the token VALUE appeared in output -- this tool's output is quoted into issues" ;;
-  *) ok "no mode printed the token value" ;;
+  *"$FAKE_TOKEN"*|*"$NEW"*) bad "a token VALUE appeared in output -- this tool's output is quoted into issues" ;;
+  *) ok "no mode printed either token value" ;;
 esac
 
-echo "== 7. THE RESOLVER IS ONE ANSWER ====================================="
+echo "== 8. THE RESOLVER IS ONE ANSWER ====================================="
 # shellcheck source=../lib/selfdev-claude-token.sh
 ( . "$ROOT/lib/selfdev-claude-token.sh"
   [ "$(selfdev_token_path)" = "/etc/selfdev/claude-token" ] || exit 1 ) \
@@ -108,7 +130,7 @@ echo "== 7. THE RESOLVER IS ONE ANSWER ====================================="
   && ok "SELFDEV_TOKEN_FILE overrides it" || bad "the override does not take"
 ( . "$ROOT/lib/selfdev-claude-token.sh"
   SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" selfdev_token_export || exit 1
-  [ "$CLAUDE_CODE_OAUTH_TOKEN" = "$FAKE_TOKEN" ] || exit 1 ) \
+  [ "$CLAUDE_CODE_OAUTH_TOKEN" = "$NEW" ] || exit 1 ) \
   && ok "selfdev_token_export puts it in the ENVIRONMENT, leaving no file" \
   || bad "selfdev_token_export did not export the value"
 printf 'not-a-token\n' > "$TMP/etc/bogus"
