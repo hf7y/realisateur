@@ -5,12 +5,11 @@
 # somebody remembers to ask -- which is the prose discipline it was built to
 # replace, wearing a shell script. This is what makes it fire on its own.
 #
-# IT SURFACES; IT DOES NOT BLOCK. A drifted claim is a red check. This
-# repository is private on a plan where both the branch-protection and the
-# rulesets APIs answer 403 "Upgrade to GitHub Pro" (probed 2026-08-07), so a
-# red check here cannot prevent a push, a review or a merge, and it is not
-# meant to. Growth after "done" is legitimate; growth that leaves the claim
-# standing is what this makes impossible to do quietly.
+# IT SURFACES; IT DOES NOT BLOCK. Not a required check on main. It once could
+# not be one -- private repo, branch-protection API answering 403 (2026-08-07)
+# -- but the repo went public 2026-08-19 and the judgement outlived its cause:
+# growth after "done" is legitimate, and blocking would forbid it. Growth that
+# leaves the claim standing is what this makes impossible to do quietly.
 #
 # THE EVENT LIST IS LOAD-BEARING. `ready_for_review` and `converted_to_draft`
 # are NOT in the default `pull_request` set. Without them the two acts that
@@ -24,6 +23,10 @@ name: claim-drift
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

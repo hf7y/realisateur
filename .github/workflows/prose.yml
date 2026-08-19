@@ -8,6 +8,10 @@ name: prose
 on:
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   prose:
     uses: hf7y/etalon/.github/workflows/guard.yml@main

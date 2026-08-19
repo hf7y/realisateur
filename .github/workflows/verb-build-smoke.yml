@@ -2,18 +2,11 @@
 # credential anybody has to mint.
 #
 # WHY THIS LIVES IN REALISATEUR AND NOT IN hf7y/verbs
-#   The meta-repo's own workflow cannot be exercised without a secret. Its
-#   very first step is `actions/checkout` of hf7y/realisateur, which is
-#   PRIVATE, and the default GITHUB_TOKEN in hf7y/verbs is scoped to
-#   hf7y/verbs alone. So a "dry run" dispatched in the meta-repo still needs
-#   VERBS_READ_TOKEN just to obtain the script it would dry-run. Only Zach
-#   can mint that PAT, and until he does the meta-repo's workflow is
-#   unrunnable and therefore unproven.
-#
-#   Here, the script is simply in the checkout. GITHUB_TOKEN can read
-#   realisateur because it IS realisateur, and `gh` with that token can see
-#   hf7y's PUBLIC repositories -- enough to run the real derivation, against
-#   the real GitHub, over real repositories, with no secret at all.
+#   The meta-repo's workflow starts by checking out hf7y/realisateur, and its
+#   GITHUB_TOKEN is scoped to hf7y/verbs alone -- so it needed VERBS_READ_TOKEN
+#   just to fetch the script, a PAT only Zach can mint. realisateur went public
+#   2026-08-19, retiring that blocker. It still lives here: this run needs no
+#   token at all, and moving it would trade a proven path for an unexercised.
 #
 # WHAT THIS DOES AND DOES NOT PROVE
 #   PROVES: the two contract suites pass; and cut-verb-build.sh can reach
@@ -27,8 +20,7 @@
 #   or --write: this path is structurally incapable of producing an artifact
 #   a host could install.
 #
-#   The gap is not subtle, and it is worth knowing the size of it. Measured
-#   on this job's first run (realisateur run 30968673378, 2026-08-05):
+#   Measured on this job's first run (run 30968673378, 2026-08-05):
 #
 #     9 verb(s) from  3 project(s)    <- here, default GITHUB_TOKEN
 #    32 verb(s) from 13 project(s)    <- same script, same day, org credential
@@ -51,6 +43,10 @@ on:
       - 'bin/tests/cut-verb-build-test.sh'
       - 'provision/verbs-meta/**'
       - '.github/workflows/verb-build-smoke.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
