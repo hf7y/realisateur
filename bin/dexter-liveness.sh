@@ -30,8 +30,7 @@ JSON=0
 EXPECT_DISTROS="Ubuntu"          # hermes joins this when it is containerised
 EXPECT_VMS="monkey"              # nomac is the office VM, started by hand
 EXPECT_PORTS="8643"              # zaxon MCP
-# whisper joins this when hf7y/crt lands it; naming it before that turns this
-# check red for a service that does not exist yet.
+# whisper joins when hf7y/crt lands it -- naming it sooner turns this red (#405)
 EXPECT_CONTAINERS="zaxon-gateway zaxon-relay zaxon-watcher"
 
 fail=0; blind=0; zaxon_fail=0; vm_fail=0; findings=()
@@ -110,8 +109,7 @@ if [ -n "$winboot" ] && [ -n "$up_s" ]; then
   fi
 fi
 
-# zaxon must work without monkey, so the two carry separate verdicts -- one
-# exit code cannot say which half is dark.
+# zaxon must work without monkey: one exit code cannot say which half is dark.
 zaxon_status="$([ "$zaxon_fail" = 1 ] && echo DOWN || echo OK)"
 vm_status="$([ "$vm_fail" = 1 ] && echo DOWN || echo OK)"
 
