@@ -185,7 +185,6 @@ cut-verb-build.sh
 deploy-drift.sh
 release-gate.sh
 publish-release-verdict.sh
-ecosim-sensor-tick.sh
 floor-check.sh
 hardcoded-home-lint.sh
 ownership-audit.sh

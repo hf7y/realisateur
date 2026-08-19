@@ -247,7 +247,6 @@ bin/hardcoded-home-lint.sh                 bashify
 bin/lib/cli-guard.sh                       bashify
 hooks                                      bashify
 bashify                                    bashify
-bin/ecosim-sensor-tick.sh                  ecosim
 .claude/commands/bashify.md                bashify
 .claude/commands/cloture.md                bashify
 .github/workflows/claim-drift.yml          vim-arcade

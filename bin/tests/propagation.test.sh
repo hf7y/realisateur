@@ -545,9 +545,10 @@ has "--retire unsets it, verified by re-reading the config" "$O" "re-read"
 
 # ONE READER, with a NAMED exemption list rather than a loose rule.
 #
-# Two scripts legitimately resolve the pin path because they OWN the build
+# One script legitimately resolves the pin path because it OWNS the build
+# layout. (#49 retired the other, ecosim-sensor-tick.sh, from this repo.)
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
-PIN_OWNERS="install-verb-build.sh ecosim-sensor-tick.sh"
+PIN_OWNERS="install-verb-build.sh"
 strays=""
 for f in "$REPO"/bin/*.sh; do
   n="$(basename "$f")"
