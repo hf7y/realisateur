@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ausculte.sh -- can Zach stop looking? Composed from probes that already exist.
 # THE HUMAN CHANNEL IS FIRST: every other failure is meant to reach him through
-# zaxon, so a green report with that down is one nobody receives. And BLIND is
-# never folded into OK -- this is the command built to be believed.
+# zaxon, so a green report with that down is one nobody receives. BLIND is never
+# folded into OK; this is the command built to be believed.
 set -uo pipefail
 
 CLI_NAME='ausculte.sh'
@@ -39,8 +39,6 @@ want() {
   return 1
 }
 
-# The human channel, first. An MCP initialize, not a TCP connect: the relay's
-# own healthcheck opens a socket and so does a hung gateway.
 if want channel; then
   ep=''; for u in http://127.0.0.1:8643/mcp http://100.107.253.56:8643/mcp; do
     if curl -s -m 8 -o /dev/null -H 'Content-Type: application/json' \

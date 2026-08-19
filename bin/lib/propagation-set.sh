@@ -168,6 +168,7 @@ PROP_LEAK_BOUND=7
 PROP_LOCAL_SCRIPTS="
 sunset-coordinator-files.sh
 dexter-liveness.sh
+ausculte.sh
 dexter-service-deploy.sh
 monkey-vdi-to-internal.sh
 monkey-watch.sh

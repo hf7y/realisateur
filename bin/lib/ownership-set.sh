@@ -148,6 +148,9 @@ bin/selfdev-agent-survey.sh                realisateur
 provision/dexter/README.md                 realisateur
 bin/dexter-liveness.sh                     realisateur
 bin/tests/dexter-liveness.test.sh          realisateur
+bin/ausculte.sh                            realisateur
+bin/tests/ausculte.test.sh                 realisateur
+bin/lib/zaxon.sh                           realisateur
 bin/dexter-service-deploy.sh               realisateur
 bin/tests/dexter-service-deploy.test.sh    realisateur
 bin/publish-monkey-status.sh               realisateur

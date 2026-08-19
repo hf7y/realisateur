@@ -26,8 +26,6 @@ run rot >/dev/null; check "a clean probe exits 0" "$?" "0"
 stub decision-rot.sh 1 "answered and still open"
 run rot >/dev/null; check "a probe reporting rot is DOWN (5)" "$?" "5"
 
-# cli-guard's 2 means ausculte called the probe WRONG -- a defect HERE, and
-# reporting it DOWN would send someone hunting a healthy fleet.
 stub decision-rot.sh 2 "usage"
 out="$(run rot)"; check "a usage error from a probe is BLIND, not DOWN" "$?" "6"
 case "$out" in *"fix ausculte"*) ok "...and it says the fault is ausculte's" ;;

@@ -1,9 +1,9 @@
-# zaxon.sh -- the ask_zach call in ONE place. It was hand-copied into
-# monkey-watch.sh and monkey-vdi-to-internal.sh, ~20 lines each, already
-# drifted. crt's `demande` verb is the estate-wide door; this serves callers
-# that run before a verb build is guaranteed present. NEVER FATAL.
+#!/usr/bin/env bash
+# zaxon.sh -- the ask_zach call in ONE place; monkey-watch.sh and
+# monkey-vdi-to-internal.sh each held a copy and had drifted. crt's `demande`
+# verb is the estate-wide door. NEVER FATAL: a recovery that aborts because it
+# could not announce itself is worse than a silent one.
 
-# zaxon_ask <message> <from-agent> -- echoes the ticket id, or nothing.
 zaxon_ask() {
   local msg="$1" from="${2:-agent}" url hdr sid body tid
   hdr="$(mktemp)"; body="$(mktemp)"
