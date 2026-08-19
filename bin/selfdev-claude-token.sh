@@ -7,9 +7,7 @@
 #                                                every stale copy still on disk
 #   selfdev-claude-token.sh --install <file>     write /etc/selfdev/claude-token
 #                                                (0640 root:selfdev) from <file>
-#   selfdev-claude-token.sh --install <f> --force-length
-#                                                install even if the length
-#                                                disagrees with the current value
+#   selfdev-claude-token.sh --install <f> --force-length   skip the length check
 #   selfdev-claude-token.sh --fanout             LIST the accounts that would
 #                                                be rewritten from the one copy
 #   selfdev-claude-token.sh --fanout --apply     rewrite them
@@ -23,14 +21,11 @@
 # revoke the old value. Purging first only deletes copies of a value that is
 # still live.
 #
-# WHY --fanout EXISTS, AND WHY IT IS TEMPORARY. Nothing reads
-# /etc/selfdev/claude-token at dispatch yet; every account still reads its own
-# ~/.claude/settings.json. So --install alone changes nothing, and revoking the
-# old value before the accounts hold the new one takes the whole fleet down
-# silently. --fanout DERIVES those copies from the one file instead of leaving
-# them hand-managed: still N copies, but one source of truth and one command to
-# rotate. It should be deleted the day dispatch reads the host-wide file, and
-# --purge is what deletes the copies then.
+# --fanout IS TEMPORARY. Nothing reads the host-wide file at dispatch yet, so
+# --install alone changes nothing and revoking first takes the fleet down
+# silently. --fanout derives the per-account copies from the one file: still N
+# copies, one source of truth. Delete it, and --purge the copies, the day
+# dispatch reads /etc/selfdev/claude-token.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -128,18 +123,13 @@ TOKPATH="$(selfdev_token_path)"
 case "$MODE" in
 install)
   [ -r "$SRC" ] || die "cannot read $SRC"
-  # Strip ALL whitespace, not just \r\n. A token pasted through a terminal
-  # arrives with a stray leading or trailing SPACE often enough that stripping
-  # only newlines is the difference between a rotation and an outage: on
-  # 2026-08-19 a 110-char paste (108 + space + newline) passed the prefix check
-  # here, reached 15 accounts via --fanout, and every one of them returned
-  # "401 OAuth access token is invalid" until the fleet was rolled back.
+  # ALL whitespace, not just \r\n: a pasted token carries a stray space, and
+  # on 2026-08-19 that reached 15 accounts as a 401 (#409).
   tok="$(tr -d '[:space:]' < "$SRC")"
   case "$tok" in sk-ant-oat*) ;; *) die "$SRC does not hold an sk-ant-oat* token -- refusing to install it" ;; esac
 
-  # A prefix is not a shape. Compare against the value being REPLACED, which is
-  # the only known-good example this host has; a length that disagrees is the
-  # signature of a truncated or padded paste.
+  # A prefix is not a shape. The replaced value is the only known-good example
+  # this host has, so a disagreeing length is a bad paste.
   if [ -e "$TOKPATH" ] && selfdev_token_readable "$TOKPATH"; then
     cur_len="$(tr -d '[:space:]' < "$TOKPATH" | wc -c)"
     new_len="${#tok}"

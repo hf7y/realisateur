@@ -92,14 +92,13 @@ python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$TMP/accounts/alpha/
 rc  "a completed purge exits 0" 0 "$R"
 
 echo "== 5b. --install VALIDATES SHAPE, NOT JUST PREFIX ===================="
-# The 2026-08-19 outage: 108 chars + a stray space passed the prefix check,
-# reached 15 accounts, and every one returned 401 until the fleet rolled back.
+# The 2026-08-19 outage: a stray space passed the prefix check and reached 15
+# accounts as a 401 (#409).
 GOOD='sk-ant-oat01-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 printf '%s\n' "$GOOD" > "$TMP/etc/claude-token"
 
-# The WRITE needs root and the selfdev group, so unprivileged it always stops
-# at that step. That is the point: a padded value must get PAST validation and
-# fail there, not be rejected as the wrong length.
+# The write needs root, so unprivileged it stops there -- which is the point:
+# a padded value must reach that step, not be refused as the wrong length.
 printf ' %s \n' "$GOOD" > "$TMP/etc/spaced"
 O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" bash "$TOOL" --install "$TMP/etc/spaced" 2>&1)"
 case "$O" in
