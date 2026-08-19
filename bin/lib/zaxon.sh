@@ -7,9 +7,16 @@
 zaxon_ask() {
   local msg="$1" from="${2:-agent}" url hdr sid body tid
   hdr="$(mktemp)"; body="$(mktemp)"
-  for url in ${ZAXON:-http://127.0.0.1:8643/mcp http://100.107.253.56:8643/mcp}; do
+  # TAILNET FIRST, loopback second (2026-08-19). zaxon runs on dexter, so
+  # 127.0.0.1 answers ONLY when this is called on dexter; from monkey it is
+  # refused. Measured from monkey 2026-08-19: the tailnet address returns
+  # http=200 in 0.017s, loopback http=000. The cost of the old order was not
+  # latency (refusal is instant) -- it was that listing loopback first reads
+  # as "loopback is the primary route", which is how "zaxon is not reachable
+  # from monkey" kept getting re-derived. It is reachable, and has been.
+  for url in ${ZAXON:-http://100.107.253.56:8643/mcp http://127.0.0.1:8643/mcp}; do
     : > "$hdr"
-    curl -s -D "$hdr" -o /dev/null -m 20 -H 'Content-Type: application/json' \
+    curl -s -D "$hdr" -o /dev/null --connect-timeout 5 -m 20 -H 'Content-Type: application/json' \
       -H 'Accept: application/json,text/event-stream' -X POST "$url" \
       -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"$from\",\"version\":\"1\"}}}" \
       >/dev/null 2>&1 || continue

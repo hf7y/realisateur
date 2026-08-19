@@ -40,8 +40,10 @@ want() {
 }
 
 if want channel; then
-  ep=''; for u in http://127.0.0.1:8643/mcp http://100.107.253.56:8643/mcp; do
-    if curl -s -m 8 -o /dev/null -H 'Content-Type: application/json' \
+  # Tailnet first: zaxon runs on dexter, so loopback answers only when
+  # ausculte is run ON dexter. See bin/lib/zaxon.sh for the same ordering.
+  ep=''; for u in http://100.107.253.56:8643/mcp http://127.0.0.1:8643/mcp; do
+    if curl -s --connect-timeout 4 -m 8 -o /dev/null -H 'Content-Type: application/json' \
          -H 'Accept: application/json,text/event-stream' -X POST "$u" \
          -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ausculte","version":"1"}}}' \
          2>/dev/null; then ep="$u"; break; fi
