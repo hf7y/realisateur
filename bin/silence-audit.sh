@@ -153,10 +153,6 @@ project_repos() {
 }
 
 project_repos_and_worktrees() {
-  # project_repos plus every git worktree of those repos. Separate from
-  # project_repos on purpose: worktrees are NOT registered projects and must
-  # not inflate projects_seen (the BLIND denominator). Only checks that
-  # genuinely care about on-disk copies use this.
   local name repo wt
   while IFS=$'\t' read -r name repo; do
     [ -z "${repo:-}" ] && continue
@@ -319,17 +315,7 @@ check_prose_only_rule() {
   done < <(project_repos)
 }
 
-check_worktree_backed() {
-  # Incident 2026-07-28: ~/.local/bin/silence-audit was installed as a
-  # symlink into realisateur-staging-silence-audit, a git worktree on branch
-  # staging/silence-audit. Merging that branch and pruning the worktree
-  # removes a machine-wide command with no error anywhere -- the install
-  # looks permanent and is not.
-  #
-  # Domain: ~/.local/bin. Unreadable domain is BLIND, never clean. Ported
-  # from ecosim's fork (#421) unchanged -- this check reads $HOME/.local/bin
-  # directly and never touches project_repos, so the registry-vs-scheduler
-  # split between the two forks does not apply to it.
+check_worktree_backed() {  # ported from ecosim's fork, #421
   local bindir="${LOCAL_BIN:-$HOME/.local/bin}" entry target dir gitdir
   if [ ! -d "$bindir" ]; then
     note blind "worktree-backed: $bindir does not exist or is unreadable -- NOT audited"
@@ -343,7 +329,6 @@ check_worktree_backed() {
       continue
     }
     dir="$(dirname "$target")"
-    # A worktree's .git is a FILE containing "gitdir: ...", not a directory.
     gitdir="$(git -C "$dir" rev-parse --git-dir 2>/dev/null)" || continue
     if [ -f "$dir/.git" ] || [ -f "$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)/.git" ]; then
       flag worktree-backed "$(basename "$entry") -> $target lives in a git WORKTREE, not a permanent checkout -- pruning the worktree deletes this command silently"
@@ -351,30 +336,7 @@ check_worktree_backed() {
   done < <(find "$bindir" -maxdepth 1 -type l 2>/dev/null)
 }
 
-check_twin() {
-  # Incident 2026-07-28, two shapes in one day:
-  #   (a) bin/silence-audit.sh byte-identical in ecosim and in a realisateur
-  #       worktree, with the live PATH symlink pointing at the copy;
-  #   (b) the dead-man switch hand-pasted into aedile's wrapper while
-  #       lib/sweep-loop-common.sh already implemented it -- and the copy
-  #       immediately differed (no notify-send, no "bumping EXPIRY_DAYS does
-  #       not renew" warning).
-  # Only (a) is mechanically detectable from file content, so that is what
-  # this checks. It does NOT claim to find every copied mechanism, and says
-  # so rather than implying coverage it lacks.
-  #
-  # Scans registered repos AND their git worktrees. The worktree half is not
-  # decoration: the first cut of this check scanned registered repos only,
-  # and so did NOT catch the very duplicate that motivated it -- the second
-  # copy of this file lives in a worktree, which is not a registered project.
-  # A check blind to its own founding incident is worse than no check,
-  # because it reports clean over the case you built it for.
-  #
-  # Ported from ecosim's fork (#421). project_repos_and_worktrees is this
-  # file's own registry-based project_repos plus worktree discovery -- the
-  # scheduler-conf-vs-registry split between the two forks does not touch
-  # this check, since neither variant reads PROJECT_REPO_PATH or the marker
-  # file, only what project_repos already handed back.
+check_twin() {  # ported from ecosim's fork, #421
   local name repo sh sum base
   local -a sums=() paths=() owners=()
   while IFS=$'\t' read -r name repo; do
@@ -384,12 +346,6 @@ check_twin() {
       sum="$(md5sum "$sh" 2>/dev/null | cut -d' ' -f1)"
       [ -n "$sum" ] || continue
       local i found="" found_owner="" owner
-      # Owner = the PROJECT, with any "(worktree)" suffix stripped. A repo and
-      # its own worktree share files by definition -- flagging that is pure
-      # noise, and the first live run produced a screenful of it. The real
-      # signal is the same file in two DIFFERENT projects, which is what the
-      # founding incident was (ecosim's silence-audit.sh vs a realisateur
-      # worktree's copy).
       owner="${name%(worktree)}"
       for i in "${!sums[@]}"; do
         if [ "${sums[$i]}" = "$sum" ] && [ "${owners[$i]}" != "$owner" ]; then
@@ -405,20 +361,7 @@ check_twin() {
   done < <(project_repos_and_worktrees)
 }
 
-check_subrepo_invisible() {
-  # Incident 2026-07-28: the */15 scheduler sweep committed dirty CLAUDE.md
-  # in 15 repos and skipped aedile, whose registration pointed at a
-  # SUBDIRECTORY of the wavebucks monorepo. bin/scheduler's git-health test
-  # is [ -d "$repo_path/.git" ], a literal directory test that a monorepo
-  # subdirectory always fails. The project stays registered, stays dispatched,
-  # and is silently exempt from every repo-level check. Known since
-  # 2026-07-24 and still live.
-  #
-  # Ported from ecosim's fork (#421) unchanged. It only asks git where a
-  # repo's toplevel is, so it applies identically regardless of whether the
-  # repo path came from a scheduler conf or from a $REGISTRY_MARKER-carrying
-  # tree under $PROJECTS_ROOT -- both forks hand this check the same shape
-  # (name, repo-path) tuple.
+check_subrepo_invisible() {  # ported from ecosim's fork, #421
   local name repo top
   while IFS=$'\t' read -r name repo; do
     [ -z "${repo:-}" ] && continue
@@ -430,23 +373,7 @@ check_subrepo_invisible() {
   done < <(project_repos)
 }
 
-# check_dirty_writer is deliberately NOT ported from ecosim's fork (#421).
-# Its "does this reach across repos" heuristic keys on scheduler-conf
-# literals (PROJECT_REPO_PATH / schedule/*.conf / SCHED_ROOT) that mean
-# nothing in this file's registry-based domain, so porting it required
-# swapping in this file's own markers (PROJECTS_ROOT / REGISTRY_MARKER /
-# .agent-project). Doing that and testing it against this repo's own bin/
-# false-positived immediately: bin/cut-verb-build.sh reads REGISTRY_MARKER
-# (satisfying the adapted "reaches across repos" half) and calls `cp` into
-# --assemble, a build staging directory (satisfying the "mutates files"
-# half) -- but --assemble is not a repo it read from, and there is nothing
-# for it to commit. The heuristic cannot tell "writes back into what it
-# read" from "writes into an output directory that happens to share a
-# variable-naming shape", which ecosim's conf-scraping domain never had to
-# distinguish because it has no equivalent staging-dir convention. Shipping
-# it anyway would have meant this audit flagging its own sibling script on
-# every run. Recorded here, the way ecosim's --self-test records
-# retirement-open, so the next reader does not re-derive this from scratch.
+# check_dirty_writer (#421) NOT ported: adapted, it false-positives on bin/cut-verb-build.sh (writes to a build staging dir, not a repo it read).
 
 
 # ---------------------------------------------------------------- self-test
@@ -562,7 +489,6 @@ EOF
   t  "--target on a non-tree names what it wanted" 'no-such-tree' "$out"
   tn "--target on a non-tree does not fall back to the registry" 'decoy-scan\.sh' "$out"
 
-  # --- twin: two DECLARED projects, one file, byte-identical.
   mkdir -p "$tmp/reg3/proj1/bin" "$tmp/reg3/proj2/bin"
   : > "$tmp/reg3/proj1/.agent-project"; : > "$tmp/reg3/proj2/.agent-project"
   printf '#!/usr/bin/env bash\necho identical\n' >"$tmp/reg3/proj1/bin/dup.sh"
@@ -573,16 +499,12 @@ EOF
   out="$(PROJECTS_ROOT="$tmp/reg3" bash "${BASH_SOURCE[0]}" 2>&1)"
   tn "twin clears once the copies diverge" 'twin.*dup\.sh' "$out"
 
-  # --- worktree-backed: BLIND on an unreadable bindir, FLAG on a dangling link.
   out="$(PROJECTS_ROOT="$tmp/reg3" LOCAL_BIN="$tmp/nonexistent-bin" bash "${BASH_SOURCE[0]}" 2>&1)"
   t "worktree-backed reports BLIND on an unreadable bin dir" 'blind.*worktree-backed' "$out"
   mkdir -p "$tmp/lbin"; ln -sfn "$tmp/gone-forever" "$tmp/lbin/ghost"
   out="$(PROJECTS_ROOT="$tmp/reg3" LOCAL_BIN="$tmp/lbin" bash "${BASH_SOURCE[0]}" 2>&1)"
   t "worktree-backed fires on a dangling install" 'worktree-backed.*ghost.*DANGLING' "$out"
 
-  # --- subrepo-invisible: a declared project tree that is a SUBDIRECTORY of a
-  # larger git repo (the monorepo shape, #421/ecosim's founding incident),
-  # versus one that IS its own repo root.
   mkdir -p "$tmp/mono/sub/bin"
   git -C "$tmp/mono" init -q 2>/dev/null
   : > "$tmp/mono/sub/.agent-project"
