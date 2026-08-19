@@ -7,6 +7,7 @@
 #                                                every stale copy still on disk
 #   selfdev-claude-token.sh --install <file>     write /etc/selfdev/claude-token
 #                                                (0640 root:selfdev) from <file>
+#   selfdev-claude-token.sh --install <f> --force-length   skip the length check
 #   selfdev-claude-token.sh --fanout             LIST the accounts that would
 #                                                be rewritten from the one copy
 #   selfdev-claude-token.sh --fanout --apply     rewrite them
@@ -15,19 +16,14 @@
 #
 # exit: 0 OK  1 usage  2 GAP (something to do)  4 BAD  6 BLIND (could not look)
 #
-# ORDER MATTERS, and nothing here can enforce it -- this cannot tell a rotated
-# token from an unrotated one. Rotate, --install, --fanout, prove a dispatch,
-# revoke the old value. Purging first only deletes copies of a value that is
-# still live.
+# ORDER MATTERS, unenforceable here: rotate, --install, --fanout, prove a
+# dispatch, revoke. Purging first deletes copies of a value still live.
 #
-# WHY --fanout EXISTS, AND WHY IT IS TEMPORARY. Nothing reads
-# /etc/selfdev/claude-token at dispatch yet; every account still reads its own
-# ~/.claude/settings.json. So --install alone changes nothing, and revoking the
-# old value before the accounts hold the new one takes the whole fleet down
-# silently. --fanout DERIVES those copies from the one file instead of leaving
-# them hand-managed: still N copies, but one source of truth and one command to
-# rotate. It should be deleted the day dispatch reads the host-wide file, and
-# --purge is what deletes the copies then.
+# --fanout IS TEMPORARY. Nothing reads the host-wide file at dispatch yet, so
+# --install alone changes nothing and revoking first takes the fleet down
+# silently. --fanout derives the per-account copies from the one file: still N
+# copies, one source of truth. Delete it, and --purge the copies, the day
+# dispatch reads /etc/selfdev/claude-token.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -44,11 +40,10 @@ bad()   { printf '  BAD     %s\n' "$*"; BAD=$((BAD+1)); }
 blind() { printf '  BLIND   %s\n' "$*"; BLIND=$((BLIND+1)); }
 die()   { printf 'selfdev-claude-token: %s\n' "$*" >&2; exit 1; }
 
-# Prints the header comment block, however long it is -- a fixed line range
-# silently starts printing code the moment the header is edited.
+# Prints the whole header: a fixed line range starts printing code once edited.
 usage() { sed -n '2,/^[^#]/p' "${BASH_SOURCE[0]}" | sed '$d; s/^# \{0,1\}//'; }
 
-MODE=""; SRC=""; APPLY=0
+MODE=""; SRC=""; APPLY=0; FORCE_LEN=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --check)   MODE=check ;;
@@ -56,6 +51,7 @@ while [ $# -gt 0 ]; do
     --fanout)  MODE=fanout ;;
     --purge)   MODE=purge ;;
     --apply)   APPLY=1 ;;
+    --force-length) FORCE_LEN=1 ;;
     -h|--help) usage; exit 0 ;;
     *) die "unknown argument: $1 -- try --help" ;;
   esac
@@ -124,8 +120,25 @@ TOKPATH="$(selfdev_token_path)"
 case "$MODE" in
 install)
   [ -r "$SRC" ] || die "cannot read $SRC"
-  tok="$(tr -d '\r\n' < "$SRC")"
+  # ALL whitespace, not just \r\n: a pasted token carries a stray space, and
+  # on 2026-08-19 that reached 15 accounts as a 401 (#409).
+  tok="$(tr -d '[:space:]' < "$SRC")"
   case "$tok" in sk-ant-oat*) ;; *) die "$SRC does not hold an sk-ant-oat* token -- refusing to install it" ;; esac
+
+  # A prefix is not a shape; the replaced value is the only known-good example.
+  if [ -e "$TOKPATH" ] && selfdev_token_readable "$TOKPATH"; then
+    cur_len="$(tr -d '[:space:]' < "$TOKPATH" | wc -c)"
+    new_len="${#tok}"
+    if [ "$cur_len" -ne "$new_len" ] && [ "$FORCE_LEN" -eq 0 ]; then
+      printf 'selfdev-claude-token: REFUSING -- the new value is %d characters, the one it replaces is %d.\n' "$new_len" "$cur_len" >&2
+      printf '  A token that is the wrong length is a bad paste, and --fanout would carry it to every account.\n' >&2
+      printf '  Re-copy it, or pass --force-length if the token format genuinely changed.\n' >&2
+      exit 4
+    fi
+    ok "length matches the value being replaced ($new_len characters)"
+  else
+    gap "no existing value to compare length against -- installing $new_len characters unchecked"
+  fi
   getent group "$SELFDEV_TOKEN_GROUP" >/dev/null || die "no group $SELFDEV_TOKEN_GROUP on this host"
   install -d -m 755 -o root -g root "$SELFDEV_TOKEN_DIR" || die "cannot create $SELFDEV_TOKEN_DIR (run as root)"
   # Via a mode-600 temp file: argv is readable in ps by any local user.
