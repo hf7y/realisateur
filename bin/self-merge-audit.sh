@@ -1,31 +1,8 @@
 #!/usr/bin/env bash
-# self-merge-audit.sh -- item 3 of hf7y/realisateur#288: "a merge whose author
-# and merger are the same account, on a repo with no required reviews, is a
-# cheap thing to detect and report." Items 1 (convention text, #323) and 2
-# (branch protection, this repo's bin/branch-protection-provision.sh) are
-# already landed; this is the remaining, undecided-free half.
-#
+# self-merge-audit.sh -- realisateur#288 item 3: same account both ends of a merge, no required status check to have gated it.
 # RUNNER: bin/tests/self-merge-audit.test.sh
 # GUARD-TEST: bin/tests/self-merge-audit.test.sh
 # GATE: strict
-#
-# TRAP: `required_pull_request_reviews` is set to null by
-# branch-protection-provision.sh on every repo it protects, by design -- this
-# estate is agent-authored and nothing here ever requires a human reviewer.
-# So "no required reviews" is true of every repo, always, and is useless as a
-# predicate. The actual hazard #288 measured was narrower: a PR that merged
-# with NOTHING gating it at all -- no required status check to queue behind,
-# same account on both ends. This script tests for THAT: self-merge AND no
-# required status check context, which is exactly what
-# branch-protection-provision.sh's own read_contexts() already answers.
-#
-# TRAP: a self-merge on a repo that DOES have a required check is not a
-# finding -- the check is the gate, and an agent squash-merging its own green
-# PR is this estate's sanctioned, ordinary path (claim-drift --convention).
-# Reported separately, never counted as a hazard.
-#
-# TRAP: BLIND is never "0 hazards". A repo this cannot read has established
-# nothing about it, matching branch-protection-provision.sh's own exit ladder.
 
 set -uo pipefail
 
@@ -48,8 +25,6 @@ OWNER="${SMA_OWNER:-hf7y}"
 GH_BIN="${GH_BIN:-gh}"
 COUNT="${SMA_COUNT:-10}"   # merged PRs inspected per repo, most recent first
 
-# THE ROSTER. Kept identical to bin/branch-protection-provision.sh's, and for
-# the same reason stated there: re-derive, do not trust.
 ROSTER=(
   baudin bibliothecaire chezz crt ecosim gardien groc-mangr nine-speakers
   realisateur scheduler secretaire senechal sequestria vim-arcade wtul
@@ -85,8 +60,6 @@ echo
 
 api_get() { "$GH_BIN" api "$1" 2>/dev/null; }
 
-# Same 404-BODY TRAP as branch-protection-provision.sh: gate on gh's exit
-# status first, never look at the body unless the call succeeded.
 read_contexts() {
   local out
   out="$(api_get "repos/$1/branches/$2/protection")" || return 0
@@ -112,12 +85,7 @@ for name in "${names[@]}"; do
     continue
   fi
 
-  # The `pulls` REST list endpoint never populates `merged_by` (it is only
-  # present on the single-PR GET) -- `merged_by` reads null for every row
-  # even on a genuine self-merge, which would silently report 0 hazards
-  # everywhere. `gh pr list --json mergedBy` is GraphQL-backed and resolves
-  # it correctly; verified live against this repo's own merged PRs before
-  # trusting it.
+  # `pulls` REST list never returns merged_by; `gh pr list --json mergedBy` does.
   if ! pr_json="$("$GH_BIN" pr list --repo "$slug" --state merged \
         --json number,author,mergedBy --limit "$COUNT" 2>/dev/null)"; then
     echo "  BLIND $name: could not list pull requests"
