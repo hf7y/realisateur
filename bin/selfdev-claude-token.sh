@@ -12,14 +12,9 @@
 #
 # exit: 0 OK  1 usage  2 GAP (something to do)  4 BAD  6 BLIND (could not look)
 #
-# --purge is DRY-RUN unless --apply. It removes only paths it can name and has
-# just verified; it never globs a home directory blind.
-#
-# ORDER MATTERS. Purging before rotating is theatre: the value in those files
-# is still live. Rotate (`claude setup-token`), --install the new value, prove
-# a dispatch works, and only then --purge. Nothing here enforces that order --
-# it cannot, since it cannot tell a rotated token from an unrotated one -- so
-# it is stated here and printed by --check.
+# ORDER MATTERS, and nothing here can enforce it -- this cannot tell a rotated
+# token from an unrotated one. Rotate, --install, prove a dispatch, --purge.
+# Purging first only deletes copies of a value that is still live.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,9 +22,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/selfdev-claude-token.sh"
 
 UID_MIN="${SELFDEV_UID_MIN:-3000}"; UID_MAX="${SELFDEV_UID_MAX:-3099}"
-# Overridable so the suite exercises THIS code path rather than a fixture
-# shape production never writes -- the defect that made three guards
-# untestable (realisateur, guards-scrape-unexpanded-HOME).
+# Overridable so the suite exercises THIS path, not a shape production never writes.
 HOME_ROOT="${SELFDEV_HOME_ROOT:-/home}"
 PASS=0; GAPS=0; BAD=0; BLIND=0
 ok()    { printf '  OK      %s\n' "$*"; PASS=$((PASS+1)); }
@@ -38,7 +31,9 @@ bad()   { printf '  BAD     %s\n' "$*"; BAD=$((BAD+1)); }
 blind() { printf '  BLIND   %s\n' "$*"; BLIND=$((BLIND+1)); }
 die()   { printf 'selfdev-claude-token: %s\n' "$*" >&2; exit 1; }
 
-usage() { sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+# Prints the header comment block, however long it is -- a fixed line range
+# silently starts printing code the moment the header is edited.
+usage() { sed -n '2,/^[^#]/p' "${BASH_SOURCE[0]}" | sed '$d; s/^# \{0,1\}//'; }
 
 MODE=""; SRC=""; APPLY=0
 while [ $# -gt 0 ]; do
@@ -54,9 +49,7 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$MODE" ] || { usage; exit 1; }
 
-# selfdev_accounts -- the accounts in the self-dev uid band on THIS host.
-# Prints nothing and returns 1 if the band is empty, which is a finding
-# (this host has no self-dev accounts) and not an emptiness to pass over.
+# selfdev_accounts -- rc 1 on an empty band: a finding, not an emptiness to pass over.
 selfdev_accounts() {
   local out
   if [ -n "${SELFDEV_ACCOUNTS:-}" ]; then
@@ -71,9 +64,8 @@ selfdev_accounts() {
   printf '%s\n' "$out"
 }
 
-# stale_copies <account> -- the per-account paths this design replaces. Named,
-# not globbed, except the .bak-* series which IS a glob because its names are
-# timestamps. Prints only paths that exist.
+# stale_copies <account> -- the paths this design replaces. Named, not globbed,
+# except .bak-* whose names are timestamps.
 stale_copies() {
   local h="$HOME_ROOT/$1" p
   for p in "$h/.claude-token" "$h/.claude/settings.json" "$h"/.claude/settings.json.bak-*; do
@@ -82,9 +74,8 @@ stale_copies() {
   return 0
 }
 
-# strip_token_key <settings.json> -- remove ONLY the CLAUDE_CODE_OAUTH_TOKEN
-# key, leaving every other setting exactly as it was. The file is not ours to
-# delete; it holds hooks, permissions and model config an account needs.
+# strip_token_key -- removes ONLY the token key. The file is not ours to delete:
+# it holds hooks, permissions and model config the account needs.
 strip_token_key() {
   python3 - "$1" <<'PY'
 import json, sys, pathlib
@@ -104,9 +95,7 @@ install)
   case "$tok" in sk-ant-oat*) ;; *) die "$SRC does not hold an sk-ant-oat* token -- refusing to install it" ;; esac
   getent group "$SELFDEV_TOKEN_GROUP" >/dev/null || die "no group $SELFDEV_TOKEN_GROUP on this host"
   install -d -m 755 -o root -g root "$SELFDEV_TOKEN_DIR" || die "cannot create $SELFDEV_TOKEN_DIR (run as root)"
-  # Via a mode-600 temp file so the value never appears in argv, which is
-  # readable in ps by any local user -- the same care provision-selfdev-user.sh
-  # takes, kept here because this is now the only writer.
+  # Via a mode-600 temp file: argv is readable in ps by any local user.
   tmp="$(mktemp)"; chmod 600 "$tmp"; printf '%s\n' "$tok" > "$tmp"
   install -m 640 -o root -g "$SELFDEV_TOKEN_GROUP" "$tmp" "$TOKPATH" || { rm -f "$tmp"; die "install to $TOKPATH failed"; }
   shred -u "$tmp" 2>/dev/null || rm -f "$tmp"
@@ -143,10 +132,9 @@ check)
     n=0
     while read -r a; do
       [ -n "$a" ] || continue
-      # ABSENT and UNREADABLE are different answers. A home that is not
-      # there holds no copy -- that is a fact. A home that is there and
-      # cannot be entered is a domain we did not read, and folding that into
-      # "clean" is the exact failure this ecosystem calls BLIND.
+      # ABSENT is a fact; UNREADABLE is a domain we did not read. Only the
+      # second is BLIND, and folding it into "clean" is reporting clean by
+      # not looking.
       if [ ! -e "$HOME_ROOT/$a" ]; then
         ok "$a has no home under $HOME_ROOT -- no copy to hold"
         continue
@@ -184,8 +172,6 @@ purge)
       [ -n "$p" ] || continue
       case "$p" in
         */.claude/settings.json)
-          # The settings file is not ours to delete -- it holds unrelated
-          # config. Strip only the one key, and only if it is there.
           if grep -q CLAUDE_CODE_OAUTH_TOKEN "$p" 2>/dev/null; then
             if [ "$APPLY" -eq 1 ]; then
               if strip_token_key "$p"; then
