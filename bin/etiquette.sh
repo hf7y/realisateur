@@ -6,18 +6,17 @@
 # RUNNER: no -- a SURVEY, run in a triage pass or ahead of /ideate and /cloture
 # GUARD-TEST: bin/tests/etiquette.test.sh
 # GATE: none -- reads live issue trackers; writes only with --apply
-#
 # THE TEXT LIVES IN bin/lib/labels.tsv AND IS NOT DUPLICATED HERE (#397). A
 # grammar copied into 24 repos is 24 grammars; this is the `discipline` shape --
 # one file, read live, carried by the verb build so no checkout is needed.
 #
 # `needs-human` is DERIVED from line 1 by grammar_declaration()
 # (bin/lib/body-grammar.sh), which gh-sign enforces at creation. Typed, it was
-# wrong 3 of 3 (#396) and absent from 22 of 24 repos (#397).
+# wrong 3 of 3 and absent from 22 of 24 repos (#396, #397).
 #
-# TRAP: line 1 declaring NEITHER is UNDECLARED, never read as "no decision".
-# TRAP: a label absent from labels.tsv is left alone, never deleted -- a floor,
-#   not a whitelist. Deleting unrecognised labels erases a repo's own taxonomy.
+# TRAP: line 1 declaring NEITHER is UNDECLARED, never "no decision".
+# TRAP: a label absent from labels.tsv is left alone -- a floor, not a
+#   whitelist; deleting unrecognised labels erases a repo's own taxonomy.
 set -uo pipefail
 
 CLI_NAME='etiquette'
@@ -51,7 +50,7 @@ while [ $# -gt 0 ]; do
 done
 
 # Self-locating THROUGH THE SYMLINK: without readlink -f the grammar is sought
-# beside the NAME it was called by. discipline.sh documents the same trap.
+# beside the NAME it was called by (the trap discipline.sh documents).
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 GRAMMAR_FILE="${ETIQUETTE_GRAMMAR:-$HERE/bin/lib/labels.tsv}"
 
@@ -89,8 +88,6 @@ if [ -z "$REPO" ]; then
   exit 0
 fi
 
-# Read from the grammar, not typed here, so this file cannot disagree with
-# labels.tsv about which label it reconciles.
 LABEL=''
 for g in "${GRAMMAR[@]}"; do
   [ "$(g_field "$g" 3)" = 'derived:decision' ] && { LABEL="$(g_field "$g" 1)"; break; }
@@ -132,7 +129,7 @@ done
 say ""
 
 # --- 2. does each open issue's derived label match its body? ------------
-# [] means both "missing repo" and "empty one"; only the exit code separates
+# [] means both "missing repo" and "empty one" -- only the exit code separates
 # "nothing waiting" from "could not look".
 json="$(gh issue list --repo "$REPO" --state open --limit 200 \
         --json number,title,body,labels 2>&1)" || {
