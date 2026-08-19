@@ -73,10 +73,18 @@ out = {
                                  time.gmtime(now + (CADENCE_H + GRACE_H) * 3600)),
     "cadence_hours": CADENCE_H,
     "grace_hours": GRACE_H,
-    # The verb build this host actually serves -- resolved through the shim,
-    # not read from a pin file that nothing proves was adopted.
-    "verb_build": os.path.realpath("/usr/local/bin/arme").split("/verb-builds/")[-1].split("/")[0]
-    if os.path.exists("/usr/local/bin/arme") else None,
+    # The verb build this host actually serves -- resolved through the
+    # `current` symlink, not read from a pin file that nothing proves was
+    # adopted.
+    #
+    # This used to resolve /usr/local/bin/arme. `arme` is a scheduler-ladder
+    # verb that was DELIBERATELY RETIRED, so the probe found nothing and the
+    # page reported "verb build none" while the host was serving a build from
+    # that morning. A sensor pointed at one retired verb reports the whole
+    # build missing; the build root is the thing being asked about, so ask it.
+    "verb_build": os.path.basename(
+        os.path.realpath("/usr/local/share/verb-builds/current"))
+    if os.path.exists("/usr/local/share/verb-builds/current") else None,
     "accounts": [],
 }
 
