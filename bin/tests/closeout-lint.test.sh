@@ -260,7 +260,7 @@ GH_BIN="$GH_DEFAULT"
 git -C "$T/oldrepo" branch -q oldhostonly
 out="$(run "$T/blockers-today.md" oldrepo)"
 has   "E3 registry mode skips a stale repo"    "$out" "no registered repo has a commit younger"
-run_rc "$T/blockers-today.md" --repo "$T/oldrepo"
+SESSION_START=1 run_rc "$T/blockers-today.md" --repo "$T/oldrepo"
 hasnt "E3 --repo ignores the age gate"                    "$RUN_OUT" "no registered repo has a commit younger"
 has   "E3 and actually checks its branches"               "$RUN_OUT" "FLAG [host-only-branch]"
 
@@ -454,9 +454,8 @@ SESSION_START=""
 echo
 echo "-- I. other worktrees' branches are attributed and COUNTED (#106)"
 # 12 OF 12 WAS THE FLAG RATE; THE LINE RATE OUTLIVED IT. #99 removed the false
-# FLAGs, but each other-worktree branch still printed a ~180-character `skip`
-# line -- 20 in a 99-line report whose only finding was one. So: ONE counted
-# line, not dropped (I2 pins the names still on screen).
+# FLAGs, but each other-worktree branch still printed a ~180-char `skip` line.
+# So: ONE counted line, not dropped (I2 pins the names still on screen).
 newrepo attribrepo
 git -C "$T/attribrepo" branch -q sideA && git -C "$T/attribrepo" push -q origin sideA
 git -C "$T/attribrepo" branch -q sideB && git -C "$T/attribrepo" push -q origin sideB
@@ -518,6 +517,37 @@ rc    "J3 --allow-blind downgrades it to a warning" 0 "$J3_RC"
 J4_OUT="$(run "$T/blockers-old.md" oldrepo)"
 hasnt "J4 a real, merely-stale registry is not BLIND [registry]" "$J4_OUT" "BLIND [registry]"
 has   "J4 it still reports the stale-repo note"                  "$J4_OUT" "no registered repo has a commit younger"
+
+echo "-- K. a branch older than this session is not this run's residue (#363)"
+# Worktrees share the session cwd's refs, so every subagent was FLAGged for
+# branches a human left days earlier. K2 pins the half that must not regress.
+newrepo bystander
+git -C "$T/bystander" branch -q foreign
+echo theirs > "$T/bystander/theirs.txt"; git -C "$T/bystander" add -A
+GIT_COMMITTER_DATE="2026-07-01T00:00:00" GIT_AUTHOR_DATE="2026-07-01T00:00:00" \
+  git -C "$T/bystander" commit -qm 'someone else, days ago' >/dev/null
+git -C "$T/bystander" branch -qf foreign HEAD
+git -C "$T/bystander" reset -q --hard origin/main
+repo_run() { RUN_OUT="$(TODAY="$DAY" SCHED_ROOT="$T/sched" BLOCKERS_MD="$T/blockers-today.md" \
+  SESSION_START="$1" "$SCRIPT" --strict --allow-blind --repo "$T/bystander" 2>&1)"; RUN_RC=$?; }
+repo_run "$(date +%s)"
+rc    "K1 a clean run with a pre-existing foreign branch passes" 0 "$RUN_RC"
+has   "K1 and says why it is not a finding" "$RUN_OUT" "note [pre-existing-branch] bystander: 'foreign'"
+hasnt "K1 and does not FLAG it"             "$RUN_OUT" "FLAG [host-only-branch]"
+
+echo mine > "$T/bystander/mine.txt"; git -C "$T/bystander" add -A
+git -C "$T/bystander" commit -qm 'this run made this'
+git -C "$T/bystander" branch -q thisrun
+repo_run "$(( $(date +%s) - 3600 ))"
+rc    "K2 a branch committed during this run still FLAGs" 1 "$RUN_RC"
+has   "K2 and names it"                     "$RUN_OUT" "FLAG [host-only-branch] bystander: branch 'thisrun'"
+has   "K2 while the foreign one stays a note" "$RUN_OUT" "note [pre-existing-branch] bystander: 'foreign'"
+
+# The anchor is the only thing attributing: a session that really did start
+# before the foreign branch owns it again, and it FLAGs.
+repo_run 1
+rc    "K3 an anchor older than the branch still gates" 1 "$RUN_RC"
+has   "K3 and flags the foreign branch too"  "$RUN_OUT" "FLAG [host-only-branch] bystander: branch 'foreign'"
 
 echo
 summary
