@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # directive-prose.sh -- a decision written in prose must cite an issue.
 #
-# RUNNER: .github/workflows/tests.yml
+# RUNNER: .github/workflows/tests.yml -- job `surface`
 # GUARD-TEST: bin/tests/directive-prose.test.sh
 # GATE: none -- cli-guard.sh exits 2 under guard-estate's stripped sandbox
 #

@@ -43,6 +43,12 @@ on:
   push:
     branches: [main]
 
+# One run per branch, here and in every workflow: 119 of 200 sampled runs
+# were superseded and billed anyway (#401).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -124,14 +130,25 @@ jobs:
   # PUBLISHED, and a stale local ref is what made the guard's first draft
   # report "0 carried files, exit 0" against a branch carrying six. So the ref
   # has to be fetched -- actions/checkout brings one branch.
-  carry-drift:
+  # ...and directive-prose rides here too: both take ~6s, GitHub bills each JOB
+  # rounded UP to a minute, and neither is required on main (#401). `suites`
+  # and `shellcheck` stay separate -- a required check answering two questions
+  # cannot say which failed.
+  surface:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Make origin/bashified resolvable
-        run: git fetch --no-tags --depth=1 origin +refs/heads/bashified:refs/remotes/origin/bashified
-      - name: What ships must equal what main says
+        with:
+          fetch-depth: 0        # directive-prose diffs against main
+      - name: Make origin/bashified and origin/main resolvable
+        run: |
+          git fetch --no-tags --depth=1 origin +refs/heads/bashified:refs/remotes/origin/bashified
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+      # Each step names its guard: a bare exit no longer says which went red.
+      - name: carry-drift -- what ships must equal what main says
         run: bash bin/carry-drift.sh
+      - name: directive-prose -- a decision recorded in prose must cite an issue
+        run: bash bin/directive-prose.sh
 
 
   # directive-prose is REALISATEUR'S OWN guard, not the estate's: it asserts
@@ -139,13 +156,3 @@ jobs:
   # the markdown-cost job; that job moved to hf7y/etalon, which carries only
   # what every repo needs, so this gets its own job rather than travelling
   # with a guard that is no longer here.
-  directive-prose:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Make origin/main resolvable
-        run: git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
-      - name: A decision recorded in prose must cite an issue
-        run: bash bin/directive-prose.sh
