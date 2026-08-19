@@ -1,15 +1,8 @@
 #!/usr/bin/env bash
-# ausculte.sh -- can Zach stop looking? One question, composed from probes that
-# already exist. It builds no new state and invents no new predicate.
-#
-# THE HUMAN CHANNEL IS CHECKED FIRST, and that ordering is the design. Every
-# other failure in this estate is supposed to reach Zach through zaxon; if that
-# is down, a green report on everything else is a report nobody would receive.
-#
-# BLIND IS NEVER FOLDED INTO OK. A check that could not look exits 6, not 0 --
-# a green ausculte that never probed is the exact failure the estate was built
-# to refuse, and it would be the most expensive one here because this is the
-# command whose whole purpose is to be believed.
+# ausculte.sh -- can Zach stop looking? Composed from probes that already exist.
+# THE HUMAN CHANNEL IS FIRST: every other failure is meant to reach him through
+# zaxon, so a green report with that down is one nobody receives. And BLIND is
+# never folded into OK -- this is the command built to be believed.
 set -uo pipefail
 
 CLI_NAME='ausculte.sh'
@@ -36,8 +29,6 @@ while [ $# -gt 0 ]; do
 done
 
 down=0; blind=0; rows=()
-# record <probe> <OK|DOWN|BLIND> <detail>. DOWN outranks BLIND: a thing known
-# broken is more actionable than a thing unseen, so it decides the exit.
 record() {
   rows+=("$1|$2|$3")
   case "$2" in DOWN) down=1 ;; BLIND) blind=1 ;; esac
@@ -48,9 +39,8 @@ want() {
   return 1
 }
 
-# --- the human channel, first --------------------------------------------
-# An MCP initialize, not a TCP connect: the relay's own healthcheck opens a
-# socket, which a hung gateway also does. Asking it to speak is the difference.
+# The human channel, first. An MCP initialize, not a TCP connect: the relay's
+# own healthcheck opens a socket and so does a hung gateway.
 if want channel; then
   ep=''; for u in http://127.0.0.1:8643/mcp http://100.107.253.56:8643/mcp; do
     if curl -s -m 8 -o /dev/null -H 'Content-Type: application/json' \
@@ -62,7 +52,6 @@ if want channel; then
   else record channel DOWN 'no zaxon relay answered -- questions cannot reach Zach'; fi
 fi
 
-# --- hosts ----------------------------------------------------------------
 if want hosts; then
   if [ -x "$HERE/dexter-liveness.sh" ]; then
     out="$(bash "$HERE/dexter-liveness.sh" 2>&1)"; rc=$?
@@ -74,9 +63,6 @@ if want hosts; then
   else record hosts BLIND 'dexter-liveness.sh not present'; fi
 fi
 
-# --- arming: armed AND actually running -----------------------------------
-# A missing ledger on an ARMED account is a finding, not a blank -- it means
-# the account was told to work and never has.
 if want arming; then
   out="$(ssh -n -o ConnectTimeout=10 -o BatchMode=yes monkey \
           'sudo -n python3 /usr/local/libexec/selfdev/monkey-status-collect.py 2>/dev/null || sudo -n python3 ~zach/realisateur/bin/monkey-status-collect.py 2>/dev/null' 2>/dev/null)"
@@ -87,7 +73,6 @@ if want arming; then
   fi
 fi
 
-# --- propagation: does each host run what was published? ------------------
 if want propagation; then
   pub="$(gh api repos/hf7y/verbs/contents/manifest.tsv --jq .content 2>/dev/null | base64 -d 2>/dev/null | grep -cv '^#' || echo 0)"
   if [ "${pub:-0}" -lt 1 ]; then record propagation BLIND 'cannot read the published manifest'
@@ -104,13 +89,10 @@ if want propagation; then
   fi
 fi
 
-# --- rot: answers nobody acted on -----------------------------------------
 if want rot; then
   if [ -x "$HERE/decision-rot.sh" ]; then
     out="$(bash "$HERE/decision-rot.sh" --all 2>&1)"; rc=$?
-    # 2 is cli-guard's usage error: this composer calling a probe WRONG is a
-    # defect here, not a fleet finding, and must never read as DOWN.
-    case $rc in
+      case $rc in
       0) record rot OK 'no answered-and-abandoned issues' ;;
       1) record rot DOWN "$(printf '%s' "$out" | tail -1)" ;;
       2) record rot BLIND 'ausculte invoked decision-rot.sh wrongly -- fix ausculte' ;;
@@ -119,7 +101,6 @@ if want rot; then
   else record rot BLIND 'decision-rot.sh not present'; fi
 fi
 
-# --- silence: guards that pass by not looking ------------------------------
 if want silence; then
   if [ -x "$HERE/silence-audit.sh" ]; then
     out="$(bash "$HERE/silence-audit.sh" --strict 2>&1)"; rc=$?

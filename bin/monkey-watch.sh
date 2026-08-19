@@ -3,20 +3,15 @@
 # alert when it changes state.
 #
 # TRAPS (the rest of this header is in the vault):
-# WHY THIS EXISTS (hf7y/realisateur#274). publish-monkey-status.sh runs BY
-# HAND, from mandark, and refuses to publish unless its ssh collection
-# succeeds: "collector returned no accounts. Refusing to publish an empty
-# page." So the page cannot report the one thing worth reporting. On
-# 2026-08-14 monkey's root went read-only, sshd reset every connection, 14
-# accounts were unreachable for hours -- and the page showed a healthy world
-# from before the outage, because publishing REQUIRES the thing that broke.
-# The monitoring inherited the failure it was supposed to report.
+# WHY THIS EXISTS (#274). publish-monkey-status.sh refuses to publish unless
+# its ssh collection succeeds, so the page cannot report the one thing worth
+# reporting: on 2026-08-14 monkey went unreachable for hours and the page
+# showed the healthy world from before, because publishing REQUIRED the thing
+# that broke. The monitoring inherited the failure it was meant to report.
 # THE COLLECTOR IS THE SOURCE OF THE ACCOUNT ROWS. THIS SCRIPT IS NOT.
-# bin/monkey-status-collect.py runs as root ON monkey and probes each
-# account's real crontab and real scheduler ledger: `armed` means that
-# account's own crontab holds a dispatch runner, and a missing ledger means it
-# has never run -- which for an armed account is a finding, not a blank. None
-# of that is derivable from dexter.
+# monkey-status-collect.py runs as root ON monkey and reads each account's real
+# crontab and ledger; a missing ledger on an ARMED account is a finding, not a
+# blank. None of that is derivable from dexter.
 
 set -uo pipefail
 
@@ -31,7 +26,8 @@ PAGE_SRC="${PAGE_SRC:-$HERE/share/monkey-status.html}"
 STATE_FILE="${STATE_FILE:-$HOME/.local/state/monkey-watch.last}"
 PUBLISH_REPO="${PUBLISH_REPO:-hf7y/hf7y.github.io}"
 PUBLISH_DIR="${PUBLISH_DIR:-monkey}"
-ZAXON="${ZAXON:-http://127.0.0.1:8643/mcp}"
+# shellcheck source=lib/zaxon.sh
+. "$HERE/bin/lib/zaxon.sh"
 APPLY=0
 [ "${1:-}" = "--apply" ] && APPLY=1
 
@@ -131,22 +127,8 @@ $WHY
 
 vm=$VMSTATE sshd=$SSHD root=${ROOTMOUNT:-?} disk=$DISK_HOME
 https://hf7y.com/$PUBLISH_DIR/"
-    hdr="$(mktemp)"
-    curl -s -D "$hdr" -o /dev/null -m 20 -H 'Content-Type: application/json' \
-      -H 'Accept: application/json,text/event-stream' -X POST "$ZAXON" \
-      -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"monkey-watch","version":"1"}}}' || true
-    sid="$(grep -i '^mcp-session-id:' "$hdr" | tr -d '\r' | awk '{print $2}')"
-    if [ -n "$sid" ]; then
-      curl -s -o /dev/null -m 20 -H 'Content-Type: application/json' \
-        -H 'Accept: application/json,text/event-stream' -H "mcp-session-id: $sid" \
-        -X POST "$ZAXON" -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
-      MSG="$msg" python3 -c 'import json,os; print(json.dumps({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ask_zach","arguments":{"question":os.environ["MSG"],"from_agent":"monkey-watch"}}}))' > /tmp/monkey-watch-msg.json
-      curl -s -m 30 -H 'Content-Type: application/json' \
-        -H 'Accept: application/json,text/event-stream' -H "mcp-session-id: $sid" \
-        -X POST "$ZAXON" --data-binary @/tmp/monkey-watch-msg.json >/dev/null || true
-      printf '%s: alerted (%s -> %s)\n' "$CLI_NAME" "$LAST" "$VERDICT"
-    fi
-    rm -f "$hdr"
+    tid="$(zaxon_ask "$msg" monkey-watch)"
+    [ -z "$tid" ] || printf '%s: alerted (%s -> %s) ticket %s\n' "$CLI_NAME" "$LAST" "$VERDICT" "$tid"
   fi
 fi
 
