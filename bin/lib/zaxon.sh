@@ -4,6 +4,17 @@
 # verb is the estate-wide door. NEVER FATAL: a recovery that aborts because it
 # could not announce itself is worse than a silent one.
 
+zaxon_probe() {
+  local from="${1:-agent}" url
+  for url in ${ZAXON:-http://127.0.0.1:8643/mcp http://100.107.253.56:8643/mcp}; do
+    curl -s -m 8 -o /dev/null -H 'Content-Type: application/json' \
+      -H 'Accept: application/json,text/event-stream' -X POST "$url" \
+      -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"$from\",\"version\":\"1\"}}}" \
+      2>/dev/null && { printf '%s\n' "$url"; return 0; }
+  done
+  return 1
+}
+
 zaxon_ask() {
   local msg="$1" from="${2:-agent}" url hdr sid body tid
   hdr="$(mktemp)"; body="$(mktemp)"
