@@ -1,15 +1,9 @@
 #!/usr/bin/env bash
 # ausculte.sh -- can Zach stop looking? Composed from probes that already exist.
-#
 # KIND: verb
-#
 # THE HUMAN CHANNEL IS FIRST: every other failure is meant to reach him through
 # zaxon, so a green report with that down is one nobody receives. BLIND is never
 # folded into OK; this is the command built to be believed.
-#
-# `hosts`/`rot` shell out to repo-only siblings and correctly go BLIND, not
-# OK, once deployed standalone. `silence`'s sibling ships under three
-# possible names; see the `want silence` block.
 set -uo pipefail
 
 CLI_NAME='ausculte.sh'
@@ -108,7 +102,6 @@ if want rot; then
 fi
 
 if want silence; then
-  # repo clone (.sh), deployed sibling (no suffix), or PATH -- in that order.
   sa=''
   if   [ -x "$HERE/silence-audit.sh" ]; then sa="$HERE/silence-audit.sh"
   elif [ -x "$HERE/silence-audit" ];    then sa="$HERE/silence-audit"
