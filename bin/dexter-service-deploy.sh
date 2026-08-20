@@ -80,13 +80,21 @@ fi
 # zaxon's data/ holds a WhatsApp linked-device session. Two processes holding
 # it means WhatsApp logs the link out, and recovering costs a QR scan on Zach's
 if [ "$NAME" = "zaxon" ]; then
+  SESSION="${ZAXON_SESSION_PATH:-/home/zaxon/.hermes/whatsapp/session}"  # hardcoded-home-ok: zaxon's home on dexter, not this account's
   running="$(ssh -n "$HOST" 'sudo -n systemctl restart systemd-binfmt 2>/dev/null; cd /mnt/c && /mnt/c/Windows/System32/wsl.exe -l -q --running 2>/dev/null | tr -d "\0\r"' || true)"
-  case "$running" in
-    *hermes*) die "the 'hermes' distro is RUNNING and owns the same WhatsApp session.
-  Starting a second owner logs the link out and costs a QR scan to recover.
-  Stop it first:  ssh $HOST 'wslx --terminate hermes'
-  Refusing rather than racing it." ;;
-  esac
+  holder=""
+  while IFS= read -r d; do
+    [ -n "$d" ] || continue
+    if ssh -n "$HOST" "cd /mnt/c && /mnt/c/Windows/System32/wsl.exe -d \"$d\" -- lsof -t +D \"$SESSION\" >/dev/null 2>&1"; then
+      holder="$d"; break
+    fi
+  done <<<"$running"
+  if [ -n "$holder" ]; then
+    die "a process in the '$holder' distro already holds the WhatsApp session ($SESSION).
+  Starting a second holder logs the link out and costs a QR scan to recover.
+  Stop it first:  ssh $HOST \"wslx --terminate $holder\"
+  Refusing rather than racing it."
+  fi
 fi
 
 # WHAT THE REPO DOES NOT OWN. `data/` is always service state; a service may

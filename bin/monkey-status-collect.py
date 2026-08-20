@@ -73,10 +73,15 @@ out = {
                                  time.gmtime(now + (CADENCE_H + GRACE_H) * 3600)),
     "cadence_hours": CADENCE_H,
     "grace_hours": GRACE_H,
-    # The verb build this host actually serves -- resolved through the shim,
-    # not read from a pin file that nothing proves was adopted.
-    "verb_build": os.path.realpath("/usr/local/bin/arme").split("/verb-builds/")[-1].split("/")[0]
-    if os.path.exists("/usr/local/bin/arme") else None,
+    # The verb build this host actually serves -- resolved through the
+    # `current` symlink, not read from a pin file that nothing proves was
+    # adopted.
+    #
+    # TRAP: resolving one named verb makes the whole build read as missing the
+    # day that verb is retired. The build root is what is being asked about.
+    "verb_build": os.path.basename(
+        os.path.realpath("/usr/local/share/verb-builds/current"))
+    if os.path.exists("/usr/local/share/verb-builds/current") else None,
     "accounts": [],
 }
 

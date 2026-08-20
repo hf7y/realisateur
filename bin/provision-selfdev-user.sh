@@ -138,7 +138,7 @@ p.chmod(0o600)
 PY
 
 # --- the OTHER credential ------------------------------------------------------
-# gh, on the same argument as the claude token above, and added 2026-08-03 for
+# gh, on the same argument as the claude token above, for
 # the same reason the rest of this script exists: bibliothecaire was the second
 GH_SRC="${SELFDEV_GH_HOSTS:-$CRED_HOME/.config/gh/hosts.yml}"
 if [ -r "$GH_SRC" ]; then
