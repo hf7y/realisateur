@@ -7,12 +7,9 @@
 # zaxon, so a green report with that down is one nobody receives. BLIND is never
 # folded into OK; this is the command built to be believed.
 #
-# `hosts`, `rot` and `silence` shell out to sibling scripts that stay
-# repo-only (dexter-liveness.sh, decision-rot.sh) or ship under a different
-# name (silence-audit -- see the `want silence` block below). Deployed
-# standalone, those probes correctly go BLIND rather than guessing -- BLIND
-# is the honest answer to "the sibling this probe needs is not here", not a
-# defect this file papers over.
+# `hosts`/`rot` shell out to repo-only siblings and correctly go BLIND, not
+# OK, once deployed standalone. `silence`'s sibling ships under three
+# possible names; see the `want silence` block.
 set -uo pipefail
 
 CLI_NAME='ausculte.sh'
@@ -111,10 +108,7 @@ if want rot; then
 fi
 
 if want silence; then
-  # silence-audit ships as $HERE/silence-audit.sh in a repo clone, as the
-  # sibling verb $HERE/silence-audit once ausculte is deployed alongside it,
-  # or on PATH when neither sits beside this file. Same script; three names
-  # for the same fact, checked in that order.
+  # repo clone (.sh), deployed sibling (no suffix), or PATH -- in that order.
   sa=''
   if   [ -x "$HERE/silence-audit.sh" ]; then sa="$HERE/silence-audit.sh"
   elif [ -x "$HERE/silence-audit" ];    then sa="$HERE/silence-audit"
