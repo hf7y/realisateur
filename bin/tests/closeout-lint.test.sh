@@ -63,8 +63,6 @@ GIT_COMMITTER_DATE="2026-07-01T00:00:00" GIT_AUTHOR_DATE="2026-07-01T00:00:00" \
   git -C "$T/oldrepo" commit -q --amend --no-edit --date="2026-07-01T00:00:00" >/dev/null
 reg ghostrepo "$T/does-not-exist"
 
-printf '## wtul\n- something dated %s\n' "$DAY" > "$T/blockers-today.md"
-printf '## wtul\n- something dated 2026-07-01\n' > "$T/blockers-old.md"
 
 # --- gh stubs: section B asks a REMOTE, and this suite never does -----------
 # B's query is `gh api ... --jq '<fmt>'`, so the script reads only gh's post-jq
@@ -77,17 +75,14 @@ printf '#!/bin/sh\necho "gh: could not resolve host github.com" >&2\nexit 1\n' >
 chmod +x "$T/gh-found/gh" "$T/gh-empty/gh" "$T/gh-down/gh"
 GH_DEFAULT="$T/gh-found/gh"
 
-run() { # run <BLOCKERS_MD> [projects...]   ($GH_BIN/$SESSION_START overridable)
-  local b="$1"; shift
-  TODAY="$DAY" SCHED_ROOT="$T/sched" BLOCKERS_MD="$b" HOURS=12 \
+run() { # run [projects...]   ($GH_BIN/$SESSION_START overridable)
+  TODAY="$DAY" SCHED_ROOT="$T/sched" HOURS=12 \
     GH_BIN="${GH_BIN:-$GH_DEFAULT}" SESSION_START="${SESSION_START:-}" \
     "$SCRIPT" "$@" 2>&1
 }
-# run_rc <BLOCKERS_MD> [args...] -- same, but sets RUN_OUT/RUN_RC instead of
-# only printing output, so a case can assert the exit code too.
+# run_rc [args...] -- same, but sets RUN_OUT/RUN_RC so a case can assert the rc.
 run_rc() {
-  local b="$1"; shift
-  RUN_OUT="$(TODAY="$DAY" SCHED_ROOT="$T/sched" BLOCKERS_MD="$b" HOURS=12 \
+  RUN_OUT="$(TODAY="$DAY" SCHED_ROOT="$T/sched" HOURS=12 \
     GH_BIN="${GH_BIN:-$GH_DEFAULT}" SESSION_START="${SESSION_START:-}" \
     "$SCRIPT" "$@" 2>&1)"
   RUN_RC=$?
@@ -100,33 +95,33 @@ count() {
 
 echo "closeout-lint.test.sh"
 echo "-- A. recently touched repos"
-out="$(run "$T/blockers-today.md" clean)"
+out="$(run clean)"
 hasnt "A1 clean repo raises no flag"           "$out" "FLAG ["
 has   "A1 clean repo counted as touched"       "$out" "0 FLAG(s) across 1"
 
-out="$(run "$T/blockers-today.md" dirtyrepo)"
+out="$(run dirtyrepo)"
 has   "A2 dirty tree flagged"                  "$out" "FLAG [dirty-tree] dirtyrepo"
 
-out="$(run "$T/blockers-today.md" aheadrepo)"
+out="$(run aheadrepo)"
 has   "A3 unpushed commit flagged"             "$out" "FLAG [unpushed] aheadrepo"
 has   "A3 names the count"                     "$out" "1 commit(s) on main not on origin/main"
 
 # A4: a branch with no origin/<branch> is not merely untracked -- it exists ONLY
 # on this host, a blocker `fauche` and `transplante` refuse a repo for.
-out="$(run "$T/blockers-today.md" detached)"
+out="$(run detached)"
 has   "A4 host-only branch flagged"            "$out" "FLAG [host-only-branch] detached"
 has   "A4 names the branch it would strand"    "$out" "branch 'orphan' has no origin/orphan"
 
-out="$(run "$T/blockers-today.md" oldrepo)"
+out="$(run oldrepo)"
 hasnt "A5 stale repo not flagged"              "$out" "FLAG ["
 has   "A5 stale repo not even scanned"         "$out" "no registered repo has a commit younger"
 
-out="$(run "$T/blockers-today.md" ghostrepo)"
+out="$(run ghostrepo)"
 has   "A6 missing repo path flagged"           "$out" "FLAG [missing-repo] ghostrepo"
 
 # A7: a repo with no linked worktree emits no worktree line at all.
 hasnt "A7 no worktrees means no BLIND line"    "$out" "BLIND [worktrees]"
-out="$(run "$T/blockers-today.md" clean)"
+out="$(run clean)"
 hasnt "A7 clean repo likewise silent"          "$out" "BLIND [worktrees]"
 
 # A8 gets its OWN repo, and its branch is PUSHED WITHOUT --set-upstream: the
@@ -135,7 +130,7 @@ hasnt "A7 clean repo likewise silent"          "$out" "BLIND [worktrees]"
 newrepo wtrepo
 git -C "$T/wtrepo" branch -q side && git -C "$T/wtrepo" push -q origin side
 git -C "$T/wtrepo" worktree add -q "$T/wtrepo-side" side >/dev/null 2>&1
-out="$(run "$T/blockers-today.md" wtrepo)"
+out="$(run wtrepo)"
 # A8 REVERSED 2026-08-07: this used to assert `BLIND [worktrees]`. On the real
 # checkout that line covered 13 worktrees, above 12 false FLAGs, and all 13 were
 # clean -- BLIND about a domain readable in 3ms is the conflation reversed.
@@ -145,7 +140,7 @@ hasnt "A8 a clean, pushed worktree raises no FLAG"         "$out" "FLAG ["
 hasnt "A8 pushed-but-no-upstream not host-only" "$out" "FLAG [host-only-branch]"
 
 git -C "$T/oldrepo" worktree add -q -b oldside "$T/oldrepo-side" >/dev/null 2>&1
-out="$(run "$T/blockers-today.md" oldrepo)"
+out="$(run oldrepo)"
 # A9: worktrees are examined BEFORE the age gate, so a repo whose HEAD is too
 # old to scan does not hide the worktrees hanging off it -- that gate is
 # precisely what hid two unpushed commits on 2026-07-28.
@@ -157,27 +152,26 @@ echo "-- B. today's session record (issues/PRs, not a FOCUS.md row)"
 # B1..B4 used to drive a FOCUS.md check (a dated entry citing a sha, else
 # [no-record]/[record-no-sha]/[no-focus]) that `/cloture` §3, revised
 # 2026-08-10, forbids writing -- and `/cloture` is what RUNS closeout-lint, so
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 GH_BIN="$T/gh-found/gh"
-run_rc "$T/blockers-today.md" clean
+run_rc clean
 has   "B1 a record on the remote passes"       "$RUN_OUT" "ok -- 1 issue(s)/PR(s) created $DAY"
 hasnt "B1 and raises no flag"                  "$RUN_OUT" "FLAG ["
 rc    "B1 clean scan still exits 0"            0 "$RUN_RC"
 
 GH_BIN="$T/gh-empty/gh"
-out="$(run "$T/blockers-today.md" clean)"
+out="$(run clean)"
 has   "B2 GitHub reached and said nothing today -> FLAG" "$out" "FLAG [no-record]"
 
 # B3/B4 ARE THE POINT OF THE REWRITE. B now depends on a network it may not
 # have, and FLAGging because it could not look is #139's false alarm by another
 # route: unreachable is a counted BLIND.
 GH_BIN="$T/gh-down/gh"
-out="$(run "$T/blockers-today.md" clean)"
+out="$(run clean)"
 has   "B3 unreachable GitHub is BLIND"         "$out" "BLIND [session-record]"
 hasnt "B3 and never a FLAG"                    "$out" "FLAG ["
 
 GH_BIN="$T/nope/gh"
-out="$(run "$T/blockers-today.md" clean)"
+out="$(run clean)"
 has   "B4 no gh on PATH is BLIND"              "$out" "BLIND [session-record]"
 hasnt "B4 and never a FLAG"                    "$out" "FLAG ["
 
@@ -185,13 +179,13 @@ hasnt "B4 and never a FLAG"                    "$out" "FLAG ["
 # tell "you filed nothing" from "I could not ask" will eventually treat both
 # as noise.
 GH_BIN="$T/gh-down/gh"
-run_rc "$T/blockers-today.md" --strict strictclean
+run_rc --strict strictclean
 rc    "B5 --strict on an unaskable remote exits 6, not 1" 6 "$RUN_RC"
 
 # B6: the retired FOCUS.md check is GONE, not silent. If any of these strings
 # came back, a closing session that obeyed /cloture §3 would fail again.
 GH_BIN="$T/gh-found/gh"
-out="$(run "$T/blockers-today.md" clean)"
+out="$(run clean)"
 for gone in no-focus record-no-sha FOCUS.md; do
   hasnt "B6 the retired FOCUS.md check leaves no '$gone'" "$out" "$gone"
 done
@@ -199,30 +193,28 @@ done
 # B7: a repo whose origin is not on GitHub cannot be asked at all, which is the
 # same unanswered question as being offline -- BLIND, never a FLAG.
 newrepo elsewhere "$T/remotes/somewhere-else"
-out="$(run "$T/blockers-today.md" elsewhere)"
+out="$(run elsewhere)"
 has   "B7 a non-GitHub origin is reported, not guessed at" "$out" "origin is not a GitHub remote"
 has   "B7 and counts as BLIND"                 "$out" "BLIND [session-record]"
 hasnt "B7 and never a FLAG"                    "$out" "FLAG ["
 GH_BIN="$GH_DEFAULT"
 
-echo "-- C. decision residue (never flags, by design)"
-out="$(run "$T/blockers-today.md" clean)"
-has   "C1 today-dated BLOCKERS block passes"   "$out" "ok -- BLOCKERS.md carries"
-
-out="$(run "$T/blockers-old.md" clean)"
-has   "C2 stale BLOCKERS reported as NOTE"     "$out" "NOTE BLOCKERS.md has nothing dated"
-hasnt "C2 and NOT as a flag"                   "$out" "FLAG ["
+echo "-- C. the retired decision-residue surface"
+# scheduler#66 retired those surfaces; this lint was the last thing asking for one.
+out="$(run clean)"
+hasnt "C1 no BLOCKERS.md section"              "$out" "BLOCKERS"
+hasnt "C1 and no DECISION RESIDUE heading"     "$out" "DECISION RESIDUE"
 
 echo "-- D. --strict exit code (exit-code plumbing, not a new FLAG type)"
-run_rc "$T/blockers-today.md" --strict dirtyrepo
+run_rc --strict dirtyrepo
 rc    "D1 --strict exits nonzero when a FLAG was printed" 1 "$RUN_RC"
 has   "D1 output still shows the FLAG"                    "$RUN_OUT" "FLAG [dirty-tree]"
 
-run_rc "$T/blockers-today.md" --strict strictclean
+run_rc --strict strictclean
 rc    "D2 --strict exits 0 on an all-clean scan"          0 "$RUN_RC"
 hasnt "D2 no FLAG in a clean --strict run"                "$RUN_OUT" "FLAG ["
 
-run_rc "$T/blockers-today.md" dirtyrepo
+run_rc dirtyrepo
 rc    "D3 bare invocation stays exit 0 despite a FLAG"    0 "$RUN_RC"
 has   "D3 the FLAG is still printed (signal, not silence)" "$RUN_OUT" "FLAG [dirty-tree]"
 
@@ -238,7 +230,7 @@ echo one > "$T/loose/f.txt"; git -C "$T/loose" add -A
 git -C "$T/loose" commit -qm init; git -C "$T/loose" push -q origin main
 git -C "$T/loose" branch -q --set-upstream-to=origin/main
 
-run_rc "$T/blockers-today.md" --repo "$T/loose"
+run_rc --repo "$T/loose"
 rc    "E1 --repo audits an UNREGISTERED tree"             0 "$RUN_RC"
 has   "E1 names the tree it audited"                      "$RUN_OUT" "single tree: $T/loose"
 hasnt "E1 registry mode could never have reached it"      "$RUN_OUT" "recently-touched repo(s)"
@@ -247,9 +239,8 @@ hasnt "E1 registry mode could never have reached it"      "$RUN_OUT" "recently-t
 # keeps the SubagentStop path offline. Hence the OFFLINE stub here: if --repo
 # stopped skipping B, this would exit 6, not 0.
 GH_BIN="$T/gh-down/gh"
-run_rc "$T/blockers-old.md" --repo "$T/loose"
+run_rc --repo "$T/loose"
 hasnt "E2 --repo skips section B"                         "$RUN_OUT" "B. TODAY'S SESSION RECORD"
-hasnt "E2 --repo skips section C"                         "$RUN_OUT" "C. DECISION RESIDUE"
 rc    "E2 so a session-wide question cannot gate one tree" 0 "$RUN_RC"
 GH_BIN="$GH_DEFAULT"
 
@@ -258,9 +249,9 @@ GH_BIN="$GH_DEFAULT"
 # scans it and --repo must. E3's branch must be one the audit examines, and
 # `oldside` is in a worktree and correctly skipped -- so, a plain one.
 git -C "$T/oldrepo" branch -q oldhostonly
-out="$(run "$T/blockers-today.md" oldrepo)"
+out="$(run oldrepo)"
 has   "E3 registry mode skips a stale repo"    "$out" "no registered repo has a commit younger"
-run_rc "$T/blockers-today.md" --repo "$T/oldrepo"
+SESSION_START=1 run_rc --repo "$T/oldrepo"
 hasnt "E3 --repo ignores the age gate"                    "$RUN_OUT" "no registered repo has a commit younger"
 has   "E3 and actually checks its branches"               "$RUN_OUT" "FLAG [host-only-branch]"
 
@@ -271,31 +262,31 @@ newrepo blindrepo
 git -C "$T/blindrepo" branch -q ghostside
 git -C "$T/blindrepo" worktree add -q "$T/blindrepo-gone" ghostside >/dev/null 2>&1
 rm -rf "$T/blindrepo-gone"
-run_rc "$T/blockers-today.md" --strict --repo "$T/blindrepo"
+run_rc --strict --repo "$T/blindrepo"
 rc    "E4 an UNREADABLE worktree is BLIND and exits 6"    6 "$RUN_RC"
 hasnt "E4 and it really was BLIND-not-FLAG"               "$RUN_OUT" "FLAG ["
 has   "E4 names the unreadable worktree"                  "$RUN_OUT" "BLIND [worktree]"
 
-run_rc "$T/blockers-today.md" --strict --allow-blind --repo "$T/blindrepo"
+run_rc --strict --allow-blind --repo "$T/blindrepo"
 rc    "E5 --allow-blind downgrades BLIND to a warning"    0 "$RUN_RC"
 
 # A FLAG is something we DID see; BLIND is something we could not. dirtyrepo
 # has no worktree, so this also pins that a plain FLAG still exits 1 and not 6.
-run_rc "$T/blockers-today.md" --strict --repo "$T/dirtyrepo"
+run_rc --strict --repo "$T/dirtyrepo"
 rc    "E6 a FLAG still exits 1, not 6"                    1 "$RUN_RC"
 
 # Usage errors. Two selectors that disagree is a usage error, not something
 # to resolve by precedence and silently honour one of.
-run_rc "$T/blockers-today.md" --repo "$T/loose" clean
+run_rc --repo "$T/loose" clean
 rc    "E7 --repo plus a project name is rejected"         2 "$RUN_RC"
-run_rc "$T/blockers-today.md" --repo "$T/sched"
+run_rc --repo "$T/sched"
 rc    "E8 --repo on a non-git directory is rejected"      2 "$RUN_RC"
-run_rc "$T/blockers-today.md" --repo
+run_rc --repo
 rc    "E9 --repo with no path is rejected"                2 "$RUN_RC"
 
 # A subdirectory argument must still name the repo, or a hook whose cwd is
 # nested would audit nothing and report clean.
-run_rc "$T/blockers-today.md" --repo "$T/loose/.git/.."
+run_rc --repo "$T/loose/.git/.."
 has   "E10 --repo resolves to the work-tree root"         "$RUN_OUT" "single tree: $T/loose"
 
 echo
@@ -327,7 +318,7 @@ echo gamma > "$T/squashed/c.txt"; git -C "$T/squashed" add -A
 git -C "$T/squashed" commit -qm 'on no remote, in no squash'
 git -C "$T/squashed" checkout -q main
 
-out="$(run "$T/blockers-today.md" squashed)"
+out="$(run squashed)"
 hasnt "F1 squash-merged branch is NOT flagged as host-only" "$out" "FLAG [host-only-branch] squashed: branch 'feature'"
 has   "F1 it is reported as landed, not as lost"            "$out" "note [landed] squashed: 'feature'"
 has   "F2 a genuinely unmerged branch STILL flags"          "$out" "FLAG [host-only-branch] squashed: branch 'lost'"
@@ -335,9 +326,8 @@ has   "F2 a genuinely unmerged branch STILL flags"          "$out" "FLAG [host-o
 # F3: the downgrade must not need the network. F1 passing at all is already the
 # offline proof, but pin it explicitly -- a guard that hard-requires a network
 # is its own failure mode. Prepending a nonexistent directory to PATH does not
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 GH_BIN="$T/nope/gh"
-out="$(run "$T/blockers-today.md" squashed)"
+out="$(run squashed)"
 GH_BIN="$GH_DEFAULT"
 hasnt "F3 offline (no gh on PATH) still declines to flag"   "$out" "FLAG [host-only-branch] squashed: branch 'feature'"
 has   "F3 and still flags the genuinely unmerged one"       "$out" "FLAG [host-only-branch] squashed: branch 'lost'"
@@ -346,7 +336,7 @@ has   "F3 and still flags the genuinely unmerged one"       "$out" "FLAG [host-o
 # needs an author and a CI runner has no global one, so the script must supply
 # its own rather than inherit ("empty ident name").
 out="$(HOME="$T/no-identity" GIT_CONFIG_GLOBAL=/dev/null \
-       run "$T/blockers-today.md" squashed)"
+       run squashed)"
 hasnt "F4 no git identity -> probe still works"             "$out" "FLAG [host-only-branch] squashed: branch 'feature'"
 
 echo
@@ -363,7 +353,7 @@ git -C "$T/wt_unpushed" worktree add -q "$T/wt_unpushed-side" feat >/dev/null 2>
 echo stranded > "$T/wt_unpushed-side/s.txt"
 git -C "$T/wt_unpushed-side" add -A
 git -C "$T/wt_unpushed-side" commit -qm 'committed here and never pushed'
-out="$(run "$T/blockers-today.md" wt_unpushed)"
+out="$(run wt_unpushed)"
 has   "G1 unpushed commit IN a worktree is FLAGged"  "$out" "FLAG [worktree-unpushed]"
 has   "G1 and it names the worktree branch"          "$out" "feat"
 hasnt "G1 and it is no longer merely BLIND"          "$out" "BLIND [worktrees]"
@@ -381,7 +371,7 @@ git -C "$T/wt_dirty" branch -q scratch
 git -C "$T/wt_dirty" push -q origin scratch
 git -C "$T/wt_dirty" worktree add -q "$T/wt_dirty-side" scratch >/dev/null 2>&1
 echo mid-run >> "$T/wt_dirty-side/f.txt"
-run_rc "$T/blockers-today.md" --strict --repo "$T/wt_dirty"
+run_rc --strict --repo "$T/wt_dirty"
 has   "G2 a dirty worktree is reported"              "$RUN_OUT" "note [worktree-dirty]"
 hasnt "G2 but it is not a FLAG"                      "$RUN_OUT" "FLAG [worktree"
 rc    "G2 and it does not gate a concurrent run"     0 "$RUN_RC"
@@ -389,15 +379,14 @@ rc    "G2 and it does not gate a concurrent run"     0 "$RUN_RC"
 # G2b/G2c: mtime-split the worktree note the way #137 split the main checkout
 # (#150). An anchor an hour in the future makes the fixture's dirt unambiguously
 # OLDER than this session -- the agent that used the worktree already exited
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SESSION_START="$(( $(date +%s) + 3600 ))"
-run_rc "$T/blockers-today.md" --strict --repo "$T/wt_dirty"
+run_rc --strict --repo "$T/wt_dirty"
 has   "G2b abandoned worktree dirt FLAGs"            "$RUN_OUT" "FLAG [worktree-dirty-abandoned]"
 has   "G2b names the worktree path"                  "$RUN_OUT" "$T/wt_dirty-side"
 rc    "G2b and it gates"                             1 "$RUN_RC"
 
 SESSION_START=1
-run_rc "$T/blockers-today.md" --strict --repo "$T/wt_dirty"
+run_rc --strict --repo "$T/wt_dirty"
 has   "G2c dirt modified during the session is still just a note" "$RUN_OUT" "note [worktree-dirty]"
 hasnt "G2c and still not a FLAG"                     "$RUN_OUT" "FLAG [worktree"
 rc    "G2c and it still does not gate"               0 "$RUN_RC"
@@ -405,12 +394,12 @@ SESSION_START=""
 
 # G3: an UNREADABLE worktree is still BLIND. Removing the audit's ability to
 # say "I could not look" would trade one conflation for another.
-run_rc "$T/blockers-today.md" --repo "$T/blindrepo"
+run_rc --repo "$T/blindrepo"
 has   "G3 unreadable worktree still says BLIND"      "$RUN_OUT" "BLIND [worktree]"
 
 # G4: BLIND LEADS THE SUMMARY. The defect was not only that 13 worktrees went
 # unread -- the line saying so was buried above twelve louder FLAGs and skipped.
-run_rc "$T/blockers-today.md" --repo "$T/blindrepo"
+run_rc --repo "$T/blindrepo"
 case "$RUN_OUT" in
   *"BLIND: "*"domain(s) existed and were NOT read"*) ok "G4 summary leads with BLIND" ;;
   *) bad "G4 summary leads with BLIND (no leading BLIND banner in summary)" ;;
@@ -421,13 +410,12 @@ echo "-- H. a shared checkout's PRE-EXISTING dirt is not this run's (#137)"
 # THE INCIDENT (#137). On 2026-08-11 a subagent was blocked at close over two
 # paths already in its session-start `git status` snapshot, and every remedy
 # offered was wrong: committing adopts another session's work under your name,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 newrepo sharedtree && echo 'another session was here' >> "$T/sharedtree/f.txt"
 
 # H1: an anchor an hour from now is unambiguously later than a file written a
 # moment ago, so nothing in this tree can be this run's.
 SESSION_START="$(( $(date +%s) + 3600 ))"
-run_rc "$T/blockers-today.md" --strict --repo "$T/sharedtree"
+run_rc --strict --repo "$T/sharedtree"
 has   "H1 pre-existing dirt is a note"         "$RUN_OUT" "note [pre-existing-dirty] sharedtree"
 hasnt "H1 and NOT a FLAG"                      "$RUN_OUT" "FLAG [dirty-tree]"
 has   "H1 the paths are still printed, never silent" "$RUN_OUT" "f.txt"
@@ -436,7 +424,7 @@ rc    "H1 and it does not block the closing run" 0 "$RUN_RC"
 # H2: THE TEETH. Same tree, same dirt, anchor moved to 1970 -- every path now
 # postdates the session start, which is what "this run modified it" means.
 SESSION_START=1
-run_rc "$T/blockers-today.md" --strict --repo "$T/sharedtree"
+run_rc --strict --repo "$T/sharedtree"
 has   "H2 dirt modified during the session still FLAGs" "$RUN_OUT" "FLAG [dirty-tree] sharedtree"
 has   "H2 and it counts what is this run's"    "$RUN_OUT" "1 of 1 modified since this session started"
 rc    "H2 and it gates"                        1 "$RUN_RC"
@@ -445,7 +433,7 @@ rc    "H2 and it gates"                        1 "$RUN_RC"
 # case (cron, CI), which a suite that may itself run under a claude ancestor
 # cannot produce deterministically.
 SESSION_START="not a time at all"
-run_rc "$T/blockers-today.md" --strict --repo "$T/sharedtree"
+run_rc --strict --repo "$T/sharedtree"
 has   "H3 an unknowable session start still FLAGs" "$RUN_OUT" "FLAG [dirty-tree] sharedtree"
 has   "H3 and says the anchor is what it lacked"   "$RUN_OUT" "session start is unknown here"
 rc    "H3 and it gates"                        1 "$RUN_RC"
@@ -454,15 +442,14 @@ SESSION_START=""
 echo
 echo "-- I. other worktrees' branches are attributed and COUNTED (#106)"
 # 12 OF 12 WAS THE FLAG RATE; THE LINE RATE OUTLIVED IT. #99 removed the false
-# FLAGs, but each other-worktree branch still printed a ~180-character `skip`
-# line -- 20 in a 99-line report whose only finding was one. So: ONE counted
-# line, not dropped (I2 pins the names still on screen).
+# FLAGs, but each other-worktree branch still printed a ~180-char `skip` line.
+# So: ONE counted line, not dropped (I2 pins the names still on screen).
 newrepo attribrepo
 git -C "$T/attribrepo" branch -q sideA && git -C "$T/attribrepo" push -q origin sideA
 git -C "$T/attribrepo" branch -q sideB && git -C "$T/attribrepo" push -q origin sideB
 git -C "$T/attribrepo" worktree add -q "$T/attribrepo-A" sideA >/dev/null 2>&1
 git -C "$T/attribrepo" worktree add -q "$T/attribrepo-B" sideB >/dev/null 2>&1
-out="$(run "$T/blockers-today.md" attribrepo)"
+out="$(run attribrepo)"
 count "I1 two other-worktree branches produce ONE line" "$out" "skip [other-worktree]" 1
 has   "I1 and it counts the branches"          "$out" "2 branch(es) are checked out in 2 linked worktree(s)"
 has   "I2 sideA is still named"                "$out" "sideA"
@@ -477,7 +464,7 @@ echo more > "$T/attribrepo/h.txt"; git -C "$T/attribrepo" add -A
 git -C "$T/attribrepo" commit -qm 'a commit on no remote'
 git -C "$T/attribrepo" branch -qf nobodys-branch HEAD
 git -C "$T/attribrepo" reset -q --hard origin/main
-out="$(run "$T/blockers-today.md" attribrepo)"
+out="$(run attribrepo)"
 has   "I4 a branch owned by no worktree still FLAGs" "$out" "FLAG [host-only-branch] attribrepo: branch 'nobodys-branch'"
 count "I4 and the counted skip line is still one" "$out" "skip [other-worktree]" 1
 
@@ -485,15 +472,14 @@ echo "-- J. an unreadable/absent registry is BLIND, not clean (#232)"
 # A full sweep (no --repo, no explicit names) against a SCHED_ROOT whose
 # schedule/ directory does not exist must not read as "zero repos touched" --
 # that is indistinguishable from "looked at everything, found nothing", the
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 EMPTY="$T/no-such-sched"
-J_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" BLOCKERS_MD="$T/blockers-today.md" HOURS=12 \
+J_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" HOURS=12 \
   GH_BIN="$GH_DEFAULT" SESSION_START="" "$SCRIPT" 2>&1)"; J_RC=$?
 rc    "J1 absent registry sweep exits 0 without --strict" 0 "$J_RC"
 has   "J1 but still reports BLIND"             "$J_OUT" "BLIND [registry]"
 hasnt "J1 and never claims a clean scan"       "$J_OUT" "0 FLAG(s) across 0 recently-touched repo(s); 0 BLIND"
 
-J2_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" BLOCKERS_MD="$T/blockers-today.md" HOURS=12 \
+J2_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" HOURS=12 \
   GH_BIN="$GH_DEFAULT" SESSION_START="" "$SCRIPT" --strict 2>&1)"; J2_RC=$?
 rc    "J2 --strict against an absent registry gates as BLIND (6)" 6 "$J2_RC"
 has   "J2 names the registry path"             "$J2_OUT" "$EMPTY/schedule/"
@@ -507,7 +493,7 @@ has   "J2 Section B is BLIND too, not a false 'no work' claim" "$J_OUT" \
 hasnt "J2 and never claims there was no work to record"       "$J_OUT" \
   "no work to have recorded"
 
-J3_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" BLOCKERS_MD="$T/blockers-today.md" HOURS=12 \
+J3_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" HOURS=12 \
   GH_BIN="$GH_DEFAULT" SESSION_START="" "$SCRIPT" --strict --allow-blind 2>&1)"; J3_RC=$?
 rc    "J3 --allow-blind downgrades it to a warning" 0 "$J3_RC"
 
@@ -515,9 +501,40 @@ rc    "J3 --allow-blind downgrades it to a warning" 0 "$J3_RC"
 # reporting BLIND [registry] just because nothing was touched recently --
 # that path is A1's "(no registered repo has a commit younger than...)" note,
 # a different and older signal this change must not shadow.
-J4_OUT="$(run "$T/blockers-old.md" oldrepo)"
+J4_OUT="$(run oldrepo)"
 hasnt "J4 a real, merely-stale registry is not BLIND [registry]" "$J4_OUT" "BLIND [registry]"
 has   "J4 it still reports the stale-repo note"                  "$J4_OUT" "no registered repo has a commit younger"
+
+echo "-- K. a branch older than this session is not this run's residue (#363)"
+# Worktrees share the session cwd's refs, so every subagent was FLAGged for
+# branches a human left days earlier. K2 pins the half that must not regress.
+newrepo bystander
+git -C "$T/bystander" branch -q foreign
+echo theirs > "$T/bystander/theirs.txt"; git -C "$T/bystander" add -A
+GIT_COMMITTER_DATE="2026-07-01T00:00:00" GIT_AUTHOR_DATE="2026-07-01T00:00:00" \
+  git -C "$T/bystander" commit -qm 'someone else, days ago' >/dev/null
+git -C "$T/bystander" branch -qf foreign HEAD
+git -C "$T/bystander" reset -q --hard origin/main
+repo_run() { RUN_OUT="$(TODAY="$DAY" SCHED_ROOT="$T/sched" \
+  SESSION_START="$1" "$SCRIPT" --strict --allow-blind --repo "$T/bystander" 2>&1)"; RUN_RC=$?; }
+repo_run "$(date +%s)"
+rc    "K1 a clean run with a pre-existing foreign branch passes" 0 "$RUN_RC"
+has   "K1 and says why it is not a finding" "$RUN_OUT" "note [pre-existing-branch] bystander: 'foreign'"
+hasnt "K1 and does not FLAG it"             "$RUN_OUT" "FLAG [host-only-branch]"
+
+echo mine > "$T/bystander/mine.txt"; git -C "$T/bystander" add -A
+git -C "$T/bystander" commit -qm 'this run made this'
+git -C "$T/bystander" branch -q thisrun
+repo_run "$(( $(date +%s) - 3600 ))"
+rc    "K2 a branch committed during this run still FLAGs" 1 "$RUN_RC"
+has   "K2 and names it"                     "$RUN_OUT" "FLAG [host-only-branch] bystander: branch 'thisrun'"
+has   "K2 while the foreign one stays a note" "$RUN_OUT" "note [pre-existing-branch] bystander: 'foreign'"
+
+# The anchor is the only thing attributing: a session that really did start
+# before the foreign branch owns it again, and it FLAGs.
+repo_run 1
+rc    "K3 an anchor older than the branch still gates" 1 "$RUN_RC"
+has   "K3 and flags the foreign branch too"  "$RUN_OUT" "FLAG [host-only-branch] bystander: branch 'foreign'"
 
 echo
 summary

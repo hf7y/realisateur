@@ -39,6 +39,7 @@ cli_guard "$@"
 # The support library sits beside this script in the bootstrap, and beside it
 # in the repo. Both layouts are the same relative path, on purpose.
 . "$(dirname "${BASH_SOURCE[0]}")/lib/propagation-set.sh"
+. "$(dirname "${BASH_SOURCE[0]}")/lib/host-check.sh"
 
 # --- knobs. Every one exists so bin/tests/propagation.test.sh can run against
 # fixture homes with no network, no ssh and no sudo. Same reasoning as
@@ -55,14 +56,12 @@ CRON_SPEC="${TICK_CRON_SPEC:-41 5 * * *}"
 # Empty for a per-account tick: its defaults ARE the account's own paths.
 #
 # The host-scoped tick needs it, because every path it works on is deliberately
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CRON_ENV="${TICK_CRON_ENV:-}"
 RELEASE_STATUS_URL="${RELEASE_STATUS_URL:-https://hf7y.com/verbs/status.json}"
 # Whether adoption also writes the bin links. OFF by default and it stays off
 # for a per-ACCOUNT tick, because `installe` owns that account's ~/.local/bin
 # and install-verb-build.sh's --link exists to not clobber it.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 TICK_LINK="${TICK_LINK:-0}"
 SURVEY_HOST="${TICK_SURVEY_HOST:-monkey}"
 SURVEY_PASSWD="${TICK_SURVEY_PASSWD:-/etc/passwd}"
@@ -99,7 +98,6 @@ act() { printf '  ..    %s\n' "$*"; }
 # ---------------------------------------------------------------------------
 # Locate the installer. Beside this script first (the bootstrap layout on a
 # consumer), then in a realisateur checkout (the dev layout). NOT derived from
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 find_installer() {
   # An override that names a path which is not there is a MISSING installer,
   # not an installer. Returning it anyway would make "bootstrap incomplete"
@@ -148,7 +146,6 @@ check_clock() {
 # ---------------------------------------------------------------------------
 # The pin row. Delegates entirely: install-verb-build.sh --check already
 # prints "yours:" / "latest:" and distinguishes exit 1 (newer exists) from
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 check_pin() {
   local inst out rc
   if ! inst="$(find_installer)"; then
@@ -208,7 +205,6 @@ install_cadence() {
 # ---------------------------------------------------------------------------
 # The other half of install_cadence: hf7y/realisateur#180 retires the
 # per-account clock and private build root now that one host-wide channel
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 retire_cadence() {
   echo "-- retire cadence (account $(id -un)) ---------------------------------"
   local probe; probe="$(command -v "$HOST_PROBE_VERB" 2>/dev/null || true)"
@@ -302,33 +298,48 @@ retire_cadence() {
 # ---------------------------------------------------------------------------
 # --survey: the read-only operator view. It does not write, does not adopt,
 # and does not need the accounts to trust it -- it runs each account's own
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+
+survey_scan_accounts() {
+  while IFS=: read -r user _ uid _ _ home _; do
+    [ "$uid" -ge "$UID_MIN" ] 2>/dev/null || continue
+    [ "$uid" -le "$UID_MAX" ] || continue
+    pin=$(sudo -u "$user" readlink "$home/$PROP_PIN_PATH" 2>/dev/null | xargs -r basename 2>/dev/null)
+    clk=$(sudo -u "$user" stat -c %Y "$home/.local/state/selfdev-release-tick.status" 2>/dev/null || echo 0)
+    cron=none
+    sudo -u "$user" crontab -l 2>/dev/null | grep -q 'selfdev-release:TICK' && cron=armed
+    # Does this account resolve the host-wide channel? Asked AS THE ACCOUNT,
+    # because a $HOME/.local/bin entry earlier on its PATH shadows the host
+    # directory, and the host's own view cannot see that.
+    host=no
+    sudo -u "$user" -H sh -c "command -v $HOST_PROBE_VERB" 2>/dev/null | grep -q "^$HOST_BIN/" && host=yes
+    echo "$user ${pin:-NONE} $clk $cron $host"
+  done < "$SURVEY_PASSWD"
+}
+
 run_survey() {
   echo "-- fleet survey: $SURVEY_HOST (read-only) -----------------------------"
   local found=0
-  local out
-  out="$(ssh -o BatchMode=yes -o ConnectTimeout=15 "$SURVEY_HOST" "bash -s" <<EOF
+  local out rc local_scan=0
+  if on_target_host "$SURVEY_HOST"; then
+    local_scan=1
+    out="$(survey_scan_accounts)"; rc=$?
+  else
+    out="$(ssh -o BatchMode=yes -o ConnectTimeout=15 "$SURVEY_HOST" \
+      "UID_MIN=$UID_MIN UID_MAX=$UID_MAX PROP_PIN_PATH='$PROP_PIN_PATH' HOST_PROBE_VERB='$HOST_PROBE_VERB' HOST_BIN='$HOST_BIN' SURVEY_PASSWD='$SURVEY_PASSWD' bash -s" <<EOF
 set -uo pipefail
-while IFS=: read -r user _ uid _ _ home _; do
-  [ "\$uid" -ge $UID_MIN ] 2>/dev/null || continue
-  [ "\$uid" -le $UID_MAX ] || continue
-  pin=\$(sudo -u "\$user" readlink "\$home/$PROP_PIN_PATH" 2>/dev/null | xargs -r basename 2>/dev/null)
-  clk=\$(sudo -u "\$user" stat -c %Y "\$home/.local/state/selfdev-release-tick.status" 2>/dev/null || echo 0)
-  cron=none
-  sudo -u "\$user" crontab -l 2>/dev/null | grep -q 'selfdev-release:TICK' && cron=armed
-  # Does this account resolve the host-wide channel? Asked AS THE ACCOUNT,
-  # because a \$HOME/.local/bin entry earlier on its PATH shadows the host
-  # directory, and the host's own view cannot see that.
-  host=no
-  sudo -u "\$user" -H sh -c 'command -v $HOST_PROBE_VERB' 2>/dev/null | grep -q "^$HOST_BIN/" && host=yes
-  echo "\$user \${pin:-NONE} \$clk \$cron \$host"
-done < $SURVEY_PASSWD
+$(declare -f survey_scan_accounts)
+survey_scan_accounts
 EOF
 )"
-  local rc=$?
+    rc=$?
+  fi
   if [ "$rc" != 0 ] || [ -z "$out" ]; then
     echo
-    echo "BLIND: could not survey $SURVEY_HOST (ssh rc=$rc). Nothing was verified." >&2
+    if [ "$local_scan" = 1 ]; then
+      echo "BLIND: could not scan $SURVEY_HOST locally (rc=$rc). Nothing was verified." >&2
+    else
+      echo "BLIND: could not survey $SURVEY_HOST (ssh rc=$rc). Nothing was verified." >&2
+    fi
     return 3
   fi
   printf '  %-16s %-26s %-8s %-6s %s\n' ACCOUNT PIN CLOCK CRON CHANNEL
@@ -399,7 +410,6 @@ check_clock
 # --- the CHANNEL's own health, read live from the published verdict ---------
 # This is the row that separates "no new build because nothing changed" from
 # "no new build because main is broken". Without it both are just an absence,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 echo
 echo "-- release channel (live) ---------------------------------------------"
 led="$(dirname "${BASH_SOURCE[0]}")/release-ledger.sh"

@@ -88,7 +88,6 @@ echo "-- B. cred_grade_account: pure grading, no network --------------------"
 # NOT `res="$(grade ...)"`: a first draft packed everything into one
 # \x1f-delimited string and unpacked it with `read`, which stops at the
 # FIRST NEWLINE regardless of IFS -- cred_grade_account's own output is
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 grade() {
   GRADE_OUT="$(cred_grade_account "$1" "$2" 2>&1)"; GRADE_RC=$?
   GRADE_FLAGS="$(grep -c '^  FLAG \[drift\]' <<<"$GRADE_OUT" || true)"
@@ -212,7 +211,6 @@ STUB="$T/stub"; mkdir -p "$STUB"
 # A stub `ssh` that answers fetch_remote's `bash -s -- <args...>` shape (the
 # FILTER positional is the 4th token after "--") from $STUB_ROWS, and treats
 # any OTHER invocation (cmd_apply's one-shot commands) as "log it, succeed" --
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cat > "$STUB/ssh" <<'STUBSH'
 #!/usr/bin/env bash
 LOG="${STUB_LOG:-/dev/null}"
@@ -311,7 +309,6 @@ echo "-- D2. deploy-key symmetry grading -- the false/null jq regression ----"
 # ============================================================================
 # THE REGRESSION THIS PINS: jq's `//` treats `false` as falsy, same as
 # `null`. A first draft used `.readOnly // empty`, which turned every
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STUB_JSON_solo="$(printf '[{"title":"monkey-solo-solo","readOnly":false}]')"
 O="$(STUB_ROWS='solo	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
@@ -335,7 +332,6 @@ echo "-- D3. deploy-key symmetry grading -- the read_only field-name regression"
 # ============================================================================
 # THE REGRESSION THIS PINS, FOUND LIVE AGAINST THE REAL FLEET (not a fixture):
 # `gh repo deploy-key list --json title,readOnly` on gh 2.45.0 VALIDATES
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STUB_JSON_realword='[{"title":"monkey-realword-realword","read_only":false}]'
 O="$(STUB_ROWS='realword	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
@@ -361,7 +357,6 @@ t_has "real gh shape: a WRITE key on a shared repo is still flagged" "$O" "reali
 # The fail-loud default arm itself: an unrecognized readOnly-shaped value
 # must read as BLIND, never as silence. Exercised directly, not by trying to
 # reproduce a gh version skew: `has()` on the fixture object true either way,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 O="$(STUB_ROWS='oddshape	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
      STUB_JSON_realisateur='[{"title":"monkey-oddshape-realisateur","readOnly":"maybe"}]' \
@@ -375,7 +370,6 @@ echo "-- E. --apply: idempotency, converge actions, and refusals ------------"
 # ============================================================================
 # NO FIXTURE SOURCE KEY any more. --apply used to push a private copy of the
 # App key into the account from a local source path, and the source-path knobs
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 LOG="$T/apply.log"; : > "$LOG"
 CLEAN_SINGLE='conv-clean	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y'

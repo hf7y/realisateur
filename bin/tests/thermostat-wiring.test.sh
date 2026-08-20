@@ -156,6 +156,70 @@ out="$(run '' "$NOSENSOR")"
 has G3 "$out" "UNMET  setpoint"
 
 echo
+echo "== H: no checkout -- read live from GitHub (#414) ==========================="
+# #414: SCHED_ROOT names no directory; ghstub answers with mkscheduler's own shapes.
+mkdir -p "$TMP/ghstub"
+cat > "$TMP/ghstub/gh" <<'EOF'
+#!/bin/sh
+[ -n "${TW_BLIND:-}" ] && exit 1
+case "$*" in
+  *"repos/hf7y/scheduler/git/trees/HEAD?recursive=1"*)
+    if [ "$TW_SHAPE" = current ]; then
+      printf '100644 BLOCKERS.md\n100644 lib/sweep-loop-common.sh\n100755 bin/morning-report.sh\n100644 schedule/_paced.conf\n100755 bin/usage-paced-runner.sh\n'
+    else
+      printf '100644 lib/run-record.sh\n100755 bin/tempo.sh\n100644 schedule/_paced.conf\n100755 bin/usage-paced-runner.sh\n'
+    fi
+    ;;
+  *"repos/hf7y/scheduler/contents/schedule/_paced.conf"*)
+    if [ "$TW_SHAPE" = current ]; then
+      printf 'ecosim|0|2|/x/scheduler-run ecosim batch\n' | base64 | tr -d '\n'
+    else
+      printf 'ecosim|0|/x/scheduler-run ecosim batch\n' | base64 | tr -d '\n'
+    fi ;;
+  *"repos/hf7y/scheduler/contents/lib/run-record.sh"*)
+    printf 'echo "$v" >> "$HOME/.local/share/scheduler-verdict/$p.history"\n' | base64 | tr -d '\n' ;;
+  *"repos/hf7y/scheduler/contents/bin/tempo.sh"*)
+    printf 'gh issue list --repo "$slug" --state open\n' | base64 | tr -d '\n' ;;
+  *"repos/hf7y/scheduler/contents/bin/usage-paced-runner.sh"*)
+    if [ "$TW_SHAPE" = current ]; then
+      printf 'exec "$SELF_DIR/freeze-check.sh" "$name"\n' | base64 | tr -d '\n'
+    else
+      printf '"$SELF_DIR/tempo.sh" "$name" || continue\n' | base64 | tr -d '\n'
+    fi ;;
+  *"issue list"*) exit 1 ;;
+  *) exit 1 ;;
+esac
+EOF
+chmod +x "$TMP/ghstub/gh"
+
+run_remote() {
+  local ratchet="$1" shape="$2"; shift 2
+  printf '%s\n' "$ratchet" > "$FAKE/bin/thermostat-wiring.ratchet"
+  env PATH="$TMP/ghstub:$PATH" SCHED_ROOT="$TMP/no-such-scheduler" TW_SHAPE="$shape" \
+      bash "$FAKE/bin/thermostat-wiring.sh" "$@" 2>&1
+}
+
+out="$(run_remote '' conforming)"; rc=$?
+is    H1  "$rc" 0
+has   H1b "$out" "no checkout -- read live from"
+hasnt H1c "$out" "UNMET  ledger"
+hasnt H1d "$out" "UNMET  setpoint"
+has   H1e "$out" "PASS   ledger"
+has   H1f "$out" "PASS   setpoint"
+
+out="$(run_remote '' current)"; rc=$?
+is  H2  "$rc" 0
+has H2b "$out" "UNMET  blockers"
+has H2c "$out" "UNMET  weight"
+
+printf '%s\n' 'ledger' > "$FAKE/bin/thermostat-wiring.ratchet"
+out="$(env PATH="$TMP/ghstub:$PATH" SCHED_ROOT="$TMP/no-such-scheduler" TW_SHAPE=conforming TW_BLIND=1 \
+      bash "$FAKE/bin/thermostat-wiring.sh" 2>&1)"; rc=$?
+is  H3  "$rc" 2
+has H3b "$out" "cannot see"
+has H3c "$out" "GitHub tree did not read"
+
+echo
 summary
 [ "$fail" = 0 ] || exit 1
 exit 0

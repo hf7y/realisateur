@@ -52,13 +52,11 @@ eq "A5  no PROJECT_REPO_PATH returns 1" "$?" "1"
 # This section exercised restamp-discipline.sh end to end against a fixture
 # ecosystem, including its "a pass that reached nothing exits nonzero" guard.
 # The script is gone: `discipline` prints the one file at the point of use
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 # --- C: the population ratchet -----------------------------------------------
 # WHY A RATCHET AND NOT A LIST. lib/conf.sh's header used to NAME the four
 # scripts still on the raw grep; by 2026-08-11 it was wrong in both directions
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
-printf '\nC. no script in bin/ or bashify/ extracts PROJECT_REPO_PATH without expanding it\n'
+printf '\nC. no script in bin/ extracts PROJECT_REPO_PATH without expanding it\n'
 c_bad=""
 c_scanned=0
 while IFS= read -r f; do
@@ -80,7 +78,6 @@ while IFS= read -r f; do
   # committing it. The population is the scripts that run against the registry.
 done < <(cd "$REPO" && git ls-files \
            ':(glob)bin/*.sh' ':(glob)bin/lib/*.sh' \
-           ':(glob)bashify/*.sh' ':(glob)bashify/lib/*.sh' ':(glob)bashify/bin/*' \
            2>/dev/null)
 
 if [ "$c_scanned" -eq 0 ]; then
@@ -98,7 +95,6 @@ fi
 # D1 is the defect: until 2026-08-11 resolution returned nothing for every
 # directory on every host, so no marker was written and scheduler's
 # interactive-deferral guard read every repo as free. D3 is the half that
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 printf '\nD. session-marker.sh resolves, and says so when it cannot\n'
 SM="$REPO/bin/session-marker.sh"
 D="$T/sm"; mkdir -p "$D/home/Documents/Projects/demo/sub" "$D/sched/schedule"

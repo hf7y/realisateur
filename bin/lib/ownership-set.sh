@@ -20,27 +20,7 @@
 #   ownership    a file with a foreign owner cannot BE MAINTAINED here without
 #                this repo's maintainer becoming that project's maintainer.
 #
-# ============================================================================
-# THE MISSION TEST -- one question, from this repo's own documents
-# ============================================================================
-#
-# vault:realisateur/UNIVERSE.md, "The anatomy", line 47, on what this organ is:
-#
-#     realisateur -- perception and judgment. Senses (the offline surveys),
-#     triages (park-by-default), records. It never decides; the human decides.
-#
-# vault:realisateur/PRECIPITATION.md restates the same boundary as a pair:
-#
-#     Scheduler enforces weights and never sets them; realisateur senses and
-#     never decides.
-#
-# And README.md gives the effector half that is genuinely realisateur's:
-#
-#     realisateur's job is to notice what's been dropped, infer the idea
-#     behind it, and turn it into a real, scaffolded project wired into the
-#     rest of the development ecosystem.
-#
-# So the question asked of every file below is:
+# THE MISSION TEST, asked of every file below:
 #
 #   >>> Does this file SENSE the ecosystem, TRIAGE what it senses, or SCAFFOLD
 #   >>> a new project from an idea? If it instead ACTS ON the estate --
@@ -48,19 +28,14 @@
 #   >>> then by this repo's own doctrine it is somebody else's organ, and the
 #   >>> only question left is whose.
 #
-# BELONGS-ELSEWHERE WITHOUT A NAMED RECEIVER IS A COMPLAINT, NOT A FINDING.
-# Every foreign row names a receiver, and every receiver is declared in
-# OWN_RECEIVERS below with a probe that was actually run.
+# Every foreign row names a receiver declared in OWN_RECEIVERS.
 #
 # ============================================================================
 # WHAT THIS LEDGER IS NOT
 # ============================================================================
 #
-# It is not a migration order and it does not move anything. Naming a file
-# foreign changes nothing about where it runs today; bin/install-shims.sh is
-# senechal's by mission AND is the thing that writes the PATH shims this
-# estate currently runs on. See bin/ownership-audit.sh's header for why the
-# audit and the move are deliberately separate acts.
+# It is not a migration order and it does not move anything. The audit and the
+# move are deliberately separate acts; see bin/ownership-audit.sh.
 #
 # ============================================================================
 # HOW A NEW FILE GETS CLASSIFIED
@@ -86,15 +61,13 @@ vim-arcade      hf7y/vim-arcade exists
 ecosim          hf7y/ecosim exists
 gardien         hf7y/gardien exists
 bibliothecaire  hf7y/bibliothecaire exists
-crt             hf7y/crt exists (private, pushed 2026-08-12; probed 2026-08-14 via gh repo view)
-bashify         NO REPO -- see OWN_HOMELESS below
+crt             hf7y/crt exists
+etalon          hf7y/etalon exists
 "
 
-# --- the receivers that do not exist yet ------------------------------------
-# One foreign area names a receiver that has no repository. That is not a
-# reason to call it realisateur's; it is the finding. `gh repo list hf7y`
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
-OWN_HOMELESS="bashify"
+# A foreign row whose receiver has no repository is the finding, not a reason
+# to call the file realisateur's.
+OWN_HOMELESS=""
 
 # --- the areas the audit derives its population from ------------------------
 # Mechanism only. Root *.md, *.idea and archive/ are prose and are priced by
@@ -103,7 +76,6 @@ OWN_AREAS="
 bin
 hooks
 provision
-bashify
 .github/workflows
 .claude/commands
 "
@@ -111,17 +83,12 @@ bashify
 # --- THE LEDGER -------------------------------------------------------------
 # Rows are `<path-prefix> <owner> <reason>`, longest prefix wins. Owner
 # `realisateur` means MISSION-UNIQUE: no other project could hold it without
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 # ---- MISSION-UNIQUE: sense, triage, scaffold -------------------------------
 #
-# THE COUNTER-ARGUMENT FOR bashify, weighed and recorded rather than omitted,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 OWN_MINE="
 .agent-project                             realisateur
 bin/tests/registry-marker.test.sh          realisateur
-bin/lib/not-a-spend.tsv                    realisateur
-bin/tests/not-a-spend.test.sh              realisateur
 bin/silence-audit.sh                       realisateur
 bin/monkey-vdi-to-internal.sh              realisateur
 bin/monkey-watch.sh                        realisateur
@@ -148,6 +115,10 @@ bin/selfdev-agent-survey.sh                realisateur
 provision/dexter/README.md                 realisateur
 bin/dexter-liveness.sh                     realisateur
 bin/tests/dexter-liveness.test.sh          realisateur
+bin/ausculte.sh                            realisateur
+bin/tests/ausculte.test.sh                 realisateur
+bin/lib/zaxon.sh                           realisateur
+bin/lib/host-check.sh                      realisateur
 bin/dexter-service-deploy.sh               realisateur
 bin/tests/dexter-service-deploy.test.sh    realisateur
 bin/publish-monkey-status.sh               realisateur
@@ -158,6 +129,8 @@ bin/tests/served-not-cloned.test.sh        realisateur
 bin/verb-kind-lint.sh                      realisateur
 bin/tests/verb-kind-lint.test.sh           realisateur
 bin/wire-release-channel.sh                realisateur
+bin/dresse.sh                              realisateur
+bin/tests/dresse.test.sh                   realisateur
 bin/tests/selfdev-agent-survey.test.sh     realisateur
 bin/repo-settings-provision.sh             realisateur
 bin/tests/repo-settings-provision.test.sh  realisateur
@@ -173,7 +146,6 @@ bin/tests/selfdev-hooks-provision.test.sh  realisateur
 bin/discipline.sh                          realisateur
 bin/consigne                               realisateur
 bin/tests/consigne.test.sh                 realisateur
-bin/tests/bashify-coin.test.sh             bashify
 bin/ownership-audit.sh                     realisateur
 bin/lib/ownership-set.sh                   realisateur
 bin/tests/guard-estate.test.sh             realisateur
@@ -188,6 +160,9 @@ bin/selfdev-app-key.sh                     realisateur
 bin/lib/selfdev-app-key.sh                 realisateur
 bin/tests/selfdev-app-key.test.sh          realisateur
 bin/lib/selfdev-credentials-set.sh         realisateur
+bin/selfdev-claude-token.sh                realisateur
+bin/lib/selfdev-claude-token.sh            realisateur
+bin/tests/selfdev-claude-token.test.sh     realisateur
 bin/lib/api-restamp.sh                     realisateur
 bin/tests/api-restamp.test.sh              realisateur
 bin/self-merge-audit.sh                    realisateur
@@ -230,24 +205,23 @@ bin/tests/body-grammar.test.sh             vim-arcade
 bin/defere.sh                              vim-arcade
 bin/path-provenance-audit.sh               senechal
 bin/tests/path-provenance-audit.test.sh    senechal
-bin/closeout-lint.sh                       bashify
 bin/retire-check.sh                        realisateur
 bin/decision-rot.sh                        realisateur
 bin/tests/decision-rot.test.sh             realisateur
-bin/needs-zach.sh                          realisateur
-bin/tests/needs-zach.test.sh               realisateur
+bin/etiquette.sh                           realisateur
+bin/tests/etiquette.test.sh                realisateur
+bin/lib/labels.tsv                         realisateur
+bin/lib/answered.sh                        realisateur
 bin/rot-ratchet.sh                         realisateur
 bin/tests/rot-ratchet.test.sh              realisateur
 .github/workflows/rot-ratchet.yml          realisateur
 bin/directive-prose.sh                     realisateur
 bin/tests/directive-prose.test.sh          realisateur
-bin/hardcoded-home-lint.sh                 bashify
-bin/lib/cli-guard.sh                       bashify
-hooks                                      bashify
-bashify                                    bashify
-bin/ecosim-sensor-tick.sh                  ecosim
-.claude/commands/bashify.md                bashify
-.claude/commands/cloture.md                bashify
+bin/closeout-lint.sh                       etalon
+bin/hardcoded-home-lint.sh                 etalon
+bin/lib/cli-guard.sh                       etalon
+hooks                                      etalon
+.claude/commands/cloture.md                etalon
 .github/workflows/claim-drift.yml          vim-arcade
 .github/workflows/verb-build-smoke.yml     verbs
 bin/tests/release-channel-wiring.test.sh   verbs
@@ -257,7 +231,6 @@ bin/tests/verb-build-test.sh               verbs
 # --- lookup -----------------------------------------------------------------
 # own_owner <path> -- prints `<owner> <reason>` for the longest matching row,
 # or nothing (rc 1) when the path matches none. rc 1 IS the finding; a caller
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 own_derived_from() {
   local p="$1" b cand
   case "$p" in

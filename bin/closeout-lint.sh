@@ -18,14 +18,14 @@
 # Sections A, B and C each carry their own header below; usage is $CLI_USAGE.
 #
 # --repo audits ONE tree (no positional name reaches a linked worktree): no
-# registry, no age gate, B/C skipped as session-wide concerns. It is what a
+# registry, no age gate, B skipped as a session-wide concern. It is what a
 # SubagentStop hook needs, since a registry scan would block every subagent over
 # some unrelated project. BLIND GATES, exit 6 (Zach, 2026-08-02) -- a domain
 # that existed and was NOT read is not a pass, and 6 is what `garde` and
 # `ausculte` already use; its two-shaped override is at the gate below.
 #
 # Env overrides (set by bin/tests/closeout-lint.test.sh, not normally): HOURS,
-# SCHED_ROOT, BLOCKERS_MD, TODAY, GH_BIN (the CLI B asks; the suite stubs it),
+# SCHED_ROOT, TODAY, GH_BIN (the CLI B asks; the suite stubs it),
 # and SESSION_START (epoch or anything `date -d` parses; see below).
 set -uo pipefail
 
@@ -34,8 +34,8 @@ CLI_SUMMARY='the deterministic half of session closeout -- what did today leave 
 CLI_USAGE='  closeout-lint.sh              scan every registered project
   closeout-lint.sh <name>...    scan only the named project(s)
   closeout-lint.sh --strict [<name>...]   exit 1 if any FLAG was printed
-  closeout-lint.sh --repo <path>          audit ONE working tree (sections
-                                          B/C skipped, age gate ignored)
+  closeout-lint.sh --repo <path>          audit ONE working tree (section B
+                                          skipped, age gate ignored)
   closeout-lint.sh --allow-blind          BLIND warns instead of gating
     (HOURS=<n> in the environment sets the lookback window)'
 CLI_FLAGS='--strict --repo --allow-blind'
@@ -49,7 +49,6 @@ CLI_POSITIONAL=any
 cli_guard "$@"
 
 SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
-BLOCKERS_MD="${BLOCKERS_MD:-$SCHED_ROOT/BLOCKERS.md}"
 HOURS="${HOURS:-12}"
 TODAY="${TODAY:-$(date +%Y-%m-%d)}"
 SESSION_START="${SESSION_START:-}"
@@ -153,7 +152,6 @@ now="$(date +%s)"
 # no explicit names) that discovers ZERO projects is ambiguous the same way
 # hygiene-lint.sh's equivalent loop was until 2026-08-07: it might mean "the
 # registry is empty" or it might mean "$SCHED_ROOT/schedule doesn't exist on
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ -z "$REPO_ARG" ] && [ "${#want[@]}" -eq 0 ] && [ "${#projects[@]}" -eq 0 ]; then
   blind=$((blind+1))
   registry_blind=1
@@ -164,7 +162,6 @@ cutoff=$(( HOURS * 3600 ))
 # --- WHEN DID THIS SESSION START (hf7y/realisateur#137) ----------------------
 #
 # The dirty-tree rule below assumed "uncommitted changes at close are this
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 session_start_epoch() { # -> epoch seconds on stdout, or nothing and exit 1
   local raw="$SESSION_START" p="${PPID}" d=0 comm et
   if [ -n "$raw" ]; then
@@ -184,18 +181,16 @@ session_start_epoch() { # -> epoch seconds on stdout, or nothing and exit 1
 }
 
 # `find -newermt` IS the test, so its absence must not read as "nothing is
-# newer" -- that would silently downgrade every dirty tree on a host whose find
-# predates it. Probed once; a failed probe leaves the anchor unset, i.e. FLAG.
+# newer". Probed once; a failed probe leaves the anchor unset, i.e. FLAG.
 SESSION_EPOCH=""
 if command -v find >/dev/null 2>&1 && find /dev/null -newermt "@0" >/dev/null 2>&1; then
   SESSION_EPOCH="$(session_start_epoch || true)"
 fi
 
-# Every dirty path modified at or after <epoch>. One that cannot be resolved --
-# a deletion, a rename's old half, a git-quoted name this does not unquote --
-# prints as RECENT: unattributable is this run's until proven otherwise. `find`
-# rather than `stat` because an untracked DIRECTORY is one `dir/` entry whose
-# own mtime says nothing about a file three levels inside it.
+# Every dirty path modified at or after <epoch>; one that cannot be resolved
+# (a deletion, a rename's old half, a git-quoted name) prints as RECENT --
+# unattributable is this run's until proven otherwise. `find`, not `stat`: an
+# untracked DIRECTORY's own mtime says nothing about a file three levels in.
 dirty_newer_than() { # <repo> <epoch> <porcelain-output>
   local repo="$1" epoch="$2" line p
   printf '%s\n' "$3" | while IFS= read -r line; do
@@ -207,6 +202,17 @@ dirty_newer_than() { # <repo> <epoch> <porcelain-output>
       printf '%s\n' "$p"
     fi
   done
+}
+
+# A branch whose newest commit predates this session is not this run's residue
+# (#363): worktrees SHARE the ref store, so every subagent inherited every
+# stale branch as a FLAG. Same carve-out and fallback as dirty_newer_than.
+tip_predates_session() { # <repo> <rev> -> 0 if its newest commit is older than session start
+  local newest
+  [ -n "$SESSION_EPOCH" ] || return 1
+  newest="$(git -C "$1" log -1 --format=%ct "$2" 2>/dev/null)" || return 1
+  [ -n "$newest" ] || return 1
+  [ "$newest" -lt "$SESSION_EPOCH" ]
 }
 
 i=0
@@ -238,11 +244,12 @@ while [ "$i" -lt "${#projects[@]}" ]; do
 
       # AN UNPUSHED COMMIT IS THE UNAMBIGUOUS FINDING. Measured against the
       # branch's own remote ref, never `@{u}`: an explicit-refspec push
-      # configures no upstream and is still safely on origin (`@{u}` over-
-      # reported by two on the first propagation pass).
+      # configures no upstream and is still safely on origin.
       if git -C "$w" rev-parse --verify -q "origin/$wbr" >/dev/null 2>&1; then
         wahead="$(git -C "$w" rev-list --count "origin/$wbr..HEAD" 2>/dev/null)"
-        if [ "${wahead:-0}" -gt 0 ]; then
+        if [ "${wahead:-0}" -gt 0 ] && tip_predates_session "$w" HEAD; then
+          echo "    note [pre-existing-unpushed] $name: $wahead commit(s) on '$wbr' in $w predate this session -- not this run's to push"
+        elif [ "${wahead:-0}" -gt 0 ]; then
           echo "    FLAG [worktree-unpushed] $name: $wahead commit(s) on '$wbr' in $w not on origin/$wbr"
           git -C "$w" log --oneline "origin/$wbr..HEAD" 2>/dev/null | head -5 | sed 's/^/      /'
           flags=$((flags+1))
@@ -281,9 +288,8 @@ EOF
   ct="$(git -C "$repo" log -1 --format=%ct 2>/dev/null)"
   [ -n "$ct" ] || continue
   age=$(( now - ct ))
-  # The age gate answers "did THIS SESSION touch it", which is the right
-  # question for a registry sweep and the wrong one for --repo: the caller
-  # names the tree explicitly, so skipping it as "too old" would silently
+  # The age gate answers "did THIS SESSION touch it": right for a registry
+  # sweep, wrong for --repo, where skipping the named tree as "too old" would
   # audit nothing and report clean -- the exact shape of a false all-clear.
   if [ -z "$REPO_ARG" ] && [ "$age" -gt "$cutoff" ]; then continue; fi
   touched=$((touched+1))
@@ -291,10 +297,9 @@ EOF
   printf '  %-18s HEAD %sh ago\n' "$name" "$(( age / 3600 ))"
 
   # dirty tree: an uncommitted change to a live script is indistinguishable
-  # from an abandoned one (CLAUDE.md subagent rule, 2026-07-25 incident) --
-  # unless it predates the session, in which case it is indistinguishable from
-  # a CONCURRENT one, and adopting it is the same incident with the names
-  # swapped. See the session_start_epoch header above.
+  # from an abandoned one (CLAUDE.md subagent rule) -- unless it predates the
+  # session, when it is indistinguishable from a CONCURRENT one and adopting
+  # it is the same incident with the names swapped.
   dirty_all="$(git -C "$repo" status --porcelain 2>/dev/null)"
   if [ -n "$dirty_all" ]; then
     dcount="$(printf '%s\n' "$dirty_all" | grep -c .)"
@@ -320,8 +325,7 @@ EOF
   fi
 
   # unpushed: "verified where the consumer reads it" -- the nightly clones the
-  # REF, not this tree. EVERY BRANCH, not just the checked-out one: this read
-  # HEAD alone until 2026-08-01 and scheduler carried three host-only `paced/*`
+  # REF, not this tree. EVERY BRANCH, not just the checked-out one.
   #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   wt_owner="$(git -C "$repo" worktree list --porcelain 2>/dev/null \
         | awk -v m="$repo" '
@@ -386,11 +390,15 @@ EOF
     fi
     if git -C "$repo" rev-parse --verify -q "origin/$br" >/dev/null 2>&1; then
       ahead="$(git -C "$repo" rev-list --count "origin/$br..$br" 2>/dev/null)"
-      if [ "${ahead:-0}" -gt 0 ]; then
+      if [ "${ahead:-0}" -gt 0 ] && tip_predates_session "$repo" "$br"; then
+        echo "    note [pre-existing-unpushed] $name: $ahead commit(s) on $br predate this session -- not this run's to push"
+      elif [ "${ahead:-0}" -gt 0 ]; then
         echo "    FLAG [unpushed] $name: $ahead commit(s) on $br not on origin/$br"
         git -C "$repo" log --oneline "origin/$br..$br" 2>/dev/null | head -5 | sed 's/^/      /'
         flags=$((flags+1))
       fi
+    elif tip_predates_session "$repo" "$br"; then
+      echo "    note [pre-existing-branch] $name: '$br' has no origin/$br, but its tip predates this session -- another run's residue, not this one's"
     else
       echo "    FLAG [host-only-branch] $name: branch '$br' has no origin/$br -- it exists only on this host"
       flags=$((flags+1))
@@ -487,18 +495,6 @@ else
   fi
 fi
 
-echo
-echo "== C. DECISION RESIDUE ($BLOCKERS_MD) =="
-if [ ! -f "$BLOCKERS_MD" ]; then
-  echo "  NOTE $BLOCKERS_MD not found -- cannot check"
-elif grep -q "$TODAY" "$BLOCKERS_MD" 2>/dev/null; then
-  echo "  ok -- BLOCKERS.md carries at least one line dated $TODAY"
-else
-  echo "  NOTE BLOCKERS.md has nothing dated $TODAY."
-  echo "    Not a FLAG: only the closing session knows whether it had any"
-  echo "    decision-shaped residue to file. If it did, it belongs there as a"
-  echo "    '> '-answerable one-liner under the filing project's ## section."
-fi
 }
 [ -n "$REPO_ARG" ] || session_wide_sections
 

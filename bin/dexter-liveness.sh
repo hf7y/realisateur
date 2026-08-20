@@ -2,26 +2,19 @@
 # dexter-liveness.sh -- is dexter actually serving what it is supposed to serve?
 #
 # THE OUTAGE THIS EXISTS FOR. zaxon -- the only relay that carries a question
-# to a human -- was dead for ten days and nothing noticed. Not because anything
-# was broken: hermes-gateway is `enabled`, runs as its own user, carries
-# Restart=always. The WSL distro it lives in never restarted after the
-# 2026-08-03 reboot, and a distro has no supervisor above it. It was found by
-# accident, by a groc-mangr dispatch run that happened to try the relay
-# (hf7y/groc-mangr#9).
-#
-# So this is the alarm, and its most important check is the LAST one: dexter
-# starts its distro and its VMs from the Windows per-user Startup folder, which
-# runs at LOGIN, not at boot. A reboot with nobody logging in leaves monkey
-# down -- which is all of self-dev -- and reads, from the outside, exactly like
-# a quiet night.
+# to a human -- was dead for ten days and nothing noticed. Its service was
+# `enabled` with Restart=always; the WSL distro under it never came back from
+# the 2026-08-03 reboot, and a distro has no supervisor above it
+# (hf7y/groc-mangr#9). Hence the last check here: dexter starts its distro and
+# its VMs from the Windows Startup folder, i.e. at LOGIN. A reboot nobody logs
+# in after leaves monkey -- all of self-dev -- down, and reads from the outside
+# like a quiet night.
 #
 #   bin/dexter-liveness.sh            # human-readable, exit tells the story
 #   bin/dexter-liveness.sh --json     # one object, for a status document
 #
-# READ-ONLY. It starts nothing, fixes nothing, and writes nothing on dexter.
-# Fixing is a separate act with a separate blast radius -- same stance as
-# senechal's health/*.sh, which this deliberately imitates rather than
-# reinvents. When `ausculte hosts` exists, this becomes one of its probes.
+# READ-ONLY: it starts nothing, fixes nothing, writes nothing on dexter, the
+# same stance as senechal's health/*.sh; `ausculte hosts` composes it.
 #
 # exit: 0 all good  5 something declared is down  6 BLIND (cannot reach dexter)
 set -uo pipefail
@@ -36,16 +29,28 @@ JSON=0
 EXPECT_DISTROS="Ubuntu"          # hermes joins this when it is containerised
 EXPECT_VMS="monkey"              # nomac is the office VM, started by hand
 EXPECT_PORTS="8643"              # zaxon MCP
-EXPECT_CONTAINERS=""             # filled in as services move to /srv
+# whisper joins when hf7y/crt lands it -- naming it sooner turns this red (#405)
+EXPECT_CONTAINERS="zaxon-gateway zaxon-relay zaxon-watcher"
 
-fail=0; blind=0; findings=()
+fail=0; blind=0; zaxon_fail=0; vm_fail=0; findings=()
 note() { findings+=("$1"); }
+zaxon_note() { note "$1"; fail=1; zaxon_fail=1; }
 
 probe="$(ssh -n -o ConnectTimeout=10 -o BatchMode=yes "$HOST" '
+  export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
   echo "UPTIME_S=$(cut -d. -f1 /proc/uptime)"
   echo "DOCKER=$(systemctl is-active docker 2>/dev/null)"
   echo "CONTAINERS=$(sudo -n docker ps --format "{{.Names}}" 2>/dev/null | tr "\n" "," )"
   echo "PORTS=$(ss -ltn 2>/dev/null | awk "{print \$4}" | sed "s/.*://" | sort -un | tr "\n" ",")"
+  # A TCP connect is not liveness: a hung gateway still accepts one, and the
+  # relay'"'"'s own docker healthcheck is a connect too. Ask the MCP layer to
+  # speak. Same call shape as monkey-watch.sh; 127.0.0.1 so this survives the
+  # rebind off 0.0.0.0.
+  curl -s -m 15 -H "Content-Type: application/json" \
+    -H "Accept: application/json,text/event-stream" \
+    -X POST http://127.0.0.1:8643/mcp \
+    -d '"'"'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"dexter-liveness","version":"1"}}}'"'"' 2>/dev/null \
+    | tr -d "\r" | sed -n "s/.*\"serverInfo\":{[^}]*\"name\":\"\([^\"]*\)\".*/MCP_SERVER=\1/p" | head -1
   sudo -n systemctl restart systemd-binfmt 2>/dev/null
   cd /mnt/c || exit 0
   echo "DISTROS=$(/mnt/c/Windows/System32/wsl.exe -l -q --running 2>/dev/null | tr -d "\0\r" | tr "\n" ",")"
@@ -73,21 +78,24 @@ for d in $EXPECT_DISTROS; do
   has "$d" "$(val DISTROS)" || { note "WSL distro '$d' is not running"; fail=1; }
 done
 for v in $EXPECT_VMS; do
-  has "$v" "$(val VMS)" || { note "VirtualBox VM '$v' is not running -- if this is monkey, self-dev dispatch is down"; fail=1; }
+  has "$v" "$(val VMS)" || { note "VirtualBox VM '$v' is not running -- if this is monkey, self-dev dispatch is down"; fail=1; vm_fail=1; }
 done
 for p in $EXPECT_PORTS; do
-  has "$p" "$(val PORTS)" || { note "nothing is listening on port $p (zaxon MCP) -- the relay cannot carry a question to a human"; fail=1; }
+  has "$p" "$(val PORTS)" || zaxon_note "nothing is listening on port $p (zaxon MCP) -- the relay cannot carry a question to a human"
 done
 for c in $EXPECT_CONTAINERS; do
-  has "$c" "$(val CONTAINERS)" || { note "container '$c' is not running"; fail=1; }
+  case "$c" in
+    zaxon-*) has "$c" "$(val CONTAINERS)" || zaxon_note "container '$c' is not running" ;;
+    *)       has "$c" "$(val CONTAINERS)" || { note "container '$c' is not running"; fail=1; } ;;
+  esac
 done
+mcp_server="$(val MCP_SERVER)"
+[ -n "$mcp_server" ] || zaxon_note "zaxon MCP returned no serverInfo -- the socket is open but the relay is not answering"
 [ "$(val DOCKER)" = "active" ] || { note "dockerd is not active -- every containerised service on this host is down"; fail=1; }
 
-# THE CHECK THAT WOULD HAVE CAUGHT THE TEN DAYS. dexter's distro and VMs are
-# started from the Windows per-user Startup folder, i.e. at LOGIN. If Windows
-# has booted much more recently than the Ubuntu distro has been up, then the
-# machine came back and nobody logged in, and everything above is down for a
-# reason no amount of service configuration will fix.
+# THE CHECK THAT WOULD HAVE CAUGHT THE TEN DAYS: Windows booted long before the
+# distro came up means the machine came back and nobody logged in, and no amount
+# of service configuration fixes that.
 winboot="$(val WINBOOT)"; up_s="$(val UPTIME_S)"
 if [ -n "$winboot" ] && [ -n "$up_s" ]; then
   win_epoch="$(date -u -d "$winboot" +%s 2>/dev/null)"
@@ -100,9 +108,14 @@ if [ -n "$winboot" ] && [ -n "$up_s" ]; then
   fi
 fi
 
+# zaxon must work without monkey: one exit code cannot say which half is dark.
+zaxon_status="$([ "$zaxon_fail" = 1 ] && echo DOWN || echo OK)"
+vm_status="$([ "$vm_fail" = 1 ] && echo DOWN || echo OK)"
+
 if [ "$JSON" = 1 ]; then
-  printf '{"host":"%s","status":"%s","distros":"%s","vms":"%s","docker":"%s","findings":[' \
+  printf '{"host":"%s","status":"%s","zaxon":"%s","selfdev_vm":"%s","mcp_server":"%s","distros":"%s","vms":"%s","docker":"%s","findings":[' \
     "$HOST" "$([ "$fail" = 1 ] && echo DOWN || echo OK)" \
+    "$zaxon_status" "$vm_status" "$mcp_server" \
     "$(val DISTROS)" "$(val VMS)" "$(val DOCKER)"
   for i in "${!findings[@]}"; do
     [ "$i" -gt 0 ] && printf ','
@@ -110,6 +123,8 @@ if [ "$JSON" = 1 ]; then
   done
   printf ']}\n'
 else
+  printf 'ZAXON (human channel): %s%s\n' "$zaxon_status" "${mcp_server:+ -- serverInfo $mcp_server}"
+  printf 'MONKEY (self-dev VM): %s\n' "$vm_status"
   if [ "${#findings[@]}" -eq 0 ]; then
     echo "OK -- distros: $(val DISTROS) vms: $(val VMS) docker: $(val DOCKER)"
   else

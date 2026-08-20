@@ -1,20 +1,15 @@
 #!/usr/bin/env bash
-# dexter-service-deploy.sh -- ship a service from this repo to dexter's /srv.
+# dexter-service-deploy.sh -- ship a service from its owning repo to dexter's /srv.
 #
-# THE CHANNEL THIS IS HALF OF. Zach, 2026-08-14: "docker containers are the
-# consumables produced by dev agents." Commands already have a channel -- a
-# project declares a verb on its `bashified` branch, the nightly build cuts it,
-# and every account adopts it (vault:realisateur/VERB-DISTRIBUTION.md). Services had none: they
-# were hand-installed into whatever userland their author was sitting in, which
-# is how zaxon ended up in an undocumented WSL distro and stayed dead for ten
-# days. This is the service half: repo -> /srv/<name> -> compose up.
+# Commands have a channel (a verb on `bashified` -- vault:realisateur/VERB-DISTRIBUTION.md).
+# Services had none, which is how zaxon ended up in an undocumented WSL distro.
 #
 #   bin/dexter-service-deploy.sh <name>            # push + up -d
 #   bin/dexter-service-deploy.sh <name> --dry-run  # show what would move
 #
-# Source of truth is provision/dexter/<name>/ in the OWNING project's repo. /srv/<name>/data on
-# dexter is service state and is NEVER overwritten from here -- it is the one
-# thing the repo does not own.
+# Source of truth is provision/dexter/<name>/ in the OWNING project's repo, read
+# live from GitHub -- dexter holds no clones. /srv/<name>/data on dexter is
+# service state and is NEVER overwritten from here.
 set -euo pipefail
 
 CLI_NAME="$(basename "$0")"
@@ -25,15 +20,15 @@ DRY=0
 [ "${2:-}" = "--dry-run" ] && DRY=1
 
 die() { echo "$CLI_NAME: $*" >&2; exit 1; }
+# shellcheck source=bin/lib/ownership-set.sh
+. "$HERE/bin/lib/ownership-set.sh"
 
 [ -n "$NAME" ] || die "usage: $CLI_NAME <service-name> [--dry-run]
 services visible from here: $(find "$HERE/provision/dexter" "$HOME"/Documents/Projects/*/provision/dexter -mindepth 1 -maxdepth 1 -type d -printf '%f ' 2>/dev/null)"
 
 # WHERE A SERVICE COMES FROM. The container channel is realisateur's ROAD; the
-# freight belongs to whichever project owns the service (bin/lib/ownership-set.sh
-# has the ledger). zaxon is crt's, so its Dockerfile and compose.yaml live in
-# hf7y/crt -- not here. This searches this repo first, then sibling checkouts,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+# freight belongs to whichever project owns the service. A checkout is used when
+# one is here but is never required: dexter has none, so the fallback is GitHub.
 SEARCH=""
 if [ -n "${DEXTER_SERVICE_PATH:-}" ]; then
   IFS=: read -ra _roots <<< "$DEXTER_SERVICE_PATH"
@@ -45,16 +40,45 @@ for d in "$HOME"/Documents/Projects/*/provision/dexter/"$NAME"; do
 done
 SRC=""
 for d in $SEARCH; do [ -d "$d" ] && { SRC="$d"; break; }; done
-[ -n "$SRC" ] || die "no such service: '$NAME' is not in this repo's provision/dexter/,
-  nor in any sibling checkout under ~/Documents/Projects/*/provision/dexter/.
-  If the owning project is not cloned here, clone it -- a service deploys from
-  its owner's repo, not from a copy parked in this one."
+
+# WHO OWNS WHICH SERVICE, without a map in this file. The ledger names the
+# projects that exist (zaxon is crt's); each is asked whether its tree carries
+# provision/dexter/<name>/, and the first that does is the source. A tree that
+# does not READ is blind, never absence, so it exits 6 rather than "no such
+# service".
+OWNER="${DEXTER_OWNER:-hf7y}"
+if [ -z "$SRC" ]; then
+  blind=""
+  STAGE="$(mktemp -d)"; trap 'rm -rf "$STAGE"' EXIT
+  for repo in realisateur $(printf '%s\n' "$OWN_RECEIVERS" | awk '/exists/{print $1}'); do
+    tree="$(gh api "repos/$OWNER/$repo/git/trees/HEAD?recursive=1" -q '.tree[] | "\(.mode) \(.path)"' 2>/dev/null)" || tree=""
+    [ -n "$tree" ] || { blind="$blind $repo"; continue; }
+    files="$(printf '%s\n' "$tree" | awk -v p="provision/dexter/$NAME/" '$1 != "040000" && index($2, p) == 1')"
+    [ -n "$files" ] || continue
+    while read -r mode path; do
+      rel="${path#provision/dexter/$NAME/}"
+      mkdir -p "$STAGE/$(dirname "$rel")"
+      b64="$(gh api "repos/$OWNER/$repo/contents/$path?ref=HEAD" -q .content 2>/dev/null)" \
+        || { echo "$CLI_NAME: BLIND -- $OWNER/$repo:$path did not read. An unreadable source is not an empty one." >&2; exit 6; }
+      printf '%s' "$b64" | base64 -d > "$STAGE/$rel"
+      [ "$mode" = "100755" ] && chmod +x "$STAGE/$rel" || true
+    done <<< "$files"
+    SRC="$STAGE"; break
+  done
+  if [ -z "$SRC" ] && [ -n "$blind" ]; then
+    echo "$CLI_NAME: BLIND -- could not read the tree of:$blind" >&2
+    echo "  '$NAME' may well exist in one of them. Refusing to call an unreadable" >&2
+    echo "  estate an empty one. Check \`gh auth status\` and re-run." >&2
+    exit 6
+  fi
+fi
+[ -n "$SRC" ] || die "no such service: '$NAME' is not in provision/dexter/ of this
+  repo, of any sibling checkout, nor of any project the ownership ledger names."
 [ -f "$SRC/compose.yaml" ] || die "$NAME has no compose.yaml. A service that cannot be composed is not deployable from here."
 
 # --- THE ONE-OWNER CHECK ----------------------------------------------------
 # zaxon's data/ holds a WhatsApp linked-device session. Two processes holding
 # it means WhatsApp logs the link out, and recovering costs a QR scan on Zach's
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$NAME" = "zaxon" ]; then
   running="$(ssh -n "$HOST" 'sudo -n systemctl restart systemd-binfmt 2>/dev/null; cd /mnt/c && /mnt/c/Windows/System32/wsl.exe -l -q --running 2>/dev/null | tr -d "\0\r"' || true)"
   case "$running" in
@@ -65,11 +89,9 @@ if [ "$NAME" = "zaxon" ]; then
   esac
 fi
 
-# WHAT THE REPO DOES NOT OWN. `data/` is always service state. A service may
-# declare more in `.deploykeep` -- zaxon's uv interpreter, for instance, is 97M
-# lifted off the old host and belongs to no repo. Without this, --delete-after
-# removes it and the service crash-loops on a half-present runtime. The list
-# lives WITH the service so this script needs no per-service special case.
+# WHAT THE REPO DOES NOT OWN. `data/` is always service state; a service may
+# declare more in `.deploykeep` (zaxon's 97M uv interpreter belongs to no repo).
+# Without this, --delete-after removes it and the service crash-loops.
 KEEP="--exclude data"
 if [ -f "$SRC/.deploykeep" ]; then
   while IFS= read -r line; do
@@ -85,15 +107,13 @@ if [ "$DRY" = 1 ]; then
   exit 0
 fi
 
-# /srv is root-owned; make the directory once, owned by the login user, so the
-# push itself needs no privilege.
+# /srv is root-owned; make the dir once, owned by the login user, so the push needs no privilege.
 ssh -n "$HOST" "sudo -n mkdir -p /srv/$NAME && sudo -n chown \$(id -u):\$(id -g) /srv/$NAME"
 # shellcheck disable=SC2086  # KEEP is a built argument list, intentionally split
 rsync -a $KEEP --delete-after "$SRC/" "$HOST:/srv/$NAME/"
 
-# `docker compose up -d --build`: build is idempotent and cheap when nothing
-# changed, and it means a Dockerfile edit in this repo actually reaches the
-# running container instead of silently not.
+# --build is idempotent and cheap when nothing changed, and it means a
+# Dockerfile edit actually reaches the running container instead of silently not.
 ssh -n "$HOST" "cd /srv/$NAME && sudo -n docker compose up -d --build" 2>&1 | tail -15
 ssh -n "$HOST" "cd /srv/$NAME && sudo -n docker compose ps"
 

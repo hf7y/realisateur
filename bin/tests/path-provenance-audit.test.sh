@@ -14,7 +14,6 @@ mkdir -p "$TMP/stub" "$TMP/stub-noget"
 # A gh that answers, deterministically, "the tracker has no open issues". The
 # tracker probe is not what these cases are about, and a gh that FAILS would
 # make every case BLIND -- which the guard correctly refuses to grade as
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 printf '#!/bin/sh\nprintf "[]"\n' > "$TMP/stub/gh"
 printf '#!/bin/sh\nexit 1\n'      > "$TMP/stub/crontab"
 printf '#!/bin/sh\nexit 1\n'      > "$TMP/stub-noget/gh"
@@ -273,6 +272,31 @@ run --strict
 is "H1 --strict fails while the vision is unmet" "$RC" 3
 run --not-a-real-flag
 is "H2 an unknown flag is a usage error" "$RC" 2
+
+echo
+echo "== I. --prune REMOVES ONLY WHAT IS STILL AN ORPHAN =="
+newhome
+mkshim "$FH/.local/bin/gone-src" realisateur "$FH/Documents/Projects/someproj/bin/deleted.sh"
+mkshim "$FH/.local/bin/live-src" realisateur "$FH/Documents/Projects/someproj/bin/real.sh"
+printf '#!/bin/sh\n' > "$FH/Documents/Projects/someproj/bin/real.sh"
+chmod +x "$FH/Documents/Projects/someproj/bin/real.sh"
+ln -sfn "$FH/nowhere" "$FH/.local/bin/dangling"
+
+run --prune
+is  "I1 a preview exits 0" "$RC" 0
+case "$OUT" in *"would   remove"*) ok "I2 it names what would go" ;; *) bad "I2 it names what would go" "$OUT" ;; esac
+case "$OUT" in *gone-src*) ok "I3 the shim whose source is deleted is named" ;; *) bad "I3 the shim whose source is deleted is named" "$OUT" ;; esac
+case "$OUT" in *live-src*) bad "I4 a shim with a live source is untouched" "$OUT" ;; *) ok "I4 a shim with a live source is untouched" ;; esac
+if [ -f "$FH/.local/bin/gone-src" ]; then ok "I5 the preview wrote nothing"; else bad "I5 the preview wrote nothing" "it removed the file"; fi
+
+run --prune --apply
+is "I6 --apply exits 0" "$RC" 0
+if [ -e "$FH/.local/bin/gone-src" ]; then bad "I7 the orphan is gone" "still there"; else ok "I7 the orphan is gone"; fi
+if [ -e "$FH/.local/bin/dangling" ]; then bad "I8 the dangling symlink is gone" "still there"; else ok "I8 the dangling symlink is gone"; fi
+if [ -f "$FH/.local/bin/live-src" ]; then ok "I9 the live shim survived"; else bad "I9 the live shim survived" "it was removed"; fi
+
+run
+case "$OUT" in *ORPHAN*) bad "I10 the audit no longer reports an orphan" "$OUT" ;; *) ok "I10 the audit no longer reports an orphan" ;; esac
 
 echo
 echo "path-provenance-audit.test: $pass ok, $fail FAIL"

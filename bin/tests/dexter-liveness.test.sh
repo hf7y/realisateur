@@ -31,8 +31,9 @@ healthy() {
   cat > "$STUB_REPLY" <<EOF
 UPTIME_S=100000
 DOCKER=active
-CONTAINERS=zaxon-gateway,
+CONTAINERS=zaxon-gateway,zaxon-relay,zaxon-watcher,
 PORTS=22,2223,8643,
+MCP_SERVER=hermes
 DISTROS=Ubuntu,
 VMS=monkey,
 WINBOOT=
@@ -63,6 +64,30 @@ is "exit 5 when monkey is not running" "$rc" "5"
 has "spells out the consequence" "$out" "self-dev dispatch is down"
 
 echo
+echo "== 3b. ZAXON IS REPORTED APART FROM MONKEY ==============================="
+# Zach's requirement: zaxon must work without monkey. Both verdicts are exit 5,
+# so the OUTPUT is the only place they can be told apart.
+healthy
+sed -i 's/^VMS=.*/VMS=/' "$STUB_REPLY"
+out="$(bash "$PROBE" 2>&1)"
+has "monkey down is named as the VM" "$out" "MONKEY (self-dev VM): DOWN"
+has "and the human channel is still called OK" "$out" "ZAXON (human channel): OK"
+
+healthy
+sed -i 's/^MCP_SERVER=.*//' "$STUB_REPLY"          # socket open, relay mute
+out="$(bash "$PROBE" 2>&1)"; rc=$?
+is "exit 5 when the MCP layer does not answer" "$rc" "5"
+has "an open socket is not liveness" "$out" "no serverInfo"
+has "zaxon is DOWN" "$out" "ZAXON (human channel): DOWN"
+has "while the VM is not blamed for it" "$out" "MONKEY (self-dev VM): OK"
+
+healthy
+sed -i 's/^CONTAINERS=.*/CONTAINERS=zaxon-gateway,zaxon-watcher,/' "$STUB_REPLY"
+out="$(bash "$PROBE" 2>&1)"; rc=$?
+is "exit 5 when a declared container is gone" "$rc" "5"
+has "names it" "$out" "zaxon-relay"
+
+echo
 echo "== 4. BLIND IS NOT 'HEALTHY', AND NOT 'DOWN' ============================="
 rm -f "$STUB_REPLY"                                     # stub ssh exits 255
 out="$(bash "$PROBE" 2>&1)"; rc=$?
@@ -91,6 +116,13 @@ if printf '%s' "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys
   ok "--json emits one valid object with a status"
 else
   bad "--json did not parse as JSON with a status: $out"
+fi
+healthy
+out="$(bash "$PROBE" --json 2>&1)"
+if printf '%s' "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d["zaxon"]=="OK" and d["selfdev_vm"]=="OK" and d["mcp_server"]=="hermes" else 1)' 2>/dev/null; then
+  ok "--json carries the two verdicts separately"
+else
+  bad "--json lacks independent zaxon/selfdev_vm verdicts: $out"
 fi
 rm -f "$STUB_REPLY"
 out="$(bash "$PROBE" --json 2>&1)"

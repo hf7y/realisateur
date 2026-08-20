@@ -15,7 +15,6 @@
 # next run of each. Removing today's instances is not the fix; the fix is that
 # a new one cannot be added without this going red.
 # The three, live on 2026-08-11:
-#   bashify/bashify.sh            a worktree per `bashify emit`, never removed
 #   bin/land-selfdev.sh           $PROJECTS/senechal-verbs, from `bashified`
 #   (scheduler) bin/scheduler-dev-cycle.sh, bin/overnight-dev.sh
 # It also cannot ROT: check B below fails if an allowlisted path has stopped
@@ -63,8 +62,6 @@ if [ -n "${NO_WORKTREE_ALLOW_FILE:-}" ]; then
   done < "$NO_WORKTREE_ALLOW_FILE"
 elif git ls-files --error-unmatch "$SELF_REL" >/dev/null 2>&1; then
   ALLOW_APPLIES=1
-  allow bashify/lib/sync-runtime.sh \
-  "creates \$PROJECTS/<project>-verbs under --apply when no worktree already has the branch's bashified checked out (#158) -- a human review copy for the write sync performs, same shape as bashify.sh's per-emit worktree, and never created during preflight (no --apply)"
 fi
 
 # Excluded prefixes -- see the header for why each.
@@ -146,6 +143,53 @@ else
       echo "  allowed $p -- ${ALLOW_WHY[$i]}"
     fi
   done
+fi
+
+echo
+echo "== C. NO WORKTREE IS ACTUALLY REGISTERED NOW =="
+
+# #429: reads git's actual registrations; same rot discipline as check B.
+WT_ALLOW_PATTERNS=()
+WT_ALLOW_WHY=()
+wt_allow() { WT_ALLOW_PATTERNS+=("$1"); WT_ALLOW_WHY+=("$2"); }
+if [ -n "${NO_WORKTREE_WT_ALLOW_FILE:-}" ]; then
+  while IFS=$'\t' read -r _p _w; do
+    [ -n "${_p:-}" ] || continue
+    case "$_p" in \#*) continue ;; esac
+    wt_allow "$_p" "${_w:-no reason recorded}"
+  done < "$NO_WORKTREE_WT_ALLOW_FILE"
+fi
+
+mapfile -t STRAY_WT < <(
+  git -C "$ROOT" worktree list --porcelain 2>/dev/null \
+    | awk -v m="$ROOT" '/^worktree /{p=substr($0,10); if (p != m) print p}'
+)
+
+wt_matched=()
+for wt in ${STRAY_WT[@]+"${STRAY_WT[@]}"}; do
+  hit=0
+  for i in "${!WT_ALLOW_PATTERNS[@]}"; do
+    # shellcheck disable=SC2254 # deliberate glob: the pattern IS the glob
+    case "$wt" in
+      ${WT_ALLOW_PATTERNS[$i]}) hit=1; wt_matched[$i]=1 ;;
+    esac
+  done
+  if [ "$hit" -eq 1 ]; then continue; fi
+  echo "FLAG [stray worktree] $wt is a registered worktree outside the main checkout"
+  flags=$((flags + 1))
+done
+
+for i in "${!WT_ALLOW_PATTERNS[@]}"; do
+  if [ "${wt_matched[$i]:-0}" -ne 1 ]; then
+    echo "FLAG [stale worktree allowlist] ${WT_ALLOW_PATTERNS[$i]} is allowlisted but no worktree matches it -- delete the entry"
+    flags=$((flags + 1))
+  else
+    echo "  allowed ${WT_ALLOW_PATTERNS[$i]} -- ${WT_ALLOW_WHY[$i]}"
+  fi
+done
+
+if [ "${#STRAY_WT[@]}" -eq 0 ] && [ "${#WT_ALLOW_PATTERNS[@]}" -eq 0 ]; then
+  echo "  0 worktree(s) registered under $ROOT besides the main checkout"
 fi
 
 echo

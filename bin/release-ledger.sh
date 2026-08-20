@@ -68,7 +68,6 @@ done
 # Two input adapters, ONE set of grading rules. A separate implementation for
 # the live path would be a second answer to "is the channel healthy", and the
 # live path is the one nobody exercises by hand.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ -n "$URL" ]; then
   [ -z "$LEDGER" ] || { printf '%s: --url and --ledger are exclusive\n' "$CLI_NAME" >&2; exit 2; }
   _tmpdir="$(mktemp -d)"; trap 'rm -rf "$_tmpdir"' EXIT

@@ -6,20 +6,11 @@
 # GUARD-TEST: bin/tests/hardcoded-home-lint.test.sh
 # GATE: default
 #
-# THE FAILURE THIS EXISTS FOR. `bashify/lib/coin.sh` carried
-# `SCHED="/home/zach/Documents/Projects/scheduler"` with no override. On every
-# account except zach that directory does not exist, so `coin` found no
-# registry and reported "no registered project named X" -- exit 4, GAP. It
-# read as "you did not register it" instead of "I looked in another user's
-# home". The account looked empty rather than misconfigured, and the one exit
-# code that exists to say I-cannot-see was bypassed by the case it was written
-# for. This covers the uid 3000-3099 accounts the monkey dispatch runs under,
-# where $HOME is /home/<project>.
-#
-# It survived because `bin/tests/verb-set.test.sh` was never wired to a
-# workflow, so it only ever ran on the one machine where the path existed.
-# Three more instances were found the same night in bashify/lib/{amend,
-# branch-purge,closure}.sh. A grep is cheaper than a fourth discovery.
+# THE FAILURE THIS EXISTS FOR. An absolute path into a named user's home reads
+# as "you did not register it" on every other account, instead of "I looked in
+# another user's home" -- the account looks empty rather than misconfigured,
+# and the exit code that exists to say I-cannot-see is bypassed. Dispatch runs
+# under uid 3000-3099, where $HOME is /home/<project>.
 #
 # COMMENTS ARE EXEMPT, deliberately. Every fix for this defect documents the
 # old path in a comment above the new line, and flagging those would make the
@@ -42,7 +33,6 @@ ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 # WHAT COUNTS AS EXECUTABLE CODE IS THE SHEBANG, NOT THE FILENAME.
 #
 # This selected `'*.sh' 'bin/*'` until 2026-08-07, and that missed an entire
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 files=()
 while IFS= read -r f; do
   case "$f" in archive/*) continue ;; esac

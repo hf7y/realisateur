@@ -59,7 +59,6 @@ done
 # WHERE THE CREDENTIAL LIVES is answered in ONE place for every reader --
 # bin/lib/selfdev-app-key.sh -- and not re-spelled here. Until 2026-08-12 this
 # line said `$HOME/.config/selfdev/gh-app.conf`, i.e. one copy of one key per
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 _sd_lib="$(dirname "${BASH_SOURCE[0]}")/lib/selfdev-app-key.sh"
 [ -r "$_sd_lib" ] || _sd_lib="$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh"
 if [ -r "$_sd_lib" ]; then
@@ -148,7 +147,6 @@ installation_id() {
 # --- the token, with a cache -------------------------------------------------
 # Cached because git invokes a credential helper on EVERY remote operation, and
 # minting per operation would turn one push into three round trips and three
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mint_token() {
   local jwt inst body cache now exp
   cache="$CACHE_DIR/$(printf '%s|%s|%s' "$APP_ID" "$OWNER" "$REPOS" | openssl dgst -sha256 -hex | awk '{print $NF}').tok"
@@ -182,7 +180,6 @@ mint_token() {
 # ============================================================================
 # AUTHOR AND PUSHER ARE TWO LAYERS, AND --wire USED TO CONFLATE THEM
 # ============================================================================
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SELFDEV_EMAIL_DOMAIN="${SELFDEV_EMAIL_DOMAIN:-selfdev.invalid}"
 
 account_identity() {

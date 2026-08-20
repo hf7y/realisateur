@@ -62,33 +62,25 @@ view every image artifact.
 An empty inbox is now the **normal** state, not an exception. Intake is
 bursty; most nights there is nothing dropped.
 
-**The failure mode this section exists to prevent** (observed 2026-07-26,
-seven batch runs in one day): with no artifact to work on, the pass goes
-looking for work in the only place left -- realisateur itself -- and builds
-another lint, guard or record *about its own batch process*. Each one is real,
-tested, committed code, which is what makes it hard to see. That day produced
-five new scripts for realisateur's own workflow and **zero** commits into any
-of the twelve scaffolded projects.
+**The failure mode this prevents:** with no artifact, the pass builds another
+lint or guard *about its own batch process*. Real, tested, committed code,
+which is what makes it hard to see. Seven runs on 2026-07-26 produced five such
+scripts and **zero** commits into any of the twelve scaffolded projects.
 
 So when there is no artifact to process, the job is **stewardship of the
 other projects**, and the output is *routing*, not building:
 
-- Pick the **one** most striking row — a dark high-weight project, a
-  reservoir stranded behind a closed valve, a live weight-1 project whose
-  oldest open idea is weeks old.
-- **File it as an issue.** If it needs a human decision (re-enable?
-  reweight? park the stranded ideas?), the issue IS the question.
-  **Re-enabling a project or changing a weight is not this pass's call** — those are
-  stated decisions, and a batch run making them silently is the reorder
-  `/ideate` §4.5 forbids.
-- Then **stop**. A steward pass that surfaces one thing clearly and
-  builds nothing is a complete, successful run. Say so in the report.
+- Pick the **one** most striking row — a dark high-weight project, a live
+  weight-1 project whose oldest open idea is weeks old.
+- **File it as an issue**, and if it needs a human decision the issue IS the
+  question. **Re-enabling a project or changing a weight is not this pass's
+  call** — a batch run making one silently is the reorder `/ideate` §4.5 forbids.
+- Then **stop**. A steward pass that surfaces one thing and builds nothing is a
+  complete, successful run. Say so in the report.
 
 **Explicitly out of scope on an empty-inbox night:** authoring a new lint,
-survey, guard, or command for realisateur itself. If the pass believes one
-is needed, that belief is the output — file it as an issue for a pass with
-a human present, and do not build it tonight. Realisateur already has five surveys; the sixth needs a stated
-reason from outside this loop.
+survey, guard, or command for realisateur itself. If the pass believes one is
+needed, that belief is the output — file it as an issue, do not build it.
 
 ## 3. Infer and wire up, one artifact at a time
 
@@ -109,30 +101,22 @@ For each unarchived artifact:
   ambiguous word, an image with no clear direction), leave it in the
   inbox rather than guessing wildly -- but a genuine partial idea should
   still get a best-effort scaffold, not be skipped for being imperfect.
-- **First check whether the artifact is actually about realisateur's own
-  process/workflow, not a new sibling project** -- e.g. "look into how
-  the scheduler's idea logic could unite with my habit of dropping notes
-  here" is feedback about this repo, not raw material for a new
-  `~/Documents/Projects/<name>/`. Telltale: it names realisateur, the
-  scheduler, or "this folder/workflow" itself as the subject. For these,
-  don't scaffold a project -- research the answer, record the decision
-  where the mechanism it governs lives (or `README.md` if it changes the
-  documented process), then archive the source artifact same as any other
-  processed idea.
+- **First check whether the artifact is about realisateur's own
+  process/workflow, not a new sibling project.** Telltale: it names
+  realisateur, the scheduler, or "this folder/workflow" as the subject. For
+  these, don't scaffold -- research the answer, record the decision where the
+  mechanism it governs lives, then archive the artifact as usual.
 - Check whether a project for this idea already exists under
   `~/Documents/Projects/` before creating a new one -- an artifact might
   be an addition to something already scaffolded, not a brand-new project.
 - **If it's an addition to an existing project, apply park-by-default
-  triage** (see `vault:realisateur/STABILITY-MILESTONES.md`): is this idea required to reach
-  that project's *current* stability milestone (its open `milestone`-
-  labelled issue)? If **yes**, it's `active` -- build/queue it normally. If
-  **no**, **park it**: `defere '<one line>' --project <name>` to
-  file it as a `deferred` issue, and do NOT build it tonight. Parking is
-  the default for anything beyond the current bar --
-  building past the milestone unprompted is the failure mode this convention
-  exists to prevent. A brand-new project is exempt: the inbox idea *is* its
-  v1, so scaffold it and set its first `## Stability milestone` as part of
-  the scaffold (below).
+  triage** (see `vault:realisateur/STABILITY-MILESTONES.md`): is this idea
+  required to reach that project's *current* stability milestone (its open
+  `milestone`-labelled issue)? If **yes**, build/queue it normally. If **no**,
+  **park it**: `defere '<one line>' --project <name>`, and do NOT build it
+  tonight. Building past the milestone unprompted is the failure mode this
+  convention exists to prevent. A brand-new project is exempt: the inbox idea
+  *is* its v1.
 - For a genuinely new idea: create `~/Documents/Projects/<name>/`, `git
   init` it, write a minimal README describing the inferred idea and
   initial scaffolding (actual code/structure appropriate to what was
@@ -144,12 +128,10 @@ For each unarchived artifact:
 - **Point every new project at `discipline`; do NOT copy the checklist in.**
   Its root `CLAUDE.md` gets a one-line pointer to the command. Copying the
   block is what realisateur#263 retired.
-  - Write a baseline `.gitignore` that blocks secrets and build debris
-    before the first `git add`: at minimum
-    `*.env`, `.env`, `secrets/`, `*secret*`, `*cred*`, `*.pem`, `*.key`,
-    `id_rsa*`, plus build/debris `*.img`, `*.img.xz`, `*.iso`, `*.efi`,
-    `*.dmg`, `*.log`, `__pycache__/`, `*.pyc`, `.DS_Store`. Real secrets
-    go in an untracked `.env`/`secrets/`, never a tracked file.
+  - Write a baseline `.gitignore` before the first `git add`: `*.env`, `.env`,
+    `secrets/`, `*secret*`, `*cred*`, `*.pem`, `*.key`, `id_rsa*`, `*.img`,
+    `*.img.xz`, `*.iso`, `*.efi`, `*.dmg`, `*.log`, `__pycache__/`, `*.pyc`,
+    `.DS_Store`. Real secrets go in an untracked `.env`/`secrets/`.
   - Prove it took by RUNNING `discipline` from the new project and seeing the
     full checklist, not by trusting that a file was written.
 - If the new project is the kind of thing that benefits from unattended
@@ -177,9 +159,9 @@ landed, so it needs no clone of that repo and no push access to it.
 
 ## 4. Commit as you go
 
-Commit realisateur's own repo (inbox archival, any scaffolding that lives
-here) as each artifact is processed, not all in one giant commit at the
-end. Each new project gets its own first commit(s) in its own repo.
+Commit realisateur's own repo as each artifact is processed, not all in one
+giant commit at the end. Each new project gets its own first commit in its own
+repo.
 
 ## 5. Flag what you built, and anything needing the user's own judgment
 
@@ -188,18 +170,16 @@ One issue per item, on `hf7y/realisateur`:
 - **Every new project scaffolded tonight** -- what artifact it came from,
   what was inferred, where it lives, whether it got a scheduler
   registration.
-- **A genuine judgment call needing the user's own decision** -- not
-  "should I build this" (default: yes), but something actually
-  ambiguous: two very different readings of the same artifact, or a case
-  where a GitHub remote (real credentials) seemed like it might genuinely
-  be warranted instead of a local bare one.
+- **A genuine judgment call needing the user's own decision** -- not "should I
+  build this" (default: yes), but something actually ambiguous: two very
+  different readings of one artifact. File it with `DECISION:` as line 1, per
+  `etiquette`, so it lands in the needs-human queue rather than beside it.
 
 ## 6. Report in the run, not in a file
 
 Do NOT write a dated report file. scheduler's standing rule 5 bans it --
 *"NO NEW MARKDOWN FILES. Do not write a handoff, session record, design note,
-sprint summary, or retrospective. Prose is not a deliverable."* This command
-told you to write one until 2026-08-17.
+sprint summary, or retrospective. Prose is not a deliverable."*
 
 End the run by saying, in the run's own output: which artifacts were
 processed and what was inferred, which projects were scaffolded and whether
