@@ -3,19 +3,6 @@
 # registered project, so that project's unattended jobs can defer instead of
 # editing files out from under a live session.
 #
-# TRAPS (the rest of this header is in the vault):
-# EIGHT DAYS OF NO-OP, 2026-08-03 -> 2026-08-11 (#73). resolve_project read
-# the conf with `grep -oP`, which does not expand shell variables, so `repo`
-# was the LITERAL `$HOME/Documents/Projects/<name>` and the `case` below could
-# not match any real cwd. Dated precisely because the CONFS moved, not the
-# code: scheduler 8bca07b (2026-08-03 12:23) rewrote nine confs from
-# `/home/zach/...` to `"$HOME/..."`, and the last marker this script ever
-# wrote is realisateur.interactive at 2026-08-03T10:45 -- 98 minutes earlier.
-# Cost: the marker's consumer, scheduler lib/sweep-loop-common.sh, defers a
-# project's unattended run when a human is in the repo, and no marker reads as
-# no human. Eight days of dispatch with that deferral off, in the direction
-# this file's own header calls "the dangerous one" -- silently, because "not a
-# registered project" is ALSO the normal answer. Hence the counters below.
 #
 # Usage (from hooks; reads the hook's JSON on stdin):
 

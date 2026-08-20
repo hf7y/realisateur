@@ -13,10 +13,6 @@
 #     accumulated 42 issues in one day and shipped one `git merge --ff-only`.
 #   - Prose describing a change is not the change. So the description IS the
 #     script, and if the script is wrong the description cannot be right.
-# On 2026-08-06, 26 pull requests merged and five of six dispatchers ran older
-# code for a day; one was frozen for eighteen hours because the engine wrote
-# into its own source tree and then refused to pull past its own writing. Every
-# individual piece was careful. Nothing owned the step after "merged".
 #
 # usage:  pivot.sh status | install | uninstall [MOVE...]
 # exit:   0 done   1 a MOVE failed   2 usage   3 BLIND (could not determine

@@ -3,11 +3,6 @@
 # channel, and the alarm that fires when the clock stops.
 #
 # TRAPS (the rest of this header is in the vault):
-# Probed 2026-08-07: builds had been cut nightly since 2026-08-05 and
-# `~/.local/share/verb-builds/` did not exist on a single one of the ten
-# accounts on `monkey`. Zero consumers. Meanwhile every account's realisateur
-# clone sat 15 commits behind `origin/main` and ten ecosystem commands on
-# every account's PATH exec'd into it, successfully and silently.
 # OPERATION is fail-open: an unreachable release channel does NOT stop the
 # account. It keeps running the build it already has, which was fully verified
 # when it was installed, and this tick exits 3 BLIND and says so. BUILD-
