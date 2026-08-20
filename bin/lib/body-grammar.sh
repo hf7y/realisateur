@@ -4,8 +4,7 @@
 # Pure bash: gh-sign runs under cron's PATH, where sed and grep were not found.
 #
 #   UNDECLARED          line 1 is neither DECISION: nor NO-DECISION:
-#   NO-DECIDER          DECISION: named no @handle (NO-DECISION: is exempt --
-#                       it asserts there is nobody to decide; #419)
+#   NO-DECIDER          DECISION: named no @handle. NO-DECISION: is exempt (#419)
 #   MISPLACED-DECISION  a declaration below line 1
 #   UNLEDGERED          no <!-- DEFERRED --> block
 #   MULTI-LEDGER        more than one
@@ -13,10 +12,8 @@
 #   EMPTY-LEDGER        no entries; write "- none"
 #   NO-DESTINATION      an entry naming no issue and no URL
 #
-# NO-OWNER: is not a destination. #327 deferred two things to it and one to
-# hf7y/vim-arcade#143; the issue is open and findable, and the two are lost --
-# 0 issues mention gh-sign anywhere, /usr/local/bin/gh does not exist, so #327
-# merged as a no-op. `defere` files one in a command; cite the number.
+# NO-OWNER: is not a destination -- #327 deferred two things to it and both
+# are lost. `defere` files one in a command; cite the number.
 
 GRAMMAR_DECIDER_RE='@[A-Za-z0-9][-A-Za-z0-9_/]*'
 

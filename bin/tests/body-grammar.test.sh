@@ -62,7 +62,6 @@ DECISION: buried at line 3
 <!-- /DEFERRED -->')" MISPLACED-DECISION
 eq  'B2 the well-formed body is clean' "$(findings "$GOOD")" 0
 # #419: NO-DECISION asserts there is nobody to decide, so it names no @handle.
-# 140 of the estate's 163 no-decision bodies are written this way.
 eq  'B2a NO-DECISION needs no decider' "$(findings 'NO-DECISION: agent work -- tests green, nothing to weigh
 
 <!-- DEFERRED -->
