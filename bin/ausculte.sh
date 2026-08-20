@@ -40,12 +40,8 @@ want() {
 }
 
 if want channel; then
-  ep=''; for u in http://127.0.0.1:8643/mcp http://100.107.253.56:8643/mcp; do
-    if curl -s -m 8 -o /dev/null -H 'Content-Type: application/json' \
-         -H 'Accept: application/json,text/event-stream' -X POST "$u" \
-         -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ausculte","version":"1"}}}' \
-         2>/dev/null; then ep="$u"; break; fi
-  done
+  . "$HERE/lib/zaxon.sh"
+  ep="$(zaxon_probe ausculte)" || ep=''
   if [ -n "$ep" ]; then record channel OK "zaxon answers at $ep"
   else record channel DOWN 'no zaxon relay answered -- questions cannot reach Zach'; fi
 fi
