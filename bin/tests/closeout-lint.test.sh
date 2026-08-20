@@ -116,8 +116,13 @@ out="$(run oldrepo)"
 hasnt "A5 stale repo not flagged"              "$out" "FLAG ["
 has   "A5 stale repo not even scanned"         "$out" "no registered repo has a commit younger"
 
+# A6: a registered project with no checkout HERE is the clone-free state, not
+# residue -- dev hosts stopped keeping one clone per project. It is a finding
+# only on the host that owns the project, i.e. the one with that account.
 out="$(run ghostrepo)"
-has   "A6 missing repo path flagged"           "$out" "FLAG [missing-repo] ghostrepo"
+hasnt "A6 a missing checkout is not residue on a host that owns no such account" "$out" "FLAG [missing-repo] ghostrepo"
+out="$(ACCOUNT_PROBE=true run ghostrepo)"
+has   "A6 but it IS flagged on the host that owns it" "$out" "FLAG [missing-repo] ghostrepo"
 
 # A7: a repo with no linked worktree emits no worktree line at all.
 hasnt "A7 no worktrees means no BLIND line"    "$out" "BLIND [worktrees]"

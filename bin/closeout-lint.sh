@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # closeout-lint.sh -- the deterministic half of the `/cloture` session-closing
-# rite (design: realisateur .scheduler/FOCUS.md 2026-07-26). Zero AI, writes
+# rite. Zero AI, writes
 # nothing. A and C are offline; B asks GitHub whether this session left an
 # issue or a PR and reports a counted BLIND -- never a FLAG -- when it cannot,
 # and `--repo` skips B so the SubagentStop path stays fully offline. Signals,
@@ -19,10 +19,8 @@
 #
 # --repo audits ONE tree (no positional name reaches a linked worktree): no
 # registry, no age gate, B skipped as a session-wide concern. It is what a
-# SubagentStop hook needs, since a registry scan would block every subagent over
-# some unrelated project. BLIND GATES, exit 6 (Zach, 2026-08-02) -- a domain
-# that existed and was NOT read is not a pass, and 6 is what `garde` and
-# `ausculte` already use; its two-shaped override is at the gate below.
+# SubagentStop hook needs, since a registry scan would block every subagent.
+# BLIND GATES at exit 6: a domain that existed and was NOT read is not a pass.
 #
 # Env overrides (set by bin/tests/closeout-lint.test.sh, not normally): HOURS,
 # SCHED_ROOT, TODAY, GH_BIN (the CLI B asks; the suite stubs it),
@@ -53,6 +51,11 @@ HOURS="${HOURS:-12}"
 TODAY="${TODAY:-$(date +%Y-%m-%d)}"
 SESSION_START="${SESSION_START:-}"
 GH_BIN="${GH_BIN:-gh}"
+# Which host OWNS a project: the one with a UNIX account of that name. A seam,
+# so the suite can drive both sides without inventing accounts.
+ACCOUNT_PROBE="${ACCOUNT_PROBE:-id -u}"
+SCHED_OWNER="${SCHED_OWNER:-hf7y}"
+SCHED_REPO="${SCHED_REPO:-scheduler}"
 
 # Mode flags are not project names -- strip them before building the
 # positional project-filter list (cli_guard validated them but never consumes
@@ -92,7 +95,24 @@ if [ -n "$REPO_ARG" ]; then
   projects+=("$(basename "$REPO_ARG")"); paths+=("$REPO_ARG")
 else
   # --- discover registered projects (same loop as hygiene-lint.sh) ----------
-  for conf in "$SCHED_ROOT"/schedule/*.conf; do
+  # A CHECKOUT WINS WHEN PRESENT; GitHub is the clone-free fallback (#414).
+  # Without it this section is BLIND on any host with no scheduler clone.
+  confs=()
+  if [ -d "$SCHED_ROOT/schedule" ]; then
+    for c in "$SCHED_ROOT"/schedule/*.conf; do [ -f "$c" ] && confs+=("$c"); done
+  else
+    remote_confs="$("$GH_BIN" api "repos/$SCHED_OWNER/$SCHED_REPO/contents/schedule" \
+                      -q '.[].name' 2>/dev/null | grep '\.conf$' || true)"
+    if [ -n "$remote_confs" ]; then
+      tmp_sched="$(mktemp -d)"; trap 'rm -rf "$tmp_sched"' EXIT
+      while read -r rc; do
+        [ -n "$rc" ] || continue
+        "$GH_BIN" api "repos/$SCHED_OWNER/$SCHED_REPO/contents/schedule/$rc" -q .content 2>/dev/null \
+          | base64 -d > "$tmp_sched/$rc" 2>/dev/null && confs+=("$tmp_sched/$rc")
+      done <<< "$remote_confs"
+    fi
+  fi
+  for conf in ${confs+"${confs[@]}"}; do
     [ -f "$conf" ] || continue
     name="$(basename "$conf" .conf)"
     case "$name" in _*) continue ;; esac
@@ -148,10 +168,9 @@ touched_paths=()
 registry_blind=0
 now="$(date +%s)"
 
-# REGISTRY ITSELF UNREADABLE (hf7y/realisateur#232). A full sweep (no --repo,
-# no explicit names) that discovers ZERO projects is ambiguous the same way
-# hygiene-lint.sh's equivalent loop was until 2026-08-07: it might mean "the
-# registry is empty" or it might mean "$SCHED_ROOT/schedule doesn't exist on
+# REGISTRY ITSELF UNREADABLE (hf7y/realisateur#232). A full sweep that
+# discovers ZERO projects is ambiguous: it might mean "the registry is
+# empty" or it might mean "the registry could not be read on
 if [ -z "$REPO_ARG" ] && [ "${#want[@]}" -eq 0 ] && [ "${#projects[@]}" -eq 0 ]; then
   blind=$((blind+1))
   registry_blind=1
@@ -218,7 +237,17 @@ tip_predates_session() { # <repo> <rev> -> 0 if its newest commit is older than 
 i=0
 while [ "$i" -lt "${#projects[@]}" ]; do
   name="${projects[$i]}"; repo="${paths[$i]}"; i=$((i+1))
-  [ -d "$repo" ] || { echo "  FLAG [missing-repo] $name: $repo does not exist"; flags=$((flags+1)); continue; }
+  # A REGISTERED PROJECT WITH NO CHECKOUT HERE IS THE CLONE-FREE STATE, not a
+  # finding: dev hosts stopped keeping one clone per project. It is only a
+  # finding on the host that OWNS the project -- the one with an account of
+  # that name -- where the account's own checkout is where its work lives.
+  if [ ! -d "$repo" ]; then
+    if $ACCOUNT_PROBE "$name" >/dev/null 2>&1; then
+      echo "  FLAG [missing-repo] $name: $repo does not exist on the host that owns $name"
+      flags=$((flags+1))
+    fi
+    continue
+  fi
   git -C "$repo" rev-parse --git-dir >/dev/null 2>&1 || continue
 
   # Linked worktrees are READ, and BEFORE the age gate; both halves measured
@@ -423,19 +452,13 @@ done
 session_wide_sections() {
 echo
 echo "== B. TODAY'S SESSION RECORD (issues/PRs created $TODAY) =="
-# B USED TO READ .scheduler/FOCUS.md, AND DOCTRINE MADE THAT UNSATISFIABLE
-# (#139). It emitted `FLAG [no-record] no FOCUS.md entry dated <today>`, while
-# `/cloture` §3 -- revised 2026-08-10, and the thing that RUNS this script --
-# forbids that row: "Nothing from this session gets appended to
-# .scheduler/FOCUS.md ... as a session-log row." Clearing the FLAG required
-# doing the forbidden thing, every time -- CLAUDE.md's "a mandatory row nobody
-# can satisfy is how a checklist stops being read", a second time. `/cloture`
-# is newer and wins, so B asks what it commits to: did this session leave
-# anything on the REMOTE, over the repos A just found touched (PROSE-REAPING.md
-# §3, "an issue title is a countable unit; a FOCUS.md bullet is not"). REST,
-# NOT SEARCH -- search would be one call rather than one per repo, but its
-# index is eventually consistent and a PR opened ninety seconds ago is exactly
-# what a closing session asks about.
+# B ASKS THE REMOTE, not a file in the tree: did this session leave an issue or
+# a PR over the repos A found touched. A mandatory row nobody can satisfy is
+# how a checklist stops being read (#139).
+#
+# REST, NOT SEARCH -- search is one call instead of one per repo, but its index
+# is eventually consistent and a PR opened ninety seconds ago is exactly what a
+# closing session asks about.
 #
 # IT CAN NEVER FLAG FOR BEING OFFLINE -- no gh, no auth, a timeout, a rate
 # limit, a non-GitHub origin: each leaves the question unanswered, which is a
@@ -499,9 +522,7 @@ fi
 [ -n "$REPO_ARG" ] || session_wide_sections
 
 echo
-# BLIND LEADS. As a trailing clause after the FLAG count it is how "13 linked
-# worktree(s) NOT examined" got skipped on 2026-08-07: one quiet line above
-# twelve loud false FLAGs.
+# BLIND LEADS: as a trailing clause after the FLAG count it gets skipped.
 if [ "$blind" -gt 0 ]; then
   echo "!! BLIND: $blind domain(s) existed and were NOT read. This is NOT a clean"
   echo "!! result -- an unread domain can hold anything, including the stranded"
