@@ -28,7 +28,6 @@
 #   >>> then by this repo's own doctrine it is somebody else's organ, and the
 #   >>> only question left is whose.
 #
-# BELONGS-ELSEWHERE WITHOUT A NAMED RECEIVER IS A COMPLAINT, NOT A FINDING.
 # Every foreign row names a receiver declared in OWN_RECEIVERS.
 #
 # ============================================================================
