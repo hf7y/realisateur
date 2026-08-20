@@ -1,57 +1,28 @@
 #!/usr/bin/env bash
 # enrole-selfdev.sh -- the two steps setup-selfdev-project.sh prints as prose
-# and leaves to a human, done mechanically, idempotently and reversibly.
+# and leaves to a human, done mechanically, idempotently and reversibly:
+# flip the project's row in schedule/_paced.<host>.conf from |0| to |1|, and
+# sync that host's crontab as the project's own account.
 #
-# WHAT WAS ACTUALLY MANUAL. setup-selfdev-project.sh ends by printing:
-#
-#     1. in the scheduler repo, schedule/_paced.<host>.conf: flip <p>'s row
-#        from |0| to |1|, commit, push.
-#     2. as <p> on this host:
-#          cd ~/Documents/Projects/scheduler && git pull --ff-only \
-#            && ./bin/sync-crontab.sh --apply
-#     3. confirm schedule/FREEZE names <p>@<host>
-#
-# Steps 1 and 2 are pure mechanism -- the same edits, in the same order, every
-# time. On 2026-08-12 they were typed by hand for four projects (sequestria,
-# groc-mangr, crt, secretaire) and the typing found four defects that were
-# nothing to do with those projects: two confs with BATCH_JOB_NAME="" (which
-# makes `scheduler-run <p> batch` exit 2), no conf setting CRON_ACCOUNT (that
-# is scheduler#33, four jobs reading 7-12d idle while running daily), briefs
-# under .claude/ where an unattended run cannot write them, and a repo whose
-# default branch was a feature branch (realisateur#39). Every one of those is
-# a precondition a script can check in a second and a human re-derives from
-# scratch each time. That is the case for this file.
-#
-# STEP 3 IS NOT HERE AND WILL NOT BE. schedule/FREEZE is the allowlist, its own
-# header reserves its EXEMPT lines for a human -- "a row added to a rotation by
+# STEP 3 IS NOT HERE AND WILL NOT BE. schedule/FREEZE is the allowlist and its
+# header reserves its EXEMPT lines for a human: "a row added to a rotation by
 # an agent, a merge, or a copied file still dispatches NOTHING until a human
-# adds a line here" -- and an agent that could write it would make the guard
-# decorative. This script deliberately arrives at exactly one outstanding act:
-# one line, added by a person, arms one project.
+# adds a line here". An agent that could write it would make the guard
+# decorative, so this script stops at exactly one outstanding act -- one line,
+# added by a person, arms one project.
 #
-# THE THREE PROPERTIES, and how each is obtained rather than claimed:
+# REVERSIBLE means --retire flips the row back to |0|; it does NOT delete the
+# row. Membership in the rotation is what SUPPRESSES the project's fixed
+# nightly cron line, so deleting a row to "clean up" installs a nightly
+# dispatch the rotation no longer controls (the 2026-08-05 five-stray-cron-
+# lines bug). The reverse of "add a row" is "flip a field".
 #
-#   MECHANICAL   every field it sets is derived from the project name and the
-#                host; nothing is typed twice. The rotation row's command is
-#                built from the same PROJECT_REPO_PATH shape the existing rows
-#                use, and the conf fields are read back after writing.
-#   IDEMPOTENT   re-running --apply on an enrolled project changes nothing and
-#                says so (every write is "ensure", not "append"). Proven by
-#                bin/tests/enrole-selfdev.test.sh case D, which runs it twice
-#                and asserts the second run's diff is empty.
-#   REVERSIBLE   --retire sets the row back to |0| and leaves everything else.
-#                It does NOT delete the row: membership in the rotation is what
-#                SUPPRESSES the project's fixed nightly cron line, so deleting
-#                the row to "clean up" installs a nightly dispatch on a
-#                schedule the rotation no longer controls. That is the
-#                2026-08-05 five-stray-cron-lines bug, and it is why the
-#                reverse of "add a row" is "flip a field", not "remove a row".
+# IT COMMITS NOTHING. The repo half edits files in a scheduler clone and stops
+# -- no git commit, no push, no gh. The caller reviews the diff and lands it as
+# that repo is landed today. A provisioning script that pushes to a repo
+# fourteen accounts pull from is a blast radius nobody asked for.
 #
-# WHAT IT DOES NOT COMMIT. The repo half edits files in a scheduler clone and
-# stops; it never runs git commit, git push or gh. The caller reviews the diff
-# it prints and lands it however that repo is landed today (a PR, per
-# claim-drift.sh --convention). A provisioning script that pushes to a repo
-# fourteen other accounts pull from is a blast radius nobody asked for.
+#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 set -uo pipefail
 
 CLI_NAME='enrole-selfdev.sh'
@@ -109,29 +80,16 @@ PACED="$REPO/schedule/_paced.$HOST.conf"
 # worse than refusing: it looks done.
 [ -f "$PACED" ]      || die "no $PACED -- this host reads the shared _paced.conf, i.e. another machine's rotation. Give it its own file first."
 
-# Refuse on a dirty tree IN THE FILES THIS TOUCHES -- but only at the moment a
-# WRITE is actually needed, and only once.
+# Refuse on a dirty tree IN THE FILES THIS TOUCHES, at the moment a write is
+# needed rather than at startup -- the test caught that: this script's OWN
+# first --apply leaves the clone dirty, so a startup check refuses every
+# re-run and trades away the idempotence the caller relies on.
 #
-# THE OBVIOUS PLACEMENT IS WRONG, and the test caught it: checking at startup
-# refuses every re-run, because this script's OWN first --apply leaves the
-# clone dirty. That would trade idempotence for the guard, and idempotence is
-# the property the caller is relying on. Checked here instead, so a re-run that
-# would change nothing sails through (it writes nothing to lose) and a re-run
-# that WOULD change something stops on somebody else's in-flight edit. That is
-# the case the guard was for: a FOCUS/QUESTIONS-style silent adoption, which
-# this ecosystem has lost content to four times.
-# The rule, mechanically: a file is safe to rewrite if every line that already
-# differs from HEAD is a line THIS SCRIPT OWNS. It owns exactly two shapes --
-# `<FIELD>="..."` in the project conf, and the `<project>|...` row in the
-# rotation. Anything else uncommitted in those two files belongs to another
-# writer, and adopting it silently is how this ecosystem has lost content four
-# times.
-#
-# THE OBVIOUS IMPLEMENTATION IS WRONG, and the test caught it twice: a blanket
-# "refuse if dirty" at startup refuses every re-run, because this script's OWN
-# first --apply leaves the clone dirty. That trades away idempotence and
-# reversibility -- the two properties the caller is relying on -- to guard
-# against a conflict that is not there.
+# The rule: a file is safe to rewrite if every line already differing from HEAD
+# is a line THIS SCRIPT OWNS -- `<FIELD>="..."` in the project conf, and the
+# `<project>|...` row in the rotation. Anything else uncommitted there belongs
+# to another writer, and adopting it silently is how this ecosystem has lost
+# content four times.
 refuse_if_dirty() {  # <path> <regex of lines this script owns>
   local path="$1" mine="$2" foreign
   git -C "$REPO" diff --quiet -- "$path" 2>/dev/null && return 0
