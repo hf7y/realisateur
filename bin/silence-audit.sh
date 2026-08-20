@@ -268,10 +268,12 @@ check_stderr_silenced() {
 
 check_unwired() {
   # A mechanism nothing names. Domain read: every readable crontab, this
-  # project's command files, EVERY .sh ANYWHERE IN THE REPO, and the registry.
+  # project's command files, EVERY .sh ANYWHERE IN THE REPO, the registry,
+  # and every bashified verb binary (bin/<verb>, extensionless -- the
+  # build strips .sh, and --include='*.sh' has no way to say "no extension").
   #
   #   [rest: vault:realisateur/guard-archaeology-20260817.md]
-  local name repo sh base crontab_blob
+  local name repo sh base crontab_blob verb found
   crontab_blob="$(read_crontabs)"
   while IFS=$'\t' read -r name repo; do
     [ -z "${repo:-}" ] && continue
@@ -284,11 +286,21 @@ check_unwired() {
         --include='*.service' --include='*.timer' 2>/dev/null && continue
       grep -rqF "$base" "$repo" --include='*.sh' --exclude="$base" \
         --exclude-dir=.git --exclude-dir=worktrees 2>/dev/null && continue
+      # A bashified verb binary is a text file too, just without the
+      # extension --include can match. Found this way (not by widening the
+      # include glob): gardien's bin/garde execs bin/ecosystem-archive.sh,
+      # and only this loop, not the one above, ever sees that call.
+      found=0
+      while IFS= read -r verb; do
+        [ -f "$verb" ] && [ -r "$verb" ] || continue
+        grep -qF "$base" "$verb" 2>/dev/null && { found=1; break; }
+      done < <(find "$repo/bin" -maxdepth 1 -type f ! -name '*.sh' 2>/dev/null)
+      [ "$found" = 1 ] && continue
       # scheduler's confs were one place a script could be named. They are not
       # readable without a scheduler checkout, and requiring one is the coupling
       # this guard just shed -- so it is consulted only if it happens to exist.
       [ -n "${SCHED_ROOT:-}" ] && grep -rqF "$base" "$SCHED_ROOT/schedule" 2>/dev/null && continue
-      flag unwired "$name: bin/$base is named by no crontab, doc, conf, unit, registry entry, or any other .sh in the repo (tests/ included)"
+      flag unwired "$name: bin/$base is named by no crontab, doc, conf, unit, registry entry, verb binary, or any other .sh in the repo (tests/ included)"
     done < <(find "$repo/bin" -maxdepth 1 -name '*.sh' -type f 2>/dev/null)
   done < <(project_repos)
 }
@@ -458,6 +470,17 @@ EOF
   tn "unwired quiet on a script named only by its own witness" 'unwired.*witnessed\.sh' "$out"
   t  "unwired still fires on a script nothing names"           'unwired.*orphaned\.sh'  "$out"
   rm -f "$tmp/proj/bin/witnessed.sh" "$tmp/proj/tests/witnessed-witness.sh" "$tmp/proj/bin/orphaned.sh"
+
+  # --- gardien#6-adjacent: a bashified verb binary (bin/<verb>, no
+  # extension) is a valid referrer too. --include='*.sh' cannot see it --
+  # this reproduced as a false [unwired] on gardien's own
+  # bin/ecosystem-archive.sh, called only from bin/garde.
+  printf '#!/usr/bin/env bash\necho hi\n'                            >"$tmp/proj/bin/helper.sh"
+  printf '#!/usr/bin/env bash\nexec bin/helper.sh "$@"\n'            >"$tmp/proj/bin/garde"
+  chmod +x "$tmp/proj/bin/garde"
+  out="$(PROJECTS_ROOT="$tmp/projects" bash "${BASH_SOURCE[0]}" 2>&1)"
+  tn "unwired quiet on a script named only by an extensionless verb binary" 'unwired.*helper\.sh' "$out"
+  rm -f "$tmp/proj/bin/helper.sh" "$tmp/proj/bin/garde"
 
   # --- #107: --target must audit the tree it was POINTED AT and must not read
   # the registry. The registry here is deliberately non-empty and points at a
