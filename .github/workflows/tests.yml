@@ -72,10 +72,9 @@ jobs:
           git config --global init.defaultBranch main
 
       # bin/run-suites.sh does the looping and quarantine handling (#316).
-      # Two globs, not one: bashify/test/ carries its own verify-*.sh suites
       # that bin/tests/*.sh never matched (#157). Still a glob, not a roster.
-      - name: Run every suite in bin/tests/ and bashify/test/
-        run: bash bin/run-suites.sh bin/tests/*.sh bashify/test/verify-*.sh
+      - name: Run every suite in bin/tests/
+        run: bash bin/run-suites.sh bin/tests/*.sh
 
   # SHELLCHECK. A separate job from `suites` on purpose: the suite above
   # asserts that bin/shellcheck-lint.sh BEHAVES (its regression path fires, it

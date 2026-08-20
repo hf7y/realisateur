@@ -60,10 +60,8 @@ check "A2 a production creator exits 1" "$rc" "1"
 has   "A2 and names the file and line" "$out" "bin/creator.sh:2"
 has   "A2 and counts it" "$out" "1 FLAG(s)"
 
-# A3 -- `git -C <dir> worktree add` is the form all three real creators used.
-# A pattern that only matched the bare `git worktree add` would have missed
-# bin/land-selfdev.sh and bashify/bashify.sh, which is to say all of the
-# realisateur half of hf7y/realisateur#69.
+# A3 -- `git -C <dir> worktree add` is the form the real creators used; a
+# pattern matching only bare `git worktree add` misses them.
 d="$(mkfixture dashc)"
 printf '#!/usr/bin/env bash\ngit -C "$R" worktree add -q "$W" bashified\n' > "$d/bin/creator.sh"
 G "$d" add -A >/dev/null; G "$d" commit -qm creator >/dev/null

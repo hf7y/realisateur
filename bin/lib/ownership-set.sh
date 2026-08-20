@@ -61,15 +61,13 @@ vim-arcade      hf7y/vim-arcade exists
 ecosim          hf7y/ecosim exists
 gardien         hf7y/gardien exists
 bibliothecaire  hf7y/bibliothecaire exists
-crt             hf7y/crt exists (private, pushed 2026-08-12; probed 2026-08-14 via gh repo view)
-bashify         NO REPO -- see OWN_HOMELESS below
+crt             hf7y/crt exists
+etalon          hf7y/etalon exists
 "
 
-# --- the receivers that do not exist yet ------------------------------------
-# One foreign area names a receiver that has no repository. That is not a
-# reason to call it realisateur's; it is the finding. `gh repo list hf7y`
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
-OWN_HOMELESS="bashify"
+# A foreign row whose receiver has no repository is the finding, not a reason
+# to call the file realisateur's.
+OWN_HOMELESS=""
 
 # --- the areas the audit derives its population from ------------------------
 # Mechanism only. Root *.md, *.idea and archive/ are prose and are priced by
@@ -78,7 +76,6 @@ OWN_AREAS="
 bin
 hooks
 provision
-bashify
 .github/workflows
 .claude/commands
 "
@@ -90,13 +87,9 @@ bashify
 
 # ---- MISSION-UNIQUE: sense, triage, scaffold -------------------------------
 #
-# THE COUNTER-ARGUMENT FOR bashify, weighed and recorded rather than omitted,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 OWN_MINE="
 .agent-project                             realisateur
 bin/tests/registry-marker.test.sh          realisateur
-bin/lib/not-a-spend.tsv                    realisateur
-bin/tests/not-a-spend.test.sh              realisateur
 bin/silence-audit.sh                       realisateur
 bin/monkey-vdi-to-internal.sh              realisateur
 bin/monkey-watch.sh                        realisateur
@@ -154,7 +147,6 @@ bin/tests/selfdev-hooks-provision.test.sh  realisateur
 bin/discipline.sh                          realisateur
 bin/consigne                               realisateur
 bin/tests/consigne.test.sh                 realisateur
-bin/tests/bashify-coin.test.sh             bashify
 bin/ownership-audit.sh                     realisateur
 bin/lib/ownership-set.sh                   realisateur
 bin/tests/guard-estate.test.sh             realisateur
@@ -212,7 +204,6 @@ bin/tests/body-grammar.test.sh             vim-arcade
 bin/defere.sh                              vim-arcade
 bin/path-provenance-audit.sh               senechal
 bin/tests/path-provenance-audit.test.sh    senechal
-bin/closeout-lint.sh                       bashify
 bin/retire-check.sh                        realisateur
 bin/decision-rot.sh                        realisateur
 bin/tests/decision-rot.test.sh             realisateur
@@ -225,12 +216,11 @@ bin/tests/rot-ratchet.test.sh              realisateur
 .github/workflows/rot-ratchet.yml          realisateur
 bin/directive-prose.sh                     realisateur
 bin/tests/directive-prose.test.sh          realisateur
-bin/hardcoded-home-lint.sh                 bashify
-bin/lib/cli-guard.sh                       bashify
-hooks                                      bashify
-bashify                                    bashify
-.claude/commands/bashify.md                bashify
-.claude/commands/cloture.md                bashify
+bin/closeout-lint.sh                       etalon
+bin/hardcoded-home-lint.sh                 etalon
+bin/lib/cli-guard.sh                       etalon
+hooks                                      etalon
+.claude/commands/cloture.md                etalon
 .github/workflows/claim-drift.yml          vim-arcade
 .github/workflows/verb-build-smoke.yml     verbs
 bin/tests/release-channel-wiring.test.sh   verbs

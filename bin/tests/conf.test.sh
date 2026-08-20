@@ -58,7 +58,7 @@ eq "A5  no PROJECT_REPO_PATH returns 1" "$?" "1"
 # WHY A RATCHET AND NOT A LIST. lib/conf.sh's header used to NAME the four
 # scripts still on the raw grep; by 2026-08-11 it was wrong in both directions
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
-printf '\nC. no script in bin/ or bashify/ extracts PROJECT_REPO_PATH without expanding it\n'
+printf '\nC. no script in bin/ extracts PROJECT_REPO_PATH without expanding it\n'
 c_bad=""
 c_scanned=0
 while IFS= read -r f; do
@@ -80,7 +80,6 @@ while IFS= read -r f; do
   # committing it. The population is the scripts that run against the registry.
 done < <(cd "$REPO" && git ls-files \
            ':(glob)bin/*.sh' ':(glob)bin/lib/*.sh' \
-           ':(glob)bashify/*.sh' ':(glob)bashify/lib/*.sh' ':(glob)bashify/bin/*' \
            2>/dev/null)
 
 if [ "$c_scanned" -eq 0 ]; then

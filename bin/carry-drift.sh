@@ -74,7 +74,6 @@ bin/lib/host-check.sh	bin/lib/host-check.sh
 bin/lib/zaxon.sh	bin/lib/zaxon.sh
 bin/lib/labels.tsv	bin/lib/labels.tsv
 BUILD-DISCIPLINE.md	BUILD-DISCIPLINE.md
-commands/bashify.md	.claude/commands/bashify.md
 commands/cloture.md	.claude/commands/cloture.md
 commands/ideate.md	.claude/commands/ideate.md
 commands/reap.md	.claude/commands/reap.md
