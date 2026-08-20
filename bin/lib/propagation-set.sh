@@ -143,15 +143,15 @@ closeout-lint.sh
 notify-senechal.sh
 silence-audit.sh
 gh-sign.sh
+discipline.sh
+claim-drift.sh
+consigne
+ausculte.sh
 "
 
 # --- THE LEAK, with a bound on it -------------------------------------------
 # PAYLOAD-class scripts that are NOT yet declared on any bashified branch.
 PROP_PAYLOAD_PENDING="
-check-project-busy.sh
-closeout-lint.sh
-notify-senechal.sh
-silence-audit.sh
 "
 PROP_LEAK_BOUND=7
 
@@ -162,13 +162,11 @@ PROP_LEAK_BOUND=7
 PROP_LOCAL_SCRIPTS="
 sunset-coordinator-files.sh
 dexter-liveness.sh
-ausculte.sh
 dexter-service-deploy.sh
 monkey-vdi-to-internal.sh
 monkey-watch.sh
 playbook.sh
 publish-monkey-status.sh
-claim-drift.sh
 carry-drift.sh
 defere.sh
 retire-check.sh
@@ -183,7 +181,6 @@ floor-check.sh
 hardcoded-home-lint.sh
 ownership-audit.sh
 reach-lint.sh
-discipline.sh
 thermostat-wiring.sh
 path-provenance-audit.sh
 selfdev-agent-survey.sh

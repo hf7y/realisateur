@@ -83,6 +83,42 @@ else
   echo "       bound HERE, deliberately, in a commit that says why."
 fi
 
+# verb name -> script basename (`gh` <- gh-sign.sh) via carry-drift's CARRIES.
+CARRY_LIB="$REPO/bin/carry-drift.sh"
+CARRIES_BLOCK="$(sed -n "/^CARRIES='/,/^'\$/p" "$CARRY_LIB" | sed -e '1d' -e '$d')"
+
+main_script_for() {
+  local v="$1" line
+  line="$(printf '%s\n' "$CARRIES_BLOCK" | awk -F'\t' -v p="bin/$v" '$1==p{print $2}')"
+  if [ -n "$line" ]; then
+    basename "$line"
+  elif [ -f "$REPO/bin/$v.sh" ]; then
+    printf '%s.sh' "$v"
+  else
+    printf '%s' "$v"
+  fi
+}
+
+. "$REPO/bin/lib/verb-set.sh"
+V_REF="$(verb_set_ref_of "$REPO")" || V_REF=""
+if [ -z "$V_REF" ]; then
+  bad "no bashified ref in this checkout -- cannot check declared verbs against the contract"
+else
+  declared_verbs="$(verb_set_verbs_of "$REPO" "$V_REF")"
+  verb_bad=""
+  while read -r v; do
+    [ -n "$v" ] || continue
+    s="$(main_script_for "$v")"
+    ch="$(prop_channel "$s" 2>/dev/null)" || { verb_bad="$verb_bad $v(<-$s: unclassified)"; continue; }
+    [ "$ch" = payload ] || verb_bad="$verb_bad $v(<-$s: $ch, not payload)"
+  done <<< "$declared_verbs"
+  if [ -z "$verb_bad" ]; then
+    ok "every verb this repo's bashified branch declares resolves to a PAYLOAD-class script"
+  else
+    bad "declared verb(s) whose backing script is not PAYLOAD-classified:$verb_bad"
+  fi
+fi
+
 # ===========================================================================
 echo
 echo "-- 2. main IS NOT A DEPLOY REF, AND THE LEAK MAY NOT GROW --------------"
@@ -308,9 +344,9 @@ echo "-- 5. PULL, NOT PUSH ---------------------------------------------------"
 # clock. Asserted against the source, because this is exactly the property
 # that erodes the first time reaching in is more convenient.
 
-# Everything from the first line to the --survey function is the tick's own
-# path. --survey is the one read-only operator view and is allowed ssh.
-APPLY_PATH="$(sed -n '1,/^run_survey()/p' "$TICK")"
+# Everything from the first line to the --survey machinery is the tick's own
+# path. --survey and its account scan are allowed ssh and sudo -u.
+APPLY_PATH="$(sed -n '1,/^survey_scan_accounts()/p' "$TICK")"
 hasnt "the tick's own path contains no 'sudo -u'" "$APPLY_PATH" "sudo -u "
 hasnt "the tick's own path contains no ssh" "$APPLY_PATH" "ssh -o"
 
@@ -322,7 +358,7 @@ hasnt "the cadence is not written into another account's crontab" "$CADENCE_FN" 
 has "the cadence is verified by re-reading crontab -l, not by the write's rc" "$CADENCE_FN" "crontab -l"
 
 # --survey may read, but must not adopt or write.
-SURVEY_FN="$(sed -n '/^run_survey()/,/^}/p' "$TICK")"
+SURVEY_FN="$(sed -n '/^survey_scan_accounts()/,/^}/p; /^run_survey()/,/^}/p' "$TICK")"
 hasnt "--survey never adopts a build" "$SURVEY_FN" "--apply"
 hasnt "--survey never repoints a symlink" "$SURVEY_FN" "ln -s"
 
@@ -333,8 +369,11 @@ hasnt "--survey never repoints a symlink" "$SURVEY_FN" "ln -s"
 # account resolved every verb. An alarm that fires on success is one nobody
 # reads the next time it fires on failure.
 has "--survey grades the host-wide channel, not just the private pin" "$SURVEY_FN" "host-wide"
-has "...by asking AS THE ACCOUNT, since its own PATH can shadow the host dir" "$SURVEY_FN" 'sudo -u "\$user" -H'
+has "...by asking AS THE ACCOUNT, since its own PATH can shadow the host dir" "$SURVEY_FN" 'sudo -u "$user" -H'
 has "...and an account with neither is still a finding" "$SURVEY_FN" "this account has no verbs"
+
+has "run_survey resolves locally when already on SURVEY_HOST" "$SURVEY_FN" "on_target_host \"\$SURVEY_HOST\""
+has "the local branch calls the scan directly, no ssh" "$SURVEY_FN" 'out="$(survey_scan_accounts)"'
 
 # ===========================================================================
 echo
@@ -441,6 +480,28 @@ O="$(TICK_SURVEY_HOST="no-such-host.invalid" TICK_STATE="$T/s_fresh" \
      HOME="$T/emptyhome" "$TICK" --survey 2>&1)"; R=$?
 rc "an unreachable survey host exits 3 BLIND, not 0" 3 "$R"
 has "the unreachable survey says nothing was verified" "$O" "Nothing was verified"
+
+mkdir -p "$T/localsurvey/stub"
+cat > "$T/localsurvey/stub/ssh" <<EOF
+#!/usr/bin/env bash
+echo called >> "$T/localsurvey/ssh_called"
+exit 255
+EOF
+chmod +x "$T/localsurvey/stub/ssh"
+cat > "$T/localsurvey/stub/sudo" <<'EOF'
+#!/usr/bin/env bash
+exit 1
+EOF
+chmod +x "$T/localsurvey/stub/sudo"
+printf 'acct1:x:3001:3001::/home/acct1:/bin/bash\n' > "$T/localsurvey/passwd"
+
+O="$(PATH="$T/localsurvey/stub:$PATH" SELFDEV_LOCAL_HOSTNAME="testhost" \
+     TICK_SURVEY_HOST="testhost" TICK_SURVEY_PASSWD="$T/localsurvey/passwd" \
+     TICK_STATE="$T/s_fresh" HOME="$T/localsurvey/home" "$TICK" --survey 2>&1)"
+[ -f "$T/localsurvey/ssh_called" ] \
+  && bad "a local survey never shells out to ssh" "ssh was invoked" \
+  || ok "a local survey never shells out to ssh"
+has "a local survey still finds the fixture account" "$O" "acct1"
 
 # ===========================================================================
 echo
