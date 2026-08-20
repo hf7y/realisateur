@@ -210,6 +210,8 @@ bin/lib/body-grammar.sh                    vim-arcade
 bin/tests/body-grammar.test.sh             vim-arcade
 .github/workflows/deferral-ledger.yml      vim-arcade
 bin/defere.sh                              vim-arcade
+bin/containment-audit.sh                   senechal
+bin/tests/containment-audit.test.sh        senechal
 bin/path-provenance-audit.sh               senechal
 bin/tests/path-provenance-audit.test.sh    senechal
 bin/closeout-lint.sh                       bashify
