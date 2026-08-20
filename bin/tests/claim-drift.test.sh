@@ -44,7 +44,6 @@ chmod +x "$TMP/deadgh/gh"
 # A PATH with no `jq` on it. It cannot simply be an empty directory: the
 # script needs bash, readlink and dirname before it reaches any check at all,
 # so emptying PATH tests "bash is missing", not "jq is missing" -- the first
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mkdir -p "$TMP/nojq"
 for t in bash readlink dirname tr cat; do ln -sf "$(command -v "$t")" "$TMP/nojq/$t"; done
 ln -sf "$TMP/shim/gh" "$TMP/nojq/gh"
@@ -71,7 +70,7 @@ pr_json() { # <number> <state> <isDraft> <createdAt> <headRefOid> <commits-json>
   # testing drift and nothing else. Section J supplies its own bodies; if the
   # default were non-conforming, every case would fail for two reasons at once
   #   [rest: vault:realisateur/guard-archaeology-20260817.md]
-  local body="${7-DECISION: merge this, it is a clean fix.}"
+  local body="${7-NO-DECISION: merge this, it is a clean fix.}"
   printf '{"number":%s,"title":"t","url":"https://x/pull/%s","state":"%s","isDraft":%s,"createdAt":"%s","headRefOid":"%s","commits":%s,"body":%s}' \
     "$1" "$1" "$2" "$3" "$4" "$5" "$6" "$(printf '%s' "$body" | jq -Rs .)"
 }
@@ -206,7 +205,6 @@ fi
 # A READY pull request is a completion claim (section A). This asserts the
 # second half of the convention: a claim must also say what it asks of the
 # reader. Not a style rule -- Zach's stated failure mode is "if it's a PR not a
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 echo
 echo "J. a ready PR classifies itself in line one"
 
@@ -254,6 +252,22 @@ is  J7c "$(rc_of "$J7" --strict 9)" 0
 # guard-estate's check E hit and had to fix.
 J8=$(jcase j8 false 'We should probably add a DECISION: line to this one day.')
 has J8 "$(run "$J8" 9)" 'UNDECIDED'
+
+# Zach, 2026-08-15: "a decision should be a draft PR." #319 carried a correct
+# DECISION line, was ready, and auto-merge landed it 38 minutes later.
+J9=$(jcase j9 false 'DECISION: raise the ratchet by hand?')
+has J9 "$(run "$J9" 9)" 'NOT-DRAFT'
+is  J9b "$(rc_of "$J9" --strict 9)" 1
+
+# A DRAFT decision is the prescribed shape, so it must not be flagged.
+J10=$(jcase j10 true 'DECISION: raise the ratchet by hand?')
+hasnt J10 "$(run "$J10" 9)" 'NOT-DRAFT'
+is    J10b "$(rc_of "$J10" --strict 9)" 0
+
+# NO-DECISION is not a decision: a ready PR that asks nothing is the default.
+J11=$(jcase j11 false 'NO-DECISION: green fix, nothing to weigh.')
+hasnt J11 "$(run "$J11" 9)" 'NOT-DRAFT'
+is    J11b "$(rc_of "$J11" --strict 9)" 0
 
 echo
 echo "L. OVERCAUTIOUS -- a DECISION line nobody needed to write"
@@ -305,8 +319,12 @@ L3=$(jcase l3 false 'DECISION: does the new cron cadence look right?')
 printf '%s' "$DIFF_SCRIPT_CHANGED" > "$L3/diff.txt"
 hasnt L3 "$(run "$L3" 9)" 'OVERCAUTIOUS'
 
-# --strict must never gate on it -- it is a suggestion, not a verdict.
-is L4 "$(rc_of "$L1" --strict 9)" 0
+# --strict never gates on OVERCAUTIOUS itself -- it is a suggestion. L1 does
+# exit 1, and on the other finding it carries: a DECISION line on a ready PR.
+is L4 "$(rc_of "$L1" --strict 9)" 1
+L5=$(jcase l5 true 'DECISION: does this survey shape look right?')
+printf '%s' "$DIFF_NEW_ONLY$DIFF_MD_SHRINK" > "$L5/diff.txt"
+is L5b "$(rc_of "$L5" --strict 9)" 0
 
 echo
 echo "K. the convention is single-sourced"

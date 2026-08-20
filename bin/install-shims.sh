@@ -25,13 +25,11 @@ cli_guard "$@"
 # bin/token-usage.sh. Those answer "where am I"; this one answers "what should
 # the INSTALLED shim point at", and the answer must be a stable checkout
 # rather than whatever tree the installer happened to be invoked from.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 REPO="${REPO:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/realisateur}"
 
 # A SOURCE OF TRUTH THAT IS NOT THERE IS A HARD FAILURE, NOT A FLAG.
 #
 # Found 2026-08-02 while bootstrapping dexter, and it is the reason the
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ ! -d "$REPO/bin" ] || [ ! -e "$REPO/.git" ]; then
   printf '%s: REPO does not name a realisateur checkout: %s\n' \
     "${0##*/}" "$REPO" >&2
@@ -43,7 +41,6 @@ fi
 # EVERY destination is env-overridable, and that is a test-safety property, not
 # a convenience. bin/tests/install-shims.test.sh redirects them to a scratch
 # dir; without the override the test silently ran against the REAL
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CMD_SRC="$REPO/.claude/commands"
 CMD_DEST="${CMD_DEST:-$HOME/.claude/commands}"
 HOOK_SRC="$REPO/hooks"
@@ -111,7 +108,6 @@ done
 # hand on 2026-08-01 and tracked in NO repo, which is the same defect that
 # broke the dexter bootstrap in July -- `usage-paced-runner.sh` was a symlink
 # hand-made once that nothing in any repo created, so a bare host could not
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 note "Claude Code hooks -> $HOOK_DEST"
 shopt -s nullglob
 hook_files=("$HOOK_SRC"/*.sh)

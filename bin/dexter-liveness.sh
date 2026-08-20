@@ -46,6 +46,12 @@ probe="$(ssh -n -o ConnectTimeout=10 -o BatchMode=yes "$HOST" '
   # relay'"'"'s own docker healthcheck is a connect too. Ask the MCP layer to
   # speak. Same call shape as monkey-watch.sh; 127.0.0.1 so this survives the
   # rebind off 0.0.0.0.
+  #
+  # 127.0.0.1 IS CORRECT HERE -- do not "fix" it to the tailnet address to
+  # match bin/lib/zaxon.sh. This whole block is an ssh payload that executes
+  # ON dexter (see the wsl.exe and /mnt/c lines below), and dexter is where
+  # zaxon runs. The tailnet-first ordering in zaxon.sh/ausculte.sh is for
+  # callers that are NOT dexter.
   curl -s -m 15 -H "Content-Type: application/json" \
     -H "Accept: application/json,text/event-stream" \
     -X POST http://127.0.0.1:8643/mcp \

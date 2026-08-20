@@ -5,13 +5,6 @@
 # GUARD-TEST: none -- no fixture yet for a multi-account host probe; the honest fix is to build one, not to drop the check
 # GATE: none -- ssh to live accounts; a sandbox can only make it lie
 #
-# The gap this closes: on 2026-08-06, 26 PRs merged across five repos and
-# five of six monkey accounts were running code from before them. One was
-# frozen (a dirty tracked file tripped the runner's own pull gate); the
-# other four were simply never checked. Merging was treated as shipping.
-# Nothing anywhere asked whether a host was on the ref it should be on --
-# BUILD-DISCIPLINE.md has demanded exactly that check since it was written.
-#
 # The account list is PROBED, not retyped: dispatcher accounts on monkey are
 # uid 3000-3099 (the provisioning range), and a dispatcher is an account with
 # the engine checked out. A list in this file would be one more thing to

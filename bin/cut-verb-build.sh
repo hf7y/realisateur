@@ -58,7 +58,6 @@ die() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
 # --- the not-a-verb opt-out, loaded from ONE file -----------------------
 # Rows are <project>\t<name>\t<why>. Read from a file rather than a case
 # statement in here so the judgement is reviewable next to the rule it bends
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 NOT_A_VERB="${VERB_NOT_A_VERB_FILE:-$(dirname "${BASH_SOURCE[0]}")/lib/not-a-verb.tsv}"
 exempt=''
 if [ -f "$NOT_A_VERB" ]; then
@@ -77,7 +76,6 @@ exempt_reason() {
 
 # --dry-run is for CI with NO org credential (the smoke workflow). Its read is
 # short BY CONSTRUCTION, so it must be incapable of producing an installable.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$DRY_RUN" -eq 1 ] && { [ -n "$ASSEMBLE" ] || [ "$WRITE" -eq 1 ]; }; then
   printf '%s: --dry-run cannot be combined with --assemble or --write: a dry run reads with whatever credential it has, so its build is short by an unknown amount and must never become an artifact.\n' \
     "$CLI_NAME" >&2
@@ -87,7 +85,6 @@ fi
 # An unreadable repository must FAIL LOUDLY, never sit waiting for a
 # password. git ls-remote against a repo the credential cannot read will ask
 # a terminal for one; in CI there is no terminal and the job hangs to the
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 export GIT_TERMINAL_PROMPT=0
 
 command -v gh >/dev/null 2>&1 || die 'gh is not on PATH -- cannot read the declarations. Refusing to cut an empty build.'
@@ -97,7 +94,6 @@ gh auth status >/dev/null 2>&1 \
 # --- 1. which repositories carry a bashified branch ---------------------
 # `gh repo list` rather than a typed list: a project that bashifies itself
 # tomorrow joins the build with nobody editing a file. The private repos
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 say "reading $OWNER's repositories ..."
 repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].name' 2>/dev/null)" \
   || die "cannot list $OWNER's repositories -- BLIND, not empty."
@@ -106,7 +102,6 @@ repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].nam
 # --- 1b. THE REGISTRY: which repos are agent PROJECTS ----------------------
 #
 # Distinct from the verb set, and the difference is the whole reason this
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
 registry=""
 _gql='query($owner:String!){ user(login:$owner){ repositories(first:100, isFork:false, ownerAffiliations:OWNER){
@@ -266,7 +261,6 @@ fi
 # WHERE IT LIVES DEPENDS ON WHO IS RUNNING. The published manifest is read
 # FIRST -- the only reading that exists everywhere. $BUILD_ROOT is a CONSUMER
 # path: absent on the CI runner that cuts nightly, so #399 lost 17 in silence.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 prev_count=0
 prev_where='(nothing published, nothing local)'
 if [ "$DRY_RUN" -eq 1 ]; then   # a short read grades the credential, not this
@@ -340,7 +334,6 @@ manifest="$tmp/manifest.tsv"
 # Four tab-separated fields, a 40-hex sha, and a repo_url that names the
 # project it claims to come from. This is cheap and it is the only part of
 # the pipeline a credential-less CI can exercise (see --dry-run), so it is
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 shape_bad=0
 while IFS= read -r line; do
   case "$line" in '#'*|'') continue ;; esac
@@ -382,7 +375,6 @@ say "derived $verb_count verb(s) from $projects project(s)"
 # --- 6. assemble the tree CI commits ------------------------------------
 # The meta-repo's whole content, laid out as <project>/bin/<verb> +
 # <project>/man/<verb>.1, so a consumer clones ONE repository instead of
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ -n "$ASSEMBLE" ]; then
   mkdir -p "$ASSEMBLE" || die "cannot create $ASSEMBLE"
   # Only ever prune paths this build owns. A blanket wipe of $ASSEMBLE

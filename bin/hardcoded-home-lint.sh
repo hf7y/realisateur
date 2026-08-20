@@ -33,7 +33,6 @@ ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 # WHAT COUNTS AS EXECUTABLE CODE IS THE SHEBANG, NOT THE FILENAME.
 #
 # This selected `'*.sh' 'bin/*'` until 2026-08-07, and that missed an entire
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 files=()
 while IFS= read -r f; do
   case "$f" in archive/*) continue ;; esac

@@ -33,7 +33,6 @@ openssl rsa -in "$T/app.pem" -pubout -out "$T/app.pub.pem" 2>/dev/null
 # pointed at the fixture conf, so neither a real ~/.config/selfdev nor the
 # host-wide /etc/selfdev on the machine running this test can leak in.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 FIXTURE_CONF="$T/home/.config/selfdev/gh-app.conf"
 run() { env HOME="$T/home" XDG_CACHE_HOME="$T/cache" SELFDEV_APP_CONF="$FIXTURE_CONF" "$@"; }
 mkdir -p "$T/home/.config/selfdev" "$T/cache"
@@ -165,7 +164,6 @@ eq  "H2 exits 5" "$rcH2" "5"
 # --- I: --adopt no longer invents a per-account path ---------------------------
 # It used to install ~/.config/selfdev/<account>/<account>.pem plus a conf
 # naming it -- which is how ONE App key came to sit on disk under four names,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 outI="$(run env SELFDEV_GH_API="http://127.0.0.1:1" "$SCRIPT" --adopt \
         --account acct2 --key "$T/app.pem" --app-id 4520255 2>&1)"; rcI=$?
 has "I prints the fingerprint"  "$outI" "fingerprint:"
@@ -247,7 +245,6 @@ has "J --wire writes a helper git will call as '<self> --credential <op>'" "$out
 # --- K: --wire writes the ACCOUNT as author, never the App bot -----------------
 # THE BUG THIS CASE EXISTS FOR, found live on ecosim@monkey 2026-08-07:
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 echo
 echo "-- K: --wire sets AUTHOR=account, PUSHER=App -----------------------------"
 

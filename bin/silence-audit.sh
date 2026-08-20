@@ -170,7 +170,6 @@ project_repos_and_worktrees() {
 # Counted ONCE, up front, so BLIND is keyed on the domain this script is
 # actually about (registered projects) rather than on a total that other
 # checks can quietly inflate. The first cut of this script keyed BLIND on a
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 projects_seen="$(project_repos | grep -c . || true)"
 
 # ---------------------------------------------------------------- checks
@@ -547,7 +546,6 @@ if [ "$SELFTEST" = 1 ]; then self_test; exit $?; fi
 # The noisy self-trigger. BUILD-DISCIPLINE pattern 2 (build-but-don't-wire)
 # is the failure this project regenerates most often, and an auditor that
 # sits unwired while reporting on everyone else's wiring is the joke writing
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 self_wiring_banner() {
   local me hits=0
   me="$(basename "${BASH_SOURCE[0]}")"

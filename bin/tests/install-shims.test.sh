@@ -33,7 +33,6 @@ trap 'rm -rf "$WORK"' EXIT
 # REPO IS PASSED, AND THAT IS THE WHOLE POINT OF THIS FUNCTION.
 #
 # Until 2026-08-07 this passed only BIN_DEST and CMD_DEST. install-shims.sh
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 run_shims() {
   REPO="$REPO" BIN_DEST="$WORK/bin" CMD_DEST="$WORK/cmds" \
     HOOK_DEST="$WORK/hooks" CLAUDE_SETTINGS="$WORK/settings.json" \
@@ -47,7 +46,6 @@ printf -- '\n-- E. a REPO that is not a checkout (2026-08-02 dexter bootstrap)\n
 # defaulted to mandark's path, which does not exist there. It printed FLAGs
 # about hooks it could not find, installed nothing, and EXITED 0 -- while
 # ~/.local/bin was still exactly `claude node npm npx`. The installer whose
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mkdir -p "$WORK/notarepo"
 rc="$(CMD_DEST="$WORK/ecmds" REPO="$WORK/notarepo" \
       bash "$SHIMS" >"$WORK/eout" 2>"$WORK/eerr"; printf '%s' "$?")"
@@ -60,7 +58,6 @@ grep -q 'does not name a realisateur checkout' "$WORK/eerr" \
 # E4 is the OTHER side of E1/E2, and without it the checkout test passes
 # vacuously by refusing everything. In a linked worktree `.git` is a FILE, not
 # a directory, so the `-d` test this check used until 2026-08-07 called every
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 git init -q "$WORK/wtsrc"
 git -C "$WORK/wtsrc" config user.email t@test; git -C "$WORK/wtsrc" config user.name T
 mkdir -p "$WORK/wtsrc/bin"; printf '#!/bin/sh\necho x\n' > "$WORK/wtsrc/bin/x.sh"

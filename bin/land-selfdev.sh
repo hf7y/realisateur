@@ -84,7 +84,6 @@ fi
 # THREE WAYS THIS USER CAN BE AUTHENTICATED, and the check must know all of
 # them or it reports a false gap on the shape we actually use.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CRED="$HOME/.claude/.credentials.json"
 SETTINGS="$HOME/.claude/settings.json"
 auth=""
@@ -131,10 +130,7 @@ echo
 echo "== landing =="
 mkdir -p "$PROJECTS"
 
-# Credentials come BEFORE the clone that needs them, per repo, derived from
-# the same loop -- added 2026-08-03 after ecosim's four deploy keys turned out
-# to have been made by hand and written down nowhere ("we can't do this for
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+# Credentials come BEFORE the clone that needs them, per repo.
 WIRE="$(dirname "$0")/wire-selfdev-git.sh"
 
 wire_repo() {
@@ -173,7 +169,6 @@ clone_or_update scheduler   "https://github.com/$GH_OWNER/scheduler.git"
 # EVERY OTHER REPO IS DERIVED, NOT TYPED. schedule/<p>.conf already declares
 # REPO_URL per project -- that IS the registry. A typed list here would be a
 # second source that drifts from it, which is the failure realisateur's own
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 for p in ${SELFDEV_PROJECTS:-senechal ecosim}; do
   conf="$PROJECTS/scheduler/schedule/$p.conf"
   if [ ! -f "$conf" ]; then bad "$p: no schedule/$p.conf -- not a registered project"; continue; fi
@@ -186,21 +181,9 @@ done
 # installe is itself a verb, and it is the tool that installs verbs. ONE
 # hand-made symlink, in one place, and every subsequent write goes through it.
 #
-# IT USED TO BOOTSTRAP OUT OF A WORKTREE THIS SCRIPT CREATED -- `git worktree
-# add $PROJECTS/senechal-verbs bashified`, immediately above. That block is
-# gone, for two independent reasons and either alone would be enough:
-#
-#   1. It was already dead. `installe` stopped reading a <project>-verbs
-#      worktree on 2026-08-05 (hf7y/senechal a1c8629f, PR #22) and installs
-#      from the pinned build manifest instead. Re-probed on mandark
-#      2026-08-11: $PROJECTS/senechal-verbs does not exist, ~/.local/bin/
-#      installe resolves into the adopted verb build under ~/.local/share,
-#      and every verb on PATH resolves through the build. This was
-#      bootstrapping from a location nothing else in the ecosystem reads.
-#   2. Zach, 2026-08-06: "we should not have any more worktrees after
-#      tonight" (hf7y/realisateur#69). This was one of three scripts on the
-#      estate that put them back after the directories were cleared.
-#
+# NO WORKTREE HERE. `installe` installs from the pinned build manifest, not a
+# <project>-verbs worktree, and hf7y/realisateur#69 ended worktree creation
+# estate-wide; bin/no-worktree-lint.sh is what keeps it ended.
 # bin/install-verb-build.sh's own header states the same supersession from the
 # other end: "A verb today is a symlink into a bashified WORKTREE of a full
 # dev clone ... A build depends on no dev checkout at all -- which is the
