@@ -149,6 +149,53 @@ else
 fi
 
 echo
+echo "== C. NO WORKTREE IS ACTUALLY REGISTERED NOW =="
+
+# #429: reads git's actual registrations; same rot discipline as check B.
+WT_ALLOW_PATTERNS=()
+WT_ALLOW_WHY=()
+wt_allow() { WT_ALLOW_PATTERNS+=("$1"); WT_ALLOW_WHY+=("$2"); }
+if [ -n "${NO_WORKTREE_WT_ALLOW_FILE:-}" ]; then
+  while IFS=$'\t' read -r _p _w; do
+    [ -n "${_p:-}" ] || continue
+    case "$_p" in \#*) continue ;; esac
+    wt_allow "$_p" "${_w:-no reason recorded}"
+  done < "$NO_WORKTREE_WT_ALLOW_FILE"
+fi
+
+mapfile -t STRAY_WT < <(
+  git -C "$ROOT" worktree list --porcelain 2>/dev/null \
+    | awk -v m="$ROOT" '/^worktree /{p=substr($0,10); if (p != m) print p}'
+)
+
+wt_matched=()
+for wt in ${STRAY_WT[@]+"${STRAY_WT[@]}"}; do
+  hit=0
+  for i in "${!WT_ALLOW_PATTERNS[@]}"; do
+    # shellcheck disable=SC2254 # deliberate glob: the pattern IS the glob
+    case "$wt" in
+      ${WT_ALLOW_PATTERNS[$i]}) hit=1; wt_matched[$i]=1 ;;
+    esac
+  done
+  if [ "$hit" -eq 1 ]; then continue; fi
+  echo "FLAG [stray worktree] $wt is a registered worktree outside the main checkout"
+  flags=$((flags + 1))
+done
+
+for i in "${!WT_ALLOW_PATTERNS[@]}"; do
+  if [ "${wt_matched[$i]:-0}" -ne 1 ]; then
+    echo "FLAG [stale worktree allowlist] ${WT_ALLOW_PATTERNS[$i]} is allowlisted but no worktree matches it -- delete the entry"
+    flags=$((flags + 1))
+  else
+    echo "  allowed ${WT_ALLOW_PATTERNS[$i]} -- ${WT_ALLOW_WHY[$i]}"
+  fi
+done
+
+if [ "${#STRAY_WT[@]}" -eq 0 ] && [ "${#WT_ALLOW_PATTERNS[@]}" -eq 0 ]; then
+  echo "  0 worktree(s) registered under $ROOT besides the main checkout"
+fi
+
+echo
 if [ "$flags" -gt 0 ]; then
   echo "$flags FLAG(s)."
   echo "A worktree is not forbidden because it is exotic. It is forbidden because"
