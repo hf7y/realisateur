@@ -126,6 +126,7 @@ land-selfdev.sh
 provision-selfdev-user.sh
 install-honey-plugin.sh
 setup-selfdev-project.sh
+enrole-selfdev.sh
 wire-selfdev-git.sh
 wire-release-channel.sh
 selfdev-gh-app-register.sh
