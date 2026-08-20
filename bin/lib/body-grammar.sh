@@ -4,7 +4,8 @@
 # Pure bash: gh-sign runs under cron's PATH, where sed and grep were not found.
 #
 #   UNDECLARED          line 1 is neither DECISION: nor NO-DECISION:
-#   NO-DECIDER          declared, named no @handle
+#   NO-DECIDER          DECISION: named no @handle (NO-DECISION: is exempt --
+#                       it asserts there is nobody to decide; #419)
 #   MISPLACED-DECISION  a declaration below line 1
 #   UNLEDGERED          no <!-- DEFERRED --> block
 #   MULTI-LEDGER        more than one
@@ -101,7 +102,10 @@ grammar_check() {
     case "$line" in *[![:space:]]*) ;; *) continue ;; esac
     local decl="${stripped#"${stripped%%[![:space:]#>*_-]*}"}"
     case "$decl" in
-      [Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*|[Nn][Oo]-[Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*)
+      [Nn][Oo]-[Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*)
+        [ "$first_seen" -eq 1 ] && _find MISPLACED-DECISION \
+          "line $lineno declares, but line 1 did not. The convention reads line 1 only." ;;
+      [Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]:*)
         if [ "$first_seen" -eq 1 ]; then
           _find MISPLACED-DECISION "line $lineno declares, but line 1 did not. The convention reads line 1 only."
         else
