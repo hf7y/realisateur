@@ -125,4 +125,8 @@ eq "every derived tool exists in this checkout" "$missing" ""
 grep -q 'prop_host_tools' "$SCRIPT" && ok "the door reads the derivation rather than retyping it" \
   || bad "the door does not call prop_host_tools"
 
+grep -q 'ln -sfn "$HOST_LIBEXEC/dresse.sh" "$HOST_BIN/dresse"' "$SCRIPT" \
+  && ok "the verb Zach types is linked onto PATH, not only deployed to libexec" \
+  || bad "dresse is deployed and never linked; a verb nobody can type is not installed"
+
 summary
