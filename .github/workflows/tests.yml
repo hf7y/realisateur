@@ -58,6 +58,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Make origin/bashified resolvable
+        run: git fetch --no-tags --depth=1 origin +refs/heads/bashified:refs/remotes/origin/bashified
+
       # Several suites commit into fixture repositories. Most set an identity
       # per repo or per command, but a runner has no global one at all, so
       # anything that does not is a confusing "empty ident name" failure that

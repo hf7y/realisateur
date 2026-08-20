@@ -148,17 +148,15 @@ closeout-lint.sh
 notify-senechal.sh
 silence-audit.sh
 gh-sign.sh
+discipline.sh
+claim-drift.sh
+consigne
 "
 
 # --- THE LEAK, with a bound on it -------------------------------------------
-# PAYLOAD-class scripts that are NOT yet declared on any bashified branch.
-# realisateur's bashified branch declares TWO verbs: consigne and gh. It was
-# five until arpente, epluche and juge were retired 2026-08-18 (#382).
+# PAYLOAD-class scripts NOT yet declared on any bashified branch. Refreshed
+# #432: the branch now declares all nine, so the leak is empty, not four.
 PROP_PAYLOAD_PENDING="
-check-project-busy.sh
-closeout-lint.sh
-notify-senechal.sh
-silence-audit.sh
 "
 PROP_LEAK_BOUND=7
 
@@ -175,7 +173,6 @@ monkey-vdi-to-internal.sh
 monkey-watch.sh
 playbook.sh
 publish-monkey-status.sh
-claim-drift.sh
 carry-drift.sh
 defere.sh
 retire-check.sh
@@ -190,7 +187,6 @@ floor-check.sh
 hardcoded-home-lint.sh
 ownership-audit.sh
 reach-lint.sh
-discipline.sh
 thermostat-wiring.sh
 path-provenance-audit.sh
 selfdev-agent-survey.sh

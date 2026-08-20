@@ -83,6 +83,42 @@ else
   echo "       bound HERE, deliberately, in a commit that says why."
 fi
 
+# verb name -> script basename (`gh` <- gh-sign.sh) via carry-drift's CARRIES.
+CARRY_LIB="$REPO/bin/carry-drift.sh"
+CARRIES_BLOCK="$(sed -n "/^CARRIES='/,/^'\$/p" "$CARRY_LIB" | sed -e '1d' -e '$d')"
+
+main_script_for() {
+  local v="$1" line
+  line="$(printf '%s\n' "$CARRIES_BLOCK" | awk -F'\t' -v p="bin/$v" '$1==p{print $2}')"
+  if [ -n "$line" ]; then
+    basename "$line"
+  elif [ -f "$REPO/bin/$v.sh" ]; then
+    printf '%s.sh' "$v"
+  else
+    printf '%s' "$v"
+  fi
+}
+
+. "$REPO/bin/lib/verb-set.sh"
+V_REF="$(verb_set_ref_of "$REPO")" || V_REF=""
+if [ -z "$V_REF" ]; then
+  bad "no bashified ref in this checkout -- cannot check declared verbs against the contract"
+else
+  declared_verbs="$(verb_set_verbs_of "$REPO" "$V_REF")"
+  verb_bad=""
+  while read -r v; do
+    [ -n "$v" ] || continue
+    s="$(main_script_for "$v")"
+    ch="$(prop_channel "$s" 2>/dev/null)" || { verb_bad="$verb_bad $v(<-$s: unclassified)"; continue; }
+    [ "$ch" = payload ] || verb_bad="$verb_bad $v(<-$s: $ch, not payload)"
+  done <<< "$declared_verbs"
+  if [ -z "$verb_bad" ]; then
+    ok "every verb this repo's bashified branch declares resolves to a PAYLOAD-class script"
+  else
+    bad "declared verb(s) whose backing script is not PAYLOAD-classified:$verb_bad"
+  fi
+fi
+
 # ===========================================================================
 echo
 echo "-- 2. main IS NOT A DEPLOY REF, AND THE LEAK MAY NOT GROW --------------"
