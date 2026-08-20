@@ -43,6 +43,34 @@ stub silence-audit.sh 2 "usage"
 run rot silence >/dev/null
 check "one probe DOWN and one BLIND exits DOWN" "$?" "5"
 
+# --- propagation reads the channel's VERDICT, not the verb count ---------
+# The count said OK through two days of a refusing cutter, because every host
+# still held its full set of verbs. These pin the three answers the verdict
+# gives, with curl stubbed to serve a fixture and ssh stubbed failing.
+verdict() { printf '#!/usr/bin/env bash\ncat <<'"'"'J'"'"'\n%s\nJ\n' "$1" > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"; }
+fresh="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+old="$(date -u -d '-6 days' +%Y-%m-%dT%H:%M:%SZ)"
+
+verdict "{\"decision\":\"ERROR\",\"blocked_streak\":3,\"cadence_hours\":24,\"grace_hours\":4,\"last_cut\":{\"at\":\"$old\",\"build_id\":\"B\"}}"
+out="$(run propagation)"; rc=$?
+check "a refusing channel is DOWN (5)" "$rc" "5"
+has "and it names the decision and the date nothing has propagated since" "$out" "the channel is ERROR"
+
+verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"last_cut\":{\"at\":\"$old\",\"build_id\":\"B\"}}"
+out="$(run propagation)"; rc=$?
+check "a build older than its cadence is DOWN (5)" "$rc" "5"
+has "and it names the age against the cadence" "$out" "past its 28h cadence"
+
+verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"last_cut\":{\"at\":\"$fresh\",\"build_id\":\"B\"}}"
+out="$(run propagation)"; rc=$?
+check "a fresh cut with an unreachable host is DOWN, not OK" "$rc" "5"
+has "and the unreachable consumer is named" "$out" "unreachable"
+
+printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"
+out="$(run propagation)"; rc=$?
+check "an unreadable verdict is BLIND (6), never OK" "$rc" "6"
+has "and it says it could not read the verdict" "$out" "cannot read the release channel verdict"
+
 run nosuchprobe >/dev/null; check "an unknown probe is a usage error (2)" "$?" "2"
 
 out="$(run channel)"; rc=$?

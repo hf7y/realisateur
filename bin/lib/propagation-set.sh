@@ -42,6 +42,11 @@ PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
 # recognise it; prop_current_pin() resolves either.
 PROP_PIN_PATH=".local/share/verb-builds/current"
 
+# The HOST-WIDE pin, in one place. A reader that needs it on ANOTHER host --
+# ausculte asks two of them whether they adopted the build the channel cut --
+# builds its remote command from this rather than retyping the layout.
+PROP_HOST_PIN="${VERB_HOST_BUILD_ROOT:-/usr/local/share/verb-builds}/current"
+
 # STAMPING -- THREE STATES, NEVER TWO. Every stamper calls
 # prop_build_trailer().
 #

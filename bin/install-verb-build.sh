@@ -94,8 +94,8 @@ if [ -n "$ROLLBACK" ]; then
 fi
 
 # --- fetch the meta-repo ------------------------------------------------
-# BOUNDED, because this runs unattended. Against an UNROUTABLE host the
-# kernel's TCP retry took 2m15s to give up -- measured 2026-08-07 against
+# BOUNDED, because this runs unattended: against an unroutable host the
+# kernel's TCP retry runs for minutes before giving up.
 NET_TIMEOUT="${VERB_BUILD_NET_TIMEOUT:-45}"
 export GIT_TERMINAL_PROMPT=0
 mkdir -p "$BUILD_ROOT" || die "cannot create $BUILD_ROOT"

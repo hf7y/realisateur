@@ -18,7 +18,7 @@
 set -uo pipefail
 
 # ############################################################################
-# THE SUNSET. Two weeks from the day this was written (2026-08-10), Zach-set.
+# THE SUNSET, Zach-set: two weeks from the day this was written.
 # Overridable ONLY to let the test suite exercise both sides of the date --
 SUNSET="${SERVED_SUNSET:-2026-08-24}"
 
@@ -185,7 +185,7 @@ probe_headless() {
 #    the only one that needs the host, so it is opt-in via --fleet and BLIND
 #    without it rather than quietly skipped.
 # 8. ONEROSTER -- "live" is ONE fact in ONE file, not an agreement between
-#    several. Zach, 2026-08-11: "it checks one source of truth. and that's
+#    several. Zach: "it checks one source of truth. and that's
 #    maintained by me."
 #
 #    TODAY a project dispatches only if THREE files agree, and every one of
@@ -224,7 +224,7 @@ probe_oneroster() {
 }
 
 # 9. SELFSERVE -- `dose <project>` is reachable and self-installing on the
-#    self-dev host. Zach, 2026-08-11: "I should be able to ssh zach@monkey and
+#    self-dev host. Zach: "I should be able to ssh zach@monkey and
 #    run dose ecosim and the newest ecosim self-installs, updates, starts
 probe_selfserve() {
   [ -d "$SCHED/.git" ] || { row BLIND selfserve "no scheduler checkout at $SCHED"; return; }
