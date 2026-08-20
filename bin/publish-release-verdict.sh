@@ -6,7 +6,6 @@
 # WHY A URL AND NOT A FILE IN A REPO
 # ============================================================================
 #
-# Zach, 2026-08-07: "post the cut status to a webpage, not a driftable file."
 #
 # He is right and the reason is the bug we are already fixing. A verdict
 # committed into `hf7y/verbs` is read by consumers out of THEIR clone of it,

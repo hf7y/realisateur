@@ -77,11 +77,8 @@ out = {
     # `current` symlink, not read from a pin file that nothing proves was
     # adopted.
     #
-    # This used to resolve /usr/local/bin/arme. `arme` is a scheduler-ladder
-    # verb that was DELIBERATELY RETIRED, so the probe found nothing and the
-    # page reported "verb build none" while the host was serving a build from
-    # that morning. A sensor pointed at one retired verb reports the whole
-    # build missing; the build root is the thing being asked about, so ask it.
+    # TRAP: resolving one named verb makes the whole build read as missing the
+    # day that verb is retired. The build root is what is being asked about.
     "verb_build": os.path.basename(
         os.path.realpath("/usr/local/share/verb-builds/current"))
     if os.path.exists("/usr/local/share/verb-builds/current") else None,

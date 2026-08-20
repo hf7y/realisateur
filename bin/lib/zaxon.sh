@@ -4,9 +4,7 @@
 # verb is the estate-wide door. NEVER FATAL: a recovery that aborts because it
 # could not announce itself is worse than a silent one.
 
-# TAILNET FIRST. zaxon runs on dexter, so loopback answers only when the caller
-# IS dexter -- everywhere else it is a connect timeout before the address that
-# works is tried. The order is the cost, not the correctness.
+# Same ordering as zaxon_ask, for the same reason.
 zaxon_probe() {
   local from="${1:-agent}" url
   for url in ${ZAXON:-http://100.107.253.56:8643/mcp http://127.0.0.1:8643/mcp}; do
@@ -21,13 +19,10 @@ zaxon_probe() {
 zaxon_ask() {
   local msg="$1" from="${2:-agent}" url hdr sid body tid
   hdr="$(mktemp)"; body="$(mktemp)"
-  # TAILNET FIRST, loopback second (2026-08-19). zaxon runs on dexter, so
-  # 127.0.0.1 answers ONLY when this is called on dexter; from monkey it is
-  # refused. Measured from monkey 2026-08-19: the tailnet address returns
-  # http=200 in 0.017s, loopback http=000. The cost of the old order was not
-  # latency (refusal is instant) -- it was that listing loopback first reads
-  # as "loopback is the primary route", which is how "zaxon is not reachable
-  # from monkey" kept getting re-derived. It is reachable, and has been.
+  # TAILNET FIRST: zaxon runs on dexter, so 127.0.0.1 answers only when the
+  # caller IS dexter. Listing loopback first reads as "loopback is the primary
+  # route", which is how "zaxon is unreachable from monkey" keeps being
+  # re-derived about a relay that answers.
   for url in ${ZAXON:-http://100.107.253.56:8643/mcp http://127.0.0.1:8643/mcp}; do
     : > "$hdr"
     curl -s -D "$hdr" -o /dev/null --connect-timeout 5 -m 20 -H 'Content-Type: application/json' \

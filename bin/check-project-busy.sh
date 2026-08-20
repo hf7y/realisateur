@@ -38,7 +38,7 @@ project="${1:?usage: check-project-busy.sh <project>}"
 # A MISSPELLED PROJECT MUST NOT READ AS "free". This script's whole job is to
 # gate cross-writes, and its safe-looking answer is the permissive one -- so an
 # unregistered name silently returning "free" is the exact shape of a guard
-# that fails open. Verified 2026-07-30: `check-project-busy.sh --not-a-real-flag`
+# that fails open: `check-project-busy.sh --not-a-real-flag`
 # exited 0 and reported free.
 # Same host-portability fix as bin/notify-senechal.sh: this was an absolute
 # path under /home/zach, so on any other host EVERY project read as
@@ -74,7 +74,7 @@ if [ -f "$reg_lock" ] && ! flock -n "$reg_lock" -c true 2>/dev/null; then
 fi
 
 # -- 2. A LIVE INTERACTIVE SESSION -------------------------------------------
-# The other half of the same question, added 2026-07-26: a job lock says
+# The other half of the same question: a job lock says
 # "automation is writing here"; this says "a human is". Written by
 # bin/session-marker.sh from a Claude SessionStart hook.
 marker="$registry_dir/$project.interactive"
