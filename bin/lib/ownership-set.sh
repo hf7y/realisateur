@@ -149,6 +149,7 @@ bin/tests/consigne.test.sh                 realisateur
 bin/ownership-audit.sh                     realisateur
 bin/lib/ownership-set.sh                   realisateur
 bin/tests/guard-estate.test.sh             realisateur
+bin/tests/subagent-closeout.test.sh        realisateur
 .github/workflows/tests.yml                realisateur
 .github/workflows/prose.yml                realisateur
 .claude/commands/ideate.md                 realisateur
