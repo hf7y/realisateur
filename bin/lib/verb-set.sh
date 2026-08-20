@@ -4,12 +4,9 @@
 # TRAPS (the rest of this header is in the vault):
 # The generator answered the second with `command -v <verb>` -- the HOST'S
 # PATH. That is host state, and the declarations are repo state, so the two
-# disagree whenever a verb is declared but not yet installed. On 2026-07-30
-# the bashify pass installed nothing on PATH, so `command -v range` found
-# nothing twice and `range` was assigned to BOTH bibliothecaire ("shelve,
-# catalogue and retrieve the ecosystem's texts") and secretaire ("put the
-# morning's accounts in the order a missed message costs most"). Only one can
-# own the name; today secretaire's wins and bibliothecaire's verb is
+# disagree whenever a verb is declared but not yet installed -- and a verb
+# nobody installed can be assigned to two projects at once. Only one can own
+# the name, and
 # unreachable. The report for that pass says "all verbs confirmed unclaimed on
 # PATH before assignment", which was true and still produced a collision --
 # PATH was the wrong thing to confirm against.

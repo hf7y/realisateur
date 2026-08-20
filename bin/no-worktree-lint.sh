@@ -15,7 +15,6 @@
 # next run of each. Removing today's instances is not the fix; the fix is that
 # a new one cannot be added without this going red.
 # The three, live on 2026-08-11:
-#   bashify/bashify.sh            a worktree per `bashify emit`, never removed
 #   bin/land-selfdev.sh           $PROJECTS/senechal-verbs, from `bashified`
 #   (scheduler) bin/scheduler-dev-cycle.sh, bin/overnight-dev.sh
 # It also cannot ROT: check B below fails if an allowlisted path has stopped
@@ -63,8 +62,6 @@ if [ -n "${NO_WORKTREE_ALLOW_FILE:-}" ]; then
   done < "$NO_WORKTREE_ALLOW_FILE"
 elif git ls-files --error-unmatch "$SELF_REL" >/dev/null 2>&1; then
   ALLOW_APPLIES=1
-  allow bashify/lib/sync-runtime.sh \
-  "creates \$PROJECTS/<project>-verbs under --apply when no worktree already has the branch's bashified checked out (#158) -- a human review copy for the write sync performs, same shape as bashify.sh's per-emit worktree, and never created during preflight (no --apply)"
 fi
 
 # Excluded prefixes -- see the header for why each.

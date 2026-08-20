@@ -204,10 +204,7 @@ elif [ -z "$(find "$RL" -newermt '-18 hours' 2>/dev/null)" ]; then
          "runner has not ticked in 18h (last $(date -r "$RL" '+%F %H:%M')) -- the loop has not run yet"
 else
   # The witness must be the RUNNER's own record that it dispatched, not the
-  # mere existence of a non-main branch. An earlier version accepted any branch
-  # with a recent commit and reported 3.3 MET on `bashified` -- a branch from
-  # hand-driven bashify work -- on an evening when the 18:00 tick had SKIPped
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  # mere existence of a non-main branch: a hand-pushed branch is not dispatch.
   proj="$(grep -oE '^[a-z][a-z-]*(?=\|1\|)' "$SCHED/schedule/_paced.conf" 2>/dev/null \
           || grep -E '^[a-z][a-z-]*\|1\|' "$SCHED/schedule/_paced.conf" 2>/dev/null | cut -d'|' -f1 | head -1)"
   proj="${proj:-gardien}"
