@@ -69,6 +69,9 @@ bin/discipline	bin/discipline.sh
 bin/notify-senechal	bin/notify-senechal.sh
 bin/silence-audit	bin/silence-audit.sh
 bin/etiquette	bin/etiquette.sh
+bin/ausculte	bin/ausculte.sh
+bin/lib/host-check.sh	bin/lib/host-check.sh
+bin/lib/zaxon.sh	bin/lib/zaxon.sh
 bin/lib/labels.tsv	bin/lib/labels.tsv
 BUILD-DISCIPLINE.md	BUILD-DISCIPLINE.md
 commands/bashify.md	.claude/commands/bashify.md

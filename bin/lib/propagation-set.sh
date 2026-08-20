@@ -151,6 +151,7 @@ gh-sign.sh
 discipline.sh
 claim-drift.sh
 consigne
+ausculte.sh
 "
 
 # --- THE LEAK, with a bound on it -------------------------------------------
@@ -167,7 +168,6 @@ PROP_LEAK_BOUND=7
 PROP_LOCAL_SCRIPTS="
 sunset-coordinator-files.sh
 dexter-liveness.sh
-ausculte.sh
 dexter-service-deploy.sh
 monkey-vdi-to-internal.sh
 monkey-watch.sh

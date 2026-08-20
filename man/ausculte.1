@@ -1,0 +1,83 @@
+.TH AUSCULTE 1 "2026-08-20" "realisateur" "bashified verb"
+.SH NAME
+ausculte \- can Zach stop looking? Composed from probes that already exist.
+.SH SYNOPSIS
+.B ausculte
+.br
+.B ausculte
+--json
+.br
+.B ausculte
+.I probe
+.RI [ probe ...]
+.SH DESCRIPTION
+Runs every probe this estate already has and answers one question: is
+self-dev healthy enough that a human does not have to keep watching it?
+.PP
+.B channel
+asks whether a question can even reach Zach, through zaxon. It is probed
+FIRST and deliberately: every other failure below is meant to reach him
+through that same channel, so a green report with the channel down is a
+report nobody receives.
+.PP
+.B hosts
+runs
+.BR dexter-liveness (1)'s
+checks.
+.B arming
+asks whether the self-dev accounts monkey hosts are armed, resolving the
+collector locally when already run from the target host rather than
+ssh'ing to itself.
+.B propagation
+compares the published verb manifest against what is actually installed on
+each host.
+.B rot
+and
+.B silence
+run
+.I decision-rot.sh
+and
+.BR silence-audit (1)
+respectively.
+.PP
+.B hosts
+and
+.B rot
+call sibling scripts
+.RI ( dexter-liveness.sh ", " decision-rot.sh )
+that stay repo-only. Run standalone, with no repo clone beside it, those two
+probes correctly report BLIND rather than guess \(em BLIND is the honest
+answer to "the sibling this probe needs is not here."
+.B silence
+resolves its sibling three ways (a repo clone's
+.IR silence-audit.sh ,
+a deployed sibling
+.IR silence-audit ,
+or PATH), so it keeps working once ausculte ships as a verb.
+.SH OPTIONS
+.TP
+.B --json
+Print one JSON object per probe instead of the human-readable report.
+.TP
+.I probe
+Run only the named probe(s) instead of every one:
+.IR channel ", " hosts ", " arming ", " propagation ", " rot ", " silence .
+.SH EXIT STATUS
+.TP
+.B 0
+Every declared probe answered OK. Stop looking.
+.TP
+.B 5
+Something declared is DOWN. The report names it.
+.TP
+.B 6
+BLIND: at least one probe could not look, and nothing was found DOWN. This
+is NOT "all clear."
+.SH NOTES
+THE HUMAN CHANNEL IS FIRST, and BLIND is never folded into OK \(em this is
+the command built to be believed. Two invariants from its own header have
+tests behind them: the channel probe runs before any other, and a BLIND
+probe never downgrades to a clean exit.
+.SH SEE ALSO
+.BR discipline (1),
+.BR silence-audit (1)
