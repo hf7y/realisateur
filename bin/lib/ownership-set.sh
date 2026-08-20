@@ -161,6 +161,8 @@ bin/tests/served-not-cloned.test.sh        realisateur
 bin/verb-kind-lint.sh                      realisateur
 bin/tests/verb-kind-lint.test.sh           realisateur
 bin/wire-release-channel.sh                realisateur
+bin/dresse.sh                              realisateur
+bin/tests/dresse.test.sh                   realisateur
 bin/tests/selfdev-agent-survey.test.sh     realisateur
 bin/repo-settings-provision.sh             realisateur
 bin/tests/repo-settings-provision.test.sh  realisateur

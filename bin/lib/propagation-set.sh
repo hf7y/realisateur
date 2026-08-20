@@ -122,6 +122,7 @@ lib/selfdev-app-key.sh
 #
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PROP_PROVISION_SCRIPTS="
+dresse.sh
 land-selfdev.sh
 provision-selfdev-user.sh
 install-honey-plugin.sh
