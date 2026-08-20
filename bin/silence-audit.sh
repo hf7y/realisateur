@@ -268,9 +268,7 @@ check_stderr_silenced() {
 
 check_unwired() {
   # A mechanism nothing names. Domain read: every readable crontab, this
-  # project's command files, EVERY .sh ANYWHERE IN THE REPO, the registry,
-  # and every bashified verb binary (bin/<verb>, extensionless -- the
-  # build strips .sh, and --include='*.sh' has no way to say "no extension").
+  # project's command files, EVERY .sh ANYWHERE IN THE REPO, and the registry.
   #
   #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local name repo sh base crontab_blob verb found
@@ -286,10 +284,6 @@ check_unwired() {
         --include='*.service' --include='*.timer' 2>/dev/null && continue
       grep -rqF "$base" "$repo" --include='*.sh' --exclude="$base" \
         --exclude-dir=.git --exclude-dir=worktrees 2>/dev/null && continue
-      # A bashified verb binary is a text file too, just without the
-      # extension --include can match. Found this way (not by widening the
-      # include glob): gardien's bin/garde execs bin/ecosystem-archive.sh,
-      # and only this loop, not the one above, ever sees that call.
       found=0
       while IFS= read -r verb; do
         [ -f "$verb" ] && [ -r "$verb" ] || continue
@@ -471,10 +465,6 @@ EOF
   t  "unwired still fires on a script nothing names"           'unwired.*orphaned\.sh'  "$out"
   rm -f "$tmp/proj/bin/witnessed.sh" "$tmp/proj/tests/witnessed-witness.sh" "$tmp/proj/bin/orphaned.sh"
 
-  # --- gardien#6-adjacent: a bashified verb binary (bin/<verb>, no
-  # extension) is a valid referrer too. --include='*.sh' cannot see it --
-  # this reproduced as a false [unwired] on gardien's own
-  # bin/ecosystem-archive.sh, called only from bin/garde.
   printf '#!/usr/bin/env bash\necho hi\n'                            >"$tmp/proj/bin/helper.sh"
   printf '#!/usr/bin/env bash\nexec bin/helper.sh "$@"\n'            >"$tmp/proj/bin/garde"
   chmod +x "$tmp/proj/bin/garde"
