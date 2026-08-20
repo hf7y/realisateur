@@ -182,6 +182,12 @@ wire_host() {
     fi
   done
   [ "$boot_ok" -eq 1 ] || return 1
+  # THE VERB HAS TO BE TYPEABLE. dresse is provision-class, so it never travels
+  # in a verb build and nothing links it: deployed to libexec and absent from
+  # PATH, it is a verb Zach cannot type, which was its whole justification.
+  ln -sfn "$HOST_LIBEXEC/dresse.sh" "$HOST_BIN/dresse" \
+    && echo "  OK      $HOST_BIN/dresse -> $HOST_LIBEXEC/dresse.sh" \
+    || { echo "  BAD     could not link $HOST_BIN/dresse"; return 1; }
   if [ -x "$HOST_LIBEXEC/dresse.sh" ] && bash "$HOST_LIBEXEC/dresse.sh" --help >/dev/null 2>&1; then
     echo "  OK      $HOST_LIBEXEC/dresse.sh --help runs from the deployed path"
   else

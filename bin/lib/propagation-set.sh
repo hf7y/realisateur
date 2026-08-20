@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 # propagation-set.sh -- THE DEV/PROD CONTRACT, in one place.
 #
-# THE DECISION (2026-08-07, Zach-directed; the desired-state frame it belongs
-# to is #134). Self-dev accounts do NOT pull fresh clones of realisateur.
-# `main` IS NOT A DEPLOY REF; everything they use reaches them through the
-# nightly verb build.
-#
-# The argument is what it buys the DEV side, not agent safety. If live accounts
-# pull `main` on a tick, every commit is a deployment and `main` must turn
-# conservative to protect them. Separating them is what lets `main` STAY FAST.
+# THE DECISION (#134, Zach-directed). Self-dev accounts do NOT pull fresh
+# clones of realisateur. `main` IS NOT A DEPLOY REF; everything they use
+# reaches them through the nightly verb build. The argument is what it buys the
+# DEV side: if live accounts pull `main` on a tick, every commit is a
+# deployment and `main` must turn conservative to protect them.
 #
 # PULL, NOT PUSH. The clock lives on the CONSUMER, in the account's own
 # crontab, running as the account. bin/tests/propagation.test.sh asserts this
@@ -109,6 +106,7 @@ selfdev-gh-app.sh
 # into a 0700 home presents as "Permission denied", not "file not found".
 PROP_BOOTSTRAP_SUPPORT="
 lib/cli-guard.sh
+lib/host-check.sh
 lib/propagation-set.sh
 lib/selfdev-app-key.sh
 "
