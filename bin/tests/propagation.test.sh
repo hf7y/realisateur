@@ -344,9 +344,9 @@ echo "-- 5. PULL, NOT PUSH ---------------------------------------------------"
 # clock. Asserted against the source, because this is exactly the property
 # that erodes the first time reaching in is more convenient.
 
-# Everything from the first line to the --survey function is the tick's own
-# path. --survey is the one read-only operator view and is allowed ssh.
-APPLY_PATH="$(sed -n '1,/^run_survey()/p' "$TICK")"
+# Everything from the first line to the --survey machinery is the tick's own
+# path. --survey and its account scan are allowed ssh and sudo -u.
+APPLY_PATH="$(sed -n '1,/^survey_scan_accounts()/p' "$TICK")"
 hasnt "the tick's own path contains no 'sudo -u'" "$APPLY_PATH" "sudo -u "
 hasnt "the tick's own path contains no ssh" "$APPLY_PATH" "ssh -o"
 
@@ -358,7 +358,7 @@ hasnt "the cadence is not written into another account's crontab" "$CADENCE_FN" 
 has "the cadence is verified by re-reading crontab -l, not by the write's rc" "$CADENCE_FN" "crontab -l"
 
 # --survey may read, but must not adopt or write.
-SURVEY_FN="$(sed -n '/^run_survey()/,/^}/p' "$TICK")"
+SURVEY_FN="$(sed -n '/^survey_scan_accounts()/,/^}/p; /^run_survey()/,/^}/p' "$TICK")"
 hasnt "--survey never adopts a build" "$SURVEY_FN" "--apply"
 hasnt "--survey never repoints a symlink" "$SURVEY_FN" "ln -s"
 
@@ -369,8 +369,11 @@ hasnt "--survey never repoints a symlink" "$SURVEY_FN" "ln -s"
 # account resolved every verb. An alarm that fires on success is one nobody
 # reads the next time it fires on failure.
 has "--survey grades the host-wide channel, not just the private pin" "$SURVEY_FN" "host-wide"
-has "...by asking AS THE ACCOUNT, since its own PATH can shadow the host dir" "$SURVEY_FN" 'sudo -u "\$user" -H'
+has "...by asking AS THE ACCOUNT, since its own PATH can shadow the host dir" "$SURVEY_FN" 'sudo -u "$user" -H'
 has "...and an account with neither is still a finding" "$SURVEY_FN" "this account has no verbs"
+
+has "run_survey resolves locally when already on SURVEY_HOST" "$SURVEY_FN" "on_target_host \"\$SURVEY_HOST\""
+has "the local branch calls the scan directly, no ssh" "$SURVEY_FN" 'out="$(survey_scan_accounts)"'
 
 # ===========================================================================
 echo
@@ -477,6 +480,28 @@ O="$(TICK_SURVEY_HOST="no-such-host.invalid" TICK_STATE="$T/s_fresh" \
      HOME="$T/emptyhome" "$TICK" --survey 2>&1)"; R=$?
 rc "an unreachable survey host exits 3 BLIND, not 0" 3 "$R"
 has "the unreachable survey says nothing was verified" "$O" "Nothing was verified"
+
+mkdir -p "$T/localsurvey/stub"
+cat > "$T/localsurvey/stub/ssh" <<EOF
+#!/usr/bin/env bash
+echo called >> "$T/localsurvey/ssh_called"
+exit 255
+EOF
+chmod +x "$T/localsurvey/stub/ssh"
+cat > "$T/localsurvey/stub/sudo" <<'EOF'
+#!/usr/bin/env bash
+exit 1
+EOF
+chmod +x "$T/localsurvey/stub/sudo"
+printf 'acct1:x:3001:3001::/home/acct1:/bin/bash\n' > "$T/localsurvey/passwd"
+
+O="$(PATH="$T/localsurvey/stub:$PATH" SELFDEV_LOCAL_HOSTNAME="testhost" \
+     TICK_SURVEY_HOST="testhost" TICK_SURVEY_PASSWD="$T/localsurvey/passwd" \
+     TICK_STATE="$T/s_fresh" HOME="$T/localsurvey/home" "$TICK" --survey 2>&1)"
+[ -f "$T/localsurvey/ssh_called" ] \
+  && bad "a local survey never shells out to ssh" "ssh was invoked" \
+  || ok "a local survey never shells out to ssh"
+has "a local survey still finds the fixture account" "$O" "acct1"
 
 # ===========================================================================
 echo

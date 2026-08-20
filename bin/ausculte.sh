@@ -19,6 +19,7 @@ CLI_EXITS='  0  every declared probe answered OK
 cli_guard "$@"
 
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+. "$HERE/lib/host-check.sh"
 JSON=0; ONLY=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -58,8 +59,12 @@ if want hosts; then
 fi
 
 if want arming; then
-  out="$(ssh -n -o ConnectTimeout=10 -o BatchMode=yes monkey \
-          'sudo -n python3 /usr/local/libexec/selfdev/monkey-status-collect.py 2>/dev/null || sudo -n python3 ~zach/realisateur/bin/monkey-status-collect.py 2>/dev/null' 2>/dev/null)"
+  if on_target_host monkey; then
+    out="$(sudo -n python3 /usr/local/libexec/selfdev/monkey-status-collect.py 2>/dev/null || sudo -n python3 ~zach/realisateur/bin/monkey-status-collect.py 2>/dev/null)"
+  else
+    out="$(ssh -n -o ConnectTimeout=10 -o BatchMode=yes monkey \
+            'sudo -n python3 /usr/local/libexec/selfdev/monkey-status-collect.py 2>/dev/null || sudo -n python3 ~zach/realisateur/bin/monkey-status-collect.py 2>/dev/null' 2>/dev/null)"
+  fi
   if [ -z "$out" ]; then record arming BLIND 'monkey did not answer the collector'
   else
     n="$(printf '%s' "$out" | grep -co 'armed' || true)"
