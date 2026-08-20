@@ -8,17 +8,6 @@
 # GATE: strict
 #
 # TRAPS (the rest of this header is in the vault):
-# WHY THIS EXISTS. claim-drift.sh --convention states, as settled ecosystem
-# fact: "allow_auto_merge=true, delete_branch_on_merge=true ... live on
-# hf7y/realisateur since 2026-08-08." That was true of realisateur alone --
-# applied once, by hand, against one repo. It was never turned into something
-# that runs against the REGISTRY, so every sibling project silently kept
-# whatever GitHub defaulted it to. Found 2026-08-10 (senechal, via /cloture):
-# hf7y/senechal had both settings OFF, `gh pr merge --auto` produced squash
-# merges that satisfied the intent, and 22 already-merged PR branches sat on
-# origin forever because nothing ever deleted them (the reconciliation cost
-# a whole /triage-run's Phase 1 to clean up by hand). "Live on realisateur"
-# read as an ecosystem fact; it was one repo's setting.
 #
 
 set -uo pipefail

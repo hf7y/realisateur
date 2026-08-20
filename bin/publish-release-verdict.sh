@@ -28,14 +28,6 @@
 # has to be readable with NO credential at all, or the consumers that most
 # need it are the ones that cannot see it.
 #
-# Probed 2026-08-07:
-#   hf7y/verbs            private: true    has_pages: false
-#   hf7y (account)        type: User, free -- Pages on a PRIVATE repo needs a
-#                         paid plan, so publishing from `verbs` is not
-#                         available at any amount of configuration.
-#   hf7y/hf7y.github.io   public: true     Pages: built, https://hf7y.com/
-#                         (200 over HTTPS, custom domain, already live)
-#
 # So the endpoint is an existing, already-live, credential-free public site,
 # not a new thing to stand up and maintain. That is also the "extend what
 # exists" answer rather than inventing a parallel channel.
@@ -76,15 +68,6 @@
 # ============================================================================
 # THE VERDICT CARRIES ITS OWN EXPIRY, AND THE PRODUCER SETS IT
 # ============================================================================
-#
-# Added 2026-08-07, after the failure below.
-#
-# THE FAILURE. The publisher died on its own argument parser (`--build-id -`;
-# see bin/lib/cli-guard.sh) and published nothing. The endpoint kept serving
-# the previous night's `"decision": "CUT", "blocked_streak": 0`. Nineteen
-# hours old, inside the consumer's staleness window, so `release-ledger.sh`
-# graded it `release channel healthy (verdict fresh, no blocked streak)` on
-# the one night the gate was broken.
 #
 #   >>> THE CHANNEL'S FAILURE MODE IS SILENCE, AND SILENCE RENDERS AS THE
 #   >>> LAST GOOD VERDICT. A publisher that cannot publish leaves a stale

@@ -5,16 +5,6 @@
 # RUNNER: no -- needs `ssh $CRED_HOST` + passwordless `sudo -n -u <account>`
 #
 # TRAPS (the rest of this header is in the vault):
-# Measured 2026-08-11: ecosim's `gh` credential was a fine-grained PAT missing
-# the Pull-requests permission -- 403 on the ENTIRE Pull-requests API, read
-# and write. `gh issue list` kept working, so every automated signal an
-# operator would normally trust (a green test run, a pushed branch, an
-# answered issue) stayed healthy right up to the one step that mattered. It
-# took two days and a human to notice, because the OTHER nine accounts were
-# never compared against it -- each account's own scripts
-# (provision-selfdev-user.sh, wire-selfdev-git.sh, selfdev-gh-app.sh) check
-# THAT account in isolation and always have. THE ACTUAL DEFECT WAS THAT
-# NOTHING COMPARED THE TEN. This is that comparison, run on a clock.
 # --audit (default) is READ-ONLY throughout: it never writes to the fleet, so
 # it needs no notify-senechal and is safe to run unattended on a clock. It is
 # the mode that would have caught ecosim on day one.

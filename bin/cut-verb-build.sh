@@ -244,10 +244,6 @@ verb_count="$(wc -l < "$rows" | tr -d ' ')"
 [ "$verb_count" -gt 0 ] || die 'derived zero verbs. That is a BLIND read, not an ecosystem with no verbs.'
 
 # --- 3. a name may be declared by exactly one project -------------------
-# verb-set.sh exists because `range` was assigned to both bibliothecaire
-# and secretaire on 2026-07-30. Two claimants is a build that cannot be
-# installed unambiguously, so it is refused here rather than resolved by
-# whichever `ln -s` runs last.
 dupes="$(awk -F'\t' '{print $2}' "$rows" | sort | uniq -d)"
 if [ -n "$dupes" ]; then
   while read -r d; do

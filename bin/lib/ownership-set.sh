@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 # ownership-set.sh -- THE OWNERSHIP LEDGER, in one place.
 #
-# ============================================================================
-# THE AXIS, AND WHY IT IS NOT THE ONE propagation-set.sh ALREADY HAS
-# ============================================================================
-#
+# =====================================================================# THE AXIS, AND WHY IT IS NOT THE ONE propagation-set.sh ALREADY HAS
+# =====================================================================#
 # bin/lib/propagation-set.sh answers DISTRIBUTION: bootstrap / provision /
 # payload / local -- by what route does this file reach the host that runs it.
 # This file answers OWNERSHIP: which project's mission does this file serve.
@@ -30,17 +28,13 @@
 #
 # Every foreign row names a receiver declared in OWN_RECEIVERS.
 #
-# ============================================================================
-# WHAT THIS LEDGER IS NOT
-# ============================================================================
-#
+# =====================================================================# WHAT THIS LEDGER IS NOT
+# =====================================================================#
 # It is not a migration order and it does not move anything. The audit and the
 # move are deliberately separate acts; see bin/ownership-audit.sh.
 #
-# ============================================================================
-# HOW A NEW FILE GETS CLASSIFIED
-# ============================================================================
-#
+# =====================================================================# HOW A NEW FILE GETS CLASSIFIED
+# =====================================================================#
 # It does not get classified by being added here. The population is derived
 # from the tree (see OWN_AREAS), so a new file that is not matched by any row
 # is UNCLASSIFIED, and unclassified is a hard finding with a bound of zero --
@@ -149,6 +143,8 @@ bin/tests/consigne.test.sh                 realisateur
 bin/ownership-audit.sh                     realisateur
 bin/lib/ownership-set.sh                   realisateur
 bin/tests/guard-estate.test.sh             realisateur
+bin/org-migration-audit.sh                 realisateur
+bin/tests/org-migration-audit.test.sh      realisateur
 bin/tests/subagent-closeout.test.sh        realisateur
 .github/workflows/tests.yml                realisateur
 .github/workflows/prose.yml                realisateur

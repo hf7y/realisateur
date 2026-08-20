@@ -24,16 +24,6 @@ set -uo pipefail
 #
 #     selfdev-gh-app.sh --credential get
 #
-# `get` matched no case, fell through to `*)`, printed usage and exited 2.
-# THE HELPER HAS THEREFORE NEVER FUNCTIONED, from the day it was written
-# (2026-08-06) to the day this was found (2026-08-07). Every fetch and push
-# through it fell back to whatever else git could find.
-#
-# bin/tests/selfdev-gh-app.test.sh exercised `--credential` -- but never with
-# the argument git actually appends, so it passed by testing a shape
-# production never runs. That is the same bug class as the `$HOME`-fixture
-# guards in MEMORY.md and as the `--build-id -` outage in this same PR: a test
-# green against a paraphrase of the real invocation.
 MODE="--check"; REPOS=""; ADOPT_ACCOUNT=""; ADOPT_KEY=""; ADOPT_ID=""; GIT_OP=""
 while [ $# -gt 0 ]; do
   case "$1" in

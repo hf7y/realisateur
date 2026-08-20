@@ -28,7 +28,12 @@ TESTS="$REPO/bin/tests"
 # --- the ratchets -----------------------------------------------------------
 # Measured 2026-08-07 AFTER the retirement pass in this branch. Each may be
 # lowered. Raising one is the change this file exists to make visible.
-GUARD_OPERATOR_BOUND="${GUARD_OPERATOR_BOUND:-5}"   # no automatic runner
+# 5 -> 6 on 2026-08-18 (#301): bin/org-migration-audit.sh. Deliberately
+# operator-only, not a gap to close -- it is decision support for a one-time
+# human call ("is an org migration worth the cost"), and an automatic runner
+# would mean something auto-decided that. claim-drift.sh and the four beside
+# it are operator-run for the same reason: a person reads the output.
+GUARD_OPERATOR_BOUND="${GUARD_OPERATOR_BOUND:-6}"   # no automatic runner
 GUARD_UNTESTED_BOUND="${GUARD_UNTESTED_BOUND:-4}"   # no dedicated suite
 # 7 -> 9 on 2026-08-15 (#294, #304): bin/directive-prose.sh and
 # bin/rot-ratchet.sh. Both are `GATE: none` for reasons already accepted here
