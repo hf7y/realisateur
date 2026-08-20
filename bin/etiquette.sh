@@ -10,9 +10,9 @@
 # grammar copied into 24 repos is 24 grammars; this is the `discipline` shape --
 # one file, read live, carried by the verb build so no checkout is needed.
 #
-# `needs-human` is DERIVED from line 1 by grammar_declaration()
-# (bin/lib/body-grammar.sh), which gh-sign enforces at creation. Typed, it was
-# wrong 3 of 3 and absent from 22 of 24 repos (#396, #397).
+# `needs-human` is DERIVED: grammar_declaration() (bin/lib/body-grammar.sh)
+# reads line 1, issue_answered() (bin/lib/answered.sh) reads the comments.
+# Typed, it was wrong 3 of 3 and absent from 22 of 24 repos (#396, #397).
 #
 # TRAP: line 1 declaring NEITHER is UNDECLARED, never "no decision".
 # TRAP: a label absent from labels.tsv is left alone -- a floor, not a
@@ -145,9 +145,8 @@ while IFS=$'\t' read -r num has_label title; do
   body="$(printf '%s' "$json" | jq -r --argjson n "$num" '.[]|select(.number==$n)|.body')"
   want='' ; answered=0
   case "$(grammar_declaration "$body")" in
-    # An ANSWERED decision is no longer a human's to move: it is direction
-    # nobody has taken up, which is an agent's work. Left labelled, it brakes
-    # dispatch on the very issue the answer unblocked.
+    # An answered decision is an agent's work, not a human's. Left labelled it
+    # brakes dispatch on the very issue the answer unblocked.
     decision)    want=yes
                  if issue_answered "$REPO" "$num"; then want=no; answered=1; fi ;;
     no-decision) want=no ;;

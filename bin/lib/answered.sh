@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
-# lib/answered.sh -- has a human answered this issue since it was filed?
+# lib/answered.sh -- has a human answered this issue? (decision-rot's predicate,
+# reused so `needs-human` stops claiming a decision Zach already made.)
 #
-# The predicate `decision-rot.sh` reports on, reused here so `needs-human` can
-# stop claiming a decision Zach has already made. One rule, two readers.
-#
-# THE STAMP ERA. Every comment in this estate is authored by one account, so
-# authorship cannot separate Zach from an agent. What can: `gh-sign` stamps
-# every agent comment with `<!-- agent: ... -->`. An UNSTAMPED comment written
-# after the stamp went live estate-wide is a human's. Before that date it is
-# unknowable, and unknowable is NOT an answer -- the issue keeps its label.
+# One account authors every comment here, so authorship cannot separate Zach
+# from an agent. `gh-sign` stamps agent comments, so an UNSTAMPED comment after
+# the stamp went live estate-wide is a human's; older is unknowable, and
+# unknowable is NOT an answer -- the label stays.
 ANSWERED_STAMP_ERA="${ANSWERED_STAMP_ERA:-2026-08-14}"
 
 # issue_answered <owner/repo> <number> -- 0 if answered, 1 if not, 2 if BLIND.

@@ -13,10 +13,8 @@
 # SOURCE is the column that decides who may write the label, and it is the
 # whole point of the file:
 #   derived:decision  line 1 declares `DECISION:` AND nobody has answered.
-#                     NEVER typed by hand -- `etiquette --apply` writes it.
-#                     grammar_declaration() (bin/lib/body-grammar.sh) reads
-#                     line 1; issue_answered() (bin/lib/answered.sh) reads the
-#                     comments, so an answer takes the label off by itself.
+#                     NEVER typed -- `etiquette --apply` writes it, reading
+#                     bin/lib/body-grammar.sh and bin/lib/answered.sh.
 #   written:<verb>    that verb applies it at filing time, and nothing else
 #                     should. A human retyping one of these is drift.
 #   typed             a person or agent applies it as a judgement. No
