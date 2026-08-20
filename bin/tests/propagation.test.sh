@@ -85,6 +85,55 @@ fi
 
 # ===========================================================================
 echo
+echo "-- 1b. EVERY DECLARED VERB RESOLVES TO A PAYLOAD-CLASS SCRIPT ----------"
+# ===========================================================================
+# THE TWO KEYS. PROP_*_SCRIPTS is keyed on THIS repo's own bin/*.sh basenames;
+# a bashified branch declares VERB names, and the two sets are not 1:1 -- `gh`
+# is built from gh-sign.sh. bin/carry-drift.sh's CARRIES table already maps a
+# bashified path back to its main-branch original -- it exists to prove the
+# two stay byte-identical -- so it is read here rather than re-derived
+# (verb-set.sh's own precedent for the bin/+man/ declaration rule).
+CARRY_LIB="$REPO/bin/carry-drift.sh"
+CARRIES_BLOCK="$(sed -n "/^CARRIES='/,/^'\$/p" "$CARRY_LIB" | sed -e '1d' -e '$d')"
+
+# main_script_for <verb> -- the bin/ basename on `main` backing a declared verb.
+main_script_for() {
+  local v="$1" line
+  line="$(printf '%s\n' "$CARRIES_BLOCK" | awk -F'\t' -v p="bin/$v" '$1==p{print $2}')"
+  if [ -n "$line" ]; then
+    basename "$line"
+  elif [ -f "$REPO/bin/$v.sh" ]; then
+    printf '%s.sh' "$v"
+  else
+    printf '%s' "$v"
+  fi
+}
+
+. "$REPO/bin/lib/verb-set.sh"
+V_REF="$(verb_set_ref_of "$REPO")" || V_REF=""
+if [ -z "$V_REF" ]; then
+  bad "no bashified ref in this checkout -- cannot check declared verbs against the contract"
+else
+  declared_verbs="$(verb_set_verbs_of "$REPO" "$V_REF")"
+  verb_bad=""
+  while read -r v; do
+    [ -n "$v" ] || continue
+    s="$(main_script_for "$v")"
+    ch="$(prop_channel "$s" 2>/dev/null)" || { verb_bad="$verb_bad $v(<-$s: unclassified)"; continue; }
+    [ "$ch" = payload ] || verb_bad="$verb_bad $v(<-$s: $ch, not payload)"
+  done <<< "$declared_verbs"
+  if [ -z "$verb_bad" ]; then
+    ok "every verb this repo's bashified branch declares resolves to a PAYLOAD-class script"
+  else
+    bad "declared verb(s) whose backing script is not PAYLOAD-classified:$verb_bad"
+    echo "       A verb reaches accounts as a dated build; a LOCAL or unclassified"
+    echo "       backing script means the source in bin/lib/propagation-set.sh"
+    echo "       disagrees with what actually ships. Fix the classification."
+  fi
+fi
+
+# ===========================================================================
+echo
 echo "-- 2. main IS NOT A DEPLOY REF, AND THE LEAK MAY NOT GROW --------------"
 # ===========================================================================
 # The prize in separating dev from prod is that `main` gets to STAY FAST. If

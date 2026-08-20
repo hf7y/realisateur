@@ -148,17 +148,21 @@ closeout-lint.sh
 notify-senechal.sh
 silence-audit.sh
 gh-sign.sh
+discipline.sh
+claim-drift.sh
+consigne
 "
 
 # --- THE LEAK, with a bound on it -------------------------------------------
 # PAYLOAD-class scripts that are NOT yet declared on any bashified branch.
-# realisateur's bashified branch declares TWO verbs: consigne and gh. It was
-# five until arpente, epluche and juge were retired 2026-08-18 (#382).
+# realisateur's bashified branch declares NINE verbs as of 2026-08-19:
+# check-project-busy, claim-drift, closeout-lint, consigne, discipline,
+# etiquette, gh, notify-senechal, silence-audit -- one per PAYLOAD-class
+# script above, so the leak is currently empty. bin/carry-drift.sh's CARRIES
+# table is what maps a differently-named verb (`gh`) back to the script that
+# backs it (gh-sign.sh); bin/tests/propagation.test.sh reads that table
+# rather than re-deriving it.
 PROP_PAYLOAD_PENDING="
-check-project-busy.sh
-closeout-lint.sh
-notify-senechal.sh
-silence-audit.sh
 "
 PROP_LEAK_BOUND=7
 
@@ -175,7 +179,6 @@ monkey-vdi-to-internal.sh
 monkey-watch.sh
 playbook.sh
 publish-monkey-status.sh
-claim-drift.sh
 carry-drift.sh
 defere.sh
 retire-check.sh
@@ -190,7 +193,6 @@ floor-check.sh
 hardcoded-home-lint.sh
 ownership-audit.sh
 reach-lint.sh
-discipline.sh
 thermostat-wiring.sh
 path-provenance-audit.sh
 selfdev-agent-survey.sh
