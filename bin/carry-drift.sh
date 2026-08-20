@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # carry-drift.sh -- a file carried onto `bashified` is a REPLICA of the one on
 # `main`, byte for byte, or it is a second copy of the same fact.
-# VERIFIED: 2026-08-16 via bash bin/carry-drift.sh (3 ok, 5 ratcheted, 0 findings) and its suite
 #
 # GUARD: does every file the bashified branch carries still match its original?
 # RUNNER: .github/workflows/tests.yml -- job `surface`, against origin/bashified
