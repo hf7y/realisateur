@@ -92,7 +92,6 @@ git rev-parse --git-dir >/dev/null 2>&1 || die "not a git repo: $repo"
 # A DRY RUN NEEDS NO BRANCH. Only --apply cuts one, so only --apply requires
 # one. Demanding it up front made the script unusable against exactly the
 # checkouts you most want to scan -- a CI checkout (this repo's own `suites`
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 branch="$(git symbolic-ref --quiet --short HEAD || true)"
 
 repo_name="$(basename "$(git rev-parse --show-toplevel)")"
@@ -100,7 +99,6 @@ repo_name="$(basename "$(git rev-parse --show-toplevel)")"
 # ============================================================================
 # PART A: FIND PRODUCERS -- anything that reads or writes .scheduler/ or
 # retired .claude/ coordinator files (FOCUS.md, QUESTIONS.md, BLOCKERS.md)
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 # Filenames that were retired on 2026-08-07
 
@@ -270,7 +268,6 @@ PYSCANNER
 # ============================================================================
 # PART B: CHECK FOR FILES -- what would be removed
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 find_targets() {
   local found=0

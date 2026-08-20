@@ -86,7 +86,6 @@ say "    powered off"
 # --- 2. clone ---------------------------------------------------------------
 # READ from D:, WRITE to C:. Retried, because at 19.7 MB/s this is a ~13 minute
 # continuous read off a drive that resets every 5-10 minutes -- a failed clone
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mkdir -p "$(dirname "$DST_WSL")"
 SRC_BYTES="$(stat -c %s "/mnt/d/VirtualBox VMs/monkey/monkey.vdi" 2>/dev/null || echo 0)"
 say "2/5 cloning ($((SRC_BYTES/1024/1024)) MB source, expect ~13 min at measured 19.7 MB/s)"

@@ -20,7 +20,6 @@ set -uo pipefail
 # ############################################################################
 # THE SUNSET. Two weeks from the day this was written (2026-08-10), Zach-set.
 # Overridable ONLY to let the test suite exercise both sides of the date --
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SUNSET="${SERVED_SUNSET:-2026-08-24}"
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
@@ -153,7 +152,6 @@ probe_livebrief() {
 # 5. DONEBRAKES -- the verdict changes what happens next. `verdict.sh
 #    classify` already returns 0 for DONE, meaning "bar met; stop dispatching,
 #    this is success" -- and no dispatcher branches on it. DONE was recorded 9
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 probe_donebrakes() {
   [ -d "$SCHED/bin" ] || { row BLIND donebrakes "no $SCHED/bin to search"; return; }
   local hit
@@ -228,7 +226,6 @@ probe_oneroster() {
 # 9. SELFSERVE -- `dose <project>` is reachable and self-installing on the
 #    self-dev host. Zach, 2026-08-11: "I should be able to ssh zach@monkey and
 #    run dose ecosim and the newest ecosim self-installs, updates, starts
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 probe_selfserve() {
   [ -d "$SCHED/.git" ] || { row BLIND selfserve "no scheduler checkout at $SCHED"; return; }
   local verbs

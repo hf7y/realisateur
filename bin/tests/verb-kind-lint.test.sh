@@ -346,7 +346,6 @@ echo "== 9. THE 2026-08-06T003928Z MANIFEST, WITH ITS ONE PRODUCT DECLARED =="
 # Every project/verb pair below is transcribed from the real build's
 # manifest.tsv (32 verbs, 12 projects). All 32 are given `# KIND: verb`
 # except vim-arcade/vim-arcade, which is given `# KIND: product` -- the
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 b="$(new_build real)"
 while read -r p v; do
   [ -n "$p" ] || continue
@@ -408,7 +407,6 @@ echo "== 10. THIS GUARD AND lib/not-a-verb.tsv GRADE DISJOINT POPULATIONS =="
 # list of executables that are deliberately not verbs. The reasonable review
 # question is whether this guard should honour it instead of holding a second
 # opinion about the same command. It cannot: not-a-verb.tsv exempts HALF
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 NAV="$REPO/bin/lib/not-a-verb.tsv"
 if [ ! -f "$NAV" ]; then
   bad "bin/lib/not-a-verb.tsv is missing -- the file this guard's header reasons about"

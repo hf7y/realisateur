@@ -229,7 +229,6 @@ echo "-- F. IT IS NOT A SECOND IMPLEMENTATION --------------------------------"
 # ===========================================================================
 # The defect this verb was rewritten to avoid, asserted against its own source.
 # The first draft (#121, b81de52) copied files with `cp` and committed them,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SRC_TEXT="$(grep -v '^[[:space:]]*#' "$CONSIGNE")"
 hasnt "it does not run git push"   "$SRC_TEXT" "git push"
 hasnt "it does not run git commit" "$SRC_TEXT" "git commit"

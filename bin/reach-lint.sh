@@ -118,7 +118,6 @@ echo " of this script for the failure it was written after.)"
 # Read through lib/conf.sh: the raw `grep -oP` this replaces returned the
 # LITERAL `$HOME/Documents/Projects/<name>`, so `[ -d "$repo" ]` was false for
 # every project on every host and this loop collected NOTHING -- after which
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cmd_files=()
 confs=0    # confs that carry a PROJECT_REPO_PATH at all
 repos=0    # ...of those, how many name a directory that exists
@@ -140,7 +139,6 @@ done
 # BLIND, and exit 3 rather than 0 -- but ONLY on `confs>0 && repos==0`, which
 # is the #73 shape exactly: every conf readable, every path a literal, every
 # match impossible. Two neighbouring states are deliberately NOT blind:
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$confs" -gt 0 ] && [ "$repos" -eq 0 ]; then
   echo
   echo "  BLIND: $confs registered project(s) under $SCHED_ROOT/schedule/ carry a"

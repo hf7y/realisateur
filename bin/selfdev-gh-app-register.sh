@@ -13,7 +13,6 @@ ACCOUNT=""; REPO=""; ROLE="writer"; PORT="8721"; OUT=""; MANIFEST_ONLY=0; IS_ORG
 # Matches GitHub's OWN one-hour manifest-code lifetime, deliberately. A shorter
 # wait is the worst possible setting: the server dies, the human clicks anyway
 # on a code that is still valid, GitHub creates the App, and the pem goes to a
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 WAIT="3600"
 OWNER="${SELFDEV_GH_OWNER:-hf7y}"
 # Overridable so the test suite can point the exchange at a local stub. A
@@ -93,7 +92,6 @@ FORM="$T/register.html"
 #
 # Under $HOME and NOT /tmp, deliberately. /tmp is not reliably the same
 # directory for the script and for the browser -- a sandboxed or namespaced
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 KEEPDIR="${XDG_CACHE_HOME:-$HOME/.cache}/selfdev"
 mkdir -p "$KEEPDIR"
 KEEP="$KEEPDIR/register-$ACCOUNT-$$.html"
@@ -140,7 +138,6 @@ PY
 # Open a browser ONLY on an interactive run. A script that hijacks the desktop
 # from a non-tty context is wrong in every direction: cron, CI, a background
 # job, and -- measured 2026-08-07 -- this script's OWN TEST SUITE, which runs it
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$NO_OPEN" -eq 0 ] && [ -t 1 ] && command -v xdg-open >/dev/null; then
   xdg-open "$KEEP" >/dev/null 2>&1 &
 fi

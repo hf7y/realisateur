@@ -49,7 +49,6 @@ cli_guard "$@"
 #
 # Why a flag and not a paragraph in a brief: on 2026-08-07 this convention was
 # retyped from memory into eight agent briefs by one coordinator, who then
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 print_convention() {
   cat <<'CONV'
 PULL REQUEST CONVENTION -- canonical. Reference this; do not paraphrase it.
@@ -165,13 +164,11 @@ drifted=0; current=0; unclaimed=0; settled=0; blind=0; undecided=0; overcautious
 # Whether the body declares itself at all -- one line over the shared
 # grammar_declaration(), which bin/gh-sign.sh enforces at the write. This file
 # used to carry TWO functions that differed only in return shape, each with
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 declares_itself() { [ "$(grammar_declaration "$1")" != none ]; }
 
 # THE OVERCAUTIOUS CHECK. UNDECIDED (below) catches a ready PR that asks for
 # nothing while silently wanting attention. This is the mirror failure: a
 # ready PR that raises a DECISION nobody needs to make. Both are the same
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 is_additive_only_diff() {
   local file='' is_new=0 adds=0 dels=0 saw_file=0
   judge() {

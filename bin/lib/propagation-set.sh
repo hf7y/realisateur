@@ -112,7 +112,6 @@ lib/selfdev-app-key.sh
 # --- human. Not bootstrap: these stand an account UP, once, and they run
 # --- on nobody's clock.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PROP_PROVISION_SCRIPTS="
 dresse.sh
 land-selfdev.sh
@@ -156,7 +155,6 @@ PROP_LEAK_BOUND=7
 # --- LOCAL: never leaves this repo ------------------------------------------
 # release-gate.sh and publish-release-verdict.sh are LOCAL because they run in
 # the release pipeline (GitHub Actions checks realisateur out to get them), not
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PROP_LOCAL_SCRIPTS="
 sunset-coordinator-files.sh
 dexter-liveness.sh
@@ -195,7 +193,6 @@ run-suites.sh
 # repo-settings-provision.sh is LOCAL: its subject is the FLEET (it walks the
 # whole registry), and a per-account copy would be many writers on one
 # setting. It also needs admin on someone else's repo, which self-dev
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 # prop_host_tools -- what a provisioned host carries under
 # /usr/local/libexec/selfdev beyond the bootstrap: the verb a human types and

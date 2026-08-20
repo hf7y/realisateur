@@ -34,7 +34,6 @@ export INSTALLE_MANIFEST="$WORK/manifest.tsv"
 # The registry. Set EXPLICITLY, and every fixture project is registered in it,
 # so the registration check (section F) contributes no finding to sections C/D.
 # Left at its default it would resolve inside the fixture, find nothing, and
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 export SCHEDULE_DIR="$WORK/schedule"
 mkdir -p "$INSTALLE_PROJECTS" "$INSTALLE_BIN" "$SCHEDULE_DIR"
 register() { printf 'PROJECT="%s"\n' "$1" > "$SCHEDULE_DIR/$1.conf"; }
@@ -133,7 +132,6 @@ check "C2 the mixed fixture also exits 1" "$rc" "1"
 # ANCHORED TO THE ROW, not to the word. The standing footer says "Re-run with
 # --apply to install the ABSENT rows", so a bare `grep ABSENT` matches the
 # prose and passes even when no verb was reported absent at all -- which is how
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 has   "C3 an ABSENT ROW exists for bbb"  "$out" '^ABSENT  *bbb'
 has   "C4 the ABSENT row names the declaring project" "$out" '^ABSENT  *bbb  *alpha'
 has   "C5 a COLLISION ROW exists for aaa" "$out" '^COLLISION  *aaa'

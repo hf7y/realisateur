@@ -65,7 +65,6 @@ act()   { printf '  DO    %s\n' "$*"; }
 # ============================================================================
 # THE REMOTE PROBE -- the ONLY place this script touches the network.
 # ============================================================================
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 fetch_remote() { # fetch_remote [account-filter]
   # "-" IS THE NO-FILTER SENTINEL. NEVER AN EMPTY STRING.
   #
@@ -255,7 +254,6 @@ cred_grade_account() {
 # ============================================================================
 # THE SYMMETRY CHECK -- deploy-key READ/WRITE level, from GitHub itself.
 # ============================================================================
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cred_check_deploy_keys() { # cred_check_deploy_keys <account>...
   if ! command -v "$CRED_GH_BIN" >/dev/null 2>&1; then
     blind "deploy-key symmetry: '$CRED_GH_BIN' not on PATH -- could not check GitHub-side read/write permissions"

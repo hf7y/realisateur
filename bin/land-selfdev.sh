@@ -84,7 +84,6 @@ fi
 # THREE WAYS THIS USER CAN BE AUTHENTICATED, and the check must know all of
 # them or it reports a false gap on the shape we actually use.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CRED="$HOME/.claude/.credentials.json"
 SETTINGS="$HOME/.claude/settings.json"
 auth=""
@@ -134,7 +133,6 @@ mkdir -p "$PROJECTS"
 # Credentials come BEFORE the clone that needs them, per repo, derived from
 # the same loop -- added 2026-08-03 after ecosim's four deploy keys turned out
 # to have been made by hand and written down nowhere ("we can't do this for
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 WIRE="$(dirname "$0")/wire-selfdev-git.sh"
 
 wire_repo() {
@@ -173,7 +171,6 @@ clone_or_update scheduler   "https://github.com/$GH_OWNER/scheduler.git"
 # EVERY OTHER REPO IS DERIVED, NOT TYPED. schedule/<p>.conf already declares
 # REPO_URL per project -- that IS the registry. A typed list here would be a
 # second source that drifts from it, which is the failure realisateur's own
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 for p in ${SELFDEV_PROJECTS:-senechal ecosim}; do
   conf="$PROJECTS/scheduler/schedule/$p.conf"
   if [ ! -f "$conf" ]; then bad "$p: no schedule/$p.conf -- not a registered project"; continue; fi

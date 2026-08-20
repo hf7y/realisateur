@@ -60,7 +60,6 @@ have() { command -v "$1" >/dev/null 2>&1; }
 # ---------------------------------------------------------------------------
 # THE LEDGER FILE -- per branch, inside .git, so it is never committed and
 # never leaks between branches. A session that files six items and then has to
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 ledger_path() {
   local gd br
   gd="$(git rev-parse --git-dir 2>/dev/null)" || return 1
@@ -161,7 +160,6 @@ fi
 # on `issue create` -- otherwise the front door emits bodies the front door
 # refuses. Each route implies its own declaration:
 #   --project      routed and owned; nothing to weigh -> NO-DECISION
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 case "$LEDGER_KIND" in
   project) DECLARE="NO-DECISION: @$DECIDER -- routed to $DEST and owned there; nothing here needs a call" ;;
   *)       DECLARE="DECISION: @$DECIDER -- $WHAT" ;;

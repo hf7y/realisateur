@@ -81,7 +81,6 @@ cron_spec_for() {
 #
 # Not `2>/dev/null`. An empty crontab writes "no crontab for <user>" to stderr
 # and exits 1 -- that is the ANSWER, not an error. But a permission failure
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 crontab_of() { # crontab_of [account] -- the crontab, or why it could not be read
   if [ -n "${1:-}" ]; then sudo -u "$1" crontab -l 2>&1; else crontab -l 2>&1; fi
 }
@@ -132,7 +131,6 @@ wire_one() {
 # ---------------------------------------------------------------------------
 # --host. Same three acts as wire_one -- bootstrap, adopt, clock -- against
 # host-scoped paths, plus one wire_one does not need: a witness that the LINKS
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 TICK_ENV=(
   "VERB_BUILD_ROOT=$HOST_BUILD_ROOT"
   "INSTALLE_BIN=$HOST_BIN"
