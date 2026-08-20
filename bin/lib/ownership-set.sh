@@ -241,6 +241,7 @@ bin/tests/decision-rot.test.sh             realisateur
 bin/etiquette.sh                           realisateur
 bin/tests/etiquette.test.sh                realisateur
 bin/lib/labels.tsv                         realisateur
+bin/lib/answered.sh                        realisateur
 bin/rot-ratchet.sh                         realisateur
 bin/tests/rot-ratchet.test.sh              realisateur
 .github/workflows/rot-ratchet.yml          realisateur
