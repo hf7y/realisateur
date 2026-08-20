@@ -64,9 +64,68 @@ def release_tick(user):
     return lines[-1] if lines else None
 
 
+def containment(user, uid):
+    """What this account reaches outside its own home. Three lists, and a
+    null when the probe itself could not run -- an unreadable tree is not an
+    empty one."""
+    home = f"/home/{user}"
+    out = {"foreign_clones": [], "outside_home": [], "sudoers": []}
+
+    # A clone whose origin is not this account's own repo.
+    #
+    # TRAP: git run as root over another user's checkout refuses with "dubious
+    # ownership" and prints NOTHING, so every account reads as having no
+    # clones at all -- the silent zero this estate has paid for before.
+    # safe.directory=* is what makes the probe able to look.
+    projects = f"{home}/Documents/Projects"
+    for name in sorted(os.listdir(projects)) if os.path.isdir(projects) else []:
+        d = os.path.join(projects, name)
+        url = sh("git", "-c", "safe.directory=*", "-C", d,
+                 "config", "--get", "remote.origin.url").strip()
+        if url and not url.rstrip("/").endswith(f"/{user}") and not url.endswith(f"/{user}.git"):
+            out["foreign_clones"].append({"path": d, "origin": url})
+
+    # The first file this uid owns outside its home. -quit so the sweep costs
+    # one hit, not a full walk; the account's OWN crontab is excluded because
+    # the clock lives on the consumer by design.
+    hit = sh("find", "/home", "/etc", "/usr/local", "/srv", "/var", "-xdev",
+             "-uid", str(uid), "-not", "-path", home, "-not", "-path", f"{home}/*",
+             "-not", "-path", f"/var/spool/cron/crontabs/{user}", "-print", "-quit").strip()
+    if hit:
+        out["outside_home"].append(hit)
+
+    for f in sorted(os.listdir("/etc/sudoers.d")) if os.path.isdir("/etc/sudoers.d") else []:
+        path = os.path.join("/etc/sudoers.d", f)
+        try:
+            if any(l.split() and l.split()[0] == user for l in open(path)):
+                out["sudoers"].append(path)
+        except OSError:
+            return None                       # could not read: BLIND, not clean
+    return out
+
+
+def credentials(user):
+    """The permission mode of each credential this account reads, or null
+    where it is absent. An absent credential and a world-readable one are
+    opposite findings and must not share a symbol."""
+    paths = {
+        "app_key": "/etc/selfdev/app.pem",
+        "claude_token": "/etc/selfdev/claude-token",
+        "claude_settings": f"/home/{user}/.claude/settings.json",
+    }
+    modes = {}
+    for k, p in paths.items():
+        try:
+            modes[k] = oct(os.stat(p).st_mode & 0o777)
+        except OSError:
+            modes[k] = None
+    return modes
+
+
+
 now = time.time()
 out = {
-    "schema": 1,
+    "schema": 2,
     "host": os.uname().nodename,
     "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
     "valid_until": time.strftime("%Y-%m-%dT%H:%M:%SZ",
@@ -96,6 +155,8 @@ for u in accounts():
         "release_tick": release_tick(u),
         "runs": runs,
         "last_run": runs[0] if runs else None,
+        "containment": containment(u, pwd.getpwnam(u).pw_uid),
+        "credentials": credentials(u),
     })
 
 print(json.dumps(out, indent=2))
