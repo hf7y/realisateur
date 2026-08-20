@@ -144,8 +144,7 @@ while IFS=$'\t' read -r num has_label title; do
   body="$(printf '%s' "$json" | jq -r --argjson n "$num" '.[]|select(.number==$n)|.body')"
   want='' ; answered=0
   case "$(grammar_declaration "$body")" in
-    # An answered decision is an agent's work, not a human's. Left labelled it
-    # brakes dispatch on the very issue the answer unblocked.
+    # An answered decision is an agent's work: left labelled it brakes dispatch.
     decision)    want=yes
                  if issue_answered "$REPO" "$num"; then want=no; answered=1; fi ;;
     no-decision) want=no ;;

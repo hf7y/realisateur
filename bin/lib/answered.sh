@@ -12,8 +12,7 @@ issue_answered() {
   local repo="$1" num="$2" out
   out="$(gh api "repos/$repo/issues/$num/comments" --paginate \
          --jq '[.[]|select((.body|test("<!--\\s*agent:"))|not)]|last|.created_at // ""' 2>/dev/null)" || return 2
-  # A non-date is not an answer: anything that is not an ISO timestamp means
-  # the reply was not understood, and a misread must never clear a label.
+  # A non-date is not an answer: a misread must never clear a label.
   [[ "$out" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2} ]] || return 1
   [[ ! "${out:0:10}" < "$ANSWERED_STAMP_ERA" ]] || return 1
   return 0
