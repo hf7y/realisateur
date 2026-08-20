@@ -152,7 +152,6 @@ now="$(date +%s)"
 # no explicit names) that discovers ZERO projects is ambiguous the same way
 # hygiene-lint.sh's equivalent loop was until 2026-08-07: it might mean "the
 # registry is empty" or it might mean "$SCHED_ROOT/schedule doesn't exist on
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ -z "$REPO_ARG" ] && [ "${#want[@]}" -eq 0 ] && [ "${#projects[@]}" -eq 0 ]; then
   blind=$((blind+1))
   registry_blind=1
@@ -163,7 +162,6 @@ cutoff=$(( HOURS * 3600 ))
 # --- WHEN DID THIS SESSION START (hf7y/realisateur#137) ----------------------
 #
 # The dirty-tree rule below assumed "uncommitted changes at close are this
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 session_start_epoch() { # -> epoch seconds on stdout, or nothing and exit 1
   local raw="$SESSION_START" p="${PPID}" d=0 comm et
   if [ -n "$raw" ]; then

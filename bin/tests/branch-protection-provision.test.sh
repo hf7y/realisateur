@@ -26,7 +26,6 @@ T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 # The stub speaks the four API shapes the script uses. Fixture repos are named
 # after real roster entries so the positional filter matches them.
 #   chezz     -- unprotected, PR checks incl. matrix legs + a Pages context
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PUTS="$T/put-calls.log"; : > "$PUTS"
 cat > "$T/gh" <<EOF
 #!/usr/bin/env bash

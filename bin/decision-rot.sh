@@ -49,7 +49,6 @@ OWNER="${DECISION_ROT_OWNER:-hf7y}"
 # -- the fifteen projects dispatch actually reads -- plus the three ecosystem
 # repos that carry decisions but are never dispatched (`verbs` is the verb
 # build channel; `front-door` and `basheur` are ecosystem infrastructure).
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 ROSTER=(
   baudin bibliothecaire chezz crt ecosim gardien groc-mangr nine-speakers
   realisateur scheduler secretaire senechal sequestria vim-arcade wtul
@@ -81,7 +80,6 @@ command -v jq >/dev/null || { echo "decision-rot.sh: jq not on PATH" >&2; exit 3
 # THE PREDICATE, in one jq program, so bin/tests/decision-rot.test.sh can pin
 # it against fixtures with no network. stdin is a `gh issue list --json
 # number,title,state,labels,comments` array.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 DECISION_ROT_JQ='
   # stamped: TRUE iff the body`s LAST NON-BLANK LINE opens with the agent
   # marker. A marker, not a field grammar -- see the header.

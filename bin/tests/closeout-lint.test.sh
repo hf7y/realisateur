@@ -152,7 +152,6 @@ echo "-- B. today's session record (issues/PRs, not a FOCUS.md row)"
 # B1..B4 used to drive a FOCUS.md check (a dated entry citing a sha, else
 # [no-record]/[record-no-sha]/[no-focus]) that `/cloture` §3, revised
 # 2026-08-10, forbids writing -- and `/cloture` is what RUNS closeout-lint, so
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 GH_BIN="$T/gh-found/gh"
 run_rc clean
 has   "B1 a record on the remote passes"       "$RUN_OUT" "ok -- 1 issue(s)/PR(s) created $DAY"
@@ -327,7 +326,6 @@ has   "F2 a genuinely unmerged branch STILL flags"          "$out" "FLAG [host-o
 # F3: the downgrade must not need the network. F1 passing at all is already the
 # offline proof, but pin it explicitly -- a guard that hard-requires a network
 # is its own failure mode. Prepending a nonexistent directory to PATH does not
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 GH_BIN="$T/nope/gh"
 out="$(run squashed)"
 GH_BIN="$GH_DEFAULT"
@@ -381,7 +379,6 @@ rc    "G2 and it does not gate a concurrent run"     0 "$RUN_RC"
 # G2b/G2c: mtime-split the worktree note the way #137 split the main checkout
 # (#150). An anchor an hour in the future makes the fixture's dirt unambiguously
 # OLDER than this session -- the agent that used the worktree already exited
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SESSION_START="$(( $(date +%s) + 3600 ))"
 run_rc --strict --repo "$T/wt_dirty"
 has   "G2b abandoned worktree dirt FLAGs"            "$RUN_OUT" "FLAG [worktree-dirty-abandoned]"
@@ -413,7 +410,6 @@ echo "-- H. a shared checkout's PRE-EXISTING dirt is not this run's (#137)"
 # THE INCIDENT (#137). On 2026-08-11 a subagent was blocked at close over two
 # paths already in its session-start `git status` snapshot, and every remedy
 # offered was wrong: committing adopts another session's work under your name,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 newrepo sharedtree && echo 'another session was here' >> "$T/sharedtree/f.txt"
 
 # H1: an anchor an hour from now is unambiguously later than a file written a
@@ -476,7 +472,6 @@ echo "-- J. an unreadable/absent registry is BLIND, not clean (#232)"
 # A full sweep (no --repo, no explicit names) against a SCHED_ROOT whose
 # schedule/ directory does not exist must not read as "zero repos touched" --
 # that is indistinguishable from "looked at everything, found nothing", the
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 EMPTY="$T/no-such-sched"
 J_OUT="$(TODAY="$DAY" SCHED_ROOT="$EMPTY" HOURS=12 \
   GH_BIN="$GH_DEFAULT" SESSION_START="" "$SCRIPT" 2>&1)"; J_RC=$?

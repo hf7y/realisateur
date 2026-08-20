@@ -14,7 +14,6 @@ mkdir -p "$TMP/stub" "$TMP/stub-noget"
 # A gh that answers, deterministically, "the tracker has no open issues". The
 # tracker probe is not what these cases are about, and a gh that FAILS would
 # make every case BLIND -- which the guard correctly refuses to grade as
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 printf '#!/bin/sh\nprintf "[]"\n' > "$TMP/stub/gh"
 printf '#!/bin/sh\nexit 1\n'      > "$TMP/stub/crontab"
 printf '#!/bin/sh\nexit 1\n'      > "$TMP/stub-noget/gh"

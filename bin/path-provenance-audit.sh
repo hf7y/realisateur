@@ -342,7 +342,6 @@ fi
 
 # 6. fleetview -- can the provisioned class be measured AT ALL from a host
 #    that has senechal on it? Deliberately NOT modelled as BLIND: the probe
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 _self="$(cd "$HOME_DIR" 2>/dev/null && pwd -P)"
 _fleet_readable=0; _fleet_total=0
 for _h in "$HOME_DIR/../"*; do
@@ -507,7 +506,6 @@ fi
 
 # ORDER: A POSITIVE FINDING OUTRANKS AN INABILITY TO SEE SOMETHING ELSE.
 # Both are non-zero, so neither grades as clean either way -- but if BLIND
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ -n "$regressed" ]; then
   echo "path-provenance-audit: REGRESSION:$regressed held when the ratchet was accepted." >&2
   [ "$blind" -gt 0 ] && echo "path-provenance-audit: (also BLIND on:$blindlist)" >&2
@@ -516,7 +514,6 @@ fi
 
 # ANY BLIND, not merely a blind on a ratcheted check. bin/thermostat-wiring.sh
 # tolerates the unratcheted case on the argument that it costs nothing to be
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$blind" -gt 0 ]; then
   echo "path-provenance-audit: BLIND on:$blindlist" >&2
   echo "path-provenance-audit: this is 'I could not look', NOT 'nothing is wrong'." >&2

@@ -44,7 +44,6 @@ chmod +x "$TMP/deadgh/gh"
 # A PATH with no `jq` on it. It cannot simply be an empty directory: the
 # script needs bash, readlink and dirname before it reaches any check at all,
 # so emptying PATH tests "bash is missing", not "jq is missing" -- the first
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mkdir -p "$TMP/nojq"
 for t in bash readlink dirname tr cat; do ln -sf "$(command -v "$t")" "$TMP/nojq/$t"; done
 ln -sf "$TMP/shim/gh" "$TMP/nojq/gh"
@@ -206,7 +205,6 @@ fi
 # A READY pull request is a completion claim (section A). This asserts the
 # second half of the convention: a claim must also say what it asks of the
 # reader. Not a style rule -- Zach's stated failure mode is "if it's a PR not a
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 echo
 echo "J. a ready PR classifies itself in line one"
 

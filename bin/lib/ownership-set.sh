@@ -83,7 +83,6 @@ provision
 # --- THE LEDGER -------------------------------------------------------------
 # Rows are `<path-prefix> <owner> <reason>`, longest prefix wins. Owner
 # `realisateur` means MISSION-UNIQUE: no other project could hold it without
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 # ---- MISSION-UNIQUE: sense, triage, scaffold -------------------------------
 #
@@ -202,8 +201,6 @@ bin/lib/body-grammar.sh                    vim-arcade
 bin/tests/body-grammar.test.sh             vim-arcade
 .github/workflows/deferral-ledger.yml      vim-arcade
 bin/defere.sh                              vim-arcade
-bin/containment-audit.sh                   senechal
-bin/tests/containment-audit.test.sh        senechal
 bin/path-provenance-audit.sh               senechal
 bin/tests/path-provenance-audit.test.sh    senechal
 bin/retire-check.sh                        realisateur
@@ -232,7 +229,6 @@ bin/tests/verb-build-test.sh               verbs
 # --- lookup -----------------------------------------------------------------
 # own_owner <path> -- prints `<owner> <reason>` for the longest matching row,
 # or nothing (rc 1) when the path matches none. rc 1 IS the finding; a caller
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 own_derived_from() {
   local p="$1" b cand
   case "$p" in

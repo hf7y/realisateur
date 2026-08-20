@@ -57,7 +57,6 @@ done
 # Rows are <path on bashified> <path on main>, and each one asserts BOTH that
 # the file must exist on the branch and what it must equal.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CARRIES='
 bin/gh	bin/gh-sign.sh
 bin/lib/body-grammar.sh	bin/lib/body-grammar.sh

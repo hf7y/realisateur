@@ -56,14 +56,12 @@ CRON_SPEC="${TICK_CRON_SPEC:-41 5 * * *}"
 # Empty for a per-account tick: its defaults ARE the account's own paths.
 #
 # The host-scoped tick needs it, because every path it works on is deliberately
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CRON_ENV="${TICK_CRON_ENV:-}"
 RELEASE_STATUS_URL="${RELEASE_STATUS_URL:-https://hf7y.com/verbs/status.json}"
 # Whether adoption also writes the bin links. OFF by default and it stays off
 # for a per-ACCOUNT tick, because `installe` owns that account's ~/.local/bin
 # and install-verb-build.sh's --link exists to not clobber it.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 TICK_LINK="${TICK_LINK:-0}"
 SURVEY_HOST="${TICK_SURVEY_HOST:-monkey}"
 SURVEY_PASSWD="${TICK_SURVEY_PASSWD:-/etc/passwd}"
@@ -100,7 +98,6 @@ act() { printf '  ..    %s\n' "$*"; }
 # ---------------------------------------------------------------------------
 # Locate the installer. Beside this script first (the bootstrap layout on a
 # consumer), then in a realisateur checkout (the dev layout). NOT derived from
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 find_installer() {
   # An override that names a path which is not there is a MISSING installer,
   # not an installer. Returning it anyway would make "bootstrap incomplete"
@@ -149,7 +146,6 @@ check_clock() {
 # ---------------------------------------------------------------------------
 # The pin row. Delegates entirely: install-verb-build.sh --check already
 # prints "yours:" / "latest:" and distinguishes exit 1 (newer exists) from
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 check_pin() {
   local inst out rc
   if ! inst="$(find_installer)"; then
@@ -209,7 +205,6 @@ install_cadence() {
 # ---------------------------------------------------------------------------
 # The other half of install_cadence: hf7y/realisateur#180 retires the
 # per-account clock and private build root now that one host-wide channel
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 retire_cadence() {
   echo "-- retire cadence (account $(id -un)) ---------------------------------"
   local probe; probe="$(command -v "$HOST_PROBE_VERB" 2>/dev/null || true)"
@@ -303,7 +298,6 @@ retire_cadence() {
 # ---------------------------------------------------------------------------
 # --survey: the read-only operator view. It does not write, does not adopt,
 # and does not need the accounts to trust it -- it runs each account's own
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 survey_scan_accounts() {
   while IFS=: read -r user _ uid _ _ home _; do
@@ -416,7 +410,6 @@ check_clock
 # --- the CHANNEL's own health, read live from the published verdict ---------
 # This is the row that separates "no new build because nothing changed" from
 # "no new build because main is broken". Without it both are just an absence,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 echo
 echo "-- release channel (live) ---------------------------------------------"
 led="$(dirname "${BASH_SOURCE[0]}")/release-ledger.sh"

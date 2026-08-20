@@ -14,7 +14,6 @@ gh_slug() {
 # api_restamp_push <repo> <slug> <branch> <content-file> <msgfile>
 #
 # <branch> is the base branch the caller's local HEAD tracks (e.g. "main").
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 api_restamp_push() {
   local repo="$1" slug="$2" branch="$3" content="$4" msgfile="$5"
   local base_sha file_sha new_branch title pr_url
