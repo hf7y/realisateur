@@ -165,6 +165,8 @@ bin/lib/selfdev-claude-token.sh            realisateur
 bin/tests/selfdev-claude-token.test.sh     realisateur
 bin/lib/api-restamp.sh                     realisateur
 bin/tests/api-restamp.test.sh              realisateur
+bin/self-merge-audit.sh                    realisateur
+bin/tests/self-merge-audit.test.sh         realisateur
 "
 
 # ---- DELEGABLE -------------------------------------------------------------
