@@ -18,14 +18,14 @@
 # Sections A, B and C each carry their own header below; usage is $CLI_USAGE.
 #
 # --repo audits ONE tree (no positional name reaches a linked worktree): no
-# registry, no age gate, B/C skipped as session-wide concerns. It is what a
+# registry, no age gate, B skipped as a session-wide concern. It is what a
 # SubagentStop hook needs, since a registry scan would block every subagent over
 # some unrelated project. BLIND GATES, exit 6 (Zach, 2026-08-02) -- a domain
 # that existed and was NOT read is not a pass, and 6 is what `garde` and
 # `ausculte` already use; its two-shaped override is at the gate below.
 #
 # Env overrides (set by bin/tests/closeout-lint.test.sh, not normally): HOURS,
-# SCHED_ROOT, BLOCKERS_MD, TODAY, GH_BIN (the CLI B asks; the suite stubs it),
+# SCHED_ROOT, TODAY, GH_BIN (the CLI B asks; the suite stubs it),
 # and SESSION_START (epoch or anything `date -d` parses; see below).
 set -uo pipefail
 
@@ -34,8 +34,8 @@ CLI_SUMMARY='the deterministic half of session closeout -- what did today leave 
 CLI_USAGE='  closeout-lint.sh              scan every registered project
   closeout-lint.sh <name>...    scan only the named project(s)
   closeout-lint.sh --strict [<name>...]   exit 1 if any FLAG was printed
-  closeout-lint.sh --repo <path>          audit ONE working tree (sections
-                                          B/C skipped, age gate ignored)
+  closeout-lint.sh --repo <path>          audit ONE working tree (section B
+                                          skipped, age gate ignored)
   closeout-lint.sh --allow-blind          BLIND warns instead of gating
     (HOURS=<n> in the environment sets the lookback window)'
 CLI_FLAGS='--strict --repo --allow-blind'
@@ -49,7 +49,6 @@ CLI_POSITIONAL=any
 cli_guard "$@"
 
 SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
-BLOCKERS_MD="${BLOCKERS_MD:-$SCHED_ROOT/BLOCKERS.md}"
 HOURS="${HOURS:-12}"
 TODAY="${TODAY:-$(date +%Y-%m-%d)}"
 SESSION_START="${SESSION_START:-}"
@@ -153,7 +152,6 @@ now="$(date +%s)"
 # no explicit names) that discovers ZERO projects is ambiguous the same way
 # hygiene-lint.sh's equivalent loop was until 2026-08-07: it might mean "the
 # registry is empty" or it might mean "$SCHED_ROOT/schedule doesn't exist on
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ -z "$REPO_ARG" ] && [ "${#want[@]}" -eq 0 ] && [ "${#projects[@]}" -eq 0 ]; then
   blind=$((blind+1))
   registry_blind=1
@@ -164,7 +162,6 @@ cutoff=$(( HOURS * 3600 ))
 # --- WHEN DID THIS SESSION START (hf7y/realisateur#137) ----------------------
 #
 # The dirty-tree rule below assumed "uncommitted changes at close are this
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 session_start_epoch() { # -> epoch seconds on stdout, or nothing and exit 1
   local raw="$SESSION_START" p="${PPID}" d=0 comm et
   if [ -n "$raw" ]; then
@@ -498,18 +495,6 @@ else
   fi
 fi
 
-echo
-echo "== C. DECISION RESIDUE ($BLOCKERS_MD) =="
-if [ ! -f "$BLOCKERS_MD" ]; then
-  echo "  NOTE $BLOCKERS_MD not found -- cannot check"
-elif grep -q "$TODAY" "$BLOCKERS_MD" 2>/dev/null; then
-  echo "  ok -- BLOCKERS.md carries at least one line dated $TODAY"
-else
-  echo "  NOTE BLOCKERS.md has nothing dated $TODAY."
-  echo "    Not a FLAG: only the closing session knows whether it had any"
-  echo "    decision-shaped residue to file. If it did, it belongs there as a"
-  echo "    '> '-answerable one-liner under the filing project's ## section."
-fi
 }
 [ -n "$REPO_ARG" ] || session_wide_sections
 

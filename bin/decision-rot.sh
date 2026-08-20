@@ -5,15 +5,11 @@
 # GUARD-TEST: bin/tests/decision-rot.test.sh -- 32 cases, offline behind a fake `gh`
 # GATE: none -- reads live issue trackers across 18 repos
 #
-# THE PREDICATE: ANSWERED **AND** STILL OPEN. That is the whole thing, and it
-# introduces no label, no field, no file, no schema and no new state. It
-# follows from behaviour that already exists:
-#   * Zach answers by COMMENTING and LEAVES THE ISSUE OPEN (his words,
-#     2026-08-14), so an answer never closes anything;
-#   * the nightly acts on an issue and then CLOSES it, so closing is the
-#     estate's existing signal for "handled".
-# An answered issue still open is therefore direction handed over and never
-# taken up. Closed-and-answered is not rot.
+# THE PREDICATE: ANSWERED **AND** STILL OPEN -- direction handed over and never
+# taken up. It introduces no label, field, schema or state: Zach answers by
+# COMMENTING and leaves the issue open (his words, 2026-08-14), and the nightly
+# CLOSES what it handles. What counts as ANSWERED lives in bin/lib/answered.sh,
+# which `etiquette` reads too.
 #
 # TRAP: if a future change to this audit needs a convention INVENTED to make
 #   it work, THE AUDIT IS WRONG -- report that and stop. An earlier draft
@@ -27,10 +23,8 @@
 #   imported -- that dependency would run the wrong direction across repos.
 #   It is NOT the `answered` label; nothing applies it.
 #
-# KNOWN GAP: an agent comment that is not stamped is indistinguishable from
-#   Zach's, and such comments exist in the estate today. That is a defect in
-#   the stamping, not in this predicate; the fix belongs where the stamp is
-#   written (bin/gh-sign.sh), not in a clause added here.
+# KNOWN GAP: an unstamped agent comment is indistinguishable from Zach's. The
+#   fix belongs where the stamp is written (bin/gh-sign.sh), not here.
 #
 set -uo pipefail
 
@@ -55,7 +49,6 @@ OWNER="${DECISION_ROT_OWNER:-hf7y}"
 # -- the fifteen projects dispatch actually reads -- plus the three ecosystem
 # repos that carry decisions but are never dispatched (`verbs` is the verb
 # build channel; `front-door` and `basheur` are ecosystem infrastructure).
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 ROSTER=(
   baudin bibliothecaire chezz crt ecosim gardien groc-mangr nine-speakers
   realisateur scheduler secretaire senechal sequestria vim-arcade wtul
@@ -87,7 +80,6 @@ command -v jq >/dev/null || { echo "decision-rot.sh: jq not on PATH" >&2; exit 3
 # THE PREDICATE, in one jq program, so bin/tests/decision-rot.test.sh can pin
 # it against fixtures with no network. stdin is a `gh issue list --json
 # number,title,state,labels,comments` array.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 DECISION_ROT_JQ='
   # stamped: TRUE iff the body`s LAST NON-BLANK LINE opens with the agent
   # marker. A marker, not a field grammar -- see the header.

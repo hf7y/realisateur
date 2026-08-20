@@ -26,7 +26,6 @@ echo "release-gate.test.sh"
 # Answers are read from $T/answers/<project>. One line: the check-runs
 # conclusions, verbatim, as the real --jq join would produce. The literal
 # token BLIND makes the api call fail instead.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 FAKEGH="$T/gh"
 cat > "$FAKEGH" <<'EOF'
 #!/usr/bin/env bash
@@ -190,7 +189,6 @@ echo "-- THE EVIDENCE SURFACES: WHAT THE TOKEN CAN ACTUALLY READ -------------"
 # ===========================================================================
 # THE 2026-08-07 FAILURE. The gate asked ONE endpoint,
 # /commits/{sha}/check-runs, which needs the fine-grained permission
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 : > "$QUERYLOG"
 set_answer sigma "success"
 gate sigma >/dev/null 2>&1
@@ -240,7 +238,6 @@ rc "a green Actions run does NOT override a failed commit status" 1 $?
 # --- the `state:"pending"` trap in the combined status endpoint -------------
 # Probed 2026-08-07: a commit with ZERO statuses returns
 #   {"state":"pending","total_count":0,"statuses":[]}
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 set_answer omega "success"     # no set_status -> the zero-status shape above
 O="$(gate omega)"; R=$?
 rc "a commit with zero statuses does NOT read as PENDING (the .state trap)" 0 "$R"

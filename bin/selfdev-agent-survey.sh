@@ -49,7 +49,6 @@ classify_draft_aware() { grep -qiE '\bdraft\b' <<<"$1" && echo yes || echo no; }
 # JSON regardless of how many records it holds. Pure, offline-testable, and
 # extracted for exactly that reason: this was `grep -c '"number"'` until
 # 2026-08-10, and `grep -c` counts LINES, not matches. Every account in the
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 json_field_count() { grep -o "\"$2\"" <<<"$1" | wc -l | tr -d ' '; }
 
 # Pure two-blob comparator for the cross-account duplication check: count of

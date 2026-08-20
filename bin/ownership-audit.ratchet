@@ -2,44 +2,19 @@
 # The SHARE and the FILE LIST are bars and --accept only ever improves
 # them; the line count is the baseline growth is measured from.
 # See bin/ownership-audit.sh.
-# accepted 2026-08-17T23:01:32-05:00
-foreignlines 18233
-foreignshare 545
-file .claude/commands/bashify.md
+# accepted 2026-08-20T12:59:03-05:00
+foreignlines 13169
+foreignshare 441
 file .claude/commands/cloture.md
 file .github/workflows/claim-drift.yml
 file .github/workflows/deferral-ledger.yml
 file .github/workflows/verb-build-smoke.yml
-file bashify/PURGE-EXEMPT.tsv
-file bashify/bashify.sh
-file bashify/bin/bashify
-file bashify/lib/amend.sh
-file bashify/lib/branch-purge.sh
-file bashify/lib/check.sh
-file bashify/lib/closure.sh
-file bashify/lib/coin.sh
-file bashify/lib/runtime-check.sh
-file bashify/lib/surface.sh
-file bashify/lib/sync-runtime.sh
-file bashify/man/bashify.1
-file bashify/skel/lib/verb.sh
-file bashify/skel/test/contract-test.sh
-file bashify/test/fixtures/bad-page.1
-file bashify/test/verify-amend.sh
-file bashify/test/verify-branch-purge.sh
-file bashify/test/verify-check.sh
-file bashify/test/verify-closure.sh
-file bashify/test/verify-emit.sh
-file bashify/test/verify-runtime.sh
-file bashify/test/verify-sync.sh
 file bin/check-project-busy.sh
 file bin/claim-drift.sh
 file bin/closeout-lint.sh
 file bin/cut-verb-build.sh
 file bin/defere.sh
 file bin/deploy-drift.sh
-file bin/ecosim-sensor-tick.sh
-file bin/focus-commit.sh
 file bin/hardcoded-home-lint.sh
 file bin/install-shims.sh
 file bin/install-verb-build.sh
@@ -63,15 +38,12 @@ file bin/selfdev-gh-app.sh
 file bin/selfdev-release-tick.sh
 file bin/session-marker.sh
 file bin/setup-selfdev-project.sh
-file bin/tests/bashify-coin.test.sh
 file bin/tests/body-grammar.test.sh
 file bin/tests/claim-drift.test.sh
 file bin/tests/cli-guard.test.sh
 file bin/tests/closeout-lint.test.sh
 file bin/tests/conf.test.sh
 file bin/tests/cut-verb-build-test.sh
-file bin/tests/ecosim-sensor-tick.test.sh
-file bin/tests/focus-commit.test.sh
 file bin/tests/hardcoded-home-lint.test.sh
 file bin/tests/install-shims.test.sh
 file bin/tests/notify-senechal-footer.test.sh

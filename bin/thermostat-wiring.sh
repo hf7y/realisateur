@@ -208,7 +208,6 @@ unset _paced
 # Provenance: who filed each issue. Every actor here is `hf7y` (realisateur#40,
 # #86), so authorship cannot answer it; a filing verb stamping a label can. An
 # unlabelled issue reads as a Zach directive, i.e. errors toward dispatching MORE.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if command -v gh >/dev/null 2>&1; then
   # gh's status is captured on its OWN line. Piping straight into grep would
   # hand $? to grep, and grep exits 1 on no-match -- so the success case
@@ -235,7 +234,6 @@ fi
 # THE PROBE MUST TEST THE PROPERTY, NOT A GUESSED FILENAME. The first pattern
 # here was `scheduler-verdict/.*\.history` -- a path invented when this probe
 # was written, before anything implemented it. hf7y/scheduler#135 shipped the
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 sched_grep 'scheduler-verdict/.*\.history|ledger_append' lib bin
 case $? in
   0) record ledger PASS 'an append-only verdict ledger is written' ;;
@@ -246,7 +244,6 @@ esac
 # THE SETPOINT -- the half of §3 provenance cannot see. Labels are an INPUT;
 # this asks whether anything READS them. Until hf7y/scheduler#219 nothing did:
 # the control loop was three brakes and nothing that could say "run this MORE",
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 _runner="$(sched_file 'bin/usage-paced-runner.sh')"
 if [ -z "$_runner" ]; then
   record setpoint BLIND "no bin/usage-paced-runner.sh under $SCHED"

@@ -8,8 +8,6 @@
 # TRAP: root is needed for exactly one thing pull cannot bootstrap -- putting
 #   the first files into a 0700 home the account cannot fetch into yet.
 # TRAP: an account-creation-time-only change applies to FUTURE accounts only.
-#   Builds were cut nightly for five days while NINE of ten accounts had
-#   never adopted one, silently.
 #
 
 set -uo pipefail
@@ -72,10 +70,7 @@ run_as_acct() {
     bash -lc "$3"
 }
 
-# STAGGER, so ten accounts do not all fetch in the same minute.
-# selfdev-release-tick.sh's default CRON_SPEC is a fixed `41 5 * * *`, which is
-# right for the one account it was written for and wrong for a fleet: wiring
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+# STAGGER, so the fleet does not all fetch in the same minute.
 cron_spec_for() {
   [ -z "${TICK_CRON_SPEC:-}" ] || { printf '%s' "$TICK_CRON_SPEC"; return; }
   local m; m=$(( $(cksum <<<"$1" | cut -d' ' -f1) % 60 ))
@@ -86,7 +81,6 @@ cron_spec_for() {
 #
 # Not `2>/dev/null`. An empty crontab writes "no crontab for <user>" to stderr
 # and exits 1 -- that is the ANSWER, not an error. But a permission failure
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 crontab_of() { # crontab_of [account] -- the crontab, or why it could not be read
   if [ -n "${1:-}" ]; then sudo -u "$1" crontab -l 2>&1; else crontab -l 2>&1; fi
 }
@@ -137,7 +131,6 @@ wire_one() {
 # ---------------------------------------------------------------------------
 # --host. Same three acts as wire_one -- bootstrap, adopt, clock -- against
 # host-scoped paths, plus one wire_one does not need: a witness that the LINKS
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 TICK_ENV=(
   "VERB_BUILD_ROOT=$HOST_BUILD_ROOT"
   "INSTALLE_BIN=$HOST_BIN"
@@ -153,6 +146,7 @@ wire_host() {
   if [ "$MODE" = --check ]; then
     local n; n="$(set -- $PROP_BOOTSTRAP_SCRIPTS $PROP_BOOTSTRAP_SUPPORT; echo $#)"
     echo "  would   install $n bootstrap file(s) into $HOST_LIBEXEC"
+    echo "  would   install $(prop_host_tools | wc -l) host tool(s) into $HOST_LIBEXEC (dresse and every step it runs)"
     echo "  would   adopt the latest build into $HOST_BUILD_ROOT and link it into $HOST_BIN"
     if has_tick; then
       echo "  ok      root already has the host clock in its own crontab"
@@ -175,6 +169,25 @@ wire_host() {
     fi
   done
   [ "$boot_ok" -eq 1 ] || return 1
+
+  # THE HOST TOOLS: the verb a human types on this machine, and every step it
+  # runs. Missing ones are named, never skipped silently.
+  for f in $(prop_host_tools); do
+    if [ -f "$HERE/$f" ]; then
+      install -m 755 -o root -g root "$HERE/$f" "$HOST_LIBEXEC/$f"
+      echo "  OK      $HOST_LIBEXEC/$f"
+    else
+      echo "  BAD     $HERE/$f is missing -- $HOST cannot be provisioned from its own libexec"
+      boot_ok=0
+    fi
+  done
+  [ "$boot_ok" -eq 1 ] || return 1
+  if [ -x "$HOST_LIBEXEC/dresse.sh" ] && bash "$HOST_LIBEXEC/dresse.sh" --help >/dev/null 2>&1; then
+    echo "  OK      $HOST_LIBEXEC/dresse.sh --help runs from the deployed path"
+  else
+    echo "  BAD     $HOST_LIBEXEC/dresse.sh is absent or cannot run --help"
+    return 1
+  fi
 
   # FIRST ADOPTION, here rather than left to the clock. wire_one defers it
   # ("first adoption is a separate act") because an account already had verbs

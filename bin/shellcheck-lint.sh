@@ -57,7 +57,6 @@ command -v shellcheck >/dev/null 2>&1 || {
 # tree cannot turn the guard red, and a deleted one cannot keep it red.
 # `*.sh` misses the extensionless executables in bin/ (the verbs), so those are
 # selected by SHEBANG rather than by name -- reading the file is the only
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cd "$ROOT" || { echo "BLIND: cannot cd to $ROOT" >&2; exit 2; }
 
 mapfile -t FILES < <(
@@ -95,7 +94,6 @@ baseline=""
 # VERSION SKEW. A ratchet is a comparison, and comparing findings across two
 # linter versions compares two different questions: releases add checks,
 # retire them, and change wording. A baseline accepted under one version can
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SC_VERSION="$(shellcheck --version 2>/dev/null | awk '/^version:/{print $2}')"
 SC_ACCEPTED=""
 [ -f "$RATCHET" ] && SC_ACCEPTED="$(awk '/^# shellcheck-version /{print $3}' "$RATCHET")"

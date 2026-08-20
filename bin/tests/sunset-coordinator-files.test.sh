@@ -121,7 +121,6 @@ eq "F4  nonexistent repo exits 3" "$rc" "3"
 # --- G: the two defects that would have caused real damage ---
 # G1: chezz's live producer is test/answer-channel.spec.mjs, which resolves
 # .scheduler/QUESTIONS.md at runtime. A scan limited to *.sh/*.yml reports
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 note "G. Regressions"
 mkdir -p "$T/repo-mjs" && cd "$T/repo-mjs" || exit 1
 git init -q . && git config user.email t@t && git config user.name t

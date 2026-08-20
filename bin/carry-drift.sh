@@ -57,10 +57,10 @@ done
 # Rows are <path on bashified> <path on main>, and each one asserts BOTH that
 # the file must exist on the branch and what it must equal.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CARRIES='
 bin/gh	bin/gh-sign.sh
 bin/lib/body-grammar.sh	bin/lib/body-grammar.sh
+bin/lib/answered.sh	bin/lib/answered.sh
 bin/check-project-busy	bin/check-project-busy.sh
 bin/claim-drift	bin/claim-drift.sh
 bin/closeout-lint	bin/closeout-lint.sh
@@ -68,9 +68,11 @@ bin/discipline	bin/discipline.sh
 bin/notify-senechal	bin/notify-senechal.sh
 bin/silence-audit	bin/silence-audit.sh
 bin/etiquette	bin/etiquette.sh
+bin/ausculte	bin/ausculte.sh
+bin/lib/host-check.sh	bin/lib/host-check.sh
+bin/lib/zaxon.sh	bin/lib/zaxon.sh
 bin/lib/labels.tsv	bin/lib/labels.tsv
 BUILD-DISCIPLINE.md	BUILD-DISCIPLINE.md
-commands/bashify.md	.claude/commands/bashify.md
 commands/cloture.md	.claude/commands/cloture.md
 commands/ideate.md	.claude/commands/ideate.md
 commands/reap.md	.claude/commands/reap.md

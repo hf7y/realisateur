@@ -52,7 +52,6 @@ say() { [ "$QUIET" = 1 ] || printf '%s\n' "$*"; }
 # One line, only when something is wrong. Written to be safe in a shell rc:
 # it never blocks on the network in --quiet mode (see the --check gate below).
 # The advice is per-finding, not a blanket "--apply". --apply pulls a build;
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 nag() { printf 'verbs: %s -- %s\n' "$1" "$2" >&2; }
 
 [ -d "$BUILD_ROOT" ] || {

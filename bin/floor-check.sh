@@ -95,7 +95,6 @@ say "GATE 2 -- TWO COPIES"
 # 2.1  Every repo has a reachable non-local origin, is 0-ahead of it, and clean.
 # A DIRTY tree is deliberately NOT a failure here. THE FLOOR gate 2 is about
 # recoverability -- does this history exist anywhere but this disk -- and
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 bad=""; dirty_info=""
 for d in "$PROJECTS"/*/; do
   [ -d "$d/.git" ] || continue
@@ -115,7 +114,6 @@ else notmet "2.1 every repo has a non-local origin, nothing unpushed" "$bad"; fi
 #
 # `garde media list` exits 6 when no destination is reachable, and prints
 # "BLIND: ... the REMOTE column above is unknown, not empty". Its PENDING rows
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 gl="$(garde media list 2>/dev/null)"; grc=$?
 if [ "$grc" = 6 ]; then
   unprov "2.2 backup coverage is UNKNOWN -- garde is BLIND (exit 6)" \
@@ -166,7 +164,6 @@ say "GATE 3 -- ONE LOOP, WATCHED"
 # 3.1  Generated crontab, exactly one enabled participant.
 # 3.1 asked for "exactly one enabled participant" until 2026-08-01, when Zach
 # drew the line this gate actually cares about: MECHANISMS RUN ON A CLOCK,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 en="$(grep -cE '^[a-z][a-z-]*\|1\|' "$SCHED/schedule/_paced.conf" 2>/dev/null || true)"; en="${en:-0}"
 frz=0; [ -e "$SCHED/schedule/FREEZE" ] && frz=1
 if [ "$en" -le 1 ] && [ "$disp" = 1 ] && [ "$frz" = 0 ]; then
@@ -204,10 +201,7 @@ elif [ -z "$(find "$RL" -newermt '-18 hours' 2>/dev/null)" ]; then
          "runner has not ticked in 18h (last $(date -r "$RL" '+%F %H:%M')) -- the loop has not run yet"
 else
   # The witness must be the RUNNER's own record that it dispatched, not the
-  # mere existence of a non-main branch. An earlier version accepted any branch
-  # with a recent commit and reported 3.3 MET on `bashified` -- a branch from
-  # hand-driven bashify work -- on an evening when the 18:00 tick had SKIPped
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  # mere existence of a non-main branch: a hand-pushed branch is not dispatch.
   proj="$(grep -oE '^[a-z][a-z-]*(?=\|1\|)' "$SCHED/schedule/_paced.conf" 2>/dev/null \
           || grep -E '^[a-z][a-z-]*\|1\|' "$SCHED/schedule/_paced.conf" 2>/dev/null | cut -d'|' -f1 | head -1)"
   proj="${proj:-gardien}"

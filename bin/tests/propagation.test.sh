@@ -83,6 +83,42 @@ else
   echo "       bound HERE, deliberately, in a commit that says why."
 fi
 
+# verb name -> script basename (`gh` <- gh-sign.sh) via carry-drift's CARRIES.
+CARRY_LIB="$REPO/bin/carry-drift.sh"
+CARRIES_BLOCK="$(sed -n "/^CARRIES='/,/^'\$/p" "$CARRY_LIB" | sed -e '1d' -e '$d')"
+
+main_script_for() {
+  local v="$1" line
+  line="$(printf '%s\n' "$CARRIES_BLOCK" | awk -F'\t' -v p="bin/$v" '$1==p{print $2}')"
+  if [ -n "$line" ]; then
+    basename "$line"
+  elif [ -f "$REPO/bin/$v.sh" ]; then
+    printf '%s.sh' "$v"
+  else
+    printf '%s' "$v"
+  fi
+}
+
+. "$REPO/bin/lib/verb-set.sh"
+V_REF="$(verb_set_ref_of "$REPO")" || V_REF=""
+if [ -z "$V_REF" ]; then
+  bad "no bashified ref in this checkout -- cannot check declared verbs against the contract"
+else
+  declared_verbs="$(verb_set_verbs_of "$REPO" "$V_REF")"
+  verb_bad=""
+  while read -r v; do
+    [ -n "$v" ] || continue
+    s="$(main_script_for "$v")"
+    ch="$(prop_channel "$s" 2>/dev/null)" || { verb_bad="$verb_bad $v(<-$s: unclassified)"; continue; }
+    [ "$ch" = payload ] || verb_bad="$verb_bad $v(<-$s: $ch, not payload)"
+  done <<< "$declared_verbs"
+  if [ -z "$verb_bad" ]; then
+    ok "every verb this repo's bashified branch declares resolves to a PAYLOAD-class script"
+  else
+    bad "declared verb(s) whose backing script is not PAYLOAD-classified:$verb_bad"
+  fi
+fi
+
 # ===========================================================================
 echo
 echo "-- 2. main IS NOT A DEPLOY REF, AND THE LEAK MAY NOT GROW --------------"
@@ -90,7 +126,6 @@ echo "-- 2. main IS NOT A DEPLOY REF, AND THE LEAK MAY NOT GROW --------------"
 # The prize in separating dev from prod is that `main` gets to STAY FAST. If
 # four live accounts pull `main` on a tick, every commit is a deployment and
 # `main` must turn conservative to protect them -- backwards for a repo whose
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 n_leak=$(echo $PROP_PAYLOAD_PENDING | wc -w)
 if [ "$n_leak" -le "$PROP_LEAK_BOUND" ]; then
   ok "clone-backed payload leak is $n_leak, within the bound of $PROP_LEAK_BOUND"
@@ -145,7 +180,6 @@ rc "--install-cadence --check exits 0 (it reported, it did not fail)" 0 "$R"
 # A per-account clock is retired when ONE host-wide channel feeds every
 # account. The precondition is checked from INSIDE the account, because a
 # $HOME/.local/bin entry earlier on that account's PATH shadows the host-wide
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 RH="$T/retirehome"; mkdir -p "$RH/.local/share/verb-builds/B" "$T/hostbin" "$T/shim"
 ln -s B "$RH/.local/share/verb-builds/current"
 printf '#!/bin/sh\nexit 0\n' > "$T/hostbin/dose"; chmod +x "$T/hostbin/dose"
@@ -308,9 +342,9 @@ echo "-- 5. PULL, NOT PUSH ---------------------------------------------------"
 # clock. Asserted against the source, because this is exactly the property
 # that erodes the first time reaching in is more convenient.
 
-# Everything from the first line to the --survey function is the tick's own
-# path. --survey is the one read-only operator view and is allowed ssh.
-APPLY_PATH="$(sed -n '1,/^run_survey()/p' "$TICK")"
+# Everything from the first line to the --survey machinery is the tick's own
+# path. --survey and its account scan are allowed ssh and sudo -u.
+APPLY_PATH="$(sed -n '1,/^survey_scan_accounts()/p' "$TICK")"
 hasnt "the tick's own path contains no 'sudo -u'" "$APPLY_PATH" "sudo -u "
 hasnt "the tick's own path contains no ssh" "$APPLY_PATH" "ssh -o"
 
@@ -322,7 +356,7 @@ hasnt "the cadence is not written into another account's crontab" "$CADENCE_FN" 
 has "the cadence is verified by re-reading crontab -l, not by the write's rc" "$CADENCE_FN" "crontab -l"
 
 # --survey may read, but must not adopt or write.
-SURVEY_FN="$(sed -n '/^run_survey()/,/^}/p' "$TICK")"
+SURVEY_FN="$(sed -n '/^survey_scan_accounts()/,/^}/p; /^run_survey()/,/^}/p' "$TICK")"
 hasnt "--survey never adopts a build" "$SURVEY_FN" "--apply"
 hasnt "--survey never repoints a symlink" "$SURVEY_FN" "ln -s"
 
@@ -333,8 +367,11 @@ hasnt "--survey never repoints a symlink" "$SURVEY_FN" "ln -s"
 # account resolved every verb. An alarm that fires on success is one nobody
 # reads the next time it fires on failure.
 has "--survey grades the host-wide channel, not just the private pin" "$SURVEY_FN" "host-wide"
-has "...by asking AS THE ACCOUNT, since its own PATH can shadow the host dir" "$SURVEY_FN" 'sudo -u "\$user" -H'
+has "...by asking AS THE ACCOUNT, since its own PATH can shadow the host dir" "$SURVEY_FN" 'sudo -u "$user" -H'
 has "...and an account with neither is still a finding" "$SURVEY_FN" "this account has no verbs"
+
+has "run_survey resolves locally when already on SURVEY_HOST" "$SURVEY_FN" "on_target_host \"\$SURVEY_HOST\""
+has "the local branch calls the scan directly, no ssh" "$SURVEY_FN" 'out="$(survey_scan_accounts)"'
 
 # ===========================================================================
 echo
@@ -342,7 +379,6 @@ echo "-- 5b. THE SWITCH IS DELEGATED, NEVER REIMPLEMENTED --------------------"
 # ===========================================================================
 # install-verb-build.sh verifies every verb the manifest promises and discards
 # an incomplete build rather than switching to it -- 17 hermetic cases already
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 TICK_SRC="$(cat "$TICK")"
 hasnt "the tick contains no symlink switching of its own" "$TICK_SRC" "ln -sfn"
 hasnt "the tick contains no atomic-rename of its own" "$TICK_SRC" "mv -Tf"
@@ -410,7 +446,6 @@ echo "-- 5d. BLIND MUST ARRIVE IN TIME TO BE A VERDICT -----------------------"
 # realisateur#54. install-verb-build.sh reached the right verdict against an
 # unroutable host and took 2m15s to do it (measured 2026-08-07 against
 # 192.0.2.1, TEST-NET-1) -- the kernel's TCP retry, unbounded. A human hits
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 INST="$REPO/bin/install-verb-build.sh"
 t0=$(date +%s)
 O="$(VERB_BUILD_ROOT="$T/blindroot" VERB_BUILD_NET_TIMEOUT=1 \
@@ -442,6 +477,28 @@ O="$(TICK_SURVEY_HOST="no-such-host.invalid" TICK_STATE="$T/s_fresh" \
 rc "an unreachable survey host exits 3 BLIND, not 0" 3 "$R"
 has "the unreachable survey says nothing was verified" "$O" "Nothing was verified"
 
+mkdir -p "$T/localsurvey/stub"
+cat > "$T/localsurvey/stub/ssh" <<EOF
+#!/usr/bin/env bash
+echo called >> "$T/localsurvey/ssh_called"
+exit 255
+EOF
+chmod +x "$T/localsurvey/stub/ssh"
+cat > "$T/localsurvey/stub/sudo" <<'EOF'
+#!/usr/bin/env bash
+exit 1
+EOF
+chmod +x "$T/localsurvey/stub/sudo"
+printf 'acct1:x:3001:3001::/home/acct1:/bin/bash\n' > "$T/localsurvey/passwd"
+
+O="$(PATH="$T/localsurvey/stub:$PATH" SELFDEV_LOCAL_HOSTNAME="testhost" \
+     TICK_SURVEY_HOST="testhost" TICK_SURVEY_PASSWD="$T/localsurvey/passwd" \
+     TICK_STATE="$T/s_fresh" HOME="$T/localsurvey/home" "$TICK" --survey 2>&1)"
+[ -f "$T/localsurvey/ssh_called" ] \
+  && bad "a local survey never shells out to ssh" "ssh was invoked" \
+  || ok "a local survey never shells out to ssh"
+has "a local survey still finds the fixture account" "$O" "acct1"
+
 # ===========================================================================
 echo
 echo "-- 6b. EVERY ARTIFACT RECORDS THE BUILD THAT PRODUCED IT ---------------"
@@ -449,7 +506,6 @@ echo "-- 6b. EVERY ARTIFACT RECORDS THE BUILD THAT PRODUCED IT ---------------"
 # "What was ecosim running when it did that?" has to be answerable from the
 # artifact alone, later, by someone who was not there. The value already
 # existed (the pin); nothing recorded it at the moment work was created.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 BR="$T/pinned/.local/share/verb-builds"     # has current -> 2026-08-06T043915Z
 O="$(VERB_BUILD_ROOT="$BR" bash -c '. '"$SET_LIB"'; prop_build_trailer')"
@@ -490,7 +546,6 @@ has "a private pin still wins over the host-wide one while it exists" "$O" "Verb
 
 # --- EVERY commit, not just the mandated ones ------------------------------
 # The stamper must work for ANY commit, not only the ones a protocol mandates.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STAMPER="$REPO/bin/stamp-verb-build.sh"
 SHOME="$T/stamphome"; mkdir -p "$SHOME"
 : > "$SHOME/gitconfig"
@@ -547,7 +602,6 @@ has "--retire unsets it, verified by re-reading the config" "$O" "re-read"
 #
 # One script legitimately resolves the pin path because it OWNS the build
 # layout. (#49 retired the other, ecosim-sensor-tick.sh, from this repo.)
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PIN_OWNERS="install-verb-build.sh"
 strays=""
 for f in "$REPO"/bin/*.sh; do

@@ -126,7 +126,6 @@ fi
 # ------------------------------------------------------------- registration --
 # THE CLASSIFICATION, RE-CHECKED. A verb is a UTILITY's finished form; a
 # product's finished form is an event outside the computer (vault:realisateur/WAITING-ROOM.md).
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SCHEDULE_DIR="${SCHEDULE_DIR:-$PROJECTS/scheduler/schedule}"
 note "-- registration (the registry is what 'utility' means here) -----------"
 if [ ! -d "$SCHEDULE_DIR" ]; then

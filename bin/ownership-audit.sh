@@ -109,7 +109,6 @@ recv_names=""; recv_lines=""
 # rec_now  lines held TODAY by paths the ratchet already records
 # rec_pairs "<owner>|<path>" for each of those, so the READ BY test below can
 #           ask only same-owner recorded files without re-deriving an owner
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 rec_now=0; rec_pairs=""; new_rows=""
 
 add_recv() {

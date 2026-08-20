@@ -31,8 +31,7 @@
 #   `shellcheck` directive -- SC1072/SC1073, a parse error on the whole file.
 #   Spell the path as `bin/shellcheck-lint.sh`, never bare.
 #
-# TRAP: do not reclassify a row to PAYLOAD without a matching man page. That
-#   drops it from every build in silence (#85).
+# TRAP: PAYLOAD without a man page ships nothing, silently (#85).
 
 PROP_RELEASE_REPO="hf7y/verbs"
 PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
@@ -56,20 +55,14 @@ PROP_PIN_PATH=".local/share/verb-builds/current"
 #   NEVER guess a plausible build id ("the latest one", "the one in the
 #   manifest"); that destroys exactly this distinction.
 #
-# It is a git TRAILER because it must survive the artifact being read later
-# out of context: it travels with a clone, a cherry-pick and a patch, and
-# `git log --format='%(trailers:key=Verb-Build)'` reads it in bulk.
+# It is a git TRAILER so it travels with a clone, a cherry-pick and a patch.
 
 # prop_current_pin -- the adopted build id, or nothing. Never a guess.
 #
-# TRAP: TWO ROOTS, in the order the account actually resolves them. The
-#   private pin first (an account that still has one is running it, because
-#   its ~/.local/bin shims shadow the host-wide directory), the host-wide root
-#   second. Without the second this went honest-but-useless the moment an
-#   account retired: probed 2026-08-13, four retired accounts stamped
-#   `unknown` while running a perfectly well-known build from /usr/local/bin.
-#   "Unknown" is right for an unreadable pin and wrong for a pin that moved --
-#   and the three-state rule only earns its keep while `unknown` stays rare.
+# TRAP: TWO ROOTS, in the order the account resolves them -- the private pin
+#   first (its ~/.local/bin shims shadow the host-wide directory), the
+#   host-wide root second. `unknown` is right for an unreadable pin and wrong
+#   for a pin that moved.
 prop_current_pin() {
   local p t
   for p in "${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}/current" \
@@ -107,21 +100,20 @@ release-ledger.sh
 selfdev-gh-app.sh
 "
 
-# Files the bootstrap scripts need alongside them. Named explicitly because
-# `setup-selfdev-project.sh` stages by copy into a 0700 home and a missed
-# dependency there presents as "Permission denied", not "file not found" --
-# the trap vault:realisateur/MONKEY.md 8.3 records from account #4.
+# Files the bootstrap scripts need alongside them. A missed dependency staged
+# into a 0700 home presents as "Permission denied", not "file not found".
 PROP_BOOTSTRAP_SUPPORT="
 lib/cli-guard.sh
 lib/propagation-set.sh
 lib/selfdev-app-key.sh
 "
 
-# --- PROVISIONING: root-side, runs from a hands account, never on the -------
-# --- consumer's clock. Not bootstrap: these stand an account UP, once.
+# --- PROVISIONING: root-side, deployed to the host, invoked there by a -----
+# --- human. Not bootstrap: these stand an account UP, once, and they run
+# --- on nobody's clock.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PROP_PROVISION_SCRIPTS="
+dresse.sh
 land-selfdev.sh
 provision-selfdev-user.sh
 install-honey-plugin.sh
@@ -148,34 +140,30 @@ closeout-lint.sh
 notify-senechal.sh
 silence-audit.sh
 gh-sign.sh
+discipline.sh
+claim-drift.sh
+consigne
+ausculte.sh
 "
 
 # --- THE LEAK, with a bound on it -------------------------------------------
 # PAYLOAD-class scripts that are NOT yet declared on any bashified branch.
-# realisateur's bashified branch declares TWO verbs: consigne and gh. It was
-# five until arpente, epluche and juge were retired 2026-08-18 (#382).
 PROP_PAYLOAD_PENDING="
-check-project-busy.sh
-closeout-lint.sh
-notify-senechal.sh
-silence-audit.sh
 "
 PROP_LEAK_BOUND=7
 
 # --- LOCAL: never leaves this repo ------------------------------------------
 # release-gate.sh and publish-release-verdict.sh are LOCAL because they run in
 # the release pipeline (GitHub Actions checks realisateur out to get them), not
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PROP_LOCAL_SCRIPTS="
+self-merge-audit.sh
 sunset-coordinator-files.sh
 dexter-liveness.sh
-ausculte.sh
 dexter-service-deploy.sh
 monkey-vdi-to-internal.sh
 monkey-watch.sh
 playbook.sh
 publish-monkey-status.sh
-claim-drift.sh
 carry-drift.sh
 defere.sh
 retire-check.sh
@@ -190,7 +178,6 @@ floor-check.sh
 hardcoded-home-lint.sh
 ownership-audit.sh
 reach-lint.sh
-discipline.sh
 thermostat-wiring.sh
 path-provenance-audit.sh
 selfdev-agent-survey.sh
@@ -205,9 +192,17 @@ no-worktree-lint.sh
 run-suites.sh
 "
 # repo-settings-provision.sh is LOCAL: its subject is the FLEET (it walks the
-# whole registry), and a per-account copy would be ten writers on one
+# whole registry), and a per-account copy would be many writers on one
 # setting. It also needs admin on someone else's repo, which self-dev
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+
+# prop_host_tools -- what a provisioned host carries under
+# /usr/local/libexec/selfdev beyond the bootstrap: the verb a human types and
+# every step it runs. DERIVED, so a step added to the provisioning set arrives
+# on the host without a second list agreeing to it.
+prop_host_tools() {
+  printf 'dresse.sh\n'
+  local s; for s in $PROP_PROVISION_SCRIPTS; do [ "$s" = dresse.sh ] || printf '%s\n' "$s"; done
+}
 
 # prop_channel <script-basename> -- prints bootstrap|provision|payload|local,
 # or nothing (rc 1) when the script is unclassified. Callers MUST treat rc 1

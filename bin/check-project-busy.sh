@@ -57,7 +57,6 @@ share_dir="$HOME/.local/share"
 # automation -- these happen to share the "scheduler-*" prefix with
 # scheduler's own real jobs (scheduler-nightly-batch, scheduler-paced-dev)
 # purely by naming coincidence, but being "busy" here means "the shared
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 declare -A INFRA_EXCLUDE=( [scheduler-paced-runner]=1 [scheduler-registry]=1 [scheduler-glance]=1 )
 
 busy=0
@@ -66,7 +65,6 @@ shopt -s nullglob
 # -- 1. THE CANONICAL PER-PROJECT LOCK ---------------------------------------
 # scheduler's lib/sweep-loop-common.sh already keys a lock by PROJECT_KEY
 # rather than job name -- its own comment: that is "what makes every tier/job
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 registry_dir="$share_dir/scheduler-registry"
 reg_lock="$registry_dir/$project.lock"
 if [ -f "$reg_lock" ] && ! flock -n "$reg_lock" -c true 2>/dev/null; then
@@ -79,7 +77,6 @@ fi
 # The other half of the same question, added 2026-07-26: a job lock says
 # "automation is writing here"; this says "a human is". Written by
 # bin/session-marker.sh from a Claude SessionStart hook.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 marker="$registry_dir/$project.interactive"
 if [ -f "$marker" ]; then
   mpid="$(awk -F= '$1=="pid"{print $2}' "$marker" 2>/dev/null)"
