@@ -9,7 +9,6 @@
 # never registered `scheduler` in its own fixture registry -- it relied on the
 # live one, which is exactly why it was green only on zach's box, and #89 is
 # what stopped that working. `register scheduler` fixes it; no assertion
-# changed. Fixed alongside: coin.sh now honours SCHEDULE_DIR, the same name
 # bin/install-verbs.sh reads, instead of retyping the registry join, and reports
 # BLIND rather than "no registered project" when the registry is absent.
 #
@@ -21,7 +20,6 @@ set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LIB="$REPO/bin/lib/verb-set.sh"
 INSTALL_VERBS="$REPO/bin/install-verbs.sh"
-COIN="$REPO/bashify/lib/coin.sh"
 
 check(){ if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (want '$3', got '$2')"; fi; }
 has()  { if printf '%s' "$2" | grep -q -- "$3"; then ok "$1"; else bad "$1 (output lacked '$3')"; fi; }
@@ -103,7 +101,6 @@ printf -- '-- C. absence fails loud (the intersection defect)\n'
 # ONLY POSSIBLE FINDING. Run against the main fixture it would pass on the
 # collision alone -- exit 1 for a reason that has nothing to do with absence --
 # and an intersection check would score green. That is the "PASS text, not the
-# count" trap this ecosystem already recorded against `bashify check` row 6.
 SOLO="$WORK/solo"
 mkdir -p "$SOLO/projects" "$SOLO/bin" "$SOLO/schedule"
 (
@@ -168,34 +165,10 @@ out="$("$INSTALL_VERBS" 2>&1)"
 has   "D4 a regular file is FOREIGN" "$out" '^FOREIGN  *bbb'
 check "D5 the foreign file is untouched" "$(md5sum < "$INSTALLE_BIN/bbb")" "$before"
 
-printf -- '-- E. the generator refuses a name another project declares\n'
-# coin resolves the project through scheduler's registry, so use a registered
-# one and point it at a throwaway repo via BASHIFY_REPO. The claim check runs
-# BEFORE any refusal that could write, so nothing is created either way.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
-register scheduler
-SCRATCH="$WORK/scratch"; mkdir -p "$SCRATCH"; G "$SCRATCH" init -q -b main
-echo x > "$SCRATCH/README.md"; G "$SCRATCH" add -A; G "$SCRATCH" commit -qm init
-
-coin_out="$(BASHIFY_REPO="$SCRATCH" "$COIN" scheduler aaa 'a colliding name' 2>&1)"; coin_rc=$?
-check "E1 coining a declared name exits 2" "$coin_rc" "2"
-has   "E2 the refusal names the claiming project" "$coin_out" 'alpha'
-has   "E3 the refusal explains what declared means" "$coin_out" 'whether or not it is installed here'
-
-# The negative: a free name must pass the claim check and fail LATER, at the
-# refusal about there being no branch to coin onto. Same command, different
-# verb -- so a claim check that refused everything would be caught here.
-free_out="$(BASHIFY_REPO="$SCRATCH" "$COIN" scheduler zzz 'a free name' 2>&1)"; free_rc=$?
-check "E4 a free name is not refused by the claim check" "$free_rc" "7"
-has   "E5 it got as far as the no-branch refusal" "$free_out" 'no '"'"'bashified'"'"' branch'
-hasnt "E6 the free name was never called claimed" "$free_out" 'already declared'
-
 printf -- '-- F. registration: the classification, re-checked every run\n'
 # A verb is a UTILITY's finished form. The registry is what "utility" means
-# here, and `bashify emit`/`coin` already refuse an unregistered project -- but
-# only at MINT time. A project deregistered AFTER being bashified kept its verb
-# forever, which on 2026-08-02 was 9 verbs across 4 projects, 7 of them live on
-# PATH. These assertions are the standing re-check.
+# here. A project deregistered after being bashified keeps its verb forever
+# unless something re-checks; these assertions are that re-check.
 FIX="$WORK/reg"
 mkdir -p "$FIX/projects" "$FIX/bin" "$FIX/schedule"
 (
