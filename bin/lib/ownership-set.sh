@@ -20,27 +20,7 @@
 #   ownership    a file with a foreign owner cannot BE MAINTAINED here without
 #                this repo's maintainer becoming that project's maintainer.
 #
-# ============================================================================
-# THE MISSION TEST -- one question, from this repo's own documents
-# ============================================================================
-#
-# vault:realisateur/UNIVERSE.md, "The anatomy", line 47, on what this organ is:
-#
-#     realisateur -- perception and judgment. Senses (the offline surveys),
-#     triages (park-by-default), records. It never decides; the human decides.
-#
-# vault:realisateur/PRECIPITATION.md restates the same boundary as a pair:
-#
-#     Scheduler enforces weights and never sets them; realisateur senses and
-#     never decides.
-#
-# And README.md gives the effector half that is genuinely realisateur's:
-#
-#     realisateur's job is to notice what's been dropped, infer the idea
-#     behind it, and turn it into a real, scaffolded project wired into the
-#     rest of the development ecosystem.
-#
-# So the question asked of every file below is:
+# THE MISSION TEST, asked of every file below:
 #
 #   >>> Does this file SENSE the ecosystem, TRIAGE what it senses, or SCAFFOLD
 #   >>> a new project from an idea? If it instead ACTS ON the estate --
@@ -48,19 +28,14 @@
 #   >>> then by this repo's own doctrine it is somebody else's organ, and the
 #   >>> only question left is whose.
 #
-# BELONGS-ELSEWHERE WITHOUT A NAMED RECEIVER IS A COMPLAINT, NOT A FINDING.
-# Every foreign row names a receiver, and every receiver is declared in
-# OWN_RECEIVERS below with a probe that was actually run.
+# Every foreign row names a receiver declared in OWN_RECEIVERS.
 #
 # ============================================================================
 # WHAT THIS LEDGER IS NOT
 # ============================================================================
 #
-# It is not a migration order and it does not move anything. Naming a file
-# foreign changes nothing about where it runs today; bin/install-shims.sh is
-# senechal's by mission AND is the thing that writes the PATH shims this
-# estate currently runs on. See bin/ownership-audit.sh's header for why the
-# audit and the move are deliberately separate acts.
+# It is not a migration order and it does not move anything. The audit and the
+# move are deliberately separate acts; see bin/ownership-audit.sh.
 #
 # ============================================================================
 # HOW A NEW FILE GETS CLASSIFIED
@@ -162,6 +137,8 @@ bin/tests/served-not-cloned.test.sh        realisateur
 bin/verb-kind-lint.sh                      realisateur
 bin/tests/verb-kind-lint.test.sh           realisateur
 bin/wire-release-channel.sh                realisateur
+bin/dresse.sh                              realisateur
+bin/tests/dresse.test.sh                   realisateur
 bin/tests/selfdev-agent-survey.test.sh     realisateur
 bin/repo-settings-provision.sh             realisateur
 bin/tests/repo-settings-provision.test.sh  realisateur
