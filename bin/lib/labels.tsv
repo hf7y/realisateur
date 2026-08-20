@@ -1,17 +1,13 @@
 # labels.tsv -- THE ONE HOME of the estate's issue-label grammar.
 #
 # Zach, 2026-08-18 (hf7y/realisateur#397): "Repos need to look into a central
-# place to see the grammar." So this file is NEVER copied into a repo.
-# It is read at the point of use by `etiquette`, exactly the way `discipline`
-# reads BUILD-DISCIPLINE.md -- the pattern that replaced eleven byte-identical
-# corrupted copies of the build checklist. The verb build carries it, so every
-# host reads these bytes; bin/carry-drift.sh proves the carried copy still
-# matches this one.
+# place to see the grammar." NEVER copied into a repo -- read at the point of
+# use by `etiquette`, the `discipline`/BUILD-DISCIPLINE.md shape. The verb
+# build carries it; bin/carry-drift.sh proves the carried copy still matches.
 #
 # Columns:  name  color  source  meaning
 #
-# SOURCE is the column that decides who may write the label, and it is the
-# whole point of the file:
+# SOURCE decides who may write the label, and is the point of the file:
 #   derived:decision  line 1 declares `DECISION:` AND nobody has answered.
 #                     NEVER typed -- `etiquette --apply` writes it, reading
 #                     bin/lib/body-grammar.sh and bin/lib/answered.sh.

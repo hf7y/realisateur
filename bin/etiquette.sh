@@ -6,9 +6,8 @@
 # RUNNER: no -- a SURVEY, run in a triage pass or ahead of /ideate and /cloture
 # GUARD-TEST: bin/tests/etiquette.test.sh
 # GATE: none -- reads live issue trackers; writes only with --apply
-# THE TEXT LIVES IN bin/lib/labels.tsv AND IS NOT DUPLICATED HERE (#397). A
-# grammar copied into 24 repos is 24 grammars; this is the `discipline` shape --
-# one file, read live, carried by the verb build so no checkout is needed.
+# THE TEXT LIVES IN bin/lib/labels.tsv AND IS NOT DUPLICATED HERE (#397): a
+# grammar copied into 24 repos is 24 grammars.
 #
 # `needs-human` is DERIVED: grammar_declaration() (bin/lib/body-grammar.sh)
 # reads line 1, issue_answered() (bin/lib/answered.sh) reads the comments.
