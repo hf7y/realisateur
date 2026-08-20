@@ -12,21 +12,13 @@ registration works," not "realisateur's own status."
   2026-08-07. A new project gets a GitHub repo under `hf7y` and files its
   findings, questions and milestones as issues. Do not scaffold those files.
 - **Questions are issues, and Zach answers by commenting and LEAVING THEM
-  OPEN.** His own words, 2026-08-14: "I will comment and leave open." He does
-  not apply an `answered` label and does not want to make that GitHub-UI trip,
-  so **issue state and labels carry no information about whether he
-  answered** — an OPEN question issue is *not* evidence that it is
-  unanswered. The predicate for any sweep: an issue is answered if it carries
-  a comment authored by the repo owner whose **last non-blank line does not
-  open with `<!-- agent:`**. Query across **all** states.
-  This is the one place the rule is written; other files point here.
-  Agents do not append that marker and no code calls anything to get it:
-  `bin/gh-sign.sh` stands in front of `gh` on PATH and signs every body on
-  its way out, so an unsigned owner comment is a human one by construction.
-  It was wrong here for ten days because one improvised comment on
-  hf7y/vim-arcade#12 — *"Not sure how to label issue as 'answered' for agent
-  to pick up. will try close"* — got generalized into a standing convention.
-  "will try" was in the evidence.
+  OPEN.** His own words, 2026-08-14: "I will comment and leave open." He
+  applies no `answered` label, so **issue state and labels carry no
+  information about whether he answered** — an OPEN question issue is *not*
+  evidence that it is unanswered. The predicate now has one home in code,
+  `bin/lib/answered.sh`, read by both `decision-rot` and `etiquette`: an
+  unstamped owner comment is a human's, because `bin/gh-sign.sh` stands in
+  front of `gh` on PATH and signs every agent body on its way out.
 - **Verbs come from the host-wide build**, not from a clone: on monkey,
   `/usr/local/bin` fed by one nightly tick. A new project needs no
   `*-verbs` worktree and no per-account pin (hf7y/realisateur#180).
