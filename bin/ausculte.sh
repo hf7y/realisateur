@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ausculte.sh -- can Zach stop looking? Composed from probes that already exist.
-# THE HUMAN CHANNEL IS FIRST: every other failure is meant to reach him through
-# zaxon, so a green report with that down is one nobody receives. BLIND is never
-# folded into OK; this is the command built to be believed.
+# KIND: verb
+# THE HUMAN CHANNEL IS FIRST: every other failure reaches Zach through zaxon,
+# so a green report with zaxon down reaches nobody. BLIND never folds into OK.
 set -uo pipefail
 
 CLI_NAME='ausculte.sh'
@@ -73,7 +73,7 @@ if want arming; then
 fi
 
 if want propagation; then
-  pub="$(gh api repos/hf7y/verbs/contents/manifest.tsv --jq .content 2>/dev/null | base64 -d 2>/dev/null | grep -cv '^#' || echo 0)"
+  pub="$(gh api repos/hf7y/verbs/contents/manifest.tsv --jq .content 2>/dev/null | base64 -d 2>/dev/null | grep -cv '^#')" || pub=0
   if [ "${pub:-0}" -lt 1 ]; then record propagation BLIND 'cannot read the published manifest'
   else
     bad=''
@@ -101,14 +101,19 @@ if want rot; then
 fi
 
 if want silence; then
-  if [ -x "$HERE/silence-audit.sh" ]; then
-    out="$(bash "$HERE/silence-audit.sh" --strict 2>&1)"; rc=$?
+  sa=''
+  if   [ -x "$HERE/silence-audit.sh" ]; then sa="$HERE/silence-audit.sh"
+  elif [ -x "$HERE/silence-audit" ];    then sa="$HERE/silence-audit"
+  elif command -v silence-audit >/dev/null 2>&1; then sa="$(command -v silence-audit)"
+  fi
+  if [ -n "$sa" ]; then
+    out="$(bash "$sa" --strict 2>&1)"; rc=$?
     case $rc in
       0) record silence OK 'no silenced failure paths' ;;
-      2) record silence BLIND 'ausculte invoked silence-audit.sh wrongly -- fix ausculte' ;;
+      2) record silence BLIND 'ausculte invoked silence-audit wrongly -- fix ausculte' ;;
       *) record silence DOWN "$(printf '%s' "$out" | tail -1)" ;;
     esac
-  else record silence BLIND 'silence-audit.sh not present'; fi
+  else record silence BLIND 'silence-audit not present'; fi
 fi
 
 [ ${#rows[@]} -gt 0 ] || { printf '%s: no such probe: %s\n' "$CLI_NAME" "${ONLY[*]}" >&2; exit 2; }
