@@ -1,27 +1,14 @@
 #!/usr/bin/env bash
-# dresse.sh -- stand a self-dev host, or one account on it, UP. The one command
-# Zach types; the sixteen hand-run scripts stay, and this is their front door.
+# dresse.sh -- stand a self-dev host, or one account on it, up (#435).
 #
 # KIND: verb
 #
-# Zach, 2026-08-19: "There should be a verb that does whatever that realisateur
-# agent would do, agentless, simple enough for Zach to type." (#435; the name
-# was left to this implementation -- "I don't care. You decide.")
-#
-# WHO RUNS IT: a human with sudo, ON the host being provisioned. NO self-dev
-# account gets sudo, now or later. If a step here seems to need an account to
-# have it, the step is wrong.
-#
-# TRAP: the step plan is CHECKED against bin/lib/propagation-set.sh, never
-#   invented beside it. Every script a step runs must be provision-class there,
-#   and every provision-class script this does NOT reach is PRINTED as
-#   uncovered. A front door that quietly covers eleven of sixteen reads exactly
-#   like one that covers sixteen.
-#
-# TRAP: it installs no secret unattended. selfdev-claude-token.sh --install
-#   takes a file a human supplies, so --apply reports the gap and the command
-#   rather than inventing a value. A trailing space in a pasted token took the
-#   fleet down on 2026-08-19.
+# TRAP: the step plan is checked against bin/lib/propagation-set.sh, and the
+#   indirectly-reached set is read out of the callers themselves. Neither is
+#   typed here: a recorded list of what provisioning is goes stale in silence.
+# TRAP: it installs no secret unattended -- selfdev-claude-token.sh --install
+#   takes a file a human supplies, so both modes only --check it.
+# TRAP: root is required to CHANGE the host, not to look at it.
 #
 set -uo pipefail
 
@@ -67,8 +54,7 @@ fi
 [ -n "${PROP_PROVISION_SCRIPTS:-}" ] || {
   echo "$CLI_NAME: BLIND -- propagation-set.sh declares no provisioning set" >&2; exit 6; }
 
-# --- THE PLAN. One row per step: scope|script|check args|apply args|what ------
-# Kept in run order. A row's script must be provision-class; see plan_check.
+# THE PLAN, in run order: script|check args|apply args|what
 HOST_STEPS="
 selfdev-app-key.sh|--check|--apply|the GitHub App key, host-wide, group-readable by the uid band
 selfdev-claude-token.sh|--check|--check|the shared OAuth token (--install takes a file a human supplies)
@@ -76,10 +62,6 @@ wire-release-channel.sh|--host --check|--host --apply|the verb-build channel: bo
 selfdev-permissions-provision.sh||--apply|the .claude permissions block on every account
 selfdev-hooks-provision.sh||--apply|the SubagentStop hook on every account
 "
-# An account that does not exist yet: setup-selfdev-project.sh is itself the
-# ordered sequence (account, keys, git, land, App key, channel, permissions,
-# hooks), so this does not restate it. One that does exist only needs the
-# channel re-checked; the two fleet-wide blocks above already reach it.
 ACCT_NEW_STEP="setup-selfdev-project.sh"
 ACCT_STEPS="
 wire-release-channel.sh|--check|--apply|the verb-build bootstrap and this account's own clock
@@ -94,19 +76,15 @@ run_step() { # run_step <script> <args...>
     fail_n=$((fail_n + 1)); return 1
   fi
   # shellcheck disable=SC2086
-  bash "$p" $* 2>&1 | sed 's/^/     /'
+  bash "$p" "$@" 2>&1 | sed 's/^/     /'
   local rc=${PIPESTATUS[0]}
-  # Under --check a nonzero exit is the step SAYING there is work to do; under
-  # --apply the same code is a refusal. BLIND is never either -- it is a step
-  # that could not look, and folding it into "gap" is the conflation this
-  # estate keeps paying for.
   case "$rc" in
-    0) echo "  OK      $s $*"; pass_n=$((pass_n + 1)) ;;
-    6) echo "  BLIND   $s $* could not look (exit 6) -- not clean"; fail_n=$((fail_n + 1)) ;;
+    0) echo "  OK      $s ${*}"; pass_n=$((pass_n + 1)) ;;
+    6) echo "  BLIND   $s ${*} could not look (exit 6) -- not clean"; fail_n=$((fail_n + 1)) ;;
     *) if [ "$MODE" = --check ]; then
-         echo "  GAP     $s $* reports work to do (exit $rc)"; gap_n=$((gap_n + 1))
+         echo "  GAP     $s ${*} reports work to do (exit $rc)"; gap_n=$((gap_n + 1))
        else
-         echo "  BAD     $s $* exited $rc"; fail_n=$((fail_n + 1))
+         echo "  BAD     $s ${*} exited $rc"; fail_n=$((fail_n + 1))
        fi ;;
   esac
   return 0
@@ -122,13 +100,18 @@ run_plan() { # run_plan <steps-block> <extra-arg-or-empty>
   done <<<"$block"
 }
 
-# COVERAGE. Names reached indirectly are declared here rather than assumed --
-# setup-selfdev-project.sh runs them, and saying so is what keeps this list
-# from becoming a second, quieter copy of the provisioning set.
-VIA_SETUP="provision-selfdev-user.sh wire-selfdev-git.sh land-selfdev.sh install-verbs.sh install-shims.sh selfdev-app-key.sh selfdev-permissions-provision.sh selfdev-hooks-provision.sh wire-release-channel.sh"
+# Scripts reached indirectly, read out of the callers rather than listed.
+via_setup() {
+  local f
+  for f in "$ACCT_NEW_STEP" land-selfdev.sh; do
+    [ -f "$HERE/$f" ] && grep -ohE '[a-z0-9-]+\.sh' "$HERE/$f"
+  done | sort -u
+}
 
 plan_check() {
-  local named s bad=0
+  local named via s bad=0
+  via="$(via_setup)"
+  [ -n "$via" ] || { echo "  BLIND   cannot read $ACCT_NEW_STEP -- coverage is unverifiable"; return 1; }
   named="$(printf '%s\n%s\n%s\n' "$HOST_STEPS" "$ACCT_STEPS" "$ACCT_NEW_STEP" | cut -d'|' -f1 | grep -v '^$')"
   for s in $named; do
     if [ "$(prop_channel "$s" 2>/dev/null)" != provision ]; then
@@ -139,14 +122,12 @@ plan_check() {
   for s in $PROP_PROVISION_SCRIPTS; do
     [ "$s" = dresse.sh ] && continue   # itself
     printf '%s\n' "$named" | grep -qx "$s" && continue
-    case " $VIA_SETUP " in *" $s "*) continue ;; esac
+    printf '%s\n' "$via" | grep -qx "$s" && continue
     echo "  ..      not covered by $CLI_NAME: $s (still a hand-run script)"
   done
   return $bad
 }
 
-# ROOT is required to CHANGE the host, not to look at it. --check writes
-# nothing, so it stays runnable by anyone -- and says which rows will refuse.
 if [ "$MODE" = --apply ] && [ "$(id -u)" -ne 0 ]; then
   echo "$CLI_NAME: --apply must run as root (sudo $0 $*)" >&2; exit 2
 fi
@@ -163,8 +144,6 @@ if [ "$HOSTWIDE" -eq 1 ]; then
 else
   if [ "$ALL" -eq 1 ]; then
     ACCTS="$(getent passwd | awk -F: -v lo="$UID_MIN" -v hi="$UID_MAX" '$3>=lo && $3<=hi {print $1}' | sort)"
-    # An empty band is a finding, not a clean run: it means this is not the
-    # self-dev host, or the band moved.
     [ -n "$ACCTS" ] || { echo "$CLI_NAME: no accounts in uid band $UID_MIN-$UID_MAX on $HOST -- and that is a finding" >&2; exit 1; }
   else
     ACCTS="$ACCT"

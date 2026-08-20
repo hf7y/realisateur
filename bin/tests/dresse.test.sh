@@ -58,6 +58,9 @@ write_set "$STEPS
 pivot.sh"
 for s in selfdev-app-key.sh selfdev-claude-token.sh wire-release-channel.sh \
          selfdev-permissions-provision.sh selfdev-hooks-provision.sh; do stub "$s" 0; done
+# The indirect set is READ OUT of this file, so the stub names what it runs.
+stub setup-selfdev-project.sh 0
+printf '# runs provision-selfdev-user.sh wire-selfdev-git.sh land-selfdev.sh\n' >> "$T/bin/setup-selfdev-project.sh"
 
 section "A. --check runs the plan and writes nothing"
 : > "$RAN"
@@ -104,6 +107,18 @@ out="$(bash "$D" --host --check 2>&1)"; rcv=$?
 has "F1 names the undeclared step" "$out" "is not provision-class"
 rc  "F2 exit 1" 1 "$rcv"
 eq  "F3 no step ran on a bad plan" "$(cat "$RAN")" ""
+
+section "F2. coverage is derived, not recorded"
+write_set "$STEPS
+pivot.sh
+provision-selfdev-user.sh"
+out="$(bash "$D" --host --check 2>&1)"
+hasnt "F2a a script setup-selfdev-project.sh runs is not called uncovered" "$out" "not covered by dresse: provision-selfdev-user.sh"
+mv "$T/bin/setup-selfdev-project.sh" "$T/bin/setup-selfdev-project.sh.away"
+out="$(bash "$D" --host --check 2>&1)"; rcv=$?
+has "F2b with that file gone, coverage is BLIND rather than assumed" "$out" "coverage is unverifiable"
+rc  "F2c and the run fails" 1 "$rcv"
+mv "$T/bin/setup-selfdev-project.sh.away" "$T/bin/setup-selfdev-project.sh"
 
 section "G. no propagation set is BLIND, never clean"
 rm -f "$T/bin/lib/propagation-set.sh"

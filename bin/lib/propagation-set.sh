@@ -56,20 +56,14 @@ PROP_PIN_PATH=".local/share/verb-builds/current"
 #   NEVER guess a plausible build id ("the latest one", "the one in the
 #   manifest"); that destroys exactly this distinction.
 #
-# It is a git TRAILER because it must survive the artifact being read later
-# out of context: it travels with a clone, a cherry-pick and a patch, and
-# `git log --format='%(trailers:key=Verb-Build)'` reads it in bulk.
+# It is a git TRAILER so it travels with a clone, a cherry-pick and a patch.
 
 # prop_current_pin -- the adopted build id, or nothing. Never a guess.
 #
-# TRAP: TWO ROOTS, in the order the account actually resolves them. The
-#   private pin first (an account that still has one is running it, because
-#   its ~/.local/bin shims shadow the host-wide directory), the host-wide root
-#   second. Without the second this went honest-but-useless the moment an
-#   account retired: probed 2026-08-13, four retired accounts stamped
-#   `unknown` while running a perfectly well-known build from /usr/local/bin.
-#   "Unknown" is right for an unreadable pin and wrong for a pin that moved --
-#   and the three-state rule only earns its keep while `unknown` stays rare.
+# TRAP: TWO ROOTS, in the order the account resolves them -- the private pin
+#   first (its ~/.local/bin shims shadow the host-wide directory), the
+#   host-wide root second. `unknown` is right for an unreadable pin and wrong
+#   for a pin that moved.
 prop_current_pin() {
   local p t
   for p in "${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}/current" \
@@ -153,8 +147,6 @@ gh-sign.sh
 
 # --- THE LEAK, with a bound on it -------------------------------------------
 # PAYLOAD-class scripts that are NOT yet declared on any bashified branch.
-# realisateur's bashified branch declares TWO verbs: consigne and gh. It was
-# five until arpente, epluche and juge were retired 2026-08-18 (#382).
 PROP_PAYLOAD_PENDING="
 check-project-busy.sh
 closeout-lint.sh
