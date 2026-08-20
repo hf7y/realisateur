@@ -162,10 +162,6 @@ has   "B4 and the reason is printed, not hidden" "$out" "executes nothing"
 echo
 echo "== C. NO STRAY WORKTREE IS ACTUALLY REGISTERED NOW =="
 
-# C1 -- THE REGRESSION THIS SECTION EXISTS TO CATCH. Check A greps source; it
-# cannot see a worktree an agent harness registered directly. A tree with a
-# real linked worktree, and no script anywhere naming `git worktree add`,
-# must still go red.
 d="$(mkfixture strayed)"
 G "$d" branch other >/dev/null
 G "$d" worktree add -q "$WORK/strayed-side" other >/dev/null
@@ -175,15 +171,11 @@ has   "C1 and names the path" "$out" "$WORK/strayed-side"
 has   "C1 and counts it" "$out" "1 FLAG(s)"
 G "$d" worktree remove --force "$WORK/strayed-side" >/dev/null 2>&1
 
-# C2 -- the MAIN worktree itself is never the finding; only entries other
-# than it are stray.
 d="$(mkfixture solo)"
 run "$d"
 check "C2 a tree with only the main worktree is clean" "$rc" "0"
 hasnt "C2 and names no stray worktree" "$out" "stray worktree"
 
-# C3 -- an allowlisted path pattern excuses a worktree expected to exist,
-# same discipline as check B: a live entry suppresses the finding it names.
 d="$(mkfixture excusedwt)"
 G "$d" branch other >/dev/null
 G "$d" worktree add -q "$WORK/excusedwt-side" other >/dev/null
@@ -193,9 +185,7 @@ check "C3 an allowlisted worktree path is excused" "$rc" "0"
 has   "C3 and the reason is printed" "$out" "review copy, removed after use"
 G "$d" worktree remove --force "$WORK/excusedwt-side" >/dev/null 2>&1
 
-# C4 -- and once that worktree is gone, the entry excusing it is itself a
-# FLAG -- the same rot rule as B2, applied to a runtime registration instead
-# of a source file.
+# C4 -- once that worktree is gone, the entry excusing it is a FLAG (B2's rule).
 d="$(mkfixture rottedwt)"
 out="$(NO_WORKTREE_WT_ALLOW_FILE="$WORK/allow-wt.tsv" bash "$LINT" "$d" 2>&1)"; rc=$?
 check "C4 an entry with no matching worktree is a finding" "$rc" "1"

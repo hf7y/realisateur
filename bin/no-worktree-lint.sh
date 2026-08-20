@@ -22,13 +22,6 @@
 # matching, so an entry cannot outlive its reason. That is the half a
 # ratchet's --accept normally provides, and it is the half that matters here.
 #
-# hf7y/realisateur#429, 2026-08-19: check A greps SOURCE, so it read clean
-# while five worktrees under .claude/worktrees/ pinned already-merged
-# branches -- registered directly by an agent harness (EnterWorktree,
-# isolation:worktree), with no tracked script naming the call. Check C reads
-# the tree's ACTUAL registrations instead, with the same allowlist-cannot-rot
-# discipline as check B.
-#
 # usage:  no-worktree-lint.sh [ROOT]
 # exit:   0 clean   1 FLAGs   2 BLIND (not a git tree, or zero files scanned --
 
@@ -158,18 +151,7 @@ fi
 echo
 echo "== C. NO WORKTREE IS ACTUALLY REGISTERED NOW =="
 
-# Check A greps SOURCE for the call that creates one. It cannot see a worktree
-# an agent harness registers directly -- EnterWorktree, .claude/worktrees/, an
-# isolation:worktree subagent -- because no tracked script in this tree issues
-# the call. Demonstrated 2026-08-19: five worktrees under .claude/worktrees/,
-# each pinning an already-merged branch, while check A read clean throughout.
-# Same `git worktree list --porcelain` parse as bin/closeout-lint.sh uses to
-# find a repo's linked worktrees.
-#
-# ALLOWLIST, same rot discipline as check B: allow <path-glob> "<why>" excuses
-# a worktree expected to exist right now. An entry that matches nothing
-# currently registered is itself a FLAG -- an excuse cannot outlive the
-# worktree it excused.
+# #429: reads git's actual registrations; same rot discipline as check B.
 WT_ALLOW_PATTERNS=()
 WT_ALLOW_WHY=()
 wt_allow() { WT_ALLOW_PATTERNS+=("$1"); WT_ALLOW_WHY+=("$2"); }
