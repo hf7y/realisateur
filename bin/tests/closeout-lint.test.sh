@@ -201,8 +201,7 @@ hasnt "B7 and never a FLAG"                    "$out" "FLAG ["
 GH_BIN="$GH_DEFAULT"
 
 echo "-- C. the retired decision-residue surface"
-# scheduler#66 retired those surfaces; a lint asking for a line in one was the
-# last mechanism manufacturing it.
+# scheduler#66 retired those surfaces; this lint was the last thing asking for one.
 out="$(run clean)"
 hasnt "C1 no BLOCKERS.md section"              "$out" "BLOCKERS"
 hasnt "C1 and no DECISION RESIDUE heading"     "$out" "DECISION RESIDUE"
