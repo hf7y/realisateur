@@ -79,7 +79,33 @@ fi
 # --- THE ONE-OWNER CHECK ----------------------------------------------------
 # zaxon's data/ holds a WhatsApp linked-device session. Two processes holding
 # it means WhatsApp logs the link out, and recovering costs a QR scan on Zach's
+SESSION_PATH="${SESSION_PATH:-/home/zaxon/.hermes/whatsapp/session}"  # hardcoded-home-ok: a path on dexter, not on this host
 if [ "$NAME" = "zaxon" ]; then
+  # THE PROPERTY IS WHO HOLDS THE SESSION, not which distro is up. Probing the
+  # distro was a proxy and it stopped tracking: zaxon now runs as bare
+  # processes in Ubuntu, so `hermes` reads Stopped while the session HAS a
+  # holder and the guard passes (#425). Ask about the holder first.
+  #
+  # The bracket in [-]-session is not decoration: the probe's own command line
+  # contains the pattern, and a probe that can match itself reports the state
+  # it was testing for, forever.
+  probe="$(ssh -n "$HOST" 'command -v pgrep >/dev/null 2>&1 || exit 9
+    pgrep -af -- "[-]-session '"$SESSION_PATH"'"
+    echo PROBE-OK' || true)"
+  case "$probe" in
+    *PROBE-OK*) : ;;
+    *) echo "$CLI_NAME: BLIND -- could not ask $HOST who holds $SESSION_PATH." >&2
+       echo "  A probe that could not run is not an absence of holders. Refusing." >&2
+       exit 6 ;;
+  esac
+  holders="$(printf '%s\n' "$probe" | grep -v '^PROBE-OK$' | grep -v '^[[:space:]]*$' || true)"
+  if [ -n "$holders" ]; then
+    die "the WhatsApp session at $SESSION_PATH ALREADY HAS A HOLDER:
+$holders
+  Starting a second owner logs the link out and costs a QR scan to recover.
+  Stop that process first. Refusing rather than racing it."
+  fi
+
   running="$(ssh -n "$HOST" 'sudo -n systemctl restart systemd-binfmt 2>/dev/null; cd /mnt/c && /mnt/c/Windows/System32/wsl.exe -l -q --running 2>/dev/null | tr -d "\0\r"' || true)"
   case "$running" in
     *hermes*) die "the 'hermes' distro is RUNNING and owns the same WhatsApp session.

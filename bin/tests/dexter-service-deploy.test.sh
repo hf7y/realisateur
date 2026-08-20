@@ -16,12 +16,19 @@ DEPLOY="$PWD/dexter-service-deploy.sh"
 is()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1: expected '$3', got '$2'"; fi; }
 
 STUB="$(mktemp -d)"; trap 'rm -rf "$STUB"' EXIT
-# Stub ssh prints the staged distro list. Anything that is NOT the read-only
-# distro query is recorded, so the test can assert nothing was mutated.
+# Stub ssh answers per-probe: the session-holder query from $STUB_HOLDERS, the
+# distro query from $STUB_REPLY. Every call is recorded, so the test can assert
+# nothing was mutated. SSH_BLIND=1 makes the holder probe fail to run at all.
 cat > "$STUB/ssh" <<'EOF'
 #!/bin/sh
 echo "$*" >> "$STUB_CALLS"
-cat "$STUB_REPLY" 2>/dev/null
+case "$*" in
+  *pgrep*)
+    [ -n "${SSH_BLIND:-}" ] && exit 9
+    cat "$STUB_HOLDERS" 2>/dev/null
+    echo PROBE-OK ;;
+  *) cat "$STUB_REPLY" 2>/dev/null ;;
+esac
 EOF
 # rsync must never run on a refused deploy either -- stub it the same way.
 cat > "$STUB/rsync" <<'EOF'
@@ -44,15 +51,45 @@ case "$*" in
 esac
 EOF
 chmod +x "$STUB/ssh" "$STUB/rsync" "$STUB/gh"
-export STUB_REPLY="$STUB/reply" STUB_CALLS="$STUB/calls"
+export STUB_REPLY="$STUB/reply" STUB_CALLS="$STUB/calls" STUB_HOLDERS="$STUB/holders"
+: > "$STUB_HOLDERS"
 # A fixture service, so this suite needs no project's real files: zaxon's
 # container lives in hf7y/crt now (crt owns it), which may not be cloned here.
 mkdir -p "$STUB/svc/zaxon" && printf 'services: {}\n' > "$STUB/svc/zaxon/compose.yaml"
 export DEXTER_SERVICE_PATH="$STUB/svc"
 export PATH="$STUB:$PATH"
 
+echo "== 0. THE SESSION HAS A HOLDER => REFUSE, whatever the distro list says ==="
+# The incident this closes: zaxon runs as bare processes in Ubuntu and holds
+# the session while `hermes` reads Stopped. The old guard passed and would have
+# started a second holder, reporting success.
+: > "$STUB_CALLS"; printf 'Ubuntu\n' > "$STUB_REPLY"
+printf '4711 node /srv/zaxon/bridge.js --session %s --mode bot\n' \
+  /home/zaxon/.hermes/whatsapp/session > "$STUB_HOLDERS"  # hardcoded-home-ok: fixture of a dexter path
+out="$(bash "$DEPLOY" zaxon 2>&1)"; rc=$?
+is "exits non-zero although hermes is Stopped" "$rc" "1"
+has "names the session, not the distro" "$out" "ALREADY HAS A HOLDER"
+has "and names the process holding it" "$out" "4711"
+if grep -q '^rsync ' "$STUB_CALLS" 2>/dev/null; then bad "it refused but still pushed files"; else ok "no rsync ran"; fi
+
+echo
+echo "== 0b. THE PROBE ITSELF MUST NOT MATCH => no self-match, no false holder ==="
+# `pgrep -f` sees its own command line. The bracket in [-]-session is what stops
+# the probe reporting the state it was testing for, forever.
+grep -q '\[-\]-session' "$DEPLOY" && ok "the probe pattern cannot match itself" \
+  || bad "the probe pattern would match its own command line"
+
+echo
+echo "== 0c. THE PROBE CANNOT RUN => BLIND (6), never 'no holder' ==============="
+: > "$STUB_CALLS"; : > "$STUB_HOLDERS"; printf 'Ubuntu\n' > "$STUB_REPLY"
+out="$(SSH_BLIND=1 bash "$DEPLOY" zaxon --dry-run 2>&1)"; rc=$?
+is "exits BLIND on the estate's ladder" "$rc" "6"
+has "and says an unrunnable probe is not an absence" "$out" "not an absence of holders"
+if grep -q '^rsync ' "$STUB_CALLS" 2>/dev/null; then bad "it went blind but still pushed files"; else ok "no rsync ran"; fi
+
+echo
 echo "== 1. hermes RUNNING => REFUSE, and touch nothing =========================="
-: > "$STUB_CALLS"; printf 'Ubuntu\nhermes\n' > "$STUB_REPLY"
+: > "$STUB_CALLS"; : > "$STUB_HOLDERS"; printf 'Ubuntu\nhermes\n' > "$STUB_REPLY"
 out="$(bash "$DEPLOY" zaxon 2>&1)"; rc=$?
 is "exits non-zero" "$rc" "1"
 has "names the hazard in the terms that matter" "$out" "logs the link out"
