@@ -34,6 +34,7 @@ CLI_EXITS='  0  the repo carries the declared labels and every derived one match
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/body-grammar.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/answered.sh"
 
 APPLY=0
 REPO=''
@@ -142,9 +143,13 @@ findings=0; matched=0; changed=0
 while IFS=$'\t' read -r num has_label title; do
   [ -n "$num" ] || continue
   body="$(printf '%s' "$json" | jq -r --argjson n "$num" '.[]|select(.number==$n)|.body')"
-  want=''
+  want='' ; answered=0
   case "$(grammar_declaration "$body")" in
-    decision)    want=yes ;;
+    # An ANSWERED decision is no longer a human's to move: it is direction
+    # nobody has taken up, which is an agent's work. Left labelled, it brakes
+    # dispatch on the very issue the answer unblocked.
+    decision)    want=yes
+                 if issue_answered "$REPO" "$num"; then want=no; answered=1; fi ;;
     no-decision) want=no ;;
     none)
       findings=$((findings + 1))
@@ -158,7 +163,11 @@ while IFS=$'\t' read -r num has_label title; do
     [ "$APPLY" -eq 1 ] && gh issue edit "$num" --repo "$REPO" --add-label "$LABEL" >/dev/null \
       && { changed=$((changed + 1)); row "  +label" "$num" "$LABEL added"; }
   else
-    row STALE "$num" "labelled $LABEL but declares NO-DECISION: -- ${title:0:52}"
+    if [ "$answered" = 1 ]; then
+      row ANSWERED "$num" "declares DECISION: and has been answered -- ${title:0:52}"
+    else
+      row STALE "$num" "labelled $LABEL but declares NO-DECISION: -- ${title:0:52}"
+    fi
     [ "$APPLY" -eq 1 ] && gh issue edit "$num" --repo "$REPO" --remove-label "$LABEL" >/dev/null \
       && { changed=$((changed + 1)); row "  -label" "$num" "$LABEL removed"; }
   fi

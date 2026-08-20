@@ -61,6 +61,7 @@ done
 CARRIES='
 bin/gh	bin/gh-sign.sh
 bin/lib/body-grammar.sh	bin/lib/body-grammar.sh
+bin/lib/answered.sh	bin/lib/answered.sh
 bin/check-project-busy	bin/check-project-busy.sh
 bin/claim-drift	bin/claim-drift.sh
 bin/closeout-lint	bin/closeout-lint.sh
