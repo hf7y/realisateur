@@ -345,8 +345,7 @@ echo "-- 5. PULL, NOT PUSH ---------------------------------------------------"
 # that erodes the first time reaching in is more convenient.
 
 # Everything from the first line to the --survey machinery is the tick's own
-# path. --survey (and the account scan it calls) is the one read-only
-# operator view and is allowed ssh and sudo -u.
+# path. --survey and its account scan are allowed ssh and sudo -u.
 APPLY_PATH="$(sed -n '1,/^survey_scan_accounts()/p' "$TICK")"
 hasnt "the tick's own path contains no 'sudo -u'" "$APPLY_PATH" "sudo -u "
 hasnt "the tick's own path contains no ssh" "$APPLY_PATH" "ssh -o"
@@ -358,9 +357,7 @@ has "the cadence is written to the invoking account's own crontab" "$CADENCE_FN"
 hasnt "the cadence is not written into another account's crontab" "$CADENCE_FN" "sudo"
 has "the cadence is verified by re-reading crontab -l, not by the write's rc" "$CADENCE_FN" "crontab -l"
 
-# --survey may read, but must not adopt or write. Its account scan is a
-# separate function (realisateur#434: shared verbatim between the local and
-# ssh execution paths), so both are graded together.
+# --survey may read, but must not adopt or write.
 SURVEY_FN="$(sed -n '/^survey_scan_accounts()/,/^}/p; /^run_survey()/,/^}/p' "$TICK")"
 hasnt "--survey never adopts a build" "$SURVEY_FN" "--apply"
 hasnt "--survey never repoints a symlink" "$SURVEY_FN" "ln -s"
@@ -375,8 +372,6 @@ has "--survey grades the host-wide channel, not just the private pin" "$SURVEY_F
 has "...by asking AS THE ACCOUNT, since its own PATH can shadow the host dir" "$SURVEY_FN" 'sudo -u "$user" -H'
 has "...and an account with neither is still a finding" "$SURVEY_FN" "this account has no verbs"
 
-# realisateur#434: survey must not ssh to itself when it's already on
-# $SURVEY_HOST -- that's the exact defect (root@monkey ssh'ing to "monkey").
 has "run_survey resolves locally when already on SURVEY_HOST" "$SURVEY_FN" "on_target_host \"\$SURVEY_HOST\""
 has "the local branch calls the scan directly, no ssh" "$SURVEY_FN" 'out="$(survey_scan_accounts)"'
 
@@ -486,8 +481,6 @@ O="$(TICK_SURVEY_HOST="no-such-host.invalid" TICK_STATE="$T/s_fresh" \
 rc "an unreachable survey host exits 3 BLIND, not 0" 3 "$R"
 has "the unreachable survey says nothing was verified" "$O" "Nothing was verified"
 
-# realisateur#434: when the process IS $SURVEY_HOST, the survey must scan
-# locally and never touch ssh at all -- not "reach it and fail", never called.
 mkdir -p "$T/localsurvey/stub"
 cat > "$T/localsurvey/stub/ssh" <<EOF
 #!/usr/bin/env bash

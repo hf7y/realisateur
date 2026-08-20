@@ -59,9 +59,6 @@ if want hosts; then
 fi
 
 if want arming; then
-  # realisateur#433/#434: root@monkey ssh'ing to "monkey" to ask its own
-  # collector dies on a host-key check self-ssh can never pass. Same fix,
-  # same helper, as selfdev-release-tick.sh --survey.
   if on_target_host monkey; then
     out="$(sudo -n python3 /usr/local/libexec/selfdev/monkey-status-collect.py 2>/dev/null || sudo -n python3 ~zach/realisateur/bin/monkey-status-collect.py 2>/dev/null)"
   else

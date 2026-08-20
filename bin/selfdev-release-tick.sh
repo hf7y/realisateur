@@ -305,13 +305,6 @@ retire_cadence() {
 # and does not need the accounts to trust it -- it runs each account's own
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
-# The per-account scan, one definition shipped either way: called directly
-# when this process is already on $SURVEY_HOST, or shipped over ssh as a
-# function body (`declare -f`) when it is not. realisateur#434: root@monkey
-# running --survey used to ssh to "monkey" unconditionally and die on a
-# host-key check self-ssh can never pass. A second, hand-duplicated copy of
-# this loop for the local case would just be the same drift risk moved one
-# line down, so there is exactly one copy either way.
 survey_scan_accounts() {
   while IFS=: read -r user _ uid _ _ home _; do
     [ "$uid" -ge "$UID_MIN" ] 2>/dev/null || continue

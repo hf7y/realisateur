@@ -44,9 +44,6 @@ check "one probe DOWN and one BLIND exits DOWN" "$?" "5"
 
 run nosuchprobe >/dev/null; check "an unknown probe is a usage error (2)" "$?" "2"
 
-# realisateur#433/#434: the arming probe must not ssh to itself when it IS
-# monkey. SELFDEV_LOCAL_HOSTNAME overrides the detected host so this suite
-# stays hermetic to whatever machine actually runs it.
 out="$(SELFDEV_LOCAL_HOSTNAME=elsewhere run arming)"; rc=$?
 check "arming (remote) is BLIND when ssh can't reach monkey" "$rc" "6"
 case "$out" in *"did not answer"*) ok "...and it names why" ;;
