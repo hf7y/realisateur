@@ -85,21 +85,21 @@ expect() {
 # --- 1. the clean case ------------------------------------------------------
 echo "== 1. A BUILD IN WHICH EVERY COMMAND DECLARES ITSELF A VERB =="
 b="$(new_build clean)"
-add_cmd "$b" scheduler arme  '# KIND: verb'
-add_cmd "$b" scheduler dose  '# KIND: verb'
-add_cmd "$b" senechal  lance '# KIND: verb'
+add_cmd "$b" scheduler fx-arme  '# KIND: verb'
+add_cmd "$b" scheduler fx-dose  '# KIND: verb'
+add_cmd "$b" senechal  fx-lance '# KIND: verb'
 expect "a fully-declared workchain build passes" 0 "$b"
 
 # --- 2. THE VIOLATION THIS GUARD EXISTS FOR ---------------------------------
 echo
 echo "== 2. A PRODUCT RIDING THE WORKCHAIN BUILD =="
-# This is the shape found on 2026-08-08: vim-arcade declares `entraine` (a
+# This is the shape found on 2026-08-08: vim-arcade declares `fx-entraine` (a
 # workchain verb, correctly in the build) and `vim-arcade` (the product,
 # distributed as a verb because the verb build was the only channel that
-# reached PATH). The product row is the violation; `entraine` is not.
+# reached PATH). The product row is the violation; `fx-entraine` is not.
 b="$(new_build product)"
-add_cmd "$b" scheduler  arme       '# KIND: verb'
-add_cmd "$b" vim-arcade entraine   '# KIND: verb'
+add_cmd "$b" scheduler  fx-arme       '# KIND: verb'
+add_cmd "$b" vim-arcade fx-entraine   '# KIND: verb'
 add_cmd "$b" vim-arcade vim-arcade '# KIND: product'
 expect "a command declaring KIND: product is refused a place in the workchain build" 1 "$b"
 run_lint "$b"
@@ -108,12 +108,12 @@ if printf '%s\n' "$OUT" | grep -q 'vim-arcade/vim-arcade'; then
 else
   bad "the refusal does not name vim-arcade/vim-arcade"; printf '%s\n' "$OUT" | sed 's/^/       | /'
 fi
-# Not "entraine is absent from the output" -- it is present, as an `ok` line,
+# Not "fx-entraine is absent from the output" -- it is present, as an `ok` line,
 # and it should be. The assertion is that it never appears on a FINDING line.
-if printf '%s\n' "$OUT" | grep -E '^  (FLAG|PRODUCT|UNDECLARED|OWED)' | grep -q 'entraine'; then
-  bad "it flagged entraine, which is a legitimate workchain verb"
+if printf '%s\n' "$OUT" | grep -E '^  (FLAG|PRODUCT|UNDECLARED|OWED)' | grep -q 'fx-entraine'; then
+  bad "it flagged fx-entraine, which is a legitimate workchain verb"
 else
-  ok "the sibling workchain verb entraine is NOT flagged"
+  ok "the sibling workchain verb fx-entraine is NOT flagged"
 fi
 n="$(printf '%s\n' "$OUT" | grep -cE '^  (FLAG|PRODUCT|UNDECLARED)')"
 if [ "$n" -eq 1 ]; then ok "exactly one violation, not a project-wide sweep"
@@ -123,7 +123,7 @@ else bad "expected exactly 1 violation line, got $n"; printf '%s\n' "$OUT" | sed
 echo
 echo "== 3. A COMMAND THAT DECLARES NOTHING FAILS; IT DOES NOT DEFAULT =="
 b="$(new_build undeclared)"
-add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
 add_cmd "$b" mystery   thing ''
 expect "an undeclared command is refused" 1 "$b"
 run_lint "$b"
@@ -133,20 +133,20 @@ printf '%s\n' "$OUT" | grep -q 'mystery/thing' \
 
 # The dodge: a marker that exists but is not a kind.
 b="$(new_build badkind)"
-add_cmd "$b" scheduler arme  '# KIND: verb'
-add_cmd "$b" scheduler dose  '# KIND: yes'
+add_cmd "$b" scheduler fx-arme  '# KIND: verb'
+add_cmd "$b" scheduler fx-dose  '# KIND: yes'
 expect "'# KIND: yes' is not a declaration -- refused, not accepted" 1 "$b"
 
 # The other dodge: a bare marker with nothing after it.
 b="$(new_build emptykind)"
-add_cmd "$b" scheduler arme '# KIND: verb'
-add_cmd "$b" scheduler dose '# KIND:'
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
+add_cmd "$b" scheduler fx-dose '# KIND:'
 expect "a bare '# KIND:' with no value is refused" 1 "$b"
 
 # And a marker buried below the header window is not a header declaration.
 b="$(new_build deepkind)"
-add_cmd "$b" scheduler arme '# KIND: verb'
-add_cmd "$b" scheduler dose '# KIND: verb' --deep
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
+add_cmd "$b" scheduler fx-dose '# KIND: verb' --deep
 expect "a KIND marker below the header window does not count" 1 "$b"
 
 # --- 4. the ratchet ---------------------------------------------------------
@@ -158,7 +158,7 @@ echo "== 4. THE GRANDFATHER RATCHET SHRINKS AND NEVER GROWS =="
 # pairs it forgives, so a NEW undeclared name is refused on its first night
 # regardless of how the count moved.
 b="$(new_build grandfathered)"
-add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
 add_cmd "$b" legacy    old  ''
 RATCHET_FILE="$WORK/r1"; write_ratchet "$RATCHET_FILE" 'undeclared legacy/old'
 expect "an undeclared command NAMED in the ratchet is tolerated" 0 "$b"
@@ -177,7 +177,7 @@ printf '%s\n' "$OUT" | grep -q 'newcomer/fresh' \
 # A ratchet entry for a command that now declares itself is stale, and
 # leaving it there would silently re-forgive the name if it regressed.
 b="$(new_build ratchet-stale)"
-add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
 add_cmd "$b" legacy    old  '# KIND: verb'
 RATCHET_FILE="$WORK/r1"
 expect "a ratchet entry whose command now declares itself does not fail the build" 0 "$b"
@@ -190,7 +190,7 @@ RATCHET_FILE=""
 # A product is NOT ratchetable: the ratchet forgives silence, never a
 # declared product sitting in the workchain channel.
 b="$(new_build product-not-ratchetable)"
-add_cmd "$b" scheduler  arme       '# KIND: verb'
+add_cmd "$b" scheduler  fx-arme       '# KIND: verb'
 add_cmd "$b" vim-arcade vim-arcade '# KIND: product'
 RATCHET_FILE="$WORK/r2"; write_ratchet "$RATCHET_FILE" 'undeclared vim-arcade/vim-arcade'
 expect "the ratchet cannot forgive a declared product in the workchain build" 1 "$b"
@@ -219,9 +219,9 @@ printf '%s\n' "$OUT" | grep -qE 'integer expression|line [0-9]+:' \
 # nothing" -- it is a build this lint could not read, and it must not be
 # graded either way.
 b="$(new_build missingfile)"
-add_cmd "$b" scheduler arme '# KIND: verb'
-add_cmd "$b" scheduler dose '# KIND: verb'
-rm -f "$b/scheduler/bin/dose"
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
+add_cmd "$b" scheduler fx-dose '# KIND: verb'
+rm -f "$b/scheduler/bin/fx-dose"
 expect "a manifest row whose executable is absent is BLIND, not undeclared" 6 "$b"
 run_lint "$b"
 printf '%s\n' "$OUT" | grep -q 'BLIND' \
@@ -231,8 +231,8 @@ printf '%s\n' "$OUT" | grep -q 'BLIND' \
 # E from guard-estate: the admission must come BEFORE the findings.
 b="$(new_build blindfirst)"
 add_cmd "$b" mystery   thing ''
-add_cmd "$b" scheduler dose  '# KIND: verb'
-rm -f "$b/scheduler/bin/dose"
+add_cmd "$b" scheduler fx-dose  '# KIND: verb'
+rm -f "$b/scheduler/bin/fx-dose"
 run_lint "$b"
 fb="$(printf '%s\n' "$OUT" | grep -nE '^[[:space:]]*BLIND[[:space:]:[]' | head -1 | cut -d: -f1)"
 ff="$(printf '%s\n' "$OUT" | grep -nE '^[[:space:]]*(FLAG|UNDECLARED|PRODUCT)[[:space:]:[]' | head -1 | cut -d: -f1)"
@@ -251,14 +251,14 @@ echo "== 6. THE EXIT CODE TRACKS THE FINDINGS IT PRINTED =="
 # through the sandbox, because this is the guard's own suite and it can
 # arrange both sides of the implication.
 b="$(new_build tracks-clean)"
-add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
 run_lint "$b"
 c="$(printf '%s\n' "$OUT" | grep -oE '[0-9]+ violation' | grep -oE '^[0-9]+' | head -1)"; c="${c:-0}"
 if [ "$RC" -eq 0 ] && [ "$c" -eq 0 ]; then ok "rc=0 with zero violations reported"
 else bad "rc=$RC with $c violation(s) reported -- inconsistent"; fi
 
 b="$(new_build tracks-dirty)"
-add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
 add_cmd "$b" a b ''
 add_cmd "$b" c d ''
 run_lint "$b"
@@ -271,7 +271,7 @@ else bad "rc=$RC, reported $c violation(s), expected 2 and a non-zero rc"; print
 # the live case where every row was grandfathered and NONE declared anything,
 # printing that one line above "N command(s) still owed a declaration".
 b="$(new_build honest-summary)"
-add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
 add_cmd "$b" legacy    old  ''
 RATCHET_FILE="$WORK/honest.ratchet"
 write_ratchet "$RATCHET_FILE" 'undeclared legacy/old'
@@ -290,8 +290,8 @@ printf '%s\n' "$OUT" | grep -qE '1 (still )?OWED|1 command\(s\) still owed' \
 
 # The true form is still spoken when it IS true.
 b="$(new_build honest-summary-clean)"
-add_cmd "$b" scheduler arme '# KIND: verb'
-add_cmd "$b" scheduler dose '# KIND: verb'
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
+add_cmd "$b" scheduler fx-dose '# KIND: verb'
 run_lint "$b"
 printf '%s\n' "$OUT" | grep -q 'each declaring its channel' \
   && ok "when every command really does declare, the summary says so" \
@@ -301,7 +301,7 @@ printf '%s\n' "$OUT" | grep -q 'each declaring its channel' \
 echo
 echo "== 7. IT HONOURS THE BUILD IT IS POINTED AT =="
 b="$(new_build honours)"
-add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
 run_lint "$b"
 if printf '%s\n' "$OUT" | grep -qE '/home/[a-z][a-z0-9_-]*/\.local/share/verb-builds'; then
   bad "pointed at a temp build, it reported on the host's real build root"
@@ -314,7 +314,7 @@ fi
 echo
 echo "== 8. --accept LOWERS THE RATCHET OR REFUSES =="
 b="$(new_build accept)"
-add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
 add_cmd "$b" legacy    old  ''
 RATCHET_FILE="$WORK/r3"; write_ratchet "$RATCHET_FILE" 'undeclared legacy/old' 'undeclared gone/away'
 run_lint "$b" --accept
@@ -329,7 +329,7 @@ grep -q 'legacy/old' "$RATCHET_FILE" \
 
 # The move a ratchet exists to refuse.
 b="$(new_build accept-grow)"
-add_cmd "$b" scheduler arme '# KIND: verb'
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
 add_cmd "$b" brandnew  cmd  ''
 RATCHET_FILE="$WORK/r4"; write_ratchet "$RATCHET_FILE" 'undeclared legacy/old'
 run_lint "$b" --accept
@@ -340,13 +340,12 @@ else
 fi
 RATCHET_FILE=""
 
-# --- 9. the real manifest, transcribed --------------------------------------
+# --- 9. a whole manifest's shape, with one product declared -----------------
 echo
-echo "== 9. THE 2026-08-06T003928Z MANIFEST, WITH ITS ONE PRODUCT DECLARED =="
-# Every project/verb pair below is transcribed from the real build's
-# manifest.tsv (32 verbs, 12 projects). All 32 are given `# KIND: verb`
-# except vim-arcade/vim-arcade, which is given `# KIND: product` -- the
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+echo "== 9. A 32-ROW MANIFEST, WITH ITS ONE PRODUCT DECLARED =="
+# Verb names carry the fx- prefix so no fixture name is ever a real verb:
+# a grep for a verb's callers must not count this file (#186). All 32 are
+# given `# KIND: verb` except vim-arcade/vim-arcade -- `# KIND: product`, the
 b="$(new_build real)"
 while read -r p v; do
   [ -n "$p" ] || continue
@@ -356,37 +355,37 @@ while read -r p v; do
     add_cmd "$b" "$p" "$v" '# KIND: verb'
   fi
 done <<'ROWS'
-baudin loge
-bibliothecaire accroche
-bibliothecaire cueille
-bibliothecaire fonde
-bibliothecaire glane
-bibliothecaire range
-bibliothecaire trie
-bibliothecaire verse
-crt sonne
-ecosim sonde
-gardien fauche
-gardien garde
-gardien transplante
-groc-mangr mange
-nine-speakers chante
-realisateur arpente
-realisateur epluche
-realisateur juge
-scheduler arme
-scheduler dose
-scheduler jauge
-scheduler rapporte
-scheduler relis
-senechal ausculte
-senechal debarrasse
-senechal installe
-senechal lance
-senechal recense
-senechal veille
-sequestria capte
-vim-arcade entraine
+baudin fx-loge
+bibliothecaire fx-accroche
+bibliothecaire fx-cueille
+bibliothecaire fx-fonde
+bibliothecaire fx-glane
+bibliothecaire fx-range
+bibliothecaire fx-trie
+bibliothecaire fx-verse
+crt fx-sonne
+ecosim fx-sonde
+gardien fx-fauche
+gardien fx-garde
+gardien fx-transplante
+groc-mangr fx-mange
+nine-speakers fx-chante
+realisateur fx-arpente
+realisateur fx-epluche
+realisateur fx-juge
+scheduler fx-arme
+scheduler fx-dose
+scheduler fx-jauge
+scheduler fx-rapporte
+scheduler fx-relis
+senechal fx-ausculte
+senechal fx-debarrasse
+senechal fx-installe
+senechal fx-lance
+senechal fx-recense
+senechal fx-veille
+sequestria fx-capte
+vim-arcade fx-entraine
 vim-arcade vim-arcade
 ROWS
 rows="$(grep -cv '^#' "$b/manifest.tsv")"
@@ -408,7 +407,6 @@ echo "== 10. THIS GUARD AND lib/not-a-verb.tsv GRADE DISJOINT POPULATIONS =="
 # list of executables that are deliberately not verbs. The reasonable review
 # question is whether this guard should honour it instead of holding a second
 # opinion about the same command. It cannot: not-a-verb.tsv exempts HALF
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 NAV="$REPO/bin/lib/not-a-verb.tsv"
 if [ ! -f "$NAV" ]; then
   bad "bin/lib/not-a-verb.tsv is missing -- the file this guard's header reasons about"

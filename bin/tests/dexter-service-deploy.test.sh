@@ -16,12 +16,17 @@ DEPLOY="$PWD/dexter-service-deploy.sh"
 is()  { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1: expected '$3', got '$2'"; fi; }
 
 STUB="$(mktemp -d)"; trap 'rm -rf "$STUB"' EXIT
-# Stub ssh prints the staged distro list. Anything that is NOT the read-only
-# distro query is recorded, so the test can assert nothing was mutated.
+# Stub ssh: the distro-list query gets $STUB_REPLY; a holder probe succeeds
+# only for the distro named in $STUB_HOLDER.
 cat > "$STUB/ssh" <<'EOF'
 #!/bin/sh
 echo "$*" >> "$STUB_CALLS"
-cat "$STUB_REPLY" 2>/dev/null
+case "$*" in
+  *"wsl.exe -l -q --running"*) cat "$STUB_REPLY" 2>/dev/null; exit 0 ;;
+  *"wsl.exe -d "*)
+    holder="$(cat "$STUB_HOLDER" 2>/dev/null)"
+    case "$*" in *"-d \"$holder\""*) [ -n "$holder" ] && exit 0; exit 1 ;; *) exit 1 ;; esac ;;
+esac
 EOF
 # rsync must never run on a refused deploy either -- stub it the same way.
 cat > "$STUB/rsync" <<'EOF'
@@ -44,15 +49,15 @@ case "$*" in
 esac
 EOF
 chmod +x "$STUB/ssh" "$STUB/rsync" "$STUB/gh"
-export STUB_REPLY="$STUB/reply" STUB_CALLS="$STUB/calls"
+export STUB_REPLY="$STUB/reply" STUB_CALLS="$STUB/calls" STUB_HOLDER="$STUB/holder"
 # A fixture service, so this suite needs no project's real files: zaxon's
 # container lives in hf7y/crt now (crt owns it), which may not be cloned here.
 mkdir -p "$STUB/svc/zaxon" && printf 'services: {}\n' > "$STUB/svc/zaxon/compose.yaml"
 export DEXTER_SERVICE_PATH="$STUB/svc"
 export PATH="$STUB:$PATH"
 
-echo "== 1. hermes RUNNING => REFUSE, and touch nothing =========================="
-: > "$STUB_CALLS"; printf 'Ubuntu\nhermes\n' > "$STUB_REPLY"
+echo "== 1. hermes HOLDS THE SESSION => REFUSE, and touch nothing ================"
+: > "$STUB_CALLS"; printf 'Ubuntu\nhermes\n' > "$STUB_REPLY"; printf 'hermes' > "$STUB_HOLDER"
 out="$(bash "$DEPLOY" zaxon 2>&1)"; rc=$?
 is "exits non-zero" "$rc" "1"
 has "names the hazard in the terms that matter" "$out" "logs the link out"
@@ -69,8 +74,15 @@ else
 fi
 
 echo
-echo "== 2. hermes STOPPED => the refusal does not fire =========================="
-: > "$STUB_CALLS"; printf 'Ubuntu\n' > "$STUB_REPLY"
+echo "== 1b. UBUNTU HOLDS THE SESSION, HERMES STOPPED => STILL REFUSE ============"
+: > "$STUB_CALLS"; printf 'Ubuntu\n' > "$STUB_REPLY"; printf 'Ubuntu' > "$STUB_HOLDER"
+out="$(bash "$DEPLOY" zaxon 2>&1)"; rc=$?
+is "exits non-zero even though hermes never ran" "$rc" "1"
+has "names the distro that actually holds it" "$out" "'Ubuntu' distro"
+
+echo
+echo "== 2. NOTHING HOLDS THE SESSION => the refusal does not fire ==============="
+: > "$STUB_CALLS"; printf 'Ubuntu\n' > "$STUB_REPLY"; : > "$STUB_HOLDER"
 out="$(bash "$DEPLOY" zaxon --dry-run 2>&1)"; rc=$?
 is "dry-run exits 0 when nothing else owns the session" "$rc" "0"
 has "and says where it would go" "$out" "/srv/zaxon/"

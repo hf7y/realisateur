@@ -44,7 +44,6 @@ GUARD_UNGATED_BOUND="${GUARD_UNGATED_BOUND:-9}"     # not safely executable here
 # UNDECLARED IS ZERO, and it earned the right to be. It was briefly 1, for
 # bin/closeout-lint.sh, which was being rewritten concurrently on
 # hf7y/realisateur#99 -- counting it was the honest move while another branch
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 GUARD_UNDECLARED_BOUND="${GUARD_UNDECLARED_BOUND:-0}"
 
 # How far into a file a declaration may be. Same reasoning as
@@ -98,7 +97,6 @@ fi
 # A0 -- the rename dodge, closed BEHAVIOURALLY rather than by prose.
 #
 # The first draft of this check read the header for words like "refuses" and
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 for f in "$BIN"/*.sh; do
   [ -e "$f" ] || continue
   n="$(basename "$f")"
@@ -185,7 +183,6 @@ fi
 # D/E/F. THE EXECUTED CHECKS
 # ============================================================================
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/home" "$WORK/tree" "$WORK/stub" "$WORK/sched/schedule"
@@ -204,7 +201,6 @@ chmod +x "$WORK/stub/gh" "$WORK/stub/ssh"
 # Sets the GLOBALS `OUT` and `RC`. Deliberately not `out=$(run_sandboxed ...)`:
 # command substitution runs the function in a SUBSHELL, so an rc assigned
 # inside it never reaches the caller. The first draft of this file did exactly
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 run_sandboxed() {
   local s="$1"; shift
   OUT="$(cd "$WORK/tree" && env -i \

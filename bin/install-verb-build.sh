@@ -96,7 +96,6 @@ fi
 # --- fetch the meta-repo ------------------------------------------------
 # BOUNDED, because this runs unattended. Against an UNROUTABLE host the
 # kernel's TCP retry took 2m15s to give up -- measured 2026-08-07 against
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 NET_TIMEOUT="${VERB_BUILD_NET_TIMEOUT:-45}"
 export GIT_TERMINAL_PROMPT=0
 mkdir -p "$BUILD_ROOT" || die "cannot create $BUILD_ROOT"
@@ -153,7 +152,6 @@ fi
 # --- verify every verb the manifest promised ----------------------------
 # Against the manifest, not against what happened to land. A build is a
 # promise about a SET; verifying only what is present cannot notice a verb
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 say "== build $BUILD_ID =="
 missing=0
 while IFS=$'\t' read -r project verb sha _; do
@@ -189,7 +187,6 @@ say "current -> $BUILD_ID"
 # --- the ~/.local/bin links, written once -------------------------------
 # Off by default: `installe` (senechal) owns ~/.local/bin and its manifest,
 # and this script does not get to quietly take that over. --link is for a
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$LINK" -eq 1 ]; then
   mkdir -p "$BIN"
   linked=0; skipped=0

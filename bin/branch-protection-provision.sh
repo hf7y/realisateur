@@ -8,16 +8,11 @@
 # GATE: strict
 #
 # TRAPS (the rest of this header is in the vault):
-# bin/repo-settings-provision.sh declined this job because it would have to
-# name check contexts, and `suites`/`markdown-cost` are realisateur's own job
-# names -- forcing them estate-wide wedges every repo named differently. That
-# objection is this script's design: it never names a context. It reads each
-# repo's own check runs from the head of its most recent PR -- evidence a check
-# RUNS ON PULL REQUESTS -- and requires those. (Parsing `on:` out of workflow
-# YAML asserts what a file claims, not what GitHub ran.)
-# A repo with no CI is reported NOCI and left alone, never silently skipped:
-# requiring a context no workflow produces wedges every PR, which is worse than
-# the bug. That list is hf7y/realisateur#285's worklist, measured.
+# bin/repo-settings-provision.sh declined this job: naming `suites`/
+# `markdown-cost` estate-wide wedges every differently-named repo. This
+# script never names a context -- it reads each repo's own check runs off
+# its most recent PR's head (a check ran, not a YAML claim), and reports a
+# repo with none as NOCI rather than silently skipping it (#285's worklist).
 #
 
 set -uo pipefail

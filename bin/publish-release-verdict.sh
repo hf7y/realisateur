@@ -6,7 +6,6 @@
 # WHY A URL AND NOT A FILE IN A REPO
 # ============================================================================
 #
-# Zach, 2026-08-07: "post the cut status to a webpage, not a driftable file."
 #
 # He is right and the reason is the bug we are already fixing. A verdict
 # committed into `hf7y/verbs` is read by consumers out of THEIR clone of it,
@@ -158,7 +157,6 @@ DECISIONS="CUT NO_CHANGE BLOCKED ERROR"
 # `cron: '30 1 * * *'` -- once every 24 hours. GRACE covers a slow assemble
 # plus a late runner; it is not a fudge factor for a channel that is behaving
 # badly, and widening it is a decision to be told about a dead emitter later.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PUBLISH_CADENCE_H="${PUBLISH_CADENCE_H:-24}"
 PUBLISH_GRACE_H="${PUBLISH_GRACE_H:-4}"
 
@@ -227,7 +225,6 @@ RENDER="$WORK/status.json"
 # It was `<<PY`, unquoted, so the shell expanded the whole body before python
 # saw it -- including the backticks in this block's own comments. Every gated
 # cut printed `publish-release-verdict.sh: line 229: decision: command not
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PREV_HISTORY="$PREV_HISTORY" NOW="$NOW" DECISION="$DECISION" REASON="$REASON" \
 MAIN_SHA="$MAIN_SHA" CI_RUN="$CI_RUN" BUILD_ID="$BUILD_ID" \
 VALID_UNTIL="$VALID_UNTIL" HISTORY_MAX="$HISTORY_MAX" \

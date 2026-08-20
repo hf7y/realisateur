@@ -126,7 +126,6 @@ echo "-- 2. main IS NOT A DEPLOY REF, AND THE LEAK MAY NOT GROW --------------"
 # The prize in separating dev from prod is that `main` gets to STAY FAST. If
 # four live accounts pull `main` on a tick, every commit is a deployment and
 # `main` must turn conservative to protect them -- backwards for a repo whose
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 n_leak=$(echo $PROP_PAYLOAD_PENDING | wc -w)
 if [ "$n_leak" -le "$PROP_LEAK_BOUND" ]; then
   ok "clone-backed payload leak is $n_leak, within the bound of $PROP_LEAK_BOUND"
@@ -181,7 +180,6 @@ rc "--install-cadence --check exits 0 (it reported, it did not fail)" 0 "$R"
 # A per-account clock is retired when ONE host-wide channel feeds every
 # account. The precondition is checked from INSIDE the account, because a
 # $HOME/.local/bin entry earlier on that account's PATH shadows the host-wide
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 RH="$T/retirehome"; mkdir -p "$RH/.local/share/verb-builds/B" "$T/hostbin" "$T/shim"
 ln -s B "$RH/.local/share/verb-builds/current"
 printf '#!/bin/sh\nexit 0\n' > "$T/hostbin/dose"; chmod +x "$T/hostbin/dose"
@@ -381,7 +379,6 @@ echo "-- 5b. THE SWITCH IS DELEGATED, NEVER REIMPLEMENTED --------------------"
 # ===========================================================================
 # install-verb-build.sh verifies every verb the manifest promises and discards
 # an incomplete build rather than switching to it -- 17 hermetic cases already
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 TICK_SRC="$(cat "$TICK")"
 hasnt "the tick contains no symlink switching of its own" "$TICK_SRC" "ln -sfn"
 hasnt "the tick contains no atomic-rename of its own" "$TICK_SRC" "mv -Tf"
@@ -449,7 +446,6 @@ echo "-- 5d. BLIND MUST ARRIVE IN TIME TO BE A VERDICT -----------------------"
 # realisateur#54. install-verb-build.sh reached the right verdict against an
 # unroutable host and took 2m15s to do it (measured 2026-08-07 against
 # 192.0.2.1, TEST-NET-1) -- the kernel's TCP retry, unbounded. A human hits
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 INST="$REPO/bin/install-verb-build.sh"
 t0=$(date +%s)
 O="$(VERB_BUILD_ROOT="$T/blindroot" VERB_BUILD_NET_TIMEOUT=1 \
@@ -510,7 +506,6 @@ echo "-- 6b. EVERY ARTIFACT RECORDS THE BUILD THAT PRODUCED IT ---------------"
 # "What was ecosim running when it did that?" has to be answerable from the
 # artifact alone, later, by someone who was not there. The value already
 # existed (the pin); nothing recorded it at the moment work was created.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 BR="$T/pinned/.local/share/verb-builds"     # has current -> 2026-08-06T043915Z
 O="$(VERB_BUILD_ROOT="$BR" bash -c '. '"$SET_LIB"'; prop_build_trailer')"
@@ -551,7 +546,6 @@ has "a private pin still wins over the host-wide one while it exists" "$O" "Verb
 
 # --- EVERY commit, not just the mandated ones ------------------------------
 # The stamper must work for ANY commit, not only the ones a protocol mandates.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STAMPER="$REPO/bin/stamp-verb-build.sh"
 SHOME="$T/stamphome"; mkdir -p "$SHOME"
 : > "$SHOME/gitconfig"
@@ -608,7 +602,6 @@ has "--retire unsets it, verified by re-reading the config" "$O" "re-read"
 #
 # One script legitimately resolves the pin path because it OWNS the build
 # layout. (#49 retired the other, ecosim-sensor-tick.sh, from this repo.)
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PIN_OWNERS="install-verb-build.sh"
 strays=""
 for f in "$REPO"/bin/*.sh; do

@@ -83,7 +83,6 @@ provision
 # --- THE LEDGER -------------------------------------------------------------
 # Rows are `<path-prefix> <owner> <reason>`, longest prefix wins. Owner
 # `realisateur` means MISSION-UNIQUE: no other project could hold it without
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 # ---- MISSION-UNIQUE: sense, triage, scaffold -------------------------------
 #
@@ -166,6 +165,8 @@ bin/lib/selfdev-claude-token.sh            realisateur
 bin/tests/selfdev-claude-token.test.sh     realisateur
 bin/lib/api-restamp.sh                     realisateur
 bin/tests/api-restamp.test.sh              realisateur
+bin/self-merge-audit.sh                    realisateur
+bin/tests/self-merge-audit.test.sh         realisateur
 "
 
 # ---- DELEGABLE -------------------------------------------------------------
@@ -230,7 +231,6 @@ bin/tests/verb-build-test.sh               verbs
 # --- lookup -----------------------------------------------------------------
 # own_owner <path> -- prints `<owner> <reason>` for the longest matching row,
 # or nothing (rc 1) when the path matches none. rc 1 IS the finding; a caller
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 own_derived_from() {
   local p="$1" b cand
   case "$p" in

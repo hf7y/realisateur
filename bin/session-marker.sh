@@ -33,7 +33,6 @@ action="${1:-}"
 # Resolve a directory to a registered PROJECT_KEY by matching PROJECT_REPO_PATH
 # in schedule/*.conf -- the one source, same resolution the surveys use. A cwd
 # that matches nothing is the common case (unrelated work on this machine) and
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 RESOLVE_CONFS=0   # confs that carry a PROJECT_REPO_PATH at all
 RESOLVE_LIVE=0    # ...of those, how many name a directory that exists
 RESOLVE_HIT=""    # the matched PROJECT_KEY, empty when nothing matched
