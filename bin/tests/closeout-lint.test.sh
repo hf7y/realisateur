@@ -80,8 +80,7 @@ run() { # run [projects...]   ($GH_BIN/$SESSION_START overridable)
     GH_BIN="${GH_BIN:-$GH_DEFAULT}" SESSION_START="${SESSION_START:-}" \
     "$SCRIPT" "$@" 2>&1
 }
-# run_rc [args...] -- same, but sets RUN_OUT/RUN_RC instead of only printing
-# output, so a case can assert the exit code too.
+# run_rc [args...] -- same, but sets RUN_OUT/RUN_RC so a case can assert the rc.
 run_rc() {
   RUN_OUT="$(TODAY="$DAY" SCHED_ROOT="$T/sched" HOURS=12 \
     GH_BIN="${GH_BIN:-$GH_DEFAULT}" SESSION_START="${SESSION_START:-}" \
@@ -202,9 +201,8 @@ hasnt "B7 and never a FLAG"                    "$out" "FLAG ["
 GH_BIN="$GH_DEFAULT"
 
 echo "-- C. the retired decision-residue surface"
-# scheduler#66 retired BLOCKERS.md/FOCUS.md/QUESTIONS.md ecosystem-wide. A lint
-# that asked for a line dated today in BLOCKERS.md was the last mechanism still
-# manufacturing one.
+# scheduler#66 retired those surfaces; a lint asking for a line in one was the
+# last mechanism manufacturing it.
 out="$(run clean)"
 hasnt "C1 no BLOCKERS.md section"              "$out" "BLOCKERS"
 hasnt "C1 and no DECISION RESIDUE heading"     "$out" "DECISION RESIDUE"
