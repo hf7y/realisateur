@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # ausculte.sh -- can Zach stop looking? Composed from probes that already exist.
 # KIND: verb
-# THE HUMAN CHANNEL IS FIRST: every other failure is meant to reach him through
-# zaxon, so a green report with that down is one nobody receives. BLIND is never
-# folded into OK; this is the command built to be believed.
+# THE HUMAN CHANNEL IS FIRST: every other failure reaches Zach through zaxon,
+# so a green report with zaxon down reaches nobody. BLIND never folds into OK.
 set -uo pipefail
 
 CLI_NAME='ausculte.sh'
@@ -74,7 +73,7 @@ if want arming; then
 fi
 
 if want propagation; then
-  pub="$(gh api repos/hf7y/verbs/contents/manifest.tsv --jq .content 2>/dev/null | base64 -d 2>/dev/null | grep -cv '^#' || echo 0)"
+  pub="$(gh api repos/hf7y/verbs/contents/manifest.tsv --jq .content 2>/dev/null | base64 -d 2>/dev/null | grep -cv '^#')" || pub=0
   if [ "${pub:-0}" -lt 1 ]; then record propagation BLIND 'cannot read the published manifest'
   else
     bad=''
