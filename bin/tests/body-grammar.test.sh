@@ -61,6 +61,24 @@ DECISION: buried at line 3
 - none
 <!-- /DEFERRED -->')" MISPLACED-DECISION
 eq  'B2 the well-formed body is clean' "$(findings "$GOOD")" 0
+# #419: NO-DECISION asserts there is nobody to decide, so it names no @handle.
+eq  'B2a NO-DECISION needs no decider' "$(findings 'NO-DECISION: agent work -- tests green, nothing to weigh
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->')" 0
+has 'B2b DECISION still needs one' "$(codes 'DECISION: who links the shim?
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->')" NO-DECIDER
+has 'B2c a buried NO-DECISION is still MISPLACED' "$(codes 'intro paragraph
+
+NO-DECISION: buried at line 3
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->')" MISPLACED-DECISION
 # A decision inside a fenced block is quoted code, not a claim on a human.
 eq  'B3 a fenced example is not a buried decision' \
   "$(findings 'NO-DECISION: @zach nothing to weigh
