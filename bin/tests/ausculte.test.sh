@@ -11,6 +11,7 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/bin/lib"
 cp "$HERE/../ausculte.sh" "$TMP/bin/"
 cp "$HERE/../lib/cli-guard.sh" "$TMP/bin/lib/"
+cp "$HERE/../lib/host-check.sh" "$TMP/bin/lib/"
 
 stub() { printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s"\nexit %s\n' "${3:-}" "$2" > "$TMP/bin/$1"; chmod +x "$TMP/bin/$1"; }
 
@@ -42,6 +43,24 @@ run rot silence >/dev/null
 check "one probe DOWN and one BLIND exits DOWN" "$?" "5"
 
 run nosuchprobe >/dev/null; check "an unknown probe is a usage error (2)" "$?" "2"
+
+# realisateur#433/#434: the arming probe must not ssh to itself when it IS
+# monkey. SELFDEV_LOCAL_HOSTNAME overrides the detected host so this suite
+# stays hermetic to whatever machine actually runs it.
+out="$(SELFDEV_LOCAL_HOSTNAME=elsewhere run arming)"; rc=$?
+check "arming (remote) is BLIND when ssh can't reach monkey" "$rc" "6"
+case "$out" in *"did not answer"*) ok "...and it names why" ;;
+  *) bad "arming BLIND detail" "got: $out" ;; esac
+
+printf '#!/usr/bin/env bash\necho called >> "%s/ssh_called"\nexit 255\n' "$TMP" > "$TMP/stub/ssh"
+chmod +x "$TMP/stub/ssh"
+printf '#!/usr/bin/env bash\nprintf "acct1 armed\\n"\nexit 0\n' > "$TMP/stub/sudo"
+chmod +x "$TMP/stub/sudo"
+out="$(SELFDEV_LOCAL_HOSTNAME=monkey run arming)"; rc=$?
+check "arming (local) reads OK straight from the local collector" "$rc" "0"
+[ -f "$TMP/ssh_called" ] \
+  && bad "a local arming probe never shells out to ssh" "ssh was invoked" \
+  || ok "a local arming probe never shells out to ssh"
 
 echo
 summary
