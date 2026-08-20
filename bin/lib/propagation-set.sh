@@ -31,8 +31,7 @@
 #   `shellcheck` directive -- SC1072/SC1073, a parse error on the whole file.
 #   Spell the path as `bin/shellcheck-lint.sh`, never bare.
 #
-# TRAP: do not reclassify a row to PAYLOAD without a matching man page. That
-#   drops it from every build in silence (#85).
+# TRAP: PAYLOAD without a man page ships nothing, silently (#85).
 
 PROP_RELEASE_REPO="hf7y/verbs"
 PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
@@ -101,18 +100,17 @@ release-ledger.sh
 selfdev-gh-app.sh
 "
 
-# Files the bootstrap scripts need alongside them. Named explicitly because
-# `setup-selfdev-project.sh` stages by copy into a 0700 home and a missed
-# dependency there presents as "Permission denied", not "file not found" --
-# the trap vault:realisateur/MONKEY.md 8.3 records from account #4.
+# Files the bootstrap scripts need alongside them. A missed dependency staged
+# into a 0700 home presents as "Permission denied", not "file not found".
 PROP_BOOTSTRAP_SUPPORT="
 lib/cli-guard.sh
 lib/propagation-set.sh
 lib/selfdev-app-key.sh
 "
 
-# --- PROVISIONING: root-side, runs from a hands account, never on the -------
-# --- consumer's clock. Not bootstrap: these stand an account UP, once.
+# --- PROVISIONING: root-side, deployed to the host, invoked there by a -----
+# --- human. Not bootstrap: these stand an account UP, once, and they run
+# --- on nobody's clock.
 #
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PROP_PROVISION_SCRIPTS="
@@ -195,9 +193,18 @@ no-worktree-lint.sh
 run-suites.sh
 "
 # repo-settings-provision.sh is LOCAL: its subject is the FLEET (it walks the
-# whole registry), and a per-account copy would be ten writers on one
+# whole registry), and a per-account copy would be many writers on one
 # setting. It also needs admin on someone else's repo, which self-dev
 #   [rest: vault:realisateur/guard-archaeology-20260817.md]
+
+# prop_host_tools -- what a provisioned host carries under
+# /usr/local/libexec/selfdev beyond the bootstrap: the verb a human types and
+# every step it runs. DERIVED, so a step added to the provisioning set arrives
+# on the host without a second list agreeing to it.
+prop_host_tools() {
+  printf 'dresse.sh\n'
+  local s; for s in $PROP_PROVISION_SCRIPTS; do [ "$s" = dresse.sh ] || printf '%s\n' "$s"; done
+}
 
 # prop_channel <script-basename> -- prints bootstrap|provision|payload|local,
 # or nothing (rc 1) when the script is unclassified. Callers MUST treat rc 1

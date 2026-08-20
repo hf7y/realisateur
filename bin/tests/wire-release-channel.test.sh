@@ -108,4 +108,21 @@ echo "== 6. AN EMPTY UID BAND IS A FINDING ===================================="
 has "an empty band is named as a finding" "$SRC" 'that is a finding'
 
 echo
+echo
+echo "== 7. THE HOST TOOLS ARE DERIVED, NOT LISTED ============================="
+# shellcheck source=bin/lib/propagation-set.sh
+. "$BIN/lib/propagation-set.sh"
+tools="$(prop_host_tools)"
+has "dresse is what a human types on a provisioned host" "$tools" "dresse.sh"
+n_prov=$(set -- $PROP_PROVISION_SCRIPTS; echo $#)
+n_tool=$(printf '%s\n' "$tools" | grep -c .)
+eq "every provisioning step travels with it (no second list)" "$n_tool" "$n_prov"
+dupes="$(printf '%s\n' "$tools" | sort | uniq -d)"
+eq "and dresse is not named twice" "$dupes" ""
+missing=""
+for t in $tools; do [ -f "$BIN/$t" ] || missing="$missing $t"; done
+eq "every derived tool exists in this checkout" "$missing" ""
+grep -q 'prop_host_tools' "$SCRIPT" && ok "the door reads the derivation rather than retyping it" \
+  || bad "the door does not call prop_host_tools"
+
 summary
