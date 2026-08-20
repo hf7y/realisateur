@@ -22,6 +22,13 @@
 # matching, so an entry cannot outlive its reason. That is the half a
 # ratchet's --accept normally provides, and it is the half that matters here.
 #
+# hf7y/realisateur#429, 2026-08-19: check A greps SOURCE, so it read clean
+# while five worktrees under .claude/worktrees/ pinned already-merged
+# branches -- registered directly by an agent harness (EnterWorktree,
+# isolation:worktree), with no tracked script naming the call. Check C reads
+# the tree's ACTUAL registrations instead, with the same allowlist-cannot-rot
+# discipline as check B.
+#
 # usage:  no-worktree-lint.sh [ROOT]
 # exit:   0 clean   1 FLAGs   2 BLIND (not a git tree, or zero files scanned --
 
@@ -146,6 +153,64 @@ else
       echo "  allowed $p -- ${ALLOW_WHY[$i]}"
     fi
   done
+fi
+
+echo
+echo "== C. NO WORKTREE IS ACTUALLY REGISTERED NOW =="
+
+# Check A greps SOURCE for the call that creates one. It cannot see a worktree
+# an agent harness registers directly -- EnterWorktree, .claude/worktrees/, an
+# isolation:worktree subagent -- because no tracked script in this tree issues
+# the call. Demonstrated 2026-08-19: five worktrees under .claude/worktrees/,
+# each pinning an already-merged branch, while check A read clean throughout.
+# Same `git worktree list --porcelain` parse as bin/closeout-lint.sh uses to
+# find a repo's linked worktrees.
+#
+# ALLOWLIST, same rot discipline as check B: allow <path-glob> "<why>" excuses
+# a worktree expected to exist right now. An entry that matches nothing
+# currently registered is itself a FLAG -- an excuse cannot outlive the
+# worktree it excused.
+WT_ALLOW_PATTERNS=()
+WT_ALLOW_WHY=()
+wt_allow() { WT_ALLOW_PATTERNS+=("$1"); WT_ALLOW_WHY+=("$2"); }
+if [ -n "${NO_WORKTREE_WT_ALLOW_FILE:-}" ]; then
+  while IFS=$'\t' read -r _p _w; do
+    [ -n "${_p:-}" ] || continue
+    case "$_p" in \#*) continue ;; esac
+    wt_allow "$_p" "${_w:-no reason recorded}"
+  done < "$NO_WORKTREE_WT_ALLOW_FILE"
+fi
+
+mapfile -t STRAY_WT < <(
+  git -C "$ROOT" worktree list --porcelain 2>/dev/null \
+    | awk -v m="$ROOT" '/^worktree /{p=substr($0,10); if (p != m) print p}'
+)
+
+wt_matched=()
+for wt in ${STRAY_WT[@]+"${STRAY_WT[@]}"}; do
+  hit=0
+  for i in "${!WT_ALLOW_PATTERNS[@]}"; do
+    # shellcheck disable=SC2254 # deliberate glob: the pattern IS the glob
+    case "$wt" in
+      ${WT_ALLOW_PATTERNS[$i]}) hit=1; wt_matched[$i]=1 ;;
+    esac
+  done
+  if [ "$hit" -eq 1 ]; then continue; fi
+  echo "FLAG [stray worktree] $wt is a registered worktree outside the main checkout"
+  flags=$((flags + 1))
+done
+
+for i in "${!WT_ALLOW_PATTERNS[@]}"; do
+  if [ "${wt_matched[$i]:-0}" -ne 1 ]; then
+    echo "FLAG [stale worktree allowlist] ${WT_ALLOW_PATTERNS[$i]} is allowlisted but no worktree matches it -- delete the entry"
+    flags=$((flags + 1))
+  else
+    echo "  allowed ${WT_ALLOW_PATTERNS[$i]} -- ${WT_ALLOW_WHY[$i]}"
+  fi
+done
+
+if [ "${#STRAY_WT[@]}" -eq 0 ] && [ "${#WT_ALLOW_PATTERNS[@]}" -eq 0 ]; then
+  echo "  0 worktree(s) registered under $ROOT besides the main checkout"
 fi
 
 echo

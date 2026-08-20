@@ -160,25 +160,67 @@ check "B4 with an entry it is excused" "$rc" "0"
 has   "B4 and the reason is printed, not hidden" "$out" "executes nothing"
 
 echo
-echo "== C. IT REFUSES RATHER THAN REPORTS CLEAN =="
+echo "== C. NO STRAY WORKTREE IS ACTUALLY REGISTERED NOW =="
 
-# C1 -- a directory that is not a git tree is BLIND, exit 2. "Could not look"
+# C1 -- THE REGRESSION THIS SECTION EXISTS TO CATCH. Check A greps source; it
+# cannot see a worktree an agent harness registered directly. A tree with a
+# real linked worktree, and no script anywhere naming `git worktree add`,
+# must still go red.
+d="$(mkfixture strayed)"
+G "$d" branch other >/dev/null
+G "$d" worktree add -q "$WORK/strayed-side" other >/dev/null
+run "$d"
+check "C1 a registered linked worktree is a finding" "$rc" "1"
+has   "C1 and names the path" "$out" "$WORK/strayed-side"
+has   "C1 and counts it" "$out" "1 FLAG(s)"
+G "$d" worktree remove --force "$WORK/strayed-side" >/dev/null 2>&1
+
+# C2 -- the MAIN worktree itself is never the finding; only entries other
+# than it are stray.
+d="$(mkfixture solo)"
+run "$d"
+check "C2 a tree with only the main worktree is clean" "$rc" "0"
+hasnt "C2 and names no stray worktree" "$out" "stray worktree"
+
+# C3 -- an allowlisted path pattern excuses a worktree expected to exist,
+# same discipline as check B: a live entry suppresses the finding it names.
+d="$(mkfixture excusedwt)"
+G "$d" branch other >/dev/null
+G "$d" worktree add -q "$WORK/excusedwt-side" other >/dev/null
+printf '%s\t%s\n' "$WORK/excusedwt-side" "review copy, removed after use" > "$WORK/allow-wt.tsv"
+out="$(NO_WORKTREE_WT_ALLOW_FILE="$WORK/allow-wt.tsv" bash "$LINT" "$d" 2>&1)"; rc=$?
+check "C3 an allowlisted worktree path is excused" "$rc" "0"
+has   "C3 and the reason is printed" "$out" "review copy, removed after use"
+G "$d" worktree remove --force "$WORK/excusedwt-side" >/dev/null 2>&1
+
+# C4 -- and once that worktree is gone, the entry excusing it is itself a
+# FLAG -- the same rot rule as B2, applied to a runtime registration instead
+# of a source file.
+d="$(mkfixture rottedwt)"
+out="$(NO_WORKTREE_WT_ALLOW_FILE="$WORK/allow-wt.tsv" bash "$LINT" "$d" 2>&1)"; rc=$?
+check "C4 an entry with no matching worktree is a finding" "$rc" "1"
+has   "C4 and is named as stale" "$out" "stale worktree allowlist"
+
+echo
+echo "== D. IT REFUSES RATHER THAN REPORTS CLEAN =="
+
+# D1 -- a directory that is not a git tree is BLIND, exit 2. "Could not look"
 # reported as "nothing wrong" is the pathology this estate has paid for
 # repeatedly; a scan of zero files must never grade as green.
 mkdir -p "$WORK/notarepo"
 out="$(cd "$WORK/notarepo" && bash "$LINT" 2>&1)"; rc=$?
-check "C1 a non-repo is BLIND, not clean" "$rc" "2"
-has   "C1 and says BLIND" "$out" "BLIND"
+check "D1 a non-repo is BLIND, not clean" "$rc" "2"
+has   "D1 and says BLIND" "$out" "BLIND"
 
-# C2 -- a git repo with no tracked shell at all is BLIND too, for the same
+# D2 -- a git repo with no tracked shell at all is BLIND too, for the same
 # reason: `bin/tests/*.sh matched nothing` was a real CI defect here, and a
 # lint that lints nothing is its twin.
 d="$WORK/emptyrepo"; mkdir -p "$d"
 G "$d" init -q -b main . >/dev/null
 printf 'x\n' > "$d/README.md"; G "$d" add -A >/dev/null; G "$d" commit -qm init >/dev/null
 run "$d"
-check "C2 a repo with no shell to scan is BLIND" "$rc" "2"
-has   "C2 and says BLIND" "$out" "BLIND"
+check "D2 a repo with no shell to scan is BLIND" "$rc" "2"
+has   "D2 and says BLIND" "$out" "BLIND"
 
 echo
 echo "== R. THE REAL TREE =="
