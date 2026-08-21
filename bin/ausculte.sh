@@ -71,8 +71,7 @@ if want hosts; then
 fi
 
 if want arming; then
-  # WHAT THE ACCOUNTS ARE DOING, not how often the word "armed" appears --
-  # counting the key said OK while three accounts had been dead eight days.
+  # WHAT THE ACCOUNTS ARE DOING, not how often the word "armed" appears.
   st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://hf7y.com/monkey/status.json}" 2>/dev/null)"
   if ! printf '%s' "$st" | jq -e '.accounts' >/dev/null 2>&1; then
     record arming BLIND 'the published monkey status could not be read'
@@ -122,8 +121,7 @@ fi
 
 if want propagation; then
   # THE CHANNEL'S OWN VERDICT FIRST: counting verbs answers "is something
-  # installed", not "is the channel running" -- the cutter refused two days
-  # while every host had its verbs, and this row said OK throughout.
+  # installed", not "is the channel running", and said OK through an outage.
   ps=""
   for cand in "$HERE/lib/propagation-set.sh" \
               "${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/lib/propagation-set.sh"; do
@@ -224,11 +222,25 @@ if want fleet; then
       n=$((n + 1))
       $SU tail -1 "$f"
     done
+    # PRESENCE is the signal; the runner clears these on recovery.
+    for d in $($SU sh -c "ls -d /home/*/.local/share/scheduler-paced-runner 2>/dev/null"); do
+      a=${d#/home/}; a=${a%%/*}
+      $SU test -r "$d/gate-error-streak.state" &&
+        echo "FLEET-GATE-ERR $a $($SU cat "$d/gate-error-streak.state")"
+      $SU test -r "$d/pull-block.state" &&
+        echo "FLEET-PULL $a $($SU cat "$d/pull-block.state")"
+    done
     echo "FLEET-LEDGERS $n"' 2>/dev/null)"
   case "$led" in
     *FLEET-LEDGERS*)
       n_led="$(printf '%s\n' "$led" | sed -n 's/^FLEET-LEDGERS //p')"
-      if [ "${n_led:-0}" -eq 0 ]; then
+      gate_err="$(printf '%s\n' "$led" | awk '$1=="FLEET-GATE-ERR" && $3+0 >= 2 {print $2"("$3")"}' | tr '\n' ' ')"
+      frozen="$(printf '%s\n' "$led" | awk '$1=="FLEET-PULL" && $4=="fetch-failed" && $3+0 >= 3 {print $2"("$3")"}' | tr '\n' ' ')"
+      if [ -n "$gate_err" ]; then
+        record fleet DOWN "the usage gate is ERRORing, not pacing: $gate_err consecutive failure(s) -- no account here is being held on purpose"
+      elif [ -n "$frozen" ]; then
+        record fleet DOWN "deployed code is FROZEN, so a merged fix cannot land: $frozen blocked tick(s)"
+      elif [ "${n_led:-0}" -eq 0 ]; then
         # Zero ledgers is not a quiet fleet, it is a fleet we cannot see.
         record fleet BLIND 'no account has a paced-runner ledger -- cannot tell whether any of them worked'
       else

@@ -204,6 +204,28 @@ check "an account that stops without saying why is still DOWN" "$rc" "5"
 has  "and the silence is NAMED, not printed as an empty message" "$out" "NO REASON RECORDED"
 has  "...and counted separately from the ones that did explain" "$out" "without saying why"
 
+# A GATE THAT CANNOT REACH THE API IS NOT A PACED FLEET -- same silence.
+fleet "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
+FLEET-GATE-ERR realisateur 4
+FLEET-LEDGERS 1"
+out="$(run fleet)"; rc=$?
+check "a gate ERRORing for 2+ ticks is DOWN (5), not a quiet fleet" "$rc" "5"
+has  "and it says the accounts are not being held on purpose" "$out" "is being held on purpose"
+has  "and it names the account and the count" "$out" "realisateur(4)"
+
+fleet "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
+FLEET-GATE-ERR realisateur 1
+FLEET-LEDGERS 1"
+out="$(run fleet)"; rc=$?
+check "a single gate error is not yet DOWN -- one tick is a hiccup" "$rc" "0"
+
+fleet "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
+FLEET-PULL realisateur 3 fetch-failed 0
+FLEET-LEDGERS 1"
+out="$(run fleet)"; rc=$?
+check "a checkout frozen 3+ ticks is DOWN (5); the runner will not self-heal" "$rc" "5"
+has  "and says a merged fix cannot land" "$out" "cannot land"
+
 # THE FALSE OK THIS PROBE WAS BORN WITH: it globbed a path no account had.
 fleet "FLEET-LEDGERS 0"
 out="$(run fleet)"; rc=$?
