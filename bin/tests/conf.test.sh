@@ -113,7 +113,7 @@ eq "D2  an unrelated directory exits 1"    "$rc" "1"
 mkdir -p "$D/blind/schedule"
 printf 'PROJECT_REPO_PATH="$HOME/Documents/Projects/gone"\n' > "$D/blind/schedule/gone.conf"
 out="$(HOME="$D/home" SCHED_ROOT="$D/blind" bash "$SM" resolve "$D/home" 2>&1)"; rc=$?
-eq "D3  a registry that resolves to nothing exits 3 (BLIND)" "$rc" "3"
+eq "D3  a registry that resolves to nothing exits 6 (BLIND)" "$rc" "6"
 if printf '%s' "$out" | grep -q 'BLIND'; then
   ok "D3b and says BLIND in words, not only in a code"
 else bad "D3b and says BLIND in words, not only in a code" "$out"; fi
