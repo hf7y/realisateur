@@ -44,14 +44,8 @@ cli_guard "$@"
 # predicate against fixture JSON whose author login is not this estate's.
 OWNER="${DECISION_ROT_OWNER:-hf7y}"
 
-# THE ROSTER, typed rather than derived -- a snapshot of the projects dispatch
-# reads plus the ecosystem repos that carry decisions and never dispatch. It
-# goes stale the day a project joins; deriving it is realisateur#467.
-ROSTER=(
-  baudin bibliothecaire chezz crt ecosim gardien groc-mangr nine-speakers
-  realisateur scheduler secretaire senechal sequestria vim-arcade wtul
-  verbs front-door basheur
-)
+# shellcheck source=bin/lib/roster-set.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/roster-set.sh"
 
 MODE=''
 REPOS=()

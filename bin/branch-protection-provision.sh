@@ -43,11 +43,8 @@ GH_BIN="${GH_BIN:-gh}"
 # stated there: the fifteen projects dispatch actually reads, plus the three
 # ecosystem repos that carry decisions but are never dispatched. Re-derive, do
 # not trust:  gh api repos/hf7y/scheduler/contents/schedule -q '.[].name'
-ROSTER=(
-  baudin bibliothecaire chezz crt ecosim gardien groc-mangr nine-speakers
-  realisateur scheduler secretaire senechal sequestria vim-arcade wtul
-  verbs front-door basheur
-)
+# shellcheck source=bin/lib/roster-set.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/roster-set.sh"
 
 APPLY=0
 STRICT=0
