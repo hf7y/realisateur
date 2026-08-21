@@ -71,9 +71,8 @@ if want hosts; then
 fi
 
 if want arming; then
-  # WHAT THE ACCOUNTS ARE DOING, not how many times the word "armed" appears.
-  # Counting the key said OK while three accounts had been dead for eight days:
-  # exited 3 in zero seconds, into a per-account log nobody reads.
+  # WHAT THE ACCOUNTS ARE DOING, not how often the word "armed" appears:
+  # counting the key said OK while three accounts had been dead eight days.
   st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://hf7y.com/monkey/status.json}" 2>/dev/null)"
   if ! printf '%s' "$st" | jq -e '.accounts' >/dev/null 2>&1; then
     record arming BLIND 'the published monkey status could not be read'
@@ -83,9 +82,8 @@ if want arming; then
     record arming BLIND "the published monkey status expired at $vu -- nothing is publishing it"
   else
     # TRAP: fromdateiso8601 rejects a "+00:00" offset and accepts only "Z", so
-    # the ledger's own timestamps make jq exit mid-stream. Unnormalised, this
-    # row printed OK off an empty result -- the error-read-as-nothing-found
-    # this file exists to refuse. A jq failure is BLIND, never clean.
+    # the ledger's timestamps make jq exit mid-stream. Unnormalised, this row
+    # printed OK off an empty result. A jq failure is BLIND, never clean.
     if ! stale="$(printf '%s' "$st" | jq -er --argjson d "${ARMING_STALE_DAYS:-3}" '
       (now - ($d * 86400)) as $cut
       | [ .accounts[]
@@ -96,8 +94,8 @@ if want arming; then
       record arming BLIND 'the status document could not be graded (unreadable timestamps)'
       stale=SKIP
     fi
-    # NO RECORD IS NOT NO DISPATCH: three accounts run and write none at all
-    # (hf7y/scheduler#259), so the document cannot say. That is BLIND.
+    # NO RECORD IS NOT NO DISPATCH: three accounts write none at all
+    # (hf7y/scheduler#259), so the document cannot say. BLIND.
     norec="$(printf '%s' "$st" | jq -r '[.accounts[]|select(.armed)|select(.last_run.started_at == null)|.account]|join(" ")' 2>/dev/null)"
     n_armed="$(printf '%s' "$st" | jq -r '[.accounts[]|select(.armed)]|length')"
     gen="$(printf '%s' "$st" | jq -r '.generated')"
@@ -114,8 +112,8 @@ fi
 
 if want propagation; then
   # THE CHANNEL'S OWN VERDICT FIRST: counting verbs answers "is something
-  # installed", not "is the channel running". The cutter refused for two days
-  # while every host still had its verbs, and this row said OK throughout.
+  # installed", not "is the channel running" -- the cutter refused for two
+  # days while every host had its verbs, and this row said OK throughout.
   ps=""
   for cand in "$HERE/lib/propagation-set.sh" \
               "${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/lib/propagation-set.sh"; do
@@ -143,14 +141,14 @@ if want propagation; then
     elif [ "$age_h" -gt "$max_h" ]; then
       record propagation DOWN "the newest build is ${age_h}h old, past its ${max_h}h cadence"
     else
-      # Only once the channel is proven live does what is installed mean
-      # anything: a host behind the pin is a consumer that did not adopt.
+      # Only with the channel proven live does what is installed mean
+      # anything: a host behind the pin did not adopt.
       bid="$(printf '%s' "$v" | jq -r '.build_id // empty' 2>/dev/null)"
       if [ -z "${PROP_HOST_PIN:-}" ]; then
         record propagation BLIND 'no propagation-set.sh reachable, so the host pin path is unknown'
         bid=""
       fi
-      bad=''
+      bad=''; unreachable=''
       for h in monkey "-p 2223 dexter"; do
         # LOCALHOST IS NOT AN SSH TARGET: the row read "monkey:unreachable"
         # about the host it was standing on.
@@ -160,11 +158,19 @@ if want propagation; then
           # shellcheck disable=SC2086
           n="$(ssh -n -o ConnectTimeout=10 -o BatchMode=yes $h "readlink $PROP_HOST_PIN" 2>/dev/null)"
         fi
-        [ -n "$n" ] || { bad="$bad ${h##* }:unreachable"; continue; }
+        [ -n "$n" ] || { unreachable="$unreachable ${h##* }"; continue; }
         [ "$(basename "$n")" = "$bid" ] || bad="$bad ${h##* }:$(basename "$n")"
       done
+      # A DAILY CONSUMER IS LEGITIMATELY BEHIND A FRESH CUT: exact equality
+      # made this DOWN daily between the cut and dexter's 05:49 tick. Lagging
+      # is DOWN only past the cadence+grace the channel grades ITSELF by.
       if [ -z "$bid" ]; then :
-      elif [ -n "$bad" ]; then record propagation DOWN "channel cut $bid ${age_h}h ago; behind:$bad"
+      elif [ -n "$unreachable" ]; then
+        record propagation BLIND "channel cut $bid ${age_h}h ago; could not read:$unreachable"
+      elif [ -n "$bad" ] && [ "$age_h" -gt "$max_h" ]; then
+        record propagation DOWN "channel cut $bid ${age_h}h ago, past the ${max_h}h adoption window; behind:$bad"
+      elif [ -n "$bad" ]; then
+        record propagation OK "channel cut $bid ${age_h}h ago; not yet adopted by:$bad (within the ${max_h}h window)"
       else record propagation OK "channel cut $bid ${age_h}h ago; every host is on it"; fi
     fi
   fi
