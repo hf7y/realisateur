@@ -113,6 +113,21 @@ O="$(HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$T/no-such-build" "$SCRIPT" 2>&
 case "$O" in *"BLIND the hook file source"*) ok "J: an unreadable build source says BLIND, not ok" ;;
   *) bad "J: unreadable source did not report BLIND: $O" ;; esac
 
+mkdir -p "$T/hk/acctk/.claude"
+printf '%s' "$WANT" | jq '{env:{CLAUDE_CODE_OAUTH_TOKEN:"sk-ant-oat01-FIXTURE"}}' > "$T/hk/acctk/.claude/settings.json"
+chmod 664 "$T/hk/acctk/.claude/settings.json"
+HOME_ROOT="$T/hk" SUDO='' "$SCRIPT" --apply >/dev/null 2>&1
+live="$(stat -c %a "$T/hk/acctk/.claude/settings.json")"
+[ "$live" = 600 ] && ok "K: a 664 settings.json is tightened to 600" \
+                  || bad "K: live settings.json left at $live"
+loose=0
+for b in "$T/hk/acctk/.claude"/settings.json.bak-*; do
+  [ -e "$b" ] || continue
+  [ "$(stat -c %a "$b")" = 600 ] || loose=$((loose+1))
+done
+[ "$loose" -eq 0 ] && ok "K: every backup it wrote is 600, whatever the source was" \
+                   || bad "K: $loose backup(s) wider than 600"
+
 echo
 echo "  passed: $pass  failed: $fail"
 [ "$fail" -eq 0 ]
