@@ -62,10 +62,13 @@ out="$(run arming)"; rc=$?
 check "an armed account that stopped dispatching is DOWN (5)" "$rc" "5"
 has "and it is named" "$out" "dead"
 
+# No run record is BLIND, not DOWN: three accounts dispatch and write none at
+# all (hf7y/scheduler#259), so the document cannot say either way.
 status "{\"accounts\":[{\"account\":\"never\",\"armed\":true,\"last_run\":null}]}"
 out="$(run arming)"; rc=$?
-check "an armed account that has never dispatched is DOWN (5)" "$rc" "5"
+check "an armed account with no run record is BLIND (6), not DOWN" "$rc" "6"
 has "and it is named too" "$out" "never"
+hasnt "and it is never called not-dispatching" "$out" "not dispatching"
 
 status "{\"nonsense\":true}"
 out="$(run arming)"; rc=$?
