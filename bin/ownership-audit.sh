@@ -49,8 +49,8 @@ CLI_FLAGS='--strict --accept --quiet --repo'
 CLI_EXITS='  0  no regression (growth inside recorded paths is a NOTE, not a finding)
   1  REGRESSION -- a foreign path was PARKED here, the foreign share grew, or
      a recorded foreign file was reclassified mine
-  2  BLIND -- no tree or no ledger to read. NEVER "all clear"
-  3  --strict, and foreign mechanism remains (but nothing regressed)'
+  4  GAP -- --strict, and foreign mechanism remains. In scope, not done yet
+  6  BLIND -- no tree or no ledger to read. NEVER "all clear"'
 CLI_POSITIONAL='a directory (the value of --repo)'
 . "$ROOT/bin/lib/cli-guard.sh"
 cli_guard "$@"
@@ -73,7 +73,7 @@ say() { [ "$QUIET" -eq 1 ] || printf '%s\n' "$*"; }
 # BLIND is printed FIRST and on its own, before any finding, and it is never
 # exit 0. closeout-lint printed "13 worktrees NOT examined" one line above
 # twelve false alarms and exited 0; that is the shape this avoids.
-blind() { printf 'BLIND: %s\n' "$*"; printf 'ownership-audit: nothing was measured. This is NOT a clean result.\n'; exit 2; }
+blind() { printf 'BLIND: %s\n' "$*"; printf 'ownership-audit: nothing was measured. This is NOT a clean result.\n'; exit 6; }
 
 [ -d "$TREE/.git" ] || [ -f "$TREE/.git" ] || blind "no git repository at the tree given (--repo), so no population can be derived"
 LEDGER="$TREE/bin/lib/ownership-set.sh"
@@ -311,5 +311,5 @@ fi
 
 [ "$regression" -eq 1 ] && exit 1
 [ -n "$unclassified" ] && exit 1
-if [ "$STRICT" -eq 1 ] && [ "$foreign" -gt 0 ]; then exit 3; fi
+if [ "$STRICT" -eq 1 ] && [ "$foreign" -gt 0 ]; then exit 4; fi
 exit 0

@@ -75,7 +75,7 @@ OUT="$(env HOME="$FH" PATH="$TMP/stub:/usr/bin:/bin" \
     INSTALLE_MANIFEST="$FH/.local/share/installe/manifest.tsv" \
     SENECHAL_CONFIG="$FH/.config/senechal/senechal.json" \
     timeout 60 bash "$FAKE/bin/path-provenance-audit.sh" 2>&1)"; RC=$?
-is  "A1 exit 2, not 0"           "$RC" 2
+is  "A1 exit 6 (BLIND), not 0"    "$RC" 6
 has "A1 says BLIND"              "$OUT" "BLIND"
 has "A1 refuses to call it clean" "$OUT" "NOT 'nothing is wrong'"
 # The BLIND rows must sit above any UNMET row: closeout-lint printed its
@@ -128,13 +128,13 @@ is  "B5 a REGRESSION outranks an unrelated BLIND" "$RC" 1
 has "B5 and the blindness is still reported"      "$OUT" "also BLIND on"
 rm -f "$FAKE/bin/path-provenance-audit.ratchet"
 
-# B6 -- and with nothing regressed, an unreachable tracker is exit 2, never 0.
+# B6 -- with nothing regressed, an unreachable tracker is BLIND, never 0.
 OUT="$(env HOME="$FH" PATH="$TMP/stub-noget:/usr/bin:/bin" \
     HOME="$FH" \
     INSTALLE_MANIFEST="$FH/.local/share/installe/manifest.tsv" \
     SENECHAL_CONFIG="$FH/.config/senechal/senechal.json" \
     timeout 60 bash "$FAKE/bin/path-provenance-audit.sh" 2>&1)"; RC=$?
-is "B6 an unreachable tracker is BLIND, not clean" "$RC" 2
+is "B6 an unreachable tracker is BLIND (6), not clean" "$RC" 6
 
 # B4 -- the false positive the first draft produced against a real shim.
 newhome
@@ -191,7 +191,7 @@ EOF
 CLASS=provisioned run
 has "D1 provisioned: an undeclared entry is UNMET even under the ceiling" "$OUT" "The bar here is 100%"
 CLASS=provisioned run --strict
-is  "D1 provisioned: --strict fails" "$RC" 3
+is  "D1 provisioned: --strict fails with GAP (4)" "$RC" 4
 CLASS=daily run
 has "D2 daily: the same entry passes under the ceiling" "$OUT" "1 undeclared <= ceiling 5"
 rm -f "$FAKE/bin/path-provenance-audit.ratchet"
@@ -257,7 +257,7 @@ OUT="$(env HOME="$FH" PATH="$TMP/stub:/usr/bin:/bin" \
     INSTALLE_MANIFEST="$FH/.local/share/installe/manifest.tsv" \
     SENECHAL_CONFIG="$FH/.config/senechal/senechal.json" \
     timeout 60 bash "$FAKE/bin/path-provenance-audit.sh" --accept 2>&1)"; RC=$?
-is  "G3 --accept refuses a floor from a run that censused nothing" "$RC" 2
+is  "G3 --accept refuses a floor from a run that censused nothing" "$RC" 6
 if [ -f "$FAKE/bin/path-provenance-audit.ratchet" ]; then
   bad "G3 no ratchet was written" "a ratchet file appeared"
 else
@@ -269,7 +269,7 @@ echo "== H. THE ARGUMENT CONTRACT =="
 newhome
 printf '#!/bin/sh\n' > "$FH/.local/bin/handmade"; chmod +x "$FH/.local/bin/handmade"
 run --strict
-is "H1 --strict fails while the vision is unmet" "$RC" 3
+is "H1 --strict fails with GAP (4) while the vision is unmet" "$RC" 4
 run --not-a-real-flag
 is "H2 an unknown flag is a usage error" "$RC" 2
 

@@ -98,7 +98,7 @@ has B2b "$out" "blockers"
 # `provenance` is BLIND here (no gh on PATH). Ratcheting it means the run
 # cannot prove the absence of a regression, and must refuse to say it can.
 out="$(run 'provenance' "$CUR")"; rc=$?
-is  C1 "$rc" 2
+is  C1 "$rc" 6
 has C2 "$out" "cannot see"
 # ...but the SAME blind check, unratcheted, must not fail the build:
 out="$(run '' "$CUR")"; rc=$?
@@ -117,7 +117,7 @@ grep -q '^prosepriced$' "$FAKE/bin/thermostat-wiring.ratchet" \
 
 # --- E: the argument contract ------------------------------------------------
 out="$(run '' "$CUR" --strict)"; rc=$?
-is  E1 "$rc" 3
+is  E1 "$rc" 4
 out="$(run '' "$CUR" --not-a-real-flag)"; rc=$?
 is  E2 "$rc" 2
 
@@ -215,7 +215,7 @@ has H2c "$out" "UNMET  weight"
 printf '%s\n' 'ledger' > "$FAKE/bin/thermostat-wiring.ratchet"
 out="$(env PATH="$TMP/ghstub:$PATH" SCHED_ROOT="$TMP/no-such-scheduler" TW_SHAPE=conforming TW_BLIND=1 \
       bash "$FAKE/bin/thermostat-wiring.sh" 2>&1)"; rc=$?
-is  H3  "$rc" 2
+is  H3  "$rc" 6
 has H3b "$out" "cannot see"
 has H3c "$out" "GitHub tree did not read"
 
