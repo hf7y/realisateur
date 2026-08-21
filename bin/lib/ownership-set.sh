@@ -83,6 +83,8 @@ OWN_MINE="
 .agent-project                             realisateur
 bin/tests/registry-marker.test.sh          realisateur
 bin/silence-audit.sh                       realisateur
+bin/delivery-audit.sh                      realisateur
+bin/tests/delivery-audit.test.sh           realisateur
 bin/monkey-vdi-to-internal.sh              realisateur
 bin/monkey-watch.sh                        realisateur
 bin/lib/monkey-watch-merge.py              realisateur

@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # delivery-audit.sh -- did the merged PRs actually take effect outside the repo?
 #
-# RUNNER: operator, and a clock -- read-only, writes nothing anywhere
+# RUNNER: operator -- needs a GitHub credential and ssh to the hosts a claim
+#   names; read-only everywhere, so it is safe on a clock
 # GUARD-TEST: bin/tests/delivery-audit.test.sh
+# GATE: none -- every path calls `gh` against a live tracker; the fixture is
+#   in its own suite
 #
 # TRAPS (the rest of this header is in the vault):
 # MERGED IS NOT DELIVERED. Every artifact has a place it is WRITTEN and a place

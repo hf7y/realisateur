@@ -39,7 +39,7 @@ GUARD_UNTESTED_BOUND="${GUARD_UNTESTED_BOUND:-4}"   # no dedicated suite
 # bin/rot-ratchet.sh. Both are `GATE: none` for reasons already accepted here
 # -- a diff gate cannot form a merge-base in a fixture repo (markdown-cost.sh),
 # and an estate survey needs the live issue trackers (thermostat-wiring.sh).
-GUARD_UNGATED_BOUND="${GUARD_UNGATED_BOUND:-9}"     # not safely executable here
+GUARD_UNGATED_BOUND="${GUARD_UNGATED_BOUND:-10}"    # not safely executable here
 
 # UNDECLARED IS ZERO, and it earned the right to be. It was briefly 1, for
 # bin/closeout-lint.sh, which was being rewritten concurrently on
