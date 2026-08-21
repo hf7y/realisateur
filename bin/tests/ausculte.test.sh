@@ -144,8 +144,7 @@ first="$(printf '%s\n' "$out" | awk 'NF{print $2; exit}')"
 [ "$first" = "channel" ] && ok "the human channel is probed and reported first" \
   || bad "channel probed first" "first row named: $first"
 
-# arming reads the PUBLISHED status, so it answers the same from any host and
-# never needs root or a collector installed where it happens to be running.
+# arming reads the PUBLISHED status, so it answers the same from any host.
 printf '#!/usr/bin/env bash\necho called >> "%s/ssh_called"\nexit 255\n' "$TMP" > "$TMP/stub/ssh"
 chmod +x "$TMP/stub/ssh"
 out="$(run arming)"; rc=$?
@@ -197,6 +196,13 @@ FLEET-LEDGERS 1"
 out="$(run fleet)"; rc=$?
 check "an account that ended NOT-DONE is DOWN (5)" "$rc" "5"
 has  "and the report carries the account's own words" "$out" "billing failure"
+
+fleet "2026-08-20	monkey	chezz	chezz	batch	3	NOT-DONE	
+FLEET-LEDGERS 1"
+out="$(run fleet)"; rc=$?
+check "an account that stops without saying why is still DOWN" "$rc" "5"
+has  "and the silence is NAMED, not printed as an empty message" "$out" "NO REASON RECORDED"
+has  "...and counted separately from the ones that did explain" "$out" "without saying why"
 
 # THE FALSE OK THIS PROBE WAS BORN WITH: it globbed a path no account had.
 fleet "FLEET-LEDGERS 0"
