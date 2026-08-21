@@ -3,11 +3,10 @@
 # to clone and push ONE repo, and prove they work.
 #
 # TRAPS (the rest of this header is in the vault):
-# WHY PER-REPO DEPLOY KEYS AND NOT ONE ACCOUNT-WIDE PAT. Least privilege that
-# an account-wide token cannot express: a self-dev project may push to its OWN
-# repo and must only READ realisateur, scheduler and senechal. A PAT that can
-# write one can write all four. This is the shape ecosim was given after that
-# reasoning, and mirroring it keeps ONE pattern on the host rather than two.
+# NOT THE PUSH PATH ANY MORE (2026-08-21, #171). These keys grant access and
+# confer no identity, and their url.insteadOf rewrites silently shadowed the
+# App credential helper. Pushes go over https as the App; see
+# selfdev-gh-app.sh --wire. This still registers keys for read access.
 
 set -uo pipefail
 
@@ -108,21 +107,8 @@ else
     || bad "could not write ~/.ssh/config"
 fi
 
-# --- 4. url.insteadOf --------------------------------------------------------
-TARGET="git@$ALIAS:$OWNER/$REPO.git"
-if [ "$(git config --global --get-all "url.$TARGET.insteadOf" 2>/dev/null | wc -l)" -ge 3 ]; then
-  ok "git rewrites all three URL spellings onto $ALIAS"
-elif [ "$MODE" = --check ]; then
-  gap "git does not rewrite $OWNER/$REPO onto $ALIAS -- a clone would use the wrong key"
-else
-  act "git config url.$TARGET.insteadOf (three spellings)"
-  n=0
-  for spelling in "https://github.com/$OWNER/$REPO.git" "git@github.com:$OWNER/$REPO.git" "https://github.com/$OWNER/$REPO"; do
-    git config --global --get-all "url.$TARGET.insteadOf" 2>/dev/null | grep -qxF "$spelling" \
-      || { git config --global --add "url.$TARGET.insteadOf" "$spelling" && n=$((n+1)); }
-  done
-  ok "$n URL spelling(s) rewritten onto $ALIAS"
-fi
+# NO url.insteadOf here any more (#171): it shadowed the App helper, so
+# re-adding it would quietly undo the push-path switch.
 
 # --- 5. register the deploy key with GitHub ----------------------------------
 # The one step that needs a credential this script cannot mint. If gh is not

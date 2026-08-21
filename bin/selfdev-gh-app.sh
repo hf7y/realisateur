@@ -179,10 +179,8 @@ account_identity() {
 }
 
 # --- the BOT identity: the PUSHER half, printed by --identity ----------------
-# Still resolved and still correct for what it IS -- the actor GitHub will
-# attribute the PUSH to. It is no longer written into git's author fields.
-# The email here is the only address GitHub links back to the bot actor, which
-# is why it has that shape and why it is not the shape used above.
+# The actor GitHub attributes the PUSH to, never written into git's author
+# fields. That email shape is the only one GitHub links back to the bot.
 bot_identity() {
   local jwt slug uid
   jwt="$(app_jwt)" || return 1
@@ -283,9 +281,16 @@ case "$MODE" in
 
   --wire)
     self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
-    git config --global credential."https://github.com".helper "!'$self' --credential"
+    want_helper="!'$self' --credential"
+    git config --global --unset-all credential."https://github.com".helper 2>/dev/null
+    git config --global --add credential."https://github.com".helper "$want_helper"
     git config --global credential."https://github.com".useHttpPath false
-    ok "git credential helper -> $self --credential"
+    got_helper="$(git config --global --get-all credential."https://github.com".helper)"
+    if [ "$got_helper" = "$want_helper" ]; then
+      ok "git credential helper -> $self --credential"
+    else
+      bad "git config accepted the helper write but re-reading gives '$got_helper'"
+    fi
 
     # THE AUTHOR HALF. The account, not the bot -- see the model above.
     if ident="$(account_identity)"; then
@@ -352,9 +357,25 @@ case "$MODE" in
     # url.insteadOf from wire-selfdev-git.sh rewrites github.com onto per-repo
     # ssh aliases. Where both are wired, ssh WINS and this helper is never
     # consulted -- silently. Say so rather than let it look wired.
-    if git config --global --get-regexp '^url\..*github-.*\.insteadof$' >/dev/null; then
-      gap "deploy-key url.insteadOf rewrites are also configured -- those repos will keep using ssh and the App identity, remove them per repo to switch"
-    fi
+    # REMOVED, NOT REPORTED: ssh wins over the helper otherwise (#171).
+    removed=0
+    while read -r sect; do
+      [ -n "$sect" ] || continue
+      git config --global --remove-section "$sect" 2>/dev/null && removed=$((removed + 1))
+    done < <(git config --global --get-regexp '^url\..*github-.*\.insteadof$' \
+             | awk '{print $1}' | sed 's/\.insteadof$//' | sort -u)
+    [ "$removed" -gt 0 ] && ok "removed $removed deploy-key url.insteadOf rewrite(s) -- https now reaches the helper"
+
+    for _d in "$HOME"/Documents/Projects/*/; do
+      [ -d "$_d/.git" ] || continue
+      _u="$(git -C "$_d" remote get-url origin 2>/dev/null)" || continue
+      case "$_u" in
+        git@github-*:*|git@github.com:*)
+          _slug="${_u#*:}"; _slug="${_slug%.git}"
+          git -C "$_d" remote set-url origin "https://github.com/$_slug.git" \
+            && ok "$(basename "$_d") origin -> https://github.com/$_slug.git" ;;
+      esac
+    done
     printf '\nwired: %d ok, %d missing, %d bad\n' "$PASS" "$GAPS" "$BAD"
     [ "$BAD" -eq 0 ] || exit 5
     ;;
