@@ -76,9 +76,7 @@ check "a status document with no accounts is BLIND (6)" "$rc" "6"
 hasnt "and never reports an account count it did not read" "$out" "account(s) armed"
 
 # --- propagation reads the channel's VERDICT, not the verb count ---------
-# The count said OK through two days of a refusing cutter, because every host
-# still held its full set of verbs. These pin the three answers the verdict
-# gives, with curl stubbed to serve a fixture and ssh stubbed failing.
+# The count said OK through two days of a refusing cutter. curl/ssh stubbed.
 verdict() { printf '#!/usr/bin/env bash\ncat <<'"'"'J'"'"'\n%s\nJ\n' "$1" > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"; }
 fresh="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 old="$(date -u -d '-6 days' +%Y-%m-%dT%H:%M:%SZ)"
@@ -95,8 +93,21 @@ has "and it names the age against the cadence" "$out" "past its 28h cadence"
 
 verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"last_cut\":{\"at\":\"$fresh\",\"build_id\":\"B\"}}"
 out="$(run propagation)"; rc=$?
-check "a fresh cut with an unreachable host is DOWN, not OK" "$rc" "5"
-has "and the unreachable consumer is named" "$out" "unreachable"
+# BLIND, not DOWN: could-not-look is typed 6, and still not OK.
+check "a fresh cut with an unreachable host is BLIND (6), never OK" "$rc" "6"
+has "and the unreadable consumer is named" "$out" "could not read"
+
+printf '#!/usr/bin/env bash\necho OLDBUILD\n' > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"
+out="$(run propagation)"; rc=$?
+check "a host behind a FRESH cut is OK -- it has not missed its window yet" "$rc" "0"
+has "and the row still names who has not adopted" "$out" "not yet adopted by"
+
+verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"last_cut\":{\"at\":\"$old\",\"build_id\":\"B\"}}"
+out="$(run propagation)"; rc=$?
+check "a host still behind a build past the window is DOWN (5)" "$rc" "5"
+
+verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"last_cut\":{\"at\":\"$fresh\",\"build_id\":\"B\"}}"
+printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"
 
 # No propagation-set reachable: BLIND, not a fleet of unreachable hosts.
 mv "$TMP/bin/lib/propagation-set.sh" "$TMP/bin/lib/propagation-set.away"
