@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # guard-estate.test.sh -- a test over the guard POPULATION, not over one guard.
-#
 # TRAPS (the rest of this header is in the vault):
 # THE POPULATION IS DERIVED, NOT LISTED. A list is an append point every
 # concurrent PR contends for, and a guard can be added below the bar by simply
@@ -33,20 +32,13 @@ TESTS="$REPO/bin/tests"
 # human call ("is an org migration worth the cost"), and an automatic runner
 # would mean something auto-decided that. claim-drift.sh and the four beside
 # it are operator-run for the same reason: a person reads the output.
-# 6 -> 7 on 2026-08-21 (#437): bin/selfdev-containment-audit.sh. Needs
-# passwordless root to read another account's home directory (0700) and
-# /etc/sudoers.d -- no self-dev account has that, so this one runs when an
-# operator runs it, same shape as the six already here.
-GUARD_OPERATOR_BOUND="${GUARD_OPERATOR_BOUND:-7}"   # no automatic runner
+GUARD_OPERATOR_BOUND="${GUARD_OPERATOR_BOUND:-7}"   # no automatic runner; 6->7 #437
 GUARD_UNTESTED_BOUND="${GUARD_UNTESTED_BOUND:-4}"   # no dedicated suite
 # 7 -> 9 on 2026-08-15 (#294, #304): bin/directive-prose.sh and
 # bin/rot-ratchet.sh. Both are `GATE: none` for reasons already accepted here
 # -- a diff gate cannot form a merge-base in a fixture repo (markdown-cost.sh),
 # and an estate survey needs the live issue trackers (thermostat-wiring.sh).
-# 10 -> 11 on 2026-08-21 (#437): bin/selfdev-containment-audit.sh joins them --
-# the same root requirement that makes it operator-run also makes it
-# unsafe to execute in this suite's unprivileged sandbox tree.
-GUARD_UNGATED_BOUND="${GUARD_UNGATED_BOUND:-11}"    # not safely executable here
+GUARD_UNGATED_BOUND="${GUARD_UNGATED_BOUND:-11}"    # not safely executable here; 10->11 #437
 
 # UNDECLARED IS ZERO, and it earned the right to be. It was briefly 1, for
 # bin/closeout-lint.sh, which was being rewritten concurrently on
@@ -102,7 +94,6 @@ else
 fi
 
 # A0 -- the rename dodge, closed BEHAVIOURALLY rather than by prose.
-#
 # The first draft of this check read the header for words like "refuses" and
 for f in "$BIN"/*.sh; do
   [ -e "$f" ] || continue
@@ -189,7 +180,6 @@ fi
 # ============================================================================
 # D/E/F. THE EXECUTED CHECKS
 # ============================================================================
-#
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/home" "$WORK/tree" "$WORK/stub" "$WORK/sched/schedule"

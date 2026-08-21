@@ -1,28 +1,7 @@
 #!/usr/bin/env bash
-# selfdev-containment-audit.sh -- is every self-dev account still contained?
-#
-# RUNNER: operator -- needs passwordless root to see another account's home
-#   and to read /etc/sudoers.d; no self-dev account has that
+# RUNNER: operator -- needs passwordless root; no self-dev account has that
 # GUARD-TEST: bin/tests/selfdev-containment-audit.test.sh
-# GATE: none -- same reason; the suite fakes root, it does not grant it
-#
-# TRAPS (the rest of this header is in the vault):
-# WHY THIS FILE EXISTS. realisateur#437, point 1: "Monkey needs to be
-# self-dev contained. Nothing on monkey should affect production." was
-# verified once, by hand, on 2026-08-19 --
-#   sudo find /home -maxdepth 4 -uid 3010 -newermt '-14 days' \
-#        -not -path '/home/realisateur/*'      -> nothing
-#   sudo cat /etc/sudoers.d/*                  -> zach only
-# a fact checked once is not a fact enforced. This makes the same two checks
-# repeatable, so a future agent cannot acquire reach silently.
-#
-# BLIND IS NEVER CLEAN. Both probes need root: an unprivileged account cannot
-# even list another account's home (0700), so "found nothing" from a scan
-# that could not enter the directory is not "clean", it is "could not look".
-# Never let a denied sudo read as zero findings.
-#
-# usage:  selfdev-containment-audit.sh [--quiet]
-# exit codes: see --help
+# GATE: none -- same reason
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
@@ -61,8 +40,6 @@ say() { [ "$QUIET" -eq 1 ] || printf '%s\n' "$*"; }
 
 say "selfdev-containment-audit -- $(date -u +%Y-%m-%d 2>/dev/null || echo unknown)"
 
-# `sudo -n` proven once, up front: every probe below needs it, and a denial
-# per-account would print the same BLIND fifteen times instead of once.
 if ! $CA_SUDO -n true 2>/dev/null; then
   say "  BLIND  no passwordless root -- cannot enumerate other accounts' files or read $CA_SUDOERS_DIR"
   echo "selfdev-containment-audit: BLIND -- run as an operator with passwordless sudo, or not at all." >&2

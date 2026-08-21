@@ -1,18 +1,5 @@
 #!/usr/bin/env bash
-#
-# TRAPS (the rest of this header is in the vault):
-# WHY THIS FILE EXISTS. selfdev-containment-audit.sh needs root to look at
-# another account's home or at /etc/sudoers.d, and this suite has neither.
-# Every case below fakes `sudo -n` as a plain exec (CA_SUDO) and points the
-# script at a throwaway fixture tree (CA_SCAN_ROOT, CA_SUDOERS_DIR,
-# CA_GETENT) instead of the real host -- the same shape delivery-audit.test.sh
-# uses for DA_SUDO/DA_HOST_SSH, for the same reason: a suite that could pass
-# by reaching the real host is not testing the script's logic.
-#
-# usage: ./bin/tests/selfdev-containment-audit.test.sh
-
 set -uo pipefail
-# shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -21,9 +8,6 @@ SCRIPT="$REPO/bin/selfdev-containment-audit.sh"
 harness_tmp
 mkdir -p "$T/bin" "$T/home/accta" "$T/home/acctb" "$T/sudoers.d"
 
-# A `sudo -n ...` stub that just execs the rest -- this suite runs as one
-# uid, so it cannot prove privilege separation, only that the script's own
-# branching (BLIND without sudo, FINDING/PASS with it) is correct.
 cat > "$T/bin/sudo" <<'EOF'
 #!/usr/bin/env bash
 [ "${1:-}" = -n ] && shift
@@ -31,19 +15,19 @@ exec "$@"
 EOF
 chmod +x "$T/bin/sudo"
 
-# A `sudo -n` that always denies -- proves the BLIND path fires and nothing
-# downstream is read as a clean result.
 cat > "$T/bin/nosudo" <<'EOF'
 #!/usr/bin/env bash
 exit 1
 EOF
 chmod +x "$T/bin/nosudo"
 
+MYUID="$(id -u)"   # acctb's real uid: only a real file proves cross-account
+export CA_UID_MIN="$MYUID" CA_UID_MAX="$MYUID"
 cat > "$T/passwd.txt" <<EOF
 root:x:0:0::/root:/bin/bash
 zach:x:1000:1000::/home/zach:/bin/bash
 accta:x:3001:3001::$T/home/accta:/bin/bash
-acctb:x:3010:3010::$T/home/acctb:/bin/bash
+acctb:x:$MYUID:$MYUID::$T/home/acctb:/bin/bash
 EOF
 
 section "A. no root -- BLIND, never a silent pass"
@@ -69,7 +53,7 @@ OUT="$(PATH="$T/bin:$PATH" CA_SUDO="$T/bin/sudo" CA_GETENT="cat $T/passwd.txt" \
        CA_SCAN_ROOT="$T/home" CA_SUDOERS_DIR="$T/sudoers.d" "$SCRIPT")"
 RC=$?
 rc "C1 exit 1 on a cross-account file" "1" "$RC"
-has "C2 names the offending account" "$OUT" "acctb (uid 3010) owns"
+has "C2 names the offending account" "$OUT" "acctb (uid $MYUID) owns"
 
 section "D. self-dev account named in sudoers.d -- FINDING"
 echo '%acctb ALL=(ALL) NOPASSWD: /usr/bin/foo' > "$T/sudoers.d/oops"
@@ -77,7 +61,7 @@ OUT="$(PATH="$T/bin:$PATH" CA_SUDO="$T/bin/sudo" CA_GETENT="cat $T/passwd.txt" \
        CA_SCAN_ROOT="$T/home/acctb" CA_SUDOERS_DIR="$T/sudoers.d" "$SCRIPT")"
 RC=$?
 rc "D1 exit 1 when a self-dev account is in sudoers.d" "1" "$RC"
-has "D2 names the file and the account" "$OUT" "acctb (uid 3010) referenced in"
+has "D2 names the file and the account" "$OUT" "acctb (uid $MYUID) referenced in"
 rm -f "$T/sudoers.d/oops"
 
 section "E. contract"
