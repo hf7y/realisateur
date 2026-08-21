@@ -5,22 +5,22 @@
 # TRAPS (the rest of this header is in the vault):
 # This script has two halves and does the PRODUCER HALF FIRST:
 #   a. PRODUCERS — find every reference to .scheduler/ and retired filenames
-#      across the target repo (shell scripts, .github/workflows/*.yml,
-#      .claude/commands/*.md, agent prompts, anything that USES them).
-#      If any live producers exist, refuse --apply and say which ones must be
-#      fixed first.
+#      across the target repo -- scripts, workflows, commands, prompts,
+#      anything that USES them -- and refuse --apply naming what to fix.
 #   b. FILES — only once producers are clean, git rm:
 #      - the .scheduler/ directory (entire directory)
 #      - .claude/FOCUS.md, .claude/QUESTIONS.md, .claude/BLOCKERS.md
 #        (only these files if present; .claude/ itself stays)
-# WHY PRODUCERS FIRST: A file deleted with a live producer regenerates
-# immediately, undoing the sunset. The script refuses to proceed until
-# producers are fixed upstream.
+# WHY PRODUCERS FIRST: a file deleted while a producer lives regenerates
+# immediately, undoing the sunset.
 #
 
 set -uo pipefail
 
-die() { printf 'sunset-coordinator-files: FAIL: %s\n' "$*" >&2; exit 3; }
+# 2 you asked wrongly, 5 I could not do it, 7 I will not.
+refuse() { printf 'sunset-coordinator-files: REFUSED: %s\n' "$*" >&2; exit 7; }
+usage_die() { printf 'sunset-coordinator-files: %s\n' "$*" >&2; exit 2; }
+die() { printf 'sunset-coordinator-files: FAIL: %s\n' "$*" >&2; exit 5; }
 note() { printf 'sunset-coordinator-files: %s\n' "$*"; }
 
 # ============================================================================
@@ -36,17 +36,19 @@ usage:
   sunset-coordinator-files.sh <repo> --apply   apply the removal
 
 exit codes:
-  0  nothing to do (already sunset, no producers, no --apply)
+  0  nothing to do, or --apply succeeded and the changes were committed
   1  producers block the removal (live readers/writers remain)
-  2  work was done (--apply succeeded, changes committed)
-  3  usage error or other fatal error
+  2  usage error
+  5  BROKEN -- it could not carry out what it was asked to do
+  7  REFUSED -- a precondition it will not act against (dirty tree, detached
+     HEAD, branch name taken)
 
 about:
   Detects live producers (readers/writers) of .scheduler/ and deprecated
   .claude/ coordinator files. Refuses --apply if producers are found.
   Once producers are fixed, removes the directories and commits.
 HELP
-  exit 3
+  exit 2
 fi
 
 case "${1:-}" in
@@ -59,15 +61,17 @@ usage:
   sunset-coordinator-files.sh <repo> --apply   apply the removal
 
 exit codes:
-  0  nothing to do (already sunset, no producers, no --apply)
+  0  nothing to do, or --apply succeeded and the changes were committed
   1  producers block the removal (live readers/writers remain)
-  2  work was done (--apply succeeded, changes committed)
-  3  usage error or other fatal error
+  2  usage error
+  5  BROKEN -- it could not carry out what it was asked to do
+  7  REFUSED -- a precondition it will not act against (dirty tree, detached
+     HEAD, branch name taken)
 HELP
     exit 0
     ;;
   -*)
-    die "expected repo path, got flag: $1"
+    usage_die "expected repo path, got flag: $1"
     ;;
 esac
 
@@ -79,15 +83,15 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --apply) APPLY=1 ;;
     *)
-      die "unknown flag: $1"
+      usage_die "unknown flag: $1"
       ;;
   esac
   shift
 done
 
-[ -d "$repo" ] || die "not a directory: $repo"
+[ -d "$repo" ] || usage_die "not a directory: $repo"
 cd "$repo" || die "cannot cd: $repo"
-git rev-parse --git-dir >/dev/null 2>&1 || die "not a git repo: $repo"
+git rev-parse --git-dir >/dev/null 2>&1 || usage_die "not a git repo: $repo"
 
 # A DRY RUN NEEDS NO BRANCH. Only --apply cuts one, so only --apply requires
 # one. Demanding it up front made the script unusable against exactly the
@@ -333,11 +337,11 @@ fi
 # Verify clean working tree BEFORE cutting a branch, so a dirty tree cannot
 # be carried onto it.
 if [ -z "$branch" ]; then
-  die "detached HEAD -- refusing to cut a branch from no branch"
+  refuse "detached HEAD -- refusing to cut a branch from no branch"
 fi
 
 if ! git diff-index --quiet HEAD 2>/dev/null; then
-  die "working tree not clean. Commit or stash changes before applying sunset."
+  refuse "working tree not clean. Commit or stash changes before applying sunset."
 fi
 
 # Never commit onto whatever branch happened to be checked out. The earlier
@@ -351,7 +355,7 @@ esac
 
 sunset_branch="sunset-coordinator-files-${repo_name}"
 if git show-ref --quiet "refs/heads/$sunset_branch"; then
-  die "branch $sunset_branch already exists -- delete or rename it first"
+  refuse "branch $sunset_branch already exists -- delete or rename it first"
 fi
 git checkout -q -b "$sunset_branch" || die "could not create branch $sunset_branch"
 note "applying removal on new branch $sunset_branch..."
@@ -396,4 +400,4 @@ note "committed $(git rev-parse --short HEAD) -- removal complete"
 note "branch: $sunset_branch"
 note "removed paths: $(printf '%s\n' "$targets" | grep -cv '^$') ($(printf '%s\n' "$staged" | grep -cv '^$') files staged)"
 note "next: git push -u origin $sunset_branch && gh pr create --base $branch"
-exit 2
+exit 0
