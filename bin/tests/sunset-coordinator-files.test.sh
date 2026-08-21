@@ -72,7 +72,7 @@ eq "C1  --apply exits 1 when producers block" "$rc" "1"
 note "D. --apply succeeds in clean test repo"
 rc=0
 out="$("$CMD" "$T/test-repo" --apply 2>&1)" || rc=$?
-eq "D1  --apply exits 2 when work done" "$rc" "2"
+eq "D1  --apply exits 0 when work done -- doing the job is not a finding" "$rc" "0"
 printf '%s' "$out" | grep -q "committed" && \
   ok "D2  reports commit" || \
   bad "D2  reports commit" "$out"
@@ -112,11 +112,26 @@ printf '%s' "$out" | grep -q "usage:" && \
 
 rc=0
 "$CMD" >/dev/null 2>&1 || rc=$?
-eq "F3  no args exits 3" "$rc" "3"
+eq "F3  no args is a usage error (2)" "$rc" "2"
 
 rc=0
 "$CMD" /nonexistent >/dev/null 2>&1 || rc=$?
-eq "F4  nonexistent repo exits 3" "$rc" "3"
+eq "F4  a repo path that is not one is a usage error (2)" "$rc" "2"
+
+# A REFUSAL IS NOT A BREAKAGE; both used to spend the retired 3.
+note "F5. refusing is 7, breaking is 5"
+mkdir -p "$T/repo-dirty" && cd "$T/repo-dirty" || exit 1
+git init -q . && git config user.email t@t && git config user.name t
+mkdir -p .scheduler && echo "# retired" > .scheduler/FOCUS.md
+git add -A && git commit -qm init
+# git diff-index sees TRACKED modifications only
+echo "modified" >> .scheduler/FOCUS.md
+rc=0; "$CMD" "$T/repo-dirty" --apply >/dev/null 2>&1 || rc=$?
+eq "F5  a dirty tree is REFUSED (7), not BROKEN" "$rc" "7"
+
+rc=0; out="$("$CMD" "$T/repo-dirty" --apply 2>&1)" || rc=$?
+printf '%s' "$out" | grep -q "REFUSED" &&   ok "F6  and the line says REFUSED" || bad "F6  and the line says REFUSED"
+cd "$T" || exit 1
 
 # --- G: the two defects that would have caused real damage ---
 # G1: chezz's live producer is test/answer-channel.spec.mjs, which resolves
@@ -136,7 +151,7 @@ printf '%s' "$out" | grep -q "reader.mjs" && \
 rm scripts/reader.mjs && git add -A && git commit -qm "fix producer"
 start_branch=$(git symbolic-ref --short HEAD)
 rc=0; "$CMD" "$T/repo-mjs" --apply >/dev/null 2>&1 || rc=$?
-eq "G2  --apply exits 2" "$rc" "2"
+eq "G2  --apply exits 0" "$rc" "0"
 cd "$T/repo-mjs" || exit 1
 [ "$(git symbolic-ref --short HEAD)" != "$start_branch" ] && \
   ok "G2b --apply commits on a new branch, not $start_branch" || \
@@ -317,7 +332,7 @@ mkdir -p .scheduler && echo "# retired" > .scheduler/FOCUS.md
 ln -s ../.scheduler/FOCUS.md .claude/FOCUS.md
 git add -A && git commit -qm init
 rc=0; "$CMD" "$T/repo-link" --apply >/dev/null 2>&1 || rc=$?
-eq "M1  --apply exits 2" "$rc" "2"
+eq "M1  --apply exits 0" "$rc" "0"
 cd "$T/repo-link" || exit 1
 [ -L .claude/FOCUS.md ] && bad "M2  dangling symlink survived" || ok "M2  symlink removed too"
 [ -d .scheduler ] && bad "M3  .scheduler survived" || ok "M3  .scheduler removed"
