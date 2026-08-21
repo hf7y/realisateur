@@ -259,5 +259,36 @@ case "$(cat "$TMP/gh.body" 2>/dev/null)" in
   *) bad "a read was given a body" "got: $(cat "$TMP/gh.body")" ;;
 esac
 
+GOOD='NO-DECISION: nothing to weigh
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->'
+
+reset
+printf '%s\n' "$GOOD" > "$TMP/good.txt"
+run --check-body "$TMP/good.txt" >/dev/null 2>&1
+check "a well-formed body checks clean (0)" "$?" "0"
+
+reset
+printf 'no declaration line at all\n' > "$TMP/bad.txt"
+run --check-body "$TMP/bad.txt" >/dev/null 2>&1
+check "--check-body FOUND something (1); it was asked to look, not to write" "$?" "1"
+case "$(cat "$TMP/gh.log")" in
+  '') ok "...and it created nothing to refuse" ;;
+  *) bad "--check-body reached gh" "got: $(cat "$TMP/gh.log")" ;;
+esac
+reset
+run pr create --title t --body 'no declaration line at all' >/dev/null 2>&1
+check "a write the shim DECLINES to make is REFUSED (7)" "$?" "7"
+case "$(cat "$TMP/gh.log")" in
+  '') ok "...and nothing reached gh, so the refusal cost no write" ;;
+  *) bad "the refused write reached gh" "got: $(cat "$TMP/gh.log")" ;;
+esac
+
 echo
 summary
