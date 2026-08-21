@@ -17,8 +17,7 @@ set -uo pipefail
 SCRIPT="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")/delivery-audit.sh"
 mkdir -p "$T/bin"
 
-# A gh stub that answers one PR with whatever body the case sets, so no case
-# needs the network and none can pass by reaching the real tracker.
+# A gh stub answering one PR, so no case can pass by reaching the tracker.
 mkgh() { # mkgh <body>
   printf '%s' "$1" > "$T/body"
   cat > "$T/bin/gh" <<'EOF'
@@ -37,7 +36,7 @@ mkssh() { # mkssh <exit-for-test-e> [crontab-output]
 #!/usr/bin/env bash
 case "\$*" in
   *crontab*) printf '%s\n' "${2:-}" ;;
-  *test\ -e*) exit ${1:-0} ;;
+  *bash\ -s*) exit ${1:-0} ;;
   *systemctl*) printf '%s\n' "${2:-}" ;;
 esac
 EOF
@@ -64,6 +63,28 @@ mkssh 1; OUT="$(run)"; R=$?
 rc  "A3 a path that is absent exits 1" 1 "$R"
 has "A4 and says the PR is not done" "$OUT" "this PR is not done"
 has "A5 naming the path and the host" "$OUT" "/usr/local/bin/dresse"
+
+section "A2. absent and unreadable are different answers"
+mkdir -p "$T/sealed/inner"; : > "$T/sealed/inner/thing"
+mkgh "$BODY_HDR
+<!-- DELIVERS -->
+- path:$T/sealed/inner/thing
+<!-- /DELIVERS -->"
+OUT="$(TDIR=$T DA_GH="$T/bin/gh" DA_HOST_SSH="$T/bin/ssh" bash "$SCRIPT" --pr 7 --repo hf7y/fixture 2>&1)"; R=$?
+rc  "A2a a visible, present path is MET" 0 "$R"
+
+chmod 000 "$T/sealed"
+OUT="$(TDIR=$T DA_GH="$T/bin/gh" DA_HOST_SSH="$T/bin/ssh" bash "$SCRIPT" --pr 7 --repo hf7y/fixture 2>&1)"; R=$?
+chmod 755 "$T/sealed"
+rc  "A2b a path behind a sealed ancestor is BLIND (6), not UNMET" 6 "$R"
+has "A2c and says absence was not established" "$OUT" "absence NOT established"
+
+mkgh "$BODY_HDR
+<!-- DELIVERS -->
+- path:$T/sealed/inner/no-such-thing
+<!-- /DELIVERS -->"
+OUT="$(TDIR=$T DA_GH="$T/bin/gh" DA_HOST_SSH="$T/bin/ssh" bash "$SCRIPT" --pr 7 --repo hf7y/fixture 2>&1)"; R=$?
+rc  "A2d a genuinely missing path under a readable parent is still UNMET (1)" 1 "$R"
 
 section "B. a clock claim reads the crontab it names"
 mkgh "$BODY_HDR

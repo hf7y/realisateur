@@ -4,18 +4,15 @@
 # RUNNER: operator -- needs a GitHub credential and ssh to the hosts a claim
 #   names; read-only everywhere, so it is safe on a clock
 # GUARD-TEST: bin/tests/delivery-audit.test.sh
-# GATE: none -- every path calls `gh` against a live tracker; the fixture is
-#   in its own suite
+# GATE: none -- every path calls `gh` live; the fixture is in its own suite
 #
 # TRAPS (the rest of this header is in the vault):
-# MERGED IS NOT DELIVERED. Every artifact has a place it is WRITTEN and a place
-# it takes EFFECT. This estate guards artifacts and almost nothing guards the
-# transition, so #436 merged and the host deploy never ran. A PR's DELIVERS
-# block states where it lands; this goes and looks. An unmet claim means the
-# PR is NOT done, and says which one step is missing.
+# MERGED IS NOT DELIVERED. Every artifact has a place it is WRITTEN and a
+# place it takes EFFECT, and nothing here guarded the transition -- #436
+# merged and the host deploy never ran. A PR's DELIVERS block says where it
+# lands; this goes and looks, and an unmet claim means the PR is NOT done.
 #
-# usage: `--help`, from CLI_USAGE below. One source.
-# exit codes: `--help`, from CLI_EXITS below. One source.
+# usage and exit codes: `--help`. One source.
 
 set -uo pipefail
 
@@ -67,8 +64,8 @@ echo "delivery-audit -- $REPO, ${ONE_PR:+PR $ONE_PR}${ONE_PR:+ }${ONE_PR:-last $
 
 met=0; unmet=0; blind=0; audited=0; claimless=0
 
-# A claim is met when the thing it names is THERE. Each kind knows one probe,
-# and a kind with no probe is BLIND, never met.
+# A claim is met when the thing it names is THERE. A kind with no probe is
+# BLIND, never met.
 check_claim() { # <pr> <claim>
   local pr="$1" c="$2" host='' path='' clock='' tag='' unit='' port='' secret='' repo=''
   local tok k v
@@ -87,10 +84,21 @@ check_claim() { # <pr> <claim>
   local where="${host:-localhost}" rc out
 
   if [ -n "$path" ]; then
-    if [ "$where" = localhost ]; then [ -e "$path" ]; rc=$?
-    else "$DA_HOST_SSH" -o BatchMode=yes "$where" "test -e '$path'" >/dev/null 2>&1; rc=$?; fi
+    # ABSENT AND UNREADABLE ARE DIFFERENT ANSWERS; `test -e` is false for
+    # both, and this read the second as the first on its first live run.
+    # Walk to the deepest VISIBLE ancestor, then ask whether we could have
+    # descended: traversable and child missing -> absent; sealed -> BLIND.
+    local probe='p="$1"; while [ ! -e "$p" ] && [ "$p" != / ]; do p="$(dirname "$p")"; done
+      [ "$p" = "$1" ] && exit 0; [ -x "$p" ] || exit 9; exit 1'
+    if [ "$where" = localhost ]; then
+      bash -c "$probe" _ "$path"; rc=$?
+    else
+      "$DA_HOST_SSH" -o BatchMode=yes "$where" "bash -s -- '$path'" <<<"$probe" >/dev/null 2>&1; rc=$?
+    fi
     case "$rc" in
       0) printf '  MET    #%s  path:%s on %s\n' "$pr" "$path" "$where"; met=$((met+1)) ;;
+      9) printf '  BLIND  #%s  path:%s -- an ancestor is sealed to this prober; absence NOT established\n' \
+                "$pr" "$path"; blind=$((blind+1)) ;;
       *) printf '  UNMET  #%s  path:%s is NOT on %s -- this PR is not done\n' "$pr" "$path" "$where"; unmet=$((unmet+1)) ;;
     esac
     return
