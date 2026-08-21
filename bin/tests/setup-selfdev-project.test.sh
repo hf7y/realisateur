@@ -175,4 +175,31 @@ case "$(cat "$TMP/err")" in
 esac
 
 echo
+echo "-- 9. the project's own runtime secrets: declared, never supplied -------"
+mkdir -p "$PHOME/Documents/Projects/$PROJECT"
+setup; OUT="$(cat "$TMP/out" "$TMP/err")"
+case "$OUT" in
+  *"declares no runtime secrets"*) ok "9a a project with no declaration says so, rather than saying nothing" ;;
+  *) bad "9a expected the no-declaration line" "got: $(printf '%s' "$OUT" | tail -3)" ;;
+esac
+
+printf '%s/creds/ha_token\n' "$PHOME" > "$PHOME/Documents/Projects/$PROJECT/.selfdev-secrets"
+setup; OUT="$(cat "$TMP/out" "$TMP/err")"
+case "$OUT" in
+  *"MISSING"*ha_token*) ok "9b a declared secret that is absent is reported MISSING, by path" ;;
+  *) bad "9b expected a MISSING line naming ha_token" "got: $(printf '%s' "$OUT" | tail -3)" ;;
+esac
+case "$OUT" in
+  *"will not"*) ok "9c ...and it says plainly that this script does not supply them" ;;
+  *) bad "9c expected the refusal-to-supply line" "got: $(printf '%s' "$OUT" | tail -3)" ;;
+esac
+
+mkdir -p "$PHOME/creds" && : > "$PHOME/creds/ha_token"
+setup; OUT="$(cat "$TMP/out" "$TMP/err")"
+case "$OUT" in
+  *"MISSING $PHOME/creds/ha_token"*) bad "9d a present secret should not be reported missing" "got: $(printf '%s' "$OUT" | grep MISSING | head -1)" ;;
+  *) ok "9d a declared secret that IS present stops being a finding" ;;
+esac
+
+echo
 summary

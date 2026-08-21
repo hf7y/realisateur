@@ -2,12 +2,10 @@
 # cut-verb-build.sh -- pin the ecosystem's whole verb surface to one dated,
 # immutable BUILD, read live from GitHub with no clone on this host.
 #
-# A verb is declared by a project's `bashified` branch carrying an executable
-# bin/<name> AND a matching man/<name>.1 -- the rule is bin/lib/verb-set.sh's.
-# Opt out by name in bin/lib/not-a-verb.tsv.
-#
-# Every refusal below says so when it fires: an absent verb and a retired one
-# are indistinguishable in a manifest.
+# A verb is a project's `bashified` branch carrying an executable bin/<name>
+# AND a matching man/<name>.1 (bin/lib/verb-set.sh's rule); opt out by name in
+# bin/lib/not-a-verb.tsv. Every refusal below says so when it fires: an absent
+# verb and a retired one are indistinguishable in a manifest.
 set -uo pipefail
 
 CLI_NAME='cut-verb-build.sh'
@@ -82,9 +80,8 @@ if [ "$DRY_RUN" -eq 1 ] && { [ -n "$ASSEMBLE" ] || [ "$WRITE" -eq 1 ]; }; then
   exit 2
 fi
 
-# An unreadable repository must FAIL LOUDLY, never sit waiting for a
-# password. git ls-remote against a repo the credential cannot read will ask
-# a terminal for one; in CI there is no terminal and the job hangs to the
+# An unreadable repository must FAIL LOUDLY, never wait for a password:
+# ls-remote against an unreadable repo prompts, and in CI the job hangs to the
 export GIT_TERMINAL_PROMPT=0
 
 command -v gh >/dev/null 2>&1 || die 'gh is not on PATH -- cannot read the declarations. Refusing to cut an empty build.'
@@ -92,8 +89,8 @@ gh auth status >/dev/null 2>&1 \
   || die 'gh is not authenticated. Refusing: an unauthenticated read sees no private repo and would cut a SHORT build that looks complete.'
 
 # --- 1. which repositories carry a bashified branch ---------------------
-# `gh repo list` rather than a typed list: a project that bashifies itself
-# tomorrow joins the build with nobody editing a file. The private repos
+# `gh repo list`, not a typed list: a project that bashifies itself tomorrow
+# joins with nobody editing a file. The private repos
 say "reading $OWNER's repositories ..."
 repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].name' 2>/dev/null)" \
   || die "cannot list $OWNER's repositories -- BLIND, not empty."
@@ -111,10 +108,8 @@ if _reg="$(gh api graphql -F owner="$OWNER" -f query="$_gql" \
   registry="$_reg"
   say "registry: $(printf '%s\n' "$registry" | grep -c .) project(s) carry $REGISTRY_MARKER"
 else
-  # BLIND, and it must not read as "no projects". An empty registry written
-  # into the manifest would tell every consumer the estate has no projects,
-  # which is an instruction to scan nothing -- the exact shape section 5's
-  # BLIND refusal exists to prevent for the verb set.
+  # BLIND, and must not read as "no projects": an empty registry tells every
+  # consumer to scan nothing -- section 5's shape, for the registry.
   say "registry: BLIND -- the marker query failed. Recording NO registry rows"
   say "          rather than an empty one; consumers must treat absence as"
   say "          'could not look', never as 'there are none'."
@@ -134,10 +129,8 @@ half_bad=0
 projects=0
 
 for repo in $repos; do
-  # rc is read BEFORE the pipe, because "ls-remote succeeded and this repo
-  # has no bashified branch" and "ls-remote could not read this repo at all"
-  # both come out as an empty sha and mean opposite things: the first is the
-  # normal answer for most repos, the second is blindness.
+  # rc is read BEFORE the pipe: "no bashified branch" and "could not read
+  # this repo" are both an empty sha and mean opposite things.
   giterr="$tmp/giterr"
   refs="$(git ls-remote "https://github.com/$OWNER/$repo.git" refs/heads/bashified 2>"$giterr")"
   if [ $? -ne 0 ]; then
@@ -162,12 +155,10 @@ for repo in $repos; do
   # No bashified branch is a normal answer: most repos are not bashified.
   [ -n "$sha" ] || continue
 
-  # VERBLESS IS NOT BLIND. Filtering to bin/ and man/ inside the fetch made
-  # "the call failed" and "declares no verbs" the same empty string, scored as
-  # blindness -- so retiring a repo's last verb froze the whole estate's build
-  # (2026-08-18: five repos, refused as "did not read", nothing wrong with any
-  # of them). Fetch the WHOLE tree and judge the CALL by it, since a git tree
-  # is never empty; then filter, and let the filter come back empty in peace.
+  # VERBLESS IS NOT BLIND. Filtering inside the fetch made "the call failed"
+  # and "declares no verbs" the same empty string, so retiring a repo's last
+  # verb froze the estate's build (2026-08-18, five repos). Fetch the WHOLE
+  # tree, judge the CALL by it, then filter.
   whole="$(gh api "repos/$OWNER/$repo/git/trees/$sha?recursive=1" \
              -q '.tree[] | "\(.mode) \(.path)"' 2>/dev/null)"
   if [ -z "$whole" ]; then

@@ -14,6 +14,7 @@
 #      block, without which the account's first unattended night cannot write
 #      .claude/** at all (hf7y/realisateur#282)
 #   8. bin/selfdev-hooks-provision.sh              (root)  the SubagentStop hook (#272)
+#   9. the project's own runtime secrets           (root)  REPORTED, not supplied (#289)
 
 set -uo pipefail
 
@@ -174,6 +175,34 @@ say "8/8 SubagentStop closeout hook"
 ACCOUNTS="$PROJECT" "$HERE/selfdev-hooks-provision.sh" --apply --strict \
   || echo "  WARN    $PROJECT still has no SubagentStop hook wired -- a dirty tree at exit will not be caught"
 echo "  DO      notify-senechal 'realisateur selfdev-release-tick cron in $PROJECT@$HOST crontab, owned by realisateur'"
+
+# --- 9. the project's OWN runtime secrets: DECLARED, never supplied ----------
+# #289's boundary, stated. This provisions what the ECOSYSTEM needs; a
+# project's own credentials stay on the workstation. Copying them here would
+# widen the blast radius #171 spent itself narrowing.
+#
+# It owes the difference between "needs none" and "needs some and has none":
+# a project declares them in `.selfdev-secrets`, one path per line.
+say "9/9 the project's own runtime secrets"
+SECRETS_DECL="$HOME_DIR/Documents/Projects/$PROJECT/.selfdev-secrets"
+if [ ! -r "$SECRETS_DECL" ]; then
+  echo "  --      $PROJECT declares no runtime secrets (.selfdev-secrets absent)."
+  echo "          If it needs any, that file is where it says so; nothing here supplies them."
+else
+  missing=0
+  while IFS= read -r want; do
+    case "$want" in ''|\#*) continue ;; esac
+    # Runs as root, which can stat a path a project owns; no sudo hop.
+    if [ -e "$want" ]; then
+      echo "  OK      $want"
+    else
+      echo "  MISSING $want -- $PROJECT cannot do its own work without it"
+      missing=$((missing + 1))
+    fi
+  done < "$SECRETS_DECL"
+  [ "$missing" -gt 0 ] && \
+    echo "  DO      put those in place as $PROJECT by hand. This script will not: they are the project's, not the ecosystem's."
+fi
 
 cat <<EOF
 
