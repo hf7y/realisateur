@@ -162,7 +162,7 @@ fi
 
 mapfile -t STRAY_WT < <(
   git -C "$ROOT" worktree list --porcelain 2>/dev/null \
-    | awk -v m="$ROOT" '/^worktree /{p=substr($0,10); if (p != m) print p}'
+    | awk 'BEGIN{first=1} /^worktree /{p=substr($0,10); if (first) {first=0} else print p}'
 )
 
 wt_matched=()
@@ -198,7 +198,10 @@ if [ "$flags" -gt 0 ]; then
   echo "A worktree is not forbidden because it is exotic. It is forbidden because"
   echo "the estate has already paid for one: gardien's garde.json lived only inside"
   echo "a worktree, a migration removed it, and no backup could be proved for days"
-  echo "(hf7y/gardien#7). Work in a clone under mktemp and push a branch instead."
+  echo "(hf7y/gardien#7). Work in a clone under mktemp and push a branch instead --"
+  echo "clone from the REMOTE URL, not from this local path: 'origin' in a clone-of-"
+  echo "a-local-path is the local repo, so 'push origin <branch>' lands here and"
+  echo "never reaches GitHub (hf7y/realisateur#505)."
   exit 1
 fi
 echo "0 FLAG(s) -- no production path in $ROOT names 'git worktree add'."

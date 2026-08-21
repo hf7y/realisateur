@@ -189,6 +189,14 @@ out="$(NO_WORKTREE_WT_ALLOW_FILE="$WORK/allow-wt.tsv" bash "$LINT" "$d" 2>&1)"; 
 check "C4 an entry with no matching worktree is a finding" "$rc" "1"
 has   "C4 and is named as stale" "$out" "stale worktree allowlist"
 
+d="$(mkfixture symlinked)"
+alias_path="$WORK/symlinked-alias"
+ln -s "$d" "$alias_path"
+out="$(bash "$LINT" "$alias_path" 2>&1)"; rc=$?
+check "C5 (#505) main is identified by position, not by string-matching \$ROOT -- a symlinked alias of the main checkout is not a stray worktree of itself" "$rc" "0"
+hasnt "C5 and does not flag itself as a stray worktree" "$out" "stray worktree"
+rm -f "$alias_path"
+
 echo
 echo "== D. IT REFUSES RATHER THAN REPORTS CLEAN =="
 
