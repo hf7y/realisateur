@@ -38,6 +38,20 @@ payload() { # payload <cwd> [<transcript>]
 
 run() { payload "$1" "${2:-}" | "$SCRIPT" 2>&1; }
 
+# Hermetic PR half: $T/pr-state is what the tracker says.
+mkdir -p "$T/bin"
+cat > "$T/bin/gh" <<'EOF'
+#!/usr/bin/env bash
+case "$*" in
+  *pulls/*) cat "$STUB_PR" 2>/dev/null || exit 1 ;;
+esac
+EOF
+chmod +x "$T/bin/gh"
+# The env prefixes bind to the SCRIPT, not `payload`: it is across the pipe.
+runpr() { payload "$1" "${2:-}" | STUB_PR="$T/pr-state" PATH="$T/bin:$PATH" "$SCRIPT" 2>&1; }
+rcof()  { payload "$1" "${2:-}" | STUB_PR="$T/pr-state" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
+transcript_pr() { printf 'opened https://github.com/hf7y/widget/pull/7 today\n' > "$1"; }
+
 section "A. baseline behavior is unchanged"
 
 newrepo "$T/clean"
@@ -88,5 +102,31 @@ B5_COUNT="$(printf '%s\n' "$B5_OUT" | grep -cE "tree: $T/cwdrepo4( |\$)")"
 eq "B5 cwd listed exactly once" "$B5_COUNT" "1"
 
 echo
+section "G. a PR this run opened, still open, is not a finished run"
+G="$T/g"; newrepo "$G"
+TR="$T/g-transcript"; transcript_pr "$TR"
+
+printf 'open\tfalse\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+OUT="$(runpr "$G" "$TR")"; RC="$(rcof "$G" "$TR")"
+rc  "G1 an open non-draft PR blocks the stop" 2 "$RC"
+has "G2 and names the PR" "$OUT" "pull/7"
+has "G3 and says a draft is the honest way to stop" "$OUT" "convert it to a DRAFT"
+
+printf 'open\ttrue\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+RC="$(rcof "$G" "$TR")"
+rc "G4 a DRAFT claims nothing, so it does not block" 0 "$RC"
+
+printf 'closed\tfalse\tNO-DECISION: x' > "$T/pr-state"
+RC="$(rcof "$G" "$TR")"
+rc "G5 a merged or closed PR does not block" 0 "$RC"
+
+printf 'open\tfalse\tNO-DECISION: no ledger here' > "$T/pr-state"
+OUT="$(runpr "$G" "$TR")"
+has "G6 an open PR with no DELIVERS block says nothing can check it" "$OUT" "no DELIVERS block"
+
+: > "$T/pr-state"
+RC="$(rcof "$G" "$TR")"
+rc "G7 an unreadable tracker reports but does not block" 0 "$RC"
+
 summary
 [ "$fail" -eq 0 ] || exit 1
