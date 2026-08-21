@@ -147,14 +147,18 @@ for u in "$@"; do
     [ "$APPLY" = 1 ] || continue
   fi
 
-  # merge, never replace: clobbering env/permissions reopens #282
   new="$(printf '%s' "$cur" | jq --argjson want "$HOOKS" '.hooks = $want' 2>/dev/null)"
   if [ -z "$new" ]; then
     echo "        -> FAILED to build the new settings; left untouched"
     continue
   fi
+  # 0600 ALWAYS: `cp -p` copies the source's mode, and two live settings.json
+  # were 664 -- world-readable copies of a live token (#409).
   bak="$f.bak-$(date +%Y%m%d%H%M%S)"
-  $SUDO test -f "$f" && $SUDO cp -p "$f" "$bak"
+  if $SUDO test -f "$f"; then
+    $SUDO cp -p "$f" "$bak" && $SUDO chmod 600 "$bak"
+    $SUDO chmod 600 "$f"
+  fi
   if printf '%s\n' "$new" | $SUDO tee "$f" >/dev/null 2>&1; then
     $SUDO chown "$u:$u" "$f" 2>/dev/null
     $SUDO chmod 0600 "$f" 2>/dev/null
