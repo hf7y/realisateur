@@ -131,5 +131,6 @@ done
 
 printf '%s\n' "--- $PASS ok, $GAPS missing, $BAD bad"
 [ "$BAD" -gt 0 ] && exit 1
-[ "$GAPS" -gt 0 ] && [ "$MODE" = --check ] && exit 3
+# 4, not 3: a GAP is in scope and not installed yet (#334).
+[ "$GAPS" -gt 0 ] && [ "$MODE" = --check ] && exit 4
 exit 0

@@ -166,6 +166,7 @@ if [ "$STRICT" -eq 1 ] && [ "$n_cur" -gt 0 ]; then
   say ""
   say "--strict: $n_cur finding(s) still baselined. The tree is not clean, it is"
   say "held. bin/shellcheck-lint.ratchet lists every one."
-  exit 3
+  # 4, not 3: a held baseline is in scope and not done yet -- a GAP (#334).
+  exit 4
 fi
 exit 0

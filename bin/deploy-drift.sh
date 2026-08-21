@@ -51,14 +51,15 @@ EOF
 out="$(probe)"
 rc=$?
 
+# 3 here is PRIVATE to the heredoc and this reader; a caller sees the ladder.
 if [ "$rc" = 3 ]; then
   echo "FATAL: no dispatcher accounts found on $HOST (uid 3000-3099 with $ENGINE)." >&2
   echo "  This is a BLIND result, not a clean one -- the check could not see what it audits." >&2
-  exit 2
+  exit 6
 fi
 if [ "$rc" != 0 ] || [ -z "$out" ]; then
   echo "FATAL: could not probe $HOST (ssh rc=$rc). Nothing was verified." >&2
-  exit 2
+  exit 6
 fi
 
 drift=0
