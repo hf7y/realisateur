@@ -94,7 +94,7 @@ check "...and current is back on the older build" \
 # --- 4. unreachable is BLIND, never 'up to date' ------------------------
 VERB_BUILD_ROOT="$TMP/fresh" INSTALLE_BIN="$BIN" \
   bash "$INSTALL" --remote "file:///nonexistent" --check >/dev/null 2>&1
-check "an unreachable meta-repo exits 3 (BLIND), not 0" "$?" "3"
+check "an unreachable meta-repo exits 6 (BLIND), not 0" "$?" "6"
 
 OUT="$(VERB_BUILD_ROOT="$TMP/fresh" INSTALLE_BIN="$BIN" \
        bash "$INSTALL" --remote "file:///nonexistent" --check 2>&1)"
