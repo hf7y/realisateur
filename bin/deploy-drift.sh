@@ -11,10 +11,9 @@
 # drift.
 #
 # Exit 0 = every dispatcher is on origin/main. Exit 1 = at least one is not,
-# and it says which. Exit 6 = BLIND: the check could not run (unreachable
+# and it says which. Exit 6 = BLIND, the check could not run (unreachable
 # host, no accounts found) -- NOT a silent pass, because "found nothing" and
-# "nothing is wrong" are the failure this whole script exists to stop
-# conflating.
+# "nothing is wrong" are the failure this whole script exists to stop conflating.
 set -uo pipefail
 
 HOST="${DRIFT_HOST:-monkey}"
