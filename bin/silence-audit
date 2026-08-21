@@ -8,9 +8,9 @@
 # GATE: strict --target $TREE
 #
 # TRAPS (the rest of this header is in the vault):
-# Other surveys answer "what is the state of the projects?". This asks whether
-# a sensor can tell nothing-there from could-not-look from did-not-look --
-# three world-states every mechanism here maps onto one symbol, silence.
+# Other surveys ask "what is the state of the projects?". This asks whether a
+# sensor can tell nothing-there from could-not-look from did-not-look: three
+# world-states every mechanism here maps onto one symbol, silence.
 # Ashby binds on the SENSOR too: one output symbol cannot regulate three
 # states, and no added checks fix that. Hence it audits MECHANISMS.
 #
@@ -70,8 +70,8 @@ if [ -n "$TARGET_GIVEN" ] && [ -n "$ONLY" ]; then
   exit 2
 fi
 
-# Resolve to an absolute path ONCE so every message names the same thing. A
-# failure leaves TARGET empty and is BLIND at the end, never a clean audit.
+# Resolve to an absolute path ONCE so every message names the same thing; a
+# failure leaves TARGET empty and is BLIND, never a clean audit.
 if [ -n "$TARGET_GIVEN" ]; then
   TARGET="$(cd "$TARGET_GIVEN" 2>/dev/null && pwd)" || TARGET=""
 fi
@@ -87,8 +87,7 @@ note() { echo "  NOTE [$1] $2"; }
 # that domain, never over "the ecosystem".
 
 read_crontabs() {
-  # "account<TAB>line" for every crontab we can read. An account we cannot
-  # read is BLIND, not clean -- the reason this function exists.
+  # "account<TAB>line" per readable crontab. Unreadable is BLIND, not clean.
   local acct
   crontab -l 2>/dev/null | sed "s/^/$(id -un)\t/"
   for acct in $(getent passwd | awk -F: '$3>=1000 && $3<65534 {print $1}'); do
@@ -112,8 +111,7 @@ project_repos() {
     printf '%s\t%s\n' "$(basename "$TARGET")" "$TARGET"
     return 0
   fi
-  # A PROJECT IS A TREE THAT SAYS SO: `.agent-project` is the registry, in the
-  # tree rather than a row somebody has to remember to add.
+  # A PROJECT IS A TREE THAT SAYS SO: `.agent-project` is the registry.
   for tree in "$PROJECTS_ROOT"/*; do
     [ -d "$tree" ] || continue
     name="$(basename "$tree")"
@@ -206,7 +204,6 @@ prop_is_local() {
 }
 
 check_home_scoped() {
-  # With one account $HOME-scoping is correct; a defect only across accounts.
   local accts name repo sh
   accts="$(read_crontabs | grep -cE $'\t[0-9*]' || true)"
   local n_acct
@@ -249,15 +246,22 @@ check_home_scoped() {
 }
 
 check_stderr_silenced() {
-  local name repo hit
+  # SAY WHAT WAS DROPPED: this showed five per repo and reported that as the
+  # count -- realisateur has 44. "5 findings" vs "5 of 44" is this script's
+  # own thesis, in this script.
+  local name repo hit all n shown=5
   while IFS=$'\t' read -r name repo; do
     [ -z "${repo:-}" ] && continue
+    all="$(grep -rnE '(sudo|systemctl|crontab|ssh|journalctl)[^|;]*2>[[:space:]]*/dev/null' \
+      "$repo/bin" 2>/dev/null | grep -vE '^\s*#' | cut -c1-160)"
+    n="$(printf '%s' "$all" | grep -c . || true)"
+    [ "${n:-0}" -eq 0 ] && continue
     while IFS= read -r hit; do
       [ -n "$hit" ] && flag stderr-silenced "$name: $hit"
-    done < <(
-      grep -rnE '(sudo|systemctl|crontab|ssh|journalctl)[^|;]*2>[[:space:]]*/dev/null' \
-        "$repo/bin" 2>/dev/null | grep -vE '^\s*#' | cut -c1-160 | head -5
-    )
+    done < <(printf '%s\n' "$all" | head -"$shown")
+    if [ "$n" -gt "$shown" ]; then
+      flag stderr-silenced "$name: and $((n - shown)) more silenced privileged call(s) not shown -- $n in total"
+    fi
   done < <(project_repos)
 }
 
@@ -433,7 +437,15 @@ EOF
   out="$(PROJECTS_ROOT="$tmp/projects" bash "${BASH_SOURCE[0]}" 2>&1)"
   t "stderr-silenced fires on silenced privileged probe" 'stderr-silenced.*probe\.sh' "$out"
 
-  # --- The registry is a MARKER, so no path has to be interpolated at all.
+  for i in 1 2 3 4 5 6 7; do
+    printf '#!/usr/bin/env bash\nsudo -n crontab -l 2>/dev/null\n' >"$tmp/proj/bin/many$i.sh"
+  done
+  out="$(PROJECTS_ROOT="$tmp/projects" bash "${BASH_SOURCE[0]}" 2>&1)"
+  t "a truncated list says how many more there are" 'more silenced privileged call' "$out"
+  t "...and states the true total"                  'in total'                      "$out"
+  rm -f "$tmp/proj/bin/many"*.sh
+
+  # --- The registry is a MARKER; no path is interpolated.
   # This case replaces the old "conf with a literal $HOME" regression: that
   # bug existed because a conf was SCRAPED for PROJECT_REPO_PATH and handed
   # back the five characters `$HOME`, so every project resolved to a directory
