@@ -281,24 +281,24 @@ bash "$G" --repo "$T" --accept --quiet >/dev/null 2>&1
 bash "$G" --repo "$T" --quiet >/dev/null 2>&1
 rc_is "default mode is a ratchet: no regression, exit 0" 0 $?
 bash "$G" --repo "$T" --strict --quiet >/dev/null 2>&1
-rc_is "--strict still refuses to call 80% foreign a success" 3 $?
+rc_is "--strict still refuses to call 80% foreign a success (GAP=4)" 4 $?
 
 echo
 echo "== 8. BLIND IS NEVER CLEAN, AND IS NEVER THIS REPOSITORY ==================="
 EMPTY="$WORK/empty"; mkdir -p "$EMPTY"
 ( cd "$EMPTY" && git init -q -b main . ) >/dev/null 2>&1
 OUT="$(bash "$AUD" --repo "$EMPTY" 2>&1)"; RC=$?
-rc_is "a tree with no ledger is BLIND, exit 2" 2 $RC
+rc_is "a tree with no ledger is BLIND, exit 6" 6 $RC
 has "it says so" "$OUT" "BLIND:"
 has "and says explicitly that blind is not clean" "$OUT" "NOT a clean result"
 hasnt "pointed elsewhere, it does not report on this repository" "$OUT" "$REPO"
 NOGIT="$WORK/nogit"; mkdir -p "$NOGIT"
 bash "$AUD" --repo "$NOGIT" >/dev/null 2>&1
-rc_is "a non-repository is BLIND, not empty-and-fine" 2 $?
+rc_is "a non-repository is BLIND (6), not empty-and-fine" 6 $?
 
 echo
 echo "== 9. THE ARGUMENT CONTRACT ================================================"
-bash "$AUD" --not-a-flag >/dev/null 2>&1; rc_is "unknown flag exits 2" 2 $?
+bash "$AUD" --not-a-flag >/dev/null 2>&1; rc_is "unknown flag exits 2, and 2 means only that" 2 $?
 bash "$AUD" --help >/dev/null 2>&1;       rc_is "--help exits 0" 0 $?
 O="$(bash "$AUD" --help 2>&1)"
 has "--help documents the BLIND exit" "$O" "BLIND"
@@ -318,7 +318,7 @@ OUT="$(cd "$REPO" && bash "$AUD" --repo "$REPO" 2>&1)"; RC=$?
 rc_is "the recorded baseline is honest: no regression on this branch" 0 $RC
 hasnt "nothing in the live tree is unclassified" "$OUT" "FLAG [unclassified]"
 (cd "$REPO" && bash "$AUD" --repo "$REPO" --strict --quiet >/dev/null 2>&1)
-rc_is "and --strict is still red, because the migration has not happened" 3 $?
+rc_is "and --strict is still red, because the migration has not happened" 4 $?
 hasnt "and nothing is parked here" "$OUT" "FLAG [parked]"
 printf '%s\n' "$OUT" | grep -E 'FOREIGN SHARE' | sed 's/^ */  witness: /'
 # Growth is permitted, so the only thing that keeps it from being invisible is

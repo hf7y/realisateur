@@ -9,7 +9,7 @@
 # TRAPS (the rest of this header is in the vault):
 # It never reports "I could not see" as "nothing is wrong" (the recorded
 # pathology: a propagation pass that reached zero projects and exited 0). A
-# check that cannot be probed is BLIND: exit 2 if ratcheted (an unprobeable
+# check that cannot be probed is BLIND: 6 if ratcheted (an unprobeable
 # check cannot prove no regression), tolerated if not (nothing yet to lose).
 # It also never lowers the ratchet. `--accept` raises it or refuses.
 #
@@ -29,8 +29,8 @@ CLI_USAGE='  thermostat-wiring.sh            probe, report, fail only on regress
 CLI_FLAGS='--strict --accept --quiet'
 CLI_EXITS='  0  every ratcheted check still passes
   1  REGRESSION -- a check that used to pass no longer does
-  2  BLIND -- a ratcheted check could not be probed. NEVER "all clear"
-  3  --strict, and the vision is not fully met (but nothing regressed)'
+  4  GAP -- --strict, and the vision is not fully met. In scope, not done yet
+  6  BLIND -- a ratcheted check could not be probed. NEVER "all clear"'
 CLI_POSITIONAL=none
 . "$ROOT/bin/lib/cli-guard.sh"
 cli_guard "$@"
@@ -334,7 +334,7 @@ fi
 if [ -n "$blind_ratcheted" ]; then
   echo "thermostat-wiring: BLIND on ratcheted check(s):$blind_ratcheted" >&2
   echo "thermostat-wiring: this is 'I cannot see', NOT 'nothing regressed'." >&2
-  exit 2
+  exit 6
 fi
 
 if [ -n "$regressed" ]; then
@@ -345,6 +345,6 @@ fi
 echo "thermostat-wiring: $pass/$total met, $unmet to go, $blind blind -- no regression"
 if [ "$STRICT" = 1 ] && [ "$unmet" != 0 ]; then
   echo "thermostat-wiring: --strict: the vision is not met yet" >&2
-  exit 3
+  exit 4
 fi
 exit 0

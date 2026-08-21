@@ -7,7 +7,7 @@
 # GATE: strict
 #
 # TRAP: BLIND IS NEVER CLEAN. "I could not census this account" and "this
-#   account is clean" are different answers; exit 2 is BLIND, never success.
+#   account is clean" are different answers; 6 is BLIND, never success.
 # TRAP: `installe` maintains a manifest of what IT installed and cannot see
 #   anything it did not. This asks who put a thing there, which is a
 #   different question -- do not fold the two together.
@@ -35,8 +35,8 @@ CLI_USAGE='  path-provenance-audit.sh            census, report, fail only on re
 CLI_FLAGS='--strict --accept --quiet --json --prune --apply'
 CLI_EXITS='  0  nothing regressed against the ratchet
   1  REGRESSION -- a check that used to pass no longer does, or a ceiling rose
-  2  BLIND -- a probe could not be performed. NEVER "all clear"
-  3  --strict, and the vision is not fully met (but nothing regressed)'
+  4  GAP -- --strict, and the vision is not fully met. In scope, not done yet
+  6  BLIND -- a probe could not be performed. NEVER "all clear"'
 CLI_POSITIONAL=none
 . "$ROOT/bin/lib/cli-guard.sh"
 cli_guard "$@"
@@ -479,7 +479,7 @@ fi
 if [ "$ACCEPT" = 1 ]; then
   if [ "$CENSUSED" = 0 ]; then
     echo "path-provenance-audit: REFUSED: cannot accept a floor from a run that censused nothing" >&2
-    exit 2
+    exit 6
   fi
   if [ -n "$regressed" ]; then
     echo "path-provenance-audit: REFUSED: cannot accept while$regressed is regressed" >&2
@@ -516,12 +516,12 @@ fi
 if [ "$blind" -gt 0 ]; then
   echo "path-provenance-audit: BLIND on:$blindlist" >&2
   echo "path-provenance-audit: this is 'I could not look', NOT 'nothing is wrong'." >&2
-  exit 2
+  exit 6
 fi
 
 echo "path-provenance-audit: $pass/$total met, $((total - pass)) to go -- no regression"
 if [ "$STRICT" = 1 ] && [ "$unmet" != 0 ]; then
   echo "path-provenance-audit: --strict: senechal does not yet own everything on this PATH" >&2
-  exit 3
+  exit 4
 fi
 exit 0
