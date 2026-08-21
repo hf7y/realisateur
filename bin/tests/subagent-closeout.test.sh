@@ -128,5 +128,10 @@ has "G6 an open PR with no DELIVERS block says nothing can check it" "$OUT" "no 
 RC="$(rcof "$G" "$TR")"
 rc "G7 an unreadable tracker reports but does not block" 0 "$RC"
 
+# CI has no closeout-lint and takes the fallback path; the check runs on both.
+printf 'open\tfalse\tNO-DECISION: x' > "$T/pr-state"
+RC="$(payload "$G" "$TR" | STUB_PR="$T/pr-state" PATH="$T/bin:/usr/bin:/bin" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?")"
+rc "G8 it blocks even with no closeout-lint on PATH (the fallback path)" 2 "$RC"
+
 summary
 [ "$fail" -eq 0 ] || exit 1

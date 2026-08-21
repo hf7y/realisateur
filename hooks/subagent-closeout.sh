@@ -108,6 +108,42 @@ advice() {
   echo "Then report every file you touched, including the ones you reverted."
 }
 
+# A clean tree says the work was saved, not that it landed. Checked only
+# when the tracker can be read: a hook that cannot look must not become a
+# hook nobody can get past.
+pr_report=""
+if command -v gh >/dev/null 2>&1; then
+  while IFS= read -r url; do
+    [ -n "$url" ] || continue
+    slug="${url#https://github.com/}"; num="${slug##*/}"; slug="${slug%/pull/*}"
+    meta="$(gh api "repos/$slug/pulls/$num" --jq '"\(.state)\t\(.draft)\t\(.body // "")"' 2>/dev/null)" || {
+      log "could not read $url -- not blocking on a tracker this hook cannot reach"; continue; }
+    st="${meta%%$'\t'*}"; rest="${meta#*$'\t'}"; dr="${rest%%$'\t'*}"; body="${rest#*$'\t'}"
+    [ "$st" = open ] || continue
+    if [ "$dr" = true ]; then
+      log "note: $url is still a DRAFT -- a draft claims nothing, which is a valid way to stop."
+      continue
+    fi
+    pr_report+="  $url is still open and not a draft"$'\n'
+    case "$body" in
+      *DELIVERS*) : ;;
+      *) pr_report+="    and carries no DELIVERS block, so nothing can check whether it landed"$'\n' ;;
+    esac
+  done < <(discover_opened_prs "$agent_transcript")
+fi
+if [ -n "$pr_report" ]; then
+  {
+    echo "BLOCKED: this run opened a pull request that is still open."
+    echo
+    printf '%s' "$pr_report"
+    echo
+    echo "Merging is the middle of the job, not the end of it. Either land it"
+    echo "(green checks, then merge), or convert it to a DRAFT -- a draft claims"
+    echo "nothing and is the honest way to stop with work in flight."
+  } >&2
+  exit 2
+fi
+
 # --- preferred path: reuse the tool, do not reimplement it ------------------
 LINT="$(command -v closeout-lint 2>/dev/null || true)"
 # Capture then match, rather than `"$LINT" --help | grep -q`. See the SIGPIPE
@@ -138,42 +174,6 @@ if [ -n "$LINT" ] && [[ "$lint_help" == *"--repo"* ]]; then
         ;;
     esac
   done
-  # A clean tree says the work was saved, not that it landed. Checked only
-  # when the tracker can be read: a hook that cannot look must not become a
-  # hook nobody can get past.
-  pr_report=""
-  if command -v gh >/dev/null 2>&1; then
-    while IFS= read -r url; do
-      [ -n "$url" ] || continue
-      slug="${url#https://github.com/}"; num="${slug##*/}"; slug="${slug%/pull/*}"
-      meta="$(gh api "repos/$slug/pulls/$num" --jq '"\(.state)\t\(.draft)\t\(.body // "")"' 2>/dev/null)" || {
-        log "could not read $url -- not blocking on a tracker this hook cannot reach"; continue; }
-      st="${meta%%$'\t'*}"; rest="${meta#*$'\t'}"; dr="${rest%%$'\t'*}"; body="${rest#*$'\t'}"
-      [ "$st" = open ] || continue
-      if [ "$dr" = true ]; then
-        log "note: $url is still a DRAFT -- a draft claims nothing, which is a valid way to stop."
-        continue
-      fi
-      pr_report+="  $url is still open and not a draft"$'\n'
-      case "$body" in
-        *DELIVERS*) : ;;
-        *) pr_report+="    and carries no DELIVERS block, so nothing can check whether it landed"$'\n' ;;
-      esac
-    done < <(discover_opened_prs "$agent_transcript")
-  fi
-  if [ -n "$pr_report" ]; then
-    {
-      echo "BLOCKED: this run opened a pull request that is still open."
-      echo
-      printf '%s' "$pr_report"
-      echo
-      echo "Merging is the middle of the job, not the end of it. Either land it"
-      echo "(green checks, then merge), or convert it to a DRAFT -- a draft claims"
-      echo "nothing and is the honest way to stop with work in flight."
-    } >&2
-    exit 2
-  fi
-
   [ "$blocked" -eq 0 ] && exit 0
   {
     echo "BLOCKED: closeout-lint --strict found work this run did not make durable."
