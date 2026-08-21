@@ -46,7 +46,6 @@
 # because "belongs elsewhere" aimed at nowhere is how mechanism gets parked
 # here in the first place.
 #
-# verified 2026-08-08 via `gh repo list hf7y --limit 60 --json name`
 OWN_RECEIVERS="
 scheduler       hf7y/scheduler exists
 senechal        hf7y/senechal exists

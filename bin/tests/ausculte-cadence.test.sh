@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
 #
-# SUBJECT: bin/ausculte-cadence.sh. Hermetic -- ausculte itself is a stub, and
-# --no-escalate is used throughout so a test run can never reach a person.
-#
-# Cases:
-#   A a first DOWN is recorded and does NOT escalate
-#   B the same row DOWN again escalates, exit 5
-#   C a row that recovers clears its streak, so the next DOWN starts over
-#   D BLIND from ausculte is BLIND here (6), never a clean run
-#   E --json that is not an array is BLIND, not "no rows to grade"
-#   F --install-cadence writes nothing without --apply
+# SUBJECT: bin/ausculte-cadence.sh. Hermetic -- ausculte is a stub and
+# --no-escalate is used throughout, so a test run can never reach a person.
 #
 # Usage: bin/tests/ausculte-cadence.test.sh   (exit 0 = all pass)
 
