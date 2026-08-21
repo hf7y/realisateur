@@ -299,11 +299,11 @@ t_has "mixed fleet: BLIND account reported, not skipped" "$O" "fleet-blind"
 t_has "mixed fleet: BLIND account marked BLIND, not ok" "$O" "BLIND fleet-blind"
 
 O="$(STUB_SSH_RC=255 CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN=/nonexistent-gh "$SCRIPT" --audit 2>&1)"; R=$?
-t_rc "an unreachable host exits 3, not 0 and not 1" 3 "$R"
+t_rc "an unreachable host exits 6 BLIND, not 0 and not 1" 6 "$R"
 t_has "unreachable host: says BLIND and names nothing was verified" "$O" "Nothing was verified"
 
 O="$(STUB_ROWS="" CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN=/nonexistent-gh "$SCRIPT" --audit 2>&1)"; R=$?
-t_rc "zero accounts found exits 3 (BLIND, not a clean empty fleet)" 3 "$R"
+t_rc "zero accounts found exits 6 (BLIND, not a clean empty fleet)" 6 "$R"
 
 # --- gh missing/unauthenticated degrades to BLIND, not a crash -------------
 O="$(STUB_ROWS="$FULL_CLEAN_ROWS" CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN=/nonexistent-gh "$SCRIPT" --audit 2>&1)"

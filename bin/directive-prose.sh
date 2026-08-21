@@ -6,15 +6,12 @@
 # GATE: none -- cli-guard.sh exits 2 under guard-estate's stripped sandbox
 #
 # TRAPS (the rest of this header is in the vault):
-# THE PATTERNS ARE THE WHOLE DESIGN, and they are narrow on purpose. Derived
-# 2026-08-15 by grepping the estate (baudin crt realisateur senechal wtul
-# maitre) for every candidate and reading the hits. Rejected, with counts,
-# because a guard nobody can satisfy gets bypassed:
-#   deliberately 559, DO NOT 241, on purpose 128, decided 112 -- ordinary
-#   explanatory prose; "for now" 35 -- hedging ("fine for now"), never a
-#   decision; "was wrong" 35 -- usually a lesson about a bug, not a directive;
-#   TODO 28 / FIXME 0 -- a deferral marker, and bin/lib/body-grammar.sh's
-#   NO-DESTINATION rule already says plainly that it does not count as one.
+# THE PATTERNS ARE THE WHOLE DESIGN and are narrow on purpose, derived
+# 2026-08-15 by grepping the estate and reading the hits. Rejected, with
+# counts, because a guard nobody can satisfy gets bypassed: deliberately 559,
+# DO NOT 241, on purpose 128, decided 112 (ordinary explanatory prose); "for
+# now" 35 (hedging); "was wrong" 35 (a lesson, not a directive); TODO 28 /
+# FIXME 0 (a deferral marker body-grammar.sh already rules out).
 # Kept: Zach-directed 82, an attributed date 63, SUPERSEDED 38, CORRECTED 35,
 #   "stopped being true" 5, "not acted on" 3, un-pause 2.
 #
@@ -30,12 +27,12 @@ CLI_USAGE='  directive-prose.sh          check $(git merge-base HEAD origin/main
 CLI_FLAGS=''
 CLI_EXITS='  0  no uncited decision prose was added
   1  an added line records a decision and cites no issue
-  3  the range or the diff could not be read -- NEVER "I looked and found nothing"'
+  6  BLIND: the range or the diff could not be read -- NEVER "I looked and found nothing"'
 CLI_POSITIONAL=any
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-die3() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 3; }
+die3() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 6; }
 
 [ $# -le 1 ] || die3 "takes at most one argument (a ref range), got $#"
 git rev-parse --git-dir >/dev/null 2>&1 || die3 "BLIND -- not inside a git repository. Nothing was scanned."

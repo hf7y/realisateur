@@ -94,6 +94,6 @@ run "$r" >/dev/null; rc "G1 exits 0" 0 $?
 
 echo "-- H. silent zero: an unresolvable range is 3, never 0"
 r="$(newrepo)"
-out="$( (cd "$r" && bash "$SCRIPT" 'nosuchref..HEAD' 2>&1) )"; rc "H1 exits 3" 3 $?
+out="$( (cd "$r" && bash "$SCRIPT" 'nosuchref..HEAD' 2>&1) )"; rc "H1 exits 6" 6 $?
 
 summary

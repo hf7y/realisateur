@@ -138,7 +138,7 @@ fi
 # --- F: --strict fails while findings remain baselined ----------------------
 if [ "$HAVE_SC" -eq 1 ]; then
   rc=0; bash "$T/b/bin/shellcheck-lint.sh" --strict --quiet >/dev/null 2>&1 || rc=$?
-  check "F --strict with a non-empty baseline: exit 3" 3 "$rc"
+  check "F --strict with a non-empty baseline: exit 4 (GAP)" 4 "$rc"
 else
   skip "F --strict" "shellcheck absent"
 fi

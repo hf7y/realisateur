@@ -112,7 +112,7 @@ case "$action" in
     resolve_project "$dir" || true
     if resolve_blind; then
       resolve_blind_say
-      exit 3
+      exit 6
     fi
     if [ -n "$RESOLVE_HIT" ]; then exit 0; fi
     echo "session-marker: $dir is under no registered project ($RESOLVE_LIVE of $RESOLVE_CONFS conf(s) resolve)" >&2

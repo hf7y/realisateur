@@ -10,7 +10,7 @@
 # the mode that would have caught ecosim on day one.
 #
 # usage:
-# exit (audit):  0 clean   1 drift or a per-account BLIND   3 fleet BLIND
+# exit (audit):  0 clean   1 drift or a per-account BLIND   6 fleet BLIND
 # exit (apply):  0 converged / nothing to do   5 a step failed
 
 set -uo pipefail
@@ -22,7 +22,7 @@ CLI_USAGE='  selfdev-credentials.sh            --audit (default): read all ten a
   selfdev-credentials.sh --apply <account>   converge ONE account to the baseline'
 CLI_FLAGS='--audit --apply'
 CLI_POSITIONAL=any
-CLI_EXITS='  audit: 0 clean   1 drift found, or an account could not be read (BLIND)   3 the whole fleet is BLIND
+CLI_EXITS='  audit: 0 clean   1 drift found, or an account could not be read (BLIND)   6 the whole fleet is BLIND
   apply: 0 converged, or nothing to do   5 a converge step failed   2 usage error'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
@@ -345,7 +345,7 @@ cmd_audit() {
   local out; out="$(fetch_remote "")"; local rc=$?
   if [ "$rc" -ne 0 ] || [ -z "$out" ]; then
     echo "BLIND: could not reach $CRED_HOST at all (ssh rc=$rc). Nothing was verified." >&2
-    return 3
+    return 6
   fi
 
   # `read -r acct row` with IFS=tab and MORE than two tab-separated fields on
@@ -362,7 +362,7 @@ cmd_audit() {
 
   if [ "${#accounts[@]}" -eq 0 ]; then
     echo "BLIND: $CRED_HOST answered, but no account in uid $CRED_UID_MIN-$CRED_UID_MAX was found." >&2
-    return 3
+    return 6
   fi
 
   echo
