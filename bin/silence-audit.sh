@@ -8,18 +8,12 @@
 # GATE: strict --target $TREE
 #
 # TRAPS (the rest of this header is in the vault):
-# WHAT IS MISSING THAT THIS SUPPLIES
-# ----------------------------------
-# Every existing survey here answers "what is the state of the projects?".
-# None answers "can this sensor tell the difference between nothing-there,
-# could-not-look, and did-not-look?". Those are three distinct world-states
-# and every mechanism in this ecosystem currently maps all three onto one
-# output symbol: silence. Ashby's Law is usually applied to the regulator's
-# effectors -- R's variety must match D's. It binds just as hard on the
-# SENSOR: a sensor with one output symbol cannot regulate a domain with
-# three states, and no quantity of added checks fixes that. You must add
-# output symbols. That is the entire thesis of this script, and it is why
-# it audits MECHANISMS rather than projects.
+# Other surveys answer "what is the state of the projects?". This answers
+# "can this sensor tell nothing-there from could-not-look from did-not-look?"
+# -- three world-states every mechanism here maps onto one symbol, silence.
+# Ashby binds on the SENSOR too: one output symbol cannot regulate three
+# states, and no quantity of added checks fixes that; you must add symbols.
+# Hence it audits MECHANISMS, not projects.
 #
 
 set -uo pipefail
