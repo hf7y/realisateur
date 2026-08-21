@@ -53,7 +53,8 @@ fi
 # under MY account?" -- always no for anyone else's. On 2026-08-21 this
 # reported senechal free while unable to read senechal's lock at all.
 BUSY_HOME_ROOT="${BUSY_HOME_ROOT:-/home}"
-share_dir="$HOME/.local/share"
+# Right for the caller's own project; explicit so a test can redirect it.
+share_dir="${BUSY_SHARE_DIR:-$HOME/.local/share}"
 if [ "$project" != "$(id -un)" ] && [ -d "$BUSY_HOME_ROOT/$project" ]; then
   owner_share="$BUSY_HOME_ROOT/$project/.local/share"
   if [ -r "$owner_share" ] && [ -x "$owner_share" ]; then
