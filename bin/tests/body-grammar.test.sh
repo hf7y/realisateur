@@ -223,6 +223,22 @@ eq 'T6 two blocks: a reader cannot tell which is current' "$(codes 'NO-DECISION:
 - none
 <!-- /DELIVERS -->')" 'MULTI-SHIP '
 
+eq 'T7 an indented example is not a second block' "$(findings 'NO-DECISION: x
+
+Here is what one looks like:
+
+    <!-- DELIVERS -->
+    - host:monkey path:/usr/local/bin/dresse
+    <!-- /DELIVERS -->
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
+
 section 'S. the shim REFUSES, and the refusal is what stops the write'
 run_shim() { ( PATH="$T/bin:$PATH"; cd "$T" && bash "$SHIM" "$@" 2>&1 ); }
 rm -f "$T/reached"

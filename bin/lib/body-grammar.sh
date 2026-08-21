@@ -62,7 +62,7 @@ grammar_declaration() {
 grammar_check() {
   local body="$1" line stripped n=0 lineno=0 first_seen=0
   local open=0 in_block=0 entries=0 entry='' fenced=0
-  local sopen=0 in_ship=0 ships=0 ship=''
+  local sopen=0 in_ship=0 ships=0 ship='' indent=''
 
   _find() { printf '%s  %s\n' "$1" "$2"; n=$((n + 1)); }
 
@@ -105,6 +105,11 @@ grammar_check() {
     [ "$fenced" -eq 1 ] && continue
 
     stripped="${line#"${line%%[![:space:]]*}"}"
+    # Indented four spaces, a marker is an EXAMPLE, not a second block.
+    indent="${line%%[![:space:]]*}"
+    if [ "${#indent}" -ge 4 ]; then
+      case "$stripped" in *'<!--'*'DEFERRED'*'-->'*|*'<!--'*'DELIVERS'*'-->'*) continue ;; esac
+    fi
     case "$stripped" in
       '<!-- DEFERRED -->'|'<!--DEFERRED-->')   open=$((open + 1)); in_block=1; continue ;;
       '<!-- /DEFERRED -->'|'<!--/DEFERRED-->') _judge_entry; in_block=0; continue ;;
