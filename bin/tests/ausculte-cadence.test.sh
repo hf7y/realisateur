@@ -59,6 +59,21 @@ run
 rc "E1 exit 6" 6 "$RC"
 has "E2 it says it produced no rows" "$OUT" "no rows"
 
+section "E2. mints a credential when it has none"
+printf '#!/usr/bin/env bash\n[ "$1" = --token ] && printf "ghs_fixturetoken\\n"\n' > "$T/bin/mint.sh"
+chmod +x "$T/bin/mint.sh"
+printf '#!/usr/bin/env bash\nprintf "[{\\"probe\\":\\"rot\\",\\"status\\":\\"OK\\",\\"detail\\":\\"%%s\\"}]\\n" "$GH_TOKEN"\n' > "$T/bin/ausculte.sh"
+chmod +x "$T/bin/ausculte.sh"
+OUT="$(AUSCULTE_BIN="$T/bin/ausculte.sh" AUSCULTE_CADENCE_STATE="$T/state" \
+       SELFDEV_APP_MINT="$T/bin/mint.sh" GH_TOKEN='' GITHUB_TOKEN='' \
+       bash "$SCRIPT" --no-escalate 2>&1)"; RC=$?
+has "E2a the minted token reaches the probes" "$OUT" "ghs_fixturetoken"
+
+OUT="$(AUSCULTE_BIN="$T/bin/ausculte.sh" AUSCULTE_CADENCE_STATE="$T/state" \
+       SELFDEV_APP_MINT="$T/bin/mint.sh" GH_TOKEN=ghs_alreadyhere \
+       bash "$SCRIPT" --no-escalate 2>&1)"
+has "E2b an existing credential is not replaced" "$OUT" "ghs_alreadyhere"
+
 section "F. --install-cadence writes nothing without --apply"
 before="$(crontab -l 2>/dev/null | md5sum)"
 run --install-cadence

@@ -35,6 +35,7 @@ AUSCULTE="${AUSCULTE_BIN:-$HERE/ausculte.sh}"
 CRON_TAG='# realisateur:ausculte:CADENCE'
 CRON_SPEC="${AUSCULTE_CRON_SPEC:-37 */4 * * *}"
 ISSUE_REPO="${AUSCULTE_ISSUE_REPO:-hf7y/realisateur}"
+APP_MINT="${SELFDEV_APP_MINT:-${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/selfdev-gh-app.sh}"
 
 MODE=run; APPLY=0; QUIET=0; NO_ESC=0
 for a in "$@"; do
@@ -66,6 +67,13 @@ fi
   || { echo "$CLI_NAME: BLIND -- ausculte is not runnable from here" >&2; exit 6; }
 
 mkdir -p "$STATE" || { echo "$CLI_NAME: BLIND -- cannot write $STATE" >&2; exit 6; }
+
+# THE CLOCK RUNS AS ROOT, AND ROOT HAS NO gh LOGIN, so the rows that read
+# GitHub went BLIND on every repo. The host holds the App key; mint from it.
+if [ -z "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ] && [ -x "$APP_MINT" ]; then
+  t="$("$APP_MINT" --token 2>/dev/null | tail -1)"
+  case "$t" in ghs_*|ghu_*|gh[a-z]_*) export GH_TOKEN="$t" ;; esac
+fi
 
 out="$("$AUSCULTE" --json 2>/dev/null)"
 # --json is ONE array: reading it line-wise grades nothing and exits 0.
