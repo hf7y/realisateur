@@ -6,21 +6,19 @@
 #
 # TRAPS (the rest of this header is in the vault):
 # It appends `<!-- agent: <account>@<host> <ISO8601> -->` to the bodies of
-# `issue comment|create|close`, `pr comment|create`, and `api` writes to a
-# comments endpoint, passing everything else through untouched. Both fields
+# `issue comment|create|close`, `pr comment|create`, and `api` comment
+# writes, passing everything else through untouched. Both fields
 # are read from the running process, so there is no argument to forget -- it
-# replaced bin/gh-comment.sh, a wrapper that had to be called and never was
-# (20 of 403 comments stamped; hf7y/realisateur#327).
-# AND IT KNOWS HOW OLD IT IS: past STALE_DAYS it says so on stderr and stamps
-# `STALE <n>d` into the body, where decision-rot.sh reads it rather than a log
-# nobody opens. It does NOT refuse: see FAIL OPEN above.
+# replaced a wrapper that had to be called and mostly was not (#327).
+# AND IT KNOWS HOW OLD IT IS: past STALE_DAYS it stamps `STALE <n>d` into the
+# body, where decision-rot.sh reads it. It does NOT refuse: see FAIL OPEN.
 #
 # usage: `usage()` below. `gh --help` reaches it only where there is no real gh.
 
 set -uo pipefail
 
-# Both halves are load-bearing: CLAUDECODE alone unsigns every cron script
-# calling gh outside an agent; a TTY alone signs an agent that holds one.
+# Both halves load-bearing: CLAUDECODE alone unsigns cron's gh calls, a TTY
+# alone signs an agent holding one.
 human_at_keyboard() {
   [ -z "${CLAUDECODE:-}" ] && [ -z "${CLAUDE_CODE_ENTRYPOINT:-}" ] || return 1
   [ -t 0 ] || [ -t 1 ] || return 1
@@ -36,8 +34,8 @@ STALE_DAYS=14
 BUILD_ROOTS="${GH_SIGN_BUILD_ROOTS:-/usr/local/share/verb-builds ${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"
 
 # BUILT-INS ONLY (`-ef`, `printf %(...)T`): this runs in front of every gh
-# call including cron's, with a minimal PATH. An early version shelled out to
-# id/hostname/date/readlink; under a stripped PATH all four were "command not
+# call including cron's, with a minimal PATH. Shelling out to
+# id/hostname/date/readlink made all four "command not
 stamp() {
   local who
   who="$(id -un 2>/dev/null)" || who="${USER:-${LOGNAME:-?}}"
@@ -45,7 +43,7 @@ stamp() {
     "$MARKER" "$who" "${HOSTNAME%%.*}" -1 "$(origin)"
 }
 
-# Named commands, not "update your verbs": these accounts have no checkout.
+# Named commands, not "update your verbs": the accounts have no checkout.
 demand_refresh() {
   printf 'gh-sign: STALE -- this copy is %s, %s days old (limit %s). The policy it\n' \
     "$BUILD_ID" "$(build_age_days)" "$STALE_DAYS" >&2
@@ -71,8 +69,8 @@ source, and let the nightly cut carry it (hf7y/realisateur#330).
 EOF
 }
 
-# The real gh: first on PATH that is not this file. `-ef` compares device+inode
-# THROUGH symlinks, so the /usr/local/bin/gh link is skipped, not re-executed.
+# The real gh: first on PATH that is not this file. `-ef` compares dev+inode
+# THROUGH symlinks, so the /usr/local/bin/gh link is skipped.
 real_gh() {
   local d c
   IFS=: read -ra _p <<< "$PATH"
@@ -163,8 +161,9 @@ case "${1:-}" in
     [ "$grammar_ok" -eq 1 ] || { printf 'gh-sign: BLIND -- no grammar library at %s\n' "$GRAMMAR" >&2; exit 6; }
     if [ "${2:--}" = - ]; then _b="$(cat)"; else _b="$(cat -- "$2")" || exit 6; fi
     grammar_check "$_b"; _n=$?
+    # Asked to look and found something: 1. It creates nothing to refuse.
     [ "$_n" -eq 0 ] && { echo 'gh-sign: body is well-formed'; exit 0; }
-    exit 3 ;;
+    exit 1 ;;
   --self-check)
     # Exit 1 on a stale build. This is the machine-readable half of the demand
     # -- something that runs on a clock can ask this and get an exit code,
@@ -268,7 +267,8 @@ case "${1:-} ${2:-}" in
         while IFS= read -r _f; do printf '  %s\n' "$_f" >&2; done <<<"$findings"
         printf 'gh-sign: nothing was created. `gh-sign.sh --check-body <file>` re-runs this check.\n\n' >&2
         grammar_template >&2
-        exit 3
+        # WON'T DO: the shim declined to create it.
+        exit 7
       fi
     else
       printf 'gh-sign: BLIND -- no grammar library at %s; body not checked.\n' "$GRAMMAR" >&2
