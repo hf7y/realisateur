@@ -198,7 +198,6 @@ wire_host() {
   # FIRST ADOPTION, here rather than left to the clock. wire_one defers it
   # ("first adoption is a separate act") because an account already had verbs
   # from its landing and could wait a night for the pin to move. This host has
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   before="$(readlink "$HOST_BUILD_ROOT/current" 2>/dev/null || echo '<none>')"
   echo "  ..      adopting (pin before: $before)"
   env "${TICK_ENV[@]}" "$tick" --apply 2>&1 | sed 's/^/     /'

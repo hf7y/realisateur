@@ -243,7 +243,6 @@ while IFS= read -r d; do
     if [ -d "$f" ] && [ ! -L "$f" ]; then
       # A plain subdirectory of a swept dir is not itself a PATH entry, so it
       # is skipped -- except retired-*/, a hand-made holding pen for shims
-      #   [rest: vault:realisateur/guard-archaeology-20260817.md]
       case "${f##*/}" in
         retired-*)
           for rf in "$f"/*; do

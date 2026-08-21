@@ -159,6 +159,7 @@ PROP_LEAK_BOUND=7
 # release-gate.sh and publish-release-verdict.sh are LOCAL because they run in
 # the release pipeline (GitHub Actions checks realisateur out to get them), not
 PROP_LOCAL_SCRIPTS="
+ausculte-cadence.sh
 org-migration-audit.sh
 self-merge-audit.sh
 sunset-coordinator-files.sh

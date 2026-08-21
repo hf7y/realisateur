@@ -80,7 +80,6 @@ case "$action" in
       # RETIRES the bare `pid=${PPID}` this used to write. That comment said
       # "the parent is the session process that actually persists" -- measured
       # 2026-07-27, it is not. The hook runs under a short-lived intermediate
-      #   [rest: vault:realisateur/guard-archaeology-20260817.md]
       session_pid() {
         local p="${PPID}" d=0 comm
         while [ -n "$p" ] && [ "$p" -gt 1 ] 2>/dev/null && [ "$d" -lt 12 ]; do

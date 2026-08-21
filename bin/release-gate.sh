@@ -109,7 +109,6 @@ for p in $PROJECTS; do
   # SURFACE 1: GitHub Actions workflow runs, for THIS sha only. A run against
   # any other commit is not evidence about this one, and `?head_sha=` is what
   # keeps it that way -- the rejected alternative 2 above is precisely what
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   runs="$("$GH" api "repos/$OWNER/$p/actions/runs?head_sha=$sha&per_page=100" \
             --jq '[.workflow_runs[] | (.conclusion // ("!" + .status))] | join(",")' 2>/dev/null)"
   rc_runs=$?

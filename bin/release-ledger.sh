@@ -85,7 +85,6 @@ if [ -n "$URL" ]; then
   # The published history becomes the same TSV the offline path grades, so
   # every assertion in bin/tests/release-ledger.test.sh covers this path too.
   # `valid_until` is a property of the DOCUMENT rather than of any row, so it
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   _valid_until_file="$_tmpdir/valid_until"
   python3 - "$_json" "$LEDGER" "$_valid_until_file" <<'PY' || { echo "BLIND: $URL is not a status document this consumer can parse." >&2; exit 3; }
 import json, sys

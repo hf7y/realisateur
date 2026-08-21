@@ -107,7 +107,6 @@ find_producers() {
   # One scan, every language a producer can be written in. The earlier version
   # searched only *.sh/*.yml plus .claude/commands, which made chezz's real
   # producers invisible -- they are *.mjs (scripts/, test/) and CLAUDE.md.
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local pat='\.scheduler/|FOCUS\.md|QUESTIONS\.md|BLOCKERS\.md'
   local matches code_matches doc_matches code_files
   code_files=$(grep -rIlE "$pat" \
@@ -126,7 +125,6 @@ find_producers() {
   # EXTENSIONLESS EXECUTABLES. Selecting code by extension misses the shebang
   # scripts that are usually a repo's front door: scheduler's `bin/scheduler`
   # is 3,659 lines with ~40 live read/write sites on the retired paths and was
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   shebang_files=$(git ls-files 2>/dev/null | while IFS= read -r f; do
     case "$f" in *.*|'') continue ;; esac
     [ -f "$f" ] || continue
@@ -138,7 +136,6 @@ find_producers() {
   # A COMMENT IS NOT A PRODUCER, and this is the difference between a usable
   # mechanism and one that can never report clean. Across the estate almost
   # every code hit is rationale prose -- "see FOCUS.md #8", "the 2026-07-21
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local py_files other_files py_matches awk_matches scanner
   py_files=$(printf '%s\n' "$code_files" | while IFS= read -r f; do
       [ -n "$f" ] || continue
@@ -203,7 +200,6 @@ PYSCANNER
   # awk still handles shell/js/yaml, where a comment really is "the line starts
   # with a marker" or a /* */ block -- no ambiguity to desync on.
   #
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   awk_matches=$(printf '%s\n' "$other_files" | grep -v '^$' | tr '\n' '\0' \
     | SUNSET_PAT="$pat" xargs -0 -r awk 'BEGIN { pat = ENVIRON["SUNSET_PAT"] }
       FNR==1 { inblk=0; inpy=0 }
@@ -223,7 +219,6 @@ PYSCANNER
   # Markdown is scanned NARROWLY, and the distinction is the whole point:
   # a slash-command file or CLAUDE.md INSTRUCTS an agent to read or write
   # these paths, so it is a producer. A retrospective that merely mentions
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local doc_targets='./.claude/commands ./.scheduler/commands ./CLAUDE.md ./AGENTS.md'
   # shellcheck disable=SC2086  # deliberate word-splitting: a list of paths
   doc_matches=$(grep -rInE "$pat" \
@@ -237,7 +232,6 @@ PYSCANNER
   # ONE HOP, and only one. An instruction file that says "read README.md in
   # full and trust it over your own assumptions" has made README.md part of
   # the instruction -- and baudin's README.md then said "see `.claude/FOCUS.md`
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local hop_files hop_matches=""
   # shellcheck disable=SC2086  # deliberate word-splitting: a list of paths
   hop_files=$(grep -rhoE '[A-Za-z0-9_./-]+\.md' \

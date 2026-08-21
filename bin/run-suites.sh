@@ -31,7 +31,6 @@ for t in "$@"; do
   # STDIN CLOSED. A suite must never read stdin; one that does HANGS FOREVER
   # under any runner without a tty (cron, a background job, CI). Found
   # 2026-08-15: bin/tests/selfdev-credentials.test.sh sources its subject,
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   bash "$t" </dev/null || rc=$?
   echo "::endgroup::"
   if [ "$rc" -ne 0 ]; then

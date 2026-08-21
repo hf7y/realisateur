@@ -138,7 +138,6 @@ for repo in $repos; do
   # has no bashified branch" and "ls-remote could not read this repo at all"
   # both come out as an empty sha and mean opposite things: the first is the
   # normal answer for most repos, the second is blindness.
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   giterr="$tmp/giterr"
   refs="$(git ls-remote "https://github.com/$OWNER/$repo.git" refs/heads/bashified 2>"$giterr")"
   if [ $? -ne 0 ]; then
@@ -152,7 +151,6 @@ for repo in $repos; do
         # Reaching this line means `gh repo list` ALREADY returned this repo,
         # so the credential can see it. git then 404ing is not ambiguity --
         # GitHub masks a contents-403 as a 404 for private repos, and a
-        #   [rest: vault:realisateur/guard-archaeology-20260817.md]
         hint=" -- but the API LISTED this repo, so the credential sees it and only its CONTENTS are refused. GitHub reports a contents-403 as 404 on a private repo. Fix: grant the fine-grained PAT 'Contents: Read' (Repository permissions), then re-run. Re-selecting repositories will not help; they are already selected." ;;
       *) hint="" ;;
     esac
@@ -187,7 +185,6 @@ for repo in $repos; do
   # as verb-set.sh: executable bin/<n> AND man/<n>.1. bibliothecaire's
   # bin/page92.py is executable, has no page, and correctly is not a verb --
   # which is why it has a row in lib/not-a-verb.tsv and not a man page.
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   decl="$(printf '%s\n' "$tree" | awk '
       $1 == "100755" && $2 ~ /^bin\/[^\/]+$/ { n = substr($2, 5); exec_[n] = 1 }
       $2 ~ /^man\/[^\/]+\.1$/ { n = $2; sub(/^man\//, "", n); sub(/\.1$/, "", n); page[n] = 1 }
@@ -302,7 +299,6 @@ manifest="$tmp/manifest.tsv"
   # script's own shape check are unaffected -- the manifest's data rows stay
   # exactly "one verb per line" and nothing downstream has to learn a second
   # row type.
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ -n "$registry" ]; then
     printf '# registry: %d project(s) carrying %s on their default branch.\n' \
            "$(printf '%s\n' "$registry" | grep -c .)" "$REGISTRY_MARKER"
@@ -314,7 +310,6 @@ manifest="$tmp/manifest.tsv"
   # WHAT THIS BUILD DECIDED NOT TO INCLUDE, AND WHY -- in the artifact every
   # account consumes, not only on the terminal of whoever ran the cut. A
   # half-declaration's whole failure mode is that its consequence lands on a
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ -s "$halves" ]; then
     printf '# %d name(s) on a bashified branch are NOT in this build. NOT-A-VERB rows\n' \
            "$(wc -l < "$halves" | tr -d ' ')"
@@ -383,7 +378,6 @@ if [ -n "$ASSEMBLE" ]; then
   # WHAT THE PREVIOUS BUILD OWNED, so retirement can actually take effect.
   #
   # Each project directory is rm -rf'd and re-copied below, so a project
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ -f "$ASSEMBLE/manifest.tsv" ]; then
     awk -F'\t' '!/^#/ && NF>=1 && $1 != "" {print $1}' "$ASSEMBLE/manifest.tsv" \
       | sort -u > "$tmp/prev-projects"
@@ -414,7 +408,6 @@ if [ -n "$ASSEMBLE" ]; then
     # THE WHOLE bashified TREE, not just bin/ + man/.
     #
     # This copied only bin/ and man/ first, on the reasoning that a build's
-    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     rm -rf "$work/.git"
     cp -a "$work/." "$ASSEMBLE/$project/"
     say "  assembled $project at ${sha:0:12}"
@@ -426,7 +419,6 @@ if [ -n "$ASSEMBLE" ]; then
   # Prove the tree matches the promise before CI is allowed to commit it.
   #
   # THE EXECUTABLE BIT IS NOT A WITNESS. This check was `-f && -x` and it
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   bad=0
   while IFS=$'\t' read -r project verb _ _; do
     [ -n "${verb:-}" ] || continue
@@ -453,7 +445,6 @@ if [ -n "$ASSEMBLE" ]; then
   # --- 6a. every command declares which CHANNEL it belongs to -------------
   # bin/verb-kind-lint.sh, run against the tree that was just assembled --
   # which is the only place in this pipeline where the files are on local
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   kindlint="$(dirname "${BASH_SOURCE[0]}")/verb-kind-lint.sh"
   if [ ! -f "$kindlint" ]; then
     # A missing guard is a finding, not an inconvenience.

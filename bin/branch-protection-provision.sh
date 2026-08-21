@@ -164,7 +164,6 @@ for name in "${names[@]}"; do
   # Drop MATRIX LEGS if any non-matrix context survives. A matrix job reports
   # one context per leg, named `job (1/3)`, and the leg count is part of the
   # name -- so requiring `playwright (3/3)` (live on hf7y/chezz) wedges every
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   stable=()
   for f in ${found[@]+"${found[@]}"}; do
     case "$f" in *' ('*')') ;; *) stable+=("$f") ;; esac

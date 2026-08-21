@@ -2,10 +2,10 @@
 # dexter-liveness.sh -- is dexter actually serving what it is supposed to serve?
 #
 # THE OUTAGE THIS EXISTS FOR. zaxon -- the only relay that carries a question
-# to a human -- was dead for ten days and nothing noticed. Its service was
-# `enabled` with Restart=always; the WSL distro under it never came back from
-# the 2026-08-03 reboot, and a distro has no supervisor above it
-# (hf7y/groc-mangr#9). Hence the last check here: dexter starts its distro and
+# to a human -- was dead for ten days and nothing noticed: the service was
+# `enabled` with Restart=always while the WSL distro under it never came back
+# from a reboot, and a distro has no supervisor above it (hf7y/groc-mangr#9).
+# Hence the last check here: dexter starts its distro and
 # its VMs from the Windows Startup folder, i.e. at LOGIN. A reboot nobody logs
 # in after leaves monkey -- all of self-dev -- down, and reads from the outside
 # like a quiet night.

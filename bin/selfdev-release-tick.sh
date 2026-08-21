@@ -181,7 +181,6 @@ install_cadence() {
   # crontab writes "no crontab for <user>" there and exits 1 -- that is the
   # answer, not an error -- but so does a permission failure, and silencing
   # both makes them one event. That conflation is bin/silence-audit.sh's
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   cur="$(crontab -l 2>&1 || true)"
   case "$cur" in *"no crontab for"*) cur="" ;; esac
   new="$(printf '%s\n' "$cur" | grep -vF "$CRON_TAG")"
@@ -211,10 +210,9 @@ retire_cadence() {
       return ;;
   esac
 
-  # "Already retired" must account for the shims too. A hand retire that
+  # "Already retired" must account for the shims too: a hand retire that
   # removed the build root and left $HOME/.local/bin pointing into it looks
-  # finished by every other measure -- that is the realisateur account on
-  # 2026-08-13, 33 dangling links reported as done.
+  # finished by every other measure, dangling links reported as done.
   local shims=0 s
   if [ -d "$LOCAL_BIN" ]; then
     for s in "$LOCAL_BIN"/*; do
@@ -254,10 +252,8 @@ retire_cadence() {
     act "machine-wide config changed. Run: notify-senechal 'realisateur selfdev-release-tick cron REMOVED from $(id -un)@$(hostname -s) crontab; that account now follows the host-wide channel in $HOST_BIN'"
   fi
 
-  # The shims that point INTO the build root go before the root itself.
-  # Removing the root first leaves a $HOME/.local/bin full of dangling links
-  # -- 33 of them on the realisateur account on 2026-08-13, from the hand
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  # The shims that point INTO the build root go before the root itself:
+  # removing the root first leaves $HOME/.local/bin full of dangling links,
   local shim tgt inst
   inst="$(command -v installe 2>/dev/null || true)"
   if [ -d "$LOCAL_BIN" ]; then
@@ -348,7 +344,6 @@ EOF
     # THREE STATES, and the middle one is the point. Before hf7y/realisateur#180
     # a missing private pin meant the channel had no consumer here. AFTER it,
     # it is the FINISHED state, and grading it as a gap makes this view report
-    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     if [ "${host:-no}" = yes ] && [ "$pin" = NONE ]; then
       ok "$user: follows the host-wide channel ($HOST_BIN); no private pin or clock to keep"
     elif [ "$pin" = NONE ]; then
@@ -432,7 +427,6 @@ if [ "$MODE" = apply ] && [ "$pin_rc" = 1 ]; then
   # verifies every verb the manifest promises and discards an incomplete
   # build rather than switching to it. Fail-CLOSED, here, deliberately.
   # The optional flag is an ARRAY appended after the literal call, not folded
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   link_arg=(); [ "$TICK_LINK" = 1 ] && link_arg=(--link)
   if "$inst" --latest --apply "${link_arg[@]}" 2>&1 | sed 's/^/        /'; then
     after="$(current_pin)"

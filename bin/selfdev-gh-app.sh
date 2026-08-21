@@ -218,7 +218,6 @@ case "$MODE" in
     # ADOPT NO LONGER INVENTS A PATH. It used to write
     # ~/.config/selfdev/<account>/<account>.pem plus a conf naming it -- which
     # is how one App key came to sit on disk under four different names, and
-    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     if [ "$(id -u)" -eq 0 ] && [ -x "$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh" ]; then
       "$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh" --apply --from "$ADOPT_KEY" --app-id "$ADOPT_ID" --owner "$OWNER" \
         || die "selfdev-app-key.sh --apply refused; the key was NOT installed"
@@ -271,7 +270,6 @@ case "$MODE" in
         # `''` is the hand-run form (`selfdev-gh-app.sh --credential`), kept
         # so an operator can still exercise the helper from a terminal exactly
         # as it was documented before git's operation argument was honoured.
-        #   [rest: vault:realisateur/guard-archaeology-20260817.md]
         tok="$(mint_token)" || exit 5
         printf 'username=x-access-token\npassword=%s\n' "$tok"
         ;;

@@ -110,6 +110,8 @@ provision/dexter/README.md                 realisateur
 bin/dexter-liveness.sh                     realisateur
 bin/tests/dexter-liveness.test.sh          realisateur
 bin/ausculte.sh                            realisateur
+bin/ausculte-cadence.sh                    realisateur
+bin/tests/ausculte-cadence.test.sh         realisateur
 bin/tests/ausculte.test.sh                 realisateur
 bin/lib/zaxon.sh                           realisateur
 bin/lib/host-check.sh                      realisateur
@@ -240,7 +242,6 @@ own_derived_from() {
   # tests bin/notify-senechal.sh. Try the full stem first, then strip one
   # trailing -segment at a time. This is STRUCTURAL on purpose. That suite used
   # to attach through the READ BY relation instead -- a sentence in
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   while :; do
     for cand in "bin/$b.sh" "bin/lib/$b.sh" "bin/lib/$b-set.sh"; do
       [ "$cand" = "$p" ] && continue

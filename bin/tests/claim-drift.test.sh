@@ -69,7 +69,6 @@ pr_json() { # <number> <state> <isDraft> <createdAt> <headRefOid> <commits-json>
   # The body defaults to a CONFORMING first line so the drift cases above keep
   # testing drift and nothing else. Section J supplies its own bodies; if the
   # default were non-conforming, every case would fail for two reasons at once
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local body="${7-NO-DECISION: merge this, it is a clean fix.}"
   printf '{"number":%s,"title":"t","url":"https://x/pull/%s","state":"%s","isDraft":%s,"createdAt":"%s","headRefOid":"%s","commits":%s,"body":%s}' \
     "$1" "$1" "$2" "$3" "$4" "$5" "$6" "$(printf '%s' "$body" | jq -Rs .)"
