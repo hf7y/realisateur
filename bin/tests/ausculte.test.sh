@@ -13,6 +13,7 @@ cp "$HERE/../ausculte.sh" "$TMP/bin/"
 cp "$HERE/../lib/cli-guard.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/host-check.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/zaxon.sh" "$TMP/bin/lib/"
+cp "$HERE/../lib/propagation-set.sh" "$TMP/bin/lib/"
 
 stub() { printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s"\nexit %s\n' "${3:-}" "$2" > "$TMP/bin/$1"; chmod +x "$TMP/bin/$1"; }
 
@@ -93,6 +94,13 @@ verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence
 out="$(run propagation)"; rc=$?
 check "a fresh cut with an unreachable host is DOWN, not OK" "$rc" "5"
 has "and the unreachable consumer is named" "$out" "unreachable"
+
+# No propagation-set reachable: BLIND, not a fleet of unreachable hosts.
+mv "$TMP/bin/lib/propagation-set.sh" "$TMP/bin/lib/propagation-set.away"
+out="$(run propagation)"; rc=$?
+check "no propagation-set means BLIND, not unreachable hosts" "$rc" "6"
+hasnt "and it never blames the hosts for a missing lib" "$out" "unreachable"
+mv "$TMP/bin/lib/propagation-set.away" "$TMP/bin/lib/propagation-set.sh"
 
 printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"
 out="$(run propagation)"; rc=$?

@@ -8,7 +8,6 @@
 # GATE: default --repo $TREE
 #
 # TRAPS (the rest of this header is in the vault):
-# Zach, 2026-08-16, deciding hf7y/realisateur#330: "it cannot be several
 # copies, one per repo that will drift inevitably; this needs to be one single,
 # stable location where policy changes automatically reach." One home is
 # `main`. This makes every other copy mechanical: `--carry` writes them, and

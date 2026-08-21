@@ -165,7 +165,6 @@ say "6/8 release bootstrap + clock"
 # --- 7. the permissions block ------------------------------------------------
 # Without this, the account's FIRST unattended night hits the harness's
 # sensitive-file gate on any `.claude/**` write and cannot record what it did
-# (hf7y/realisateur#282, worked example: vim-arcade@monkey 2026-08-04 shipped
 say "7/8 permissions block"
 ACCOUNTS="$PROJECT" "$HERE/selfdev-permissions-provision.sh" --apply --strict \
   || echo "  WARN    $PROJECT still has no permissions block -- its first unattended run will not be able to write .claude/**"
