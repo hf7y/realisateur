@@ -69,7 +69,7 @@ run() { GH_BIN="$T/gh" SCHED_ROOT="$T" PROJECTS_ROOT="$T/projects" "$SCRIPT" "$@
 # --- A: unreadable repo is BLIND, not silence -------------------------------
 out="$(run acme/gone)"; rc_got=$?
 has "A1 unreadable repo says BLIND"         "$out" "BLIND -- could not read repos/acme/gone"
-rc  "A2 exit 2"                             2 "$rc_got"
+rc  "A2 exit 6 (BLIND)"                             6 "$rc_got"
 
 # --- B: a populated repo reports each channel -------------------------------
 out="$(run acme/full)"
@@ -114,7 +114,7 @@ rc   "D3 exit 0 when the fallback found something"      0 "$rc_got"
 rm -f "$T/schedule/full-proj.conf" "$T/schedule/_ignored.conf"
 out="$(run)"; rc_got=$?
 has "E1 empty registry and no repo named is BLIND" "$out" "no repo named"
-rc  "E2 exit 2"                                    2 "$rc_got"
+rc  "E2 exit 6 (BLIND)"                                    6 "$rc_got"
 
 # --- F: a scheduler account wired to this slug is surfaced ------------------
 cat > "$T/schedule/full-proj.conf" <<'EOF'
