@@ -63,9 +63,8 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-# Two scope knobs at once is a question with two subjects: a registry name and
-# a directory are different domains, and picking one is the silent misparse
-# this script exists to detect.
+# Two scope knobs is a question with two subjects: a registry name and a
+# directory are different domains, and picking one is the silent misparse.
 if [ -n "$TARGET_GIVEN" ] && [ -n "$ONLY" ]; then
   echo "--target <dir> and <project> name different domains (a tree vs a registry entry); pass one" >&2
   exit 2
@@ -84,13 +83,12 @@ flag() { echo "  FLAG [$1] $2"; flags=$((flags+1)); }
 note() { echo "  NOTE [$1] $2"; }
 
 # ---------------------------------------------------------------- domains
-# Everything below reports the domain it read. A negative is only
-# ever asserted over that domain, never over "the ecosystem".
+# Everything below reports the domain it read: a negative is asserted over
+# that domain, never over "the ecosystem".
 
 read_crontabs() {
-  # Returns "account<TAB>line" for every crontab we can actually read.
-  # Domain is reported by the caller; an account we cannot read is BLIND,
-  # NOT clean -- that distinction is the reason this function exists.
+  # "account<TAB>line" for every crontab we can read. An account we cannot
+  # read is BLIND, not clean -- the reason this function exists.
   local acct
   crontab -l 2>/dev/null | sed "s/^/$(id -un)\t/"
   for acct in $(getent passwd | awk -F: '$3>=1000 && $3<65534 {print $1}'); do
@@ -105,19 +103,17 @@ read_crontabs() {
 
 project_repos() {
   local conf name repo
-  # --target: the tree we were POINTED AT is the entire domain, and the
-  # registry is not consulted at all. Returning early rather than filtering
-  # the registry down is the point: a filter that matched nothing would fall
-  # through to surveying everything, which is the bug (#107).
+  # --target: the tree POINTED AT is the entire domain; the registry is not
+  # consulted. Returning early rather than filtering it down is the point --
+  # a filter matching nothing falls through to surveying everything (#107).
   if [ -n "$TARGET_GIVEN" ]; then
     [ -n "$TARGET" ] || return 0            # unresolvable -> zero -> BLIND
     [ -d "$TARGET/bin" ] || return 0        # not a project tree -> BLIND
     printf '%s\t%s\n' "$(basename "$TARGET")" "$TARGET"
     return 0
   fi
-  # A PROJECT IS A TREE THAT SAYS SO. `.agent-project` is the registry, Zach
-  # a repo is a project iff it carries that file, declared
-  # in its own tree rather than in a row somebody has to remember to add.
+  # A PROJECT IS A TREE THAT SAYS SO: `.agent-project` is the registry, in the
+  # tree rather than a row somebody has to remember to add.
   for tree in "$PROJECTS_ROOT"/*; do
     [ -d "$tree" ] || continue
     name="$(basename "$tree")"
@@ -154,7 +150,7 @@ project_repos_and_worktrees() {
   done < <(project_repos)
 }
 
-# Counted ONCE, up front, so BLIND is keyed on the domain this script is
+# Counted ONCE up front, so BLIND is keyed on the domain this script is
 # actually about (registered projects) rather than on a total that other
 # checks can quietly inflate. The first cut of this script keyed BLIND on a
 projects_seen="$(project_repos | grep -c . || true)"
@@ -210,8 +206,7 @@ prop_is_local() {
 }
 
 check_home_scoped() {
-  # With one account, $HOME-scoping is correct and this must stay quiet: it
-  # is a defect only when the ecosystem spans accounts.
+  # With one account $HOME-scoping is correct; a defect only across accounts.
   local accts name repo sh
   accts="$(read_crontabs | grep -cE $'\t[0-9*]' || true)"
   local n_acct
@@ -234,6 +229,11 @@ check_home_scoped() {
         # per propagation-set.sh and selfdev-app-key.sh) BEFORE the $HOME
         local hm_line prefix any_home_scoped=0
         while IFS= read -r hm_line; do
+          # A $HOME path that is the DEFAULT OF AN ENV OVERRIDE is not
+          # $HOME-scoped: the host-wide installs set it -- dexter's crontab
+          # passes VERB_BUILD_ROOT=/usr/local/share/verb-builds. The one TRUE
+          # finding here (#487) was a BARE $HOME path with no escape.
+          case "$hm_line" in *'${'*':-'*) continue ;; esac
           prefix="${hm_line%%\$HOME*}"
           [ "$prefix" = "$hm_line" ] && prefix="${hm_line%%~*}"
           if ! printf '%s' "$prefix" | grep -qE '/(usr/local|etc)/'; then
@@ -535,6 +535,16 @@ verbs-refresh.sh
 floor-check.sh
 "
 PS
+  mkdir -p "$tmp/ovr/bin"
+  printf '#!/usr/bin/env bash\nB="${VERB_BUILD_ROOT:-$HOME/.local/share/x}"\n' > "$tmp/ovr/bin/overridable.sh"
+  printf '#!/usr/bin/env bash\nB="$HOME/.local/share/x"\n' > "$tmp/ovr/bin/bare.sh"
+  if grep -E '\$HOME/\.local/share' "$tmp/ovr/bin/overridable.sh" | grep -qE '\$\{[A-Z_]+:-'; then
+    echo "  ok   an overridable \$HOME default is recognised as configurable"
+  else echo "  FAIL overridable \$HOME default not recognised"; rc=1; fi
+  if grep -E '\$HOME/\.local/share' "$tmp/ovr/bin/bare.sh" | grep -qE '\$\{[A-Z_]+:-'; then
+    echo "  FAIL a BARE \$HOME path was treated as configurable"; rc=1
+  else echo "  ok   a bare \$HOME path is still \$HOME-scoped"; fi
+
   if prop_is_local "$tmp/cls" verbs-refresh.sh; then echo "  ok   a LOCAL-classified script is exempt"
   else echo "  FAIL a LOCAL-classified script was not recognised"; rc=1; fi
   if prop_is_local "$tmp/cls" check-project-busy.sh; then
