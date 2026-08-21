@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # delivery-audit.sh -- did the merged PRs actually take effect outside the repo?
 #
-# RUNNER: operator -- needs a GitHub credential and ssh to the hosts a claim
-#   names; read-only everywhere, so it is safe on a clock
-# GUARD-TEST: bin/tests/delivery-audit.test.sh
-# GATE: none -- every path calls `gh` live; the fixture is in its own suite
+# RUNNER: operator -- needs a credential and ssh to the hosts a claim names;
+#   read-only everywhere, so it is safe on a clock
+# GUARD-TEST: bin/tests/delivery-audit.test.sh -- 22 cases
+# GATE: none -- every path calls `gh` live; the fixture is in its suite
 #
 # TRAPS (the rest of this header is in the vault):
-# MERGED IS NOT DELIVERED. Every artifact has a place it is WRITTEN and a
-# place it takes EFFECT, and nothing here guarded the transition -- #436
-# merged and the host deploy never ran. A PR's DELIVERS block says where it
-# lands; this goes and looks, and an unmet claim means the PR is NOT done.
+# MERGED IS NOT DELIVERED. Every artifact has a place it is WRITTEN and a place
+# it takes EFFECT, and nothing guarded the transition -- #436 merged and the
+# host deploy never ran. A DELIVERS block says where a PR lands; this goes and
+# looks, and an unmet claim means the PR is NOT done.
 #
 # usage and exit codes: `--help`. One source.
 
@@ -33,6 +33,7 @@ CLI_EXITS='  0  every claim of every audited PR is met
 cli_guard "$@"
 
 DA_HOST_SSH="${DA_HOST_SSH:-ssh}"
+DA_SUDO="${DA_SUDO:-sudo}"   # overridable: the sealed-path cases are hermetic
 DA_GH="${DA_GH:-gh}"
 DAYS=28; REPO=""; ONE_PR=""
 while [ $# -gt 0 ]; do
@@ -64,7 +65,7 @@ echo "delivery-audit -- $REPO, ${ONE_PR:+PR $ONE_PR}${ONE_PR:+ }${ONE_PR:-last $
 
 met=0; unmet=0; blind=0; audited=0; claimless=0
 
-# A claim is met when the thing it names is THERE. A kind with no probe is
+# A claim is met when the thing it names is THERE; a kind with no probe is
 # BLIND, never met.
 check_claim() { # <pr> <claim>
   local pr="$1" c="$2" host='' path='' clock='' tag='' unit='' port='' secret='' repo=''
@@ -84,16 +85,26 @@ check_claim() { # <pr> <claim>
   local where="${host:-localhost}" rc out
 
   if [ -n "$path" ]; then
-    # ABSENT AND UNREADABLE ARE DIFFERENT ANSWERS; `test -e` is false for
-    # both, and this read the second as the first on its first live run.
-    # Walk to the deepest VISIBLE ancestor, then ask whether we could have
-    # descended: traversable and child missing -> absent; sealed -> BLIND.
+    # ABSENT AND UNREADABLE DIFFER; `test -e` is false for both, and this read
+    # the second as the first live. Walk to the deepest VISIBLE ancestor --
+    # traversable -> absent, sealed -> BLIND, then escalate, since homes are
+    # 0700 and every per-account claim would read BLIND forever.
     local probe='p="$1"; while [ ! -e "$p" ] && [ "$p" != / ]; do p="$(dirname "$p")"; done
       [ "$p" = "$1" ] && exit 0; [ -x "$p" ] || exit 9; exit 1'
     if [ "$where" = localhost ]; then
       bash -c "$probe" _ "$path"; rc=$?
+      [ "$rc" = 9 ] && "$DA_SUDO" -n true 2>/dev/null &&
+        { "$DA_SUDO" -n bash -c "$probe" _ "$path"; rc=$?; }
     else
       "$DA_HOST_SSH" -o BatchMode=yes "$where" "bash -s -- '$path'" <<<"$probe" >/dev/null 2>&1; rc=$?
+      if [ "$rc" = 9 ]; then
+        # `sudo -n` denied exits 1 -- ABSENT here -- so prove it ran.
+        "$DA_HOST_SSH" -o BatchMode=yes "$where" \
+          "sudo -n true 2>/dev/null && sudo -n bash -s -- '$path'" \
+          <<<"$probe" >/dev/null 2>&1; local src=$?
+        "$DA_HOST_SSH" -o BatchMode=yes "$where" 'sudo -n true' >/dev/null 2>&1 &&
+          rc=$src
+      fi
     fi
     case "$rc" in
       0) printf '  MET    #%s  path:%s on %s\n' "$pr" "$path" "$where"; met=$((met+1)) ;;

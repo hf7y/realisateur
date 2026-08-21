@@ -17,7 +17,7 @@ set -uo pipefail
 SCRIPT="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")/delivery-audit.sh"
 mkdir -p "$T/bin"
 
-# A gh stub answering one PR, so no case can pass by reaching the tracker.
+# A gh stub, so no case can pass by reaching the real tracker.
 mkgh() { # mkgh <body>
   printf '%s' "$1" > "$T/body"
   cat > "$T/bin/gh" <<'EOF'
@@ -74,10 +74,24 @@ OUT="$(TDIR=$T DA_GH="$T/bin/gh" DA_HOST_SSH="$T/bin/ssh" bash "$SCRIPT" --pr 7 
 rc  "A2a a visible, present path is MET" 0 "$R"
 
 chmod 000 "$T/sealed"
-OUT="$(TDIR=$T DA_GH="$T/bin/gh" DA_HOST_SSH="$T/bin/ssh" bash "$SCRIPT" --pr 7 --repo hf7y/fixture 2>&1)"; R=$?
-chmod 755 "$T/sealed"
+# Refuses, so BLIND means "could not look", not "this runner lacks sudo".
+printf '#!/usr/bin/env bash\nexit 1\n' > "$T/bin/nosudo"; chmod +x "$T/bin/nosudo"
+OUT="$(TDIR=$T DA_GH="$T/bin/gh" DA_HOST_SSH="$T/bin/ssh" DA_SUDO="$T/bin/nosudo" \
+       bash "$SCRIPT" --pr 7 --repo hf7y/fixture 2>&1)"; R=$?
 rc  "A2b a path behind a sealed ancestor is BLIND (6), not UNMET" 6 "$R"
 has "A2c and says absence was not established" "$OUT" "absence NOT established"
+
+cat > "$T/bin/yessudo" <<YS
+#!/usr/bin/env bash
+[ "\$1" = -n ] && shift
+[ "\$1" = true ] && exit 0
+chmod 755 "$T/sealed"; "\$@"; r=\$?; chmod 000 "$T/sealed"; exit \$r
+YS
+chmod +x "$T/bin/yessudo"
+OUT="$(TDIR=$T DA_GH="$T/bin/gh" DA_HOST_SSH="$T/bin/ssh" DA_SUDO="$T/bin/yessudo" \
+       bash "$SCRIPT" --pr 7 --repo hf7y/fixture 2>&1)"; R=$?
+rc  "A2b2 the other direction: a prober that CAN see resolves it, not BLIND" 0 "$R"
+chmod 755 "$T/sealed"
 
 mkgh "$BODY_HDR
 <!-- DELIVERS -->

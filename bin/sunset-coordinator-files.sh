@@ -133,9 +133,8 @@ find_producers() {
   done)
   code_files=$(printf '%s\n%s' "$code_files" "$shebang_files" | grep -v '^$' | sort -u)
 
-  # A COMMENT IS NOT A PRODUCER, and this is the difference between a usable
-  # mechanism and one that can never report clean. Across the estate almost
-  # every code hit is rationale prose -- "see FOCUS.md #8", "the 2026-07-21
+  # A COMMENT IS NOT A PRODUCER -- almost every code hit is rationale prose
+  # ("see FOCUS.md #8"), not a live writer, so counting them never reports clean.
   local py_files other_files py_matches awk_matches scanner
   py_files=$(printf '%s\n' "$code_files" | while IFS= read -r f; do
       [ -n "$f" ] || continue
