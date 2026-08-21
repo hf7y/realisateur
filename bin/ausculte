@@ -204,7 +204,7 @@ if want delivery; then
   else record delivery BLIND 'delivery-audit not present'; fi
 fi
 
-# Each ledger ends in a REASON column; nothing has ever looked at it.
+# Each ledger ends in a REASON column nothing has ever read.
 if want fleet; then
   led="$(${AUSCULTE_SSH:-ssh} -o BatchMode=yes "${AUSCULTE_FLEET_HOST:-monkey}" '
     n=0
@@ -223,11 +223,15 @@ if want fleet; then
       else
         # DONE and COOLDOWN are both fine -- COOLDOWN is the pacer holding a
         # finished account back on purpose.
+        # A BLANK REASON reads as though the account answered (scheduler#261).
         stuck="$(printf '%s\n' "$led" | grep -v '^FLEET-LEDGERS' \
-                 | awk -F'\t' '$7 == "NOT-DONE" {print $3": "$8}' || true)"
+                 | awk -F'\t' '$7 == "NOT-DONE" {
+                     r = $8; sub(/^[ \t]+/, "", r)
+                     print $3": "(r == "" ? "*** NO REASON RECORDED ***" : r) }' || true)"
         n_stuck="$(printf '%s' "$stuck" | grep -c . || true)"
+        n_mute="$(printf '%s' "$stuck" | grep -c 'NO REASON RECORDED' || true)"
         if [ "${n_stuck:-0}" -gt 0 ]; then
-          record fleet DOWN "$n_stuck of $n_led account(s) ended NOT-DONE: $(printf '%s' "$stuck" | head -1 | cut -c1-90)"
+          record fleet DOWN "$n_stuck of $n_led account(s) ended NOT-DONE${n_mute:+, $n_mute without saying why}: $(printf '%s' "$stuck" | head -1 | cut -c1-90)"
         else
           record fleet OK "$n_led account(s) finished their last run"
         fi
