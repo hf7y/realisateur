@@ -89,6 +89,30 @@ has "I: the closeout hook is the command" "$WANT" "subagent-closeout.sh"
 [ "$(printf '%s' "$WANT" | jq -r '.SubagentStop[0].hooks[0].type')" = "command" ] \
   && ok "I: the hook type is command" || bad "I: the hook type is not command"
 
+mkdir -p "$T/hj/acctj/.claude/hooks"
+printf '%s' "$WANT" | jq '{hooks:.}' > "$T/hj/acctj/.claude/settings.json"
+SRC="$T/hook-src.sh"; printf '#!/usr/bin/env bash\necho current\n' > "$SRC"; chmod +x "$SRC"
+
+printf '#!/usr/bin/env bash\necho stale\n' > "$T/hj/acctj/.claude/hooks/subagent-closeout.sh"
+O="$(HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$SRC" "$SCRIPT" 2>&1)"
+case "$O" in *"hook FILE is"*) ok "J: a stale hook file is reported as DRIFT" ;;
+  *) bad "J: stale hook file not reported: $O" ;; esac
+
+O="$(HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$SRC" "$SCRIPT" --apply 2>&1)"
+if [ "$(cat "$T/hj/acctj/.claude/hooks/subagent-closeout.sh")" = "$(cat "$SRC")" ]; then
+  ok "J: --apply refreshes it from the build"
+else
+  bad "J: --apply did not refresh the hook file"
+fi
+
+O="$(HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$SRC" "$SCRIPT" 2>&1)"
+case "$O" in *"hook FILE is"*) bad "J: a current hook file should not report drift: $O" ;;
+  *) ok "J: a current hook file stops being a finding" ;; esac
+
+O="$(HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$T/no-such-build" "$SCRIPT" 2>&1)"
+case "$O" in *"BLIND the hook file source"*) ok "J: an unreadable build source says BLIND, not ok" ;;
+  *) bad "J: unreadable source did not report BLIND: $O" ;; esac
+
 echo
 echo "  passed: $pass  failed: $fail"
 [ "$fail" -eq 0 ]
