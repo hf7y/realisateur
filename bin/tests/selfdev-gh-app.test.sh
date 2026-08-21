@@ -239,8 +239,12 @@ has "J ...and says why"  "$outL" "only accepted after --credential"
 
 # The wiring and the parser have to agree about the flag name, or --wire
 # writes a helper line the parser rejects -- which is how this shipped.
-outW="$(grep -o 'credential\.\"https://github\.com\".helper.*' "$SCRIPT" | head -1)"
+# Read the VALUE --wire writes: it unsets the key first, so the first line
+# mentioning the key is that unset.
+outW="$(grep -o 'want_helper=.*' "$SCRIPT" | head -1)"
 has "J --wire writes a helper git will call as '<self> --credential <op>'" "$outW" "--credential"
+has "J --wire clears the key first, or a second value silently wins" "$(cat "$SCRIPT")" "--unset-all credential"
+has "J --wire reads the helper back out of git rather than trusting the write" "$(cat "$SCRIPT")" "got_helper"
 
 # --- K: --wire writes the ACCOUNT as author, never the App bot -----------------
 # THE BUG THIS CASE EXISTS FOR, found live on ecosim@monkey 2026-08-07:

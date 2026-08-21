@@ -129,8 +129,17 @@ probe_one() {
       *)             [ -n "$line" ] && token="other" ;;
     esac
   fi
-  local ownrepo; ownrepo="$(id -un)"
-  local wo; wo="$(git config --global --get-all "url.git@github-$ownrepo:$owner/$ownrepo.git.insteadof" 2>/dev/null | wc -l | tr -d ' ')"
+  # "WIRED" was url.insteadOf; now the helper's shape, counts ZERO (#171).
+  local wo; wo="$(git config --global --get-all credential."https://github.com".helper 2>/dev/null)"
+  case "$(printf '%s' "$wo" | grep -c .)" in
+    0) wo=none ;;
+    1) case "$wo" in
+         *selfdev-gh-app.sh*) wo=app ;;
+         *"gh auth git-credential"*) wo=gh ;;
+         *) wo=other ;;
+       esac ;;
+    *) wo=multi ;;
+  esac
   printf '%s\t%s\t%s\t%s\t%s\t%s' "$pem_state" "$conf_state" "$keymatch" "$token" "$extra" "$wo"
   local r wr
   for r in "$@"; do
@@ -200,6 +209,7 @@ cred_grade_account() {
   fi
 
   case "$token" in
+    # gho_ stays the baseline: git pushes as the App, `gh` uses this token.
     gho) : ;;
     missing) bad "$acct: no gh-token at all (~/.config/gh/hosts.yml unreadable or absent) -- gh CLI cannot authenticate: no issue filing, no deploy-key registration"; drift=1 ;;
     pat|other)
@@ -227,13 +237,19 @@ cred_grade_account() {
     done
   fi
 
-  [ "$wire_own" = 3 ] || { bad "$acct: own-repo git wiring is $wire_own/3 url.insteadOf spellings -- cannot push via the deploy-key channel"; drift=1; }
+  case "$wire_own" in
+    app) : ;;
+    none)  bad "$acct: no git credential helper -- https pushes have no credential at all"; drift=1 ;;
+    gh)    bad "$acct: git credential helper is still \`gh auth git-credential\`, i.e. the shared gho_ token -- run selfdev-gh-app.sh --wire"; drift=1 ;;
+    multi) bad "$acct: credential.https://github.com.helper holds MORE THAN ONE value -- git takes the first that answers, so which credential pushes is not decidable from config. This is the shape that made --wire report OK on a write it never made"; drift=1 ;;
+    *)     bad "$acct: git credential helper is '$wire_own', not the App"; drift=1 ;;
+  esac
   local r i=0
   for r in $CRED_SHARED_REPOS; do
     i=$((i + 1))
     local w=""
     case "$i" in 1) w="$wire_r1" ;; 2) w="$wire_r2" ;; 3) w="$wire_r3" ;; esac
-    [ "$w" = 3 ] || { bad "$acct: $r git wiring is ${w:-0}/3 url.insteadOf spellings"; drift=1; }
+    [ "${w:-0}" = 0 ] || { bad "$acct: $r still has ${w} url.insteadOf rewrite(s) -- ssh wins over the helper, so this repo keeps pushing as a deploy key"; drift=1; }
   done
 
   [ "$drift" -eq 0 ] && ok "$acct: matches baseline"
@@ -376,11 +392,8 @@ cmd_audit() {
 # ============================================================================
 #
 # Idempotent, fails loud, NEVER touches ~/.config/gh/hosts.yml and NEVER
-# deletes an "extra" file -- see the header. Every step is DELEGATED to a
-# script that already exists and is already tested (wire-selfdev-git.sh), or
-# is the same shared-credential COPY provision-selfdev-user.sh already does
-# for the claude/gh tokens -- no new way to mint or register a credential is
-# invented here.
+# deletes an "extra" file. Every step is DELEGATED to a script that already
+# exists and is already tested -- no new way to mint a credential here.
 cmd_apply() {
   local acct="$1"
   echo "== selfdev-credentials --apply $acct -- $CRED_HOST =="
@@ -422,36 +435,24 @@ cmd_apply() {
     echo "  --    $acct already reads the host-wide App credential; left alone"
   fi
 
-  # --- 2. git wiring: DELEGATED to the account's own wire-selfdev-git.sh ----
-  cred_apply_wiring() { # cred_apply_wiring <repo> <rw-or-empty> <have>
-    local repo="$1" rw="$2" have="$3"
-    if [ "$have" = 3 ]; then
-      echo "  --    $repo git wiring already 3/3 for $acct; left alone"
-      return 0
-    fi
-    act "wire-selfdev-git.sh $repo --apply${rw:+ --rw} as $acct"
-    local remote_script="\$HOME/Documents/Projects/realisateur/bin/wire-selfdev-git.sh"
+  # --- 2. the push path: the App over https, not per-repo ssh deploy keys --
+  local leftover=$(( ${wire_r1:-0} + ${wire_r2:-0} + ${wire_r3:-0} ))
+  if [ "$wire_own" = app ] && [ "$leftover" -eq 0 ]; then
+    echo "  --    $acct already pushes as the App over https; left alone"
+  else
+    act "selfdev-gh-app.sh --wire as $acct (helper=$wire_own, $leftover leftover rewrite(s))"
     if "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \
-         "sudo -n -u '$acct' bash -lc \"[ -x $remote_script ] && '$remote_script' '$repo' --apply${rw:+ --rw}\""; then
-      echo "  OK    $repo wired for $acct"
+         "sudo -n -u '$acct' bash -lc '${CRED_APP_WIRE:-/usr/local/libexec/selfdev/selfdev-gh-app.sh} --wire'"; then
+      echo "  OK    $acct wired to the App"
       changed=1
-      return 0
+    else
+      echo "  FLAG  wiring $acct FAILED -- see selfdev-gh-app.sh's own output above" >&2
+      failed=1
     fi
-    echo "  FLAG  wiring $repo for $acct FAILED -- see wire-selfdev-git.sh's own output above" >&2
-    failed=1
-    return 1
-  }
-  cred_apply_wiring "$(cred_own_repo "$acct")" --rw "$wire_own"
-  local r i=0
-  for r in $CRED_SHARED_REPOS; do
-    i=$((i + 1))
-    local w=""
-    case "$i" in 1) w="$wire_r1" ;; 2) w="$wire_r2" ;; 3) w="$wire_r3" ;; esac
-    cred_apply_wiring "$r" "" "$w"
-  done
+  fi
 
   # --- 3. what this NEVER does, said out loud in the run itself -------------
-  echo "  --    ~/.config/gh/hosts.yml (the gh-token) was not touched -- removing a working credential is a decision, not a converge step"
+  echo "  --    ~/.config/gh/hosts.yml (the gh-token) was not touched -- gho_ is the baseline and stays; the App is the PUSH credential, not a replacement for gh's own auth"
   if [ "$extra" != "-" ]; then
     echo "  --    extra file(s) under ~/.config/selfdev/ ($extra) were not touched -- declare them in CRED_GRANTS or remove them by hand"
   fi
