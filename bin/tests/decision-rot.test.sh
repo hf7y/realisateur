@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
 # decision-rot.test.sh -- witness for bin/decision-rot.sh.
 #
-#
 # WHAT IS PINNED, and why each case exists rather than being a nice-to-have:
 #
 #   * THE TWO TRAPS THAT ALREADY ATE ANSWERS.
 #     B: an answer on a CLOSED issue. It must count as ANSWERED (so `--state
 #        open` can never be reintroduced for the answer scan) and must NOT
 #        count as ROT (closed is the estate's own signal for handled).
-#     C: an agent's own stamped comment under the shared `hf7y` token, which
-#        is byte-indistinguishable from Zach's except for the trailing stamp.
-#        A repo where the ONLY owner comments are stamped has zero answers.
-#   * D: the stamp is read on the LAST NON-BLANK LINE ONLY. A stamp quoted
-#        mid-body out of another comment must not disqualify a real answer,
-#        and trailing blank lines must not hide a real stamp.
+#     C: an agent's own stamped comment, byte-indistinguishable from Zach's
+#        but for the trailing stamp. Only-stamped comments means zero answers.
+#   * D: the stamp is the LAST NON-BLANK LINE ONLY -- a mid-body quote must
+#        not disqualify a real answer, nor trailing blanks hide a real stamp.
 #   * E: silent zero. A `gh` failure must exit 6, never 0-with-no-rot.
+#   * C'': a stamped RELAY counts; without its marker it does not (#430).
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -81,6 +79,27 @@ OUT="$(run "$T/c.json" o/r)"; RC=$?
 rc    "C1 exits 0 -- a stamped comment is not an answer" 0 "$RC"
 has   "C2 zero answered" "$OUT" "0        0"
 hasnt "C3 not listed as rotting" "$OUT" "#9"
+
+echo "-- C''. a RELAYED answer counts, or a spoken decision dies with the session"
+cat > "$T/c3.json" <<EOF
+[
+ {"number":10,"title":"agent wrote down what Zach said out loud","state":"OPEN","labels":[],
+  "comments":[{"author":{"login":"owner"},"body":"DECISION (Zach, in conversation): delete it.\n\n<!-- decision-by: zach 2026-08-21 -->\n\n$STAMP","createdAt":"2026-08-03T00:00:00Z"}]}
+]
+EOF
+OUT="$(run "$T/c3.json" o/r)"; RC=$?
+rc  "C''1 exits 1 -- the relay IS an answer, and it is still open" 1 "$RC"
+has "C''2 counts it answered" "$OUT" "1        1"
+has "C''3 dated from the relay" "$OUT" "answered 2026-08-03"
+# Without the marker this is case C: stamped, therefore silent.
+cat > "$T/c4.json" <<EOF
+[
+ {"number":10,"title":"same comment, no marker","state":"OPEN","labels":[],
+  "comments":[{"author":{"login":"owner"},"body":"DECISION (Zach, in conversation): delete it.\n\n$STAMP","createdAt":"2026-08-03T00:00:00Z"}]}
+]
+EOF
+OUT="$(run "$T/c4.json" o/r)"; RC=$?
+rc  "C''4 the same relay WITHOUT the marker still does not count" 0 "$RC"
 
 echo "-- C'. the same issue, once the human actually replies, IS rot"
 cat > "$T/c2.json" <<EOF
