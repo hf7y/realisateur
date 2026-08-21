@@ -58,7 +58,8 @@ export STUB_REPLY="$STUB/reply" STUB_CALLS="$STUB/calls" STUB_HOLDER="$STUB/hold
 STUB_PGREP="$STUB/pgrep-out"
 : > "$STUB_PGREP"
 STUB_PROBE_DEAD=""
-export STUB_PGREP STUB_PROBE_DEAD
+ZAXON_SESSION_PATH="$STUB/whatsapp-session"
+export STUB_PGREP STUB_PROBE_DEAD ZAXON_SESSION_PATH
 # A fixture service, so this suite needs no project's real files: zaxon's
 # container lives in hf7y/crt now (crt owns it), which may not be cloned here.
 mkdir -p "$STUB/svc/zaxon" && printf 'services: {}\n' > "$STUB/svc/zaxon/compose.yaml"
@@ -74,7 +75,7 @@ has "and tells the operator the exact next command" "$out" "--terminate hermes"
 
 # THE CASE #425 WAS FILED FOR: an empty distro list, a real holder.
 : > "$STUB_CALLS"; : > "$STUB_REPLY"; : > "$STUB_HOLDER"
-printf '4711 python -m zaxon --session /home/zaxon/.hermes/whatsapp/session\n' > "$STUB_PGREP"
+printf '4711 python -m zaxon --session %s\n' "$ZAXON_SESSION_PATH" > "$STUB_PGREP"
 out="$(bash "$DEPLOY" zaxon 2>&1)"; rc=$?
 is  "a bare-process holder with NO running distro still refuses" "$rc" "1"
 has "and names the process holding it" "$out" "4711"
