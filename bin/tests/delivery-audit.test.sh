@@ -74,10 +74,30 @@ OUT="$(TDIR=$T DA_GH="$T/bin/gh" DA_HOST_SSH="$T/bin/ssh" bash "$SCRIPT" --pr 7 
 rc  "A2a a visible, present path is MET" 0 "$R"
 
 chmod 000 "$T/sealed"
-OUT="$(TDIR=$T DA_GH="$T/bin/gh" DA_HOST_SSH="$T/bin/ssh" bash "$SCRIPT" --pr 7 --repo hf7y/fixture 2>&1)"; R=$?
-chmod 755 "$T/sealed"
+# A stub that refuses, so BLIND here means "nothing could look", not "this
+# runner happens to hold no sudo".
+printf '#!/usr/bin/env bash\nexit 1\n' > "$T/bin/nosudo"; chmod +x "$T/bin/nosudo"
+OUT="$(TDIR=$T DA_GH="$T/bin/gh" DA_HOST_SSH="$T/bin/ssh" DA_SUDO="$T/bin/nosudo" \
+       bash "$SCRIPT" --pr 7 --repo hf7y/fixture 2>&1)"; R=$?
 rc  "A2b a path behind a sealed ancestor is BLIND (6), not UNMET" 6 "$R"
 has "A2c and says absence was not established" "$OUT" "absence NOT established"
+
+# The other direction: a sealed home is the COMMON shape of a per-account
+# claim, so an escalated prober must resolve it rather than leave it BLIND.
+# It stands in for a uid the mode bits do not stop, by lifting them for the
+# duration of the probe -- the fixture cannot become root, but this is the
+# same observable: the escalated prober sees what the plain one could not.
+cat > "$T/bin/yessudo" <<YS
+#!/usr/bin/env bash
+[ "\$1" = -n ] && shift
+[ "\$1" = true ] && exit 0
+chmod 755 "$T/sealed"; "\$@"; r=\$?; chmod 000 "$T/sealed"; exit \$r
+YS
+chmod +x "$T/bin/yessudo"
+OUT="$(TDIR=$T DA_GH="$T/bin/gh" DA_HOST_SSH="$T/bin/ssh" DA_SUDO="$T/bin/yessudo" \
+       bash "$SCRIPT" --pr 7 --repo hf7y/fixture 2>&1)"; R=$?
+rc  "A2b2 an escalated prober that CAN see resolves it instead of BLIND" 0 "$R"
+chmod 755 "$T/sealed"
 
 mkgh "$BODY_HDR
 <!-- DELIVERS -->

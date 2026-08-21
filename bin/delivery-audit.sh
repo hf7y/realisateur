@@ -33,6 +33,9 @@ CLI_EXITS='  0  every claim of every audited PR is met
 cli_guard "$@"
 
 DA_HOST_SSH="${DA_HOST_SSH:-ssh}"
+# Overridable so the sealed-path cases are hermetic: whether the RUNNER
+# happens to hold sudo must not decide what the suite asserts.
+DA_SUDO="${DA_SUDO:-sudo}"
 DA_GH="${DA_GH:-gh}"
 DAYS=28; REPO=""; ONE_PR=""
 while [ $# -gt 0 ]; do
@@ -90,10 +93,26 @@ check_claim() { # <pr> <claim>
     # descended: traversable and child missing -> absent; sealed -> BLIND.
     local probe='p="$1"; while [ ! -e "$p" ] && [ "$p" != / ]; do p="$(dirname "$p")"; done
       [ "$p" = "$1" ] && exit 0; [ -x "$p" ] || exit 9; exit 1'
+    # A home sealed at 0700 is the COMMON shape of a per-account claim, not an
+    # exotic one: probed as an ordinary user, every such claim reads BLIND
+    # forever and the ledger can never say "done". Look harder before saying
+    # we cannot see -- rc 9 keeps its meaning only when the escalated probe is
+    # unavailable too.
     if [ "$where" = localhost ]; then
       bash -c "$probe" _ "$path"; rc=$?
+      [ "$rc" = 9 ] && "$DA_SUDO" -n true 2>/dev/null &&
+        { "$DA_SUDO" -n bash -c "$probe" _ "$path"; rc=$?; }
     else
       "$DA_HOST_SSH" -o BatchMode=yes "$where" "bash -s -- '$path'" <<<"$probe" >/dev/null 2>&1; rc=$?
+      if [ "$rc" = 9 ]; then
+        # `sudo -n` denied exits 1, which is this probe's ABSENT -- so the
+        # escalation must prove it ran before its answer is believed.
+        "$DA_HOST_SSH" -o BatchMode=yes "$where" \
+          "sudo -n true 2>/dev/null && sudo -n bash -s -- '$path'" \
+          <<<"$probe" >/dev/null 2>&1; local src=$?
+        "$DA_HOST_SSH" -o BatchMode=yes "$where" 'sudo -n true' >/dev/null 2>&1 &&
+          rc=$src
+      fi
     fi
     case "$rc" in
       0) printf '  MET    #%s  path:%s on %s\n' "$pr" "$path" "$where"; met=$((met+1)) ;;
