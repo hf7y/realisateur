@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 # ausculte-cadence.sh -- put the health verb on a clock, and give it a mouth.
 #
-# Until this file NOTHING invoked `ausculte`: it was typed by a human or it did
-# not run, which is how a refusing release channel and three dead accounts
-# stayed unseen for days.
+# Before this, nothing invoked `ausculte` -- it ran when a human typed it.
 #
 # TRAP: two consecutive DOWNs escalate, not one; the streak is on disk.
 # TRAP: it escalates through the channel ausculte probes, so the issue is filed
