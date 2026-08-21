@@ -3,14 +3,10 @@
 # channel, and the alarm that fires when the clock stops.
 #
 # TRAPS (the rest of this header is in the vault):
-# OPERATION is fail-open: an unreachable release channel does NOT stop the
-# account. It keeps running the build it already has, which was fully verified
-# when it was installed, and this tick exits 3 BLIND and says so. BUILD-
-# DISCIPLINE's first rule is "fail LOUD", not "fail STOPPED": a hard refusal
-# that silently halts a nightly tick is just a different silent failure, and
-# it converts a network blip into an outage. A verified-but-older build
-# running is a known, named, rollback-able state. Exit 3 and a status line are
-# the loudness; halting would buy nothing and cost a night's work.
+# OPERATION is fail-open: an unreachable channel does NOT stop the account. It
+# keeps the build it has, which was verified when installed, and this tick
+# exits 3 BLIND saying so. The rule is "fail LOUD", not "fail STOPPED" --
+# halting a nightly on a network blip is just a different silent failure.
 #
 # EXIT CODES
 
@@ -31,8 +27,7 @@ CLI_EXITS='  0  on the current build and the clock is alive
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-# The support library sits beside this script in the bootstrap, and beside it
-# in the repo. Both layouts are the same relative path, on purpose.
+# The support library sits beside this script in both layouts, on purpose.
 . "$(dirname "${BASH_SOURCE[0]}")/lib/propagation-set.sh"
 . "$(dirname "${BASH_SOURCE[0]}")/lib/host-check.sh"
 

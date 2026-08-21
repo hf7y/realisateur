@@ -84,6 +84,7 @@ OWN_MINE="
 bin/tests/registry-marker.test.sh          realisateur
 bin/silence-audit.sh                       realisateur
 bin/delivery-audit.sh                      realisateur
+bin/lib/roster-set.sh                      realisateur
 bin/tests/delivery-audit.test.sh           realisateur
 bin/monkey-vdi-to-internal.sh              realisateur
 bin/monkey-watch.sh                        realisateur

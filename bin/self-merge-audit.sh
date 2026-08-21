@@ -25,11 +25,8 @@ OWNER="${SMA_OWNER:-hf7y}"
 GH_BIN="${GH_BIN:-gh}"
 COUNT="${SMA_COUNT:-10}"   # merged PRs inspected per repo, most recent first
 
-ROSTER=(
-  baudin bibliothecaire chezz crt ecosim gardien groc-mangr nine-speakers
-  realisateur scheduler secretaire senechal sequestria vim-arcade wtul
-  verbs front-door basheur
-)
+# shellcheck source=bin/lib/roster-set.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/roster-set.sh"
 
 STRICT=0
 VERBOSE=0
