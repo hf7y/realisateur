@@ -210,13 +210,16 @@ cat <<EOF
 
 Arming is one reviewed change, deliberately not made here:
 
-  1. in the scheduler repo, schedule/_paced.$HOST.conf: flip $PROJECT's row
-     from |0| to |1|, commit, push.
-  2. as $PROJECT on this host:
-       cd ~/Documents/Projects/scheduler && git pull --ff-only \\
-         && ./bin/sync-crontab.sh --apply
+  1. in a scheduler clone -- conf fields + the rotation row, mechanically:
+       $HERE/enrole-selfdev.sh $PROJECT --check      # writes nothing
+       $HERE/enrole-selfdev.sh $PROJECT --apply      # then review its diff, PR it
+     (it is idempotent, and --retire is its exact reverse)
+  2. as $PROJECT on this host, once that lands:
+       $HERE/enrole-selfdev.sh $PROJECT --apply --sync
+     which is `git pull --ff-only && ./bin/sync-crontab.sh --apply` as $PROJECT.
   3. confirm schedule/FREEZE names $PROJECT@$HOST -- without it, freeze-check
-     refuses dispatch no matter what the rotation says.
+     refuses dispatch no matter what the rotation says. THIS ONE IS A HUMAN'S:
+     enrole-selfdev.sh reports the line and will not write it.
 
 Adding a participant spends a shared weekly quota. That is a judgment, and it
 is why every guard in this ecosystem stops one step short of it.
