@@ -21,12 +21,15 @@ exit 1
 EOF
 chmod +x "$T/bin/nosudo"
 
-MYUID="$(id -u)"   # acctb's real uid: only a real file proves cross-account
+MYUID="$(id -u)"   # acctb's real uid: only a real file proves it
 export CA_UID_MIN="$MYUID" CA_UID_MAX="$MYUID"
+OTHER_A=65530; OTHER_B=65531   # band is MYUID alone: a line sharing it joins
+[ "$MYUID" = "$OTHER_A" ] && OTHER_A=65528
+[ "$MYUID" = "$OTHER_B" ] && OTHER_B=65529
 cat > "$T/passwd.txt" <<EOF
 root:x:0:0::/root:/bin/bash
-zach:x:1000:1000::/home/zach:/bin/bash
-accta:x:3001:3001::$T/home/accta:/bin/bash
+zach:x:$OTHER_A:$OTHER_A::/home/zach:/bin/bash
+accta:x:$OTHER_B:$OTHER_B::$T/home/accta:/bin/bash
 acctb:x:$MYUID:$MYUID::$T/home/acctb:/bin/bash
 EOF
 
