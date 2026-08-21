@@ -17,7 +17,7 @@ bang() { printf '#!/usr/bin/env bash\necho "boom from %s"\nexit 1\n' "$(basename
 
 echo "-- A. no arguments is BLIND, not a silent clean run"
 "$SCRIPT" >/dev/null 2>&1
-rc "A1 exits 2 with no suite paths" 2 "$?"
+rc "A1 exits 6 (BLIND) with no suite paths" 6 "$?"
 
 echo "-- B. all suites pass -> exit 0"
 good "$T/b1.sh"; good "$T/b2.sh"

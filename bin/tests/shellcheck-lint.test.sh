@@ -117,7 +117,7 @@ rc=0
 PATH="$T/pathdir" bash "$T/d/bin/shellcheck-lint.sh" >/dev/null 2>&1 || rc=$?
 check "D shellcheck absent: BLIND (exit 2), not 0" 2 "$rc"
 
-# --- E: zero shell files is BLIND (exit 2), never success -------------------
+# --- E: zero shell files is BLIND (exit 6), never success -------------------
 if [ "$HAVE_SC" -eq 1 ]; then
   mkdir -p "$T/e/bin"
   cp "$GUARD" "$T/e/bin/shellcheck-lint.sh"
@@ -130,7 +130,7 @@ if [ "$HAVE_SC" -eq 1 ]; then
   git -C "$T/e" add README.md 2>/dev/null
   git -C "$T/e" commit -qm fixture 2>/dev/null
   rc=0; bash "$T/e/bin/shellcheck-lint.sh" >/dev/null 2>&1 || rc=$?
-  check "E zero shell files: BLIND (exit 2), not 0" 2 "$rc"
+  check "E zero shell files: BLIND (exit 6), not 0" 6 "$rc"
 else
   skip "E zero files" "shellcheck absent"
 fi

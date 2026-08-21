@@ -95,7 +95,7 @@ has   "I1 and says how many files it read"     "$out" "tracked files, no hardcod
 # first.
 mkdir -p "$WORK/notarepo"
 out="$(bash "$LINT" "$WORK/notarepo" 2>&1)"; rc=$?
-check "I2 a directory that is no repo is BLIND (exit 2), not 0" "$rc" "2"
+check "I2 a directory that is no repo is BLIND (exit 6), not 0" "$rc" "6"
 has   "I2 and says so in those words"          "$out" "BLIND"
 
 # The guard, run where it is meant to run. This is the assertion that would

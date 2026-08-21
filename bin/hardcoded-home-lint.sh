@@ -19,7 +19,7 @@
 #
 # exit 0  no hardcoded home in code
 # exit 1  at least one found -- named, with file and line
-# exit 2  BLIND: could not scan (not a repo, no files matched). NEVER 0.
+# exit 6  BLIND: could not scan (not a repo, no files matched). NEVER 0.
 #         "Found nothing" and "nothing is wrong" are different answers, and
 #         conflating them is the single most repeated fault in this ecosystem.
 set -uo pipefail
@@ -27,7 +27,7 @@ set -uo pipefail
 ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 [ -n "$ROOT" ] && [ -d "$ROOT" ] || {
   echo "hardcoded-home-lint: BLIND: not a git repository and no path given" >&2
-  exit 2
+  exit 6
 }
 
 # WHAT COUNTS AS EXECUTABLE CODE IS THE SHEBANG, NOT THE FILENAME.
@@ -46,7 +46,7 @@ done < <(git -C "$ROOT" ls-files 2>/dev/null | sort -u)
 if [ "${#files[@]}" -eq 0 ]; then
   echo "hardcoded-home-lint: BLIND: matched zero tracked files under $ROOT" >&2
   echo "hardcoded-home-lint: this is 'I cannot see', NOT 'nothing to report'." >&2
-  exit 2
+  exit 6
 fi
 
 found=0

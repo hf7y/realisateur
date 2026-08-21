@@ -33,9 +33,9 @@ set -uo pipefail
 ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 [ -n "$ROOT" ] && [ -d "$ROOT" ] || {
   echo "BLIND: no git worktree root resolved from $PWD -- this guard could not look." >&2
-  exit 2
+  exit 6
 }
-cd "$ROOT" || { echo "BLIND: cannot cd to $ROOT" >&2; exit 2; }
+cd "$ROOT" || { echo "BLIND: cannot cd to $ROOT" >&2; exit 6; }
 
 # The pattern. `git ... worktree add` with anything (or nothing) between, so
 # `git -C "$repo" worktree add` and `git worktree add` both match, and
@@ -96,7 +96,7 @@ SCANNED=(); for f in ${FILES[@]+"${FILES[@]}"}; do excluded "$f" || SCANNED+=("$
 # CI defect in this repository and a lint that lints nothing is its twin.
 if [ "${#SCANNED[@]}" -eq 0 ]; then
   echo "BLIND: no tracked shell file outside the test tree under $ROOT -- this guard scanned nothing."
-  exit 2
+  exit 6
 fi
 
 flags=0

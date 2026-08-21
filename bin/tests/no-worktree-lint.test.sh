@@ -197,7 +197,7 @@ echo "== D. IT REFUSES RATHER THAN REPORTS CLEAN =="
 # repeatedly; a scan of zero files must never grade as green.
 mkdir -p "$WORK/notarepo"
 out="$(cd "$WORK/notarepo" && bash "$LINT" 2>&1)"; rc=$?
-check "D1 a non-repo is BLIND, not clean" "$rc" "2"
+check "D1 a non-repo is BLIND (6), not clean" "$rc" "6"
 has   "D1 and says BLIND" "$out" "BLIND"
 
 # D2 -- a git repo with no tracked shell at all is BLIND too, for the same
@@ -207,7 +207,7 @@ d="$WORK/emptyrepo"; mkdir -p "$d"
 G "$d" init -q -b main . >/dev/null
 printf 'x\n' > "$d/README.md"; G "$d" add -A >/dev/null; G "$d" commit -qm init >/dev/null
 run "$d"
-check "D2 a repo with no shell to scan is BLIND" "$rc" "2"
+check "D2 a repo with no shell to scan is BLIND (6)" "$rc" "6"
 has   "D2 and says BLIND" "$out" "BLIND"
 
 echo

@@ -75,7 +75,7 @@ if [ "${#slugs[@]}" -eq 0 ]; then
 fi
 if [ "${#slugs[@]}" -eq 0 ]; then
   echo "$CLI_NAME: BLIND -- no repo named and $SCHED_ROOT/schedule has no REPO_URL to fall back to" >&2
-  exit 2
+  exit 6
 fi
 
 blind=0
@@ -206,6 +206,6 @@ printf '  SCRIPTABLE    deploy keys, rulesets, branch protection, hardcoded owne
 printf '  HUMAN-ONLY    secrets, Pages custom domain re-verification, Apps Script token + redeploy, GitHub App re-auth, self-dev account rewiring -- each needs a person in a browser or at a keyboard the automation cannot reach.\n'
 
 if [ "$blind" -eq 1 ]; then
-  exit 2
+  exit 6
 fi
 exit 0
