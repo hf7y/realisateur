@@ -8,12 +8,11 @@
 # GATE: strict --target $TREE
 #
 # TRAPS (the rest of this header is in the vault):
-# Other surveys answer "what is the state of the projects?". This answers
-# "can this sensor tell nothing-there from could-not-look from did-not-look?"
-# -- three world-states every mechanism here maps onto one symbol, silence.
+# Other surveys answer "what is the state of the projects?". This asks whether
+# a sensor can tell nothing-there from could-not-look from did-not-look --
+# three world-states every mechanism here maps onto one symbol, silence.
 # Ashby binds on the SENSOR too: one output symbol cannot regulate three
-# states, and no quantity of added checks fixes that; you must add symbols.
-# Hence it audits MECHANISMS, not projects.
+# states, and no added checks fix that. Hence it audits MECHANISMS.
 #
 
 set -uo pipefail
@@ -64,17 +63,16 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-# Two scope knobs at once is a question with two subjects. A registry name and
-# a directory are different domains, and picking one for the caller is the
-# silent-misparse behaviour this script exists to detect.
+# Two scope knobs at once is a question with two subjects: a registry name and
+# a directory are different domains, and picking one is the silent misparse
+# this script exists to detect.
 if [ -n "$TARGET_GIVEN" ] && [ -n "$ONLY" ]; then
   echo "--target <dir> and <project> name different domains (a tree vs a registry entry); pass one" >&2
   exit 2
 fi
 
-# Resolve to an absolute path ONCE, here, so every message below names the
-# same thing. A failure to resolve leaves TARGET empty and is reported as
-# BLIND at the end -- never as a clean audit of nothing.
+# Resolve to an absolute path ONCE so every message names the same thing. A
+# failure leaves TARGET empty and is BLIND at the end, never a clean audit.
 if [ -n "$TARGET_GIVEN" ]; then
   TARGET="$(cd "$TARGET_GIVEN" 2>/dev/null && pwd)" || TARGET=""
 fi
@@ -86,7 +84,7 @@ flag() { echo "  FLAG [$1] $2"; flags=$((flags+1)); }
 note() { echo "  NOTE [$1] $2"; }
 
 # ---------------------------------------------------------------- domains
-# Everything below reports the domain it actually read. A negative is only
+# Everything below reports the domain it read. A negative is only
 # ever asserted over that domain, never over "the ecosystem".
 
 read_crontabs() {
@@ -201,10 +199,19 @@ check_self_witness() {
   done < <(read_crontabs)
 }
 
+# prop_is_local <repo> <script> -- true when that repo's own propagation-set
+# classifies it LOCAL. An absent classification is not an exemption.
+prop_is_local() {
+  local repo="$1" name="$2" set="$1/bin/lib/propagation-set.sh" locals
+  [ -r "$set" ] || return 1
+  locals="$(sed -n '/^PROP_LOCAL_SCRIPTS="/,/^"/p' "$set" 2>/dev/null)"
+  case " $(printf '%s' "$locals" | tr '\n' ' ') " in *" $name "*) return 0 ;; esac
+  return 1
+}
+
 check_home_scoped() {
-  # Count dispatch accounts first. With one account, $HOME-scoping is
-  # correct and this check must stay quiet -- it is only a defect when the
-  # ecosystem actually spans accounts.
+  # With one account, $HOME-scoping is correct and this must stay quiet: it
+  # is a defect only when the ecosystem spans accounts.
   local accts name repo sh
   accts="$(read_crontabs | grep -cE $'\t[0-9*]' || true)"
   local n_acct
@@ -217,6 +224,8 @@ check_home_scoped() {
     [ -z "${repo:-}" ] && continue
     while IFS= read -r sh; do
       [ -f "$sh" ] || continue
+      # A LOCAL-CLASS SCRIPT NEVER LEAVES THIS HOST, so $HOME is its scope.
+      if prop_is_local "$repo" "$(basename "$sh")"; then continue; fi
       # reads per-job run state under $HOME, but never mentions another account
       if grep -qE '\$HOME/\.local/share|~/\.local/share' "$sh" 2>/dev/null \
          && ! grep -qE 'CRON_ACCOUNT|sudo -n -u|-u "\$acct"' "$sh" 2>/dev/null; then
@@ -518,6 +527,22 @@ EOF
   out="$(PROJECTS_ROOT="$tmp/empty" bash "${BASH_SOURCE[0]}" 2>&1; echo "rc=$?")"
   t "empty domain exits BLIND(3) not clean" 'rc=3' "$out"
   t "empty domain says BLIND"               'BLIND'  "$out"
+
+  mkdir -p "$tmp/cls/bin/lib"
+  cat > "$tmp/cls/bin/lib/propagation-set.sh" <<'PS'
+PROP_LOCAL_SCRIPTS="
+verbs-refresh.sh
+floor-check.sh
+"
+PS
+  if prop_is_local "$tmp/cls" verbs-refresh.sh; then echo "  ok   a LOCAL-classified script is exempt"
+  else echo "  FAIL a LOCAL-classified script was not recognised"; rc=1; fi
+  if prop_is_local "$tmp/cls" check-project-busy.sh; then
+    echo "  FAIL a script absent from PROP_LOCAL_SCRIPTS was treated as LOCAL"; rc=1
+  else echo "  ok   a script the classification does not list is still checked"; fi
+  if prop_is_local "$tmp/proj" verbs-refresh.sh; then
+    echo "  FAIL a repo with NO propagation-set exempted a script"; rc=1
+  else echo "  ok   a repo with no classification exempts nothing"; fi
 
   echo
   [ "$rc" -eq 0 ] && echo "self-test: PASS" || echo "self-test: FAIL"
