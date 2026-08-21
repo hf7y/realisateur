@@ -3,11 +3,10 @@
 #
 # KIND: verb
 #
-# TRAP: the step plan is checked against bin/lib/propagation-set.sh, and the
-#   indirectly-reached set is read out of the callers themselves. Neither is
-#   typed here: a recorded list of what provisioning is goes stale in silence.
-# TRAP: it installs no secret unattended -- selfdev-claude-token.sh --install
-#   takes a file a human supplies, so both modes only --check it.
+# TRAP: the step plan is checked against bin/lib/propagation-set.sh and the
+#   indirect set read from the callers -- a typed list goes stale in silence.
+# TRAP: it installs no secret unattended -- --install takes a file a human
+#   supplies, so both modes only --check it.
 # TRAP: root is required to CHANGE the host, not to look at it.
 #
 set -uo pipefail
@@ -111,7 +110,8 @@ via_setup() {
 plan_check() {
   local named via s bad=0
   via="$(via_setup)"
-  [ -n "$via" ] || { echo "  BLIND   cannot read $ACCT_NEW_STEP -- coverage is unverifiable"; return 1; }
+  # 6, this file's own BLIND code: 1 said "a step refused" about an unread plan.
+  [ -n "$via" ] || { echo "  BLIND   cannot read $ACCT_NEW_STEP -- coverage is unverifiable"; return 6; }
   named="$(printf '%s\n%s\n%s\n' "$HOST_STEPS" "$ACCT_STEPS" "$ACCT_NEW_STEP" | cut -d'|' -f1 | grep -v '^$')"
   for s in $named; do
     if [ "$(prop_channel "$s" 2>/dev/null)" != provision ]; then
@@ -136,7 +136,7 @@ TARGET="$ACCT"; [ "$HOSTWIDE" -eq 1 ] && TARGET=--host; [ "$ALL" -eq 1 ] && TARG
 
 echo "== $CLI_NAME ($MODE) on $HOST, uid band $UID_MIN-$UID_MAX =="
 [ "$(id -u)" -eq 0 ] || echo "  ..      not root: root-only steps will refuse below; run --check under sudo for the full picture"
-plan_check || exit 1
+plan_check || exit $?
 
 if [ "$HOSTWIDE" -eq 1 ]; then
   printf '\n-- %s (host-wide) --\n' "$HOST"

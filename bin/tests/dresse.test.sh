@@ -117,7 +117,7 @@ hasnt "F2a a script setup-selfdev-project.sh runs is not called uncovered" "$out
 mv "$T/bin/setup-selfdev-project.sh" "$T/bin/setup-selfdev-project.sh.away"
 out="$(bash "$D" --host --check 2>&1)"; rcv=$?
 has "F2b with that file gone, coverage is BLIND rather than assumed" "$out" "coverage is unverifiable"
-rc  "F2c and the run fails" 1 "$rcv"
+rc  "F2c and the run is BLIND (6), not a finding" 6 "$rcv"
 mv "$T/bin/setup-selfdev-project.sh.away" "$T/bin/setup-selfdev-project.sh"
 
 section "G. no propagation set is BLIND, never clean"
