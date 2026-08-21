@@ -25,6 +25,14 @@
 # KNOWN GAP: an unstamped agent comment is indistinguishable from Zach's. The
 #   fix belongs where the stamp is written (bin/gh-sign.sh), not here.
 #
+# THE RELAY, 2026-08-21. The stamp had a second cost nobody priced: an agent
+#   RELAYING Zach's spoken answer got stamped, so the relay read as
+#   not-an-answer and the decision stayed invisible. #430 was answered four
+#   separate times and re-surfaced as `needs-human` every time. A stamped
+#   comment now counts when it carries `<!-- decision-by: <who> <date> -->`.
+#   Forgeable, deliberately: a forged relay is typed and auditable, a lost
+#   answer leaves nothing at all.
+#
 set -uo pipefail
 
 CLI_NAME='decision-rot.sh'
@@ -78,10 +86,16 @@ DECISION_ROT_JQ='
   def stamped:
     (. // "") | split("\n") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))
     | if length == 0 then false else (.[-1] | test("^<!--\\s*agent:")) end;
-  # The answer: the LATEST owner comment that is not agent-stamped. An older
-  # answer that was taken up does not excuse a newer one that was not.
+  # relayed: a stamped comment still carries an answer when it says whose.
+  # Most of Zach`s calls are spoken in a session; an agent writing one down is
+  # the only way it outlives the session, and the stamp used to erase it.
+  def relayed: (. // "") | test("<!--\\s*decision-by:");
+  # The answer: the LATEST owner comment that is not agent-stamped, or that is
+  # stamped and relays a named decider. An older answer that was taken up does
+  # not excuse a newer one that was not.
   def answer:
-    [ .comments[]? | select((.author.login // "") == $o) | select((.body | stamped) | not) ]
+    [ .comments[]? | select((.author.login // "") == $o)
+      | select(((.body | stamped) | not) or (.body | relayed)) ]
     | if length == 0 then null else (sort_by(.createdAt) | .[-1]) end;
   # The `answered` label is an optional override, never the trigger. It still
   # needs a clock, so it falls back to the newest owner comment of any kind.

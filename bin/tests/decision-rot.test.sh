@@ -82,6 +82,28 @@ rc    "C1 exits 0 -- a stamped comment is not an answer" 0 "$RC"
 has   "C2 zero answered" "$OUT" "0        0"
 hasnt "C3 not listed as rotting" "$OUT" "#9"
 
+echo "-- C''. a RELAYED answer counts, or a spoken decision dies with the session"
+cat > "$T/c3.json" <<EOF
+[
+ {"number":10,"title":"agent wrote down what Zach said out loud","state":"OPEN","labels":[],
+  "comments":[{"author":{"login":"owner"},"body":"DECISION (Zach, in conversation): delete it.\n\n<!-- decision-by: zach 2026-08-21 -->\n\n$STAMP","createdAt":"2026-08-03T00:00:00Z"}]}
+]
+EOF
+OUT="$(run "$T/c3.json" o/r)"; RC=$?
+rc  "C''1 exits 1 -- the relay IS an answer, and it is still open" 1 "$RC"
+has "C''2 counts it answered" "$OUT" "1        1"
+has "C''3 dated from the relay" "$OUT" "answered 2026-08-03"
+# Without the marker this is case C: stamped, therefore silent. That contrast
+# is the whole point -- #430 was answered four times and never counted once.
+cat > "$T/c4.json" <<EOF
+[
+ {"number":10,"title":"same comment, no marker","state":"OPEN","labels":[],
+  "comments":[{"author":{"login":"owner"},"body":"DECISION (Zach, in conversation): delete it.\n\n$STAMP","createdAt":"2026-08-03T00:00:00Z"}]}
+]
+EOF
+OUT="$(run "$T/c4.json" o/r)"; RC=$?
+rc  "C''4 the same relay WITHOUT the marker still does not count" 0 "$RC"
+
 echo "-- C'. the same issue, once the human actually replies, IS rot"
 cat > "$T/c2.json" <<EOF
 [
