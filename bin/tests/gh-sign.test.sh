@@ -29,6 +29,8 @@ for a in "$@"; do
   prev="$a"
 done
 printf '%s\n' "$*" | grep -q -- '--body-file -' && cat > "$GH_LAST_BODY"
+printf '%s\n' "$*" | grep -q -- 'body=@-' && cat > "$GH_LAST_BODY"
+for a in "$@"; do case "$a" in body=*) [ "$a" = 'body=@-' ] || printf '%s' "${a#body=}" > "$GH_LAST_BODY" ;; esac; done
 exit "${GH_EXIT:-0}"
 STUB
 chmod +x "$TMP/stub/gh"
@@ -223,6 +225,39 @@ fi
 out="$(PATH="$TMP/empty-path" "$TIMEOUT_BIN" 10 "$BASH_BIN" "$GS" --help 2>&1)"; rc=$?
 check "--help exits 0 where there is no real gh at all" "$rc" "0"
 contains "...and introduces the shim" "$out" "gh-sign"
+
+# --- `gh api` is the same write by another route (decision-rot's KNOWN GAP)
+reset
+printf 'a reply body\n' > "$TMP/reply.md"
+run api -X POST repos/hf7y/widget/issues/7/comments -F body=@"$TMP/reply.md" >/dev/null 2>&1
+case "$(lastline)" in
+  '<!-- agent: '*) ok "an api comment posted from a file is stamped" ;;
+  *) bad "api comment (file) unstamped" "got: $(lastline)" ;;
+esac
+check "...and the real gh is invoked exactly once" "$(grep -c . "$TMP/gh.log")" "1"
+contains "...as a stdin field, so a long body cannot hit ARG_MAX" "$(cat "$TMP/gh.log")" "body=@-"
+
+reset
+run api -X POST repos/hf7y/widget/issues/7/comments -f body="inline reply" >/dev/null 2>&1
+case "$(lastline)" in
+  '<!-- agent: '*) ok "an api comment passed inline is stamped" ;;
+  *) bad "api comment (inline) unstamped" "got: $(lastline)" ;;
+esac
+
+reset
+run api -X POST repos/hf7y/widget/pulls/7/comments -f body="pr reply" >/dev/null 2>&1
+case "$(lastline)" in
+  '<!-- agent: '*) ok "a pull-request api comment is stamped too" ;;
+  *) bad "pr api comment unstamped" "got: $(lastline)" ;;
+esac
+
+reset
+run api repos/hf7y/widget --jq .name >/dev/null 2>&1
+contains "a non-comment api call reaches gh unchanged" "$(cat "$TMP/gh.log")" "repos/hf7y/widget"
+case "$(cat "$TMP/gh.body" 2>/dev/null)" in
+  '') ok "...and nothing was signed into it" ;;
+  *) bad "a read was given a body" "got: $(cat "$TMP/gh.body")" ;;
+esac
 
 echo
 summary
