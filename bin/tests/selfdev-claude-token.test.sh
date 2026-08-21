@@ -31,9 +31,9 @@ echo "selfdev-claude-token.test.sh"
 
 echo "== 1. THE ARGUMENT CONTRACT =========================================="
 O="$(bash "$TOOL" 2>&1)"; R=$?
-rc  "no argument is a usage error, not a default action" 1 "$R"
+rc  "no argument is a usage error (2), not a default action" 2 "$R"
 O="$(bash "$TOOL" --nonsense 2>&1)"; R=$?
-rc  "an unknown argument is refused" 1 "$R"
+rc  "an unknown argument is a usage error (2)" 2 "$R"
 has "...and names the argument" "$O" "--nonsense"
 O="$(bash "$TOOL" --help 2>&1)"; R=$?
 rc  "--help exits 0" 0 "$R"
@@ -44,7 +44,7 @@ mkdir -p "$TMP/etc"; mkhome alpha; mkhome beta
 O="$(run --check)"; R=$?
 has "an absent host-wide copy is a GAP" "$O" "has not been installed"
 has "...and every per-account copy is named" "$O" "stale copy: $TMP/accounts/alpha/.claude-token"
-rc  "...and a GAP alone exits 2" 2 "$R"
+rc  "...and a GAP alone exits 4 -- in scope, not done yet" 4 "$R"
 
 # ABSENT is a fact; only UNREADABLE is BLIND -- conflating them reports clean
 # by not looking.
@@ -62,7 +62,7 @@ echo "== 3. --purge REFUSES WITHOUT A REPLACEMENT =========================="
 O="$(run --purge)"; R=$?
 has "purging with no host-wide copy is refused" "$O" "refusing to purge"
 has "...and says what it would cost" "$O" "produce nothing, silently"
-rc  "...and that is BAD, not a no-op" 4 "$R"
+rc  "...and that is a FINDING (1), not a no-op" 1 "$R"
 [ -e "$TMP/accounts/alpha/.claude-token" ] && ok "...and it deleted nothing" \
                                        || bad "the refusal still removed a file"
 
@@ -109,7 +109,7 @@ has "...and stops only at the privileged write" "$O" "no group"
 
 printf '%s\n' "${GOOD}EXTRA" > "$TMP/etc/wrong"
 O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" bash "$TOOL" --install "$TMP/etc/wrong" 2>&1)"; R=$?
-rc  "a value of the WRONG LENGTH is refused" 4 "$R"
+rc  "a value of the WRONG LENGTH is REFUSED (7), not a gap to fill later" 7 "$R"
 has "...and says both lengths" "$O" "characters, the one it replaces is"
 has "...and names what it would have cost" "$O" "carry it to every account"
 [ "$(tr -d '[:space:]' < "$TMP/etc/claude-token")" = "$GOOD" ] \
@@ -123,7 +123,7 @@ esac
 
 printf 'not-a-token\n' > "$TMP/etc/nope"
 O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" bash "$TOOL" --install "$TMP/etc/nope" 2>&1)"; R=$?
-rc  "a non-oat value is still refused, before any length check" 1 "$R"
+rc  "a non-oat value is a usage error (2), before any length check" 2 "$R"
 
 echo "== 6. --fanout DERIVES THE COPIES FROM THE ONE FILE =================="
 # Rebuild homes holding the OLD value, and put a DIFFERENT value host-wide.
@@ -141,7 +141,7 @@ grep -q "$OLD" "$TMP/accounts/alpha/.claude-token" \
 rm -f "$TMP/etc/claude-token"
 O="$(run --fanout --apply)"; R=$?
 has "fanout with no host-wide copy is refused" "$O" "run --install first"
-rc  "...and that is BAD, not a silent no-op" 4 "$R"
+rc  "...and that is a FINDING (1), not a silent no-op" 1 "$R"
 grep -q "$OLD" "$TMP/accounts/alpha/.claude-token" \
   && ok "...and it rewrote nothing" || bad "the refusal still touched a home"
 printf '%s\n' "$NEW" > "$TMP/etc/claude-token"
