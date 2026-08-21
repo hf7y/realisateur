@@ -210,7 +210,6 @@ if [ "$LINK" -eq 1 ]; then
   # The loop above only ever ADDS: it walks the NEW manifest, so a verb a
   # nightly build dropped keeps its old link, now pointing at
   # `current/<project>/bin/<verb>` -- which after the switch above does not
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   wanted="$(grep -v '^#' "$DEST/manifest.tsv" | cut -f2)"
   dropped=0
   for have in "$BIN"/*; do

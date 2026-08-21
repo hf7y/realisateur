@@ -342,7 +342,6 @@ if command -v flock >/dev/null 2>&1; then
   # BIBLIOTHECAIRE_VAULT set explicitly on every case below, even the ones
   # that don't reach vault_locked's directory check (the usage-error cases) --
   # a missing --vault/env falls back to the real host default,
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$VL" "$CONSIGNE" lock -- echo hello world 2>&1)"; rc=$?
   check "lock runs the wrapped command" "$rc" "0"
   has   "...and its stdout reaches the caller" "$OUT" "hello world"

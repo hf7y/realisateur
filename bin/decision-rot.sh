@@ -6,10 +6,9 @@
 # GATE: none -- reads live issue trackers across 18 repos
 #
 # THE PREDICATE: ANSWERED **AND** STILL OPEN -- direction handed over and never
-# taken up. It introduces no label, field, schema or state: Zach answers by
-# COMMENTING and leaves the issue open (his words, 2026-08-14), and the nightly
-# CLOSES what it handles. What counts as ANSWERED lives in bin/lib/answered.sh,
-# which `etiquette` reads too.
+# taken up. Zach answers by COMMENTING and leaves the issue open; the nightly
+# CLOSES what it handles. ANSWERED lives in bin/lib/answered.sh, which
+# `etiquette` reads too.
 #
 # TRAP: if a future change to this audit needs a convention INVENTED to make
 #   it work, THE AUDIT IS WRONG -- report that and stop. An earlier draft
@@ -45,10 +44,9 @@ cli_guard "$@"
 # predicate against fixture JSON whose author login is not this estate's.
 OWNER="${DECISION_ROT_OWNER:-hf7y}"
 
-# THE ROSTER. Derived 2026-08-15 from hf7y/scheduler `schedule/<project>.conf`
-# -- the fifteen projects dispatch actually reads -- plus the three ecosystem
-# repos that carry decisions but are never dispatched (`verbs` is the verb
-# build channel; `front-door` and `basheur` are ecosystem infrastructure).
+# THE ROSTER, typed rather than derived -- a snapshot of the projects dispatch
+# reads plus the ecosystem repos that carry decisions and never dispatch. It
+# goes stale the day a project joins; deriving it is realisateur#467.
 ROSTER=(
   baudin bibliothecaire chezz crt ecosim gardien groc-mangr nine-speakers
   realisateur scheduler secretaire senechal sequestria vim-arcade wtul

@@ -70,7 +70,6 @@ elif [ -d "$PROJECTS/scheduler" ]; then
   # The fallback is not wrong by itself: mandark deliberately has no host file
   # and reads the shared one, which is documented in _paced.dexter.conf's own
   # header. What matters is WHAT would be inherited. Falling back onto a file
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   enabled=$(grep -cE '^[a-z][^|]*\|1\|' "$SHARED_PACED" 2>/dev/null || echo 0)
   if [ "${enabled:-0}" -gt 0 ]; then
     bad "no schedule/_paced.$HOST.conf, and the shared _paced.conf has $enabled ENABLED row(s) -- this host would silently dispatch another machine's rotation"
@@ -226,7 +225,6 @@ if [ -x "$PROJECTS/realisateur/bin/install-shims.sh" ]; then
   # A nonzero exit here is NOT necessarily a failed install: install-shims.sh
   # also exits nonzero when it FLAGs, and its standing flag on a fresh account
   # is "subagent-closeout.sh is installed but not referenced in
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   shim_out="$(REPO="$PROJECTS/realisateur" "$PROJECTS/realisateur/bin/install-shims.sh" 2>&1)"; shim_rc=$?
   printf '%s\n' "$shim_out"
   if [ "$shim_rc" -eq 0 ]; then

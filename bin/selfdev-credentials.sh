@@ -92,7 +92,6 @@ probe_one() {
   # THE CREDENTIAL IS HOST-WIDE as of 2026-08-12: /etc/selfdev/{app.pem,gh-app.conf},
   # one file readable by group `selfdev`, not a copy per account. So what this
   # probe asks changed shape: not "does this account have its own key" but
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local pem="${SELFDEV_APP_PEM:-/etc/selfdev/app.pem}"
   local conf="${SELFDEV_APP_CONF:-/etc/selfdev/gh-app.conf}"
   local hosts="$HOME/.config/gh/hosts.yml"
@@ -260,7 +259,6 @@ cred_check_deploy_keys() { # cred_check_deploy_keys <account>...
   # AN ACCOUNT'S OWN REPO IS ALWAYS ITS OWN, even when that repo also appears
   # on the shared list. `realisateur@monkey` and `scheduler@monkey` exist
   # because one unix user per project is the whole monkey design, and their
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local repo acct others
   for repo in $CRED_SHARED_REPOS; do
     others=""
@@ -284,7 +282,6 @@ cred_check_repo_keys() {
   # `--json title,readOnly` is REQUESTED but not, in practice, HONOURED: gh
   # 2.45.0 validates "readOnly" as a real field name (an unknown one is
   # refused with a list that names it) and then ignores the filter anyway,
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local json; json="$("$CRED_GH_BIN" repo deploy-key list --repo "$CRED_GH_OWNER/$repo" --json title,readOnly 2>/dev/null)"
   if [ -z "$json" ]; then
     blind "deploy-key symmetry: could not list keys on $CRED_GH_OWNER/$repo (no admin access here, or the repo/call failed)"
@@ -295,7 +292,6 @@ cred_check_repo_keys() {
     # TWO jq calls, deliberately, not one with `// empty`. jq's `//` falls
     # through on `false` as well as `null` -- `.readOnly // empty` silently
     # turned every legitimate `"readOnly": false` (a WRITE key -- exactly the
-    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     local suf="-$acct-$repo" found
     found="$(printf '%s' "$json" | jq -r --arg suf "$suf" '[.[] | select(.title | endswith($suf))] | length')"
     if [ "${found:-0}" -eq 0 ] 2>/dev/null; then
@@ -317,7 +313,6 @@ cred_check_repo_keys() {
         # FAIL LOUD ON AN UNRECOGNIZED SHAPE. A silent `case` with no default
         # arm is exactly how this bug hid the first time: `$ro` read the
         # literal string "null" (the field name gh's own error message calls
-        #   [rest: vault:realisateur/guard-archaeology-20260817.md]
         blind "deploy-key symmetry: $acct on $repo returned an unreadable readOnly value ('$ro') -- gh's JSON shape may have changed" ;;
     esac
   done
@@ -413,7 +408,6 @@ cmd_apply() {
   # --- 1. the App credential: HOST-WIDE, placed by the script that owns it --
   #
   # This block used to copy a private app.pem + gh-app.conf into the account,
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ "$pem" != "ok:600" ] || [ "$conf" = missing ]; then
     act "placing the host-wide App credential and adding $acct to group $CRED_APP_GROUP (selfdev-app-key.sh --apply)"
     if "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \

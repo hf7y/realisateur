@@ -249,7 +249,6 @@ probe_clonefree() {
   # SERVED_FLEET_CRONTABS: read the fleet's crontab content from a file
   # instead of over ssh. Exists so bin/tests/served-not-cloned.test.sh can
   # exercise BOTH sides of this probe with no host, no ssh and no sudo --
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ -n "${SERVED_FLEET_CRONTABS:-}" ]; then
     [ -f "$SERVED_FLEET_CRONTABS" ] \
       || { row BLIND clonefree "SERVED_FLEET_CRONTABS names $SERVED_FLEET_CRONTABS, which does not exist"; return; }

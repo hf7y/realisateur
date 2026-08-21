@@ -121,15 +121,12 @@ if [ "$grc" = 6 ]; then
 elif [ "$grc" != 0 ]; then
   unprov "2.2 backup coverage is UNKNOWN" "garde media list exited $grc"
 elif [ "$DO_RESTORE" = 1 ]; then
-  # PENDING is reported as drift, NOT as failure. On a machine anyone is
-  # working on, files appear between the copy and the verify -- on 2026-08-01
-  # three sets sat 1-4 files behind while a live session edited them, minutes
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
+  # PENDING is reported as drift, NOT as failure: on a machine anyone is
+  # working on, files appear between the copy and the verify, minutes
   npend="$(printf '%s' "$gl" | grep -c 'PENDING' || true)"
   # Pull one real file back off the destination and diff it. Chosen from a set
   # that is small and stable; the point is the round trip, not the file.
   # garde lays each SET DOWN UNDER ITS SET NAME at the destination root, not
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   src="$HOME/Documents/Projects/realisateur/README.md"
   rem="/mnt/d/gardien-media/mandark/Projects/realisateur/README.md"
   tmp="$(mktemp)"
@@ -162,8 +159,7 @@ say ""
 say "GATE 3 -- ONE LOOP, WATCHED"
 
 # 3.1  Generated crontab, exactly one enabled participant.
-# 3.1 asked for "exactly one enabled participant" until 2026-08-01, when Zach
-# drew the line this gate actually cares about: MECHANISMS RUN ON A CLOCK,
+# The line this gate cares about: MECHANISMS RUN ON A CLOCK,
 en="$(grep -cE '^[a-z][a-z-]*\|1\|' "$SCHED/schedule/_paced.conf" 2>/dev/null || true)"; en="${en:-0}"
 frz=0; [ -e "$SCHED/schedule/FREEZE" ] && frz=1
 if [ "$en" -le 1 ] && [ "$disp" = 1 ] && [ "$frz" = 0 ]; then
@@ -216,13 +212,10 @@ else
     # vault:realisateur/THE-FLOOR.md 3.3 as written asks for "a commit on a branch". That is the
     # WRONG criterion and this check deliberately does not enforce it.
     #
-    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     dirty="$(git -C "$PROJECTS/$proj" status --porcelain 2>/dev/null | grep -c . || true)"
     fail="$(systemctl --user list-units --state=failed --no-legend 2>/dev/null | grep -c . || true)"
-    # Window from when the run actually STARTED, not a flat 18h. A human
-    # commit made earlier the same day is not the run's doing -- on 2026-08-01
-    # a 17:10 FOCUS commit made this read new_commits_on_main=1 for a run that
-    # began at 20:34 and committed nothing.
+    # Window from when the run actually STARTED, not a flat 18h: a human
+    # commit made earlier the same day is not the run's doing.
     since="$(printf '%s' "$done_line" | grep -oE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]+' || true)"
     dstart="$(grep "DISPATCH .* $proj ->" "$RL" 2>/dev/null | tail -1 | grep -oE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:+-]+' || true)"
     onmain="$(git -C "$PROJECTS/$proj" log --oneline --since="${dstart:-${since:-18 hours ago}}" main 2>/dev/null | grep -c . || true)"

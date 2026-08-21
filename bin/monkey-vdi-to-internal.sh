@@ -150,7 +150,6 @@ else
   # ONE RESET, THEN GIVE UP. Learned the hard way on the 2026-08-14 run: the
   # first boot after the move hung in initramfs at "Begin: Loading essential
   # drivers", frozen -- two screenshots twenty minutes apart were BYTE
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   say "    no banner after $((BOOT_WAIT_SECS/60)) min -- capturing console, then ONE reset"
   vbm controlvm "$VM" screenshotpng 'C:\Users\Public\monkey-recovery-hung-boot.png' | sed 's/^/    /'
   vbm controlvm "$VM" reset | sed 's/^/    /'

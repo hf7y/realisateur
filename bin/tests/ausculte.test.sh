@@ -43,6 +43,34 @@ stub silence-audit.sh 2 "usage"
 run rot silence >/dev/null
 check "one probe DOWN and one BLIND exits DOWN" "$?" "5"
 
+# --- arming reads what the accounts DID ----------------------------------
+# Counting the word "armed" said OK while three accounts had been dead eight
+# days. And the first draft of the fix printed OK off a jq error, because the
+# ledger writes "+00:00" and fromdateiso8601 accepts only "Z".
+status() { printf '#!/usr/bin/env bash\ncat <<'"'"'J'"'"'\n%s\nJ\n' "$1" > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"; }
+recent="$(date -u -d '-1 hour' +%Y-%m-%dT%H:%M:%S+00:00)"
+old_run="$(date -u -d '-9 days' +%Y-%m-%dT%H:%M:%S+00:00)"
+
+status "{\"accounts\":[{\"account\":\"live\",\"armed\":true,\"last_run\":{\"started_at\":\"$recent\"}}]}"
+out="$(run arming)"; rc=$?
+check "an account that dispatched recently is OK" "$rc" "0"
+has "and the offset form is parsed, not fatal" "$out" "OK      arming"
+
+status "{\"accounts\":[{\"account\":\"dead\",\"armed\":true,\"last_run\":{\"started_at\":\"$old_run\"}}]}"
+out="$(run arming)"; rc=$?
+check "an armed account that stopped dispatching is DOWN (5)" "$rc" "5"
+has "and it is named" "$out" "dead"
+
+status "{\"accounts\":[{\"account\":\"never\",\"armed\":true,\"last_run\":null}]}"
+out="$(run arming)"; rc=$?
+check "an armed account that has never dispatched is DOWN (5)" "$rc" "5"
+has "and it is named too" "$out" "never"
+
+status "{\"nonsense\":true}"
+out="$(run arming)"; rc=$?
+check "a status document with no accounts is BLIND (6)" "$rc" "6"
+hasnt "and never reports an account count it did not read" "$out" "account(s) armed"
+
 # --- propagation reads the channel's VERDICT, not the verb count ---------
 # The count said OK through two days of a refusing cutter, because every host
 # still held its full set of verbs. These pin the three answers the verdict
@@ -87,20 +115,23 @@ first="$(printf '%s\n' "$out" | awk 'NF{print $2; exit}')"
 [ "$first" = "channel" ] && ok "the human channel is probed and reported first" \
   || bad "channel probed first" "first row named: $first"
 
-out="$(SELFDEV_LOCAL_HOSTNAME=elsewhere run arming)"; rc=$?
-check "arming (remote) is BLIND when ssh can't reach monkey" "$rc" "6"
-case "$out" in *"did not answer"*) ok "...and it names why" ;;
-  *) bad "arming BLIND detail" "got: $out" ;; esac
-
+# arming reads the PUBLISHED status, so it answers the same from any host and
+# never needs root or a collector installed where it happens to be running.
 printf '#!/usr/bin/env bash\necho called >> "%s/ssh_called"\nexit 255\n' "$TMP" > "$TMP/stub/ssh"
 chmod +x "$TMP/stub/ssh"
-printf '#!/usr/bin/env bash\nprintf "acct1 armed\\n"\nexit 0\n' > "$TMP/stub/sudo"
-chmod +x "$TMP/stub/sudo"
-out="$(SELFDEV_LOCAL_HOSTNAME=monkey run arming)"; rc=$?
-check "arming (local) reads OK straight from the local collector" "$rc" "0"
+out="$(run arming)"; rc=$?
+check "an unreadable status document is BLIND (6)" "$rc" "6"
+case "$out" in *"could not be read"*) ok "...and it names why" ;;
+  *) bad "arming BLIND detail" "got: $out" ;; esac
 [ -f "$TMP/ssh_called" ] \
-  && bad "a local arming probe never shells out to ssh" "ssh was invoked" \
-  || ok "a local arming probe never shells out to ssh"
+  && bad "the arming probe never shells out to ssh" "ssh was invoked" \
+  || ok "the arming probe never shells out to ssh"
+
+expired="$(date -u -d '-2 days' +%Y-%m-%dT%H:%M:%SZ)"
+status "{\"valid_until\":\"$expired\",\"accounts\":[{\"account\":\"a\",\"armed\":true,\"last_run\":{\"started_at\":\"$recent\"}}]}"
+out="$(run arming)"; rc=$?
+check "a status document past its own valid_until is BLIND (6)" "$rc" "6"
+has "and it says nothing is publishing it" "$out" "expired at"
 
 echo
 summary

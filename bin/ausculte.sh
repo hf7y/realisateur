@@ -59,16 +59,40 @@ if want hosts; then
 fi
 
 if want arming; then
-  if on_target_host monkey; then
-    out="$(sudo -n python3 /usr/local/libexec/selfdev/monkey-status-collect.py 2>/dev/null || sudo -n python3 ~zach/realisateur/bin/monkey-status-collect.py 2>/dev/null)"
+  # WHAT THE ACCOUNTS ARE DOING, not how many times the word "armed" appears.
+  # Counting the key said OK while three accounts had been dead for eight days:
+  # their dead-man switches expired on 2026-08-12/13 and every dispatch since
+  # exited 3 in zero seconds, into a per-account log nobody reads.
+  st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://hf7y.com/monkey/status.json}" 2>/dev/null)"
+  if ! printf '%s' "$st" | jq -e '.accounts' >/dev/null 2>&1; then
+    record arming BLIND 'the published monkey status could not be read'
+  elif vu="$(printf '%s' "$st" | jq -r '.valid_until // empty')" && [ -n "$vu" ] \
+       && [ "$(date -u +%s)" -gt "$(date -u -d "$vu" +%s 2>/dev/null || echo 0)" ]; then
+    # A document past the freshness it declares for itself is not evidence.
+    record arming BLIND "the published monkey status expired at $vu -- nothing is publishing it"
   else
-    out="$(ssh -n -o ConnectTimeout=10 -o BatchMode=yes monkey \
-            'sudo -n python3 /usr/local/libexec/selfdev/monkey-status-collect.py 2>/dev/null || sudo -n python3 ~zach/realisateur/bin/monkey-status-collect.py 2>/dev/null' 2>/dev/null)"
-  fi
-  if [ -z "$out" ]; then record arming BLIND 'monkey did not answer the collector'
-  else
-    n="$(printf '%s' "$out" | grep -co 'armed' || true)"
-    record arming OK "$n account(s) reported armed"
+    # TRAP: fromdateiso8601 rejects a "+00:00" offset and accepts only "Z", so
+    # the ledger's own timestamps make jq exit mid-stream. Unnormalised, this
+    # row printed OK off an empty result -- the error-read-as-nothing-found
+    # this file exists to refuse. A jq failure is BLIND, never clean.
+    if ! stale="$(printf '%s' "$st" | jq -er --argjson d "${ARMING_STALE_DAYS:-3}" '
+      (now - ($d * 86400)) as $cut
+      | [ .accounts[]
+          | select(.armed)
+          | select(((.last_run.started_at // "1970-01-01T00:00:00Z")
+                    | sub("\\+00:00$"; "Z") | fromdateiso8601) < $cut)
+          | .account ] | join(" ")' 2>/dev/null)"; then
+      record arming BLIND 'the status document could not be graded (unreadable timestamps)'
+      stale=SKIP
+    fi
+    n_armed="$(printf '%s' "$st" | jq -r '[.accounts[]|select(.armed)]|length')"
+    gen="$(printf '%s' "$st" | jq -r '.generated')"
+    if [ "$stale" = SKIP ]; then :
+    elif [ -n "$stale" ]; then
+      record arming DOWN "armed but not dispatching for ${ARMING_STALE_DAYS:-3}d: $stale (status generated $gen)"
+    else
+      record arming OK "$n_armed account(s) armed, each dispatched within ${ARMING_STALE_DAYS:-3}d"
+    fi
   fi
 fi
 

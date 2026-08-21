@@ -29,7 +29,7 @@ REPO="${REPO:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/realisateur}"
 
 # A SOURCE OF TRUTH THAT IS NOT THERE IS A HARD FAILURE, NOT A FLAG.
 #
-# Found 2026-08-02 while bootstrapping dexter, and it is the reason the
+# Found while bootstrapping dexter, and it is the reason the
 if [ ! -d "$REPO/bin" ] || [ ! -e "$REPO/.git" ]; then
   printf '%s: REPO does not name a realisateur checkout: %s\n' \
     "${0##*/}" "$REPO" >&2
@@ -69,7 +69,6 @@ install_file() {
   # A symlink at an install target is never something this installer made -- it
   # only ever writes regular files. Left in place it is actively destructive,
   # because both checks below follow it: `-f`/`cat` read through to the TARGET
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ -L "$path" ]; then
     local target; target="$(readlink "$path")"
     if [ "$CHECK_ONLY" = 1 ]; then
@@ -104,10 +103,9 @@ for name in "${GLOBAL_COMMANDS[@]}"; do
   install_file "$CMD_DEST/$name.md" "$(cat "$CMD_SRC/$name.md")" 644 "/$name"
 done
 
-# Claude Code hooks. Added 2026-08-02: subagent-closeout.sh was installed by
-# hand on 2026-08-01 and tracked in NO repo, which is the same defect that
-# broke the dexter bootstrap in July -- `usage-paced-runner.sh` was a symlink
-# hand-made once that nothing in any repo created, so a bare host could not
+# Claude Code hooks. A hook installed by hand and tracked in NO repo is the
+# defect that broke the dexter bootstrap: `usage-paced-runner.sh` was a symlink
+# made once that nothing in any repo created, so a bare host could not
 note "Claude Code hooks -> $HOOK_DEST"
 shopt -s nullglob
 hook_files=("$HOOK_SRC"/*.sh)
