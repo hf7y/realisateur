@@ -160,6 +160,7 @@ PROP_LEAK_BOUND=7
 # the release pipeline (GitHub Actions checks realisateur out to get them), not
 PROP_LOCAL_SCRIPTS="
 ausculte-cadence.sh
+delivery-audit.sh
 org-migration-audit.sh
 self-merge-audit.sh
 sunset-coordinator-files.sh
