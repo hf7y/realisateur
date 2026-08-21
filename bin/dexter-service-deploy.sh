@@ -81,18 +81,41 @@ fi
 # it means WhatsApp logs the link out, and recovering costs a QR scan on Zach's
 if [ "$NAME" = "zaxon" ]; then
   SESSION="${ZAXON_SESSION_PATH:-/home/zaxon/.hermes/whatsapp/session}"  # hardcoded-home-ok: zaxon's home on dexter, not this account's
-  running="$(ssh -n "$HOST" 'sudo -n systemctl restart systemd-binfmt 2>/dev/null; cd /mnt/c && /mnt/c/Windows/System32/wsl.exe -l -q --running 2>/dev/null | tr -d "\0\r"' || true)"
-  holder=""
-  while IFS= read -r d; do
-    [ -n "$d" ] || continue
-    if ssh -n "$HOST" "cd /mnt/c && /mnt/c/Windows/System32/wsl.exe -d \"$d\" -- lsof -t +D \"$SESSION\" >/dev/null 2>&1"; then
-      holder="$d"; break
-    fi
-  done <<<"$running"
+  # ASK WHO HOLDS IT, and prove the asking happened. The distro list was a
+  # proxy that stopped tracking (#425), and `|| true` made an unreachable
+  # dexter read as "no holder". [-]-session stops pgrep matching itself.
+  fix="stop that holder, then deploy"
+  probe="$(ssh -n "$HOST" 'command -v pgrep >/dev/null 2>&1 || exit 9
+    pgrep -af -- "[-]-session '"$SESSION"'" || true
+    echo PROBE-OK' || true)"
+  case "$probe" in
+    *PROBE-OK*) : ;;
+    *) die "BLIND -- could not ask $HOST who holds $SESSION.
+  A probe that could not run is not an absence of holders. Refusing." ;;
+  esac
+  holder="$(printf '%s\n' "$probe" | grep -v '^PROBE-OK$' | grep -v '^[[:space:]]*$' || true)"
   if [ -n "$holder" ]; then
-    die "a process in the '$holder' distro already holds the WhatsApp session ($SESSION).
+    holder="a process on $HOST:
+$holder"
+    fix="kill it on $HOST, then deploy"
+  fi
+
+  if [ -z "$holder" ]; then
+    running="$(ssh -n "$HOST" 'sudo -n systemctl restart systemd-binfmt 2>/dev/null; cd /mnt/c && /mnt/c/Windows/System32/wsl.exe -l -q --running 2>/dev/null | tr -d "\0\r"' || true)"
+    while IFS= read -r d; do
+      [ -n "$d" ] || continue
+      if ssh -n "$HOST" "cd /mnt/c && /mnt/c/Windows/System32/wsl.exe -d \"$d\" -- lsof -t +D \"$SESSION\" >/dev/null 2>&1"; then
+        holder="a process in the '$d' distro"
+        fix="ssh $HOST \"wslx --terminate $d\""
+        break
+      fi
+    done <<<"$running"
+  fi
+  if [ -n "$holder" ]; then
+    die "$holder
+  already holds the WhatsApp session ($SESSION).
   Starting a second holder logs the link out and costs a QR scan to recover.
-  Stop it first:  ssh $HOST \"wslx --terminate $holder\"
+  Stop it first:  $fix
   Refusing rather than racing it."
   fi
 fi

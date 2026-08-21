@@ -22,6 +22,11 @@ cat > "$STUB/ssh" <<'EOF'
 #!/bin/sh
 echo "$*" >> "$STUB_CALLS"
 case "$*" in
+  *pgrep*)
+    # STUB_PROBE_DEAD makes the probe fail: must read BLIND, not "no holder".
+    [ -n "$STUB_PROBE_DEAD" ] && exit 1
+    cat "$STUB_PGREP" 2>/dev/null
+    echo PROBE-OK; exit 0 ;;
   *"wsl.exe -l -q --running"*) cat "$STUB_REPLY" 2>/dev/null; exit 0 ;;
   *"wsl.exe -d "*)
     holder="$(cat "$STUB_HOLDER" 2>/dev/null)"
@@ -50,6 +55,11 @@ esac
 EOF
 chmod +x "$STUB/ssh" "$STUB/rsync" "$STUB/gh"
 export STUB_REPLY="$STUB/reply" STUB_CALLS="$STUB/calls" STUB_HOLDER="$STUB/holder"
+STUB_PGREP="$STUB/pgrep-out"
+: > "$STUB_PGREP"
+STUB_PROBE_DEAD=""
+ZAXON_SESSION_PATH="$STUB/whatsapp-session"
+export STUB_PGREP STUB_PROBE_DEAD ZAXON_SESSION_PATH
 # A fixture service, so this suite needs no project's real files: zaxon's
 # container lives in hf7y/crt now (crt owns it), which may not be cloned here.
 mkdir -p "$STUB/svc/zaxon" && printf 'services: {}\n' > "$STUB/svc/zaxon/compose.yaml"
@@ -62,6 +72,20 @@ out="$(bash "$DEPLOY" zaxon 2>&1)"; rc=$?
 is "exits non-zero" "$rc" "1"
 has "names the hazard in the terms that matter" "$out" "logs the link out"
 has "and tells the operator the exact next command" "$out" "--terminate hermes"
+
+# THE CASE #425 WAS FILED FOR: an empty distro list, a real holder.
+: > "$STUB_CALLS"; : > "$STUB_REPLY"; : > "$STUB_HOLDER"
+printf '4711 python -m zaxon --session %s\n' "$ZAXON_SESSION_PATH" > "$STUB_PGREP"
+out="$(bash "$DEPLOY" zaxon 2>&1)"; rc=$?
+is  "a bare-process holder with NO running distro still refuses" "$rc" "1"
+has "and names the process holding it" "$out" "4711"
+
+# A probe that could not run is not an absence of holders.
+: > "$STUB_CALLS"; : > "$STUB_PGREP"
+out="$(STUB_PROBE_DEAD=1 bash "$DEPLOY" zaxon 2>&1)"; rc=$?
+is  "an unreachable probe refuses rather than deploying" "$rc" "1"
+has "and says it is BLIND, not clean" "$out" "BLIND"
+: > "$STUB_PGREP"; printf 'Ubuntu\nhermes\n' > "$STUB_REPLY"; printf 'hermes' > "$STUB_HOLDER"
 if grep -q '^rsync ' "$STUB_CALLS" 2>/dev/null; then
   bad "it refused but still pushed files"
 else
