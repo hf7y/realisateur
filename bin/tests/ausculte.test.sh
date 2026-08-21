@@ -145,4 +145,50 @@ check "a status document past its own valid_until is BLIND (6)" "$rc" "6"
 has "and it says nothing is publishing it" "$out" "expired at"
 
 echo
+echo "-- delivery: an unmet claim is DOWN, an absent ledger is BLIND ---------"
+stub delivery-audit.sh 0 "3 PR(s) audited; 4 met, 0 UNMET, 0 blind (0 carried no ledger)."
+out="$(run delivery)"; rc=$?
+check "every claim met is OK (0)" "$rc" "0"
+has  "and it carries the count" "$out" "PR(s) audited"
+
+printf '#!/usr/bin/env bash\nprintf "  UNMET  #436  path:/x is NOT on monkey\\n"\nexit 1\n' > "$TMP/bin/delivery-audit.sh"
+chmod +x "$TMP/bin/delivery-audit.sh"
+out="$(run delivery)"; rc=$?
+check "a merged PR claiming a delivery that is not there is DOWN (5)" "$rc" "5"
+
+stub delivery-audit.sh 6 "0 PR(s) audited; 0 met, 0 UNMET, 2 blind (2 carried no ledger)."
+out="$(run delivery)"; rc=$?
+check "claims that could not be checked are BLIND (6), never OK" "$rc" "6"
+
+rm -f "$TMP/bin/delivery-audit.sh"
+out="$(run delivery)"; rc=$?
+check "no delivery-audit at all is BLIND (6)" "$rc" "6"
+has  "and it says which part is missing" "$out" "delivery-audit not present"
+
+echo
+echo "-- fleet: the reason an account gives for stopping ---------------------"
+fleet() { printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s"\nexit 0\n' "$1" > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"; }
+
+fleet "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
+FLEET-LEDGERS 1"
+out="$(run fleet)"; rc=$?
+check "a fleet that finished its last run is OK (0)" "$rc" "0"
+
+fleet "2026-08-20	monkey	wtul	wtul	batch	0	NOT-DONE	blocked on a GitHub Actions billing failure -- needs Zach
+FLEET-LEDGERS 1"
+out="$(run fleet)"; rc=$?
+check "an account that ended NOT-DONE is DOWN (5)" "$rc" "5"
+has  "and the report carries the account's own words" "$out" "billing failure"
+
+# THE FALSE OK THIS PROBE WAS BORN WITH: it globbed a path no account had.
+fleet "FLEET-LEDGERS 0"
+out="$(run fleet)"; rc=$?
+check "zero ledgers is BLIND (6), not a quiet fleet" "$rc" "6"
+has  "and it says it cannot tell" "$out" "cannot tell"
+
+printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"
+out="$(run fleet)"; rc=$?
+check "an unreachable host is BLIND (6)" "$rc" "6"
+
+echo
 summary

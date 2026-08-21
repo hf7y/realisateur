@@ -117,6 +117,22 @@ else
   else
     bad "declared verb(s) whose backing script is not PAYLOAD-classified:$verb_bad"
   fi
+
+  # A verb installs as a SYMLINK: sourcing lib/ without readlink -f fails
+  # QUIETLY and the verb runs with no cli_guard (live on ausculte, 08-21).
+  link_bad=""
+  while read -r v; do
+    [ -n "$v" ] || continue
+    s="$(main_script_for "$v")"
+    f="$REPO/bin/$s"
+    [ -r "$f" ] || continue
+    grep -q 'dirname "\${BASH_SOURCE\[0\]}")/lib/' "$f" && link_bad="$link_bad $v(<-$s)"
+  done <<< "$declared_verbs"
+  if [ -z "$link_bad" ]; then
+    ok "every declared verb resolves its lib/ through readlink -f, so the symlink install works"
+  else
+    bad "verb(s) sourcing lib/ without readlink -f -- the guard will not load when installed as a symlink:$link_bad"
+  fi
 fi
 
 # ===========================================================================
