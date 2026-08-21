@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
-# selfdev-hooks-provision.sh -- give every self-dev account the SubagentStop
-# closeout hook it was installed with and never wired, so THE-FLOOR gate 3.2 is MET in substance, not just in the hook file's existence.
+# selfdev-hooks-provision.sh -- every self-dev account runs THE-FLOOR gate
+# 3.2's closeout hook: wired in settings.json, and the CURRENT file.
 #
-# RUNNER: bin/tests/selfdev-hooks-provision.test.sh
+# RUNNER: bin/tests/selfdev-hooks-provision.test.sh -- and an operator, on the host
 # GUARD-TEST: bin/tests/selfdev-hooks-provision.test.sh
 # GATE: strict
 #
-# hf7y/realisateur#272: install-shims.sh installs the hook file on every
-# account but will not wire settings.json itself ("Zach's file"); #282 already
-# crossed that boundary for `permissions`, applied here to #272's gap. A
-# sibling of selfdev-permissions-provision.sh (same shape, #321), not a merge into it -- different questions, per #294.
+# #272: install-shims.sh installs the hook file but will not wire
+# settings.json ("Zach's file"); #282 crossed that boundary for `permissions`.
+# A sibling of selfdev-permissions-provision.sh, not a merge into it (#294).
 #
-# Env overrides (test suite only): HOME_ROOT, ACCOUNTS, SUDO. See --help.
+# Env overrides (test suite only): HOME_ROOT, ACCOUNTS, SUDO, SELFDEV_HOOK_SRC.
 
 set -uo pipefail
 
@@ -55,7 +54,7 @@ for a in "$@"; do
   esac
 done
 
-# One jq literal: the drift check and the write read the SAME value. Wires the path install-shims.sh already installs.
+# One jq literal: the drift check and the write read the SAME value.
 read -r -d '' HOOKS <<'JSON'
 {
   "SubagentStop": [
@@ -90,11 +89,40 @@ echo
 
 drift=0; blind=0; okc=0
 
+# THE FILE, NOT ONLY THE BLOCK: install-shims.sh refreshes it from a local
+# CLONE 13 of 15 accounts lost to #385/#386. FOUR live versions, none main's.
+# PROP_HOST_PIN, not the literal layout: propagation-set.sh owns it.
+# shellcheck source=bin/lib/propagation-set.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/propagation-set.sh"
+HOOK_SRC="${SELFDEV_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/subagent-closeout.sh}"
+hook_drift=0
+hook_sum() { $SUDO md5sum "$1" 2>/dev/null | cut -d' ' -f1; }
+want_sum="$(hook_sum "$HOOK_SRC")"
+[ -n "$want_sum" ] || echo "  BLIND the hook file source is unreadable at $HOOK_SRC -- not checked"
+
 for u in "$@"; do
   f="$HOME_ROOT/$u/.claude/settings.json"
 
+  if [ -n "$want_sum" ]; then
+    hf="$HOME_ROOT/$u/.claude/hooks/subagent-closeout.sh"
+    got_sum="$(hook_sum "$hf")"
+    if [ "$got_sum" = "$want_sum" ]; then
+      :
+    else
+      echo "  DRIFT $u: hook FILE is ${got_sum:-absent}, build has ${want_sum}"
+      hook_drift=$((hook_drift+1))
+      if [ "$APPLY" = 1 ]; then
+        if $SUDO install -m 755 -D "$HOOK_SRC" "$hf" 2>/dev/null; then
+          $SUDO chown "$u:$u" "$hf" 2>/dev/null || true
+          echo "        -> refreshed from the build"
+        else
+          echo "        -> FAILED to refresh the hook file"
+        fi
+      fi
+    fi
+  fi
+
   if ! $SUDO test -f "$f" 2>/dev/null; then
-    # no file is DRIFT, not BLIND: state is known, --apply can create one
     echo "  DRIFT $u: no settings.json at all"
     drift=$((drift+1))
     [ "$APPLY" = 1 ] || continue
@@ -119,7 +147,7 @@ for u in "$@"; do
     [ "$APPLY" = 1 ] || continue
   fi
 
-  # merge, never replace: clobbering env/permissions would take the account off the air or reopen #282
+  # merge, never replace: clobbering env/permissions reopens #282
   new="$(printf '%s' "$cur" | jq --argjson want "$HOOKS" '.hooks = $want' 2>/dev/null)"
   if [ -z "$new" ]; then
     echo "        -> FAILED to build the new settings; left untouched"
@@ -143,6 +171,7 @@ for u in "$@"; do
 done
 
 echo
+[ "$hook_drift" -gt 0 ] && echo "== $hook_drift account(s) ran a hook FILE that is not the build's =="
 echo "== $okc with the block, $drift drifted, $blind BLIND, out of $# account(s) =="
 
 [ "$blind" -eq 0 ] || { echo "$CLI_NAME: $blind account(s) unreadable -- counts above are NOT trustworthy."; exit 6; }
