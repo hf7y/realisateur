@@ -14,7 +14,7 @@
 #   selfdev-claude-token.sh --purge              LIST the copies that would go
 #   selfdev-claude-token.sh --purge --apply      shred them
 #
-# exit: 0 OK  1 usage  2 GAP (something to do)  4 BAD  6 BLIND (could not look)
+# exit: 0 OK  1 BAD (found)  2 usage  4 GAP (to do)  6 BLIND  7 REFUSED
 #
 # ORDER MATTERS, unenforceable here: rotate, --install, --fanout, prove a
 # dispatch, revoke. Purging first deletes copies of a value still live.
@@ -38,7 +38,7 @@ ok()    { printf '  OK      %s\n' "$*"; PASS=$((PASS+1)); }
 gap()   { printf '  GAP     %s\n' "$*"; GAPS=$((GAPS+1)); }
 bad()   { printf '  BAD     %s\n' "$*"; BAD=$((BAD+1)); }
 blind() { printf '  BLIND   %s\n' "$*"; BLIND=$((BLIND+1)); }
-die()   { printf 'selfdev-claude-token: %s\n' "$*" >&2; exit 1; }
+die()   { printf 'selfdev-claude-token: %s\n' "$*" >&2; exit 2; }
 
 # Prints the whole header: a fixed line range starts printing code once edited.
 usage() { sed -n '2,/^[^#]/p' "${BASH_SOURCE[0]}" | sed '$d; s/^# \{0,1\}//'; }
@@ -57,7 +57,7 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-[ -n "$MODE" ] || { usage; exit 1; }
+[ -n "$MODE" ] || { usage; exit 2; }
 
 # selfdev_accounts -- rc 1 on an empty band: a finding, not an emptiness to pass over.
 selfdev_accounts() {
@@ -133,7 +133,7 @@ install)
       printf 'selfdev-claude-token: REFUSING -- the new value is %d characters, the one it replaces is %d.\n' "$new_len" "$cur_len" >&2
       printf '  A token that is the wrong length is a bad paste, and --fanout would carry it to every account.\n' >&2
       printf '  Re-copy it, or pass --force-length if the token format genuinely changed.\n' >&2
-      exit 4
+      exit 7
     fi
     ok "length matches the value being replaced ($new_len characters)"
   else
@@ -205,7 +205,7 @@ fanout)
   [ "$APPLY" -eq 1 ] || echo "== DRY RUN (no --apply): listing only =="
   if [ ! -e "$TOKPATH" ]; then
     bad "nothing to fan out: $TOKPATH does not exist -- run --install first"
-    printf '\n== %d BAD ==\n' "$BAD"; exit 4
+    printf '\n== %d BAD ==\n' "$BAD"; exit 1
   fi
   if ! selfdev_token_readable "$TOKPATH"; then
     blind "cannot read $TOKPATH as $(id -un) -- refusing to fan out a value I cannot verify"
@@ -242,7 +242,7 @@ purge)
   [ "$APPLY" -eq 1 ] || echo "== DRY RUN (no --apply): listing only =="
   if [ ! -e "$TOKPATH" ]; then
     bad "refusing to purge: $TOKPATH does not exist, so purging would leave NO copy of the token anywhere and every account would dispatch and produce nothing, silently"
-    printf '\n== %d BAD ==\n' "$BAD"; exit 4
+    printf '\n== %d BAD ==\n' "$BAD"; exit 1
   fi
   selfdev_token_readable "$TOKPATH" || { blind "cannot read $TOKPATH as $(id -un) -- refusing to purge against a replacement I cannot verify"; printf '\n== %d BLIND ==\n' "$BLIND"; exit 6; }
   if ! accts="$(selfdev_accounts)"; then
@@ -286,7 +286,7 @@ purge)
 esac
 
 printf '\n== %d OK, %d GAP, %d BAD, %d BLIND ==\n' "$PASS" "$GAPS" "$BAD" "$BLIND"
-[ "$BAD"   -gt 0 ] && exit 4
+[ "$BAD"   -gt 0 ] && exit 1
 [ "$BLIND" -gt 0 ] && exit 6
-[ "$GAPS"  -gt 0 ] && exit 2
+[ "$GAPS"  -gt 0 ] && exit 4
 exit 0
