@@ -71,7 +71,7 @@ if want hosts; then
 fi
 
 if want arming; then
-  # WHAT THE ACCOUNTS ARE DOING, not how often the word "armed" appears:
+  # WHAT THE ACCOUNTS ARE DOING, not how often the word "armed" appears --
   # counting the key said OK while three accounts had been dead eight days.
   st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://hf7y.com/monkey/status.json}" 2>/dev/null)"
   if ! printf '%s' "$st" | jq -e '.accounts' >/dev/null 2>&1; then
@@ -81,9 +81,9 @@ if want arming; then
     # A document past the freshness it declares for itself is not evidence.
     record arming BLIND "the published monkey status expired at $vu -- nothing is publishing it"
   else
-    # TRAP: fromdateiso8601 rejects a "+00:00" offset and accepts only "Z", so
-    # the ledger's timestamps make jq exit mid-stream. Unnormalised, this row
-    # printed OK off an empty result. A jq failure is BLIND, never clean.
+    # TRAP: fromdateiso8601 rejects a "+00:00" offset and takes only "Z", so
+    # the timestamps make jq exit mid-stream and this row printed OK off an
+    # empty result. A jq failure is BLIND, never clean.
     if ! stale="$(printf '%s' "$st" | jq -er --argjson d "${ARMING_STALE_DAYS:-3}" '
       (now - ($d * 86400)) as $cut
       | [ .accounts[]
@@ -94,8 +94,7 @@ if want arming; then
       record arming BLIND 'the status document could not be graded (unreadable timestamps)'
       stale=SKIP
     fi
-    # NO RECORD IS NOT NO DISPATCH: three accounts write none at all
-    # (hf7y/scheduler#259), so the document cannot say. BLIND.
+    # NO RECORD IS NOT NO DISPATCH (hf7y/scheduler#259).
     norec="$(printf '%s' "$st" | jq -r '[.accounts[]|select(.armed)|select(.last_run.started_at == null)|.account]|join(" ")' 2>/dev/null)"
     n_armed="$(printf '%s' "$st" | jq -r '[.accounts[]|select(.armed)]|length')"
     gen="$(printf '%s' "$st" | jq -r '.generated')"
@@ -103,7 +102,18 @@ if want arming; then
     elif [ -n "$stale" ]; then
       record arming DOWN "armed but not dispatching for ${ARMING_STALE_DAYS:-3}d: $stale (status generated $gen)"
     elif [ -n "$norec" ]; then
-      record arming BLIND "no run record published for: $norec -- cannot tell whether they dispatched (hf7y/scheduler#259)"
+      # The document omits their last_run; their ledgers are on the host.
+      lr="$(${AUSCULTE_SSH:-ssh} -o BatchMode=yes "${AUSCULTE_FLEET_HOST:-monkey}" "
+        sudo -n true 2>/dev/null && SU='sudo -n' || SU=''
+        for a in $norec; do
+          f=/home/\$a/.local/share/scheduler-paced-runner/ledger.tsv
+          \$SU test -r \"\$f\" && printf '%s %s\n' \"\$a\" \"\$(\$SU tail -1 \"\$f\" | cut -f1)\"
+        done" 2>/dev/null)"
+      if [ -n "$lr" ]; then
+        record arming DOWN "published status omits last_run for: $norec (hf7y/scheduler#259) -- their own ledgers say: $(printf '%s' "$lr" | tr '\n' ' ')"
+      else
+        record arming BLIND "no run record published for: $norec -- cannot tell whether they dispatched (hf7y/scheduler#259)"
+      fi
     else
       record arming OK "$n_armed account(s) armed, each dispatched within ${ARMING_STALE_DAYS:-3}d"
     fi
@@ -112,8 +122,8 @@ fi
 
 if want propagation; then
   # THE CHANNEL'S OWN VERDICT FIRST: counting verbs answers "is something
-  # installed", not "is the channel running" -- the cutter refused for two
-  # days while every host had its verbs, and this row said OK throughout.
+  # installed", not "is the channel running" -- the cutter refused two days
+  # while every host had its verbs, and this row said OK throughout.
   ps=""
   for cand in "$HERE/lib/propagation-set.sh" \
               "${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/lib/propagation-set.sh"; do
@@ -207,11 +217,12 @@ fi
 # Each ledger ends in a REASON column nothing has ever read.
 if want fleet; then
   led="$(${AUSCULTE_SSH:-ssh} -o BatchMode=yes "${AUSCULTE_FLEET_HOST:-monkey}" '
+    sudo -n true 2>/dev/null && SU="sudo -n" || SU=""   # homes are 0700
     n=0
-    for f in /home/*/.local/share/scheduler-paced-runner/ledger.tsv; do
-      [ -r "$f" ] || continue
+    for f in $($SU sh -c "ls /home/*/.local/share/scheduler-paced-runner/ledger.tsv 2>/dev/null"); do
+      $SU test -r "$f" || continue
       n=$((n + 1))
-      tail -1 "$f"
+      $SU tail -1 "$f"
     done
     echo "FLEET-LEDGERS $n"' 2>/dev/null)"
   case "$led" in
