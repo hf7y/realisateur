@@ -247,7 +247,7 @@ printf '%s\n' "$GOOD" > "$T/good.md"
 printf 'intro\n\nDECISION: buried\n' > "$T/bad.md"
 
 out="$(run_shim issue create --title T --body-file "$T/bad.md")"; got=$?
-rc   'S1 a malformed issue body exits 3' "$got" 3
+rc   'S1 a malformed issue body is REFUSED (7): nothing was created' 7 "$got"
 has  'S2 it says what is wrong'          "$out" MISPLACED-DECISION
 has  'S3 it prints the block to paste'   "$out" '<!-- DEFERRED -->'
 if [ -f "$T/reached" ]; then bad 'S4 gh was never called' "gh ran: $(cat "$T/reached")"
@@ -269,7 +269,7 @@ out="$( PATH="$T/bin:$PATH" GH_SIGN_LIB=/nonexistent bash "$SHIM" issue create -
 has 'S7 a missing grammar library is announced BLIND, not silently skipped' "$out" BLIND
 
 out="$(bash "$SHIM" --check-body "$T/bad.md" 2>&1)"; got=$?
-rc  'S8 --check-body re-runs the same check offline' "$got" 3
+rc  'S8 --check-body re-runs it offline and FINDS it (1), refusing nothing' 1 "$got"
 has 'S9 --check-body names the same finding'         "$out" MISPLACED-DECISION
 
 section 'I. the CI backstop is wired to the same grammar'
