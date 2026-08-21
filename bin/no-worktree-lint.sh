@@ -160,14 +160,6 @@ if [ -n "${NO_WORKTREE_WT_ALLOW_FILE:-}" ]; then
   done < "$NO_WORKTREE_WT_ALLOW_FILE"
 fi
 
-# The main worktree is identified by ITS POSITION, not by string-matching
-# $ROOT: `git worktree list` always lists the main worktree first (documented
-# git behaviour), and $ROOT can legitimately disagree with what git prints for
-# it -- e.g. a leaked GIT_WORK_TREE from an unrelated clone-under-mktemp makes
-# `git rev-parse --show-toplevel` report a path git's own worktree metadata
-# never printed, which turned the real main checkout into a false [stray
-# worktree] FLAG (#505). Position is the one thing git guarantees; a path
-# comparison against an independently-resolved $ROOT is not.
 mapfile -t STRAY_WT < <(
   git -C "$ROOT" worktree list --porcelain 2>/dev/null \
     | awk 'BEGIN{first=1} /^worktree /{p=substr($0,10); if (first) {first=0} else print p}'
