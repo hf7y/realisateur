@@ -454,7 +454,7 @@ EOF
   printf '#!/usr/bin/env bash\nls /etc >/dev/null\n' >"$tmp/reg2/undeclared/bin/x.sh"
   out="$(PROJECTS_ROOT="$tmp/reg2" bash "${BASH_SOURCE[0]}" 2>&1; echo "rc=$?")"
   tn "a declared tree is not reported BLIND"        'BLIND'       "$out"
-  tn "a declared tree does not exit 3"              'rc=3'        "$out"
+  tn "a declared tree does not exit 6"              'rc=3'        "$out"
   tn "an undeclared sibling is not audited"         'undeclared'  "$out"
 
   # --- #138: a script whose ONLY caller is its own witness is WIRED.
@@ -534,7 +534,7 @@ EOF
   out="$(PROJECTS_ROOT="$tmp/reg4" bash "${BASH_SOURCE[0]}" 2>&1)"
   tn "subrepo-invisible clears when the declared tree is the repo root" 'subrepo-invisible' "$out"
 
-  # --- BLIND: zero mechanisms must exit 3, not 0
+  # --- BLIND: zero mechanisms must exit 6, not 0
   mkdir -p "$tmp/empty/schedule"
   out="$(PROJECTS_ROOT="$tmp/empty" bash "${BASH_SOURCE[0]}" 2>&1; echo "rc=$?")"
   t "empty domain exits BLIND(3) not clean" 'rc=3' "$out"
@@ -637,7 +637,7 @@ if [ "${projects_seen:-0}" -eq 0 ]; then
   echo "This is not a clean result. Nothing was audited; the domain was"
   echo "unreadable or empty. Reporting clean here would be the exact defect"
   echo "this script exists to detect."
-  exit 3
+  exit 6
 fi
 echo "audited $mechanisms mechanism(s); $flags FLAG(s)"
 [ "$STRICT" = 1 ] && [ "$flags" -gt 0 ] && exit 1

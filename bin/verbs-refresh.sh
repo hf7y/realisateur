@@ -27,7 +27,7 @@ CLI_EXITS='  0  on the newest build, it is not stale, and every verb link resolv
   1  something needs doing: a newer build exists, the current one is older
      than STALE_DAYS, or a verb link is dangling or off-channel
   2  usage error
-  3  BLIND -- could not reach the build channel, or there is no build root
+  6  BLIND -- could not reach the build channel, or there is no build root
      here at all. NEVER 0: could-not-look is not up-to-date.'
 CLI_POSITIONAL=none
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
@@ -56,13 +56,13 @@ nag() { printf 'verbs: %s -- %s\n' "$1" "$2" >&2; }
 
 [ -d "$BUILD_ROOT" ] || {
   echo "$CLI_NAME: no build root at $BUILD_ROOT -- this host has never adopted a verb build. BLIND, not up to date." >&2
-  exit 3
+  exit 6
 }
 
 pin="$(readlink "$BUILD_ROOT/current" 2>/dev/null)"
 [ -n "$pin" ] || {
   echo "$CLI_NAME: $BUILD_ROOT/current is not a symlink -- no build is pinned. BLIND, not up to date." >&2
-  exit 3
+  exit 6
 }
 
 # AGE. The build id is a UTC stamp (2026-08-14T033443Z), so the age comes from
@@ -132,7 +132,7 @@ if [ "$do_check" = 1 ]; then
   case $? in
     0) say "  ok     no newer build on the channel" ;;
     1) say "  NEWER  a newer build is available"; newer=1; findings=$((findings+1)) ;;
-    *) echo "$CLI_NAME: could not reach the build channel -- BLIND, not up to date." >&2; exit 3 ;;
+    *) echo "$CLI_NAME: could not reach the build channel -- BLIND, not up to date." >&2; exit 6 ;;
   esac
   touch "$STAMP" 2>/dev/null || true
 fi

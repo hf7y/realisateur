@@ -297,7 +297,7 @@ EOF
 }
 INST_CURRENT="$T/inst-current.sh"; mkinst "$INST_CURRENT" 0 "verbs: up to date (build 2026-08-07T040739Z)"
 INST_NEWER="$T/inst-newer.sh";     mkinst "$INST_NEWER"   1 "verbs: a newer build is available"
-INST_BLIND="$T/inst-blind.sh";     mkinst "$INST_BLIND"   3 "install-verb-build.sh: BLIND -- cannot fetch"
+INST_BLIND="$T/inst-blind.sh";     mkinst "$INST_BLIND"   6 "install-verb-build.sh: BLIND -- cannot fetch"
 
 mkdir -p "$T/s_fresh" "$T/s_old" "$T/s_none"
 printf '2026-08-07T12:00:00Z rc=0 pin=2026-08-07T040739Z 2 ok\n' > "$T/s_fresh/selfdev-release-tick.status"
@@ -416,7 +416,7 @@ PIN_BEFORE="$(readlink "$T/pinned/.local/share/verb-builds/current")"
 
 O="$(HOME="$T/pinned" TICK_STATE="$T/s_fresh" TICK_INSTALLER="$INST_BLIND" \
      VERB_BUILD_ROOT="$T/pinned/.local/share/verb-builds" "$TICK" --check 2>&1)"; R=$?
-rc "an unreachable release channel exits 3 BLIND, not 0 and not 1" 3 "$R"
+rc "an unreachable release channel exits 6 BLIND, not 0 and not 1" 6 "$R"
 has "BLIND says it is not 'up to date'" "$O" "not 'up to date'"
 has "BLIND names the fail-open choice explicitly" "$O" "fail-open on operation"
 PIN_AFTER="$(readlink "$T/pinned/.local/share/verb-builds/current")"
@@ -467,7 +467,7 @@ t0=$(date +%s)
 O="$(VERB_BUILD_ROOT="$T/blindroot" VERB_BUILD_NET_TIMEOUT=1 \
      "$INST" --check --remote https://192.0.2.1/verbs.git 2>&1)"; R=$?
 t1=$(date +%s)
-rc "an unroutable remote reaches BLIND (exit 3), not a hang" 3 "$R"
+rc "an unroutable remote reaches BLIND (exit 6), not a hang" 6 "$R"
 has "BLIND names the bound it hit" "$O" "within 1s"
 if [ $((t1 - t0)) -le 10 ]; then
   ok "BLIND arrived in $((t1-t0))s -- the network reach is bounded, not left to TCP retry"
@@ -490,7 +490,7 @@ rc "a missing bootstrap exits non-zero" 1 "$R"
 
 O="$(TICK_SURVEY_HOST="no-such-host.invalid" TICK_STATE="$T/s_fresh" \
      HOME="$T/emptyhome" "$TICK" --survey 2>&1)"; R=$?
-rc "an unreachable survey host exits 3 BLIND, not 0" 3 "$R"
+rc "an unreachable survey host exits 6 BLIND, not 0" 6 "$R"
 has "the unreachable survey says nothing was verified" "$O" "Nothing was verified"
 
 mkdir -p "$T/localsurvey/stub"

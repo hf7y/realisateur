@@ -236,7 +236,7 @@ echo
 echo "-- 6. UNREADABLE IS NOT EMPTY ------------------------------------------"
 # ===========================================================================
 O="$("$LED" --ledger "$T/no-such-file.tsv" 2>&1)"; R=$?
-rc "a ledger that cannot be read is BLIND (3), not BAD (1) and not clean" 3 "$R"
+rc "a ledger that cannot be read is BLIND (6), not BAD (1) and not clean" 6 "$R"
 has "BLIND says it is a different fact from reporting nothing" "$O" "different fact from a channel that reported nothing"
 has "BLIND says what to do rather than inviting a silence" "$O" "do not silence this"
 

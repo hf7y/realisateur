@@ -246,6 +246,8 @@ if want silence; then
     case $rc in
       0) record silence OK 'no silenced failure paths' ;;
       2) record silence BLIND 'ausculte invoked silence-audit wrongly -- fix ausculte' ;;
+      # 6 used to fall through to DOWN: unreadable read as not-serving (#334).
+      6) record silence BLIND "$(printf '%s' "$out" | tail -1)" ;;
       *) record silence DOWN "$(printf '%s' "$out" | tail -1)" ;;
     esac
   else record silence BLIND 'silence-audit not present'; fi

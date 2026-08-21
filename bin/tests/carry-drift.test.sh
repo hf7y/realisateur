@@ -128,10 +128,10 @@ has "E3 ...and named"  "$out" "DRIFT     bin/gh"
 section "F. BLIND is not clean"
 mkdir -p "$T/nobranch"; git -C "$T/nobranch" init -q 2>/dev/null || git init -q "$T/nobranch"
 out="$(bash "$CD" --repo "$T/nobranch" --ratchet "$EMPTY_RATCHET" 2>&1)"; rc=$?
-rc  "F1 no bashified ref exits 3, not 0" 3 "$rc"
+rc  "F1 no bashified ref exits 6, not 0" 6 "$rc"
 has "F2 ...and says it could not look"   "$out" "BLIND"
 out="$(bash "$CD" --repo "$T/does-not-exist" 2>&1)"; rc=$?
-rc  "F3 an absent repo is BLIND too" 3 "$rc"
+rc  "F3 an absent repo is BLIND too" 6 "$rc"
 
 section "H. a DECLARED carry that was never made is a finding, not silence"
 # The shape of hf7y/realisateur#327: the shim merged, nothing carried it, and

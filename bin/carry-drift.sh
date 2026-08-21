@@ -32,7 +32,7 @@ CLI_POSITIONAL=any
 CLI_EXITS='  0  every carried file matches, or the pairs that do not are ratcheted
   1  a carried file has drifted from its original and is not in the ratchet
   2  usage error
-  3  BLIND -- no `bashified` ref to read. Never 0: could-not-look is not clean.'
+  6  BLIND -- no `bashified` ref to read. Never 0: could-not-look is not clean.'
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 
@@ -80,7 +80,7 @@ hooks/subagent-closeout.sh	hooks/subagent-closeout.sh
 say()  { printf '%s\n' "$*"; }
 row()  { printf '  %-9s %-26s %s\n' "$1" "$2" "${3:-}"; }
 
-[ -d "$ROOT" ] || { printf '%s: BLIND: no such directory: %s\n' "$CLI_NAME" "$ROOT" >&2; exit 3; }
+[ -d "$ROOT" ] || { printf '%s: BLIND: no such directory: %s\n' "$CLI_NAME" "$ROOT" >&2; exit 6; }
 
 # origin/bashified FIRST, deliberately, and it is not a style choice: the
 # build is cut from what is PUBLISHED, so a stale local `bashified` would make
@@ -94,7 +94,7 @@ done
 [ -n "$REF" ] || {
   printf '%s: BLIND: %s has no `bashified` ref, so nothing could be compared.\n' "$CLI_NAME" "$ROOT" >&2
   printf '%s: that is "I could not look", not "nothing has drifted".\n' "$CLI_NAME" >&2
-  exit 3
+  exit 6
 }
 
 # main_original <bashified-path> -- the file on main this one is a copy of, or
