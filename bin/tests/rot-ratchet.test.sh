@@ -8,7 +8,7 @@
 #   C a repo below baseline            -> exit 0; --accept lowers it
 #   D --accept refuses a regression    -> exit 1, ratchet unchanged
 #   E --accept with nothing to lower   -> exit 1 (never a silent rewrite)
-#   F the scan exiting 3 is BLIND      -> exit 3, never 0
+#   F the scan exiting BLIND           -> exit 6, never 0
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -62,7 +62,7 @@ bash "$SCRIPT" --accept >/dev/null 2>&1; rc "E1 exits 1" 1 $?
 
 echo "-- F. an unreadable repo is BLIND, never all-clear"
 fixture chezz; baseline "chezz	2"
-out="$(SCAN_RC=3 bash "$SCRIPT" 2>&1)"; rc "F1 exits 3" 3 $?
+out="$(SCAN_RC=3 bash "$SCRIPT" 2>&1)"; rc "F1 exits 6" 6 $?
 has "F2 says BLIND" "$out" "BLIND"
 
 summary

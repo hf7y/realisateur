@@ -10,7 +10,7 @@
 # express that: they half-succeed, and leave you running a verb set that
 # never existed as a whole and cannot be named in a bug report.
 # And it never reports "you are up to date" when it could not look. An
-# unreachable remote is BLIND, exit 3 -- the `garde` shape from
+# unreachable remote is BLIND, exit 6 -- the `garde` shape from
 # vault:realisateur/MONKEY.md §5, where skipping unreachable destinations made
 # "nothing pending" indistinguishable from "everything is proven".
 
@@ -29,7 +29,7 @@ CLI_POSITIONAL=any   # flag VALUES (--build <id>) read as positionals to cli-gua
 CLI_EXITS='  0  done, or --check found you current
   1  refused: incomplete, unverifiable, or --check found a newer build
   2  usage error
-  3  BLIND: could not reach the meta-repo. This is not "up to date".'
+  6  BLIND: could not reach the meta-repo. This is not "up to date".'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
@@ -59,7 +59,7 @@ done
 
 say()  { printf '%s\n' "$*" >&2; }
 die()  { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
-blind(){ printf '%s: BLIND -- %s. This is not "up to date".\n' "$CLI_NAME" "$*" >&2; exit 3; }
+blind(){ printf '%s: BLIND -- %s. This is not "up to date".\n' "$CLI_NAME" "$*" >&2; exit 6; }
 row()  { printf '  %-8s %-18s %s\n' "$1" "$2" "${3:-}" >&2; }
 
 current_id() { readlink "$BUILD_ROOT/current" 2>/dev/null || true; }

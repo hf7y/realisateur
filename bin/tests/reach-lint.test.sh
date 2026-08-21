@@ -113,10 +113,10 @@ echo "-- E. a registry whose paths resolve to NOTHING is BLIND, not clean"
 mkdir -p "$T/E/sched/schedule"
 printf 'PROJECT_REPO_PATH="%s/E/does-not-exist"\n' "$T" > "$T/E/sched/schedule/proj.conf"
 run "$T/E/sched"
-rc  "E1 exits 3 BLIND when no conf resolves"   3 "$RUN_RC"
+rc  "E1 exits 6 BLIND when no conf resolves"   6 "$RUN_RC"
 has "E2 and says BLIND in words, not only in a code" "$RUN_OUT" "BLIND"
 run "$T/E/sched" --strict-reach
-rc  "E3 --strict-reach is BLIND too, not 0"    3 "$RUN_RC"
+rc  "E3 --strict-reach is BLIND too, not 0"    6 "$RUN_RC"
 
 echo "-- F. no registry AT ALL is not blind -- install-shims.sh depends on it"
 # F is the negative that keeps E honest, and it is not hypothetical: the first

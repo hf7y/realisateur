@@ -32,7 +32,7 @@
 #   0  every gated project is GREEN -- the build may be cut
 #   1  REFUSE: at least one project's default branch is RED
 #   2  usage error (cli-guard)
-#   3  BLIND: could not ask GitHub. This is not "green".
+#   6  BLIND: could not ask GitHub. This is not "green".
 #   4  REFUSE: at least one project's checks are still running
 #
 set -uo pipefail
@@ -45,7 +45,7 @@ CLI_FLAGS='--manifest --projects --owner'
 CLI_POSITIONAL=any   # flag VALUES read as positionals to cli-guard
 CLI_EXITS='  0  every gated project is GREEN -- the build may be cut
   1  REFUSE: a project'"'"'s default branch is RED
-  3  BLIND: could not ask GitHub. This is not "green".
+  6  BLIND: could not ask GitHub. This is not "green".
   4  REFUSE: a project'"'"'s checks are still running'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
@@ -80,7 +80,7 @@ if [ -n "$MANIFEST" ]; then
     # and something upstream should already have refused. Saying "green" here
     # would rubber-stamp it.
     printf '%s: BLIND -- the manifest names no projects. Nothing was gated.\n' "$CLI_NAME" >&2
-    exit 3
+    exit 6
   }
 fi
 
@@ -183,7 +183,7 @@ if [ "$blind" -gt 0 ]; then
   echo
   echo "BLIND: $blind project(s) could not be read. This is NOT a green result --" >&2
   echo "  a credential-limited read is short by construction and looks healthy." >&2
-  exit 3
+  exit 6
 fi
 
 if [ "$red" -gt 0 ]; then

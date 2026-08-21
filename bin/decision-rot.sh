@@ -36,7 +36,7 @@ CLI_FLAGS='--all --json'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  clean -- every answered issue has been closed
   1  rot found -- at least one answered issue is still open
-  3  error -- a repo could not be read; the count is NOT trustworthy'
+  6  BLIND -- a repo could not be read; the count is NOT trustworthy'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
@@ -66,8 +66,8 @@ if [ "$MODE" = all ]; then
   for p in "${ROSTER[@]}"; do REPOS+=("$OWNER/$p"); done
 fi
 
-command -v gh >/dev/null || { echo "decision-rot.sh: gh not on PATH" >&2; exit 3; }
-command -v jq >/dev/null || { echo "decision-rot.sh: jq not on PATH" >&2; exit 3; }
+command -v gh >/dev/null || { echo "decision-rot.sh: gh not on PATH" >&2; exit 6; }
+command -v jq >/dev/null || { echo "decision-rot.sh: jq not on PATH" >&2; exit 6; }
 
 # THE PREDICATE, in one jq program, so bin/tests/decision-rot.test.sh can pin
 # it against fixtures with no network. stdin is a `gh issue list --json
@@ -177,7 +177,7 @@ fi
 
 if [ "$ERRORS" -gt 0 ]; then
   echo "decision-rot.sh: $ERRORS repo(s) unreadable -- the count above is NOT trustworthy" >&2
-  exit 3
+  exit 6
 fi
 [ "$TOTAL_ROT" -gt 0 ] && exit 1
 exit 0

@@ -44,6 +44,13 @@ stub silence-audit.sh 2 "usage"
 run rot silence >/dev/null
 check "one probe DOWN and one BLIND exits DOWN" "$?" "5"
 
+stub decision-rot.sh 0
+stub silence-audit.sh 6 "BLIND: no tracked files"
+out="$(run silence)"; rc=$?
+check "a BLIND silence-audit is BLIND (6), not DOWN" "$rc" "6"
+case "$out" in *BLIND*) ok "...and the row says BLIND" ;;
+  *) bad "silence BLIND row" "got: $out" ;; esac
+
 # --- arming reads what the accounts DID ----------------------------------
 # Counting the word "armed" said OK while three accounts had been dead eight
 # days. And the first draft of the fix printed OK off a jq error, because the

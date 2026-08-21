@@ -173,15 +173,15 @@ echo
 echo "-- BLIND is not green --------------------------------------------------"
 set_answer kappa BLIND
 O="$(gate alpha kappa)"; R=$?
-rc "an unreadable project exits 3 BLIND, not 0" 3 "$R"
+rc "an unreadable project exits 6 BLIND, not 0" 6 "$R"
 has "BLIND is stated per project" "$O" "BLIND"
 has "BLIND says explicitly that it is not green" "$O" "NOT a green result"
 has "BLIND names why a short read looks healthy" "$O" "short by construction"
 
 set_answer lam NOREPO
-gate lam >/dev/null 2>&1; rc "a repository that cannot be read is BLIND" 3 $?
+gate lam >/dev/null 2>&1; rc "a repository that cannot be read is BLIND" 6 $?
 set_answer mu NOSHA
-gate mu >/dev/null 2>&1; rc "a HEAD that cannot be resolved is BLIND" 3 $?
+gate mu >/dev/null 2>&1; rc "a HEAD that cannot be resolved is BLIND" 6 $?
 
 # ===========================================================================
 echo
@@ -257,14 +257,14 @@ has "...and the row says both surfaces were consulted and empty" \
 # each one goes: UNGATED allows the cut, BLIND refuses it.
 set_answer aa BLIND            # the actions/runs query itself fails
 O="$(gate aa)"; R=$?
-rc "an actions/runs query that FAILS is BLIND (3), not UNGATED (0)" 3 "$R"
+rc "an actions/runs query that FAILS is BLIND (6), not UNGATED (0)" 6 "$R"
 has "...and names the surface that failed" "$O" "actions/runs"
 has "...and the permission it needs, so the fix is obvious" "$O" "actions:read"
 
 set_answer bb "success"
 set_status bb BLIND            # actions answers, statuses refuses
 O="$(gate bb)"; R=$?
-rc "a statuses query that FAILS is BLIND even when Actions answered green" 3 "$R"
+rc "a statuses query that FAILS is BLIND even when Actions answered green" 6 "$R"
 has "...and names that surface and its permission" "$O" "statuses:read"
 hasnt "...and does not report the project as GREEN" "$O" "GATE OPEN"
 
@@ -273,7 +273,7 @@ hasnt "...and does not report the project as GREEN" "$O" "GATE OPEN"
 for n in c1 c2 c3; do set_answer "$n" BLIND; done
 set_answer c4 "success"
 O="$(gate c1 c2 c3 c4)"; R=$?
-rc "many BLIND projects and one green still refuses" 3 "$R"
+rc "many BLIND projects and one green still refuses" 6 "$R"
 has "the count is reported honestly" "$O" "1 green, 0 red, 0 pending, 0 ungated, 3 blind"
 has "BLIND says explicitly it is not green" "$O" "NOT a green result"
 
@@ -300,7 +300,7 @@ has "the comment row is not treated as a project" "$O" "RED on: xi"
 # launder that.
 printf '# only a comment\n' > "$T/m2.tsv"
 O="$(ANSWERS="$T/answers" RELEASE_GATE_GH="$FAKEGH" "$GATE" --manifest "$T/m2.tsv" 2>&1)"; R=$?
-rc "an empty manifest is BLIND, never GREEN" 3 "$R"
+rc "an empty manifest is BLIND, never GREEN" 6 "$R"
 has "...and says nothing was gated" "$O" "names no projects"
 
 "$GATE" --manifest "$T/does-not-exist.tsv" >/dev/null 2>&1

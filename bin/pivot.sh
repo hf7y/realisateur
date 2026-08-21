@@ -20,7 +20,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
-cd "$ROOT" 2>/dev/null || { echo "pivot: BLIND: cannot reach repo root" >&2; exit 3; }
+cd "$ROOT" 2>/dev/null || { echo "pivot: BLIND: cannot reach repo root" >&2; exit 6; }
 
 # --- the ledger -------------------------------------------------------------
 # Each MOVE is: key | adds | retires-1 | retires-2 | witness command

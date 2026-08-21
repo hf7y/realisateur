@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # reach-lint.sh -- offline-first (zero AI), writes nothing, and exits 0 except
-# for its own --strict mode and the BLIND case (exit 3) where it could not
+# for its own --strict mode and the BLIND case (exit 6) where it could not
 # reach a single registered repo. The mechanization of BUILD-DISCIPLINE.md
 # pattern 13b along the axis hygiene-lint's [dispatch-parity] NOTE cannot
 # see: not "which command files name this script", but "can the executor
@@ -28,7 +28,7 @@ CLI_USAGE='  reach-lint.sh                scan every registered project + ~/.cla
 CLI_FLAGS='--strict --strict-reach'
 CLI_EXITS='  0  scanned; no FLAGs, or FLAGs found but no --strict mode asked for
   1  --strict/--strict-reach was given and the corresponding check FLAGged
-  3  BLIND: no registered project resolved to a directory that exists, so
+  6  BLIND: no registered project resolved to a directory that exists, so
      nothing was scanned. Never reported as 0.'
 CLI_POSITIONAL=none
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
@@ -136,7 +136,7 @@ for conf in "$SCHED_ROOT"/schedule/*.conf; do
   done
 done
 
-# BLIND, and exit 3 rather than 0 -- but ONLY on `confs>0 && repos==0`, which
+# BLIND, and exit 6 rather than 0 -- but ONLY on `confs>0 && repos==0`, which
 # is the #73 shape exactly: every conf readable, every path a literal, every
 # match impossible. Two neighbouring states are deliberately NOT blind:
 if [ "$confs" -gt 0 ] && [ "$repos" -eq 0 ]; then
@@ -145,7 +145,7 @@ if [ "$confs" -gt 0 ] && [ "$repos" -eq 0 ]; then
   echo "  PROJECT_REPO_PATH and NOT ONE resolves to a directory that exists, so"
   echo "  there was nothing to scan. This is 'I could not look', NOT 'nothing"
   echo "  to report'."
-  exit 3
+  exit 6
 fi
 
 echo

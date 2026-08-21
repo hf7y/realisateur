@@ -3,12 +3,11 @@
 #
 # RUNNER: .github/workflows/rot-ratchet.yml -- daily
 # GUARD-TEST: bin/tests/rot-ratchet.test.sh
-# GATE: none -- it grades the ESTATE's issues, not this checkout; same reason
-#       bin/decision-rot.sh is unwired. CI would depend on the network.
+# GATE: none -- it grades the ESTATE's issues, not this checkout, so CI would
+#       depend on the network; same reason bin/decision-rot.sh is unwired.
 #
-# The predicate is bin/decision-rot.sh's, unchanged and unduplicated: this
-# reads its `--json` summary. Nothing new is defined here -- no label, no
-# field, no convention -- only the ratchet idiom this repo already uses in
+# The predicate is bin/decision-rot.sh's, unchanged: this reads its `--json`
+# summary. Nothing new is defined here -- only the ratchet idiom used in
 # bin/thermostat-wiring.ratchet: `--accept` LOWERS a repo's baseline or
 # refuses, and a repo above its baseline exits 1.
 #
@@ -16,7 +15,7 @@
 # exit:   0  no repo is above its baseline
 #         1  REGRESSION -- a repo grew rot, or --accept had nothing to lower
 #         2  usage error (cli-guard.sh)
-#         3  BLIND -- decision-rot.sh could not read a repo. NEVER "all clear"
+#         6  BLIND -- decision-rot.sh could not read a repo. NEVER "all clear"
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
@@ -29,7 +28,7 @@ CLI_USAGE='  rot-ratchet.sh            grade every repo against its baseline
 CLI_FLAGS='--accept'
 CLI_EXITS='  0  no repo is above its baseline
   1  REGRESSION -- a repo grew rot (or --accept found nothing to lower)
-  3  BLIND -- a repo could not be read; the count is NOT trustworthy'
+  6  BLIND -- a repo could not be read; the count is NOT trustworthy'
 CLI_POSITIONAL=none
 . "$ROOT/bin/lib/cli-guard.sh"
 cli_guard "$@"
@@ -45,11 +44,11 @@ out="$($SCAN)"; rc=$?
 # decision-rot.sh: 0 clean, 1 rot found, 3 unreadable. Only 3 is BLIND.
 if [ "$rc" -eq 3 ]; then
   echo 'rot-ratchet.sh: decision-rot.sh could not read every repo -- BLIND, not clear' >&2
-  exit 3
+  exit 6
 fi
 if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
   echo "rot-ratchet.sh: scan exited $rc" >&2
-  exit 3
+  exit 6
 fi
 
 # Counted from the rotting rows, not from the summary total, so the per-repo
@@ -58,7 +57,7 @@ now="$(printf '%s\n' "$out" \
        | jq -r 'select(.kind == "rotting") | .repo' | sed 's|.*/||' | sort | uniq -c \
        | awk '{print $2"\t"$1}')"
 
-[ -f "$RATCHET" ] || { echo "rot-ratchet.sh: no ratchet at $RATCHET -- run --accept to seed it" >&2; exit 3; }
+[ -f "$RATCHET" ] || { echo "rot-ratchet.sh: no ratchet at $RATCHET -- run --accept to seed it" >&2; exit 6; }
 
 base="$(grep -v '^#' "$RATCHET" | grep .)"
 

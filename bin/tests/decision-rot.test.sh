@@ -14,7 +14,7 @@
 #   * D: the stamp is read on the LAST NON-BLANK LINE ONLY. A stamp quoted
 #        mid-body out of another comment must not disqualify a real answer,
 #        and trailing blank lines must not hide a real stamp.
-#   * E: silent zero. A `gh` failure must exit 3, never 0-with-no-rot.
+#   * E: silent zero. A `gh` failure must exit 6, never 0-with-no-rot.
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -109,12 +109,12 @@ has   "D2 exactly one answered -- the mid-body quote does not disqualify" "$OUT"
 has   "D3 the mid-body-quote issue is the rotting one" "$OUT" "#10"
 hasnt "D4 trailing blank lines do not hide the stamp" "$OUT" "#11"
 
-echo "-- E. SILENT ZERO: a gh failure exits 3, never 0"
+echo "-- E. SILENT ZERO: a gh failure exits 6, never 0"
 OUT="$(GH_FAIL='API rate limit exceeded' run "$T/a.json" o/r 2>&1)"; RC=$?
-rc  "E1 exits 3 on a gh failure" 3 "$RC"
+rc  "E1 exits 6 on a gh failure" 6 "$RC"
 has "E2 says the count is untrustworthy" "$OUT" "NOT trustworthy"
 OUT="$(GH_FAIL='GraphQL: Could not resolve to a Repository' run "$T/a.json" --all 2>&1)"; RC=$?
-rc  "E3 a missing repo across --all is exit 3, not a quiet short count" 3 "$RC"
+rc  "E3 a missing repo across --all is exit 6, not a quiet short count" 6 "$RC"
 OUT="$(GH_FAIL='Issues are disabled for this repo' run "$T/a.json" o/r 2>&1)"; RC=$?
 rc  "E4 issues-disabled is soft (exit 0, nothing to grade)" 0 "$RC"
 has "E5 and says so on stderr" "$OUT" "issues disabled"

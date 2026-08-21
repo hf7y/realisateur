@@ -23,7 +23,7 @@ CLI_FLAGS='--check --apply --install-cadence --retire-cadence --survey'
 CLI_POSITIONAL=none
 CLI_EXITS='  0  on the current build and the clock is alive
   1  findings: a newer build exists, the clock is dead, or bootstrap incomplete
-  3  BLIND: could not reach the release channel. This is not "up to date".'
+  6  BLIND: could not reach the release channel. This is not "up to date".'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
@@ -151,7 +151,7 @@ check_pin() {
   case "$rc" in
     0) ok "pin current: $(current_pin)" ;;
     1) gap "a newer build exists -- this account is on $(current_pin || echo '<none>'). Adopt: $0 --apply" ;;
-    3) bad "BLIND -- could not reach the release channel. The account keeps running its pinned build (fail-open on operation); nothing was verified." ;;
+    6) bad "BLIND -- could not reach the release channel. The account keeps running its pinned build (fail-open on operation); nothing was verified." ;;
     *) bad "install-verb-build.sh --check exited $rc, which is not a verdict this script knows how to read" ;;
   esac
   return "$rc"
@@ -326,7 +326,7 @@ EOF
     else
       echo "BLIND: could not survey $SURVEY_HOST (ssh rc=$rc). Nothing was verified." >&2
     fi
-    return 3
+    return 6
   fi
   printf '  %-16s %-26s %-8s %-6s %s\n' ACCOUNT PIN CLOCK CRON CHANNEL
   local now; now="$(date +%s)"
@@ -349,7 +349,7 @@ EOF
       ok "$user: private pin $pin, clock $age (pre-#180 shape; --retire-cadence moves it to $HOST_BIN)"
     fi
   done <<<"$out"
-  [ "$found" = 1 ] || { echo; echo "BLIND: no project accounts (uid $UID_MIN-$UID_MAX) on $SURVEY_HOST." >&2; return 3; }
+  [ "$found" = 1 ] || { echo; echo "BLIND: no project accounts (uid $UID_MIN-$UID_MAX) on $SURVEY_HOST." >&2; return 6; }
   return 0
 }
 
@@ -363,7 +363,7 @@ if [ "$SURVEY" = 1 ]; then
   run_survey; srv=$?
   echo
   printf '%d ok, %d gap, %d bad\n' "$PASS" "$GAPS" "$BAD"
-  [ "$srv" = 3 ] && exit 3
+  [ "$srv" = 6 ] && exit 6
   [ "$GAPS" -eq 0 ] && [ "$BAD" -eq 0 ] || exit 1
   exit 0
 fi
@@ -440,13 +440,13 @@ rc=0
 [ "$GAPS" -eq 0 ] && [ "$BAD" -eq 0 ] || rc=1
 # BLIND outranks findings: "a newer build may exist, we could not look" must
 # never be reported with the same code as "a newer build exists".
-[ "$pin_rc" = 3 ] && rc=3
+[ "$pin_rc" = 6 ] && rc=6
 
 [ "$MODE" = apply ] && { record_status "$rc" "$summary"; echo "recorded: $STATUS_FILE"; }
 
 case "$rc" in
   0) ;;
-  3) echo; echo "BLIND: the release channel could not be reached. This is not 'up to date'." >&2 ;;
+  6) echo; echo "BLIND: the release channel could not be reached. This is not 'up to date'." >&2 ;;
   *) echo; echo "NOT ON THE CURRENT RELEASE, or the clock has stopped. Rows above say which." >&2 ;;
 esac
 exit "$rc"
