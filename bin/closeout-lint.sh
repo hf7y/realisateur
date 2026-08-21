@@ -249,7 +249,7 @@ while [ "$i" -lt "${#projects[@]}" ]; do
   fi
   git -C "$repo" rev-parse --git-dir >/dev/null 2>&1 || continue
 
-  # Linked worktrees are READ, and BEFORE the age gate; both halves measured
+  # Linked worktrees are READ, and BEFORE the age gate.
   wt="$(git -C "$repo" worktree list --porcelain 2>/dev/null \
         | awk -v m="$repo" '/^worktree /{p=substr($0,10); if (p != m) print p}')"
   if [ -n "$wt" ]; then
