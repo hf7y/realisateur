@@ -37,7 +37,11 @@ Prose about the change.
 <!-- DEFERRED -->
 - hf7y/vim-arcade#143 -- drop the third copy of the retired grammar
 - hf7y/realisateur#330 -- gh-sign is linked nowhere, so nothing is signed
-<!-- /DEFERRED -->'
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- host:monkey path:/usr/local/bin/gh via: install-verb-build.sh --link
+<!-- /DELIVERS -->'
 
 section 'A. the declaration is read from the FIRST non-empty line only'
 eq 'A1 DECISION opens it'            "$(grammar_declaration "$GOOD")" decision
@@ -66,7 +70,11 @@ eq  'B2a NO-DECISION needs no decider' "$(findings 'NO-DECISION: agent work -- t
 
 <!-- DEFERRED -->
 - none
-<!-- /DEFERRED -->')" 0
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
 has 'B2b DECISION still needs one' "$(codes 'DECISION: who links the shim?
 
 <!-- DEFERRED -->
@@ -89,7 +97,11 @@ DECISION: this is an example
 
 <!-- DEFERRED -->
 - none
-<!-- /DEFERRED -->')" 0
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
 
 section 'C. the DEFERRED block'
 has 'C1 absent block is UNLEDGERED'   "$(codes 'a body with no ledger at all')" UNLEDGERED
@@ -109,7 +121,11 @@ has 'C4 an unclosed block is UNCLOSED' "$(codes 'NO-DECISION: @zach ok
 eq  'C5 "- none" is a complete, passing answer' "$(findings 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - none
-<!-- /DEFERRED -->')" 0
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
 
 section 'D. every entry names a destination'
 has 'D1 a bare intention has none' "$(codes 'NO-DECISION: @zach ok
@@ -119,11 +135,19 @@ has 'D1 a bare intention has none' "$(codes 'NO-DECISION: @zach ok
 eq 'D2 owner/repo#N is a destination' "$(findings 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - hf7y/scheduler#49 -- the sibling issue
-<!-- /DEFERRED -->')" 0
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
 eq 'D3 a URL is a destination' "$(findings 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - https://github.com/hf7y/realisateur/issues/327 -- the read side
-<!-- /DEFERRED -->')" 0
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
 # NO-OWNER is refused however well argued. #327 filed two of them: the issue
 # it DID cite is open and findable, and both ownerless entries are lost --
 # 0 issues mention gh-sign anywhere, and #327 merged as a no-op because of it.
@@ -139,7 +163,65 @@ eq 'D6 a wrapped entry folds into its bullet' "$(findings 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - hf7y/realisateur#330 -- it changes what four live accounts must hold
   before they can fetch anything, so a human decides
-<!-- /DEFERRED -->')" 0
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
+
+section 'T. the DELIVERS ledger -- where the change takes effect'
+eq 'T1 no DELIVERS block is a finding' "$(codes 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->')" 'UNSHIPPED '
+eq 'T2 "- none" is a complete answer' "$(findings 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
+eq 'T3 a typed claim passes' "$(findings 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- clock:root@monkey tag:realisateur:ausculte:CADENCE
+<!-- /DELIVERS -->')" 0
+eq 'T4 prose a check cannot look for is a finding' "$(codes 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- it lands on the host
+<!-- /DELIVERS -->')" 'UNTYPED-DELIVERY '
+eq 'T5 an empty block is not an answer' "$(codes 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+<!-- /DELIVERS -->')" 'EMPTY-SHIP '
+eq 'T6 two blocks: a reader cannot tell which is current' "$(codes 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 'MULTI-SHIP '
 
 section 'S. the shim REFUSES, and the refusal is what stops the write'
 run_shim() { ( PATH="$T/bin:$PATH"; cd "$T" && bash "$SHIM" "$@" 2>&1 ); }
