@@ -134,6 +134,9 @@ Before marking anything done:
       already explicitly ask for this exact change, with verified evidence it
       does what was asked? If yes there is no decision. Not mechanically
       checkable (#125).
+- [ ] **Empty input distinguished from clean result?** If what this reads can
+      be ABSENT rather than merely empty, does it say BLIND — or does zero
+      iterations produce a confident pass? (#233)
 
 ## Ecosystem protocols (realisateur baseline)
 The checklist above governs work inside this repo. These govern anything that
