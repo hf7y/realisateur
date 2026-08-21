@@ -5,22 +5,12 @@
 # One account authors every comment, so authorship cannot separate Zach from an
 # agent. `gh-sign` stamps agent comments: an UNSTAMPED comment after the stamp
 # went live is a human's; older is unknowable, and unknowable is not an answer.
+# But Zach's answers are usually SPOKEN, and the stamp erased the agent relay
+# that wrote them down -- #430 was answered four times and re-surfaced every
+# one. So a stamped comment counts when it names a decider. Forgeable on
+# purpose: a forged relay is typed and auditable, a lost answer leaves nothing.
 ANSWERED_STAMP_ERA="${ANSWERED_STAMP_ERA:-2026-08-14}"
-
-# THE RELAY MARKER, AND WHY IT HAD TO EXIST. Most of Zach's answers are spoken
-# in a session, not typed into the tracker. An agent that writes one down is
-# the ONLY way it outlives the session -- and until 2026-08-21 that relay was
-# self-defeating: `gh-sign` stamps the agent's comment, the rule above reads
-# every stamped comment as not-an-answer, and the relayed decision was
-# invisible to the predicate built to find exactly it. #430 was answered four
-# times and re-surfaced as `needs-human` every time.
-#
-# So a stamped comment counts when it carries this marker naming the decider:
-#     <!-- decision-by: zach 2026-08-21 -->
-# An agent could forge it. That is the deliberate trade: a forged relay is
-# TYPED and greppable, so it can be audited; a lost answer leaves no trace at
-# all, and losing them is the failure that is actually happening.
-ANSWERED_RELAY_RE='<!--\\s*decision-by:'
+ANSWERED_RELAY_RE='<!--\\s*decision-by:'   # <!-- decision-by: zach 2026-08-21 -->
 
 # issue_answered <owner/repo> <number> -- 0 if answered, 1 if not, 2 if BLIND.
 issue_answered() {
