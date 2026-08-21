@@ -9,20 +9,20 @@ CLI_NAME='ausculte.sh'
 CLI_SUMMARY='is self-dev healthy enough to stop watching?'
 CLI_USAGE='  ausculte              every probe; the exit code is the answer
   ausculte --json       one object per probe
-  ausculte <probe>      just one: channel hosts arming propagation rot silence'
+  ausculte <probe>      just one: channel hosts arming propagation rot
+                        silence delivery fleet'
 CLI_FLAGS='--json'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  every declared probe answered OK
   5  something declared is DOWN (the report names it)
   6  BLIND: at least one probe could not look, and none was DOWN'
-. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+# readlink -f: a verb is a symlink; without this the guard silently misses.
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 
-# part <name> -- the first path that exists: beside this file, in the host's
-# libexec, or on PATH. ausculte travels in the verb build and the probes it
-# composes do not, so without this it is BLIND about them on a host.
+# part <name> -- first path that exists: beside this file, libexec, or PATH.
 part() {
   local n="$1" p
   for p in "$HERE/$n" "${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/$n" \
@@ -113,13 +113,9 @@ if want arming; then
 fi
 
 if want propagation; then
-  # THE CHANNEL'S OWN VERDICT FIRST. Counting verbs answers "is something
-  # installed", not "is the channel running": the cutter refused for two days
-  # over one undeclared command while every host still had its full set of
-  # verbs, and this row said OK throughout. The cutter publishes decision,
-  # last_cut.at and blocked_streak; nothing read them until now.
-  # A verb build carries verbs, not every lib they source: with no copy
-  # reachable the pin path is unknown, and an empty one blames the hosts.
+  # THE CHANNEL'S OWN VERDICT FIRST: counting verbs answers "is something
+  # installed", not "is the channel running". The cutter refused for two days
+  # while every host still had its verbs, and this row said OK throughout.
   ps=""
   for cand in "$HERE/lib/propagation-set.sh" \
               "${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/lib/propagation-set.sh"; do
@@ -184,6 +180,54 @@ if want rot; then
       *) record rot BLIND "$(printf '%s' "$out" | tail -1)" ;;
     esac
   else record rot BLIND 'decision-rot.sh not present'; fi
+fi
+
+if want delivery; then
+  da=''
+  if da="$(part delivery-audit.sh)"; then :
+  elif command -v delivery-audit >/dev/null 2>&1; then da="$(command -v delivery-audit)"
+  fi
+  if [ -n "$da" ]; then
+    out="$(bash "$da" --days "${AUSCULTE_DELIVERY_DAYS:-7}" 2>&1)"; rc=$?
+    case $rc in
+      0) record delivery OK "$(printf '%s' "$out" | grep 'PR(s) audited' | tail -1)" ;;
+      1) record delivery DOWN "$(printf '%s' "$out" | grep -c '^  UNMET' | tr -d ' ') merged PR(s) claim a delivery that is not there" ;;
+      6) record delivery BLIND "$(printf '%s' "$out" | grep 'PR(s) audited' | tail -1)" ;;
+      *) record delivery BLIND 'delivery-audit could not be graded' ;;
+    esac
+  else record delivery BLIND 'delivery-audit not present'; fi
+fi
+
+# Each ledger ends in a REASON column; nothing has ever looked at it.
+if want fleet; then
+  led="$(${AUSCULTE_SSH:-ssh} -o BatchMode=yes "${AUSCULTE_FLEET_HOST:-monkey}" '
+    n=0
+    for f in /home/*/.local/share/scheduler-paced-runner/ledger.tsv; do
+      [ -r "$f" ] || continue
+      n=$((n + 1))
+      tail -1 "$f"
+    done
+    echo "FLEET-LEDGERS $n"' 2>/dev/null)"
+  case "$led" in
+    *FLEET-LEDGERS*)
+      n_led="$(printf '%s\n' "$led" | sed -n 's/^FLEET-LEDGERS //p')"
+      if [ "${n_led:-0}" -eq 0 ]; then
+        # Zero ledgers is not a quiet fleet, it is a fleet we cannot see.
+        record fleet BLIND 'no account has a paced-runner ledger -- cannot tell whether any of them worked'
+      else
+        # DONE and COOLDOWN are both fine -- COOLDOWN is the pacer holding a
+        # finished account back on purpose.
+        stuck="$(printf '%s\n' "$led" | grep -v '^FLEET-LEDGERS' \
+                 | awk -F'\t' '$7 == "NOT-DONE" {print $3": "$8}' || true)"
+        n_stuck="$(printf '%s' "$stuck" | grep -c . || true)"
+        if [ "${n_stuck:-0}" -gt 0 ]; then
+          record fleet DOWN "$n_stuck of $n_led account(s) ended NOT-DONE: $(printf '%s' "$stuck" | head -1 | cut -c1-90)"
+        else
+          record fleet OK "$n_led account(s) finished their last run"
+        fi
+      fi ;;
+    *) record fleet BLIND 'could not read the accounts paced-runner ledgers' ;;
+  esac
 fi
 
 if want silence; then
