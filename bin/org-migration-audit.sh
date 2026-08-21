@@ -7,7 +7,6 @@
 # GATE: none -- every path calls `gh` against a live repo
 #
 # TRAPS (the rest of this header is in the vault):
-# THIS PERFORMS NO MIGRATION. Zach, 2026-08-15 (hf7y/realisateur#301): "migration to organization is
 # so painful. make an issue so a self-dev gives me a script that walks me
 # through exactly the credentials I'll need to provision and other manual
 # tedium ... so I can decide if it's worth it." The deliverable is the
