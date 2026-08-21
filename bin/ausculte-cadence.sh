@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # ausculte-cadence.sh -- put the health verb on a clock, and give it a mouth.
 #
-# Until this file NOTHING invoked `ausculte`: no cron, no workflow, no hook, no
-# script. It was typed by a human or it did not run -- which is how a refusing
-# release channel and three dead accounts stayed unseen for days.
+# Until this file NOTHING invoked `ausculte`: it was typed by a human or it did
+# not run, which is how a refusing release channel and three dead accounts
+# stayed unseen for days.
 #
-# TRAP: a watcher that shouts on the first DOWN teaches the reader to ignore
-#   it. Two consecutive DOWNs escalate; the streak is on disk.
-# TRAP: it escalates through the channel ausculte itself probes, so the issue
-#   is filed FIRST -- if the relay is what is down, the record still exists.
+# TRAP: two consecutive DOWNs escalate, not one; the streak is on disk.
+# TRAP: it escalates through the channel ausculte probes, so the issue is filed
+#   FIRST -- if the relay is what is down, the record still exists.
 #
 set -uo pipefail
 

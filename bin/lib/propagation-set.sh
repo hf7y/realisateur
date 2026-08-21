@@ -205,7 +205,9 @@ run-suites.sh
 # every step it runs. DERIVED, so a step added to the provisioning set arrives
 # on the host without a second list agreeing to it.
 prop_host_tools() {
-  printf 'dresse.sh\n'
+  # The probes ausculte composes are LOCAL-class and ride here, or it is
+  # BLIND about them on a host.
+  printf 'dresse.sh\nausculte-cadence.sh\ndexter-liveness.sh\ndecision-rot.sh\n'
   local s; for s in $PROP_PROVISION_SCRIPTS; do [ "$s" = dresse.sh ] || printf '%s\n' "$s"; done
 }
 

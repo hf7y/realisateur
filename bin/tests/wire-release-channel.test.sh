@@ -114,9 +114,18 @@ echo "== 7. THE HOST TOOLS ARE DERIVED, NOT LISTED =============================
 . "$BIN/lib/propagation-set.sh"
 tools="$(prop_host_tools)"
 has "dresse is what a human types on a provisioned host" "$tools" "dresse.sh"
+# The host set is the provisioning steps PLUS the probes ausculte composes,
+# which are LOCAL-class and would otherwise leave it blind on a host.
 n_prov=$(set -- $PROP_PROVISION_SCRIPTS; echo $#)
 n_tool=$(printf '%s\n' "$tools" | grep -c .)
-eq "every provisioning step travels with it (no second list)" "$n_tool" "$n_prov"
+[ "$n_tool" -ge "$n_prov" ] \
+  && ok "every provisioning step travels with it (no second list)" \
+  || bad "every provisioning step travels" "want at least $n_prov, got $n_tool"
+for extra in ausculte-cadence.sh dexter-liveness.sh decision-rot.sh; do
+  printf '%s\n' "$tools" | grep -qx "$extra" \
+    && ok "the host carries $extra, so ausculte is not blind about it there" \
+    || bad "the host carries $extra" "absent from prop_host_tools"
+done
 dupes="$(printf '%s\n' "$tools" | sort | uniq -d)"
 eq "and dresse is not named twice" "$dupes" ""
 missing=""
