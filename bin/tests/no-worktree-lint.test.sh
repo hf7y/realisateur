@@ -189,6 +189,23 @@ out="$(NO_WORKTREE_WT_ALLOW_FILE="$WORK/allow-wt.tsv" bash "$LINT" "$d" 2>&1)"; 
 check "C4 an entry with no matching worktree is a finding" "$rc" "1"
 has   "C4 and is named as stale" "$out" "stale worktree allowlist"
 
+# C5 -- THE REGRESSION (#505): the live guard flagged its OWN main checkout
+# as a stray worktree of itself. Reproduced here by invoking through a
+# SYMLINKED alias of the checkout: `git worktree list --porcelain` always
+# prints the canonical (symlink-resolved) path for the main worktree, but
+# $ROOT can be the symlink path itself (a bare `pwd` after `cd`ing through
+# one keeps it, unlike `git rev-parse --show-toplevel`) -- same directory,
+# two spellings. Comparing them by STRING equality made the main checkout
+# fail to recognize itself. The fix identifies "main" by POSITION (git
+# worktree list always lists it first), not by string-matching $ROOT.
+d="$(mkfixture symlinked)"
+alias_path="$WORK/symlinked-alias"
+ln -s "$d" "$alias_path"
+out="$(bash "$LINT" "$alias_path" 2>&1)"; rc=$?
+check "C5 a symlinked alias of the main checkout is not a stray worktree of itself" "$rc" "0"
+hasnt "C5 and does not flag itself as a stray worktree" "$out" "stray worktree"
+rm -f "$alias_path"
+
 echo
 echo "== D. IT REFUSES RATHER THAN REPORTS CLEAN =="
 
