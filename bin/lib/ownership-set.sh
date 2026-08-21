@@ -169,6 +169,8 @@ bin/lib/api-restamp.sh                     realisateur
 bin/tests/api-restamp.test.sh              realisateur
 bin/self-merge-audit.sh                    realisateur
 bin/tests/self-merge-audit.test.sh         realisateur
+bin/selfdev-containment-audit.sh           realisateur
+bin/tests/selfdev-containment-audit.test.sh realisateur
 "
 
 # ---- DELEGABLE -------------------------------------------------------------

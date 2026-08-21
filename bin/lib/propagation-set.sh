@@ -163,6 +163,7 @@ ausculte-cadence.sh
 delivery-audit.sh
 org-migration-audit.sh
 self-merge-audit.sh
+selfdev-containment-audit.sh
 sunset-coordinator-files.sh
 dexter-liveness.sh
 dexter-service-deploy.sh
