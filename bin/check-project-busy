@@ -8,8 +8,7 @@
 # One narrow question: is a scheduler-dispatched job running against <project>
 # right now? It gates a DIRECT write into that project's tree while its own
 # automation is mid-run -- the same spirit as the "a dirty tree is a stop"
-# rule. (It named FOCUS.md/QUESTIONS.md until 2026-08-21; those were retired
-# estate-wide by hf7y/scheduler#66 and the gate is about the tree, not them.)
+# rule -- the gate is about the tree.
 #
 # Mechanism: a scheduler job dir holds a sweep.lock (or run.lock) taken via
 # `flock` for the run's duration. A non-blocking flock probe on that file
