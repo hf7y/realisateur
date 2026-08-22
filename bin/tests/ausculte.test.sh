@@ -166,18 +166,32 @@ FLEET-LEDGERS 1"
 out="$(run fleet)"; rc=$?
 check "a fleet that finished its last run is OK (0)" "$rc" "0"
 
-fleet "2026-08-20	monkey	wtul	wtul	batch	0	NOT-DONE	blocked on a GitHub Actions billing failure -- needs Zach
+# NOT-DONE IS THE HEALTHY STATE, and this suite used to assert the opposite.
+# The runner records NOT-DONE for an agent verdict of CONTINUE --
+# schedule/_verdict-semantics.md, "there is ACTIONABLE work left". Measured
+# 2026-08-22: 9 of 14 accounts read NOT-DONE and six had shipped a merged PR in
+# that very run. The old assertion made this row DOWN whenever the fleet was
+# working, which is the one failure a health verb may not have.
+fleet "2026-08-20	monkey	wtul	wtul	batch	0	NOT-DONE	Landed PR #54 and closed #58; more in the queue
 FLEET-LEDGERS 1"
 out="$(run fleet)"; rc=$?
-check "an account that ended NOT-DONE is DOWN (5)" "$rc" "5"
-has  "and the report carries the account's own words" "$out" "billing failure"
+check "an account still working, and saying so, is OK (0) -- not DOWN" "$rc" "0"
+has  "and the count of accounts still working is reported" "$out" "1 still working"
+
+# A run the runner itself could get no verdict out of is the same silence as a
+# blank reason: gardien and scheduler both read this way on 2026-08-22.
+fleet "2026-08-20	monkey	gardien	gardien	batch	1	NOT-DONE	no-verdict: ran with no verdict written
+FLEET-LEDGERS 1"
+out="$(run fleet)"; rc=$?
+check "a run that wrote no verdict is DOWN (5) -- the sensor got nothing" "$rc" "5"
+has  "and it says so in the account's own words" "$out" "no-verdict"
 
 fleet "2026-08-20	monkey	chezz	chezz	batch	3	NOT-DONE	
 FLEET-LEDGERS 1"
 out="$(run fleet)"; rc=$?
-check "an account that stops without saying why is still DOWN" "$rc" "5"
+check "an account that stops without saying why is DOWN" "$rc" "5"
 has  "and the silence is NAMED, not printed as an empty message" "$out" "NO REASON RECORDED"
-has  "...and counted separately from the ones that did explain" "$out" "without saying why"
+has  "...and the headline counts the SILENT ones, not every NOT-DONE" "$out" "stopped without saying why"
 
 # A GATE THAT CANNOT REACH THE API IS NOT A PACED FLEET -- same silence.
 fleet "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
@@ -210,6 +224,18 @@ has  "and it says it cannot tell" "$out" "cannot tell"
 printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"
 out="$(run fleet)"; rc=$?
 check "an unreachable host is BLIND (6)" "$rc" "6"
+
+# ON THE HOST ITSELF, THERE IS NOTHING TO SSH TO. The cadence runs as root on
+# monkey, where root has an empty authorized_keys and no known_hosts, so
+# `ssh monkey` from monkey failed host key verification and this row was BLIND
+# on the one machine holding the files. ssh stays stubbed FAILING here: if the
+# local path were not taken the message would be the ssh fallback's.
+printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"
+out="$(PATH="$TMP/stub:$PATH" AUSCULTE_FLEET_HOST=selfhost SELFDEV_LOCAL_HOSTNAME=selfhost \
+       bash "$TMP/bin/ausculte.sh" fleet 2>&1)"; rc=$?
+check "reading its OWN host needs no ssh -- still BLIND here, but for the right reason" "$rc" "6"
+has  "and the reason is an empty fleet, not an unreachable one" "$out" "no account has a paced-runner ledger"
+hasnt "so the ssh fallback was never taken" "$out" "could not read the accounts"
 
 echo
 summary
