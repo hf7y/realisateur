@@ -282,4 +282,38 @@ section 'I. the CI backstop is wired to the same grammar'
 
 hasnt 'I5 the deleted script is really gone' "$(ls "$ROOT")" 'deferral-ledger.sh'
 
+# --- DEFAULT-AFTER: the unanswered decision resolves itself (2026-08-22) -----
+# 36 open `needs-human` issues, each subtracting from its repo's `actionable`
+# count in tempo.sh -- so every unanswered question was also a brake on the
+# repo that asked it. #262: the only brake in the loop was a person's
+# attention, "which is why the estate could not be left alone".
+section "DEFAULT-AFTER"
+
+_da() { printf 'DECISION: @zach -- q\n%s\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n' "$1"; }
+
+grammar_check "$(_da 'DEFAULT-AFTER 14d: close it as declined')" >/dev/null 2>&1 \
+  && ok "a well-formed default is accepted" \
+  || bad "a well-formed default is accepted" "it was refused"
+
+out="$(grammar_check "$(_da 'DEFAULT-AFTER: close it')" 2>&1)"
+case "$out" in *BAD-DEFAULT*) ok "a default with no day count is BAD-DEFAULT" ;;
+  *) bad "no day count is BAD-DEFAULT" "got: $out" ;; esac
+
+out="$(grammar_check "$(_da 'DEFAULT-AFTER 14d:')" 2>&1)"
+case "$out" in *BAD-DEFAULT*) ok "a window with no action is BAD-DEFAULT -- a timer to nowhere" ;;
+  *) bad "no action is BAD-DEFAULT" "got: $out" ;; esac
+
+# OPTIONAL ON PURPOSE. An irreversible call must be able to block forever;
+# making the line mandatory would produce ritual defaults on exactly those.
+grammar_check "$(printf 'DECISION: @zach -- q\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n')" >/dev/null 2>&1 \
+  && ok "a DECISION with NO default is still valid -- blocking is a legitimate answer" \
+  || bad "no default is still valid" "it was refused; irreversible calls could not block"
+
+# The reader the actuator consumes.
+got="$(grammar_default_after "$(_da 'DEFAULT-AFTER 14d: close it as declined')")"
+eq "the reader returns days and action, tab-separated" "$got" "$(printf '14\tclose it as declined')"
+grammar_default_after "$(_da 'nothing here')" >/dev/null 2>&1 \
+  && bad "absent default returns 1" "it returned 0" \
+  || ok "an absent default returns 1, so the actuator can tell 'blocks forever' from 'not read'"
+
 summary
