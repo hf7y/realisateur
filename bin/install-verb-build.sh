@@ -38,6 +38,9 @@ REMOTE="${VERB_BUILD_REMOTE:-https://github.com/hf7y/verbs.git}"
 BIN="${INSTALLE_BIN:-$HOME/.local/bin}"
 CMD_DEST="${CMD_DEST:-$HOME/.claude/commands}"
 HOOK_DEST="${HOOK_DEST:-$HOME/.claude/hooks}"
+# HOST-WIDE, not $HOME-scoped: these are the probes ausculte composes on the
+# machine, and `ssh <host> ausculte` sees no $HOME path (realisateur#264).
+LIBEXEC_DEST="${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}"
 REPO="$BUILD_ROOT/repo"
 BUILD_ID=''; APPLY=0; LINK=0; LIST=0; CHECK=0; LATEST=0; ROLLBACK=''
 
@@ -244,24 +247,46 @@ if [ "$LINK" -eq 1 ]; then
   # the last clone-dependent thing (#389). COPIED, not symlinked: a dangling
   # link into a rolled-back build reads as a CORRUPT command file, not an
   # absent one.
+  #
+  # libexec JOINED THIS LOOP for realisateur#517. Host tools reached the
+  # machine ONLY when a human ran wire-release-channel.sh --host --apply, so a
+  # fix to one of ausculte's own probes sat on main indefinitely -- which is
+  # how a decision-rot that could not load its roster walked zero repositories,
+  # exited 0, and rendered as `rot OK` over 48 rotting decisions (#512). The
+  # clock already existed; only the payload was missing. bin/lib/carries.tsv
+  # carries the three probes onto bashified, cut-verb-build.sh copies the whole
+  # tree into the build, and this installs them.
   installed=0
-  for src_dir in commands hooks; do
+  for src_dir in commands hooks libexec; do
     from="$BUILD_ROOT/current/realisateur/$src_dir"
     [ -d "$from" ] || continue
     case "$src_dir" in
       commands) to="$CMD_DEST"; mode=644 ;;
       hooks)    to="$HOOK_DEST"; mode=755 ;;
+      libexec)  to="$LIBEXEC_DEST"; mode=755 ;;
     esac
-    mkdir -p "$to"
+    # A destination this account cannot create is a FINDING, not a silent skip:
+    # libexec is root-owned, and a --link run without the privilege for it
+    # would otherwise report "installed 0" and read as up to date.
+    mkdir -p "$to" 2>/dev/null || { row SKIP "$src_dir" "cannot create $to -- not installed"; continue; }
     for f in "$from"/*; do
       [ -f "$f" ] || continue
       dst="$to/$(basename "$f")"
       # A symlink here is never ours; cp would write THROUGH it.
       [ -L "$dst" ] && { row SKIP "$(basename "$f")" "symlink -> $(readlink "$dst")"; continue; }
       cmp -s "$f" "$dst" && continue
-      cp "$f" "$dst" && chmod "$mode" "$dst" && installed=$((installed + 1))
+      # ATOMIC, because a destination here can be EXECUTING. bash re-reads its
+      # script by offset, so `cp` over a running one (cp truncates in place,
+      # same inode) corrupts it mid-run. Rename gives the new content a new
+      # inode and leaves the running process on the old one.
+      tmp="$to/.$(basename "$f").new.$$"
+      if cp "$f" "$tmp" && chmod "$mode" "$tmp" && mv -f "$tmp" "$dst"; then
+        installed=$((installed + 1))
+      else
+        rm -f "$tmp"; row SKIP "$(basename "$f")" "could not install into $to"
+      fi
     done
   done
-  say "installed $installed command/hook file(s) from this build"
+  say "installed $installed command/hook/libexec file(s) from this build"
 fi
 exit 0
