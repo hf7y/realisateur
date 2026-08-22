@@ -37,13 +37,19 @@ TABLE="$REPO/bin/lib/carries.tsv"
 
 echo "carry-drift.test.sh"
 
+# origin/bashified FIRST, and refreshed before it is read. A local
+# `bashified` branch on a dev checkout is whatever that clone last fetched --
+# preferring it made this suite report drift against a branch nobody ships
+# (8 commits stale here on 2026-08-22), and would just as happily report
+# clean against one. The local branch is a fallback for a clone with no
+# remote at all, and says so when it is used.
 REF_BASH=""
-for c in bashified origin/bashified; do
-  git -C "$REPO" rev-parse --verify -q "$c^{commit}" >/dev/null 2>&1 && { REF_BASH="$c"; break; }
-done
-if [ -z "$REF_BASH" ]; then
-  git -C "$REPO" fetch -q --depth=1 origin bashified:refs/remotes/origin/bashified 2>/dev/null || true
-  git -C "$REPO" rev-parse --verify -q "origin/bashified^{commit}" >/dev/null 2>&1 && REF_BASH="origin/bashified"
+git -C "$REPO" fetch -q --depth=1 origin bashified:refs/remotes/origin/bashified 2>/dev/null || true
+if git -C "$REPO" rev-parse --verify -q "origin/bashified^{commit}" >/dev/null 2>&1; then
+  REF_BASH="origin/bashified"
+elif git -C "$REPO" rev-parse --verify -q "bashified^{commit}" >/dev/null 2>&1; then
+  REF_BASH="bashified"
+  echo "  note  origin/bashified unreadable; comparing against the LOCAL bashified branch"
 fi
 if [ -z "$REF_BASH" ]; then
   bad "no bashified ref is readable here -- drift was NOT checked (BLIND, not clean)"
