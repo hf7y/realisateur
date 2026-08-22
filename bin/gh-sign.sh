@@ -195,6 +195,18 @@ case "${1:-}" in
     # shellcheck source=lib/propagation-set.sh
     . "$_ps"
     _host="${GH_SIGN_HOST:-monkey}"
+    # A LOCAL-CLASS FILE CAN STILL LAND ON A HOST. prop_host_tools() rides
+    # ausculte's probes to /usr/local/libexec/selfdev BY NAME, while
+    # prop_channel goes on calling them `local` -- deliberately, per
+    # propagation-set.sh: "or it is BLIND about them on a host". Reading only
+    # the class made this actuator answer `- none` for three files that
+    # demonstrably deploy: ausculte-cadence.sh, dexter-liveness.sh,
+    # decision-rot.sh. Space-delimited so a name matches whole, same idiom as
+    # $_seen below.
+    _ht=' '
+    while IFS= read -r _t; do [ -n "$_t" ] && _ht="$_ht$_t "; done <<EOF
+$(prop_host_tools 2>/dev/null)
+EOF
     printf '<!-- DELIVERS -->\n'
     _n=0; _seen=''
     while IFS= read -r _f; do
@@ -213,6 +225,9 @@ case "${1:-}" in
                     printf -- '- path:/usr/local/bin/%s on %s\n' "$_v" "$_host"; _n=$((_n+1)) ;;
         bootstrap|provision)
                     printf -- '- path:/usr/local/libexec/selfdev/%s on %s\n' "$_b" "$_host"; _n=$((_n+1)) ;;
+        local)      case "$_ht" in
+                      *" $_b "*) printf -- '- path:/usr/local/libexec/selfdev/%s on %s\n' "$_b" "$_host"; _n=$((_n+1)) ;;
+                    esac ;;
       esac
     done <<EOF
 $(git diff --name-only "$_base" 2>/dev/null; git diff --name-only --cached "$_base" 2>/dev/null)
