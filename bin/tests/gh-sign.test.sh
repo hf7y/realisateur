@@ -138,6 +138,23 @@ contains "...and says so out loud" "$out" "BLIND"
 out="$(PATH="$TMP/loop:$TMP/stub" "$TIMEOUT_BIN" 10 "$BASH_BIN" "$GS" --self-check 2>&1)"
 contains "--self-check resolves past the shim to the real gh" "$out" "$TMP/stub/gh"
 
+# --- 9b. A SECOND COPY, NOT THE SAME INODE, IS STILL NOT "real gh" ---------
+# The production shape: a checkout run as `bash bin/gh-sign.sh` while
+# /usr/local/bin/gh is a DISTINCT installed copy of the same script. `-ef`
+# says "different file" for two copies, so without the content check this
+# shim picked the installed copy as "real gh" -- a double hop whose second
+# layer `cat`s an already-drained stdin and posts a blank body.
+mkdir -p "$TMP/installed"
+cp "$GS" "$TMP/installed/gh"; chmod +x "$TMP/installed/gh"
+reset
+out="$(GH_LOG="$TMP/gh.log" GH_LAST_BODY="$TMP/gh.body" \
+       PATH="$TMP/installed:$TMP/stub:$PATH" "$BASH_BIN" "$GS" \
+       issue comment 7 --repo hf7y/widget --body-file - <<<'two copies on PATH' 2>&1)"
+contains "a second on-disk copy of the shim is never mistaken for real gh" \
+      "$(cat "$TMP/gh.body")" "two copies on PATH"
+check "...and the real gh is invoked exactly once, not looped through both copies" \
+      "$(grep -c . "$TMP/gh.log")" "1"
+
 # --- 10. WHICH COPY OF THE POLICY IS THIS, AND HOW OLD? (#330) -------------
 # The shim ships as one link per host into a dated build. It recognises itself
 # among the builds by inode -- the same `-ef` test that stops it re-executing
