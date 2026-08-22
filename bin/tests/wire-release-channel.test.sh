@@ -138,4 +138,51 @@ grep -q 'ln -sfn "$HOST_LIBEXEC/dresse.sh" "$HOST_BIN/dresse"' "$SCRIPT" \
   && ok "the verb Zach types is linked onto PATH, not only deployed to libexec" \
   || bad "dresse is deployed and never linked; a verb nobody can type is not installed"
 
+
+# --- the checkout these bytes come from (2026-08-22) ------------------------
+# BUILD-DISCIPLINE: "Deploy verified against a git ref; drift fails loud."
+# This script IS the deploy and it verified nothing. /root/realisateur-refresh
+# sat 12 commits behind main, `--host --apply` ran out of it, reported
+# "3 ok, 0 gap, 0 bad", and installed the OLD install-verb-build.sh -- so
+# realisateur#531's libexec clock was "applied" and absent. Every mtime moved,
+# which reads exactly like success.
+echo
+echo "== 8. THE CHECKOUT THESE BYTES COME FROM ================================"
+harness_tmp
+FN="$T/cur.sh"
+awk '/^checkout_is_current\(\) \{$/,/^\}$/' "$SCRIPT" > "$FN"
+grep -q 'BEHIND' "$FN" \
+  && ok "checkout_is_current() lifts out of the script" \
+  || bad "could not extract checkout_is_current()" "from $SCRIPT"
+# shellcheck disable=SC1090
+. "$FN"
+
+g() { git -c user.email=t@t -c user.name=t -c init.defaultBranch=main "$@"; }
+UP="$T/up"; mkdir -p "$UP"; g init -q "$UP"
+( cd "$UP" && echo one > f && g add -A && g commit -q -m one ) >/dev/null 2>&1
+g clone -q "$UP" "$T/clone" >/dev/null 2>&1; mkdir -p "$T/clone/bin"
+
+HERE="$T/clone/bin"
+O="$(checkout_is_current 2>&1)"; r=$?
+eq "level with origin/main returns 0" "$r" 0
+
+( cd "$UP" && echo two > f && g add -A && g commit -q -m two ) >/dev/null 2>&1
+O="$(checkout_is_current 2>&1)"; r=$?
+eq  "a checkout BEHIND origin/main returns 1 -- not 0" "$r" 1
+has "and it says how far behind, in commits" "$O" "1 commit(s) BEHIND"
+has "and names the one-line fix in the checkout it stands in" "$O" "pull --ff-only"
+
+# BLIND IS NOT CURRENT. "I could not check" must never read as "it is level":
+# this writes bytes to a shared host, so unknown bytes are not a conservative
+# default the way an unreadable release channel is.
+mkdir -p "$T/nogit/bin"; HERE="$T/nogit/bin"
+O="$(checkout_is_current 2>&1)"; r=$?
+eq  "a non-git directory is BLIND (6), never 0" "$r" 6
+has "and it says it cannot tell what the bytes are" "$O" "cannot tell what these bytes are"
+
+# And the refusal is WIRED, not merely defined -- the defect shape of the week.
+grep -q '_cur" -ne 0' "$SCRIPT" \
+  && ok "--apply refuses on a stale checkout: the guard is CALLED" \
+  || bad "--apply refuses on a stale checkout" "no refusal branch in $SCRIPT"
+
 summary

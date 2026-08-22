@@ -56,6 +56,41 @@ HOST_BIN="${HOST_INSTALLE_BIN:-/usr/local/bin}"
 HOST_LIBEXEC="${HOST_SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}"
 HOST_STATE="${HOST_TICK_STATE:-/var/lib/selfdev-release}"
 
+# --- THE CHECKOUT THIS INSTALLS FROM MUST BE CURRENT --------------------
+# BUILD-DISCIPLINE: "Deploy verified against a git ref; drift fails loud."
+# This script is the deploy and it verified nothing. Cost, 2026-08-22:
+# /root/realisateur-refresh sat 12 commits behind main, `--host --apply` ran
+# happily out of it, reported `3 ok, 0 gap, 0 bad`, and installed the OLD
+# install-verb-build.sh -- so realisateur#531's libexec clock, whose entire
+# purpose is to stop a host tool needing a human, was "applied" and absent.
+# Nothing said so; the mtimes all moved, which reads exactly like success.
+#
+# FAIL CLOSED ON APPLY. Elsewhere in this estate an unreadable channel fails
+# OPEN, because refusing to operate on a bad network reading is worse than
+# operating on the last known good state. That reasoning does not transfer:
+# this writes bytes to a shared host. Installing UNKNOWN bytes is not a
+# conservative default, and "I could not check" is not "it is current".
+#
+# No override flag. A documented bypass turns a guard into a toll booth, and
+# the one-line fix is `git pull` in the checkout you are standing in.
+checkout_is_current() {
+  local root rc
+  root="$(cd "$HERE/.." && pwd)"
+  git -C "$root" rev-parse --git-dir >/dev/null 2>&1 || {
+    echo "  BLIND   $root is not a git checkout -- cannot tell what these bytes are. Install from a clone."
+    return 6; }
+  git -C "$root" fetch -q origin main 2>/dev/null || {
+    echo "  BLIND   could not fetch origin/main -- cannot tell whether this checkout is current."
+    return 6; }
+  rc="$(git -C "$root" rev-list --count HEAD..FETCH_HEAD 2>/dev/null)" || return 6
+  case "$rc" in ''|*[!0-9]*) return 6 ;; esac
+  [ "$rc" -eq 0 ] && return 0
+  echo "  BAD     this checkout is $rc commit(s) BEHIND origin/main."
+  echo "          Installing from it ships stale bytes and reports success."
+  echo "          Fix: git -C $root pull --ff-only"
+  return 1
+}
+
 # shellcheck source=lib/propagation-set.sh
 . "$HERE/lib/propagation-set.sh"
 
@@ -262,6 +297,14 @@ wire_host() {
 if [ "$HOSTWIDE" -eq 1 ]; then
   echo "== wire-release-channel --host ($MODE) on $HOST =="
   echo "   build root $HOST_BUILD_ROOT   links $HOST_BIN   state $HOST_STATE"
+  printf '\n-- the checkout these bytes come from --\n'
+  checkout_is_current; _cur=$?
+  [ "$_cur" -eq 0 ] && echo "  ok      this checkout is level with origin/main"
+  if [ "$MODE" = --apply ] && [ "$_cur" -ne 0 ]; then
+    echo
+    echo "== NOTHING INSTALLED. --check is honest about what it would do; --apply refuses to write bytes it cannot vouch for. =="
+    exit 1
+  fi
   printf '\n-- %s (host-wide) --\n' "$HOST"
   if wire_host; then
     echo
