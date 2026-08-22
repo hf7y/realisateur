@@ -131,16 +131,28 @@ Reproduce: \`ausculte $name\`
 
 <!-- DEFERRED -->
 - none
-<!-- /DEFERRED -->"
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->"
   if command -v gh >/dev/null 2>&1; then
     existing="$(gh issue list -R "$ISSUE_REPO" --search "in:title \"ausculte: $name has been $word\"" \
                   --state open --json number --jq '.[0].number' 2>/dev/null)"
     if [ -n "$existing" ]; then
       echo "  ..      already filed as $ISSUE_REPO#$existing"
     else
-      gh issue create -R "$ISSUE_REPO" --title "$title" --body "$body" >/dev/null 2>&1 \
-        && echo "  ..      filed on $ISSUE_REPO" \
-        || echo "  BAD     could not file the issue -- the record is this line only"
+      # WHY THE REASON IS KEPT: this call goes through gh-sign, which REFUSES
+      # a body that breaks lib/body-grammar.sh (exit 7). Sending its stderr to
+      # /dev/null made a refusal read exactly like a filing, and that is how
+      # this cadence escalated four BLIND rows into nothing at all -- its own
+      # body carried no DELIVERS block, so every `gh issue create` since the
+      # grammar landed was refused, silently, every four hours.
+      if err="$(gh issue create -R "$ISSUE_REPO" --title "$title" --body "$body" 2>&1 >/dev/null)"; then
+        echo "  ..      filed on $ISSUE_REPO"
+      else
+        echo "  BAD     could not file the issue -- the record is this line only: ${err:-no reason given}"
+      fi
     fi
   fi
 
