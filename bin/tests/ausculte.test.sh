@@ -128,7 +128,6 @@ case "$out" in *"no zaxon relay answered"*) ok "...and it names why" ;;
   *) bad "channel DOWN detail" "got: $out" ;; esac
 
 stub decision-rot.sh 0
-stub silence-audit.sh 0
 stub dexter-liveness.sh 0
 out="$(run)"; rc=$?
 check "a DOWN human channel is never folded into OK, even with everything else clean" "$rc" "5"
