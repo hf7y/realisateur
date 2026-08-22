@@ -36,9 +36,7 @@ esac
 EOF
   chmod +x "$T/bin/gh"
 }
-# A curl stub standing in for the release channel status endpoint.
-# mkcurl "" makes it BLIND (no last_cut), mirroring an unreachable channel.
-mkcurl() { # mkcurl <cut_at>
+mkcurl() { # mkcurl <cut_at> -- "" makes it BLIND, no last_cut
   printf '%s' "${1:-}" > "$T/cut_at"
   cat > "$T/bin/curl" <<'EOF'
 #!/usr/bin/env bash

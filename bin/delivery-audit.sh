@@ -12,13 +12,6 @@
 # host deploy never ran. A DELIVERS block says where a PR lands; this goes and
 # looks, and an unmet claim means the PR is NOT done.
 #
-# EXISTING IS NOT CURRENT. `path:` asks only whether something is there --
-# #499. `matches:<deployed-path> home:<repo-path>` asks whether the DEPLOYED
-# BYTES are the ones this PR merged, graded against the release channel's own
-# cadence: a mismatch is UNMET only once a build has cut since the merge,
-# PENDING before that (the adoption window ausculte's propagation probe
-# already grants hosts, extended here to PRs).
-#
 # usage and exit codes: `--help`. One source.
 
 set -uo pipefail
@@ -74,10 +67,6 @@ echo "delivery-audit -- $REPO, ${ONE_PR:+PR $ONE_PR}${ONE_PR:+ }${ONE_PR:-last $
 
 met=0; unmet=0; pending=0; blind=0; audited=0; claimless=0
 
-# The release channel's own verdict, fetched at most once and cached: a
-# `matches:` claim needs to know whether a build has been CUT since the PR
-# merged, not just what today's build looks like. Same source ausculte.sh's
-# propagation probe reads, so the two cannot disagree about the cadence.
 VERDICT_FETCHED=0
 VERDICT_CUT_EPOCH=''
 fetch_verdict() {
@@ -91,11 +80,7 @@ fetch_verdict() {
   [ -n "$VERDICT_CUT_EPOCH" ]
 }
 
-# Reads a file's bytes the same way the `path:` probe establishes presence --
-# walking to the deepest VISIBLE ancestor so a sealed parent reads BLIND, not
-# absent -- but returns the bytes on stdout when the file is there and
-# readable. rc: 0 read, 1 absent, 9 blind (unreadable or behind a seal).
-read_deployed() { # <host> <path>
+read_deployed() { # <host> <path> -> bytes on stdout; rc: 0 read, 1 absent, 9 blind
   local where="$1" path="$2" rc
   local probe='p="$1"; if [ -e "$p" ]; then
       [ -r "$p" ] || exit 9
@@ -142,14 +127,7 @@ check_claim() { # <pr> <claim> <merged_at>
   done
   local where="${host:-localhost}" rc out
 
-  if [ -n "$matches" ] && [ -n "$home" ]; then
-    # MERGED IS NOT DEPLOYED: the ledger could say a path exists, never that
-    # the bytes AT it are the ones this PR merged. #499. Grading a mismatch
-    # UNMET the moment it is seen would fail every PR for the day between
-    # merge and the next nightly cut -- so a mismatch is only UNMET once a
-    # build has actually been cut since this PR merged; before that it is
-    # PENDING, the same distinction the propagation probe's adoption window
-    # already makes for hosts instead of PRs.
+  if [ -n "$matches" ] && [ -n "$home" ]; then  # #499: UNMET only once cut since merge, else PENDING
     local repo_for_home="${repo:-$REPO}" deployed home_bytes drc
     deployed="$(read_deployed "$where" "$matches")"; drc=$?
     if [ "$drc" = 9 ]; then
