@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # defere.sh -- file the thing you were about to write a paragraph about.
 #
+# KIND: verb
+#
 # TRAP: "no owner" may NOT silently mean Zach. There are three routing
 #   states and refusing to choose is a usage error, not a quiet default.
 # TRAP: a project that does not resolve against a live `gh repo view` is
