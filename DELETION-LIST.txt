@@ -1,0 +1,124 @@
+# DELETION-LIST.txt -- self-dev v1 subtraction, hf7y/realisateur.
+#
+# WHY THIS FILE EXISTS AT ALL: so the sprint's state lives in the repo and not
+# in an agent's context. Any session -- or Zach -- can finish this by running
+# the list. If the run dies at file 30 of 60, the next one reads this and
+# continues. No plan state is held in a conversation.
+#
+#   git rm -q $(grep -v '^#' DELETION-LIST.txt | grep -v '^$')
+#   bash bin/shellcheck-lint.sh --accept     # ratchet keys on (file,code) pairs
+#
+# WHY THESE: measured 2026-08-21. Six sampled guards = 1,029 lines, zero
+# findings; four report clean, one exits 2 on a usage error, one times out.
+# Guards are 5,673 of bin/'s 15,550 LOC. The estate's failure is not missing
+# wiring -- it is wiring that runs, reports green, and cannot see. Ashby S.8/7:
+# a transducer with fewer output values than its input has distinct states
+# loses distinctions. That is the whole disease, and deletion is the only
+# remedy that does not add another transducer.
+#
+# NOT DELETED, and why: run-suites.sh and shellcheck-lint.sh produce the
+# REQUIRED checks (enforce_admins=true -- breaking them makes the repo
+# unmergeable, including this PR). decision-rot.sh and dexter-liveness.sh are
+# live ausculte probes. discipline.sh is CLAUDE.md's mandated front door.
+# publish-monkey-status.sh + monkey-status-collect.py produce the dashboard
+# Zach reads.
+#
+# silence-audit.sh and delivery-audit.sh ARE ausculte probes and are deleted
+# anyway: silence-audit counts "named in a doc" as wired; delivery-audit reads
+# `- none` on 260 of 262 PRs. Both are sensors that do not sense. ausculte
+# drops from 8 probes to 6 in the same PR.
+
+# ---- guards: the 36% of bin/ that reports clean and finds nothing ----------
+bin/carry-drift.sh
+bin/check-project-busy.sh
+bin/claim-drift.sh
+bin/closeout-lint.sh
+bin/delivery-audit.sh
+bin/deploy-drift.sh
+bin/directive-prose.sh
+bin/floor-check.sh
+bin/hardcoded-home-lint.sh
+bin/no-worktree-lint.sh
+bin/org-migration-audit.sh
+bin/ownership-audit.sh
+bin/path-provenance-audit.sh
+bin/reach-lint.sh
+bin/release-gate.sh
+bin/retire-check.sh
+bin/rot-ratchet.sh
+bin/selfdev-agent-survey.sh
+bin/selfdev-containment-audit.sh
+bin/self-merge-audit.sh
+bin/served-not-cloned.sh
+bin/silence-audit.sh
+bin/thermostat-wiring.sh
+bin/verb-kind-lint.sh
+
+# ---- ratchets: baselines for guards that no longer exist -------------------
+bin/carry-drift.ratchet
+bin/ownership-audit.ratchet
+bin/path-provenance-audit.ratchet
+bin/rot-ratchet.ratchet
+bin/thermostat-wiring.ratchet
+bin/verb-kind-lint.ratchet
+
+# ---- orphans: reachable from no cron, no CI, and no verb ------------------
+bin/branch-protection-provision.sh
+bin/defere.sh
+bin/dexter-service-deploy.sh
+bin/install-honey-plugin.sh
+bin/install-shims.sh
+bin/land-selfdev.sh
+bin/monkey-vdi-to-internal.sh
+bin/monkey-watch.sh
+bin/pivot.sh
+bin/playbook.sh
+bin/publish-release-verdict.sh
+bin/release-ledger.sh
+bin/repo-settings-provision.sh
+bin/selfdev-gh-app-register.sh
+bin/session-marker.sh
+bin/sunset-coordinator-files.sh
+bin/wire-release-channel.sh
+bin/wire-selfdev-git.sh
+
+# ---- suites for the above: a test for a file that is gone ------------------
+# bin/tests/guard-estate.test.sh is KEPT on purpose. It derives the guard
+# population by NAME SHAPE over bin/*.sh and ratchets it downward -- so after
+# this deletion it is what stops the guards growing back.
+bin/tests/branch-protection-provision.test.sh
+bin/tests/carry-drift.test.sh
+bin/tests/check-project-busy.test.sh
+bin/tests/claim-drift.test.sh
+bin/tests/closeout-lint.test.sh
+bin/tests/delivery-audit.test.sh
+bin/tests/dexter-service-deploy.test.sh
+bin/tests/directive-prose.test.sh
+bin/tests/hardcoded-home-lint.test.sh
+bin/tests/install-shims.test.sh
+bin/tests/no-worktree-lint.test.sh
+bin/tests/org-migration-audit.test.sh
+bin/tests/ownership-audit.test.sh
+bin/tests/path-provenance-audit.test.sh
+bin/tests/reach-lint.test.sh
+bin/tests/release-channel-wiring.test.sh
+bin/tests/release-gate.test.sh
+bin/tests/release-ledger.test.sh
+bin/tests/repo-settings-provision.test.sh
+bin/tests/retire-check.test.sh
+bin/tests/rot-ratchet.test.sh
+bin/tests/selfdev-agent-survey.test.sh
+bin/tests/selfdev-containment-audit.test.sh
+bin/tests/selfdev-gh-app-register.test.sh
+bin/tests/self-merge-audit.test.sh
+bin/tests/served-not-cloned.test.sh
+bin/tests/sunset-coordinator-files.test.sh
+bin/tests/thermostat-wiring.test.sh
+bin/tests/verb-kind-lint.test.sh
+bin/tests/wire-release-channel.test.sh
+
+# ---- advisory workflows: none is a required check -------------------------
+.github/workflows/claim-drift.yml
+.github/workflows/deferral-ledger.yml
+.github/workflows/rot-ratchet.yml
+.github/workflows/verb-build-smoke.yml
