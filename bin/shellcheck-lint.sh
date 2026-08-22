@@ -23,7 +23,7 @@
 #
 # exit-0 no-op, the unguarded `cd`, the check that cannot see and says fine.
 # usage:  shellcheck-lint.sh [--strict] [--accept] [--quiet]
-# exit:   0 no new findings   1 REGRESSION (a new file/code pair)
+# exit:   0 no new findings   1 REGRESSION (a new file/code pair)   6 BLIND
 
 set -uo pipefail
 
@@ -50,7 +50,7 @@ command -v shellcheck >/dev/null 2>&1 || {
   echo "  install: apt-get install shellcheck, or drop the static binary from" >&2
   echo "  https://github.com/koalaman/shellcheck/releases onto PATH." >&2
   echo "  A guard that cannot probe does not get to report success." >&2
-  exit 2
+  exit 6
 }
 
 # WHICH FILES. Tracked-only, so an untracked scratch script in the working

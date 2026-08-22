@@ -101,10 +101,10 @@ else
   skip "C regression path" "shellcheck absent"
 fi
 
-# --- D: shellcheck absent is BLIND (exit 2), never success -------------------
+# --- D: shellcheck absent is BLIND (exit 6), never success -------------------
 # ALWAYS RUNS. Needs shellcheck gone, so it builds a PATH holding the guard's
 # other dependencies and nothing else. Clearing PATH entirely would remove git
-# too and the guard would exit 2 for the wrong reason -- which would pass this
+# too and the guard would exit for the wrong reason -- which would pass this
 # assertion while proving nothing.
 mkfixture "$T/d" '#!/usr/bin/env bash
 echo fine
@@ -115,7 +115,7 @@ for b in git bash head grep sed sort comm mktemp date cat printf readlink dirnam
 done
 rc=0
 PATH="$T/pathdir" bash "$T/d/bin/shellcheck-lint.sh" >/dev/null 2>&1 || rc=$?
-check "D shellcheck absent: BLIND (exit 2), not 0" 2 "$rc"
+check "D shellcheck absent: BLIND (exit 6), not 0" 6 "$rc"
 
 # --- E: zero shell files is BLIND (exit 6), never success -------------------
 if [ "$HAVE_SC" -eq 1 ]; then
