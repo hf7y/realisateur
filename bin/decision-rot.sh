@@ -45,6 +45,20 @@ OWNER="${DECISION_ROT_OWNER:-hf7y}"
 # shellcheck source=bin/lib/roster-set.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/roster-set.sh"
 
+# A MISSING ROSTER IS BLIND, NOT AN EMPTY ESTATE. `.` on an absent file does
+# not abort under `set -uo pipefail`: it prints to stderr and execution
+# continues with ROSTER unset, so the walk below iterates zero repositories and
+# this script prints `TOTAL 0 0` and exits 0 -- which `ausculte` renders as
+# "rot OK -- no answered-and-abandoned issues". Found live on monkey
+# 2026-08-22: /usr/local/libexec/selfdev/ lacked lib/roster-set.sh and the
+# health verb had been reporting a clean estate over 48 rotting decisions.
+# roster-set.sh sets ROSTER_SET_LIB as a load sentinel; nothing read it.
+if [ "${ROSTER_SET_LIB:-}" != 1 ] || [ "${#ROSTER[@]}" -eq 0 ]; then
+  printf '%s: BLIND -- lib/roster-set.sh did not load, so this audited NO repositories. A count of zero here is the absence of a reading, not the absence of rot.\n' \
+    "$CLI_NAME" >&2
+  exit 6
+fi
+
 MODE=''
 REPOS=()
 JSON=0

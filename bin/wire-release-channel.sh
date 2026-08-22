@@ -92,7 +92,11 @@ wire_one() {
   spec="$(cron_spec_for "$acct")"
 
   if [ "$MODE" = --check ]; then
-    local n; n="$(set -- $PROP_BOOTSTRAP_SCRIPTS $PROP_BOOTSTRAP_SUPPORT; echo $#)"
+    # SC2046 is baselined here on purpose: word splitting IS the point --
+    # prop_support_libs prints one lib per line, exactly as the unquoted
+    # $PROP_BOOTSTRAP_SCRIPTS beside it does. A directive cannot attach
+    # through `local`, so the ratchet carries it with this reason instead.
+    local n; n="$(set -- $PROP_BOOTSTRAP_SCRIPTS $(prop_support_libs "$HERE"); echo $#)"
     echo "  would   install $n bootstrap file(s) into $boot"
     if has_tick "$acct"; then
       echo "  ok      $acct already has the clock in its own crontab"
@@ -103,7 +107,9 @@ wire_one() {
   fi
 
   install -d -m 755 -o "$acct" -g "$acct" "$boot" "$boot/lib" || return 1
-  for f in $PROP_BOOTSTRAP_SCRIPTS $PROP_BOOTSTRAP_SUPPORT; do
+  # shellcheck disable=SC2046  # word splitting is the point: prop_support_libs
+  # prints one lib per line, exactly as $PROP_BOOTSTRAP_SCRIPTS beside it does.
+  for f in $PROP_BOOTSTRAP_SCRIPTS $(prop_support_libs "$HERE"); do
     if [ -f "$HERE/$f" ]; then
       install -m 755 -o "$acct" -g "$acct" "$HERE/$f" "$boot/$f"
       echo "  OK      $boot/$f"
@@ -144,7 +150,11 @@ wire_host() {
   tick="$HOST_LIBEXEC/selfdev-release-tick.sh"
 
   if [ "$MODE" = --check ]; then
-    local n; n="$(set -- $PROP_BOOTSTRAP_SCRIPTS $PROP_BOOTSTRAP_SUPPORT; echo $#)"
+    # SC2046 is baselined here on purpose: word splitting IS the point --
+    # prop_support_libs prints one lib per line, exactly as the unquoted
+    # $PROP_BOOTSTRAP_SCRIPTS beside it does. A directive cannot attach
+    # through `local`, so the ratchet carries it with this reason instead.
+    local n; n="$(set -- $PROP_BOOTSTRAP_SCRIPTS $(prop_support_libs "$HERE"); echo $#)"
     echo "  would   install $n bootstrap file(s) into $HOST_LIBEXEC"
     echo "  would   install $(prop_host_tools | wc -l) host tool(s) into $HOST_LIBEXEC (dresse and every step it runs)"
     echo "  would   adopt the latest build into $HOST_BUILD_ROOT and link it into $HOST_BIN"
@@ -159,7 +169,9 @@ wire_host() {
 
   install -d -m 755 -o root -g root \
     "$HOST_LIBEXEC" "$HOST_LIBEXEC/lib" "$HOST_BUILD_ROOT" "$HOST_STATE" "$HOST_BIN" || return 1
-  for f in $PROP_BOOTSTRAP_SCRIPTS $PROP_BOOTSTRAP_SUPPORT; do
+  # shellcheck disable=SC2046  # word splitting is the point: prop_support_libs
+  # prints one lib per line, exactly as $PROP_BOOTSTRAP_SCRIPTS beside it does.
+  for f in $PROP_BOOTSTRAP_SCRIPTS $(prop_support_libs "$HERE"); do
     if [ -f "$HERE/$f" ]; then
       install -m 755 -o root -g root "$HERE/$f" "$HOST_LIBEXEC/$f"
       echo "  OK      $HOST_LIBEXEC/$f"
