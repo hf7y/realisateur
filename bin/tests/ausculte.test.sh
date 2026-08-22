@@ -238,4 +238,36 @@ has  "and the reason is an empty fleet, not an unreachable one" "$out" "no accou
 hasnt "so the ssh fallback was never taken" "$out" "could not read the accounts"
 
 echo
+echo "-- NOT-MINE: the containment boundary is not a failure -----------------"
+# monkey is a VirtualBox GUEST on dexter. A guest holding shell on its own
+# hypervisor is backwards, so root@monkey has an empty authorized_keys and no
+# key at all -- and with only OK/DOWN/BLIND the `hosts` row could report that
+# correct arrangement ONLY as BLIND: an alarm that can never clear, which
+# trains its reader to ignore the row and then the verb. Ashby S.8/7, the
+# argument this file keeps making: a transducer with fewer output values than
+# its input has distinct states loses distinctions.
+stub decision-rot.sh 0
+out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=monkey bash "$TMP/bin/ausculte.sh" hosts 2>&1)"; rc=$?
+case "$out" in *NOT-MINE*) ok "on the guest, hosts is NOT-MINE -- not BLIND" ;;
+  *) bad "hosts is NOT-MINE on monkey" "got: $out" ;; esac
+check "...and NOT-MINE is not an alarm: exit 0, neither 5 nor 6" "$rc" "0"
+case "$out" in *monkey-watch*) ok "...and it NAMES who answers instead, so the question is not merely dropped" ;;
+  *) bad "NOT-MINE names the owner" "got: $out" ;; esac
+
+# A HOST OMITTED WITHOUT SAYING SO is how a partial answer reads as a complete
+# one. Every propagation verdict has to carry the host it was not allowed to
+# ask -- so the row needs a READABLE channel verdict to get that far, the same
+# fixture the cut tests above use.
+verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"last_cut\":{\"at\":\"$fresh\",\"build_id\":\"B\"}}"
+out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=monkey bash "$TMP/bin/ausculte.sh" propagation 2>&1)"
+case "$out" in *"not asked from here"*) ok "propagation names the host it did not ask, so a partial answer cannot read as a complete one" ;;
+  *) bad "propagation names the skipped host" "got: $out" ;; esac
+case "$out" in *dexter*) ok "...and names WHICH host, not just that one was skipped" ;;
+  *) bad "the skipped host is named" "got: $out" ;; esac
+
+# Off the guest, nothing changes: mandark still asks dexter directly.
+out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=mandark bash "$TMP/bin/ausculte.sh" hosts 2>&1)"
+case "$out" in *NOT-MINE*) bad "off-guest hosts still probes dexter" "it went NOT-MINE on mandark" ;;
+  *) ok "off the guest the row still probes dexter -- the boundary is monkey's, not everyone's" ;; esac
+
 summary
