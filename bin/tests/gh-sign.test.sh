@@ -307,5 +307,27 @@ case "$(cat "$TMP/gh.log")" in
   *) bad "the refused write reached gh" "got: $(cat "$TMP/gh.log")" ;;
 esac
 
+# --- 12. --delivers: WHERE a change lands, derived, not asserted -----------
+# #521 shipped this actuator with no test at all, which is how it went on
+# answering `- none` for three files that deploy to every provisioned host.
+# The contract has TWO readers -- prop_channel for the class, prop_host_tools
+# for what rides to libexec by name -- and reading only the first is the bug.
+R="$TMP/deliv"; mkdir -p "$R/bin"
+git -C "$R" init -q
+git -C "$R" -c user.email=t@t -c user.name=t commit -q --allow-empty -m base
+deliv() { # <path-that-changed> -- graded against the commit before it alone
+  local base; base="$(git -C "$R" rev-parse HEAD)"
+  mkdir -p "$R/$(dirname "$1")"; : > "$R/$1"
+  git -C "$R" add -A >/dev/null 2>&1
+  git -C "$R" -c user.email=t@t -c user.name=t commit -q -m "change $1" >/dev/null 2>&1
+  ( cd "$R" && GH_SIGN_BASE="$base" "$BASH_BIN" "$GS" --delivers 2>&1 )
+}
+contains "a LOCAL-class probe names its libexec path, not '- none'" \
+  "$(deliv bin/ausculte-cadence.sh)" "- path:/usr/local/libexec/selfdev/ausculte-cadence.sh on monkey"
+contains "a payload script names its VERB, not its basename" \
+  "$(deliv bin/gh-sign.sh)" "- path:/usr/local/bin/gh on monkey"
+contains "a file that leaves the repo nowhere still says '- none'" \
+  "$(deliv README.md)" "- none"
+
 echo
 summary
