@@ -72,8 +72,14 @@ source, and let the nightly cut carry it (hf7y/realisateur#330).
 EOF
 }
 
-# The real gh: first on PATH that is not this file. `-ef` compares dev+inode
-# THROUGH symlinks, so the /usr/local/bin/gh link is skipped.
+# The real gh: first on PATH that is not this file AND not another copy of
+# it. `-ef` alone only catches the SAME inode (the /usr/local/bin/gh link
+# back to this exact build); it misses a SECOND copy -- a dev checkout run
+# as `bash bin/gh-sign.sh` while /usr/local/bin/gh is a distinct installed
+# copy of the same script. `-ef` then says "different file" and this shim
+# picks the other shim as "real gh": a double hop whose second layer reads
+# an already-`cat`-drained stdin and posts a blank body. The content check
+# catches any copy, byte-identical or not.
 real_gh() {
   local d c
   IFS=: read -ra _p <<< "$PATH"
@@ -81,6 +87,7 @@ real_gh() {
     c="$d/gh"
     [ -x "$c" ] || continue
     [ "$c" -ef "${BASH_SOURCE[0]}" ] && continue
+    grep -qaF '# gh-sign.sh -- sign every agent-written GitHub' "$c" 2>/dev/null && continue
     printf '%s\n' "$c"
     return 0
   done
