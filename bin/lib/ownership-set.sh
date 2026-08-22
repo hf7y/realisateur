@@ -165,6 +165,7 @@ provision/verbs-meta                       verbs
 bin/lib/body-grammar.sh                    vim-arcade
 bin/tests/body-grammar.test.sh             vim-arcade
 .github/workflows/deferral-ledger.yml      vim-arcade
+bin/defere.sh                               realisateur
 bin/decision-rot.sh                        realisateur
 bin/tests/decision-rot.test.sh             realisateur
 bin/etiquette.sh                           realisateur
