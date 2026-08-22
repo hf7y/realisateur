@@ -40,6 +40,34 @@
 #   land-selfdev.sh, wire-selfdev-git.sh, wire-release-channel.sh
 #                                                 <- setup-selfdev-project.sh,
 #       the account-standup path
+# A SEVENTH CAME BACK ON 2026-08-22, and it is the worst miss of the set.
+# bin/monkey-watch.sh was cut as an orphan for the same reason -- no caller in
+# .github/workflows/ or in this repo's bin/. Its caller is a CRONTAB LINE ON
+# ANOTHER MACHINE: dexter runs it every ten minutes out of a checkout dexter
+# pulls itself. So the rule the six above teach has a second half --
+#
+#   A REACHABILITY SCAN CANNOT SEE AN OFF-HOST CALLER.
+#
+# What that cost: monkey-watch is the only observer OUTSIDE the system it
+# observes. ausculte runs on monkey; the health cadence runs on monkey; every
+# issue the estate files about itself is written ON monkey. When monkey goes
+# down the tracker does not fill with alarms, it goes QUIET -- and dexter
+# starts its VMs at LOGIN, so a reboot nobody logs in after takes all of
+# self-dev with it and reads from outside like a quiet night. For the whole
+# interval, dexter's cron appended `not found` to a log that reached 47 MB.
+#
+# Worse, line 23 above protected publish-monkey-status.sh and
+# monkey-status-collect.py BY NAME as "the dashboard Zach reads" -- and this
+# same cut deleted the thing that invokes them. THE LIST KEPT THE PAYLOAD AND
+# CUT ITS CLOCK. That is realisateur#518, and this was its cause.
+#
+# publish-monkey-status.sh is now deleted DELIBERATELY, which is a different
+# act: monkey-watch supersedes it. Both publish the same status.json to the
+# same repo, but that one runs from mandark and REFUSES TO PUBLISH when its
+# ssh collection fails -- so it showed the last healthy world straight through
+# the 2026-08-14 outage (#274). Two writers of one file with different failure
+# semantics is not redundancy; it is the failure hiding itself.
+#
 # The guard bucket below survived review nearly unchanged; the orphan bucket
 # was wrong. A scan that misses an entry point reports the same "clean" as a
 # scan that found nothing -- which is the estate's own disease, committed here
@@ -94,7 +122,6 @@ bin/dexter-service-deploy.sh
 bin/install-honey-plugin.sh
 bin/install-shims.sh
 bin/monkey-vdi-to-internal.sh
-bin/monkey-watch.sh
 bin/pivot.sh
 bin/playbook.sh
 bin/repo-settings-provision.sh
