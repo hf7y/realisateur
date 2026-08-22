@@ -37,7 +37,7 @@ OWNER="${DEFERE_OWNER:-hf7y}"
 # decision to itself, which is the ownerless case with a handle stuck on it.
 DECIDER="${DEFERE_DECIDER:-zach}"
 WHAT=''; PROJECT=''; HUMAN=''; UNROUTABLE=''; BODY=''; FROM=''; REPO=''
-DRY=0; MODE=file
+DRY=0; MODE='file'   # quoted: `file` is a mode name, not file(1) -- SC2209
 
 while [ $# -gt 0 ]; do
   case "$1" in
