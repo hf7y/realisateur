@@ -93,7 +93,7 @@ grammar_check() {
     ships=$((ships + 1))
     case "$ship" in
       '- none'|'- none.'|'-none')                       ship=''; return 0 ;;
-      *host:*|*path:*|*clock:*|*tag:*|*secret:*|*unit:*|*port:*|*repo:*|*matches:*|*home:*) ship=''; return 0 ;;
+      *host:*|*path:*|*clock:*|*tag:*|*secret:*|*unit:*|*port:*|*repo:*) ship=''; return 0 ;;
     esac
     _find UNTYPED-DELIVERY "names no <kind>:<value> a check could look for: ${ship:0:60}"
     ship=''
