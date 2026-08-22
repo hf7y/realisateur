@@ -5,7 +5,7 @@
 # TRAPS (the rest of this header is in the vault):
 # OPERATION is fail-open: an unreachable channel does NOT stop the account. It
 # keeps the build it has, which was verified when installed, and this tick
-# exits 3 BLIND saying so. The rule is "fail LOUD", not "fail STOPPED" --
+# exits 6 BLIND saying so. The rule is "fail LOUD", not "fail STOPPED" --
 # halting a nightly on a network blip is just a different silent failure.
 #
 # EXIT CODES
@@ -403,7 +403,7 @@ if [ -x "$led" ]; then
   printf '%s\n' "$ch_out" | sed 's/^/        /'
   case "$ch_rc" in
     0) ok "release channel healthy (verdict fresh, no blocked streak)" ;;
-    3) bad "release channel BLIND -- $RELEASE_STATUS_URL unreachable. Not 'healthy'." ;;
+    6) bad "release channel BLIND -- $RELEASE_STATUS_URL unreachable. Not 'healthy'." ;;
     *) bad "release channel UNHEALTHY -- the emitter is silent or the pipeline is blocked. Rows above say which; this is why no new build has appeared." ;;
   esac
 else
