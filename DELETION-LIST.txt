@@ -27,10 +27,38 @@
 # anyway: silence-audit counts "named in a doc" as wired; delivery-audit reads
 # `- none` on 260 of 262 PRs. Both are sensors that do not sense. ausculte
 # drops from 8 probes to 6 in the same PR.
+#
+# SIX FILES CAME BACK, and the reason is worth keeping. The first cut deleted
+# them as orphans on a reachability scan of .github/workflows/ that never read
+# provision/verbs-meta/build-verbs.yml -- the NIGHTLY VERB BUILD, i.e. the
+# propagation channel itself. Each has a live caller:
+#   publish-release-verdict.sh, release-gate.sh   <- build-verbs.yml
+#   release-ledger.sh                             <- the verdict's consumer half
+#   verb-kind-lint.sh                             <- cut-verb-build.sh, which
+#       DIES without it: "Refusing to cut a build whose channel declarations
+#       were never checked."
+#   land-selfdev.sh, wire-selfdev-git.sh, wire-release-channel.sh
+#                                                 <- setup-selfdev-project.sh,
+#       the account-standup path
+# The guard bucket below survived review nearly unchanged; the orphan bucket
+# was wrong. A scan that misses an entry point reports the same "clean" as a
+# scan that found nothing -- which is the estate's own disease, committed here
+# by the sprint that exists to remove it.
+#
+# check-project-busy.sh also came back, from the guard bucket. It is an
+# installed VERB on PATH and CLAUDE.md names it as an ecosystem protocol
+# ("what to do when a change reaches outside this repo"). Deleting a
+# documented front door during a stabilisation sprint is the wrong trade; the
+# 124 lines stay.
+#
+# carry-drift.sh went, but the CARRIES table inside it did not: it is now
+# bin/lib/carries.tsv, the bin/lib/labels.tsv shape. A guard should not own a
+# data structure that outlives it -- bin/tests/propagation.test.sh reads that
+# mapping to answer "which script backs verb <v>", which is a question about
+# the repo.
 
 # ---- guards: the 36% of bin/ that reports clean and finds nothing ----------
 bin/carry-drift.sh
-bin/check-project-busy.sh
 bin/claim-drift.sh
 bin/closeout-lint.sh
 bin/delivery-audit.sh
@@ -43,7 +71,6 @@ bin/org-migration-audit.sh
 bin/ownership-audit.sh
 bin/path-provenance-audit.sh
 bin/reach-lint.sh
-bin/release-gate.sh
 bin/retire-check.sh
 bin/rot-ratchet.sh
 bin/selfdev-agent-survey.sh
@@ -52,7 +79,6 @@ bin/self-merge-audit.sh
 bin/served-not-cloned.sh
 bin/silence-audit.sh
 bin/thermostat-wiring.sh
-bin/verb-kind-lint.sh
 
 # ---- ratchets: baselines for guards that no longer exist -------------------
 bin/carry-drift.ratchet
@@ -60,7 +86,6 @@ bin/ownership-audit.ratchet
 bin/path-provenance-audit.ratchet
 bin/rot-ratchet.ratchet
 bin/thermostat-wiring.ratchet
-bin/verb-kind-lint.ratchet
 
 # ---- orphans: reachable from no cron, no CI, and no verb ------------------
 bin/branch-protection-provision.sh
@@ -68,19 +93,14 @@ bin/defere.sh
 bin/dexter-service-deploy.sh
 bin/install-honey-plugin.sh
 bin/install-shims.sh
-bin/land-selfdev.sh
 bin/monkey-vdi-to-internal.sh
 bin/monkey-watch.sh
 bin/pivot.sh
 bin/playbook.sh
-bin/publish-release-verdict.sh
-bin/release-ledger.sh
 bin/repo-settings-provision.sh
 bin/selfdev-gh-app-register.sh
 bin/session-marker.sh
 bin/sunset-coordinator-files.sh
-bin/wire-release-channel.sh
-bin/wire-selfdev-git.sh
 
 # ---- suites for the above: a test for a file that is gone ------------------
 # bin/tests/guard-estate.test.sh is KEPT on purpose. It derives the guard
@@ -88,7 +108,6 @@ bin/wire-selfdev-git.sh
 # this deletion it is what stops the guards growing back.
 bin/tests/branch-protection-provision.test.sh
 bin/tests/carry-drift.test.sh
-bin/tests/check-project-busy.test.sh
 bin/tests/claim-drift.test.sh
 bin/tests/closeout-lint.test.sh
 bin/tests/delivery-audit.test.sh
@@ -101,9 +120,6 @@ bin/tests/org-migration-audit.test.sh
 bin/tests/ownership-audit.test.sh
 bin/tests/path-provenance-audit.test.sh
 bin/tests/reach-lint.test.sh
-bin/tests/release-channel-wiring.test.sh
-bin/tests/release-gate.test.sh
-bin/tests/release-ledger.test.sh
 bin/tests/repo-settings-provision.test.sh
 bin/tests/retire-check.test.sh
 bin/tests/rot-ratchet.test.sh
@@ -114,8 +130,6 @@ bin/tests/self-merge-audit.test.sh
 bin/tests/served-not-cloned.test.sh
 bin/tests/sunset-coordinator-files.test.sh
 bin/tests/thermostat-wiring.test.sh
-bin/tests/verb-kind-lint.test.sh
-bin/tests/wire-release-channel.test.sh
 
 # ---- advisory workflows: none is a required check -------------------------
 .github/workflows/claim-drift.yml
