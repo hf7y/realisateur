@@ -104,12 +104,41 @@ selfdev-gh-app.sh
 
 # Files the bootstrap scripts need alongside them. A missed dependency staged
 # into a 0700 home presents as "Permission denied", not "file not found".
+#
+# THE FLOOR, not the whole set: prop_support_libs() below DERIVES the rest by
+# reading what the shipped scripts actually source. These four stay written
+# down because propagation-set.sh is itself one of them -- a derivation cannot
+# bootstrap the file that defines it.
 PROP_BOOTSTRAP_SUPPORT="
 lib/cli-guard.sh
 lib/host-check.sh
 lib/propagation-set.sh
 lib/selfdev-app-key.sh
 "
+
+# prop_support_libs <bin-dir> -- every lib/*.sh the bootstrap and host-tool
+# sets source, derived by reading them, plus the floor above.
+#
+# WHY DERIVED. The hand-typed list said four, and seven were missing. On monkey
+# that meant /usr/local/libexec/selfdev/decision-rot.sh could not source
+# lib/roster-set.sh, so it walked ZERO repositories, printed `TOTAL 0 0`, and
+# exited 0 -- which `ausculte` rendered as "rot OK -- no answered-and-abandoned
+# issues" while 48 sat open. A list that has to agree with the code is a second
+# source of truth, and this one was silently wrong for as long as it existed.
+prop_support_libs() {
+  local bindir="${1:-}" s f
+  if [ ! -d "$bindir" ]; then printf '%s\n' $PROP_BOOTSTRAP_SUPPORT; return 0; fi
+  {
+    printf '%s\n' $PROP_BOOTSTRAP_SUPPORT
+    for s in $PROP_BOOTSTRAP_SCRIPTS $(prop_host_tools); do
+      f="$bindir/$s"; [ -f "$f" ] || continue
+      grep -ohE 'lib/[a-z0-9-]+\.(sh|tsv)' "$f" 2>/dev/null
+    done
+    # `lib/verb.sh` names etalon's canonical runtime, which reaches a host by
+    # its own channel and is not a file in this bin/. Emitting only what is
+    # HERE keeps a derived name from reading as a missing dependency.
+  } | sort -u | while read -r l; do [ -f "$bindir/$l" ] && printf '%s\n' "$l"; done
+}
 
 # --- PROVISIONING: root-side, deployed to the host, invoked there by a -----
 # --- human. Not bootstrap: these stand an account UP, once, and they run
