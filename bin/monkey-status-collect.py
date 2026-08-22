@@ -5,7 +5,12 @@ RUN ON monkey, AS ROOT:  sudo -n python3 monkey-status-collect.py
 Read-only: reads /etc/passwd, each account's crontab, its scheduler run
 ledger, and its release-tick status file. Writes nothing, dispatches
 nothing. Prints one JSON document on stdout -- the payload published to
-https://hf7y.com/monkey/status.json by bin/publish-monkey-status.sh.
+https://hf7y.com/monkey/status.json by bin/monkey-watch.sh, which feeds this
+file to monkey's python3 over stdin so the version that runs is the version in
+the checkout. It runs FROM DEXTER on purpose: publish-monkey-status.sh did the
+same job from mandark and refused to publish when its ssh collection failed, so
+the page showed the last healthy world through the 2026-08-14 outage (#274).
+That script was deleted 2026-08-22; an empty accounts[] IS the report.
 
 Every field is a probe of live state at generation time. A field this
 script cannot read is null, never a guess: a missing ledger means the
