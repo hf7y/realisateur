@@ -12,9 +12,9 @@
 # that diverged from its nine siblings had no sensor pointed at the
 # divergence itself, only at each account in isolation.
 # THE REDUNDANCY NOTE (not enforced here, not silently acted on)
-# FORMAT (newline-separated, consumed by `while read`, NOT shell code -- see
-# ownership-set.sh's own warning: a bare `"` inside a row here would silently
-# truncate this file the same way it truncated that one):
+# FORMAT (newline-separated, consumed by `while read`, NOT shell code -- a
+# bare `"` inside a row here would silently truncate this file the same way
+# it once truncated ownership-set.sh, deleted in #514):
 
 CRED_GRANTS="
 "
