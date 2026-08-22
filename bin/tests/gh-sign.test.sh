@@ -329,5 +329,30 @@ contains "a payload script names its VERB, not its basename" \
 contains "a file that leaves the repo nowhere still says '- none'" \
   "$(deliv README.md)" "- none"
 
+# --- 13. --default-after: one home for the grammar, on every account's PATH --
+# scheduler must read DEFAULT-AFTER at dispatch. It must not reach into a
+# realisateur build path for lib/body-grammar.sh, and it must not carry a
+# second copy of the parser. The shim already owns the body grammar and is
+# already on PATH everywhere, so it answers.
+reset
+printf 'DECISION: @zach -- q\nDEFAULT-AFTER 14d: close it as declined\n' > "$TMP/da.txt"
+out="$(run --default-after "$TMP/da.txt" 2>&1)"; rc=$?
+check "a well-formed default exits 0" "$rc" "0"
+check "...and prints days TAB action, for a caller to read" "$out" "$(printf '14\tclose it as declined')"
+
+printf 'DECISION: @zach -- an irreversible call\n' > "$TMP/none.txt"
+run --default-after "$TMP/none.txt" >/dev/null 2>&1
+check "no default exits 1 -- BLOCKS FOREVER is an answer, not an error" "$?" "1"
+
+# 1 and 6 must never be confused: "this blocks on purpose" vs "I could not read
+# the grammar". Folding them is how a BLIND probe gets reported as a verdict.
+GH_SIGN_LIB="$TMP/nolib" run --default-after "$TMP/da.txt" >/dev/null 2>&1
+check "an unreadable grammar is BLIND (6), never 1" "$?" "6"
+
+case "$(cat "$TMP/gh.log")" in
+  '') ok "...and none of it reached gh -- reading a body costs no write" ;;
+  *) bad "--default-after reached gh" "got: $(cat "$TMP/gh.log")" ;;
+esac
+
 echo
 summary
