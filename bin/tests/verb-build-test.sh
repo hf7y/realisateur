@@ -58,8 +58,10 @@ mk_build "2026-08-05T0130Z" "vim-arcade:entraine senechal:installe scheduler:arm
 
 CMD_DEST="$TMP/claude/commands"
 HOOK_DEST="$TMP/claude/hooks"
+SELFDEV_LIBEXEC="$TMP/libexec"
 run() { VERB_BUILD_ROOT="$ROOT" INSTALLE_BIN="$BIN" \
         CMD_DEST="$CMD_DEST" HOOK_DEST="$HOOK_DEST" \
+        SELFDEV_LIBEXEC="$SELFDEV_LIBEXEC" \
         bash "$INSTALL" --remote "file://$META" "$@"; }
 
 echo "verb-build contract"
@@ -210,6 +212,46 @@ ln -sfn "$victim" "$CMD_DEST/cloture.md"
 run --build 2026-08-10T0130Z --apply --link >/dev/null 2>&1
 check "a symlink at the destination is skipped, not written through" \
       "$(cat "$victim")" "do not clobber"
+
+# --- 12. libexec: the host tools the clock now delivers (#517) -----------
+# Before this, /usr/local/libexec/selfdev refreshed ONLY when a human ran
+# wire-release-channel.sh --host --apply, so a fix to one of ausculte's own
+# probes sat on main indefinitely. That is how a decision-rot which could not
+# load its roster walked zero repositories, exited 0, and rendered as `rot OK`
+# over 48 rotting decisions (#512).
+mkdir -p "$META/realisateur/libexec"
+printf '#!/bin/sh\ntouch "$1"\nwhile [ ! -f "$2" ]; do sleep 0.05; done\necho OLD\n' \
+  > "$META/realisateur/libexec/probe.sh"
+g -C "$META" add -A; g -C "$META" commit -m "libexec"; g -C "$META" tag -f "build/2026-08-11T0130Z"
+run --build 2026-08-11T0130Z --apply --link >/dev/null 2>&1
+check "a host tool in the build is installed executable into SELFDEV_LIBEXEC" \
+      "$([ -x "$SELFDEV_LIBEXEC/probe.sh" ] && echo yes)" "yes"
+
+# THE HAZARD THIS DIRECTORY HAS AND THE OTHER TWO DO NOT: a destination here
+# can be EXECUTING while the next build lands on it -- root's tick runs
+# install-verb-build.sh out of this very directory. A shell re-reads its script
+# BY OFFSET, so `cp` over a running one truncates it IN PLACE, same inode, and
+# the shell then executes whatever now sits at that offset.
+#
+# The invariant is REPLACEMENT, NOT REWRITING, and the inode is what says so.
+# Asserted directly rather than by racing a live script: a small script gets
+# buffered whole by the interpreter, so a timing test passes with `cp` too --
+# it looks like a witness and is not one.
+ino_before="$(stat -c %i "$SELFDEV_LIBEXEC/probe.sh")"
+printf '#!/bin/sh\necho NEW\n' > "$META/realisateur/libexec/probe.sh"
+g -C "$META" add -A; g -C "$META" commit -m "libexec v2"; g -C "$META" tag -f "build/2026-08-12T0130Z"
+run --build 2026-08-12T0130Z --apply --link >/dev/null 2>&1
+ino_after="$(stat -c %i "$SELFDEV_LIBEXEC/probe.sh")"
+if [ "$ino_before" != "$ino_after" ]; then
+  ok "an updated host tool REPLACES the file (new inode), so a running copy is untouched"
+else
+  bad "an updated host tool replaces the file" "inode unchanged ($ino_after) -- written in place, which corrupts a script executing from here"
+fi
+check "...and the destination carries the new content" \
+      "$(tail -1 "$SELFDEV_LIBEXEC/probe.sh")" "echo NEW"
+# No temp files left behind: the install writes .<name>.new.$$ beside the target.
+check "...and no .new temp file is left in the directory" \
+      "$(find "$SELFDEV_LIBEXEC" -name '.*.new.*' | wc -l)" "0"
 
 echo
 summary
