@@ -40,16 +40,8 @@ case "$out" in *"NOT \"all clear\""*) ok "...and the summary refuses to read as 
   *) bad "blind summary" "got: $out" ;; esac
 
 stub decision-rot.sh 1 "rot found"
-stub silence-audit.sh 2 "usage"
-run rot silence >/dev/null
-check "one probe DOWN and one BLIND exits DOWN" "$?" "5"
-
-stub decision-rot.sh 0
-stub silence-audit.sh 6 "BLIND: no tracked files"
-out="$(run silence)"; rc=$?
-check "a BLIND silence-audit is BLIND (6), not DOWN" "$rc" "6"
-case "$out" in *BLIND*) ok "...and the row says BLIND" ;;
-  *) bad "silence BLIND row" "got: $out" ;; esac
+run rot >/dev/null
+check "a probe DOWN exits DOWN" "$?" "5"
 
 # --- arming reads what the accounts DID ----------------------------------
 # Counting the word "armed" said OK while three accounts had been dead eight
@@ -161,26 +153,10 @@ out="$(run arming)"; rc=$?
 check "a status document past its own valid_until is BLIND (6)" "$rc" "6"
 has "and it says nothing is publishing it" "$out" "expired at"
 
-echo
-echo "-- delivery: an unmet claim is DOWN, an absent ledger is BLIND ---------"
-stub delivery-audit.sh 0 "3 PR(s) audited; 4 met, 0 UNMET, 0 blind (0 carried no ledger)."
-out="$(run delivery)"; rc=$?
-check "every claim met is OK (0)" "$rc" "0"
-has  "and it carries the count" "$out" "PR(s) audited"
-
-printf '#!/usr/bin/env bash\nprintf "  UNMET  #436  path:/x is NOT on monkey\\n"\nexit 1\n' > "$TMP/bin/delivery-audit.sh"
-chmod +x "$TMP/bin/delivery-audit.sh"
-out="$(run delivery)"; rc=$?
-check "a merged PR claiming a delivery that is not there is DOWN (5)" "$rc" "5"
-
-stub delivery-audit.sh 6 "0 PR(s) audited; 0 met, 0 UNMET, 2 blind (2 carried no ledger)."
-out="$(run delivery)"; rc=$?
-check "claims that could not be checked are BLIND (6), never OK" "$rc" "6"
-
-rm -f "$TMP/bin/delivery-audit.sh"
-out="$(run delivery)"; rc=$?
-check "no delivery-audit at all is BLIND (6)" "$rc" "6"
-has  "and it says which part is missing" "$out" "delivery-audit not present"
+# The `delivery` and `silence` probes went with delivery-audit.sh and
+# silence-audit.sh (DELETION-LIST.txt, 2026-08-22). Their cases are gone with
+# them rather than stubbed: a suite that keeps asserting the behaviour of a
+# deleted probe is the same shape of residue this sprint removed.
 
 echo
 echo "-- fleet: the reason an account gives for stopping ---------------------"

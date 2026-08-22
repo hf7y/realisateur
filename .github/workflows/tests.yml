@@ -123,38 +123,9 @@ jobs:
       - name: Ratchet -- fail only on a finding a file did not already have
         run: bash bin/shellcheck-lint.sh
 
-  # CARRY-DRIFT. Its own suite proves the guard BEHAVES, hermetically, against
-  # fixture repositories. This job asks the guard's actual question about this
-  # repository -- does what `bashified` ships still match what main says --
-  # which is a different claim, and the one that goes stale between merges.
-  #
-  # It reads origin/bashified deliberately: the build is cut from what is
-  # PUBLISHED, and a stale local ref is what made the guard's first draft
-  # report "0 carried files, exit 0" against a branch carrying six. So the ref
-  # has to be fetched -- actions/checkout brings one branch.
-  # ...and directive-prose rides here too: both take ~6s, GitHub bills each JOB
-  # rounded UP to a minute, and neither is required on main (#401). `suites`
-  # and `shellcheck` stay separate -- a required check answering two questions
-  # cannot say which failed.
-  surface:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0        # directive-prose diffs against main
-      - name: Make origin/bashified and origin/main resolvable
-        run: |
-          git fetch --no-tags --depth=1 origin +refs/heads/bashified:refs/remotes/origin/bashified
-          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
-      # Each step names its guard: a bare exit no longer says which went red.
-      - name: carry-drift -- what ships must equal what main says
-        run: bash bin/carry-drift.sh
-      - name: directive-prose -- a decision recorded in prose must cite an issue
-        run: bash bin/directive-prose.sh
-
-
-  # directive-prose is REALISATEUR'S OWN guard, not the estate's: it asserts
-  # that a decision recorded in prose cites an issue. It used to ride inside
-  # the markdown-cost job; that job moved to hf7y/etalon, which carries only
-  # what every repo needs, so this gets its own job rather than travelling
-  # with a guard that is no longer here.
+  # The `surface` job is gone with carry-drift.sh and directive-prose.sh
+  # (DELETION-LIST.txt, 2026-08-22). Neither was a required check, and both
+  # belonged to the guard layer this repo just removed: six sampled guards
+  # were 1,029 lines and produced zero findings. `suites` and `shellcheck`
+  # remain separate on purpose -- a required check answering two questions
+  # cannot say which one failed.

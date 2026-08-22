@@ -273,19 +273,12 @@ rc  'S8 --check-body re-runs it offline and FINDS it (1), refusing nothing' 1 "$
 has 'S9 --check-body names the same finding'         "$out" MISPLACED-DECISION
 
 section 'I. the CI backstop is wired to the same grammar'
-WF="$ROOT/../.github/workflows/deferral-ledger.yml"
-if [ -f "$WF" ]; then
-  wf="$(cat "$WF")"
-  has 'I1 the workflow calls the shim, not a second implementation' "$wf" 'gh-sign.sh --check-body'
-  # `edited` is not in the default pull_request set, and it is the ONLY event
-  # emitted when an author adds the ledger -- the one act that turns the check
-  # green. Without it they fix the finding and watch the check stay red.
-  has 'I2 it fires on `edited`'          "$wf" 'edited'
-  has 'I3 it fires on ready_for_review'  "$wf" 'ready_for_review'
-  hasnt 'I4 no reference to the deleted script remains' "$wf" 'bin/deferral-ledger.sh'
-else
-  bad 'I1 workflow present' "no .github/workflows/deferral-ledger.yml"
-fi
+# deferral-ledger.yml was deleted 2026-08-22 (DELETION-LIST.txt). It was never
+# a required check, and it was green on every PR that answered `- none` -- 260
+# of 262. A backstop satisfied by declaring nothing backstops nothing. The
+# grammar itself is unchanged and still enforced at the write by
+# gh-sign.sh --check-body, which sections A-H above exercise directly.
+# Reinstating a delivery check that asks for a claim, not a field, is v2.
 
 hasnt 'I5 the deleted script is really gone' "$(ls "$ROOT")" 'deferral-ledger.sh'
 

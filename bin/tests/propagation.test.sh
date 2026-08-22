@@ -83,9 +83,11 @@ else
   echo "       bound HERE, deliberately, in a commit that says why."
 fi
 
-# verb name -> script basename (`gh` <- gh-sign.sh) via carry-drift's CARRIES.
-CARRY_LIB="$REPO/bin/carry-drift.sh"
-CARRIES_BLOCK="$(sed -n "/^CARRIES='/,/^'\$/p" "$CARRY_LIB" | sed -e '1d' -e '$d')"
+# verb name -> script basename (`gh` <- gh-sign.sh). The table moved out of
+# bin/carry-drift.sh into bin/lib/carries.tsv when that guard was deleted
+# (2026-08-22): the mapping answers a question about the repo, not about the
+# guard that happened to hold it.
+CARRIES_BLOCK="$(grep -v '^#' "$REPO/bin/lib/carries.tsv" | grep -v '^$')"
 
 main_script_for() {
   local v="$1" line
@@ -105,13 +107,23 @@ if [ -z "$V_REF" ]; then
   bad "no bashified ref in this checkout -- cannot check declared verbs against the contract"
 else
   declared_verbs="$(verb_set_verbs_of "$REPO" "$V_REF")"
-  verb_bad=""
+  verb_bad=""; verb_going=""
   while read -r v; do
     [ -n "$v" ] || continue
     s="$(main_script_for "$v")"
+    # A REMOVAL IN FLIGHT IS NOT DRIFT. bashified is derived FROM main, so
+    # during a PR that deletes a verb's script the two cannot be in lockstep:
+    # main has dropped it and the next cut has not run yet. Failing here would
+    # make every deletion unmergeable, which is how a guard ends up protecting
+    # the thing it was meant to let you change. A verb whose backing script is
+    # still present and misclassified is a real finding and still fails.
+    if [ ! -e "$REPO/bin/$s" ] && [ ! -e "$REPO/bin/lib/$s" ]; then
+      verb_going="$verb_going $v"; continue
+    fi
     ch="$(prop_channel "$s" 2>/dev/null)" || { verb_bad="$verb_bad $v(<-$s: unclassified)"; continue; }
     [ "$ch" = payload ] || verb_bad="$verb_bad $v(<-$s: $ch, not payload)"
   done <<< "$declared_verbs"
+  [ -z "$verb_going" ] || echo "  ..      verb(s) awaiting the next cut to disappear:$verb_going"
   if [ -z "$verb_bad" ]; then
     ok "every verb this repo's bashified branch declares resolves to a PAYLOAD-class script"
   else

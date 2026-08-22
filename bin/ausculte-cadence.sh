@@ -86,25 +86,44 @@ while IFS= read -r row; do
   status="$(printf '%s' "$row" | jq -r '.status // empty' 2>/dev/null)"
   detail="$(printf '%s' "$row" | jq -r '.detail // empty' 2>/dev/null)"
   [ -n "$name" ] || continue
-  f="$STATE/$name.down"
-  if [ "$status" != DOWN ]; then rm -f "$f"; continue; fi
 
-  # SECOND STRIKE ESCALATES: one DOWN can be a probe catching a restart.
+  # THREE INPUT STATES NEED THREE OUTCOMES. Ashby S.8/7: a transducer with
+  # fewer output values than its input has distinct states loses distinctions.
+  # This loop had two -- escalate, or clear -- for OK, DOWN and BLIND, so
+  # `[ "$status" != DOWN ] && rm -f` cleared the streak on BLIND exactly as it
+  # did on OK. Run as root on monkey, three of ausculte's probes are BLIND for
+  # want of a gh credential, and a probe alternating DOWN/BLIND never reaches
+  # two consecutive DOWNs at all. That is why this cadence has fired every four
+  # hours since it was installed and escalated nothing.
+  #
+  # BLIND is NOT DOWN and must not be reported as it: "I could not look" is a
+  # claim about the observer. It gets its own streak, its own word, and its own
+  # issue title, so the two never collapse into one number again.
+  case "$status" in
+    OK)    rm -f "$STATE/$name.down" "$STATE/$name.blind"; continue ;;
+    DOWN)  f="$STATE/$name.down";  rm -f "$STATE/$name.blind"
+           word=DOWN;  said='is not serving' ;;
+    BLIND) f="$STATE/$name.blind"; rm -f "$STATE/$name.down"
+           word=BLIND; said='could not be looked at' ;;
+    *)     rm -f "$STATE/$name.down" "$STATE/$name.blind"; continue ;;
+  esac
+
+  # SECOND STRIKE ESCALATES: one reading can be a probe catching a restart.
   if [ ! -f "$f" ]; then
     printf '%s\n' "$detail" > "$f"
-    [ "$QUIET" -eq 1 ] || echo "  ..      $name DOWN once; escalates if it is DOWN again next run"
+    [ "$QUIET" -eq 1 ] || echo "  ..      $name $word once; escalates if it is $word again next run"
     continue
   fi
 
-  echo "  DOWN    $name -- twice running: $detail"
+  echo "  $word    $name -- twice running: $detail"
   escalated=1
   # A test run must never reach a person.
   [ "$NO_ESC" -eq 1 ] && continue
 
-  title="ausculte: $name has been DOWN for two consecutive runs"
-  body="NO-DECISION: filed by the health cadence, which escalates a row only on its second consecutive DOWN
+  title="ausculte: $name has been $word for two consecutive runs"
+  body="NO-DECISION: filed by the health cadence, which escalates a row only on its second consecutive $word
 
-\`ausculte $name\` reported DOWN twice running.
+\`ausculte $name\` reported $word twice running -- it $said.
 
     $detail
 
@@ -114,7 +133,7 @@ Reproduce: \`ausculte $name\`
 - none
 <!-- /DEFERRED -->"
   if command -v gh >/dev/null 2>&1; then
-    existing="$(gh issue list -R "$ISSUE_REPO" --search "in:title \"ausculte: $name has been DOWN\"" \
+    existing="$(gh issue list -R "$ISSUE_REPO" --search "in:title \"ausculte: $name has been $word\"" \
                   --state open --json number --jq '.[0].number' 2>/dev/null)"
     if [ -n "$existing" ]; then
       echo "  ..      already filed as $ISSUE_REPO#$existing"
@@ -128,7 +147,7 @@ Reproduce: \`ausculte $name\`
   if [ -r "$HERE/lib/zaxon.sh" ]; then
     # shellcheck source=lib/zaxon.sh
     . "$HERE/lib/zaxon.sh"
-    zaxon_ask "ausculte: $name DOWN twice. $(printf '%s' "$detail" | cut -c1-90)" ausculte-cadence >/dev/null 2>&1 \
+    zaxon_ask "ausculte: $name $word twice. $(printf '%s' "$detail" | cut -c1-90)" ausculte-cadence >/dev/null 2>&1 \
       && echo "  ..      asked over zaxon"
   fi
 done <<< "$rows"

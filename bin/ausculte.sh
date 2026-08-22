@@ -10,7 +10,7 @@ CLI_SUMMARY='is self-dev healthy enough to stop watching?'
 CLI_USAGE='  ausculte              every probe; the exit code is the answer
   ausculte --json       one object per probe
   ausculte <probe>      just one: channel hosts arming propagation rot
-                        silence delivery fleet'
+                        fleet'
 CLI_FLAGS='--json'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  every declared probe answered OK
@@ -196,21 +196,12 @@ if want rot; then
   else record rot BLIND 'decision-rot.sh not present'; fi
 fi
 
-if want delivery; then
-  da=''
-  if da="$(part delivery-audit.sh)"; then :
-  elif command -v delivery-audit >/dev/null 2>&1; then da="$(command -v delivery-audit)"
-  fi
-  if [ -n "$da" ]; then
-    out="$(bash "$da" --days "${AUSCULTE_DELIVERY_DAYS:-7}" 2>&1)"; rc=$?
-    case $rc in
-      0) record delivery OK "$(printf '%s' "$out" | grep 'PR(s) audited' | tail -1)" ;;
-      1) record delivery DOWN "$(printf '%s' "$out" | grep -c '^  UNMET' | tr -d ' ') merged PR(s) claim a delivery that is not there" ;;
-      6) record delivery BLIND "$(printf '%s' "$out" | grep 'PR(s) audited' | tail -1)" ;;
-      *) record delivery BLIND 'delivery-audit could not be graded' ;;
-    esac
-  else record delivery BLIND 'delivery-audit not present'; fi
-fi
+# The `delivery` probe is gone with delivery-audit.sh (DELETION-LIST.txt,
+# 2026-08-22). It read 2 MET and 262 BLIND across 292 PRs, because the ledger
+# it graded is answered `- none` on 260 of them: a sensor measuring a field
+# nobody fills. A probe whose only output is BLIND transmits no bits about the
+# thing it names, and one that reports OK on `- none` is worse than absent.
+# Reinstating delivery proof properly is v2.
 
 # Each ledger ends in a REASON column nothing has ever read.
 if want fleet; then
@@ -263,22 +254,10 @@ if want fleet; then
   esac
 fi
 
-if want silence; then
-  sa=''
-  if   sa="$(part silence-audit.sh)"; then :
-  elif command -v silence-audit >/dev/null 2>&1; then sa="$(command -v silence-audit)"
-  fi
-  if [ -n "$sa" ]; then
-    out="$(bash "$sa" --strict 2>&1)"; rc=$?
-    case $rc in
-      0) record silence OK 'no silenced failure paths' ;;
-      2) record silence BLIND 'ausculte invoked silence-audit wrongly -- fix ausculte' ;;
-      # 6 used to fall through to DOWN: unreadable read as not-serving (#334).
-      6) record silence BLIND "$(printf '%s' "$out" | tail -1)" ;;
-      *) record silence DOWN "$(printf '%s' "$out" | tail -1)" ;;
-    esac
-  else record silence BLIND 'silence-audit not present'; fi
-fi
+# The `silence` probe is gone with silence-audit.sh (DELETION-LIST.txt,
+# 2026-08-22). Its [unwired] test counted a script NAMED IN A DOC as wired, so
+# ausculte-cadence.sh -- installed, on a 4-hourly clock, and a no-op the whole
+# time -- passed it. A guard satisfied by documentation measures documentation.
 
 [ ${#rows[@]} -gt 0 ] || { printf '%s: no such probe: %s\n' "$CLI_NAME" "${ONLY[*]}" >&2; exit 2; }
 
