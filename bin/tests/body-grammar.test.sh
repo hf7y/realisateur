@@ -193,6 +193,15 @@ eq 'T3 a typed claim passes' "$(findings 'NO-DECISION: x
 <!-- DELIVERS -->
 - clock:root@monkey tag:realisateur:ausculte:CADENCE
 <!-- /DELIVERS -->')" 0
+eq 'T3b a matches:/home: claim passes' "$(findings 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- matches:/usr/local/bin/ausculte home:bin/ausculte.sh host:monkey
+<!-- /DELIVERS -->')" 0
 eq 'T4 prose a check cannot look for is a finding' "$(codes 'NO-DECISION: x
 
 <!-- DEFERRED -->
