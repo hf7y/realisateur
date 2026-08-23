@@ -6,13 +6,12 @@
 # RUNNER: no -- a SURVEY, run in a triage pass or ahead of /ideate and /cloture
 # GUARD-TEST: bin/tests/etiquette.test.sh
 # GATE: none -- reads live issue trackers; writes only with --apply
-# THE TEXT LIVES IN bin/lib/labels.tsv AND IS NOT DUPLICATED HERE (#397). A
-# grammar copied into 24 repos is 24 grammars; this is the `discipline` shape --
-# one file, read live, carried by the verb build so no checkout is needed.
+# THE TEXT LIVES IN bin/lib/labels.tsv AND IS NOT DUPLICATED HERE (#397): a
+# grammar copied into 24 repos is 24 grammars.
 #
-# `needs-human` is DERIVED from line 1 by grammar_declaration()
-# (bin/lib/body-grammar.sh), which gh-sign enforces at creation. Typed, it was
-# wrong 3 of 3 and absent from 22 of 24 repos (#396, #397).
+# `needs-human` is DERIVED: grammar_declaration() (bin/lib/body-grammar.sh)
+# reads line 1, issue_answered() (bin/lib/answered.sh) reads the comments.
+# Typed, it was wrong 3 of 3 and absent from 22 of 24 repos (#396, #397).
 #
 # TRAP: line 1 declaring NEITHER is UNDECLARED, never "no decision".
 # TRAP: a label absent from labels.tsv is left alone -- a floor, not a
@@ -34,6 +33,7 @@ CLI_EXITS='  0  the repo carries the declared labels and every derived one match
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/body-grammar.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/answered.sh"
 
 APPLY=0
 REPO=''
@@ -142,9 +142,11 @@ findings=0; matched=0; changed=0
 while IFS=$'\t' read -r num has_label title; do
   [ -n "$num" ] || continue
   body="$(printf '%s' "$json" | jq -r --argjson n "$num" '.[]|select(.number==$n)|.body')"
-  want=''
+  want='' ; answered=0
   case "$(grammar_declaration "$body")" in
-    decision)    want=yes ;;
+    # An answered decision is an agent's work: left labelled it brakes dispatch.
+    decision)    want=yes
+                 if issue_answered "$REPO" "$num"; then want=no; answered=1; fi ;;
     no-decision) want=no ;;
     none)
       findings=$((findings + 1))
@@ -158,7 +160,11 @@ while IFS=$'\t' read -r num has_label title; do
     [ "$APPLY" -eq 1 ] && gh issue edit "$num" --repo "$REPO" --add-label "$LABEL" >/dev/null \
       && { changed=$((changed + 1)); row "  +label" "$num" "$LABEL added"; }
   else
-    row STALE "$num" "labelled $LABEL but declares NO-DECISION: -- ${title:0:52}"
+    if [ "$answered" = 1 ]; then
+      row ANSWERED "$num" "declares DECISION: and has been answered -- ${title:0:52}"
+    else
+      row STALE "$num" "labelled $LABEL but declares NO-DECISION: -- ${title:0:52}"
+    fi
     [ "$APPLY" -eq 1 ] && gh issue edit "$num" --repo "$REPO" --remove-label "$LABEL" >/dev/null \
       && { changed=$((changed + 1)); row "  -label" "$num" "$LABEL removed"; }
   fi

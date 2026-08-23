@@ -2,35 +2,26 @@
 # decision-rot.sh -- how many of Zach's answers is nobody acting on?
 #
 # RUNNER: no -- a SURVEY, not a guard: run in a triage pass, or ahead of an /ideate or /nightly-batch
-# GUARD-TEST: bin/tests/decision-rot.test.sh -- 32 cases, offline behind a fake `gh`
+# GUARD-TEST: bin/tests/decision-rot.test.sh -- 36 cases, offline behind a fake `gh`
 # GATE: none -- reads live issue trackers across 18 repos
 #
-# THE PREDICATE: ANSWERED **AND** STILL OPEN. That is the whole thing, and it
-# introduces no label, no field, no file, no schema and no new state. It
-# follows from behaviour that already exists:
-#   * Zach answers by COMMENTING and LEAVES THE ISSUE OPEN (his words,
-#     2026-08-14), so an answer never closes anything;
-#   * the nightly acts on an issue and then CLOSES it, so closing is the
-#     estate's existing signal for "handled".
-# An answered issue still open is therefore direction handed over and never
-# taken up. Closed-and-answered is not rot.
+# THE PREDICATE: ANSWERED **AND** STILL OPEN -- direction handed over and never
+# taken up. Zach answers by COMMENTING and leaves the issue open; the nightly
+# CLOSES what it handles. ANSWERED lives in bin/lib/answered.sh (`etiquette`
+# reads it too).
 #
-# TRAP: if a future change to this audit needs a convention INVENTED to make
-#   it work, THE AUDIT IS WRONG -- report that and stop. An earlier draft
-#   defined rot as "no commit or PR referencing the issue is newer than the
-#   answer". It worked, and it could go stale SILENTLY: a change in how people
-#   write commit messages would quietly stop resolving references and the tool
-#   would report a smaller, wrong number with no signal. The predicate above
-#   fails LOUDLY in both directions instead.
+# TRAP: if a change here needs a convention INVENTED to work, THE AUDIT IS
+#   WRONG -- report that and stop. An earlier draft keyed rot to "no commit
+#   references the issue"; it worked, and would have gone stale SILENTLY the
+#   day commit messages changed shape. The predicate above fails LOUDLY.
 #
 # TRAP: ANSWERED is hf7y/chezz's predicate, reused as a CONVENTION and NOT
 #   imported -- that dependency would run the wrong direction across repos.
 #   It is NOT the `answered` label; nothing applies it.
 #
-# KNOWN GAP: an agent comment that is not stamped is indistinguishable from
-#   Zach's, and such comments exist in the estate today. That is a defect in
-#   the stamping, not in this predicate; the fix belongs where the stamp is
-#   written (bin/gh-sign.sh), not in a clause added here.
+# KNOWN GAP: an unstamped agent comment is indistinguishable from Zach's; that
+#   fix belongs in bin/gh-sign.sh. The stamp's second cost -- a stamped RELAY
+#   of a spoken answer reading as not-an-answer -- is fixed by `relayed` below.
 #
 set -uo pipefail
 
@@ -43,7 +34,7 @@ CLI_FLAGS='--all --json'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  clean -- every answered issue has been closed
   1  rot found -- at least one answered issue is still open
-  3  error -- a repo could not be read; the count is NOT trustworthy'
+  6  BLIND -- a repo could not be read; the count is NOT trustworthy'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
@@ -51,16 +42,22 @@ cli_guard "$@"
 # predicate against fixture JSON whose author login is not this estate's.
 OWNER="${DECISION_ROT_OWNER:-hf7y}"
 
-# THE ROSTER. Derived 2026-08-15 from hf7y/scheduler `schedule/<project>.conf`
-# -- the fifteen projects dispatch actually reads -- plus the three ecosystem
-# repos that carry decisions but are never dispatched (`verbs` is the verb
-# build channel; `front-door` and `basheur` are ecosystem infrastructure).
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
-ROSTER=(
-  baudin bibliothecaire chezz crt ecosim gardien groc-mangr nine-speakers
-  realisateur scheduler secretaire senechal sequestria vim-arcade wtul
-  verbs front-door basheur
-)
+# shellcheck source=bin/lib/roster-set.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/roster-set.sh"
+
+# A MISSING ROSTER IS BLIND, NOT AN EMPTY ESTATE. `.` on an absent file does
+# not abort under `set -uo pipefail`: it prints to stderr and execution
+# continues with ROSTER unset, so the walk below iterates zero repositories and
+# this script prints `TOTAL 0 0` and exits 0 -- which `ausculte` renders as
+# "rot OK -- no answered-and-abandoned issues". Found live on monkey
+# 2026-08-22: /usr/local/libexec/selfdev/ lacked lib/roster-set.sh and the
+# health verb had been reporting a clean estate over 48 rotting decisions.
+# roster-set.sh sets ROSTER_SET_LIB as a load sentinel; nothing read it.
+if [ "${ROSTER_SET_LIB:-}" != 1 ] || [ "${#ROSTER[@]}" -eq 0 ]; then
+  printf '%s: BLIND -- lib/roster-set.sh did not load, so this audited NO repositories. A count of zero here is the absence of a reading, not the absence of rot.\n' \
+    "$CLI_NAME" >&2
+  exit 6
+fi
 
 MODE=''
 REPOS=()
@@ -81,26 +78,26 @@ if [ "$MODE" = all ]; then
   for p in "${ROSTER[@]}"; do REPOS+=("$OWNER/$p"); done
 fi
 
-command -v gh >/dev/null || { echo "decision-rot.sh: gh not on PATH" >&2; exit 3; }
-command -v jq >/dev/null || { echo "decision-rot.sh: jq not on PATH" >&2; exit 3; }
+command -v gh >/dev/null || { echo "decision-rot.sh: gh not on PATH" >&2; exit 6; }
+command -v jq >/dev/null || { echo "decision-rot.sh: jq not on PATH" >&2; exit 6; }
 
 # THE PREDICATE, in one jq program, so bin/tests/decision-rot.test.sh can pin
 # it against fixtures with no network. stdin is a `gh issue list --json
 # number,title,state,labels,comments` array.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 DECISION_ROT_JQ='
-  # stamped: TRUE iff the body`s LAST NON-BLANK LINE opens with the agent
-  # marker. A marker, not a field grammar -- see the header.
+  # stamped: TRUE iff the body`s LAST NON-BLANK LINE opens with `<!-- agent:`.
   def stamped:
     (. // "") | split("\n") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))
     | if length == 0 then false else (.[-1] | test("^<!--\\s*agent:")) end;
-  # The answer: the LATEST owner comment that is not agent-stamped. An older
-  # answer that was taken up does not excuse a newer one that was not.
+  # relayed: `<!-- decision-by: zach ... -->`; spoken calls die otherwise.
+  def relayed: (. // "") | test("<!--\\s*decision-by:");
+  # The LATEST owner comment unstamped or relaying. An older answer that was
+  # taken up does not excuse a newer one that was not.
   def answer:
-    [ .comments[]? | select((.author.login // "") == $o) | select((.body | stamped) | not) ]
+    [ .comments[]? | select((.author.login // "") == $o)
+      | select(((.body | stamped) | not) or (.body | relayed)) ]
     | if length == 0 then null else (sort_by(.createdAt) | .[-1]) end;
-  # The `answered` label is an optional override, never the trigger. It still
-  # needs a clock, so it falls back to the newest owner comment of any kind.
+  # The `answered` label is an override, never the trigger; it needs a clock.
   def labelled_answer:
     if ((.labels // []) | any(.name == "answered"))
     then ([ .comments[]? | select((.author.login // "") == $o) ]
@@ -193,7 +190,7 @@ fi
 
 if [ "$ERRORS" -gt 0 ]; then
   echo "decision-rot.sh: $ERRORS repo(s) unreadable -- the count above is NOT trustworthy" >&2
-  exit 3
+  exit 6
 fi
 [ "$TOTAL_ROT" -gt 0 ] && exit 1
 exit 0

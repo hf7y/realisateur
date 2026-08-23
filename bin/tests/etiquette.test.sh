@@ -24,6 +24,12 @@ if [ "$1" = "label" ] && [ "$2" = "list" ]; then
   [ -n "${GH_LABEL_FAIL:-}" ] && { echo "$GH_LABEL_FAIL" >&2; exit 1; }
   cat "${LABELS_FIXTURE:-/dev/null}"; exit 0
 fi
+if [ "$1" = "api" ]; then
+  # repos/<o>/<r>/issues/<n>/comments -- $ANSWERED_FIXTURE names the answered ones
+  n="${2##*/issues/}"; n="${n%%/*}"
+  grep -qx "$n" "${ANSWERED_FIXTURE:-/dev/null}" 2>/dev/null && echo "2026-08-19T00:00:00Z"
+  exit 0
+fi
 if [ -n "${GH_FAIL:-}" ]; then echo "$GH_FAIL" >&2; exit 1; fi
 cat "$FIXTURE"
 EOF
@@ -36,6 +42,7 @@ printf '# fixture grammar\nneeds-human\tB60205\tderived:decision\tOnly a human c
 printf 'needs-human\tOnly a human can move this.\ndeferred\tParked for an agent.\n' > "$T/labels.txt"
 
 run() { EDITS="$T/edits" FIXTURE="$T/f.json" LABELS_FIXTURE="$T/labels.txt" \
+        ANSWERED_FIXTURE="${ANSWERED_FIXTURE:-/dev/null}" \
         ETIQUETTE_GRAMMAR="$T/grammar.tsv" bash "$SCRIPT" o/r "$@"; }
 grammar_only() { ETIQUETTE_GRAMMAR="$T/grammar.tsv" bash "$SCRIPT" "$@"; }
 
@@ -58,6 +65,36 @@ hasnt "A4 an agreeing labelled issue is not a finding" "$out" "#1   declares"
 hasnt "A5 an agreeing unlabelled issue is not a finding" "$out" "#2   declares"
 has "A6 the agreeing pair is counted, not just silent" "$out" "2 issue(s) agree"
 eq  "A7 a report writes NOTHING" "$(wc -l < "$T/edits")" "0"
+
+section "A'. an answered DECISION: stops being the human's"
+# The 2026-08-19 finding: 35 of 89 needs-human issues were decisions Zach had
+# ALREADY answered. The label is a view of line 1, and line 1 never changes.
+cat > "$T/f.json" <<'EOF'
+[
+ {"number":5,"title":"answered, still labelled","body":"DECISION: @zach -- pick one","labels":[{"name":"needs-human"}]},
+ {"number":6,"title":"unanswered, labelled","body":"DECISION: @zach -- pick one","labels":[{"name":"needs-human"}]}
+]
+EOF
+printf '5\n' > "$T/answered.txt"
+: > "$T/edits"; out="$(ANSWERED_FIXTURE="$T/answered.txt" run --apply 2>&1)"
+has "A'1 the answered one is ANSWERED"        "$out" "ANSWERED    #5"
+has "A'2 ...and the label is removed"         "$(cat "$T/edits")" "--remove-label needs-human"
+hasnt "A'3 the unanswered one is untouched"   "$out" "#6"
+
+# A comment BEFORE the stamp era cannot be told from an agent's, and
+# unknowable is not an answer.
+: > "$T/edits"; out="$(ANSWERED_FIXTURE="$T/answered.txt" ANSWERED_STAMP_ERA=2026-12-01 run --apply 2>&1)"
+hasnt "A'4 a pre-stamp comment does not clear the label" "$out" "ANSWERED"
+
+# B reads the section-A fixture; put it back.
+cat > "$T/f.json" <<'EOF'
+[
+ {"number":1,"title":"agrees, labelled","body":"DECISION: @zach -- pick one","labels":[{"name":"needs-human"}]},
+ {"number":2,"title":"agrees, unlabelled","body":"NO-DECISION: nothing to weigh","labels":[]},
+ {"number":3,"title":"declares but is not labelled","body":"DECISION: @zach -- pick one","labels":[]},
+ {"number":4,"title":"labelled but declares no decision","body":"NO-DECISION: nothing to weigh","labels":[{"name":"needs-human"}]}
+]
+EOF
 
 section "B. --apply writes the label the body implies"
 : > "$T/edits"; run --apply >/dev/null 2>&1

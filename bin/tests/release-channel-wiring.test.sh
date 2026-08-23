@@ -135,7 +135,6 @@ echo "-- G0. A PUBLISHER THAT CANNOT PUBLISH LEAVES NO STALE SUCCESS ---------"
 # ===========================================================================
 # THE 2026-08-07 FAILURE. The publish step died on `--build-id -` and emitted
 # nothing. The endpoint kept serving the previous night's CUT, 19h old, inside
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 # --- the document declares its own expiry ---------------------------------
 tmp=''; TG="$(mktemp -d)"; trap 'rm -rf "${tmp:-}" "$TG"' EXIT

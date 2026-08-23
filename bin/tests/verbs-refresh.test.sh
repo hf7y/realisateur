@@ -10,8 +10,8 @@
 #     stopped, and --check alone would say "up to date" forever)
 #   D a dangling verb link             -> named, exit 1
 #   E an off-channel verb link         -> named, exit 1, never clobbered
-#   F no build root / no pin           -> BLIND (3), never 0
-#   G the channel is unreachable       -> BLIND (3), never "up to date"
+#   F no build root / no pin           -> BLIND (6), never 0
+#   G the channel is unreachable       -> BLIND (6), never "up to date"
 #   H --apply delegates, and does not move `current` itself
 #   I --quiet prescribes a command that can actually fix the named finding
 #
@@ -145,13 +145,13 @@ rc   "E: exits 1" 1 "$got"
 # --- F/G: BLIND is never 0 --------------------------------------------------
 mkstub 0 unused
 BUILD_ROOT="$T/nonexistent" "$SCRIPT" >/dev/null 2>&1
-rc "F: no build root exits 3 BLIND" 3 "$?"
+rc "F: no build root exits 6 BLIND" 6 "$?"
 fixture "$TODAY" f2; rm "$T/f2/root/current"; mkdir -p "$T/f2/root/current"
 run f2 >/dev/null 2>&1
-rc "F: an unpinned current exits 3 BLIND" 3 "$?"
+rc "F: an unpinned current exits 6 BLIND" 6 "$?"
 fixture "$TODAY" g; mkstub 3 unused
 out="$(run g)"; run g >/dev/null 2>&1; got=$?
-rc   "G: an unreachable channel exits 3 BLIND" 3 "$got"
+rc   "G: an unreachable channel exits 6 BLIND" 6 "$got"
 has  "G: and says so rather than 'up to date'" "$out" "BLIND, not up to date"
 
 # --- H: --apply delegates the switch, and performs none of its own ----------

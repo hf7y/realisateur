@@ -24,7 +24,7 @@ CLI_FLAGS='--url --ledger --append --decision --reason --main-sha --ci-run --bui
 CLI_POSITIONAL=any
 CLI_EXITS='  0  the emitter is alive and the pipeline is not stuck
   1  findings: stale emitter, zero verdicts, unknown decision, or a streak
-  3  BLIND: the ledger could not be read at all. This is not "clean".'
+  6  BLIND: the ledger could not be read at all. This is not "clean".'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
@@ -68,7 +68,6 @@ done
 # Two input adapters, ONE set of grading rules. A separate implementation for
 # the live path would be a second answer to "is the channel healthy", and the
 # live path is the one nobody exercises by hand.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ -n "$URL" ]; then
   [ -z "$LEDGER" ] || { printf '%s: --url and --ledger are exclusive\n' "$CLI_NAME" >&2; exit 2; }
   _tmpdir="$(mktemp -d)"; trap 'rm -rf "$_tmpdir"' EXIT
@@ -80,15 +79,14 @@ if [ -n "$URL" ]; then
     echo "  The channel could not be read at all, which is a different fact from" >&2
     echo "  a channel that reported nothing. Consumers are flying blind until this" >&2
     echo "  resolves; it is NOT evidence that the release channel is healthy." >&2
-    exit 3
+    exit 6
   fi
   LEDGER="$_tmpdir/ledger.tsv"
   # The published history becomes the same TSV the offline path grades, so
   # every assertion in bin/tests/release-ledger.test.sh covers this path too.
   # `valid_until` is a property of the DOCUMENT rather than of any row, so it
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   _valid_until_file="$_tmpdir/valid_until"
-  python3 - "$_json" "$LEDGER" "$_valid_until_file" <<'PY' || { echo "BLIND: $URL is not a status document this consumer can parse." >&2; exit 3; }
+  python3 - "$_json" "$LEDGER" "$_valid_until_file" <<'PY' || { echo "BLIND: $URL is not a status document this consumer can parse." >&2; exit 6; }
 import json, sys
 d = json.load(open(sys.argv[1]))
 h = d.get("history")
@@ -152,7 +150,7 @@ if [ ! -f "$LEDGER" ]; then
   echo "  which is a different fact from a channel that reported nothing." >&2
   echo "  If the meta-repo was fetched and this file is genuinely absent, the" >&2
   echo "  emitter has never run once -- fix that, do not silence this." >&2
-  exit 3
+  exit 6
 fi
 
 rows="$(grep -v '^#' "$LEDGER" | grep -c . || true)"

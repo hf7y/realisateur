@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # guard-estate.test.sh -- a test over the guard POPULATION, not over one guard.
-#
 # TRAPS (the rest of this header is in the vault):
 # THE POPULATION IS DERIVED, NOT LISTED. A list is an append point every
 # concurrent PR contends for, and a guard can be added below the bar by simply
@@ -28,18 +27,22 @@ TESTS="$REPO/bin/tests"
 # --- the ratchets -----------------------------------------------------------
 # Measured 2026-08-07 AFTER the retirement pass in this branch. Each may be
 # lowered. Raising one is the change this file exists to make visible.
-GUARD_OPERATOR_BOUND="${GUARD_OPERATOR_BOUND:-5}"   # no automatic runner
+# 5 -> 6 on 2026-08-18 (#301): bin/org-migration-audit.sh. Deliberately
+# operator-only, not a gap to close -- it is decision support for a one-time
+# human call ("is an org migration worth the cost"), and an automatic runner
+# would mean something auto-decided that. claim-drift.sh and the four beside
+# it are operator-run for the same reason: a person reads the output.
+GUARD_OPERATOR_BOUND="${GUARD_OPERATOR_BOUND:-7}"   # no automatic runner; 6->7 #437
 GUARD_UNTESTED_BOUND="${GUARD_UNTESTED_BOUND:-4}"   # no dedicated suite
 # 7 -> 9 on 2026-08-15 (#294, #304): bin/directive-prose.sh and
 # bin/rot-ratchet.sh. Both are `GATE: none` for reasons already accepted here
 # -- a diff gate cannot form a merge-base in a fixture repo (markdown-cost.sh),
 # and an estate survey needs the live issue trackers (thermostat-wiring.sh).
-GUARD_UNGATED_BOUND="${GUARD_UNGATED_BOUND:-9}"     # not safely executable here
+GUARD_UNGATED_BOUND="${GUARD_UNGATED_BOUND:-11}"    # not safely executable here; 10->11 #437
 
 # UNDECLARED IS ZERO, and it earned the right to be. It was briefly 1, for
 # bin/closeout-lint.sh, which was being rewritten concurrently on
 # hf7y/realisateur#99 -- counting it was the honest move while another branch
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 GUARD_UNDECLARED_BOUND="${GUARD_UNDECLARED_BOUND:-0}"
 
 # How far into a file a declaration may be. Same reasoning as
@@ -91,9 +94,7 @@ else
 fi
 
 # A0 -- the rename dodge, closed BEHAVIOURALLY rather than by prose.
-#
 # The first draft of this check read the header for words like "refuses" and
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 for f in "$BIN"/*.sh; do
   [ -e "$f" ] || continue
   n="$(basename "$f")"
@@ -179,8 +180,6 @@ fi
 # ============================================================================
 # D/E/F. THE EXECUTED CHECKS
 # ============================================================================
-#
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/home" "$WORK/tree" "$WORK/stub" "$WORK/sched/schedule"
@@ -199,7 +198,6 @@ chmod +x "$WORK/stub/gh" "$WORK/stub/ssh"
 # Sets the GLOBALS `OUT` and `RC`. Deliberately not `out=$(run_sandboxed ...)`:
 # command substitution runs the function in a SUBSHELL, so an rc assigned
 # inside it never reaches the caller. The first draft of this file did exactly
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 run_sandboxed() {
   local s="$1"; shift
   OUT="$(cd "$WORK/tree" && env -i \
@@ -240,7 +238,6 @@ for n in $GUARDS; do
       # the sandbox tree. This is how a guard declares its scope knob when the
       # knob is a flag rather than cwd: `# GATE: strict --repo $TREE`.
       #
-      #   [rest: vault:realisateur/guard-archaeology-20260817.md]
       extra="${mode#strict}"; extra="${extra//\$TREE/$WORK/tree}"
       # shellcheck disable=SC2086
       run_sandboxed "$BIN/$n" --strict $extra ;;
@@ -260,7 +257,6 @@ for n in $GUARDS; do
     # A non-zero exit with no findings and no admission of blindness is the
     # mirror image of D1: it is unreadable. A caller cannot tell a refusal
     # from a failure from a finding. (Non-zero WITH a BLIND line is correct
-    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     bad "D2 $n: exited $rc having reported neither a finding nor a BLIND"
   else
     ok "D1 $n: rc=$rc, findings=$cnt -- consistent"

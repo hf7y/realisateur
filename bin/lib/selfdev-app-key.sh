@@ -33,7 +33,6 @@ selfdev_app_conf() {
 # selfdev_app_load -- source the conf, exporting SELFDEV_APP_ID / _APP_KEY /
 # _GH_OWNER. rc 0 loaded, 1 no conf, 2 conf present but incomplete.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 selfdev_app_load() {
   local conf; conf="$(selfdev_app_conf)"
   local env_id="${SELFDEV_APP_ID:-}" env_key="${SELFDEV_APP_KEY:-}" env_owner="${SELFDEV_GH_OWNER:-}"

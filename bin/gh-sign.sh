@@ -6,24 +6,19 @@
 #
 # TRAPS (the rest of this header is in the vault):
 # It appends `<!-- agent: <account>@<host> <ISO8601> -->` to the bodies of
-# `issue comment|create|close` and `pr comment|create`, passing everything else
-# through untouched. Both fields are read from the running process, so there is
-# no argument to get wrong or forget -- it replaced bin/gh-comment.sh, a
-# wrapper that had to be called and never was (20 of 403 comments stamped;
-# measurement and the GitHub App question: hf7y/realisateur#327).
-# AND IT KNOWS HOW OLD IT IS. Propagation can stop, and a shim silently
-# enforcing last month's policy is worse than none -- so past STALE_DAYS it
-# says so on stderr at every write AND stamps `STALE <n>d` into the body, in
-# the artifact where decision-rot.sh reads it rather than a log nobody opens.
-# It does NOT refuse: see FAIL OPEN above.
+# `issue comment|create|close`, `pr comment|create`, and `api` comment
+# writes, passing everything else through untouched. Both fields
+# are read from the running process, so there is no argument to forget -- it
+# replaced a wrapper that had to be called and mostly was not (#327).
+# AND IT KNOWS HOW OLD IT IS: past STALE_DAYS it stamps `STALE <n>d` into the
+# body, where decision-rot.sh reads it. It does NOT refuse: see FAIL OPEN.
 #
 # usage: `usage()` below. `gh --help` reaches it only where there is no real gh.
 
 set -uo pipefail
 
-# Both halves are load-bearing. CLAUDECODE alone unsigns every cron script
-# calling gh outside an agent, where signing already worked; a TTY alone signs
-# an agent that happens to hold one.
+# Both halves load-bearing: CLAUDECODE alone unsigns cron's gh calls, a TTY
+# alone signs an agent holding one.
 human_at_keyboard() {
   [ -z "${CLAUDECODE:-}" ] && [ -z "${CLAUDE_CODE_ENTRYPOINT:-}" ] || return 1
   [ -t 0 ] || [ -t 1 ] || return 1
@@ -33,17 +28,14 @@ human_at_keyboard() {
 MARKER='<!-- agent:'
 
 # How old a build may be before every body it writes is marked STALE. Not a
-# new number: bin/verbs-refresh.sh's STALE_DAYS, against a nightly cutter and
-# a tick that adopts within 26 hours.
+# new number: bin/verbs-refresh.sh's STALE_DAYS.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STALE_DAYS=14
 BUILD_ROOTS="${GH_SIGN_BUILD_ROOTS:-/usr/local/share/verb-builds ${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"
 
-# BUILT-INS ONLY (`-ef`, `printf %(...)T`): this runs in front of every gh call
-# including cron's, with a minimal PATH. An early version shelled out to
-# id/hostname/date/readlink; under a stripped PATH all four were "command not
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+# BUILT-INS ONLY (`-ef`, `printf %(...)T`): this runs in front of every gh
+# call including cron's, with a minimal PATH. Shelling out to
+# id/hostname/date/readlink made all four "command not
 stamp() {
   local who
   who="$(id -un 2>/dev/null)" || who="${USER:-${LOGNAME:-?}}"
@@ -51,8 +43,7 @@ stamp() {
     "$MARKER" "$who" "${HOSTNAME%%.*}" -1 "$(origin)"
 }
 
-# Named commands, not "update your verbs": these accounts have no realisateur
-# checkout, and a refusal nobody can act on is a refusal nobody acts on.
+# Named commands, not "update your verbs": the accounts have no checkout.
 demand_refresh() {
   printf 'gh-sign: STALE -- this copy is %s, %s days old (limit %s). The policy it\n' \
     "$BUILD_ID" "$(build_age_days)" "$STALE_DAYS" >&2
@@ -71,6 +62,11 @@ gh-sign -- the shim that stands in front of `gh` and signs what an agent writes.
   gh --self-check           which real gh, which build, how old, which grammar
   gh --stamp                the stamp this host and account would append
   gh --check-body <path>    grade a body; `-` reads stdin
+  gh --default-after <f>    read a DECISION body's DEFAULT-AFTER: prints
+                            "<days><TAB><action>"; 1 = none (blocks forever)
+  gh --delivers             emit this branch's DELIVERS block, derived from
+                            what it changes and where propagation-set.sh
+                            says each of those lands
 
 Installed as one link per host: /usr/local/bin/gh -> the current verb build.
 Never edit that copy -- edit realisateur's bin/gh-sign.sh, which is its one
@@ -78,9 +74,14 @@ source, and let the nightly cut carry it (hf7y/realisateur#330).
 EOF
 }
 
-# The real gh: the first one on PATH that is not this file. `-ef` compares
-# device+inode THROUGH symlinks, so /usr/local/bin/gh -> .../gh-sign.sh is
-# recognised as this script and skipped rather than re-executed forever.
+# The real gh: first on PATH that is not this file AND not another copy of
+# it. `-ef` alone only catches the SAME inode (the /usr/local/bin/gh link
+# back to this exact build); it misses a SECOND copy -- a dev checkout run
+# as `bash bin/gh-sign.sh` while /usr/local/bin/gh is a distinct installed
+# copy of the same script. `-ef` then says "different file" and this shim
+# picks the other shim as "real gh": a double hop whose second layer reads
+# an already-`cat`-drained stdin and posts a blank body. The content check
+# catches any copy, byte-identical or not.
 real_gh() {
   local d c
   IFS=: read -ra _p <<< "$PATH"
@@ -88,6 +89,7 @@ real_gh() {
     c="$d/gh"
     [ -x "$c" ] || continue
     [ "$c" -ef "${BASH_SOURCE[0]}" ] && continue
+    grep -qaF '# gh-sign.sh -- sign every agent-written GitHub' "$c" 2>/dev/null && continue
     printf '%s\n' "$c"
     return 0
   done
@@ -95,9 +97,8 @@ real_gh() {
 }
 
 # --- which copy is this, and when was it cut? -------------------------------
-# Invoked as /usr/local/bin/gh, ${BASH_SOURCE[0]} is the LINK: no build named,
-# no lib/ beside it. Resolving it needs readlink, the external this file cannot
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+# Invoked as the link, ${BASH_SOURCE[0]} names no build and has no lib/ beside
+# it. Resolving it needs readlink, the external this file cannot
 SELF="${BASH_SOURCE[0]}"
 BUILD_ID=''
 locate_self() {
@@ -113,10 +114,9 @@ locate_self() {
 }
 locate_self || :
 
-# Days since 1970-01-01 from a civil date, in arithmetic only (Howard
-# Hinnant's days_from_civil). `date -d` is the obvious way and is the external
-# this file may not have; a string comparison of build ids cannot answer "how
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+# Days since 1970-01-01 from a civil date, arithmetic only (Hinnant's
+# days_from_civil). `date -d` is the external this file may not have, and a
+# string comparison of build ids cannot answer "how
 days_from_civil() {
   local y=$((10#$1)) m=$((10#$2)) d=$((10#$3)) era yoe doy doe
   y=$(( y - (m <= 2) ))
@@ -127,8 +127,8 @@ days_from_civil() {
   printf '%s' $(( era * 146097 + doe - 719468 ))
 }
 
-# Prints the age of this build in days; returns 1 when there is no build id to
-# date from. A build id is `2026-08-05T0130Z` (install-verb-build.sh's layout);
+# Age of this build in days; returns 1 with no build id to date from. A build
+# id is `2026-08-05T0130Z` (install-verb-build.sh's layout);
 # anything else is unreadable, which is BLIND and not zero.
 build_age_days() {
   [ -n "$BUILD_ID" ] || return 1
@@ -173,8 +173,90 @@ case "${1:-}" in
     [ "$grammar_ok" -eq 1 ] || { printf 'gh-sign: BLIND -- no grammar library at %s\n' "$GRAMMAR" >&2; exit 6; }
     if [ "${2:--}" = - ]; then _b="$(cat)"; else _b="$(cat -- "$2")" || exit 6; fi
     grammar_check "$_b"; _n=$?
+    # Asked to look and found something: 1. It creates nothing to refuse.
     [ "$_n" -eq 0 ] && { echo 'gh-sign: body is well-formed'; exit 0; }
-    exit 3 ;;
+    exit 1 ;;
+  --default-after)
+    # ONE HOME FOR THE GRAMMAR, reachable by the verb every account already
+    # has on PATH. scheduler needs to read DEFAULT-AFTER at dispatch; it must
+    # not reach into a realisateur build path for lib/body-grammar.sh, and it
+    # must not carry a second copy of the parser -- copies are what produced
+    # eleven byte-identical corrupted files and a source 36 lines behind them.
+    # Same argument as --delivers: the shim owns the body grammar, so the shim
+    # answers questions about a body.
+    #
+    #   gh --default-after <file|->   prints "<days><TAB><action>"
+    #     0  the body carries a well-formed default
+    #     1  it carries none -- this decision BLOCKS FOREVER, which is a valid
+    #        answer for an irreversible call, not an error
+    #     6  BLIND -- the grammar could not be read; never mistake this for 1
+    [ "$grammar_ok" -eq 1 ] || { printf 'gh-sign: BLIND -- no grammar library at %s\n' "$GRAMMAR" >&2; exit 6; }
+    if [ "${2:--}" = - ]; then _b="$(cat)"; else _b="$(cat -- "$2")" || exit 6; fi
+    grammar_default_after "$_b" || exit 1
+    exit 0 ;;
+  --delivers)
+    # THE ACTUATOR THE DELIVERS LEDGER NEVER HAD.
+    #
+    # Measured 2026-08-22: DEFERRED is answered honestly 41 of 120 times (34%);
+    # DELIVERS, with the SAME grammar, the SAME enforcement and the same block
+    # in the same body, 2 of 292 (0.7%). Fifty times worse, and the only
+    # difference is that `defere` emits the line you paste and this ledger made
+    # you hand-write `path:/x on host` and then audited you for it.
+    #
+    # So the fix is not a stricter check. It is this: derive the answer from
+    # what the branch actually changed, using the dev/prod contract that
+    # already decides where every file lands (bin/lib/propagation-set.sh), and
+    # print the block. `- none` stays the honest answer for a branch that
+    # ships nothing outward -- it just stops being the ONLY cheap one.
+    _base="$(git merge-base HEAD "${GH_SIGN_BASE:-origin/main}" 2>/dev/null)" \
+      || { printf 'gh-sign: BLIND -- no merge-base with %s; cannot tell what this branch changes.\n' "${GH_SIGN_BASE:-origin/main}" >&2; exit 6; }
+    _ps="${GH_SIGN_LIB:-${SELF%/*}/lib}/propagation-set.sh"
+    [ -r "$_ps" ] || { printf 'gh-sign: BLIND -- no propagation-set.sh at %s, so nothing can say where a file lands.\n' "$_ps" >&2; exit 6; }
+    # shellcheck source=lib/propagation-set.sh
+    . "$_ps"
+    _host="${GH_SIGN_HOST:-monkey}"
+    # A LOCAL-CLASS FILE CAN STILL LAND ON A HOST. prop_host_tools() rides
+    # ausculte's probes to /usr/local/libexec/selfdev BY NAME, while
+    # prop_channel goes on calling them `local` -- deliberately, per
+    # propagation-set.sh: "or it is BLIND about them on a host". Reading only
+    # the class made this actuator answer `- none` for three files that
+    # demonstrably deploy: ausculte-cadence.sh, dexter-liveness.sh,
+    # decision-rot.sh. Space-delimited so a name matches whole, same idiom as
+    # $_seen below.
+    _ht=' '
+    while IFS= read -r _t; do [ -n "$_t" ] && _ht="$_ht$_t "; done <<EOF
+$(prop_host_tools 2>/dev/null)
+EOF
+    printf '<!-- DELIVERS -->\n'
+    _n=0; _seen=''
+    while IFS= read -r _f; do
+      [ -n "$_f" ] || continue
+      _b="${_f##*/}"
+      case " $_seen " in *" $_b "*) continue ;; esac
+      _seen="$_seen $_b"
+      _ch="$(prop_channel "$_b" 2>/dev/null)" || continue
+      case "$_ch" in
+        payload)    # The verb name is NOT the basename: gh-sign.sh installs as `gh`.
+                    # bin/lib/carries.tsv is the one table that maps carried
+                    # path to source, so it answers this instead of a guess.
+                    _v="$(awk -F'\t' -v s="bin/$_b" '$2==s{n=$1; sub(/^bin\//,"",n); print n; exit}' \
+                          "${GH_SIGN_LIB:-${SELF%/*}/lib}/carries.tsv" 2>/dev/null)"
+                    [ -n "$_v" ] || _v="${_b%.sh}"
+                    printf -- '- path:/usr/local/bin/%s on %s\n' "$_v" "$_host"; _n=$((_n+1)) ;;
+        bootstrap|provision)
+                    printf -- '- path:/usr/local/libexec/selfdev/%s on %s\n' "$_b" "$_host"; _n=$((_n+1)) ;;
+        local)      case "$_ht" in
+                      *" $_b "*) printf -- '- path:/usr/local/libexec/selfdev/%s on %s\n' "$_b" "$_host"; _n=$((_n+1)) ;;
+                    esac ;;
+      esac
+    done <<EOF
+$(git diff --name-only "$_base" 2>/dev/null; git diff --name-only --cached "$_base" 2>/dev/null)
+EOF
+    [ "$_n" -gt 0 ] || printf -- '- none\n'
+    printf '<!-- /DELIVERS -->\n'
+    # A branch that ships nothing is not a finding, so this is never non-zero
+    # on emptiness alone -- that would train people to skip running it.
+    exit 0 ;;
   --self-check)
     # Exit 1 on a stale build. This is the machine-readable half of the demand
     # -- something that runs on a clock can ask this and get an exit code,
@@ -211,6 +293,19 @@ signable=0
 case "${1:-} ${2:-}" in
   'issue comment'|'issue create'|'issue close'|'pr comment'|'pr create') signable=1 ;;
 esac
+
+# `gh api` IS THE SAME WRITE BY ANOTHER ROUTE and was not covered: a comment
+# posted that way came out UNSTAMPED, indistinguishable from a human's --
+# decision-rot's KNOWN GAP, which on 2026-08-21 read such comments as Zach's.
+api_comment=0
+if [ "${1:-}" = api ]; then
+  for _a in "$@"; do
+    case "$_a" in
+      */issues/*/comments|*/pulls/*/comments|*/issues/comments/*) api_comment=1 ;;
+    esac
+  done
+  [ "$api_comment" -eq 1 ] && signable=1
+fi
 # A human's write passes through whole: unsigned AND ungraded. The grammar is
 # a contract between agents, not a rule about how its author may talk.
 if [ "$signable" -ne 1 ] || human_at_keyboard; then exec "$GH" "$@"; fi
@@ -230,9 +325,24 @@ for ((i = 0; i < ${#args[@]}; i++)); do
     --body-file|-F)         kind=path;   bi=$((i + 1)); idx=$i; found=1 ;;
   esac
 done
+# `gh api` spells it body=<text>/body=@<file> in ONE word: -F is a field here.
+if [ "$api_comment" -eq 1 ]; then
+  found=0
+  for ((i = 0; i < ${#args[@]}; i++)); do
+    case "${args[$i]}" in
+      body=@*)  kind=api_path; bi=$i; idx=$i; found=1 ;;
+      body=*)   kind=api_inline; bi=$i; idx=$i; found=1 ;;
+    esac
+  done
+fi
 if [ "$found" -ne 1 ] || [ "$bi" -ge "${#args[@]}" ]; then exec "$GH" "$@"; fi
 
-if [ "$kind" = inline ]; then
+if [ "$kind" = api_inline ]; then
+  body="${args[$bi]#body=}"
+elif [ "$kind" = api_path ]; then
+  _f="${args[$bi]#body=@}"
+  [ "$_f" = '-' ] && body="$(cat)" || { body="$(cat -- "$_f" 2>/dev/null)" || exec "$GH" "$@"; }
+elif [ "$kind" = inline ]; then
   body="${args[$bi]}"
 elif [ "${args[$bi]}" = '-' ]; then
   body="$(cat)"
@@ -250,7 +360,8 @@ case "${1:-} ${2:-}" in
         while IFS= read -r _f; do printf '  %s\n' "$_f" >&2; done <<<"$findings"
         printf 'gh-sign: nothing was created. `gh-sign.sh --check-body <file>` re-runs this check.\n\n' >&2
         grammar_template >&2
-        exit 3
+        # WON'T DO: the shim declined to create it.
+        exit 7
       fi
     else
       printf 'gh-sign: BLIND -- no grammar library at %s; body not checked.\n' "$GRAMMAR" >&2
@@ -269,6 +380,13 @@ signed="$(printf '%s\n\n%s' "$body" "$(stamp)")"
 # `issue close` has no --comment-file spelling, so it stays in argv. The rest
 # go back on STDIN: a body can exceed ARG_MAX and contain anything, and
 # `--body-file -` is the one spelling with neither limit.
+case "$kind" in
+  api_inline|api_path)
+    # NOT `| exec`: that is a SUBSHELL, and the parent invoked gh twice.
+    args[$bi]='body=@-'
+    printf '%s' "$signed" | "$GH" "${args[@]}"
+    exit $? ;;
+esac
 case "${args[$idx]}" in
   --comment|-c)
     args[$bi]="$signed"

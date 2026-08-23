@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 # propagation-set.sh -- THE DEV/PROD CONTRACT, in one place.
 #
-# THE DECISION (2026-08-07, Zach-directed; the desired-state frame it belongs
-# to is #134). Self-dev accounts do NOT pull fresh clones of realisateur.
-# `main` IS NOT A DEPLOY REF; everything they use reaches them through the
-# nightly verb build.
-#
-# The argument is what it buys the DEV side, not agent safety. If live accounts
-# pull `main` on a tick, every commit is a deployment and `main` must turn
-# conservative to protect them. Separating them is what lets `main` STAY FAST.
+# THE DECISION (#134, Zach-directed). Self-dev accounts do NOT pull fresh
+# clones of realisateur. `main` IS NOT A DEPLOY REF; everything they use
+# reaches them through the nightly verb build. The argument is what it buys the
+# DEV side: if live accounts pull `main` on a tick, every commit is a
+# deployment and `main` must turn conservative to protect them.
 #
 # PULL, NOT PUSH. The clock lives on the CONSUMER, in the account's own
 # crontab, running as the account. bin/tests/propagation.test.sh asserts this
@@ -31,8 +28,7 @@
 #   `shellcheck` directive -- SC1072/SC1073, a parse error on the whole file.
 #   Spell the path as `bin/shellcheck-lint.sh`, never bare.
 #
-# TRAP: do not reclassify a row to PAYLOAD without a matching man page. That
-#   drops it from every build in silence (#85).
+# TRAP: PAYLOAD without a man page ships nothing, silently (#85).
 
 PROP_RELEASE_REPO="hf7y/verbs"
 PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
@@ -42,6 +38,11 @@ PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
 # is the LEGACY per-account shape, kept because --survey still has to
 # recognise it; prop_current_pin() resolves either.
 PROP_PIN_PATH=".local/share/verb-builds/current"
+
+# The HOST-WIDE pin, in one place. A reader that needs it on ANOTHER host --
+# ausculte asks two of them whether they adopted the build the channel cut --
+# builds its remote command from this rather than retyping the layout.
+PROP_HOST_PIN="${VERB_HOST_BUILD_ROOT:-/usr/local/share/verb-builds}/current"
 
 # STAMPING -- THREE STATES, NEVER TWO. Every stamper calls
 # prop_build_trailer().
@@ -56,20 +57,14 @@ PROP_PIN_PATH=".local/share/verb-builds/current"
 #   NEVER guess a plausible build id ("the latest one", "the one in the
 #   manifest"); that destroys exactly this distinction.
 #
-# It is a git TRAILER because it must survive the artifact being read later
-# out of context: it travels with a clone, a cherry-pick and a patch, and
-# `git log --format='%(trailers:key=Verb-Build)'` reads it in bulk.
+# It is a git TRAILER so it travels with a clone, a cherry-pick and a patch.
 
 # prop_current_pin -- the adopted build id, or nothing. Never a guess.
 #
-# TRAP: TWO ROOTS, in the order the account actually resolves them. The
-#   private pin first (an account that still has one is running it, because
-#   its ~/.local/bin shims shadow the host-wide directory), the host-wide root
-#   second. Without the second this went honest-but-useless the moment an
-#   account retired: probed 2026-08-13, four retired accounts stamped
-#   `unknown` while running a perfectly well-known build from /usr/local/bin.
-#   "Unknown" is right for an unreadable pin and wrong for a pin that moved --
-#   and the three-state rule only earns its keep while `unknown` stays rare.
+# TRAP: TWO ROOTS, in the order the account resolves them -- the private pin
+#   first (its ~/.local/bin shims shadow the host-wide directory), the
+#   host-wide root second. `unknown` is right for an unreadable pin and wrong
+#   for a pin that moved.
 prop_current_pin() {
   local p t
   for p in "${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}/current" \
@@ -107,108 +102,123 @@ release-ledger.sh
 selfdev-gh-app.sh
 "
 
-# Files the bootstrap scripts need alongside them. Named explicitly because
-# `setup-selfdev-project.sh` stages by copy into a 0700 home and a missed
-# dependency there presents as "Permission denied", not "file not found" --
-# the trap vault:realisateur/MONKEY.md 8.3 records from account #4.
+# Files the bootstrap scripts need alongside them. A missed dependency staged
+# into a 0700 home presents as "Permission denied", not "file not found".
+#
+# THE FLOOR, not the whole set: prop_support_libs() below DERIVES the rest by
+# reading what the shipped scripts actually source. These four stay written
+# down because propagation-set.sh is itself one of them -- a derivation cannot
+# bootstrap the file that defines it.
 PROP_BOOTSTRAP_SUPPORT="
 lib/cli-guard.sh
+lib/host-check.sh
 lib/propagation-set.sh
 lib/selfdev-app-key.sh
 "
 
-# --- PROVISIONING: root-side, runs from a hands account, never on the -------
-# --- consumer's clock. Not bootstrap: these stand an account UP, once.
+# prop_support_libs <bin-dir> -- every lib/*.sh the bootstrap and host-tool
+# sets source, derived by reading them, plus the floor above.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+# WHY DERIVED. The hand-typed list said four, and seven were missing. On monkey
+# that meant /usr/local/libexec/selfdev/decision-rot.sh could not source
+# lib/roster-set.sh, so it walked ZERO repositories, printed `TOTAL 0 0`, and
+# exited 0 -- which `ausculte` rendered as "rot OK -- no answered-and-abandoned
+# issues" while 48 sat open. A list that has to agree with the code is a second
+# source of truth, and this one was silently wrong for as long as it existed.
+prop_support_libs() {
+  local bindir="${1:-}" s f
+  if [ ! -d "$bindir" ]; then printf '%s\n' $PROP_BOOTSTRAP_SUPPORT; return 0; fi
+  {
+    printf '%s\n' $PROP_BOOTSTRAP_SUPPORT
+    for s in $PROP_BOOTSTRAP_SCRIPTS $(prop_host_tools); do
+      f="$bindir/$s"; [ -f "$f" ] || continue
+      grep -ohE 'lib/[a-z0-9-]+\.(sh|tsv)' "$f" 2>/dev/null
+    done
+    # `lib/verb.sh` names etalon's canonical runtime, which reaches a host by
+    # its own channel and is not a file in this bin/. Emitting only what is
+    # HERE keeps a derived name from reading as a missing dependency.
+  } | sort -u | while read -r l; do [ -f "$bindir/$l" ] && printf '%s\n' "$l"; done
+}
+
+# --- PROVISIONING: root-side, deployed to the host, invoked there by a -----
+# --- human. Not bootstrap: these stand an account UP, once, and they run
+# --- on nobody's clock.
+#
 PROP_PROVISION_SCRIPTS="
+dresse.sh
 land-selfdev.sh
 provision-selfdev-user.sh
-install-honey-plugin.sh
 setup-selfdev-project.sh
 enrole-selfdev.sh
 wire-selfdev-git.sh
 wire-release-channel.sh
-selfdev-gh-app-register.sh
 selfdev-app-key.sh
 selfdev-claude-token.sh
 selfdev-permissions-provision.sh
 selfdev-hooks-provision.sh
-install-shims.sh
 install-verbs.sh
-pivot.sh
-session-marker.sh
 stamp-verb-build.sh
 "
 
 # --- PAYLOAD: reaches user paths as a verb, inside a dated build ------------
 PROP_PAYLOAD_SCRIPTS="
+defere.sh
 etiquette.sh
 check-project-busy.sh
-closeout-lint.sh
 notify-senechal.sh
-silence-audit.sh
 gh-sign.sh
+discipline.sh
+consigne
+ausculte.sh
 "
 
 # --- THE LEAK, with a bound on it -------------------------------------------
 # PAYLOAD-class scripts that are NOT yet declared on any bashified branch.
-# realisateur's bashified branch declares TWO verbs: consigne and gh. It was
-# five until arpente, epluche and juge were retired 2026-08-18 (#382).
 PROP_PAYLOAD_PENDING="
-check-project-busy.sh
-closeout-lint.sh
-notify-senechal.sh
-silence-audit.sh
 "
 PROP_LEAK_BOUND=7
 
 # --- LOCAL: never leaves this repo ------------------------------------------
 # release-gate.sh and publish-release-verdict.sh are LOCAL because they run in
 # the release pipeline (GitHub Actions checks realisateur out to get them), not
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+#
+# "NEVER LEAVES THIS REPO" IS NOT "NEVER RUNS ANYWHERE ELSE", and reading it
+# that way cost the estate its only outside observer. A LOCAL script reaches a
+# machine by a THIRD path, neither verb build nor libexec: a plain checkout the
+# host pulls itself. dexter's crontab does exactly that every ten minutes --
+#   cd $HOME/realisateur && git pull --ff-only && bin/monkey-watch.sh --apply
+# -- so monkey-watch.sh is LOCAL by channel and load-bearing by function.
+# #511's reachability scan read .github/workflows/ and this repo's bin/, saw no
+# caller, and deleted it; the caller was a crontab line on another machine.
+# Before cutting anything in this list, ask what invokes it FROM SOMEWHERE ELSE.
 PROP_LOCAL_SCRIPTS="
-sunset-coordinator-files.sh
+ausculte-cadence.sh
 dexter-liveness.sh
-ausculte.sh
-dexter-service-deploy.sh
-monkey-vdi-to-internal.sh
 monkey-watch.sh
-playbook.sh
-publish-monkey-status.sh
-claim-drift.sh
-carry-drift.sh
-defere.sh
-retire-check.sh
 decision-rot.sh
-rot-ratchet.sh
-directive-prose.sh
 cut-verb-build.sh
-deploy-drift.sh
 release-gate.sh
 publish-release-verdict.sh
-floor-check.sh
-hardcoded-home-lint.sh
-ownership-audit.sh
-reach-lint.sh
-discipline.sh
-thermostat-wiring.sh
-path-provenance-audit.sh
-selfdev-agent-survey.sh
 selfdev-credentials.sh
-served-not-cloned.sh
 shellcheck-lint.sh
 verb-kind-lint.sh
-repo-settings-provision.sh
-branch-protection-provision.sh
 verbs-refresh.sh
-no-worktree-lint.sh
 run-suites.sh
 "
 # repo-settings-provision.sh is LOCAL: its subject is the FLEET (it walks the
-# whole registry), and a per-account copy would be ten writers on one
+# whole registry), and a per-account copy would be many writers on one
 # setting. It also needs admin on someone else's repo, which self-dev
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+
+# prop_host_tools -- what a provisioned host carries under
+# /usr/local/libexec/selfdev beyond the bootstrap: the verb a human types and
+# every step it runs. DERIVED, so a step added to the provisioning set arrives
+# on the host without a second list agreeing to it.
+prop_host_tools() {
+  # The probes ausculte composes are LOCAL-class and ride here, or it is
+  # BLIND about them on a host.
+  printf 'dresse.sh\nausculte-cadence.sh\ndexter-liveness.sh\ndecision-rot.sh\n'
+  local s; for s in $PROP_PROVISION_SCRIPTS; do [ "$s" = dresse.sh ] || printf '%s\n' "$s"; done
+}
 
 # prop_channel <script-basename> -- prints bootstrap|provision|payload|local,
 # or nothing (rc 1) when the script is unclassified. Callers MUST treat rc 1

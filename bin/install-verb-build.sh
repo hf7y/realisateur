@@ -10,7 +10,7 @@
 # express that: they half-succeed, and leave you running a verb set that
 # never existed as a whole and cannot be named in a bug report.
 # And it never reports "you are up to date" when it could not look. An
-# unreachable remote is BLIND, exit 3 -- the `garde` shape from
+# unreachable remote is BLIND, exit 6 -- the `garde` shape from
 # vault:realisateur/MONKEY.md §5, where skipping unreachable destinations made
 # "nothing pending" indistinguishable from "everything is proven".
 
@@ -29,7 +29,7 @@ CLI_POSITIONAL=any   # flag VALUES (--build <id>) read as positionals to cli-gua
 CLI_EXITS='  0  done, or --check found you current
   1  refused: incomplete, unverifiable, or --check found a newer build
   2  usage error
-  3  BLIND: could not reach the meta-repo. This is not "up to date".'
+  6  BLIND: could not reach the meta-repo. This is not "up to date".'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
@@ -38,6 +38,9 @@ REMOTE="${VERB_BUILD_REMOTE:-https://github.com/hf7y/verbs.git}"
 BIN="${INSTALLE_BIN:-$HOME/.local/bin}"
 CMD_DEST="${CMD_DEST:-$HOME/.claude/commands}"
 HOOK_DEST="${HOOK_DEST:-$HOME/.claude/hooks}"
+# HOST-WIDE, not $HOME-scoped: these are the probes ausculte composes on the
+# machine, and `ssh <host> ausculte` sees no $HOME path (realisateur#264).
+LIBEXEC_DEST="${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}"
 REPO="$BUILD_ROOT/repo"
 BUILD_ID=''; APPLY=0; LINK=0; LIST=0; CHECK=0; LATEST=0; ROLLBACK=''
 
@@ -59,7 +62,7 @@ done
 
 say()  { printf '%s\n' "$*" >&2; }
 die()  { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
-blind(){ printf '%s: BLIND -- %s. This is not "up to date".\n' "$CLI_NAME" "$*" >&2; exit 3; }
+blind(){ printf '%s: BLIND -- %s. This is not "up to date".\n' "$CLI_NAME" "$*" >&2; exit 6; }
 row()  { printf '  %-8s %-18s %s\n' "$1" "$2" "${3:-}" >&2; }
 
 current_id() { readlink "$BUILD_ROOT/current" 2>/dev/null || true; }
@@ -94,9 +97,8 @@ if [ -n "$ROLLBACK" ]; then
 fi
 
 # --- fetch the meta-repo ------------------------------------------------
-# BOUNDED, because this runs unattended. Against an UNROUTABLE host the
-# kernel's TCP retry took 2m15s to give up -- measured 2026-08-07 against
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+# BOUNDED, because this runs unattended: against an unroutable host the
+# kernel's TCP retry runs for minutes before giving up.
 NET_TIMEOUT="${VERB_BUILD_NET_TIMEOUT:-45}"
 export GIT_TERMINAL_PROMPT=0
 mkdir -p "$BUILD_ROOT" || die "cannot create $BUILD_ROOT"
@@ -153,7 +155,6 @@ fi
 # --- verify every verb the manifest promised ----------------------------
 # Against the manifest, not against what happened to land. A build is a
 # promise about a SET; verifying only what is present cannot notice a verb
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 say "== build $BUILD_ID =="
 missing=0
 while IFS=$'\t' read -r project verb sha _; do
@@ -189,7 +190,6 @@ say "current -> $BUILD_ID"
 # --- the ~/.local/bin links, written once -------------------------------
 # Off by default: `installe` (senechal) owns ~/.local/bin and its manifest,
 # and this script does not get to quietly take that over. --link is for a
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "$LINK" -eq 1 ]; then
   mkdir -p "$BIN"
   linked=0; skipped=0
@@ -213,7 +213,6 @@ if [ "$LINK" -eq 1 ]; then
   # The loop above only ever ADDS: it walks the NEW manifest, so a verb a
   # nightly build dropped keeps its old link, now pointing at
   # `current/<project>/bin/<verb>` -- which after the switch above does not
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   wanted="$(grep -v '^#' "$DEST/manifest.tsv" | cut -f2)"
   dropped=0
   for have in "$BIN"/*; do
@@ -248,24 +247,46 @@ if [ "$LINK" -eq 1 ]; then
   # the last clone-dependent thing (#389). COPIED, not symlinked: a dangling
   # link into a rolled-back build reads as a CORRUPT command file, not an
   # absent one.
+  #
+  # libexec JOINED THIS LOOP for realisateur#517. Host tools reached the
+  # machine ONLY when a human ran wire-release-channel.sh --host --apply, so a
+  # fix to one of ausculte's own probes sat on main indefinitely -- which is
+  # how a decision-rot that could not load its roster walked zero repositories,
+  # exited 0, and rendered as `rot OK` over 48 rotting decisions (#512). The
+  # clock already existed; only the payload was missing. bin/lib/carries.tsv
+  # carries the three probes onto bashified, cut-verb-build.sh copies the whole
+  # tree into the build, and this installs them.
   installed=0
-  for src_dir in commands hooks; do
+  for src_dir in commands hooks libexec; do
     from="$BUILD_ROOT/current/realisateur/$src_dir"
     [ -d "$from" ] || continue
     case "$src_dir" in
       commands) to="$CMD_DEST"; mode=644 ;;
       hooks)    to="$HOOK_DEST"; mode=755 ;;
+      libexec)  to="$LIBEXEC_DEST"; mode=755 ;;
     esac
-    mkdir -p "$to"
+    # A destination this account cannot create is a FINDING, not a silent skip:
+    # libexec is root-owned, and a --link run without the privilege for it
+    # would otherwise report "installed 0" and read as up to date.
+    mkdir -p "$to" 2>/dev/null || { row SKIP "$src_dir" "cannot create $to -- not installed"; continue; }
     for f in "$from"/*; do
       [ -f "$f" ] || continue
       dst="$to/$(basename "$f")"
       # A symlink here is never ours; cp would write THROUGH it.
       [ -L "$dst" ] && { row SKIP "$(basename "$f")" "symlink -> $(readlink "$dst")"; continue; }
       cmp -s "$f" "$dst" && continue
-      cp "$f" "$dst" && chmod "$mode" "$dst" && installed=$((installed + 1))
+      # ATOMIC, because a destination here can be EXECUTING. bash re-reads its
+      # script by offset, so `cp` over a running one (cp truncates in place,
+      # same inode) corrupts it mid-run. Rename gives the new content a new
+      # inode and leaves the running process on the old one.
+      tmp="$to/.$(basename "$f").new.$$"
+      if cp "$f" "$tmp" && chmod "$mode" "$tmp" && mv -f "$tmp" "$dst"; then
+        installed=$((installed + 1))
+      else
+        rm -f "$tmp"; row SKIP "$(basename "$f")" "could not install into $to"
+      fi
     done
   done
-  say "installed $installed command/hook file(s) from this build"
+  say "installed $installed command/hook/libexec file(s) from this build"
 fi
 exit 0

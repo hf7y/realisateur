@@ -46,7 +46,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # --build IS REQUIRED. There is deliberately no default.
 #
 # This resolved the host's own adopted-build pin (the path PROP_PIN_PATH
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 BUILD=''
 RATCHET="${VERB_KIND_RATCHET:-$ROOT/bin/verb-kind-lint.ratchet}"
 ACCEPT=0
@@ -83,7 +82,6 @@ MANIFEST="$BUILD/manifest.tsv"
 # `grep -c` PRINTS 0 and EXITS 1 when it matches nothing, so the obvious
 # `|| echo 0` fallback appends a SECOND zero and rows becomes "0\n0". The
 # empty-manifest case still reached BLIND, but by accident: `[ "0\n0" -gt 0 ]`
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 rows="$(grep -cv '^#' "$MANIFEST" 2>/dev/null || true)"
 [ -n "$rows" ] || rows=0
 [ "$rows" -gt 0 ] || blind "$MANIFEST has no rows. A build with no commands is an unreadable build, not an ecosystem with none."
@@ -149,7 +147,6 @@ for d in ${DECLARED_VERBS+"${DECLARED_VERBS[@]}"}; do say "  ok    $d: verb"; do
 # The grandfathered set is named EVERY run -- an entry that goes quiet is one
 # nobody ever retires -- but on ONE line, not one loud line each carrying fix
 # instructions. All of them live in 12 OTHER projects' repositories and cannot
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "${#GRANDFATHERED[@]}" -gt 0 ]; then
   loud "  OWED  ${#GRANDFATHERED[@]} undeclared, held by the ratchet: ${GRANDFATHERED[*]}"
   loud "        each needs '# KIND: verb' or '# KIND: product' in its own project's file"
@@ -239,7 +236,6 @@ fi
 # THE CLEAN LINE MAY NOT OVERSTATE WHAT WAS VERIFIED, and the unconditional
 # version of it did. It read "$rows command(s), each declaring its channel"
 # whatever the ratchet was holding, so on the day this landed -- 33 rows, all
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 if [ "${#GRANDFATHERED[@]}" -eq 0 ]; then
   say "$CLI_NAME: $rows command(s), each declaring its channel; no product in the workchain build."
 else

@@ -12,7 +12,7 @@
 # see .shellcheckrc's header. That is the argument for running the tool, made
 # by the tool, on the first run.
 # It never reports "I could not look" as "nothing is wrong". shellcheck
-# missing from PATH is BLIND (exit 2), never success -- the recorded pathology
+# missing from PATH is BLIND (exit 6), never success -- the recorded pathology
 # is a propagation pass that reached zero projects and exited 0. Matching zero
 # files is BLIND for the same reason: `bin/tests/*.sh matched nothing` was a
 # real CI defect in this repository, and a lint that lints nothing is its twin.
@@ -23,7 +23,7 @@
 #
 # exit-0 no-op, the unguarded `cd`, the check that cannot see and says fine.
 # usage:  shellcheck-lint.sh [--strict] [--accept] [--quiet]
-# exit:   0 no new findings   1 REGRESSION (a new file/code pair)
+# exit:   0 no new findings   1 REGRESSION (a new file/code pair)   6 BLIND
 
 set -uo pipefail
 
@@ -50,15 +50,14 @@ command -v shellcheck >/dev/null 2>&1 || {
   echo "  install: apt-get install shellcheck, or drop the static binary from" >&2
   echo "  https://github.com/koalaman/shellcheck/releases onto PATH." >&2
   echo "  A guard that cannot probe does not get to report success." >&2
-  exit 2
+  exit 6
 }
 
 # WHICH FILES. Tracked-only, so an untracked scratch script in the working
 # tree cannot turn the guard red, and a deleted one cannot keep it red.
 # `*.sh` misses the extensionless executables in bin/ (the verbs), so those are
 # selected by SHEBANG rather than by name -- reading the file is the only
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
-cd "$ROOT" || { echo "BLIND: cannot cd to $ROOT" >&2; exit 2; }
+cd "$ROOT" || { echo "BLIND: cannot cd to $ROOT" >&2; exit 6; }
 
 mapfile -t FILES < <(
   {
@@ -75,7 +74,7 @@ mapfile -t FILES < <(
 if [ "${#FILES[@]}" -eq 0 ]; then
   echo "BLIND: matched zero shell files under $ROOT -- this run linted NOTHING." >&2
   echo "  A lint that lints nothing is not a clean tree; it is a broken glob." >&2
-  exit 2
+  exit 6
 fi
 
 # CURRENT set: "path<TAB>SCNNNN", one per distinct pair, sorted.
@@ -95,7 +94,6 @@ baseline=""
 # VERSION SKEW. A ratchet is a comparison, and comparing findings across two
 # linter versions compares two different questions: releases add checks,
 # retire them, and change wording. A baseline accepted under one version can
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SC_VERSION="$(shellcheck --version 2>/dev/null | awk '/^version:/{print $2}')"
 SC_ACCEPTED=""
 [ -f "$RATCHET" ] && SC_ACCEPTED="$(awk '/^# shellcheck-version /{print $3}' "$RATCHET")"
@@ -168,6 +166,7 @@ if [ "$STRICT" -eq 1 ] && [ "$n_cur" -gt 0 ]; then
   say ""
   say "--strict: $n_cur finding(s) still baselined. The tree is not clean, it is"
   say "held. bin/shellcheck-lint.ratchet lists every one."
-  exit 3
+  # 4, not 3: a held baseline is in scope and not done yet -- a GAP (#334).
+  exit 4
 fi
 exit 0

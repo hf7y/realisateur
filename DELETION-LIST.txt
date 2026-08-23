@@ -1,0 +1,165 @@
+# DELETION-LIST.txt -- self-dev v1 subtraction, hf7y/realisateur.
+#
+# WHY THIS FILE EXISTS AT ALL: so the sprint's state lives in the repo and not
+# in an agent's context. Any session -- or Zach -- can finish this by running
+# the list. If the run dies at file 30 of 60, the next one reads this and
+# continues. No plan state is held in a conversation.
+#
+#   git rm -q $(grep -v '^#' DELETION-LIST.txt | grep -v '^$')
+#   bash bin/shellcheck-lint.sh --accept     # ratchet keys on (file,code) pairs
+#
+# WHY THESE: measured 2026-08-21. Six sampled guards = 1,029 lines, zero
+# findings; four report clean, one exits 2 on a usage error, one times out.
+# Guards are 5,673 of bin/'s 15,550 LOC. The estate's failure is not missing
+# wiring -- it is wiring that runs, reports green, and cannot see. Ashby S.8/7:
+# a transducer with fewer output values than its input has distinct states
+# loses distinctions. That is the whole disease, and deletion is the only
+# remedy that does not add another transducer.
+#
+# NOT DELETED, and why: run-suites.sh and shellcheck-lint.sh produce the
+# REQUIRED checks (enforce_admins=true -- breaking them makes the repo
+# unmergeable, including this PR). decision-rot.sh and dexter-liveness.sh are
+# live ausculte probes. discipline.sh is CLAUDE.md's mandated front door.
+# publish-monkey-status.sh + monkey-status-collect.py produce the dashboard
+# Zach reads.
+#
+# silence-audit.sh and delivery-audit.sh ARE ausculte probes and are deleted
+# anyway: silence-audit counts "named in a doc" as wired; delivery-audit reads
+# `- none` on 260 of 262 PRs. Both are sensors that do not sense. ausculte
+# drops from 8 probes to 6 in the same PR.
+#
+# SIX FILES CAME BACK, and the reason is worth keeping. The first cut deleted
+# them as orphans on a reachability scan of .github/workflows/ that never read
+# provision/verbs-meta/build-verbs.yml -- the NIGHTLY VERB BUILD, i.e. the
+# propagation channel itself. Each has a live caller:
+#   publish-release-verdict.sh, release-gate.sh   <- build-verbs.yml
+#   release-ledger.sh                             <- the verdict's consumer half
+#   verb-kind-lint.sh                             <- cut-verb-build.sh, which
+#       DIES without it: "Refusing to cut a build whose channel declarations
+#       were never checked."
+#   land-selfdev.sh, wire-selfdev-git.sh, wire-release-channel.sh
+#                                                 <- setup-selfdev-project.sh,
+#       the account-standup path
+# A SEVENTH CAME BACK ON 2026-08-22, and it is the worst miss of the set.
+# bin/monkey-watch.sh was cut as an orphan for the same reason -- no caller in
+# .github/workflows/ or in this repo's bin/. Its caller is a CRONTAB LINE ON
+# ANOTHER MACHINE: dexter runs it every ten minutes out of a checkout dexter
+# pulls itself. So the rule the six above teach has a second half --
+#
+#   A REACHABILITY SCAN CANNOT SEE AN OFF-HOST CALLER.
+#
+# What that cost: monkey-watch is the only observer OUTSIDE the system it
+# observes. ausculte runs on monkey; the health cadence runs on monkey; every
+# issue the estate files about itself is written ON monkey. When monkey goes
+# down the tracker does not fill with alarms, it goes QUIET -- and dexter
+# starts its VMs at LOGIN, so a reboot nobody logs in after takes all of
+# self-dev with it and reads from outside like a quiet night. For the whole
+# interval, dexter's cron appended `not found` to a log that reached 47 MB.
+#
+# Worse, line 23 above protected publish-monkey-status.sh and
+# monkey-status-collect.py BY NAME as "the dashboard Zach reads" -- and this
+# same cut deleted the thing that invokes them. THE LIST KEPT THE PAYLOAD AND
+# CUT ITS CLOCK. That is realisateur#518, and this was its cause.
+#
+# publish-monkey-status.sh is now deleted DELIBERATELY, which is a different
+# act: monkey-watch supersedes it. Both publish the same status.json to the
+# same repo, but that one runs from mandark and REFUSES TO PUBLISH when its
+# ssh collection fails -- so it showed the last healthy world straight through
+# the 2026-08-14 outage (#274). Two writers of one file with different failure
+# semantics is not redundancy; it is the failure hiding itself.
+#
+# The guard bucket below survived review nearly unchanged; the orphan bucket
+# was wrong. A scan that misses an entry point reports the same "clean" as a
+# scan that found nothing -- which is the estate's own disease, committed here
+# by the sprint that exists to remove it.
+#
+# check-project-busy.sh also came back, from the guard bucket. It is an
+# installed VERB on PATH and CLAUDE.md names it as an ecosystem protocol
+# ("what to do when a change reaches outside this repo"). Deleting a
+# documented front door during a stabilisation sprint is the wrong trade; the
+# 124 lines stay.
+#
+# carry-drift.sh went, but the CARRIES table inside it did not: it is now
+# bin/lib/carries.tsv, the bin/lib/labels.tsv shape. A guard should not own a
+# data structure that outlives it -- bin/tests/propagation.test.sh reads that
+# mapping to answer "which script backs verb <v>", which is a question about
+# the repo.
+
+# ---- guards: the 36% of bin/ that reports clean and finds nothing ----------
+bin/carry-drift.sh
+bin/claim-drift.sh
+bin/closeout-lint.sh
+bin/delivery-audit.sh
+bin/deploy-drift.sh
+bin/directive-prose.sh
+bin/floor-check.sh
+bin/hardcoded-home-lint.sh
+bin/no-worktree-lint.sh
+bin/org-migration-audit.sh
+bin/ownership-audit.sh
+bin/path-provenance-audit.sh
+bin/reach-lint.sh
+bin/retire-check.sh
+bin/rot-ratchet.sh
+bin/selfdev-agent-survey.sh
+bin/selfdev-containment-audit.sh
+bin/self-merge-audit.sh
+bin/served-not-cloned.sh
+bin/silence-audit.sh
+bin/thermostat-wiring.sh
+
+# ---- ratchets: baselines for guards that no longer exist -------------------
+bin/carry-drift.ratchet
+bin/ownership-audit.ratchet
+bin/path-provenance-audit.ratchet
+bin/rot-ratchet.ratchet
+bin/thermostat-wiring.ratchet
+
+# ---- orphans: reachable from no cron, no CI, and no verb ------------------
+bin/branch-protection-provision.sh
+bin/defere.sh
+bin/dexter-service-deploy.sh
+bin/install-honey-plugin.sh
+bin/install-shims.sh
+bin/monkey-vdi-to-internal.sh
+bin/pivot.sh
+bin/playbook.sh
+bin/repo-settings-provision.sh
+bin/selfdev-gh-app-register.sh
+bin/session-marker.sh
+bin/sunset-coordinator-files.sh
+
+# ---- suites for the above: a test for a file that is gone ------------------
+# bin/tests/guard-estate.test.sh is KEPT on purpose. It derives the guard
+# population by NAME SHAPE over bin/*.sh and ratchets it downward -- so after
+# this deletion it is what stops the guards growing back.
+bin/tests/branch-protection-provision.test.sh
+bin/tests/carry-drift.test.sh
+bin/tests/claim-drift.test.sh
+bin/tests/closeout-lint.test.sh
+bin/tests/delivery-audit.test.sh
+bin/tests/dexter-service-deploy.test.sh
+bin/tests/directive-prose.test.sh
+bin/tests/hardcoded-home-lint.test.sh
+bin/tests/install-shims.test.sh
+bin/tests/no-worktree-lint.test.sh
+bin/tests/org-migration-audit.test.sh
+bin/tests/ownership-audit.test.sh
+bin/tests/path-provenance-audit.test.sh
+bin/tests/reach-lint.test.sh
+bin/tests/repo-settings-provision.test.sh
+bin/tests/retire-check.test.sh
+bin/tests/rot-ratchet.test.sh
+bin/tests/selfdev-agent-survey.test.sh
+bin/tests/selfdev-containment-audit.test.sh
+bin/tests/selfdev-gh-app-register.test.sh
+bin/tests/self-merge-audit.test.sh
+bin/tests/served-not-cloned.test.sh
+bin/tests/sunset-coordinator-files.test.sh
+bin/tests/thermostat-wiring.test.sh
+
+# ---- advisory workflows: none is a required check -------------------------
+.github/workflows/claim-drift.yml
+.github/workflows/deferral-ledger.yml
+.github/workflows/rot-ratchet.yml
+.github/workflows/verb-build-smoke.yml

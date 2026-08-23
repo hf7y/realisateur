@@ -8,12 +8,12 @@
 # usage:  run-suites.sh <suite-path>...
 # exit 0  ran; nothing failed, or every failure was quarantined
 # exit 1  a non-quarantined suite failed
-# exit 2  BLIND -- no suite paths given
+# exit 6  BLIND -- no suite paths given
 set -uo pipefail
 
 QFILE="${RUN_SUITES_QUARANTINE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/run-suites.quarantine}"
 
-[ $# -gt 0 ] || { echo "run-suites: BLIND -- no suite paths given, nothing was run" >&2; exit 2; }
+[ $# -gt 0 ] || { echo "run-suites: BLIND -- no suite paths given, nothing was run" >&2; exit 6; }
 
 declare -A QUARANTINED=()
 if [ -f "$QFILE" ]; then
@@ -31,7 +31,6 @@ for t in "$@"; do
   # STDIN CLOSED. A suite must never read stdin; one that does HANGS FOREVER
   # under any runner without a tty (cron, a background job, CI). Found
   # 2026-08-15: bin/tests/selfdev-credentials.test.sh sources its subject,
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   bash "$t" </dev/null || rc=$?
   echo "::endgroup::"
   if [ "$rc" -ne 0 ]; then

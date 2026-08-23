@@ -37,7 +37,11 @@ Prose about the change.
 <!-- DEFERRED -->
 - hf7y/vim-arcade#143 -- drop the third copy of the retired grammar
 - hf7y/realisateur#330 -- gh-sign is linked nowhere, so nothing is signed
-<!-- /DEFERRED -->'
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- host:monkey path:/usr/local/bin/gh via: install-verb-build.sh --link
+<!-- /DELIVERS -->'
 
 section 'A. the declaration is read from the FIRST non-empty line only'
 eq 'A1 DECISION opens it'            "$(grammar_declaration "$GOOD")" decision
@@ -66,7 +70,11 @@ eq  'B2a NO-DECISION needs no decider' "$(findings 'NO-DECISION: agent work -- t
 
 <!-- DEFERRED -->
 - none
-<!-- /DEFERRED -->')" 0
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
 has 'B2b DECISION still needs one' "$(codes 'DECISION: who links the shim?
 
 <!-- DEFERRED -->
@@ -89,7 +97,11 @@ DECISION: this is an example
 
 <!-- DEFERRED -->
 - none
-<!-- /DEFERRED -->')" 0
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
 
 section 'C. the DEFERRED block'
 has 'C1 absent block is UNLEDGERED'   "$(codes 'a body with no ledger at all')" UNLEDGERED
@@ -109,7 +121,11 @@ has 'C4 an unclosed block is UNCLOSED' "$(codes 'NO-DECISION: @zach ok
 eq  'C5 "- none" is a complete, passing answer' "$(findings 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - none
-<!-- /DEFERRED -->')" 0
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
 
 section 'D. every entry names a destination'
 has 'D1 a bare intention has none' "$(codes 'NO-DECISION: @zach ok
@@ -119,11 +135,19 @@ has 'D1 a bare intention has none' "$(codes 'NO-DECISION: @zach ok
 eq 'D2 owner/repo#N is a destination' "$(findings 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - hf7y/scheduler#49 -- the sibling issue
-<!-- /DEFERRED -->')" 0
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
 eq 'D3 a URL is a destination' "$(findings 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - https://github.com/hf7y/realisateur/issues/327 -- the read side
-<!-- /DEFERRED -->')" 0
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
 # NO-OWNER is refused however well argued. #327 filed two of them: the issue
 # it DID cite is open and findable, and both ownerless entries are lost --
 # 0 issues mention gh-sign anywhere, and #327 merged as a no-op because of it.
@@ -139,7 +163,81 @@ eq 'D6 a wrapped entry folds into its bullet' "$(findings 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - hf7y/realisateur#330 -- it changes what four live accounts must hold
   before they can fetch anything, so a human decides
-<!-- /DEFERRED -->')" 0
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
+
+section 'T. the DELIVERS ledger -- where the change takes effect'
+eq 'T1 no DELIVERS block is a finding' "$(codes 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->')" 'UNSHIPPED '
+eq 'T2 "- none" is a complete answer' "$(findings 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
+eq 'T3 a typed claim passes' "$(findings 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- clock:root@monkey tag:realisateur:ausculte:CADENCE
+<!-- /DELIVERS -->')" 0
+eq 'T4 prose a check cannot look for is a finding' "$(codes 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- it lands on the host
+<!-- /DELIVERS -->')" 'UNTYPED-DELIVERY '
+eq 'T5 an empty block is not an answer' "$(codes 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+<!-- /DELIVERS -->')" 'EMPTY-SHIP '
+eq 'T6 two blocks: a reader cannot tell which is current' "$(codes 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 'MULTI-SHIP '
+
+eq 'T7 an indented example is not a second block' "$(findings 'NO-DECISION: x
+
+Here is what one looks like:
+
+    <!-- DELIVERS -->
+    - host:monkey path:/usr/local/bin/dresse
+    <!-- /DELIVERS -->
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->')" 0
 
 section 'S. the shim REFUSES, and the refusal is what stops the write'
 run_shim() { ( PATH="$T/bin:$PATH"; cd "$T" && bash "$SHIM" "$@" 2>&1 ); }
@@ -149,7 +247,7 @@ printf '%s\n' "$GOOD" > "$T/good.md"
 printf 'intro\n\nDECISION: buried\n' > "$T/bad.md"
 
 out="$(run_shim issue create --title T --body-file "$T/bad.md")"; got=$?
-rc   'S1 a malformed issue body exits 3' "$got" 3
+rc   'S1 a malformed issue body is REFUSED (7): nothing was created' 7 "$got"
 has  'S2 it says what is wrong'          "$out" MISPLACED-DECISION
 has  'S3 it prints the block to paste'   "$out" '<!-- DEFERRED -->'
 if [ -f "$T/reached" ]; then bad 'S4 gh was never called' "gh ran: $(cat "$T/reached")"
@@ -171,24 +269,51 @@ out="$( PATH="$T/bin:$PATH" GH_SIGN_LIB=/nonexistent bash "$SHIM" issue create -
 has 'S7 a missing grammar library is announced BLIND, not silently skipped' "$out" BLIND
 
 out="$(bash "$SHIM" --check-body "$T/bad.md" 2>&1)"; got=$?
-rc  'S8 --check-body re-runs the same check offline' "$got" 3
+rc  'S8 --check-body re-runs it offline and FINDS it (1), refusing nothing' 1 "$got"
 has 'S9 --check-body names the same finding'         "$out" MISPLACED-DECISION
 
 section 'I. the CI backstop is wired to the same grammar'
-WF="$ROOT/../.github/workflows/deferral-ledger.yml"
-if [ -f "$WF" ]; then
-  wf="$(cat "$WF")"
-  has 'I1 the workflow calls the shim, not a second implementation' "$wf" 'gh-sign.sh --check-body'
-  # `edited` is not in the default pull_request set, and it is the ONLY event
-  # emitted when an author adds the ledger -- the one act that turns the check
-  # green. Without it they fix the finding and watch the check stay red.
-  has 'I2 it fires on `edited`'          "$wf" 'edited'
-  has 'I3 it fires on ready_for_review'  "$wf" 'ready_for_review'
-  hasnt 'I4 no reference to the deleted script remains' "$wf" 'bin/deferral-ledger.sh'
-else
-  bad 'I1 workflow present' "no .github/workflows/deferral-ledger.yml"
-fi
+# deferral-ledger.yml was deleted 2026-08-22 (DELETION-LIST.txt). It was never
+# a required check, and it was green on every PR that answered `- none` -- 260
+# of 262. A backstop satisfied by declaring nothing backstops nothing. The
+# grammar itself is unchanged and still enforced at the write by
+# gh-sign.sh --check-body, which sections A-H above exercise directly.
+# Reinstating a delivery check that asks for a claim, not a field, is v2.
 
 hasnt 'I5 the deleted script is really gone' "$(ls "$ROOT")" 'deferral-ledger.sh'
+
+# --- DEFAULT-AFTER: the unanswered decision resolves itself (2026-08-22) -----
+# 36 open `needs-human` issues, each subtracting from its repo's `actionable`
+# count in tempo.sh -- so every unanswered question was also a brake on the
+# repo that asked it. #262: the only brake in the loop was a person's
+# attention, "which is why the estate could not be left alone".
+section "DEFAULT-AFTER"
+
+_da() { printf 'DECISION: @zach -- q\n%s\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n' "$1"; }
+
+grammar_check "$(_da 'DEFAULT-AFTER 14d: close it as declined')" >/dev/null 2>&1 \
+  && ok "a well-formed default is accepted" \
+  || bad "a well-formed default is accepted" "it was refused"
+
+out="$(grammar_check "$(_da 'DEFAULT-AFTER: close it')" 2>&1)"
+case "$out" in *BAD-DEFAULT*) ok "a default with no day count is BAD-DEFAULT" ;;
+  *) bad "no day count is BAD-DEFAULT" "got: $out" ;; esac
+
+out="$(grammar_check "$(_da 'DEFAULT-AFTER 14d:')" 2>&1)"
+case "$out" in *BAD-DEFAULT*) ok "a window with no action is BAD-DEFAULT -- a timer to nowhere" ;;
+  *) bad "no action is BAD-DEFAULT" "got: $out" ;; esac
+
+# OPTIONAL ON PURPOSE. An irreversible call must be able to block forever;
+# making the line mandatory would produce ritual defaults on exactly those.
+grammar_check "$(printf 'DECISION: @zach -- q\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n')" >/dev/null 2>&1 \
+  && ok "a DECISION with NO default is still valid -- blocking is a legitimate answer" \
+  || bad "no default is still valid" "it was refused; irreversible calls could not block"
+
+# The reader the actuator consumes.
+got="$(grammar_default_after "$(_da 'DEFAULT-AFTER 14d: close it as declined')")"
+eq "the reader returns days and action, tab-separated" "$got" "$(printf '14\tclose it as declined')"
+grammar_default_after "$(_da 'nothing here')" >/dev/null 2>&1 \
+  && bad "absent default returns 1" "it returned 0" \
+  || ok "an absent default returns 1, so the actuator can tell 'blocks forever' from 'not read'"
 
 summary

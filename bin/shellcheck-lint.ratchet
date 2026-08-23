@@ -1,15 +1,14 @@
 # shellcheck-lint.ratchet -- (file, code) pairs present when accepted.
 # Raised or lowered ONLY by --accept, and --accept always reports what it
 # changed. See bin/shellcheck-lint.sh for why the pair, not a count.
-# accepted 2026-08-17T02:34:59-05:00
+# accepted 2026-08-21T21:54:17-05:00
 # shellcheck-version 0.9.0
 bin/cut-verb-build.sh	SC2221
 bin/cut-verb-build.sh	SC2222
-bin/defere.sh	SC2209
-bin/deploy-drift.sh	SC2087
 bin/land-selfdev.sh	SC2088
 bin/provision-selfdev-user.sh	SC2088
 bin/selfdev-release-tick.sh	SC2087
 bin/tests/propagation.test.sh	SC1090
 bin/tests/selfdev-gh-app.test.sh	SC2120
+bin/wire-release-channel.sh	SC2046
 bin/wire-selfdev-git.sh	SC2088

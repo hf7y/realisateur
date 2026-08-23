@@ -88,14 +88,13 @@ echo "-- B. cred_grade_account: pure grading, no network --------------------"
 # NOT `res="$(grade ...)"`: a first draft packed everything into one
 # \x1f-delimited string and unpacked it with `read`, which stops at the
 # FIRST NEWLINE regardless of IFS -- cred_grade_account's own output is
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 grade() {
   GRADE_OUT="$(cred_grade_account "$1" "$2" 2>&1)"; GRADE_RC=$?
   GRADE_FLAGS="$(grep -c '^  FLAG \[drift\]' <<<"$GRADE_OUT" || true)"
   GRADE_GAPS="$(grep -c '^  gap   '          <<<"$GRADE_OUT" || true)"
 }
 
-CLEAN_ROW=$'ok:600\tok\tmatch\tgho\t-\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+CLEAN_ROW=$'ok:600\tok\tmatch\tgho\t-\tapp\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade clean-acct "$CLEAN_ROW"
 t_eq "clean row: 0 FLAG"   "$GRADE_FLAGS" 0
 t_eq "clean row: exit 0"   "$GRADE_RC" 0
@@ -113,18 +112,18 @@ t_eq "empty row: treated the same as BLIND (exit 2)" "$GRADE_RC" 2
 # /etc/selfdev/app.pem. `unreadable` is the case that mode:644 used to stand
 # in for, and it is the one that actually happens: group membership granted
 # but not yet in effect for that session.
-UNREADABLE_PEM_ROW=$'unreadable\tok\tmatch\tgho\t-\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+UNREADABLE_PEM_ROW=$'unreadable\tok\tmatch\tgho\t-\tapp\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade x "$UNREADABLE_PEM_ROW"
 t_has "host-wide key present but unreadable: flagged" "$GRADE_OUT" "CANNOT READ IT"
 t_has "host-wide key unreadable: names the group to check" "$GRADE_OUT" "selfdev-app-key.sh --check"
 [ "$GRADE_FLAGS" -ge 1 ] && t_ok "unreadable pem: at least one FLAG" || t_bad "unreadable pem: no FLAG counted"
 
-MISSING_PEM_ROW=$'missing\tok\tn/a\tgho\t-\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+MISSING_PEM_ROW=$'missing\tok\tn/a\tgho\t-\tapp\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade x "$MISSING_PEM_ROW"
 t_has "missing pem: flagged, names the consequence" "$GRADE_OUT" "no account on this host can mint an App token"
 t_has "missing pem: names the one command that fixes it" "$GRADE_OUT" "selfdev-app-key.sh --apply"
 
-MISSING_CONF_ROW=$'ok:600\tmissing\tn/a\tgho\t-\t3\t3\t3\t3\t-\t-'
+MISSING_CONF_ROW=$'ok:600\tmissing\tn/a\tgho\t-\tapp\t0\t0\t0\t-\t-'
 grade x "$MISSING_CONF_ROW"
 t_has "missing conf: flagged" "$GRADE_OUT" "no host-wide /etc/selfdev/gh-app.conf"
 t_hasnt "missing conf: does NOT also flag appid/owner (nothing to compare)" "$GRADE_OUT" "declares App id"
@@ -132,16 +131,16 @@ t_hasnt "missing conf: does NOT also flag appid/owner (nothing to compare)" "$GR
 # A fixture path, not a real filesystem location -- deliberately NOT shaped
 # like /home/<name>/..., which bin/hardcoded-home-lint.sh's own suite scans
 # this repository's TRACKED files for and flags on sight, fixture or not.
-MISMATCH_ROW=$'ok:600\tok\tmismatch:/var/tmp/selfdev-fixture/OTHER.pem\tgho\t-\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+MISMATCH_ROW=$'ok:600\tok\tmismatch:/var/tmp/selfdev-fixture/OTHER.pem\tgho\t-\tapp\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade x "$MISMATCH_ROW"
 t_has "SELFDEV_APP_KEY mismatch: flagged" "$GRADE_OUT" "points at /var/tmp/selfdev-fixture/OTHER.pem"
 
-WRONG_APPID_ROW=$'ok:600\tok\tmatch\tgho\t-\t3\t3\t3\t3\t9999999\t'"$CRED_GH_OWNER"
+WRONG_APPID_ROW=$'ok:600\tok\tmatch\tgho\t-\tapp\t0\t0\t0\t9999999\t'"$CRED_GH_OWNER"
 grade x "$WRONG_APPID_ROW"
 t_has "divergent App id: flagged against the fleet baseline" "$GRADE_OUT" "fleet baseline is $CRED_APP_ID"
 
 # The exact live shape found 2026-08-11: a fine-grained PAT, undeclared.
-PAT_ROW=$'ok:600\tok\tmatch\tpat\t-\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+PAT_ROW=$'ok:600\tok\tmatch\tpat\t-\tapp\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade ecosim "$PAT_ROW"
 t_has "undeclared PAT: flagged, names the ecosim incident" "$GRADE_OUT" "403ing on Pull requests"
 [ "$GRADE_FLAGS" -ge 1 ] && t_ok "undeclared PAT: counted as FLAG, not gap" || t_bad "undeclared PAT: not counted as a FLAG"
@@ -156,11 +155,12 @@ grade ecosim "$PAT_ROW"
 # shellcheck source=/dev/null
 . "$LIB"   # restore the empty table
 
-MISSING_TOKEN_ROW=$'ok:600\tok\tmatch\tmissing\t-\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+MISSING_TOKEN_ROW=$'ok:600\tok\tmatch\tmissing\t-\tapp\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade x "$MISSING_TOKEN_ROW"
 t_has "no gh-token at all: flagged" "$GRADE_OUT" "gh CLI cannot authenticate"
 
-EXTRA_ROW=$'ok:600\tok\tmatch\tgho\tecosim.pem\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+
+EXTRA_ROW=$'ok:600\tok\tmatch\tgho\tecosim.pem\tapp\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade ecosim "$EXTRA_ROW"
 t_has "leftover private file: flagged" "$GRADE_OUT" "leftover private file 'ecosim.pem'"
 t_has "leftover private file: names why a second copy is drift" "$GRADE_OUT" "a rotation will miss"
@@ -168,24 +168,32 @@ t_has "leftover private file: names why a second copy is drift" "$GRADE_OUT" "a 
 # app.pem itself is now a leftover when it appears under ~/.config/selfdev/:
 # the host-wide file is the credential and a private copy beside it is the
 # second source this whole change exists to end.
-LEFTOVER_BASELINE_ROW=$'ok:600\tok\tmatch\tgho\tapp.pem,gh-app.conf\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+LEFTOVER_BASELINE_ROW=$'ok:600\tok\tmatch\tgho\tapp.pem,gh-app.conf\tapp\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade x "$LEFTOVER_BASELINE_ROW"
 t_has "a private app.pem copy is itself drift now" "$GRADE_OUT" "leftover private file 'app.pem'"
 t_has "...and so is a private gh-app.conf" "$GRADE_OUT" "leftover private file 'gh-app.conf'"
 
-EXTRA_TWO_ROW=$'ok:600\tok\tmatch\tgho\ta.pem,b.pem\t3\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+EXTRA_TWO_ROW=$'ok:600\tok\tmatch\tgho\ta.pem,b.pem\tapp\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade x "$EXTRA_TWO_ROW"
 t_has "two extra files: both named" "$GRADE_OUT" "'a.pem'"
 t_has "two extra files: both named (second)" "$GRADE_OUT" "'b.pem'"
 [ "$GRADE_FLAGS" -ge 2 ] && t_ok "two extra files: two separate FLAGs" || t_bad "two extra files: expected >=2 FLAGs, got $GRADE_FLAGS"
 
-WIRE_OWN_ROW=$'ok:600\tok\tmatch\tgho\t-\t0\t3\t3\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
-grade ecosim "$WIRE_OWN_ROW"
-t_has "own-repo wiring 0/3: flagged, names the consequence" "$GRADE_OUT" "cannot push via the deploy-key channel"
+NO_HELPER_ROW=$'ok:600\tok\tmatch\tgho\t-\tnone\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+grade ecosim "$NO_HELPER_ROW"
+t_has "no credential helper: flagged, names the consequence" "$GRADE_OUT" "https pushes have no credential at all"
 
-WIRE_SHARED_ROW=$'ok:600\tok\tmatch\tgho\t-\t3\t3\t3\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
-grade x "$WIRE_SHARED_ROW"
-t_has "shared-repo (senechal, 3rd) wiring 0/3: flagged by name" "$GRADE_OUT" "senechal git wiring is 0/3"
+GH_HELPER_ROW=$'ok:600\tok\tmatch\tgho\t-\tgh\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+grade x "$GH_HELPER_ROW"
+t_has "a gh-auth helper is the old shared token by another route" "$GRADE_OUT" "gh auth git-credential"
+
+MULTI_HELPER_ROW=$'ok:600\tok\tmatch\tgho\t-\tmulti\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+grade x "$MULTI_HELPER_ROW"
+t_has "two helpers: flagged as undecidable" "$GRADE_OUT" "MORE THAN ONE value"
+
+LEFTOVER_REWRITE_ROW=$'ok:600\tok\tmatch\tgho\t-\tapp\t0\t0\t3\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
+grade x "$LEFTOVER_REWRITE_ROW"
+t_has "a leftover insteadOf rewrite is flagged by repo name" "$GRADE_OUT" "senechal still has 3 url.insteadOf rewrite(s)"
 
 # ============================================================================
 echo
@@ -212,7 +220,6 @@ STUB="$T/stub"; mkdir -p "$STUB"
 # A stub `ssh` that answers fetch_remote's `bash -s -- <args...>` shape (the
 # FILTER positional is the 4th token after "--") from $STUB_ROWS, and treats
 # any OTHER invocation (cmd_apply's one-shot commands) as "log it, succeed" --
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cat > "$STUB/ssh" <<'STUBSH'
 #!/usr/bin/env bash
 LOG="${STUB_LOG:-/dev/null}"
@@ -258,7 +265,7 @@ esac
 STUBGH
 chmod +x "$STUB/gh"
 
-FULL_CLEAN_ROWS='fleet-clean	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y'
+FULL_CLEAN_ROWS='fleet-clean	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y'
 # A GENUINELY clean run needs the deploy-key symmetry section clean too, not
 # merely absent -- gh being unreachable is its own BLIND (asserted separately
 # below) and correctly keeps the overall exit non-zero, matching this
@@ -285,18 +292,18 @@ t_has "drifted fleet: FLAG on missing pem" "$O" "no host-wide App key"
 t_has "drifted fleet: prints the redundancy note" "$O" "redundant on that path"
 t_has "drifted fleet: names hf7y/scheduler#103" "$O" "scheduler#103"
 
-MIXED_ROWS=$'fleet-clean\tok:600\tok\tmatch\tgho\t-\t3\t3\t3\t3\t4521586\thf7y\nfleet-blind\tBLIND'
+MIXED_ROWS=$'fleet-clean\tok:600\tok\tmatch\tgho\t-\tapp\t0\t0\t0\t4521586\thf7y\nfleet-blind\tBLIND'
 O="$(STUB_ROWS="$MIXED_ROWS" CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN=/nonexistent-gh "$SCRIPT" --audit 2>&1)"; R=$?
 t_rc "one BLIND account among clean ones still exits 1 (never silently ok)" 1 "$R"
 t_has "mixed fleet: BLIND account reported, not skipped" "$O" "fleet-blind"
 t_has "mixed fleet: BLIND account marked BLIND, not ok" "$O" "BLIND fleet-blind"
 
 O="$(STUB_SSH_RC=255 CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN=/nonexistent-gh "$SCRIPT" --audit 2>&1)"; R=$?
-t_rc "an unreachable host exits 3, not 0 and not 1" 3 "$R"
+t_rc "an unreachable host exits 6 BLIND, not 0 and not 1" 6 "$R"
 t_has "unreachable host: says BLIND and names nothing was verified" "$O" "Nothing was verified"
 
 O="$(STUB_ROWS="" CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN=/nonexistent-gh "$SCRIPT" --audit 2>&1)"; R=$?
-t_rc "zero accounts found exits 3 (BLIND, not a clean empty fleet)" 3 "$R"
+t_rc "zero accounts found exits 6 (BLIND, not a clean empty fleet)" 6 "$R"
 
 # --- gh missing/unauthenticated degrades to BLIND, not a crash -------------
 O="$(STUB_ROWS="$FULL_CLEAN_ROWS" CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN=/nonexistent-gh "$SCRIPT" --audit 2>&1)"
@@ -311,9 +318,8 @@ echo "-- D2. deploy-key symmetry grading -- the false/null jq regression ----"
 # ============================================================================
 # THE REGRESSION THIS PINS: jq's `//` treats `false` as falsy, same as
 # `null`. A first draft used `.readOnly // empty`, which turned every
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STUB_JSON_solo="$(printf '[{"title":"monkey-solo-solo","readOnly":false}]')"
-O="$(STUB_ROWS='solo	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y' \
+O="$(STUB_ROWS='solo	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
      STUB_JSON_realisateur='[]' STUB_JSON_scheduler='[]' STUB_JSON_senechal='[]' \
      STUB_JSON_solo="$STUB_JSON_solo" \
@@ -322,7 +328,7 @@ t_has "own-repo readOnly:false is recognized as WRITE, not 'no key'" "$O" "solo:
 t_hasnt "own-repo readOnly:false is NOT reported as missing" "$O" "no deploy key registered on solo"
 
 STUB_JSON_realisateur='[{"title":"monkey-writer-realisateur","readOnly":false}]'
-O="$(STUB_ROWS='writer	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y' \
+O="$(STUB_ROWS='writer	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
      STUB_JSON_realisateur="$STUB_JSON_realisateur" STUB_JSON_scheduler='[]' STUB_JSON_senechal='[]' \
      STUB_JSON_writer='[]' \
@@ -335,9 +341,8 @@ echo "-- D3. deploy-key symmetry grading -- the read_only field-name regression"
 # ============================================================================
 # THE REGRESSION THIS PINS, FOUND LIVE AGAINST THE REAL FLEET (not a fixture):
 # `gh repo deploy-key list --json title,readOnly` on gh 2.45.0 VALIDATES
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STUB_JSON_realword='[{"title":"monkey-realword-realword","read_only":false}]'
-O="$(STUB_ROWS='realword	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y' \
+O="$(STUB_ROWS='realword	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
      STUB_JSON_realisateur='[{"title":"monkey-realword-realisateur","read_only":true}]' \
      STUB_JSON_scheduler='[{"title":"monkey-realword-scheduler","read_only":true}]' \
@@ -351,7 +356,7 @@ t_rc "a fully correct real-shape fleet exits 0" 0 "$R_RC"
 
 # A WRITE key on a shared repo, expressed in the REAL field name, must still
 # be caught -- not just the camelCase fixture D2 already exercises.
-O="$(STUB_ROWS='badword	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y' \
+O="$(STUB_ROWS='badword	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
      STUB_JSON_realisateur='[{"title":"monkey-badword-realisateur","read_only":false}]' \
      STUB_JSON_scheduler='[]' STUB_JSON_senechal='[]' STUB_JSON_badword='[]' \
@@ -361,8 +366,7 @@ t_has "real gh shape: a WRITE key on a shared repo is still flagged" "$O" "reali
 # The fail-loud default arm itself: an unrecognized readOnly-shaped value
 # must read as BLIND, never as silence. Exercised directly, not by trying to
 # reproduce a gh version skew: `has()` on the fixture object true either way,
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
-O="$(STUB_ROWS='oddshape	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y' \
+O="$(STUB_ROWS='oddshape	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
      STUB_JSON_realisateur='[{"title":"monkey-oddshape-realisateur","readOnly":"maybe"}]' \
      STUB_JSON_scheduler='[]' STUB_JSON_senechal='[]' STUB_JSON_oddshape='[]' \
@@ -375,10 +379,9 @@ echo "-- E. --apply: idempotency, converge actions, and refusals ------------"
 # ============================================================================
 # NO FIXTURE SOURCE KEY any more. --apply used to push a private copy of the
 # App key into the account from a local source path, and the source-path knobs
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 
 LOG="$T/apply.log"; : > "$LOG"
-CLEAN_SINGLE='conv-clean	ok:600	ok	match	gho	-	3	3	3	3	4521586	hf7y'
+CLEAN_SINGLE='conv-clean	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y'
 O="$(STUB_ROWS="$CLEAN_SINGLE" CRED_SSH_BIN="$STUB/ssh" STUB_LOG="$LOG" \
      "$SCRIPT" --apply conv-clean 2>&1)"; R=$?
 t_rc "apply on an already-compliant account exits 0" 0 "$R"
@@ -387,7 +390,7 @@ t_has "apply on a compliant account reports nothing to do" "$O" "nothing to do"
               || t_ok "apply on a compliant account issued NO remote command"
 
 : > "$LOG"
-NEEDS_CREDS='conv-fix	missing	missing	n/a	gho	-	0	3	3	0	-	-'
+NEEDS_CREDS='conv-fix	missing	missing	n/a	gho	-	none	0	0	0	-	-'
 O="$(STUB_ROWS="$NEEDS_CREDS" CRED_SSH_BIN="$STUB/ssh" STUB_LOG="$LOG" \
      "$SCRIPT" --apply conv-fix 2>&1)"; R=$?
 t_rc "apply that converges credential+wiring exits 0" 0 "$R"
@@ -395,16 +398,15 @@ t_has "apply reports the host-wide placement" "$O" "host-wide App credential"
 t_has "apply reminds the operator to notify-senechal" "$O" "notify-senechal 'selfdev-credentials --apply"
 t_has "apply delegates placement to selfdev-app-key.sh --apply" "$(cat "$LOG")" "selfdev-app-key.sh --apply"
 t_hasnt "apply never writes a per-account app.pem again" "$(cat "$LOG")" "/.config/selfdev/app.pem"
-t_has "apply delegates own-repo wiring to wire-selfdev-git.sh --apply --rw" "$(cat "$LOG")" "wire-selfdev-git.sh' 'conv-fix' --apply --rw"
-t_has "apply delegates senechal wiring to wire-selfdev-git.sh --apply (read-only)" "$(cat "$LOG")" "wire-selfdev-git.sh' 'senechal' --apply\""
-t_hasnt "apply never touches realisateur wiring when it is already 3/3" "$(cat "$LOG")" "'realisateur' --apply"
-t_hasnt "apply never touches scheduler wiring when it is already 3/3" "$(cat "$LOG")" "'scheduler' --apply"
+t_has "apply switches the account with selfdev-gh-app.sh --wire" "$(cat "$LOG")" "selfdev-gh-app.sh --wire"
+t_hasnt "apply no longer wires per-repo deploy keys" "$(cat "$LOG")" "wire-selfdev-git.sh"
+t_hasnt "apply never touches hosts.yml without the flag" "$(cat "$LOG")" "hosts.yml"
 
 : > "$LOG"
 # The placement step failing on the host is reported, not swallowed: the
 # account is left exactly as it was and the operator is pointed at the one
 # command that explains why.
-O="$(STUB_ROWS='conv-nokey	missing	missing	n/a	gho	-	3	3	3	3	-	-' \
+O="$(STUB_ROWS='conv-nokey	missing	missing	n/a	gho	-	app	0	0	0	-	-' \
      CRED_SSH_BIN="$STUB/ssh" STUB_LOG="$LOG" \
      STUB_FAIL_MATCH="selfdev-app-key.sh" \
      "$SCRIPT" --apply conv-nokey 2>&1)"; R=$?
@@ -419,8 +421,8 @@ t_has "apply on a BLIND account refuses by name" "$O" "read as BLIND"
               || t_ok "apply on a BLIND account issued NO remote command"
 
 : > "$LOG"
-O="$(STUB_ROWS='conv-fail	ok:600	ok	match	gho	-	0	3	3	3	4521586	hf7y' \
-     STUB_FAIL_MATCH="wire-selfdev-git.sh' 'conv-fail'" \
+O="$(STUB_ROWS='conv-fail	ok:600	ok	match	gho	-	none	0	0	0	4521586	hf7y' \
+     STUB_FAIL_MATCH="selfdev-gh-app.sh --wire" \
      CRED_SSH_BIN="$STUB/ssh" STUB_LOG="$LOG" \
      "$SCRIPT" --apply conv-fail 2>&1)"; R=$?
 t_rc "apply propagates a failed delegate step as exit 5" 5 "$R"
@@ -439,7 +441,7 @@ t_hasnt "never truncates or writes ~/.config/gh/hosts.yml" "$SRC_TXT" 'hosts.yml
 t_hasnt "never opens hosts.yml for writing (> or >>)" "$SRC_TXT" '> "$hosts'
 t_hasnt "never mints a NEW key (no ssh-keygen)" "$SRC_TXT" "ssh-keygen"
 t_hasnt "never mints a NEW key (no openssl genrsa/req)" "$SRC_TXT" "openssl genrsa"
-t_has "does delegate git wiring to wire-selfdev-git.sh (reuse, not reimplement)" "$SRC_TXT" "wire-selfdev-git.sh"
+t_has "does delegate the git switch to selfdev-gh-app.sh --wire (reuse, not reimplement)" "$SRC_TXT" "selfdev-gh-app.sh} --wire"
 t_has "declares its opt-out with a reason" "$SRC_TXT" "# RUNNER: no --"
 t_has "reads the token's oauth_token line but never echoes the token value" "$SRC_TXT" "grep oauth_token"
 t_hasnt "the token classifier never captures anything past the shape prefix" "$SRC_TXT" 'printf.*oauth_token.*\$token'

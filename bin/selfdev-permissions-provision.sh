@@ -1,22 +1,18 @@
 #!/usr/bin/env bash
 # selfdev-permissions-provision.sh -- give every self-dev account the
-# permissions block it was documented as having and never had, so an
-# unattended run can record what it did instead of dying at the gate.
+# permissions block it was documented as having, so an unattended run can
+# record what it did instead of dying at the gate.
 #
 # RUNNER: bin/tests/selfdev-permissions-provision.test.sh
 # GUARD-TEST: bin/tests/selfdev-permissions-provision.test.sh
 # GATE: strict
 #
 # TRAPS (the rest of this header is in the vault):
-# The cost, from #282's worked example (vim-arcade@monkey's first night): the
-# run shipped real work and two writes were REFUSED -- one recording what it
-# had done, one creating the settings file that would have granted it. The gate
-# fails closed, and an agent cannot self-grant, which is the point of it. Only
-# a human-authorised pass like this one can close it.
-# Runs ON the host that owns the accounts (monkey). Every read and write of
-# another account's file goes through sudo; the script never edits a file it
-# can reach without one, so it cannot quietly rewrite the invoking user's own
-# settings.
+# #282's worked example (vim-arcade@monkey's first night): the run shipped
+# real work and two writes were REFUSED. The gate fails closed and an agent
+# cannot self-grant; only a human-authorised pass closes it.
+# Runs ON the host that owns the accounts; every read and write of another
+# account's file goes through sudo.
 #
 
 set -uo pipefail
@@ -155,8 +151,12 @@ for u in "$@"; do
     echo "        -> FAILED to build the new settings; left untouched"
     continue
   fi
+  # 0600 ON THE BACKUP: `cp -p` copies the source's mode (#409).
   bak="$f.bak-$(date +%Y%m%d%H%M%S)"
-  $SUDO test -f "$f" && $SUDO cp -p "$f" "$bak"
+  if $SUDO test -f "$f"; then
+    $SUDO cp -p "$f" "$bak" && $SUDO chmod 600 "$bak"
+    $SUDO chmod 600 "$f"
+  fi
   if printf '%s\n' "$new" | $SUDO tee "$f" >/dev/null 2>&1; then
     $SUDO chown "$u:$u" "$f" 2>/dev/null
     $SUDO chmod 0600 "$f" 2>/dev/null

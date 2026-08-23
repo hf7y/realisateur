@@ -5,22 +5,12 @@
 # RUNNER: no -- needs `ssh $CRED_HOST` + passwordless `sudo -n -u <account>`
 #
 # TRAPS (the rest of this header is in the vault):
-# Measured 2026-08-11: ecosim's `gh` credential was a fine-grained PAT missing
-# the Pull-requests permission -- 403 on the ENTIRE Pull-requests API, read
-# and write. `gh issue list` kept working, so every automated signal an
-# operator would normally trust (a green test run, a pushed branch, an
-# answered issue) stayed healthy right up to the one step that mattered. It
-# took two days and a human to notice, because the OTHER nine accounts were
-# never compared against it -- each account's own scripts
-# (provision-selfdev-user.sh, wire-selfdev-git.sh, selfdev-gh-app.sh) check
-# THAT account in isolation and always have. THE ACTUAL DEFECT WAS THAT
-# NOTHING COMPARED THE TEN. This is that comparison, run on a clock.
 # --audit (default) is READ-ONLY throughout: it never writes to the fleet, so
 # it needs no notify-senechal and is safe to run unattended on a clock. It is
 # the mode that would have caught ecosim on day one.
 #
 # usage:
-# exit (audit):  0 clean   1 drift or a per-account BLIND   3 fleet BLIND
+# exit (audit):  0 clean   1 drift or a per-account BLIND   6 fleet BLIND
 # exit (apply):  0 converged / nothing to do   5 a step failed
 
 set -uo pipefail
@@ -32,7 +22,7 @@ CLI_USAGE='  selfdev-credentials.sh            --audit (default): read all ten a
   selfdev-credentials.sh --apply <account>   converge ONE account to the baseline'
 CLI_FLAGS='--audit --apply'
 CLI_POSITIONAL=any
-CLI_EXITS='  audit: 0 clean   1 drift found, or an account could not be read (BLIND)   3 the whole fleet is BLIND
+CLI_EXITS='  audit: 0 clean   1 drift found, or an account could not be read (BLIND)   6 the whole fleet is BLIND
   apply: 0 converged, or nothing to do   5 a converge step failed   2 usage error'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
@@ -65,7 +55,6 @@ act()   { printf '  DO    %s\n' "$*"; }
 # ============================================================================
 # THE REMOTE PROBE -- the ONLY place this script touches the network.
 # ============================================================================
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 fetch_remote() { # fetch_remote [account-filter]
   # "-" IS THE NO-FILTER SENTINEL. NEVER AN EMPTY STRING.
   #
@@ -103,7 +92,6 @@ probe_one() {
   # THE CREDENTIAL IS HOST-WIDE as of 2026-08-12: /etc/selfdev/{app.pem,gh-app.conf},
   # one file readable by group `selfdev`, not a copy per account. So what this
   # probe asks changed shape: not "does this account have its own key" but
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local pem="${SELFDEV_APP_PEM:-/etc/selfdev/app.pem}"
   local conf="${SELFDEV_APP_CONF:-/etc/selfdev/gh-app.conf}"
   local hosts="$HOME/.config/gh/hosts.yml"
@@ -141,8 +129,17 @@ probe_one() {
       *)             [ -n "$line" ] && token="other" ;;
     esac
   fi
-  local ownrepo; ownrepo="$(id -un)"
-  local wo; wo="$(git config --global --get-all "url.git@github-$ownrepo:$owner/$ownrepo.git.insteadof" 2>/dev/null | wc -l | tr -d ' ')"
+  # "WIRED" was url.insteadOf; now the helper's shape, counts ZERO (#171).
+  local wo; wo="$(git config --global --get-all credential."https://github.com".helper 2>/dev/null)"
+  case "$(printf '%s' "$wo" | grep -c .)" in
+    0) wo=none ;;
+    1) case "$wo" in
+         *selfdev-gh-app.sh*) wo=app ;;
+         *"gh auth git-credential"*) wo=gh ;;
+         *) wo=other ;;
+       esac ;;
+    *) wo=multi ;;
+  esac
   printf '%s\t%s\t%s\t%s\t%s\t%s' "$pem_state" "$conf_state" "$keymatch" "$token" "$extra" "$wo"
   local r wr
   for r in "$@"; do
@@ -212,6 +209,7 @@ cred_grade_account() {
   fi
 
   case "$token" in
+    # gho_ stays the baseline: git pushes as the App, `gh` uses this token.
     gho) : ;;
     missing) bad "$acct: no gh-token at all (~/.config/gh/hosts.yml unreadable or absent) -- gh CLI cannot authenticate: no issue filing, no deploy-key registration"; drift=1 ;;
     pat|other)
@@ -239,13 +237,19 @@ cred_grade_account() {
     done
   fi
 
-  [ "$wire_own" = 3 ] || { bad "$acct: own-repo git wiring is $wire_own/3 url.insteadOf spellings -- cannot push via the deploy-key channel"; drift=1; }
+  case "$wire_own" in
+    app) : ;;
+    none)  bad "$acct: no git credential helper -- https pushes have no credential at all"; drift=1 ;;
+    gh)    bad "$acct: git credential helper is still \`gh auth git-credential\`, i.e. the shared gho_ token -- run selfdev-gh-app.sh --wire"; drift=1 ;;
+    multi) bad "$acct: credential.https://github.com.helper holds MORE THAN ONE value -- git takes the first that answers, so which credential pushes is not decidable from config. This is the shape that made --wire report OK on a write it never made"; drift=1 ;;
+    *)     bad "$acct: git credential helper is '$wire_own', not the App"; drift=1 ;;
+  esac
   local r i=0
   for r in $CRED_SHARED_REPOS; do
     i=$((i + 1))
     local w=""
     case "$i" in 1) w="$wire_r1" ;; 2) w="$wire_r2" ;; 3) w="$wire_r3" ;; esac
-    [ "$w" = 3 ] || { bad "$acct: $r git wiring is ${w:-0}/3 url.insteadOf spellings"; drift=1; }
+    [ "${w:-0}" = 0 ] || { bad "$acct: $r still has ${w} url.insteadOf rewrite(s) -- ssh wins over the helper, so this repo keeps pushing as a deploy key"; drift=1; }
   done
 
   [ "$drift" -eq 0 ] && ok "$acct: matches baseline"
@@ -255,7 +259,6 @@ cred_grade_account() {
 # ============================================================================
 # THE SYMMETRY CHECK -- deploy-key READ/WRITE level, from GitHub itself.
 # ============================================================================
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 cred_check_deploy_keys() { # cred_check_deploy_keys <account>...
   if ! command -v "$CRED_GH_BIN" >/dev/null 2>&1; then
     blind "deploy-key symmetry: '$CRED_GH_BIN' not on PATH -- could not check GitHub-side read/write permissions"
@@ -272,7 +275,6 @@ cred_check_deploy_keys() { # cred_check_deploy_keys <account>...
   # AN ACCOUNT'S OWN REPO IS ALWAYS ITS OWN, even when that repo also appears
   # on the shared list. `realisateur@monkey` and `scheduler@monkey` exist
   # because one unix user per project is the whole monkey design, and their
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local repo acct others
   for repo in $CRED_SHARED_REPOS; do
     others=""
@@ -296,7 +298,6 @@ cred_check_repo_keys() {
   # `--json title,readOnly` is REQUESTED but not, in practice, HONOURED: gh
   # 2.45.0 validates "readOnly" as a real field name (an unknown one is
   # refused with a list that names it) and then ignores the filter anyway,
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   local json; json="$("$CRED_GH_BIN" repo deploy-key list --repo "$CRED_GH_OWNER/$repo" --json title,readOnly 2>/dev/null)"
   if [ -z "$json" ]; then
     blind "deploy-key symmetry: could not list keys on $CRED_GH_OWNER/$repo (no admin access here, or the repo/call failed)"
@@ -307,7 +308,6 @@ cred_check_repo_keys() {
     # TWO jq calls, deliberately, not one with `// empty`. jq's `//` falls
     # through on `false` as well as `null` -- `.readOnly // empty` silently
     # turned every legitimate `"readOnly": false` (a WRITE key -- exactly the
-    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     local suf="-$acct-$repo" found
     found="$(printf '%s' "$json" | jq -r --arg suf "$suf" '[.[] | select(.title | endswith($suf))] | length')"
     if [ "${found:-0}" -eq 0 ] 2>/dev/null; then
@@ -329,7 +329,6 @@ cred_check_repo_keys() {
         # FAIL LOUD ON AN UNRECOGNIZED SHAPE. A silent `case` with no default
         # arm is exactly how this bug hid the first time: `$ro` read the
         # literal string "null" (the field name gh's own error message calls
-        #   [rest: vault:realisateur/guard-archaeology-20260817.md]
         blind "deploy-key symmetry: $acct on $repo returned an unreadable readOnly value ('$ro') -- gh's JSON shape may have changed" ;;
     esac
   done
@@ -346,7 +345,7 @@ cmd_audit() {
   local out; out="$(fetch_remote "")"; local rc=$?
   if [ "$rc" -ne 0 ] || [ -z "$out" ]; then
     echo "BLIND: could not reach $CRED_HOST at all (ssh rc=$rc). Nothing was verified." >&2
-    return 3
+    return 6
   fi
 
   # `read -r acct row` with IFS=tab and MORE than two tab-separated fields on
@@ -363,7 +362,7 @@ cmd_audit() {
 
   if [ "${#accounts[@]}" -eq 0 ]; then
     echo "BLIND: $CRED_HOST answered, but no account in uid $CRED_UID_MIN-$CRED_UID_MAX was found." >&2
-    return 3
+    return 6
   fi
 
   echo
@@ -393,11 +392,8 @@ cmd_audit() {
 # ============================================================================
 #
 # Idempotent, fails loud, NEVER touches ~/.config/gh/hosts.yml and NEVER
-# deletes an "extra" file -- see the header. Every step is DELEGATED to a
-# script that already exists and is already tested (wire-selfdev-git.sh), or
-# is the same shared-credential COPY provision-selfdev-user.sh already does
-# for the claude/gh tokens -- no new way to mint or register a credential is
-# invented here.
+# deletes an "extra" file. Every step is DELEGATED to a script that already
+# exists and is already tested -- no new way to mint a credential here.
 cmd_apply() {
   local acct="$1"
   echo "== selfdev-credentials --apply $acct -- $CRED_HOST =="
@@ -425,7 +421,6 @@ cmd_apply() {
   # --- 1. the App credential: HOST-WIDE, placed by the script that owns it --
   #
   # This block used to copy a private app.pem + gh-app.conf into the account,
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   if [ "$pem" != "ok:600" ] || [ "$conf" = missing ]; then
     act "placing the host-wide App credential and adding $acct to group $CRED_APP_GROUP (selfdev-app-key.sh --apply)"
     if "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \
@@ -440,36 +435,24 @@ cmd_apply() {
     echo "  --    $acct already reads the host-wide App credential; left alone"
   fi
 
-  # --- 2. git wiring: DELEGATED to the account's own wire-selfdev-git.sh ----
-  cred_apply_wiring() { # cred_apply_wiring <repo> <rw-or-empty> <have>
-    local repo="$1" rw="$2" have="$3"
-    if [ "$have" = 3 ]; then
-      echo "  --    $repo git wiring already 3/3 for $acct; left alone"
-      return 0
-    fi
-    act "wire-selfdev-git.sh $repo --apply${rw:+ --rw} as $acct"
-    local remote_script="\$HOME/Documents/Projects/realisateur/bin/wire-selfdev-git.sh"
+  # --- 2. the push path: the App over https, not per-repo ssh deploy keys --
+  local leftover=$(( ${wire_r1:-0} + ${wire_r2:-0} + ${wire_r3:-0} ))
+  if [ "$wire_own" = app ] && [ "$leftover" -eq 0 ]; then
+    echo "  --    $acct already pushes as the App over https; left alone"
+  else
+    act "selfdev-gh-app.sh --wire as $acct (helper=$wire_own, $leftover leftover rewrite(s))"
     if "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \
-         "sudo -n -u '$acct' bash -lc \"[ -x $remote_script ] && '$remote_script' '$repo' --apply${rw:+ --rw}\""; then
-      echo "  OK    $repo wired for $acct"
+         "sudo -n -u '$acct' bash -lc '${CRED_APP_WIRE:-/usr/local/libexec/selfdev/selfdev-gh-app.sh} --wire'"; then
+      echo "  OK    $acct wired to the App"
       changed=1
-      return 0
+    else
+      echo "  FLAG  wiring $acct FAILED -- see selfdev-gh-app.sh's own output above" >&2
+      failed=1
     fi
-    echo "  FLAG  wiring $repo for $acct FAILED -- see wire-selfdev-git.sh's own output above" >&2
-    failed=1
-    return 1
-  }
-  cred_apply_wiring "$(cred_own_repo "$acct")" --rw "$wire_own"
-  local r i=0
-  for r in $CRED_SHARED_REPOS; do
-    i=$((i + 1))
-    local w=""
-    case "$i" in 1) w="$wire_r1" ;; 2) w="$wire_r2" ;; 3) w="$wire_r3" ;; esac
-    cred_apply_wiring "$r" "" "$w"
-  done
+  fi
 
   # --- 3. what this NEVER does, said out loud in the run itself -------------
-  echo "  --    ~/.config/gh/hosts.yml (the gh-token) was not touched -- removing a working credential is a decision, not a converge step"
+  echo "  --    ~/.config/gh/hosts.yml (the gh-token) was not touched -- gho_ is the baseline and stays; the App is the PUSH credential, not a replacement for gh's own auth"
   if [ "$extra" != "-" ]; then
     echo "  --    extra file(s) under ~/.config/selfdev/ ($extra) were not touched -- declare them in CRED_GRANTS or remove them by hand"
   fi

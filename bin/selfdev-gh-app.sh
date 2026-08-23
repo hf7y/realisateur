@@ -24,16 +24,6 @@ set -uo pipefail
 #
 #     selfdev-gh-app.sh --credential get
 #
-# `get` matched no case, fell through to `*)`, printed usage and exited 2.
-# THE HELPER HAS THEREFORE NEVER FUNCTIONED, from the day it was written
-# (2026-08-06) to the day this was found (2026-08-07). Every fetch and push
-# through it fell back to whatever else git could find.
-#
-# bin/tests/selfdev-gh-app.test.sh exercised `--credential` -- but never with
-# the argument git actually appends, so it passed by testing a shape
-# production never runs. That is the same bug class as the `$HOME`-fixture
-# guards in MEMORY.md and as the `--build-id -` outage in this same PR: a test
-# green against a paraphrase of the real invocation.
 MODE="--check"; REPOS=""; ADOPT_ACCOUNT=""; ADOPT_KEY=""; ADOPT_ID=""; GIT_OP=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -59,7 +49,6 @@ done
 # WHERE THE CREDENTIAL LIVES is answered in ONE place for every reader --
 # bin/lib/selfdev-app-key.sh -- and not re-spelled here. Until 2026-08-12 this
 # line said `$HOME/.config/selfdev/gh-app.conf`, i.e. one copy of one key per
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 _sd_lib="$(dirname "${BASH_SOURCE[0]}")/lib/selfdev-app-key.sh"
 [ -r "$_sd_lib" ] || _sd_lib="$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh"
 if [ -r "$_sd_lib" ]; then
@@ -148,7 +137,6 @@ installation_id() {
 # --- the token, with a cache -------------------------------------------------
 # Cached because git invokes a credential helper on EVERY remote operation, and
 # minting per operation would turn one push into three round trips and three
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 mint_token() {
   local jwt inst body cache now exp
   cache="$CACHE_DIR/$(printf '%s|%s|%s' "$APP_ID" "$OWNER" "$REPOS" | openssl dgst -sha256 -hex | awk '{print $NF}').tok"
@@ -182,7 +170,6 @@ mint_token() {
 # ============================================================================
 # AUTHOR AND PUSHER ARE TWO LAYERS, AND --wire USED TO CONFLATE THEM
 # ============================================================================
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 SELFDEV_EMAIL_DOMAIN="${SELFDEV_EMAIL_DOMAIN:-selfdev.invalid}"
 
 account_identity() {
@@ -192,10 +179,8 @@ account_identity() {
 }
 
 # --- the BOT identity: the PUSHER half, printed by --identity ----------------
-# Still resolved and still correct for what it IS -- the actor GitHub will
-# attribute the PUSH to. It is no longer written into git's author fields.
-# The email here is the only address GitHub links back to the bot actor, which
-# is why it has that shape and why it is not the shape used above.
+# The actor GitHub attributes the PUSH to, never written into git's author
+# fields. That email shape is the only one GitHub links back to the bot.
 bot_identity() {
   local jwt slug uid
   jwt="$(app_jwt)" || return 1
@@ -231,7 +216,6 @@ case "$MODE" in
     # ADOPT NO LONGER INVENTS A PATH. It used to write
     # ~/.config/selfdev/<account>/<account>.pem plus a conf naming it -- which
     # is how one App key came to sit on disk under four different names, and
-    #   [rest: vault:realisateur/guard-archaeology-20260817.md]
     if [ "$(id -u)" -eq 0 ] && [ -x "$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh" ]; then
       "$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh" --apply --from "$ADOPT_KEY" --app-id "$ADOPT_ID" --owner "$OWNER" \
         || die "selfdev-app-key.sh --apply refused; the key was NOT installed"
@@ -284,7 +268,6 @@ case "$MODE" in
         # `''` is the hand-run form (`selfdev-gh-app.sh --credential`), kept
         # so an operator can still exercise the helper from a terminal exactly
         # as it was documented before git's operation argument was honoured.
-        #   [rest: vault:realisateur/guard-archaeology-20260817.md]
         tok="$(mint_token)" || exit 5
         printf 'username=x-access-token\npassword=%s\n' "$tok"
         ;;
@@ -298,9 +281,16 @@ case "$MODE" in
 
   --wire)
     self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
-    git config --global credential."https://github.com".helper "!'$self' --credential"
+    want_helper="!'$self' --credential"
+    git config --global --unset-all credential."https://github.com".helper 2>/dev/null
+    git config --global --add credential."https://github.com".helper "$want_helper"
     git config --global credential."https://github.com".useHttpPath false
-    ok "git credential helper -> $self --credential"
+    got_helper="$(git config --global --get-all credential."https://github.com".helper)"
+    if [ "$got_helper" = "$want_helper" ]; then
+      ok "git credential helper -> $self --credential"
+    else
+      bad "git config accepted the helper write but re-reading gives '$got_helper'"
+    fi
 
     # THE AUTHOR HALF. The account, not the bot -- see the model above.
     if ident="$(account_identity)"; then
@@ -367,9 +357,25 @@ case "$MODE" in
     # url.insteadOf from wire-selfdev-git.sh rewrites github.com onto per-repo
     # ssh aliases. Where both are wired, ssh WINS and this helper is never
     # consulted -- silently. Say so rather than let it look wired.
-    if git config --global --get-regexp '^url\..*github-.*\.insteadof$' >/dev/null; then
-      gap "deploy-key url.insteadOf rewrites are also configured -- those repos will keep using ssh and the App identity, remove them per repo to switch"
-    fi
+    # REMOVED, NOT REPORTED: ssh wins over the helper otherwise (#171).
+    removed=0
+    while read -r sect; do
+      [ -n "$sect" ] || continue
+      git config --global --remove-section "$sect" 2>/dev/null && removed=$((removed + 1))
+    done < <(git config --global --get-regexp '^url\..*github-.*\.insteadof$' \
+             | awk '{print $1}' | sed 's/\.insteadof$//' | sort -u)
+    [ "$removed" -gt 0 ] && ok "removed $removed deploy-key url.insteadOf rewrite(s) -- https now reaches the helper"
+
+    for _d in "$HOME"/Documents/Projects/*/; do
+      [ -d "$_d/.git" ] || continue
+      _u="$(git -C "$_d" remote get-url origin 2>/dev/null)" || continue
+      case "$_u" in
+        git@github-*:*|git@github.com:*)
+          _slug="${_u#*:}"; _slug="${_slug%.git}"
+          git -C "$_d" remote set-url origin "https://github.com/$_slug.git" \
+            && ok "$(basename "$_d") origin -> https://github.com/$_slug.git" ;;
+      esac
+    done
     printf '\nwired: %d ok, %d missing, %d bad\n' "$PASS" "$GAPS" "$BAD"
     [ "$BAD" -eq 0 ] || exit 5
     ;;

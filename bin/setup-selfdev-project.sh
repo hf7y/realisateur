@@ -14,6 +14,7 @@
 #      block, without which the account's first unattended night cannot write
 #      .claude/** at all (hf7y/realisateur#282)
 #   8. bin/selfdev-hooks-provision.sh              (root)  the SubagentStop hook (#272)
+#   9. the project's own runtime secrets           (root)  REPORTED, not supplied (#289)
 
 set -uo pipefail
 
@@ -104,7 +105,6 @@ run_as() {
 # STAGE, don't reach across accounts. $HERE is whatever checkout this script
 # was invoked from -- typically an EXISTING project account's own realisateur
 # clone, e.g. bibliothecaire's -- and every project home is 0700 (provisioned
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 STAGE="$HOME_DIR/.selfdev-setup"
 install -d -m 700 -o "$PROJECT" -g "$PROJECT" "$STAGE"
 install -m 700 -o "$PROJECT" -g "$PROJECT" \
@@ -114,7 +114,6 @@ say "3/8 git credentials, per repo"
 # THE PIPE USED TO EAT THE ANSWER. wire-selfdev-git.sh already fails loud on
 # its own: its "6. the witness" section runs `git ls-remote` against the freshly
 # wired alias and exits 5 on `BAD WITNESS FAILED: ... the wiring is not live`.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 wire_failed=""
 for repo in realisateur scheduler senechal "$PROJECT"; do
   access=""
@@ -143,7 +142,6 @@ run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
 # --- 5. the release bootstrap, and the account's own clock -------------------
 # DELEGATED to bin/wire-release-channel.sh since 2026-08-10, not reimplemented.
 # It was inline here, which meant the only way to give an account a clock was
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 say "5/8 the GitHub App credential (host-wide)"
 if [ -x "$HERE/selfdev-app-key.sh" ]; then
   # rc read from the command, not from a pipeline whose last stage is `sed`.
@@ -168,8 +166,6 @@ say "6/8 release bootstrap + clock"
 # --- 7. the permissions block ------------------------------------------------
 # Without this, the account's FIRST unattended night hits the harness's
 # sensitive-file gate on any `.claude/**` write and cannot record what it did
-# (hf7y/realisateur#282, worked example: vim-arcade@monkey 2026-08-04 shipped
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 say "7/8 permissions block"
 ACCOUNTS="$PROJECT" "$HERE/selfdev-permissions-provision.sh" --apply --strict \
   || echo "  WARN    $PROJECT still has no permissions block -- its first unattended run will not be able to write .claude/**"
@@ -179,6 +175,34 @@ say "8/8 SubagentStop closeout hook"
 ACCOUNTS="$PROJECT" "$HERE/selfdev-hooks-provision.sh" --apply --strict \
   || echo "  WARN    $PROJECT still has no SubagentStop hook wired -- a dirty tree at exit will not be caught"
 echo "  DO      notify-senechal 'realisateur selfdev-release-tick cron in $PROJECT@$HOST crontab, owned by realisateur'"
+
+# --- 9. the project's OWN runtime secrets: DECLARED, never supplied ----------
+# #289's boundary, stated. This provisions what the ECOSYSTEM needs; a
+# project's own credentials stay on the workstation. Copying them here would
+# widen the blast radius #171 spent itself narrowing.
+#
+# It owes the difference between "needs none" and "needs some and has none":
+# a project declares them in `.selfdev-secrets`, one path per line.
+say "9/9 the project's own runtime secrets"
+SECRETS_DECL="$HOME_DIR/Documents/Projects/$PROJECT/.selfdev-secrets"
+if [ ! -r "$SECRETS_DECL" ]; then
+  echo "  --      $PROJECT declares no runtime secrets (.selfdev-secrets absent)."
+  echo "          If it needs any, that file is where it says so; nothing here supplies them."
+else
+  missing=0
+  while IFS= read -r want; do
+    case "$want" in ''|\#*) continue ;; esac
+    # Runs as root, which can stat a path a project owns; no sudo hop.
+    if [ -e "$want" ]; then
+      echo "  OK      $want"
+    else
+      echo "  MISSING $want -- $PROJECT cannot do its own work without it"
+      missing=$((missing + 1))
+    fi
+  done < "$SECRETS_DECL"
+  [ "$missing" -gt 0 ] && \
+    echo "  DO      put those in place as $PROJECT by hand. This script will not: they are the project's, not the ecosystem's."
+fi
 
 cat <<EOF
 

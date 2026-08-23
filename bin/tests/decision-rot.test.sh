@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
 # decision-rot.test.sh -- witness for bin/decision-rot.sh.
 #
-#
 # WHAT IS PINNED, and why each case exists rather than being a nice-to-have:
 #
 #   * THE TWO TRAPS THAT ALREADY ATE ANSWERS.
 #     B: an answer on a CLOSED issue. It must count as ANSWERED (so `--state
 #        open` can never be reintroduced for the answer scan) and must NOT
 #        count as ROT (closed is the estate's own signal for handled).
-#     C: an agent's own stamped comment under the shared `hf7y` token, which
-#        is byte-indistinguishable from Zach's except for the trailing stamp.
-#        A repo where the ONLY owner comments are stamped has zero answers.
-#   * D: the stamp is read on the LAST NON-BLANK LINE ONLY. A stamp quoted
-#        mid-body out of another comment must not disqualify a real answer,
-#        and trailing blank lines must not hide a real stamp.
-#   * E: silent zero. A `gh` failure must exit 3, never 0-with-no-rot.
+#     C: an agent's own stamped comment, byte-indistinguishable from Zach's
+#        but for the trailing stamp. Only-stamped comments means zero answers.
+#   * D: the stamp is the LAST NON-BLANK LINE ONLY -- a mid-body quote must
+#        not disqualify a real answer, nor trailing blanks hide a real stamp.
+#   * E: silent zero. A `gh` failure must exit 6, never 0-with-no-rot.
+#   * C'': a stamped RELAY counts; without its marker it does not (#430).
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -82,6 +80,27 @@ rc    "C1 exits 0 -- a stamped comment is not an answer" 0 "$RC"
 has   "C2 zero answered" "$OUT" "0        0"
 hasnt "C3 not listed as rotting" "$OUT" "#9"
 
+echo "-- C''. a RELAYED answer counts, or a spoken decision dies with the session"
+cat > "$T/c3.json" <<EOF
+[
+ {"number":10,"title":"agent wrote down what Zach said out loud","state":"OPEN","labels":[],
+  "comments":[{"author":{"login":"owner"},"body":"DECISION (Zach, in conversation): delete it.\n\n<!-- decision-by: zach 2026-08-21 -->\n\n$STAMP","createdAt":"2026-08-03T00:00:00Z"}]}
+]
+EOF
+OUT="$(run "$T/c3.json" o/r)"; RC=$?
+rc  "C''1 exits 1 -- the relay IS an answer, and it is still open" 1 "$RC"
+has "C''2 counts it answered" "$OUT" "1        1"
+has "C''3 dated from the relay" "$OUT" "answered 2026-08-03"
+# Without the marker this is case C: stamped, therefore silent.
+cat > "$T/c4.json" <<EOF
+[
+ {"number":10,"title":"same comment, no marker","state":"OPEN","labels":[],
+  "comments":[{"author":{"login":"owner"},"body":"DECISION (Zach, in conversation): delete it.\n\n$STAMP","createdAt":"2026-08-03T00:00:00Z"}]}
+]
+EOF
+OUT="$(run "$T/c4.json" o/r)"; RC=$?
+rc  "C''4 the same relay WITHOUT the marker still does not count" 0 "$RC"
+
 echo "-- C'. the same issue, once the human actually replies, IS rot"
 cat > "$T/c2.json" <<EOF
 [
@@ -109,12 +128,12 @@ has   "D2 exactly one answered -- the mid-body quote does not disqualify" "$OUT"
 has   "D3 the mid-body-quote issue is the rotting one" "$OUT" "#10"
 hasnt "D4 trailing blank lines do not hide the stamp" "$OUT" "#11"
 
-echo "-- E. SILENT ZERO: a gh failure exits 3, never 0"
+echo "-- E. SILENT ZERO: a gh failure exits 6, never 0"
 OUT="$(GH_FAIL='API rate limit exceeded' run "$T/a.json" o/r 2>&1)"; RC=$?
-rc  "E1 exits 3 on a gh failure" 3 "$RC"
+rc  "E1 exits 6 on a gh failure" 6 "$RC"
 has "E2 says the count is untrustworthy" "$OUT" "NOT trustworthy"
 OUT="$(GH_FAIL='GraphQL: Could not resolve to a Repository' run "$T/a.json" --all 2>&1)"; RC=$?
-rc  "E3 a missing repo across --all is exit 3, not a quiet short count" 3 "$RC"
+rc  "E3 a missing repo across --all is exit 6, not a quiet short count" 6 "$RC"
 OUT="$(GH_FAIL='Issues are disabled for this repo' run "$T/a.json" o/r 2>&1)"; RC=$?
 rc  "E4 issues-disabled is soft (exit 0, nothing to grade)" 0 "$RC"
 has "E5 and says so on stderr" "$OUT" "issues disabled"
@@ -135,6 +154,33 @@ bash "$SCRIPT" --not-a-real-flag >/dev/null 2>&1; rc "G1 unknown flag exits 2" 2
 bash "$SCRIPT" >/dev/null 2>&1;                   rc "G2 no argument exits 2" 2 "$?"
 bash "$SCRIPT" --help >/dev/null 2>&1;            rc "G3 --help exits 0" 0 "$?"
 has "G4 --help states the rot exit code" "$(bash "$SCRIPT" --help 2>&1)" "1  rot found"
+
+# --- the roster covers every repo with a backlog (2026-08-22) ---------------
+# 200 open issues estate-wide; 64 sat in ELEVEN repos NO SENSOR LOOKED AT.
+# decision-rot walks ROSTER, so a repo absent from it can hold an answered and
+# abandoned decision forever while `ausculte rot` reads OK -- the estate's own
+# disease, in the file whose header already named it: "uid 3000-3099 misses the
+# ecosystem repos that carry decisions and never dispatch."
+section "H. roster coverage"
+. "$(cd "$(dirname "$0")/.." && pwd)/lib/roster-set.sh"
+_missing=""
+for _p in dcp-gate-site musc-2300 scriba-senatus french-textbook abletim \
+          etalon vitae space-canon verbs front-door basheur; do
+  case " ${ROSTER[*]} " in *" $_p "*) ;; *) _missing="$_missing $_p" ;; esac
+done
+[ -z "$_missing" ] \
+  && ok "H1 every repo that carries a backlog is swept, armed or not" \
+  || bad "H1 every repo with a backlog is in ROSTER" "unswept:$_missing"
+
+# WIRED IS NOT ARMED, and the two arrays are what keep them apart. A repo that
+# drifts from ECOSYSTEM into PROJECTS starts spending quota every night.
+_armed=""
+for _p in dcp-gate-site musc-2300 space-canon; do
+  case " ${ROSTER_PROJECTS[*]} " in *" $_p "*) _armed="$_armed $_p" ;; esac
+done
+[ -z "$_armed" ] \
+  && ok "H2 the newly swept repos are NOT in the dispatching set" \
+  || bad "H2 swept is not armed" "in ROSTER_PROJECTS, and so spending quota:$_armed"
 
 echo
 summary

@@ -70,7 +70,6 @@ elif [ -d "$PROJECTS/scheduler" ]; then
   # The fallback is not wrong by itself: mandark deliberately has no host file
   # and reads the shared one, which is documented in _paced.dexter.conf's own
   # header. What matters is WHAT would be inherited. Falling back onto a file
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   enabled=$(grep -cE '^[a-z][^|]*\|1\|' "$SHARED_PACED" 2>/dev/null || echo 0)
   if [ "${enabled:-0}" -gt 0 ]; then
     bad "no schedule/_paced.$HOST.conf, and the shared _paced.conf has $enabled ENABLED row(s) -- this host would silently dispatch another machine's rotation"
@@ -84,7 +83,6 @@ fi
 # THREE WAYS THIS USER CAN BE AUTHENTICATED, and the check must know all of
 # them or it reports a false gap on the shape we actually use.
 #
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 CRED="$HOME/.claude/.credentials.json"
 SETTINGS="$HOME/.claude/settings.json"
 auth=""
@@ -131,10 +129,7 @@ echo
 echo "== landing =="
 mkdir -p "$PROJECTS"
 
-# Credentials come BEFORE the clone that needs them, per repo, derived from
-# the same loop -- added 2026-08-03 after ecosim's four deploy keys turned out
-# to have been made by hand and written down nowhere ("we can't do this for
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
+# Credentials come BEFORE the clone that needs them, per repo.
 WIRE="$(dirname "$0")/wire-selfdev-git.sh"
 
 wire_repo() {
@@ -173,7 +168,6 @@ clone_or_update scheduler   "https://github.com/$GH_OWNER/scheduler.git"
 # EVERY OTHER REPO IS DERIVED, NOT TYPED. schedule/<p>.conf already declares
 # REPO_URL per project -- that IS the registry. A typed list here would be a
 # second source that drifts from it, which is the failure realisateur's own
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 for p in ${SELFDEV_PROJECTS:-senechal ecosim}; do
   conf="$PROJECTS/scheduler/schedule/$p.conf"
   if [ ! -f "$conf" ]; then bad "$p: no schedule/$p.conf -- not a registered project"; continue; fi
@@ -186,21 +180,9 @@ done
 # installe is itself a verb, and it is the tool that installs verbs. ONE
 # hand-made symlink, in one place, and every subsequent write goes through it.
 #
-# IT USED TO BOOTSTRAP OUT OF A WORKTREE THIS SCRIPT CREATED -- `git worktree
-# add $PROJECTS/senechal-verbs bashified`, immediately above. That block is
-# gone, for two independent reasons and either alone would be enough:
-#
-#   1. It was already dead. `installe` stopped reading a <project>-verbs
-#      worktree on 2026-08-05 (hf7y/senechal a1c8629f, PR #22) and installs
-#      from the pinned build manifest instead. Re-probed on mandark
-#      2026-08-11: $PROJECTS/senechal-verbs does not exist, ~/.local/bin/
-#      installe resolves into the adopted verb build under ~/.local/share,
-#      and every verb on PATH resolves through the build. This was
-#      bootstrapping from a location nothing else in the ecosystem reads.
-#   2. Zach, 2026-08-06: "we should not have any more worktrees after
-#      tonight" (hf7y/realisateur#69). This was one of three scripts on the
-#      estate that put them back after the directories were cleared.
-#
+# NO WORKTREE HERE. `installe` installs from the pinned build manifest, not a
+# <project>-verbs worktree, and hf7y/realisateur#69 ended worktree creation
+# estate-wide; bin/no-worktree-lint.sh is what keeps it ended.
 # bin/install-verb-build.sh's own header states the same supersession from the
 # other end: "A verb today is a symlink into a bashified WORKTREE of a full
 # dev clone ... A build depends on no dev checkout at all -- which is the
@@ -243,7 +225,6 @@ if [ -x "$PROJECTS/realisateur/bin/install-shims.sh" ]; then
   # A nonzero exit here is NOT necessarily a failed install: install-shims.sh
   # also exits nonzero when it FLAGs, and its standing flag on a fresh account
   # is "subagent-closeout.sh is installed but not referenced in
-  #   [rest: vault:realisateur/guard-archaeology-20260817.md]
   shim_out="$(REPO="$PROJECTS/realisateur" "$PROJECTS/realisateur/bin/install-shims.sh" 2>&1)"; shim_rc=$?
   printf '%s\n' "$shim_out"
   if [ "$shim_rc" -eq 0 ]; then

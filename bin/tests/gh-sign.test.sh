@@ -29,6 +29,8 @@ for a in "$@"; do
   prev="$a"
 done
 printf '%s\n' "$*" | grep -q -- '--body-file -' && cat > "$GH_LAST_BODY"
+printf '%s\n' "$*" | grep -q -- 'body=@-' && cat > "$GH_LAST_BODY"
+for a in "$@"; do case "$a" in body=*) [ "$a" = 'body=@-' ] || printf '%s' "${a#body=}" > "$GH_LAST_BODY" ;; esac; done
 exit "${GH_EXIT:-0}"
 STUB
 chmod +x "$TMP/stub/gh"
@@ -82,7 +84,7 @@ reset
 # `issue create` is grammar-gated (lib/body-grammar.sh), so the fixture is
 # well-formed. The case is about the TRAILING BLANK LINES, not the grammar:
 # bin/tests/body-grammar.test.sh owns the refusal itself.
-printf 'NO-DECISION: @zach nothing to weigh\nline\n\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n\n\n' > "$TMP/body.txt"
+printf 'NO-DECISION: @zach nothing to weigh\nline\n\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n\n\n' > "$TMP/body.txt"
 run issue create --repo hf7y/widget --title t --body-file "$TMP/body.txt" >/dev/null 2>&1
 case "$(lastline)" in
   '<!-- agent: '*) ok "trailing blank lines do not push the marker off the end" ;;
@@ -135,6 +137,23 @@ contains "...and says so out loud" "$out" "BLIND"
 
 out="$(PATH="$TMP/loop:$TMP/stub" "$TIMEOUT_BIN" 10 "$BASH_BIN" "$GS" --self-check 2>&1)"
 contains "--self-check resolves past the shim to the real gh" "$out" "$TMP/stub/gh"
+
+# --- 9b. A SECOND COPY, NOT THE SAME INODE, IS STILL NOT "real gh" ---------
+# The production shape: a checkout run as `bash bin/gh-sign.sh` while
+# /usr/local/bin/gh is a DISTINCT installed copy of the same script. `-ef`
+# says "different file" for two copies, so without the content check this
+# shim picked the installed copy as "real gh" -- a double hop whose second
+# layer `cat`s an already-drained stdin and posts a blank body.
+mkdir -p "$TMP/installed"
+cp "$GS" "$TMP/installed/gh"; chmod +x "$TMP/installed/gh"
+reset
+out="$(GH_LOG="$TMP/gh.log" GH_LAST_BODY="$TMP/gh.body" \
+       PATH="$TMP/installed:$TMP/stub:$PATH" "$BASH_BIN" "$GS" \
+       issue comment 7 --repo hf7y/widget --body-file - <<<'two copies on PATH' 2>&1)"
+contains "a second on-disk copy of the shim is never mistaken for real gh" \
+      "$(cat "$TMP/gh.body")" "two copies on PATH"
+check "...and the real gh is invoked exactly once, not looped through both copies" \
+      "$(grep -c . "$TMP/gh.log")" "1"
 
 # --- 10. WHICH COPY OF THE POLICY IS THIS, AND HOW OLD? (#330) -------------
 # The shim ships as one link per host into a dated build. It recognises itself
@@ -223,6 +242,117 @@ fi
 out="$(PATH="$TMP/empty-path" "$TIMEOUT_BIN" 10 "$BASH_BIN" "$GS" --help 2>&1)"; rc=$?
 check "--help exits 0 where there is no real gh at all" "$rc" "0"
 contains "...and introduces the shim" "$out" "gh-sign"
+
+# --- `gh api` is the same write by another route (decision-rot's KNOWN GAP)
+reset
+printf 'a reply body\n' > "$TMP/reply.md"
+run api -X POST repos/hf7y/widget/issues/7/comments -F body=@"$TMP/reply.md" >/dev/null 2>&1
+case "$(lastline)" in
+  '<!-- agent: '*) ok "an api comment posted from a file is stamped" ;;
+  *) bad "api comment (file) unstamped" "got: $(lastline)" ;;
+esac
+check "...and the real gh is invoked exactly once" "$(grep -c . "$TMP/gh.log")" "1"
+contains "...as a stdin field, so a long body cannot hit ARG_MAX" "$(cat "$TMP/gh.log")" "body=@-"
+
+reset
+run api -X POST repos/hf7y/widget/issues/7/comments -f body="inline reply" >/dev/null 2>&1
+case "$(lastline)" in
+  '<!-- agent: '*) ok "an api comment passed inline is stamped" ;;
+  *) bad "api comment (inline) unstamped" "got: $(lastline)" ;;
+esac
+
+reset
+run api -X POST repos/hf7y/widget/pulls/7/comments -f body="pr reply" >/dev/null 2>&1
+case "$(lastline)" in
+  '<!-- agent: '*) ok "a pull-request api comment is stamped too" ;;
+  *) bad "pr api comment unstamped" "got: $(lastline)" ;;
+esac
+
+reset
+run api repos/hf7y/widget --jq .name >/dev/null 2>&1
+contains "a non-comment api call reaches gh unchanged" "$(cat "$TMP/gh.log")" "repos/hf7y/widget"
+case "$(cat "$TMP/gh.body" 2>/dev/null)" in
+  '') ok "...and nothing was signed into it" ;;
+  *) bad "a read was given a body" "got: $(cat "$TMP/gh.body")" ;;
+esac
+
+GOOD='NO-DECISION: nothing to weigh
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->'
+
+reset
+printf '%s\n' "$GOOD" > "$TMP/good.txt"
+run --check-body "$TMP/good.txt" >/dev/null 2>&1
+check "a well-formed body checks clean (0)" "$?" "0"
+
+reset
+printf 'no declaration line at all\n' > "$TMP/bad.txt"
+run --check-body "$TMP/bad.txt" >/dev/null 2>&1
+check "--check-body FOUND something (1); it was asked to look, not to write" "$?" "1"
+case "$(cat "$TMP/gh.log")" in
+  '') ok "...and it created nothing to refuse" ;;
+  *) bad "--check-body reached gh" "got: $(cat "$TMP/gh.log")" ;;
+esac
+reset
+run pr create --title t --body 'no declaration line at all' >/dev/null 2>&1
+check "a write the shim DECLINES to make is REFUSED (7)" "$?" "7"
+case "$(cat "$TMP/gh.log")" in
+  '') ok "...and nothing reached gh, so the refusal cost no write" ;;
+  *) bad "the refused write reached gh" "got: $(cat "$TMP/gh.log")" ;;
+esac
+
+# --- 12. --delivers: WHERE a change lands, derived, not asserted -----------
+# #521 shipped this actuator with no test at all, which is how it went on
+# answering `- none` for three files that deploy to every provisioned host.
+# The contract has TWO readers -- prop_channel for the class, prop_host_tools
+# for what rides to libexec by name -- and reading only the first is the bug.
+R="$TMP/deliv"; mkdir -p "$R/bin"
+git -C "$R" init -q
+git -C "$R" -c user.email=t@t -c user.name=t commit -q --allow-empty -m base
+deliv() { # <path-that-changed> -- graded against the commit before it alone
+  local base; base="$(git -C "$R" rev-parse HEAD)"
+  mkdir -p "$R/$(dirname "$1")"; : > "$R/$1"
+  git -C "$R" add -A >/dev/null 2>&1
+  git -C "$R" -c user.email=t@t -c user.name=t commit -q -m "change $1" >/dev/null 2>&1
+  ( cd "$R" && GH_SIGN_BASE="$base" "$BASH_BIN" "$GS" --delivers 2>&1 )
+}
+contains "a LOCAL-class probe names its libexec path, not '- none'" \
+  "$(deliv bin/ausculte-cadence.sh)" "- path:/usr/local/libexec/selfdev/ausculte-cadence.sh on monkey"
+contains "a payload script names its VERB, not its basename" \
+  "$(deliv bin/gh-sign.sh)" "- path:/usr/local/bin/gh on monkey"
+contains "a file that leaves the repo nowhere still says '- none'" \
+  "$(deliv README.md)" "- none"
+
+# --- 13. --default-after: one home for the grammar, on every account's PATH --
+# scheduler must read DEFAULT-AFTER at dispatch. It must not reach into a
+# realisateur build path for lib/body-grammar.sh, and it must not carry a
+# second copy of the parser. The shim already owns the body grammar and is
+# already on PATH everywhere, so it answers.
+reset
+printf 'DECISION: @zach -- q\nDEFAULT-AFTER 14d: close it as declined\n' > "$TMP/da.txt"
+out="$(run --default-after "$TMP/da.txt" 2>&1)"; rc=$?
+check "a well-formed default exits 0" "$rc" "0"
+check "...and prints days TAB action, for a caller to read" "$out" "$(printf '14\tclose it as declined')"
+
+printf 'DECISION: @zach -- an irreversible call\n' > "$TMP/none.txt"
+run --default-after "$TMP/none.txt" >/dev/null 2>&1
+check "no default exits 1 -- BLOCKS FOREVER is an answer, not an error" "$?" "1"
+
+# 1 and 6 must never be confused: "this blocks on purpose" vs "I could not read
+# the grammar". Folding them is how a BLIND probe gets reported as a verdict.
+GH_SIGN_LIB="$TMP/nolib" run --default-after "$TMP/da.txt" >/dev/null 2>&1
+check "an unreadable grammar is BLIND (6), never 1" "$?" "6"
+
+case "$(cat "$TMP/gh.log")" in
+  '') ok "...and none of it reached gh -- reading a body costs no write" ;;
+  *) bad "--default-after reached gh" "got: $(cat "$TMP/gh.log")" ;;
+esac
 
 echo
 summary

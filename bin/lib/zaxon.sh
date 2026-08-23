@@ -4,12 +4,28 @@
 # verb is the estate-wide door. NEVER FATAL: a recovery that aborts because it
 # could not announce itself is worse than a silent one.
 
+# Same ordering as zaxon_ask, for the same reason.
+zaxon_probe() {
+  local from="${1:-agent}" url
+  for url in ${ZAXON:-http://100.107.253.56:8643/mcp http://127.0.0.1:8643/mcp}; do
+    curl -s -m 8 -o /dev/null -H 'Content-Type: application/json' \
+      -H 'Accept: application/json,text/event-stream' -X POST "$url" \
+      -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"$from\",\"version\":\"1\"}}}" \
+      2>/dev/null && { printf '%s\n' "$url"; return 0; }
+  done
+  return 1
+}
+
 zaxon_ask() {
   local msg="$1" from="${2:-agent}" url hdr sid body tid
   hdr="$(mktemp)"; body="$(mktemp)"
-  for url in ${ZAXON:-http://127.0.0.1:8643/mcp http://100.107.253.56:8643/mcp}; do
+  # TAILNET FIRST: zaxon runs on dexter, so 127.0.0.1 answers only when the
+  # caller IS dexter. Listing loopback first reads as "loopback is the primary
+  # route", which is how "zaxon is unreachable from monkey" keeps being
+  # re-derived about a relay that answers.
+  for url in ${ZAXON:-http://100.107.253.56:8643/mcp http://127.0.0.1:8643/mcp}; do
     : > "$hdr"
-    curl -s -D "$hdr" -o /dev/null -m 20 -H 'Content-Type: application/json' \
+    curl -s -D "$hdr" -o /dev/null --connect-timeout 5 -m 20 -H 'Content-Type: application/json' \
       -H 'Accept: application/json,text/event-stream' -X POST "$url" \
       -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"$from\",\"version\":\"1\"}}}" \
       >/dev/null 2>&1 || continue

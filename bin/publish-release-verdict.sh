@@ -2,132 +2,33 @@
 # publish-release-verdict.sh -- publish tonight's release verdict to ONE
 # public URL that every consumer reads live.
 #
-# ============================================================================
-# WHY A URL AND NOT A FILE IN A REPO
-# ============================================================================
+# TRAPS (the rest of this header is in the vault):
 #
-# Zach, 2026-08-07: "post the cut status to a webpage, not a driftable file."
+# WHY A URL, NOT A FILE IN A REPO. A verdict committed into `hf7y/verbs` is
+# read out of a consumer's CLONE, and a stale clone is the bug being fixed.
+# One live endpoint, no local copy to rot: hf7y.com/verbs/status.json.
 #
-# He is right and the reason is the bug we are already fixing. A verdict
-# committed into `hf7y/verbs` is read by consumers out of THEIR clone of it,
-# and a clone is exactly the thing that goes 15 commits stale without saying
-# so. Publishing the answer into the same kind of artifact whose staleness
-# started this whole investigation would be circular.
+# WHY THIS ENDPOINT. A uid-3000 account's credential grants read on its OWN
+# repo only, so the verdict must be readable with NO credential or the
+# consumers that need it most cannot see it. Disclosed, deliberately: project
+# names, short SHAs, run and build ids for private repos -- no code, no
+# diffs, no paths, no credentials.
 #
-# One endpoint, fetched live on every tick, no local copy to rot:
+# IT MUST RUN ON NIGHTS THAT PRODUCE NOTHING, or "nothing changed" and "main
+# is broken" are again the same absence. `if: always()`, and the decision is
+# a closed enum -- CUT | NO_CHANGE | BLOCKED | ERROR -- refused here AND on
+# the consumer, so "unrecognised" never means "probably fine".
 #
-#     https://hf7y.com/verbs/status.json      machine
-#     https://hf7y.com/verbs/                 human
-#
-# ============================================================================
-# WHY THIS ENDPOINT, CHOSEN BY PROBING RATHER THAN PREFERENCE
-# ============================================================================
-#
-# The binding constraint is what a uid-3000 self-dev account can READ. Under
-# the GitHub App model those accounts hold a per-account credential scoped to
-# their OWN repository; it does not grant read on `hf7y/verbs`. So the verdict
-# has to be readable with NO credential at all, or the consumers that most
-# need it are the ones that cannot see it.
-#
-# Probed 2026-08-07:
-#   hf7y/verbs            private: true    has_pages: false
-#   hf7y (account)        type: User, free -- Pages on a PRIVATE repo needs a
-#                         paid plan, so publishing from `verbs` is not
-#                         available at any amount of configuration.
-#   hf7y/hf7y.github.io   public: true     Pages: built, https://hf7y.com/
-#                         (200 over HTTPS, custom domain, already live)
-#
-# So the endpoint is an existing, already-live, credential-free public site,
-# not a new thing to stand up and maintain. That is also the "extend what
-# exists" answer rather than inventing a parallel channel.
-#
-# WHAT THIS DISCLOSES, stated plainly rather than buried: the published file
-# contains project NAMES, short commit SHAs, Actions run ids, and build ids
-# for repositories that are private. It contains no code, no diffs, no file
-# paths and no credentials. That is a real disclosure decision and it was
-# directed, not assumed -- if the project names are themselves sensitive,
-# change PUBLISH_REPO to a private-but-tokened endpoint and every consumer
-# then needs a credential again.
-#
-# ============================================================================
-# HISTORY LIVES IN THE PUBLISHER'S OWN REPO, NOT IN A CONSUMER'S
-# ============================================================================
-#
-# The streak and the two clocks need more than tonight's row, so the endpoint
-# carries a rolling history. It is read back out of the publish repo's own
-# checkout -- the repository this script is about to push to anyway -- so
-# there is no separate state store and no chance of publishing a history that
-# disagrees with what is already served. A consumer never keeps a copy: it
-# fetches the whole document, every tick.
-#
-# ============================================================================
-# IT MUST RUN ON THE NIGHTS THAT PRODUCE NOTHING
-# ============================================================================
-#
-# This is the entire point of the inversion. If it only ran after a
-# successful cut, "nothing changed" and "main is broken" would be identical
-# again -- both just an absence of a new build. The workflow therefore calls
-# it with `if: always()`, and the decision is a CLOSED enum:
-#
-#     CUT | NO_CHANGE | BLOCKED | ERROR
-#
-# Unknown values are refused here AND on the consumer, so "unrecognised" can
-# never quietly mean "probably fine".
-#
-# ============================================================================
-# THE VERDICT CARRIES ITS OWN EXPIRY, AND THE PRODUCER SETS IT
-# ============================================================================
-#
-# Added 2026-08-07, after the failure below.
-#
-# THE FAILURE. The publisher died on its own argument parser (`--build-id -`;
-# see bin/lib/cli-guard.sh) and published nothing. The endpoint kept serving
-# the previous night's `"decision": "CUT", "blocked_streak": 0`. Nineteen
-# hours old, inside the consumer's staleness window, so `release-ledger.sh`
-# graded it `release channel healthy (verdict fresh, no blocked streak)` on
-# the one night the gate was broken.
-#
-#   >>> THE CHANNEL'S FAILURE MODE IS SILENCE, AND SILENCE RENDERS AS THE
-#   >>> LAST GOOD VERDICT. A publisher that cannot publish leaves a stale
-#   >>> SUCCESS standing, which is worse than leaving nothing standing.
-#
-# This is bin/tests/guard-estate.test.sh's check E -- BLIND MUST NOT GRADE AS
-# CLEAN -- applied to the channel rather than to a guard. A consumer that
-# cannot see tonight's verdict is not looking at a healthy channel; it is not
-# looking at tonight at all.
-#
-# WHAT CANNOT BE THE FIX, stated first because it is the tempting one. This
-# does not close by tightening the consumer's staleness window. The emitter
-# runs ONCE NIGHTLY, so a consumer ticking at an arbitrary hour legitimately
-# sees a verdict anywhere from 0 to 24 hours old. Any threshold below ~25h
-# false-alarms every single day, and a guard that is wrong every day is a
-# guard nobody reads -- guard-estate.test.sh's whole thesis. 26h is not
-# slack; it is the FLOOR a nightly cadence imposes. The window was never the
-# defect, and shrinking it would have been a fix that made things worse.
-#
-# WHAT IS THE FIX. Two independent things, because either alone leaves a hole:
-#
-#   1. THE DOCUMENT DECLARES WHEN IT STOPS BEING EVIDENCE. `valid_until` is
-#      written HERE, by the producer, from the producer's own cadence -- not
-#      guessed by each consumer from a constant that must be kept in sync by
-#      hand with a cron expression in another repository. A consumer past
-#      `valid_until` grades BAD whatever the decision field says, and the
-#      human page renders EXPIRED rather than the last decision. Change the
-#      cadence and both halves move together, because there is ONE number.
-#      That is BUILD-DISCIPLINE's "config read from one source" applied to
-#      the one fact this channel's health depends on.
-#
-#   2. THE RUN THAT CANNOT PUBLISH TRIES AGAIN WITH LESS. build-verbs.yml
-#      captures this script's exit code and, on any failure, re-invokes it
-#      with a MINIMAL argv -- decision and reason only, no build id, no sha,
-#      no run id. That recovers the class of failure that actually happened:
-#      the verdict logic was correct and the ARGUMENT VECTOR was fatal, so a
-#      smaller vector publishes. If even that fails, the run goes red having
-#      said in the log that the channel is knowingly silent.
-#
-# Neither substitutes for the other: (1) cannot catch a publisher that fails
-# inside its own cadence, and (2) cannot catch a workflow that never ran at
-# all. Together they cover "the emitter broke" and "the emitter vanished".
+# THE CHANNEL'S FAILURE MODE IS SILENCE, AND SILENCE RENDERS AS THE LAST GOOD
+# VERDICT. That is guard-estate's "BLIND must not grade as CLEAN" applied to
+# a channel. The fix is NOT a tighter staleness window: a nightly emitter
+# legitimately looks 0-24h old, so 26h is the FLOOR a nightly cadence
+# imposes, not slack. Instead, (1) the producer writes `valid_until` from its
+# own cadence, so one number moves both halves, and a consumer past it grades
+# BAD whatever the decision says; (2) build-verbs.yml re-invokes this with a
+# MINIMAL argv on failure, recovering the case where the logic was right and
+# the argument vector was fatal. Neither covers the other: (1) misses a
+# publisher failing inside its cadence, (2) misses a workflow that never ran.
 #
 # ============================================================================
 # EXIT CODES
@@ -158,7 +59,6 @@ DECISIONS="CUT NO_CHANGE BLOCKED ERROR"
 # `cron: '30 1 * * *'` -- once every 24 hours. GRACE covers a slow assemble
 # plus a late runner; it is not a fudge factor for a channel that is behaving
 # badly, and widening it is a decision to be told about a dead emitter later.
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PUBLISH_CADENCE_H="${PUBLISH_CADENCE_H:-24}"
 PUBLISH_GRACE_H="${PUBLISH_GRACE_H:-4}"
 
@@ -227,7 +127,6 @@ RENDER="$WORK/status.json"
 # It was `<<PY`, unquoted, so the shell expanded the whole body before python
 # saw it -- including the backticks in this block's own comments. Every gated
 # cut printed `publish-release-verdict.sh: line 229: decision: command not
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 PREV_HISTORY="$PREV_HISTORY" NOW="$NOW" DECISION="$DECISION" REASON="$REASON" \
 MAIN_SHA="$MAIN_SHA" CI_RUN="$CI_RUN" BUILD_ID="$BUILD_ID" \
 VALID_UNTIL="$VALID_UNTIL" HISTORY_MAX="$HISTORY_MAX" \
