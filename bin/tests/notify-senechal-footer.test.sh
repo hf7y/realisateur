@@ -52,10 +52,19 @@ export GH_BODY_CAPTURE="$T/body.txt"
 # substitutes a local copy so this test needs no network and no senechal
 # checkout. Case 6 below re-verifies it against the real one when present.
 cat > "$T/doors.json" <<'DOORS'
-{"version": 1, "doors": {"footprint": {
-  "target": "estate.footprint", "key": "id",
-  "required": ["id", "kind", "target", "host", "owner", "status", "retire", "notes"],
-  "enums": {"kind": ["path"], "status": ["live", "retiring", "retired"]}}}}
+{"version": 1, "doors": {
+  "footprint": {
+    "target": "estate.footprint", "key": "id",
+    "required": ["id", "kind", "target", "host", "owner", "status", "retire", "notes"],
+    "enums": {"kind": ["path", "systemd-user-unit", "listening-port"], "status": ["live", "retiring", "retired"]}},
+  "crontab": {
+    "target": "estate.crontab", "key": "tag",
+    "required": ["tag", "host", "account", "owner", "schedule", "command", "status", "retire", "notes"],
+    "enums": {"status": ["live", "retiring", "retired"]}},
+  "device": {
+    "target": "estate.devices", "key": "name",
+    "required": ["name", "kind", "addr", "reach", "expect", "owner", "notes"],
+    "enums": {"reach": ["local", "ssh"], "expect": ["always-on", "intermittent"]}}}}
 DOORS
 export NOTIFY_DOORS_FILE="$T/doors.json"
 
@@ -95,6 +104,50 @@ sys.exit(0 if m and json.loads(m.group(1))["fields"]["id"] == "widget" else 1)';
 else
   bad "the fenced payload does not parse back to the filing"
 fi
+
+# 3b. DELIVERS is not "- none": it is DERIVED from the same fields already
+#     validated, so `gh-sign.sh` accepts the body and `delivery-audit` has
+#     something concrete to check (realisateur#554).
+if grep -q -- '- path: /etc/widget' "$T/body.txt"; then
+  ok "DELIVERS names the footprint's own path, not '- none'"
+else
+  bad "DELIVERS did not carry the footprint's path"
+  echo "----- captured body -----"; cat "$T/body.txt"; echo "-------------------------"
+fi
+
+GS="$(cd "$(dirname "$0")/.." && pwd)/gh-sign.sh"
+if out2="$(bash "$GS" --check-body "$T/body.txt" 2>&1)"; then
+  ok "gh-sign.sh --check-body accepts the composed body"
+else
+  bad "gh-sign.sh --check-body REFUSES the composed body: $out2"
+fi
+
+# 3c. every door kind this mapping knows maps to the grammar's own vocabulary
+#     (bin/lib/body-grammar.sh's host:/path:/unit:/port:/tag:/...).
+"$SCRIPT" footprint id=svc kind=systemd-user-unit target=widget.service host=mandark \
+  owner=realisateur status=live retire='systemctl --user disable widget' notes=n >/dev/null 2>&1
+grep -q -- '- unit: widget.service' "$T/body.txt" \
+  && ok "a systemd-user-unit footprint delivers as unit:" \
+  || bad "a systemd-user-unit footprint did not deliver as unit:"
+
+"$SCRIPT" footprint id=svc kind=listening-port target=8080 host=mandark \
+  owner=realisateur status=live retire='fuser -k 8080/tcp' notes=n >/dev/null 2>&1
+grep -q -- '- port: 8080' "$T/body.txt" \
+  && ok "a listening-port footprint delivers as port:" \
+  || bad "a listening-port footprint did not deliver as port:"
+
+"$SCRIPT" crontab tag='realisateur:tick:TICK' host=mandark account=realisateur \
+  owner=realisateur schedule='7 * * * *' command='true' status=live \
+  retire="crontab -l | grep -v TICK | crontab -" notes=n >/dev/null 2>&1
+grep -q -- '- tag: realisateur:tick:TICK' "$T/body.txt" \
+  && ok "a crontab filing delivers as tag:" \
+  || bad "a crontab filing did not deliver as tag:"
+
+"$SCRIPT" device name=newbox kind=vm addr=newbox.local reach=ssh expect=always-on \
+  owner=realisateur notes=n >/dev/null 2>&1
+grep -q -- '- host: newbox' "$T/body.txt" \
+  && ok "a device filing delivers as host:" \
+  || bad "a device filing did not deliver as host:"
 
 # 4. the triage paragraph sits AFTER the footer, never inside the receipt body
 if printf '%s' "$stripped" | grep -q 'absorbs this'; then
