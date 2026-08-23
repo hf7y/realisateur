@@ -83,4 +83,48 @@ ch="$(prop_channel monkey-watch.sh 2>/dev/null)" || ch=""
 [ "$ch" = local ] && ok "prop_channel says local -- the checkout dexter pulls itself" \
   || bad "monkey-watch.sh is classified local" "got '${ch:-unclassified}'"
 
+section "E. THE RENDERER READS THE VERDICT -- it does not re-derive one"
+# THE DEFECT THIS PINS, 2026-08-23. share/monkey-status.html computed its
+# headline from accounts[], and monkey-watch correctly publishes an EMPTY
+# accounts[] when the guest is unreachable. So a DOWN monkey rendered
+# `0 ARMED` in GREEN: the publisher was honest and the page hid the outage
+# anyway. #535 removed the publisher that hid outages and left the renderer
+# that still could.
+#
+# Asserted by RENDERING, not by grepping for a field name -- a page can
+# mention `watcher` in a comment and still headline off accounts[], which is
+# the named-in-a-doc-counts-as-wired defect section C already exists to avoid.
+PAGE="$REPO/share/monkey-status.html"
+if command -v node >/dev/null 2>&1; then
+  render() {   # render <json> -> "<class> <headline>"
+    node -e '
+      const fs=require("fs");
+      const src=fs.readFileSync(process.argv[1],"utf8").match(/<script>([\s\S]*)<\/script>/)[1];
+      let out="";
+      global.document={getElementById:()=>({set innerHTML(v){out=v;}})};
+      const body=src.replace(/fetch\([\s\S]*?\.then\(d=>\{/,"(d=>{").replace(/\}\)\.catch\([\s\S]*$/,"})(D);");
+      new Function("D",body)(JSON.parse(process.argv[2]));
+      const m=out.match(/class="verdict (\w+)">([^<]*)</);
+      console.log(m?m[1]+" "+m[2].trim():"NO-HEADLINE");
+    ' "$PAGE" "$1" 2>/dev/null
+  }
+  FRESH='"generated":"2999-01-01T00:00:00Z","valid_until":"2999-01-01T00:00:00Z"'
+  got="$(render "{\"accounts\":[],\"watcher\":{$FRESH,\"verdict\":\"DOWN\",\"why\":\"sshd silent\",\"vm_state\":\"running\",\"sshd\":\"silent\",\"disk_home\":\"internal\"}}")"
+  case "$got" in bad\ DOWN*) ok "an unreachable monkey headlines DOWN, in red -- not a green 0 ARMED" ;;
+    *) bad "DOWN document renders DOWN" "got [$got] -- the page is deriving its own verdict again" ;; esac
+
+  got="$(render "{\"accounts\":[],\"watcher\":{\"generated\":\"2020-01-01T00:00:00Z\",\"valid_until\":\"2020-01-01T00:00:00Z\",\"verdict\":\"OK\",\"why\":\"fine\",\"vm_state\":\"running\",\"sshd\":\"answering\",\"disk_home\":\"internal\"}}")"
+  case "$got" in *UNWATCHED*) ok "a watcher past its own valid_until reads UNWATCHED, not OK" ;;
+    *) bad "a stale watcher reads UNWATCHED" "got [$got] -- a dead dexter would show its last verdict as current" ;; esac
+
+  got="$(render '{"accounts":[],"generated":"2999-01-01T00:00:00Z"}')"
+  case "$got" in *UNWATCHED*) ok "a document with no watcher block cannot report health" ;;
+    *) bad "a watcher-less document reads UNWATCHED" "got [$got]" ;; esac
+else
+  # NOT a silent skip. A guard that quietly passes when it cannot run is the
+  # false-negative-wearing-a-safety-warning this suite already names in C.
+  bad "node is available to render the page" \
+    "node is not on PATH, so the renderer contract went UNCHECKED -- install node or run this suite where it exists"
+fi
+
 summary

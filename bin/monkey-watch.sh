@@ -52,6 +52,11 @@ SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_dexter_monkey}"
 COLLECTOR="${COLLECTOR:-$HERE/bin/monkey-status-collect.py}"
 PAGE_SRC="${PAGE_SRC:-$HERE/share/monkey-status.html}"
 STATE_FILE="${STATE_FILE:-$HOME/.local/state/monkey-watch.last}"
+# The cron cadence on dexter, DECLARED so the published document can carry its
+# own valid_until. The page must be able to tell "monkey is down" from "the
+# watcher stopped ticking" -- without this it shows the last verdict forever.
+CADENCE_MIN="${CADENCE_MIN:-10}"
+GRACE_MIN="${GRACE_MIN:-20}"
 PUBLISH_REPO="${PUBLISH_REPO:-hf7y/hf7y.github.io}"
 PUBLISH_DIR="${PUBLISH_DIR:-monkey}"
 # shellcheck source=lib/zaxon.sh
@@ -131,6 +136,7 @@ else                                         VERDICT="OK";       WHY="running, s
 fi
 
 payload="$(GUEST_JSON="$GUEST_JSON" NOW="$NOW" VMSTATE="$VMSTATE" DISK="$DISK" \
+  CADENCE_MIN="$CADENCE_MIN" GRACE_MIN="$GRACE_MIN" \
   DISK_HOME="$DISK_HOME" SSHD="$SSHD" UPTIME="$UPTIME" ROOTMOUNT="$ROOTMOUNT" \
   VERDICT="$VERDICT" WHY="$WHY" GUEST_ERR="$GUEST_ERR" \
   python3 "$HERE/bin/lib/monkey-watch-merge.py")"

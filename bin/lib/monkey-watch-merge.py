@@ -19,13 +19,27 @@ payload omitted `accounts` entirely and the page died on
 the correct finding (the real publisher had not run), and is the failure this
 file exists to make impossible.
 
-The host-side facts go under `watcher`, ADDITIVE, so an older renderer keeps
-working and a newer one can show what only the VM host can see: that the VM is
-running but not answering, or that its disk is back on the external drive.
+The host-side facts go under `watcher`: what only the VM host can see -- that
+the VM is running but not answering, or that its disk is back on the external
+drive.
+
+THE `watcher` BLOCK IS NOT OPTIONAL FOR THE RENDERER (2026-08-23). This
+docstring used to call it "ADDITIVE, so an older renderer keeps working", and
+that is exactly how the page rotted: the renderer kept deriving its headline
+from accounts[], so an unreachable monkey -- empty accounts[], verdict DOWN --
+rendered as a GREEN "0 ARMED". The publisher was honest and the page hid it
+anyway. A consumer that ignores `watcher.verdict` is not "older", it is wrong.
+
+`watcher.valid_until` is the WATCHER'S OWN freshness claim, and it is separate
+from the collector's `valid_until` (24 h, absent whenever the guest was
+unreachable -- so it can never bound this document). Without it a dexter that
+stops ticking leaves the last verdict on the page reading as current forever:
+the observer dies and the page still says OK.
 """
 import json
 import os
 import sys
+from datetime import datetime, timedelta
 
 
 def main() -> int:
@@ -40,6 +54,8 @@ def main() -> int:
         doc = {}
 
     now = os.environ["NOW"]
+    cadence_min = int(os.environ.get("CADENCE_MIN") or 10)
+    grace_min = int(os.environ.get("GRACE_MIN") or 20)
 
     # An empty list is the honest report when the collector could not run, and
     # it keeps the page alive to say so. Never a guess, never absent.
@@ -49,8 +65,13 @@ def main() -> int:
     doc.setdefault("host", "monkey")
 
     guest_err = os.environ.get("GUEST_ERR", "") or None
+    stamp = datetime.strptime(now, "%Y-%m-%dT%H:%M:%SZ")
     doc["watcher"] = {
         "generated": now,
+        "cadence_minutes": cadence_min,
+        "grace_minutes": grace_min,
+        "valid_until": (stamp + timedelta(minutes=cadence_min + grace_min))
+                       .strftime("%Y-%m-%dT%H:%M:%SZ"),
         "verdict": os.environ["VERDICT"],
         "why": os.environ["WHY"],
         "vm_state": os.environ["VMSTATE"],
@@ -68,7 +89,7 @@ def main() -> int:
             "rather than stale"
         ),
         "note": (
-            "Generated on dexter, the VM host, every 10 minutes. It can report "
+            f"Generated on dexter, the VM host, every {cadence_min} minutes. It can report "
             "monkey being down because it does not run on monkey. If "
             "watcher.generated is old, the WATCHER is broken -- not necessarily "
             "monkey."
