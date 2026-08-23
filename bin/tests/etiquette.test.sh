@@ -25,9 +25,11 @@ if [ "$1" = "label" ] && [ "$2" = "list" ]; then
   cat "${LABELS_FIXTURE:-/dev/null}"; exit 0
 fi
 if [ "$1" = "api" ]; then
-  # repos/<o>/<r>/issues/<n>/comments -- $ANSWERED_FIXTURE names the answered ones
+  # repos/<o>/<r>/issues/<n>/comments -- $ANSWERED_FIXTURE names the answered
+  # ones; $DISCARDED_FIXTURE names ones with a comment dated BEFORE the era.
   n="${2##*/issues/}"; n="${n%%/*}"
   grep -qx "$n" "${ANSWERED_FIXTURE:-/dev/null}" 2>/dev/null && echo "2026-08-19T00:00:00Z"
+  grep -qx "$n" "${DISCARDED_FIXTURE:-/dev/null}" 2>/dev/null && echo "2026-08-01T00:00:00Z"
   exit 0
 fi
 if [ -n "${GH_FAIL:-}" ]; then echo "$GH_FAIL" >&2; exit 1; fi
@@ -43,6 +45,7 @@ printf 'needs-human\tOnly a human can move this.\ndeferred\tParked for an agent.
 
 run() { EDITS="$T/edits" FIXTURE="$T/f.json" LABELS_FIXTURE="$T/labels.txt" \
         ANSWERED_FIXTURE="${ANSWERED_FIXTURE:-/dev/null}" \
+        DISCARDED_FIXTURE="${DISCARDED_FIXTURE:-/dev/null}" \
         ETIQUETTE_GRAMMAR="$T/grammar.tsv" bash "$SCRIPT" o/r "$@"; }
 grammar_only() { ETIQUETTE_GRAMMAR="$T/grammar.tsv" bash "$SCRIPT" "$@"; }
 
@@ -85,6 +88,22 @@ hasnt "A'3 the unanswered one is untouched"   "$out" "#6"
 # unknowable is not an answer.
 : > "$T/edits"; out="$(ANSWERED_FIXTURE="$T/answered.txt" ANSWERED_STAMP_ERA=2026-12-01 run --apply 2>&1)"
 hasnt "A'4 a pre-stamp comment does not clear the label" "$out" "ANSWERED"
+
+section "A''. a pre-era unstamped comment is DISCARDED, not silently 'no answer' (#553)"
+cat > "$T/f.json" <<'EOF'
+[
+ {"number":7,"title":"pre-era comment, still labelled","body":"DECISION: @zach -- pick one","labels":[{"name":"needs-human"}]},
+ {"number":8,"title":"truly unanswered, labelled","body":"DECISION: @zach -- pick one","labels":[{"name":"needs-human"}]}
+]
+EOF
+printf '7\n' > "$T/discarded.txt"
+: > "$T/edits"; out="$(DISCARDED_FIXTURE="$T/discarded.txt" run 2>&1)"; code=$?
+rc  "A''1 a discarded pre-era answer is still a finding -- exit 1" 1 "$code"
+has "A''2 the discard is reported by number"        "$out" "DISCARDED   #7"
+has "A''3 ...and counted in the summary line"        "$out" "1 discarded pre-era answer(s)"
+hasnt "A''4 the truly-unanswered issue is not flagged as discarded" "$out" "DISCARDED   #8"
+eq  "A''5 --apply writes NOTHING for a discarded finding -- it is not known to be answered" \
+    "$(: > "$T/edits"; DISCARDED_FIXTURE="$T/discarded.txt" run --apply >/dev/null 2>&1; wc -l < "$T/edits")" "0"
 
 # B reads the section-A fixture; put it back.
 cat > "$T/f.json" <<'EOF'

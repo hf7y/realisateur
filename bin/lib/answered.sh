@@ -12,13 +12,20 @@
 ANSWERED_STAMP_ERA="${ANSWERED_STAMP_ERA:-2026-08-14}"
 ANSWERED_RELAY_RE='<!--\\s*decision-by:'   # <!-- decision-by: zach 2026-08-21 -->
 
-# issue_answered <owner/repo> <number> -- 0 if answered, 1 if not, 2 if BLIND.
+# issue_answered <owner/repo> <number>
+#   0 answered
+#   1 not answered -- no qualifying comment exists at all
+#   2 BLIND -- could not read the comments
+#   3 DISCARDED -- a qualifying comment exists but predates ANSWERED_STAMP_ERA
+#     (realisateur#553): unknowable whether it is Zach's or an agent's, so it
+#     is not credited as an answer, but it is not NOTHING either -- a caller
+#     must be able to tell the two apart instead of folding both into 1.
 issue_answered() {
   local repo="$1" num="$2" out
   out="$(gh api "repos/$repo/issues/$num/comments" --paginate \
          --jq "[.[]|select((.body|test(\"<!--\\\\s*agent:\")|not) or (.body|test(\"$ANSWERED_RELAY_RE\")))]|last|.created_at // \"\"" 2>/dev/null)" || return 2
   # A non-date is not an answer: a misread must never clear a label.
   [[ "$out" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2} ]] || return 1
-  [[ ! "${out:0:10}" < "$ANSWERED_STAMP_ERA" ]] || return 1
+  [[ "${out:0:10}" < "$ANSWERED_STAMP_ERA" ]] && return 3
   return 0
 }

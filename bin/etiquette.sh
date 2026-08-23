@@ -138,15 +138,25 @@ json="$(gh issue list --repo "$REPO" --state open --limit 200 \
   exit 6
 }
 
-findings=0; matched=0; changed=0
+findings=0; matched=0; changed=0; discarded=0
 while IFS=$'\t' read -r num has_label title; do
   [ -n "$num" ] || continue
   body="$(printf '%s' "$json" | jq -r --argjson n "$num" '.[]|select(.number==$n)|.body')"
   want='' ; answered=0
   case "$(grammar_declaration "$body")" in
     # An answered decision is an agent's work: left labelled it brakes dispatch.
-    decision)    want=yes
-                 if issue_answered "$REPO" "$num"; then want=no; answered=1; fi ;;
+    decision)
+      want=yes
+      issue_answered "$REPO" "$num"; answered_rc=$?
+      case "$answered_rc" in
+        0) want=no; answered=1 ;;
+        # DISCARDED (realisateur#553): a comment exists that COULD be Zach's
+        # answer, unstamped, but predates ANSWERED_STAMP_ERA so it cannot be
+        # credited. Report it rather than silently treating it as no answer
+        # at all -- a human or an ideate pass adjudicates from here.
+        3) discarded=$((discarded + 1))
+           row DISCARDED "$num" "carries a pre-era unstamped comment that cannot be credited as an answer -- ${title:0:35}" ;;
+      esac ;;
     no-decision) want=no ;;
     none)
       findings=$((findings + 1))
@@ -172,9 +182,9 @@ done < <(printf '%s' "$json" | jq -r --arg l "$LABEL" \
   '.[] | [.number, (if any(.labels[]; .name==$l) then "yes" else "no" end), .title] | @tsv')
 
 say ""
-say "$matched issue(s) agree, $findings issue finding(s), $label_findings label finding(s);"
+say "$matched issue(s) agree, $findings issue finding(s), $label_findings label finding(s), $discarded discarded pre-era answer(s);"
 say "$changed label(s) reconciled, $provisioned label(s) provisioned."
 [ $((findings + label_findings)) -gt 0 ] && [ "$APPLY" -eq 0 ] && \
   say 'Re-run with --apply. An UNDECLARED body is NOT fixed by a label -- edit line 1.'
-[ $((findings + label_findings)) -eq 0 ] || exit 1
+[ $((findings + label_findings + discarded)) -eq 0 ] || exit 1
 exit 0
