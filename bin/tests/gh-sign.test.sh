@@ -29,8 +29,21 @@ for a in "$@"; do
   prev="$a"
 done
 printf '%s\n' "$*" | grep -q -- '--body-file -' && cat > "$GH_LAST_BODY"
-printf '%s\n' "$*" | grep -q -- 'body=@-' && cat > "$GH_LAST_BODY"
-for a in "$@"; do case "$a" in body=*) [ "$a" = 'body=@-' ] || printf '%s' "${a#body=}" > "$GH_LAST_BODY" ;; esac; done
+# Real gh's `@file`/`@-` magic is a `-F/--field` thing; `-f/--raw-field`
+# takes the value LITERALLY, `@-` included. Mimic that split here, or this
+# stub can't catch a caller that forgot to upgrade the flag.
+prev=''
+for a in "$@"; do
+  case "$a" in
+    body=@-)
+      case "$prev" in
+        -F|--field) cat > "$GH_LAST_BODY" ;;
+        *) printf '%s' "$a" > "$GH_LAST_BODY" ;;
+      esac ;;
+    body=*) printf '%s' "${a#body=}" > "$GH_LAST_BODY" ;;
+  esac
+  prev="$a"
+done
 exit "${GH_EXIT:-0}"
 STUB
 chmod +x "$TMP/stub/gh"
@@ -260,6 +273,10 @@ case "$(lastline)" in
   '<!-- agent: '*) ok "an api comment passed inline is stamped" ;;
   *) bad "api comment (inline) unstamped" "got: $(lastline)" ;;
 esac
+contains "...the original text survives, not the literal @- placeholder" "$(cat "$TMP/gh.body")" "inline reply"
+# `-f` has no `@` magic; a body written back as `-f body=@-` would arrive as
+# the four literal characters `@-`. The shim must upgrade the flag to `-F`.
+contains "...and the flag was upgraded from -f to -F for the write-back" "$(cat "$TMP/gh.log")" " -F body=@-"
 
 reset
 run api -X POST repos/hf7y/widget/pulls/7/comments -f body="pr reply" >/dev/null 2>&1
@@ -267,6 +284,7 @@ case "$(lastline)" in
   '<!-- agent: '*) ok "a pull-request api comment is stamped too" ;;
   *) bad "pr api comment unstamped" "got: $(lastline)" ;;
 esac
+contains "...with the pr reply text intact" "$(cat "$TMP/gh.body")" "pr reply"
 
 reset
 run api repos/hf7y/widget --jq .name >/dev/null 2>&1
