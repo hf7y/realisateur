@@ -149,6 +149,7 @@ dresse.sh
 land-selfdev.sh
 provision-selfdev-user.sh
 setup-selfdev-project.sh
+enrole-selfdev.sh
 wire-selfdev-git.sh
 wire-release-channel.sh
 selfdev-app-key.sh
