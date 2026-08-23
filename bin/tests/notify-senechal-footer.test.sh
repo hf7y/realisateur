@@ -120,7 +120,26 @@ else
   ok "no refused filing reached gh"
 fi
 
-# 6. THE COUPLING ITSELF: if senechal is checked out, our copy of the regex
+# 6. THE GRAMMAR ITSELF (#554): gh-sign refused every composed body because
+#    the footer carried a DEFERRED block and no DELIVERS block. Assert the
+#    real grammar checker -- not a copy of it -- accepts what this door
+#    composes, so a future grammar change that breaks this fails HERE.
+# shellcheck source=bin/lib/body-grammar.sh
+. "$(dirname "$(readlink -f "$0")")/../lib/body-grammar.sh"
+violations="$(grammar_check "$(cat "$T/good-body.txt")")"
+if [ -z "$violations" ]; then
+  ok "gh-sign's own grammar_check accepts the composed body"
+else
+  bad "gh-sign's grammar_check refuses the composed body: $violations"
+fi
+if grep -q '<!-- DELIVERS -->' "$T/good-body.txt" && grep -q '^- path: /etc/widget$' "$T/good-body.txt"; then
+  ok "DELIVERS is derived from the door's own kind=path/target fields"
+else
+  bad "DELIVERS block missing or not derived from kind/target"
+  echo "----- captured body -----"; cat "$T/good-body.txt"; echo "-------------------------"
+fi
+
+# 7. THE COUPLING ITSELF: if senechal is checked out, our copy of the regex
 #    must still be the regex it actually enforces. Skips loudly rather than
 #    passing quietly when senechal is not on this host.
 JANITOR="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/senechal/tools/issue-janitor.py"

@@ -167,6 +167,29 @@ print("%s: %s (%s)" % (p["door"], key, ", ".join(
     "%s=%s" % (k, v) for k, v in sorted(f.items()) if k not in ("id", "name", "notes"))))
 ')"
 
+# DELIVERS names WHERE this takes effect outside the repo, so delivery-audit
+# can go look. The door's own fields already say this -- footprint's `kind` IS
+# a DELIVERS kind (systemd-*-unit -> unit:, listening-port -> port:, path /
+# authorized-keys -> path:) -- so it is derived, never typed twice.
+delivers="$(printf '%s' "$payload" | python3 -c '
+import json, sys
+p = json.load(sys.stdin)
+f = p["fields"]
+kind_map = {
+    "systemd-user-unit": "unit", "systemd-system-unit": "unit",
+    "listening-port": "port", "path": "path", "authorized-keys": "path",
+}
+deliver_kind = kind_map.get(f.get("kind", ""))
+if deliver_kind and f.get("target"):
+    print("- %s: %s" % (deliver_kind, f["target"]))
+elif f.get("tag"):
+    print("- tag: %s" % f["tag"])
+elif f.get("name"):
+    print("- host: %s" % f["name"])
+else:
+    print("- none")
+')"
+
 command -v gh >/dev/null 2>&1 || die "gh is not on PATH -- cannot file, and could not confirm a filing either"
 # NOTE: no senechal clone is required any more -- the note goes to GitHub.
 # The check that used to be here (`[ -d "$SENECHAL/.git" ]`) is removed
@@ -188,11 +211,12 @@ title="$(printf '%s' "$text" | head -1 | cut -c1-72)"
 # THE FOOTER IS A GATE, NOT DECORATION (senechal#221 ->
 # realisateur#220). `scheduler -i` stamped every issue it filed with
 #
-# TRAP: line 1 and the DEFERRED block satisfy bin/gh-sign.sh, which refuses a
-#   body declaring no DECISION:/NO-DECISION: or carrying no ledger. Delete them
-#   as boilerplate and every call dies wherever the shim is live (#356).
-body="$(printf 'NO-DECISION: @zach -- a typed door note; it records a fact and asks nothing.\n\n%s\n\n```senechal-door\n%s\n```\n\n---\nfiled %s via `notify-senechal` on %s\n\nsenechal absorbs this with `tools/absorb-notices.py --write`; closing IS the\nacknowledgement. If it was REJECTED, the payload above is wrong or the entry\nalready exists -- fix it at the caller, not by hand here.\n\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n' \
-  "$text" "$payload" "$(date '+%Y-%m-%d %H:%M')" "$(hostname -s 2>/dev/null || hostname)")"
+# TRAP: line 1, the DEFERRED block and the DELIVERS block satisfy
+#   bin/gh-sign.sh, which refuses a body declaring no DECISION:/NO-DECISION:,
+#   carrying no ledger, or carrying no typed delivery (#554). Delete any of
+#   them as boilerplate and every call dies wherever the shim is live (#356).
+body="$(printf 'NO-DECISION: @zach -- a typed door note; it records a fact and asks nothing.\n\n%s\n\n```senechal-door\n%s\n```\n\n---\nfiled %s via `notify-senechal` on %s\n\nsenechal absorbs this with `tools/absorb-notices.py --write`; closing IS the\nacknowledgement. If it was REJECTED, the payload above is wrong or the entry\nalready exists -- fix it at the caller, not by hand here.\n\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n\n<!-- DELIVERS -->\n%s\n<!-- /DELIVERS -->\n' \
+  "$text" "$payload" "$(date '+%Y-%m-%d %H:%M')" "$(hostname -s 2>/dev/null || hostname)" "$delivers")"
 
 echo "notify-senechal: filing to $DEST_REPO as from:$FROM_PROJECT ..."
 # `door` is what the absorber queries on; `idea` stays for continuity with
