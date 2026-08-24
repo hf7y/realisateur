@@ -243,7 +243,7 @@ if [ "$MODE" = --check ]; then
   exit 0
 fi
 if [ "$changed" -eq 1 ]; then
-  echo "-- diff (NOT committed; land it as a PR, per claim-drift.sh --convention)"
+  echo "-- diff (NOT committed; land it as a PR)"
   git -C "$REPO" --no-pager diff -- "schedule/$PROJECT.conf" "schedule/_paced.$HOST.conf" | sed 's/^/    /'
   echo "    undo: git -C $REPO checkout -- schedule/$PROJECT.conf schedule/_paced.$HOST.conf"
 else

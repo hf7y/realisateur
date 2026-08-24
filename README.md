@@ -6,9 +6,9 @@ format, no naming convention.
 
 realisateur's job is to notice what's been dropped, infer the idea behind
 it, and turn it into a real, scaffolded project wired into the rest of the
-development ecosystem — most importantly, registered with
-`~/Documents/Projects/scheduler` (see `SCHEDULER.md`) so it can keep
-developing itself unattended, the same way realisateur itself now does.
+development ecosystem — most importantly, registered with the scheduler, whose
+own `README.md` is the source of truth for how, so it can keep developing
+itself unattended, the same way realisateur itself now does.
 
 ## How it works
 

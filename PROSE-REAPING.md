@@ -88,7 +88,8 @@ backlog is exactly as uncountable as before.
 - **An issue title is a countable unit; a bullet in a file is not.** The point
   of the conversion is arithmetic, not tidiness.
 - **Zach answers question-issues by commenting and leaving them open.** State
-  and labels carry no signal. Stated once in `SCHEDULER.md`; do not retype it.
+  carries no signal. `etiquette` prints the grammar and derives the label; do
+  not retype either.
 - **Before reaping into another project's repo, run `check-project-busy
   <project>`.** A front-door write (`scheduler -i`, `notify-senechal`) carries
   its own regulator and does not need the guard; a direct file write does.
@@ -110,10 +111,8 @@ reach its remote?
 
 1. `check-project-busy <project>` if the repo is not your own. Defer on `BUSY`.
 2. Work on a **branch off `main`**. Never `git add -A`; stage only named files.
-   **Not a worktree** — `bin/no-worktree-lint.sh` mechanizes Zach's 2026-08-06
-   instruction that no more worktrees be created, and this file told you to
-   make one until 2026-08-17. A doctrine that cannot be followed without
-   failing a guard is itself the thing this document is about.
+   **Not a worktree** — Zach's 2026-08-06 instruction, and this file told you
+   to make one until 2026-08-17.
 3. Read the file whole. Classify **each paragraph** by §1's question.
 4. **Re-derive every trap you intend to preserve** against the code. Put the
    witness command in the file.

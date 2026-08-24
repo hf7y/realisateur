@@ -3,7 +3,7 @@
 # Zach, 2026-08-18 (hf7y/realisateur#397): "Repos need to look into a central
 # place to see the grammar." NEVER copied into a repo -- read at the point of
 # use by `etiquette`, the `discipline`/BUILD-DISCIPLINE.md shape. The verb
-# build carries it; bin/carry-drift.sh proves the carried copy still matches.
+# build carries it, and a guard test proves the carried copy still matches.
 #
 # Columns:  name  color  source  meaning
 #

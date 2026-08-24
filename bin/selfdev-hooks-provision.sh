@@ -6,9 +6,11 @@
 # GUARD-TEST: bin/tests/selfdev-hooks-provision.test.sh
 # GATE: strict
 #
-# #272: install-shims.sh installs the hook file but will not wire
-# settings.json ("Zach's file"); #282 crossed that boundary for `permissions`.
-# A sibling of selfdev-permissions-provision.sh, not a merge into it (#294).
+# THE SPLIT (#272): something else installs the hook FILE; this wires
+# settings.json ("Zach's file"), which #282 crossed that boundary for with
+# `permissions`. The file half is the verb build -- carried in
+# bin/lib/carries.tsv, installed on the release tick -- since #264 got off
+# shims. A sibling of selfdev-permissions-provision.sh, not a merge (#294).
 #
 # Env overrides (test suite only): HOME_ROOT, ACCOUNTS, SUDO, SELFDEV_HOOK_SRC.
 
@@ -89,7 +91,7 @@ echo
 
 drift=0; blind=0; okc=0
 
-# THE FILE, NOT ONLY THE BLOCK: install-shims.sh refreshes it from a local
+# THE FILE, NOT ONLY THE BLOCK: the verb build refreshes it from a local
 # CLONE 13 of 15 accounts lost to #385/#386. FOUR live versions, none main's.
 # PROP_HOST_PIN, not the literal layout: propagation-set.sh owns it.
 # shellcheck source=bin/lib/propagation-set.sh

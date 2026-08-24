@@ -34,8 +34,8 @@ cli_guard "$@"
 . "$(dirname "${BASH_SOURCE[0]}")/lib/verb-set.sh"
 
 # Overridable for tests only (bin/tests/*, which also override HOME so nothing
-# real is written). Same reasoning as install-shims.sh: without the override a
-# test silently runs against the real ~/.local/bin. INSTALLE_* names are shared
+# real is written). Without the override a test silently runs against the real
+# ~/.local/bin. INSTALLE_* names are shared
 # with `installe` on purpose -- two tools disagreeing about where verbs live is
 # the drift this file exists to catch.
 PROJECTS="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}"
