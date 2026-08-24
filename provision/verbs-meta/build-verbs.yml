@@ -61,6 +61,13 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # THE DISPATCH DOOR IS GATED; THE CRON IS NOT (#601). Measured over 40 runs,
+    # 27 builds came through workflow_dispatch, so the "hold still while agents
+    # merge" stability declared above was not in force.
+    # TRAP: an environment gates a JOB, so a bare name would also hold the
+    #   SCHEDULED run for an approval nobody watches -- an outage of the thing
+    #   this protects. An empty name applies no gate.
+    environment: ${{ github.event_name == 'workflow_dispatch' && 'release' || '' }}
     steps:
       # The credential is asserted BEFORE anything else, because every
       # symptom of its absence is misleading. Without it the realisateur

@@ -36,10 +36,9 @@ ROSTER_PROJECTS=(
 # "uid 3000-3099 misses the ecosystem repos that carry decisions and never
 # dispatch."
 #
-# ARMING IS A SEPARATE ACT and is deliberately not done here: an account
-# (provision-selfdev-user.sh), a schedule/<p>.conf, an enabled row in
-# _paced.<host>.conf and an EXEMPT line in FREEZE. Being swept costs one API
-# read per repo per decision-rot run; being armed costs quota every night.
+# ARMING IS A SEPARATE ACT and is deliberately not done here. Being swept
+# costs one API read per repo per decision-rot run; being armed costs quota
+# every night.
 ROSTER_ECOSYSTEM=(
   verbs front-door basheur
   dcp-gate-site musc-2300 scriba-senatus french-textbook

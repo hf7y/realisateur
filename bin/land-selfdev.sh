@@ -246,6 +246,6 @@ ZERO lines beginning "ERROR [". Then, and only as a separate act:
 
 Arming dispatch is the one step that spends a shared quota, and on this
 ecosystem's accounting mandark, dexter and this host all draw on the same
-weekly budget. Confirm schedule/FREEZE exempts only this host first.
+weekly budget.
 EOF
 [ "$BAD" -eq 0 ]

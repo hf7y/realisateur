@@ -4,12 +4,6 @@
 # flip the project's row in schedule/_paced.<host>.conf from |0| to |1|, and
 # sync that host's crontab as the project's own account.
 #
-# STEP 3 IS NOT HERE AND WILL NOT BE. schedule/FREEZE is the allowlist and its
-# header reserves its EXEMPT lines for a human: "a row added to a rotation by
-# an agent, a merge, or a copied file still dispatches NOTHING until a human
-# adds a line here". An agent that could write it would make the guard
-# decorative, so this script stops at exactly one outstanding act -- one line,
-# added by a person, arms one project.
 #
 # REVERSIBLE means --retire flips the row back to |0|; it does NOT delete the
 # row. Membership in the rotation is what SUPPRESSES the project's fixed
@@ -26,7 +20,7 @@
 set -uo pipefail
 
 CLI_NAME='enrole-selfdev.sh'
-CLI_SUMMARY='enrol a landed self-dev project into its host rotation -- mechanical, idempotent, reversible; never touches schedule/FREEZE'
+CLI_SUMMARY='enrol a landed self-dev project into its host rotation -- mechanical, idempotent, reversible'
 CLI_USAGE='  enrole-selfdev.sh <project>                    --check (default): probe, write NOTHING
   enrole-selfdev.sh <project> --apply            ensure conf fields + an ENABLED rotation row
   enrole-selfdev.sh <project> --retire           set the rotation row back to |0| (keeps the row)
@@ -203,15 +197,6 @@ open(p, "w").write(s.replace(old + "\n", new + "\n"))
 PY
     act "row enabled $en -> $want_enabled"; changed=1
   fi
-fi
-
-# --- the gate, reported and never touched ------------------------------------
-echo "-- gate (schedule/FREEZE)"
-if grep -qE "^[[:space:]]*EXEMPT:[[:space:]]*$PROJECT@$HOST" "$REPO/schedule/FREEZE" 2>/dev/null; then
-  ok "EXEMPT: $PROJECT@$HOST is present -- this project DISPATCHES once the row is enabled"
-else
-  printf '  ..      no EXEMPT: %s@%s in schedule/FREEZE, so freeze-check refuses every dispatch.\n' "$PROJECT" "$HOST"
-  printf '          THAT IS THE REMAINING ACT AND IT IS A HUMAN'"'"'S: one line, added by a person.\n'
 fi
 
 # --- the host half -----------------------------------------------------------
