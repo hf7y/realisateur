@@ -4,24 +4,17 @@
 # observes, and the invoker of the dashboard Zach reads.
 #
 # THE DEFECT THIS PINS, 2026-08-22. realisateur#511's reachability scan read
-# .github/workflows/ and this repo's own bin/, found no caller for
-# monkey-watch.sh, and deleted it. Its caller was a CRONTAB LINE ON ANOTHER
-# MACHINE -- dexter, every ten minutes, out of a checkout dexter pulls itself.
+# .github/workflows/ and this repo's bin/, found no caller for monkey-watch.sh,
+# and deleted it. Its caller was a CRONTAB LINE ON ANOTHER MACHINE -- dexter,
+# every ten minutes, out of a checkout dexter pulls itself.
+# The blast radius was not one script: DELETION-LIST.txt:23 protected the
+# dashboard payload BY NAME while the same PR deleted its only invoker, keeping
+# the payload and cutting its clock (#518); #524 then deleted the merge lib as
+# an orphan. Dexter's cron kept firing into a deleted path, appending
+# `not found` to a 47 MB log -- a fault indicator nobody reads.
 #
-# The blast radius was not one script. DELETION-LIST.txt:23 protected
-# publish-monkey-status.sh and monkey-status-collect.py BY NAME as "the
-# dashboard Zach reads", and the same PR deleted the only thing that invokes
-# them: the list kept the payload and cut its clock (realisateur#518). Then
-# #524 deleted lib/monkey-watch-merge.py as an orphan -- correctly measured,
-# wrong conclusion, because the right fix was to restore its consumer.
-#
-# Meanwhile dexter's cron kept firing into a deleted path and appending
-# `not found` to a log that reached 47 MB. A cron entry pointing at a deleted
-# script is not inert; it is a fault indicator nobody reads.
-#
-# So the assertions are: the observer exists, it still names the parts it
-# needs, those parts exist -- and, generally, THE DASHBOARD PAYLOAD HAS AN
-# INVOKER. That last one is the guard; the rest is scaffolding for it.
+# So: the observer exists, names the parts it needs, those parts exist -- and
+# THE DASHBOARD PAYLOAD HAS AN INVOKER, which is the guard.
 
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -82,5 +75,42 @@ section "D. it is declared, so it reaches dexter by a named channel"
 ch="$(prop_channel monkey-watch.sh 2>/dev/null)" || ch=""
 [ "$ch" = local ] && ok "prop_channel says local -- the checkout dexter pulls itself" \
   || bad "monkey-watch.sh is classified local" "got '${ch:-unclassified}'"
+
+section "E. THE RENDERER READS THE VERDICT -- it does not re-derive one"
+# THE DEFECT THIS PINS: the page headlined off accounts[], which is EMPTY when
+# the guest is unreachable -- so a DOWN monkey rendered `0 ARMED` in GREEN.
+# #535 removed the publisher that hid outages, not the renderer that still
+# could. Asserted by RENDERING, not by grepping for a field name.
+PAGE="$REPO/share/monkey-status.html"
+if command -v node >/dev/null 2>&1; then
+  render() {   # render <json> -> "<class> <headline>"
+    node -e '
+      const fs=require("fs");
+      const src=fs.readFileSync(process.argv[1],"utf8").match(/<script>([\s\S]*)<\/script>/)[1];
+      let out="";
+      global.document={getElementById:()=>({set innerHTML(v){out=v;}})};
+      const body=src.replace(/fetch\([\s\S]*?\.then\(d=>\{/,"(d=>{").replace(/\}\)\.catch\([\s\S]*$/,"})(D);");
+      new Function("D",body)(JSON.parse(process.argv[2]));
+      const m=out.match(/class="verdict (\w+)">([^<]*)</);
+      console.log(m?m[1]+" "+m[2].trim():"NO-HEADLINE");
+    ' "$PAGE" "$1" 2>/dev/null
+  }
+  FRESH='"generated":"2999-01-01T00:00:00Z","valid_until":"2999-01-01T00:00:00Z"'
+  got="$(render "{\"accounts\":[],\"watcher\":{$FRESH,\"verdict\":\"DOWN\",\"why\":\"sshd silent\",\"vm_state\":\"running\",\"sshd\":\"silent\",\"disk_home\":\"internal\"}}")"
+  case "$got" in bad\ DOWN*) ok "an unreachable monkey headlines DOWN, in red -- not a green 0 ARMED" ;;
+    *) bad "DOWN document renders DOWN" "got [$got] -- the page is deriving its own verdict again" ;; esac
+
+  got="$(render "{\"accounts\":[],\"watcher\":{\"generated\":\"2020-01-01T00:00:00Z\",\"valid_until\":\"2020-01-01T00:00:00Z\",\"verdict\":\"OK\",\"why\":\"fine\",\"vm_state\":\"running\",\"sshd\":\"answering\",\"disk_home\":\"internal\"}}")"
+  case "$got" in *UNWATCHED*) ok "a watcher past its own valid_until reads UNWATCHED, not OK" ;;
+    *) bad "a stale watcher reads UNWATCHED" "got [$got] -- a dead dexter would show its last verdict as current" ;; esac
+
+  got="$(render '{"accounts":[],"generated":"2999-01-01T00:00:00Z"}')"
+  case "$got" in *UNWATCHED*) ok "a document with no watcher block cannot report health" ;;
+    *) bad "a watcher-less document reads UNWATCHED" "got [$got]" ;; esac
+else
+  # NOT a silent skip: a guard that passes when it cannot run is C's defect.
+  bad "node is available to render the page" \
+    "node is not on PATH, so the renderer contract went UNCHECKED -- install node or run this suite where it exists"
+fi
 
 summary
