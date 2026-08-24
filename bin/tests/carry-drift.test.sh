@@ -35,14 +35,17 @@ TABLE="$REPO/bin/lib/carries.tsv"
 
 echo "carry-drift.test.sh"
 
-# origin/bashified FIRST, and refreshed before it is read. A local
-# `bashified` branch on a dev checkout is whatever that clone last fetched --
-# preferring it made this suite report drift against a branch nobody ships
-# (8 commits stale here on 2026-08-22), and would just as happily report
-# clean against one. The local branch is a fallback for a clone with no
-# remote at all, and says so when it is used.
+# origin/bashified FIRST, refreshed before read: a local `bashified` is
+# whatever that clone last fetched, and preferring it reported drift against a
+# branch nobody ships. The local one is a fallback, and says so when used.
+# --depth=1 ONLY WHERE ALREADY SHALLOW: it shallows the WHOLE repo, so this
+# suite truncated its own dev clone -- `git merge-base` then says "unrelated
+# histories" and rebase dies. CI is depth-1 already; elsewhere, fetch whole.
+depth=""
+[ "$(git -C "$REPO" rev-parse --is-shallow-repository 2>/dev/null)" = true ] && depth=--depth=1
+
 REF_BASH=""
-git -C "$REPO" fetch -q --depth=1 origin bashified:refs/remotes/origin/bashified 2>/dev/null || true
+git -C "$REPO" fetch -q $depth origin bashified:refs/remotes/origin/bashified 2>/dev/null || true
 if git -C "$REPO" rev-parse --verify -q "origin/bashified^{commit}" >/dev/null 2>&1; then
   REF_BASH="origin/bashified"
 elif git -C "$REPO" rev-parse --verify -q "bashified^{commit}" >/dev/null 2>&1; then
@@ -77,7 +80,7 @@ fi
 # never shipped, and the honest answer -- not yet -- was a red required check.
 # Found by checking #571's log instead of assuming the first fix covered it.
 REF_MAIN=""
-git -C "$REPO" fetch -q --depth=1 origin main:refs/remotes/origin/main 2>/dev/null || true
+git -C "$REPO" fetch -q $depth origin main:refs/remotes/origin/main 2>/dev/null || true
 if git -C "$REPO" rev-parse --verify -q "origin/main^{commit}" >/dev/null 2>&1; then
   REF_MAIN="origin/main"
 elif git -C "$REPO" rev-parse --verify -q "main^{commit}" >/dev/null 2>&1; then
