@@ -24,6 +24,7 @@ GRACE_H = 4
 RUNS_KEPT = 5
 OUTSIDE_MAX = 20                     # paths shown before the tail is counted
 TICK_TAG = "realisateur:selfdev-release:TICK"
+RUNNER_TAG = "scheduler:scheduler-paced-runner:RUNNER"
 HOME_ROOT = os.environ.get("SELFDEV_HOME_ROOT", "/home")          # fixture seams:
 SUDOERS_D = os.environ.get("SELFDEV_SUDOERS_D", "/etc/sudoers.d")  # unset in production
 
@@ -87,6 +88,17 @@ def release_tick(user, cron_lines):
         return None
     lines = [l.strip() for l in open(p) if l.strip()]
     return lines[-1] if lines else None
+
+
+def armed(cron_lines):
+    """Whether the account has a live scheduler-paced-runner dispatch line.
+
+    TRAP: a substring test over "runner" or "scheduler" also matches a line
+    that only runs sync-crontab.sh out of the scheduler clone -- that syncs
+    the crontab, it arms nothing, and reading it as armed reports a live
+    dispatcher where there is none. Match the cron tag the line is actually
+    written with instead."""
+    return any(RUNNER_TAG in l for l in cron_lines)
 
 
 def containment(user, uid):
@@ -179,7 +191,7 @@ if __name__ == "__main__":            # importable per function; `python3 - <fil
         out["accounts"].append({
             "account": u,
             "uid": pwd.getpwnam(u).pw_uid,
-            "armed": any("runner" in l or "scheduler" in l for l in c),
+            "armed": armed(c),
             "cron": c,
             "release_tick": release_tick(u, c),
             "runs": runs,
