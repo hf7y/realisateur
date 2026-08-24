@@ -44,7 +44,7 @@ done
 
 # Ubuntu's ~/.profile only prepends ~/.local/bin if the directory EXISTS at
 # login. Created later, it is not on PATH until the next login -- which is how
-# a shim that is installed correctly still cannot be found.
+# a verb that is installed correctly still cannot be found.
 if [ -d "$HOME/.local/bin" ]; then ok "~/.local/bin exists"
 else gap "~/.local/bin does not exist -- create it BEFORE the next login or .profile will not add it to PATH"; fi
 case ":$PATH:" in *":$HOME/.local/bin:"*) ok "~/.local/bin is on PATH" ;;
@@ -182,7 +182,7 @@ done
 #
 # NO WORKTREE HERE. `installe` installs from the pinned build manifest, not a
 # <project>-verbs worktree, and hf7y/realisateur#69 ended worktree creation
-# estate-wide; bin/no-worktree-lint.sh is what keeps it ended.
+# estate-wide.
 # bin/install-verb-build.sh's own header states the same supersession from the
 # other end: "A verb today is a symlink into a bashified WORKTREE of a full
 # dev clone ... A build depends on no dev checkout at all -- which is the
@@ -218,23 +218,11 @@ if ! command -v installe >/dev/null 2>&1; then
   fi
 else ok "installe already on PATH"; fi
 
-# realisateur's own installers, reused unchanged. install-shims.sh needs REPO
-# because it deliberately does NOT self-locate (its header says why).
-if [ -x "$PROJECTS/realisateur/bin/install-shims.sh" ]; then
-  act "install-shims.sh"
-  # A nonzero exit here is NOT necessarily a failed install: install-shims.sh
-  # also exits nonzero when it FLAGs, and its standing flag on a fresh account
-  # is "subagent-closeout.sh is installed but not referenced in
-  shim_out="$(REPO="$PROJECTS/realisateur" "$PROJECTS/realisateur/bin/install-shims.sh" 2>&1)"; shim_rc=$?
-  printf '%s\n' "$shim_out"
-  if [ "$shim_rc" -eq 0 ]; then
-    ok "shims, user commands and hooks installed"
-  elif printf '%s' "$shim_out" | grep -q '^FLAG:'; then
-    gap "install-shims.sh installed everything but FLAGged (rc=$shim_rc) -- read the FLAG lines above; a hook that is installed and unreferenced never fires"
-  else
-    bad "install-shims.sh failed (rc=$shim_rc)"
-  fi
-fi
+# NO SHIM STEP. #264 got off shims (2026-08-18) and #511 deleted the installer;
+# this block outlived both and was the last thing in the estate still trying to
+# run it. User commands and hooks ride the verb build instead -- carried in
+# bin/lib/carries.tsv, installed by install-verb-build.sh below -- and the
+# settings.json half is selfdev-hooks-provision.sh, run by root as its own step.
 if [ -x "$PROJECTS/realisateur/bin/install-verbs.sh" ]; then
   act "install-verbs.sh --apply (every write routed through installe)"
   "$PROJECTS/realisateur/bin/install-verbs.sh" --apply \

@@ -41,8 +41,8 @@ For per-project git health and open questions use `scheduler status
 **Read the answers on your own issues and process them.** Zach answers by
 commenting and LEAVING THE ISSUE OPEN -- state and labels say nothing about
 whether he answered, so an open question issue is *not* evidence that it is
-unanswered. Sweep across **all** states. Rule, predicate and history:
-`SCHEDULER.md`, "What is true now". Treat
+unanswered. Sweep across **all** states. `etiquette` prints the grammar and
+derives the label. Treat
 any such comment as authoritative: act on it, and if the decision should
 persist, put it where the mechanism it governs lives. Then remove that
 question+answer block once acted on. Leave unanswered questions
@@ -52,7 +52,7 @@ untouched.
 
 The inbox is whatever's sitting at the repo root (or under an `inbox/`
 subdirectory if one exists by now) that isn't part of realisateur's own
-scaffolding (`README.md`, `SCHEDULER.md`, `.claude/` (commands only), `.scheduler/`, `.git/`, an
+scaffolding (`README.md`, `.claude/` (commands only), `.scheduler/`, `.git/`, an
 `archive/` directory). It could be a text file, a PNG, anything -- there
 is no fixed naming convention, per `README.md`. Read every text artifact;
 view every image artifact.
@@ -136,13 +136,16 @@ For each unarchived artifact:
     full checklist, not by trusting that a file was written.
 - If the new project is the kind of thing that benefits from unattended
   nightly iteration (most agent/codebase projects are), wire it into the
-  scheduler exactly as `SCHEDULER.md` documents for realisateur itself:
-  a GitHub repo under `hf7y` (its issue tracker is where the project's
+  scheduler, per the scheduler's own `README.md`, which is the source of
+  truth: a GitHub repo under `hf7y` (its issue tracker is where the project's
   prose lives), a `.claude/commands/nightly-batch.md`
   and a root `CLAUDE.md` (adapt the templates in scheduler's `examples/`
   to what the new project actually is -- `CLAUDE.md.template` is the
   "suggest `/ideate <project>` instead of implementing" guardrail, worth
   every new project having from day one).
+  Push the command file to the remote BEFORE registering, and read the first
+  run's report rather than assuming it worked: a scheduled job reads the ref,
+  not your working tree.
 - Move the source artifact into `archive/` (create it if missing) once
   acted on, or once a real decision was made not to (note why in the
   report either way).
