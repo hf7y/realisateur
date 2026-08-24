@@ -217,9 +217,6 @@ Arming is one reviewed change, deliberately not made here:
   2. as $PROJECT on this host, once that lands:
        $HERE/enrole-selfdev.sh $PROJECT --apply --sync
      which is `git pull --ff-only && ./bin/sync-crontab.sh --apply` as $PROJECT.
-  3. confirm schedule/FREEZE names $PROJECT@$HOST -- without it, freeze-check
-     refuses dispatch no matter what the rotation says. THIS ONE IS A HUMAN'S:
-     enrole-selfdev.sh reports the line and will not write it.
 
 Adding a participant spends a shared weekly quota. That is a judgment, and it
 is why every guard in this ecosystem stops one step short of it.

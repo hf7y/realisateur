@@ -178,8 +178,7 @@ cat <<EOF
 
 NOT LANDED AND NOT ARMED, deliberately. Next, as $PROJECT:
     bin/land-selfdev.sh --check      # then --land
-and only then a reviewed change to schedule/_paced.$(hostname -s).conf plus
-schedule/FREEZE. Adding a participant is a judgment, not a side effect of
-creating an account.
+and only then a reviewed change to schedule/_paced.$(hostname -s).conf.
+Adding a participant is a judgment, not a side effect of creating an account.
 EOF
 [ "$BAD" -eq 0 ]

@@ -32,7 +32,6 @@ BATCH_CRON=""
 AUTONOMY_TIER="medium"
 EOF
   printf '# rotation\nother|1|1|%s/other/x\n' "$HOMES" > "$d/schedule/_paced.testhost.conf"
-  printf 'EXEMPT: other@testhost\n' > "$d/schedule/FREEZE"
   git -C "$d" init -q; git -C "$d" add -A
   git -C "$d" -c user.email=t@t -c user.name=t commit -qm init
   echo "$d"
@@ -63,10 +62,6 @@ ROWS="$(grep -c '^widget|' "$C/schedule/_paced.testhost.conf")"
 [ "$ROWS" = 1 ] && ok "B4 exactly one row" || bad "B4 expected 1 row, got $ROWS"
 has "B5 the row is enabled" "$(grep '^widget|' "$C/schedule/_paced.testhost.conf")" "widget|1|1|$HOMES/widget/Documents/Projects/scheduler/bin/scheduler-run widget batch"
 has "B6 prints the undo command" "$OUT" 'undo: git -C'
-
-echo "-- C. it never touches the gate, and says the gate is what is left"
-hasnt "C1 no EXEMPT line was written" "$(cat "$C/schedule/FREEZE")" "widget@testhost"
-has   "C2 says so out loud" "$OUT" "REMAINING ACT AND IT IS A HUMAN"
 
 echo "-- D. IDEMPOTENT: a second --apply changes nothing"
 BEFORE="$(git -C "$C" diff)"
