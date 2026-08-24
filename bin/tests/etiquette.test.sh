@@ -25,13 +25,10 @@ if [ "$1" = "label" ] && [ "$2" = "list" ]; then
   cat "${LABELS_FIXTURE:-/dev/null}"; exit 0
 fi
 if [ "$1" = "issue" ] && [ "$2" = "view" ]; then
-  # `gh issue view <n> --json number,labels,comments`. answered.sh moved off
-  # `api .../issues/<n>/comments` because that endpoint carries no LABELS, and
-  # without labels the `answered` override is invisible to etiquette.
+  # `gh issue view`: the REST comments endpoint carries no LABELS.
   #
-  # $ANSWERED_FIXTURE names the issues that have a comment, one per line, as
-  # `<number>` or `<number><TAB><createdAt>`. Labels come from $FIXTURE, so a
-  # test declares them in one place.
+  # $ANSWERED_FIXTURE: `<number>` or `<number><TAB><createdAt>`, one per line.
+  # Labels come from $FIXTURE, so a test declares them in one place.
   n="$3"
   cdate="$(awk -F'\t' -v n="$n" '$1==n {print ($2=="" ? "2026-08-19T00:00:00Z" : $2)}' \
             "${ANSWERED_FIXTURE:-/dev/null}" 2>/dev/null)"
@@ -101,18 +98,13 @@ hasnt "A'3 the unanswered one is untouched"   "$out" "#6"
 : > "$T/edits"; out="$(ANSWERED_FIXTURE="$T/answered.txt" ANSWERED_STAMP_ERA=2026-12-01 run --apply 2>&1)"
 hasnt "A'4 a pre-stamp comment does not clear the label" "$out" "ANSWERED    #5"
 
-# ...BUT IT IS NOT A SILENCE EITHER (hf7y/realisateur#553, #568). Reported as
-# unanswered with no line and no count, an issue carrying a human's own words
-# was indistinguishable from one carrying nothing, and the question got asked
-# again. Zach re-answered hf7y/chezz#4 that way on 2026-08-23.
+# ...BUT NOT A SILENCE (#553): reported as unanswered it gets asked again.
 has  "A'5 ...and it SAYS SO"                    "$out" "UNCOUNTED   #5"
 has  "A'6 ...naming the date it declined"       "$out" "2026-08-19"
 eq   "A'7 ...and writes no label edit"          "$(grep -c 'remove-label' "$T/edits")" "0"
 
 section "A''. the \`answered\` label is the override for an answer given elsewhere"
-# hf7y/wtul#37's clasp call was settled on hf7y/wtul#34 100 minutes before #37
-# was filed. Nothing looks across issues, so it blocked nine days. One typed
-# label is the whole fix; decision-rot already read it, etiquette never did.
+# #568: an answer given on ANOTHER issue. decision-rot read this label already.
 cat > "$T/f.json" <<'EOF'
 [
  {"number":8,"title":"answered elsewhere","body":"DECISION: @zach -- pick one","labels":[{"name":"needs-human"},{"name":"answered"}]},

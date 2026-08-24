@@ -1,23 +1,12 @@
 #!/usr/bin/env bash
-# lib/answered.sh -- the ONE-ISSUE feeder for bin/lib/answered.jq, which is
-# where the predicate itself lives and is the only place it lives.
-#
-# This file used to carry a second copy of that predicate as an inline `--jq`
-# expression, and bin/decision-rot.sh carried a third as DECISION_ROT_JQ. The
-# three disagreed; see the header of answered.jq for the four axes and the cost.
-#
-# WHY THE PREDICATE IS jq AND NOT BASH: `decision-rot` reads 26 repos with ONE
-# bulk `gh issue list --json ...,comments` each. If it called this function it
-# would spend one API call per issue instead -- hundreds. So the shared thing
-# is the text, and each caller feeds it the shape it already has.
+# lib/answered.sh -- the ONE-ISSUE feeder for bin/lib/answered.jq, where the
+# predicate lives and only lives. jq, not bash: decision-rot reads every repo
+# with ONE bulk call each and would otherwise spend one per issue.
 ANSWERED_STAMP_ERA="${ANSWERED_STAMP_ERA:-2026-08-14}"
-# Agents post as this account and nothing else can, so a comment from any other
-# human login needs no stamp era to prove it is a person's. See answered.jq.
 ANSWERED_OWNER="${ANSWERED_OWNER:-hf7y}"
 ANSWERED_JQ_FILE="${ANSWERED_JQ_FILE:-$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/answered.jq}"
 
-# Set by issue_answered() for a caller that wants to SAY why. The whole defect
-# this file is being changed for is a verdict nobody could print, so throwing
+# Set by issue_answered() so a caller can SAY why -- throwing
 # away the reason the predicate already computed would rebuild it.
 ANSWERED_WHY=''
 ANSWERED_AT=''

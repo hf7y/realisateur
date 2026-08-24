@@ -37,14 +37,9 @@ run() { FIXTURE="$1" bash "$SCRIPT" "${@:2}"; }
 
 STAMP='<!-- agent: hf7y/realisateur 2026-08-15 -->'
 
-# EVERY FIXTURE COMMENT BELOW IS DATED AFTER 2026-08-14 ON PURPOSE. This suite
-# was written when decision-rot had no stamp era, so its comments sat in late
-# July / early August; when the predicate merged into bin/lib/answered.jq
-# (#568) and the era came with it, 16 of these cases went from "answered" to
-# "uncounted" at once. The dates are incidental to what A-D actually pin (where
-# the stamp sits, whether a relay counts, open vs closed), so the clock moved
-# and the assertions did not. THE ERA ITSELF is pinned in section C''' below,
-# which is the case that did not exist before.
+# FIXTURE COMMENTS ARE DATED AFTER 2026-08-14 ON PURPOSE: 16 cases flipped to
+# "uncounted" when the era arrived, and the dates are incidental to what A-D
+# pin, so the clock moved and the assertions did not (era pinned in C''').
 
 echo "decision-rot.test.sh"
 
@@ -138,10 +133,7 @@ has   "D3 the mid-body-quote issue is the rotting one" "$OUT" "#10"
 hasnt "D4 trailing blank lines do not hide the stamp" "$OUT" "#11"
 
 echo "-- C'''. UNCOUNTED: a pre-era comment is not an answer, and not a silence"
-# hf7y/realisateur#553. Before 2026-08-23 this returned the same "no" as an
-# issue with no comments at all -- no line, no count, no name -- so an issue
-# carrying Zach's own words was indistinguishable from one carrying nothing,
-# and he was asked hf7y/chezz#4 a second time and gave the same answer twice.
+# #553: same "no" as an issue with no comments, so chezz#4 was asked twice.
 cat > "$T/u.json" <<EOF
 [
  {"number":20,"title":"answered before the stamp era","state":"OPEN","labels":[],
@@ -162,9 +154,7 @@ U="$(printf '%s' "$OUT" | jq -c 'select(.kind=="uncounted")')"
 has "C'''7 each uncounted line names its issue"     "$U" '"number":20'
 has "C'''8 ...and the date it declined to count"    "$U" '"comment_at":"2026-08-11"'
 
-# THE OVERRIDE. hf7y/wtul#37's clasp call was settled on hf7y/wtul#34 and
-# blocked nine days because nothing looks across issues. One typed label ends
-# it -- and it must outrank UNCOUNTED, which is the state it exists to leave.
+# THE OVERRIDE (#568): it must outrank UNCOUNTED.
 cat > "$T/u2.json" <<EOF
 [
  {"number":21,"title":"answered on another issue","state":"OPEN","labels":[{"name":"answered"}],

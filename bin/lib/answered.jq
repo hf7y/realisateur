@@ -1,34 +1,21 @@
-# answered.jq -- has a human answered this issue? THE one text.
+# answered.jq -- has a human answered this issue? THE one text (#568).
 #
-# Prepended to a caller's own filter, which is the pattern this replaces:
-#
+# Prepended to a caller's filter:
 #   jq --arg owner hf7y --arg era 2026-08-14 "$(cat answered.jq)"'.[] | verdict'
 #
-# INPUT, per issue: the shape both `gh issue list --json
-# number,title,state,labels,comments` and `gh issue view --json ...` produce --
-# `.comments[]` carrying `.author.login`, `.body`, `.createdAt`, and
-# `.labels[].name`. Two callers, two feeding styles, one text.
-#
-# WHY IT IS ONE TEXT NOW (hf7y/realisateur#568). This lived twice -- as
-# DECISION_ROT_JQ in bin/decision-rot.sh and as an inline `--jq` expression in
-# bin/lib/answered.sh -- and the copies disagreed on FOUR axes: the era cutoff
-# (one had none), the `answered` label (one ignored it), what `stamped` means
-# (anywhere in the body vs. the last line), and whether the comment's author
-# mattered. SCHEDULER.md said they shared a predicate. They did not, and
-# nothing said so.
+# INPUT, per issue: what `gh issue list/view --json ...,labels,comments`
+# produce. Two callers, two feeding styles, one text -- it lived THREE times
+# and the copies disagreed on the era cutoff, the `answered` label, what
+# `stamped` means, and whether the author mattered.
 #
 # THREE VERDICTS, AND THE THIRD IS THE POINT:
-#
-#   answered     a human answered, or the `answered` label says one did elsewhere
-#   uncounted    a comment exists that COULD be a human's and cannot be counted
+#   answered     a human did, or the `answered` label says one did elsewhere
+#   uncounted    a comment COULD be a human's and cannot be counted
 #   unanswered   there is nothing here
-#
-# `uncounted` was previously reported as `unanswered`, with no line and no
-# count. That is how Zach was asked hf7y/chezz#4 a second time and re-gave the
-# answer he had already written on it, and how the clasp call on hf7y/wtul#37
-# blocked nine days after being settled on hf7y/wtul#34. An unknowable is not
-# an answer -- but it is not a silence either, and folding it into one spends
-# the scarcest thing in the estate.
+# `uncounted` used to report as `unanswered`, with no line and no count. That
+# is how Zach was asked chezz#4 twice, and how wtul#37 blocked nine days after
+# being settled on wtul#34. An unknowable is not an answer -- but it is not a
+# silence either.
 
 # stamped: TRUE iff the body's LAST NON-BLANK LINE opens with `<!-- agent:`.
 # The stricter of the two rules that merged here: `test("<!--\\s*agent:")`

@@ -6,16 +6,13 @@
 # RUNNER: no -- a SURVEY, run in a triage pass or ahead of /ideate and /cloture
 # GUARD-TEST: bin/tests/etiquette.test.sh
 # GATE: none -- reads live issue trackers; writes only with --apply
-# THE TEXT LIVES IN bin/lib/labels.tsv AND IS NOT DUPLICATED HERE (#397): a
-# grammar copied into 24 repos is 24 grammars.
-#
-# `needs-human` is DERIVED: grammar_declaration() (bin/lib/body-grammar.sh)
-# reads line 1, issue_answered() (bin/lib/answered.sh) reads the comments.
-# Typed, it was wrong 3 of 3 and absent from 22 of 24 repos (#396, #397).
+# THE TEXT LIVES IN bin/lib/labels.tsv, NOT HERE (#397): a grammar copied into
+# 24 repos is 24 grammars. `needs-human` is DERIVED -- grammar_declaration()
+# reads line 1, issue_answered() reads the comments. Typed, it was wrong 3 of 3.
 #
 # TRAP: line 1 declaring NEITHER is UNDECLARED, never "no decision".
 # TRAP: a label absent from labels.tsv is left alone -- a floor, not a
-#   whitelist; deleting unrecognised labels erases a repo's own taxonomy.
+#   whitelist; deleting one erases a repo's own taxonomy.
 set -uo pipefail
 
 CLI_NAME='etiquette'
@@ -147,10 +144,8 @@ while IFS=$'\t' read -r num has_label title; do
     # An answered decision is an agent's work: left labelled it brakes dispatch.
     decision)
       want=yes
-      # THREE OUTCOMES BESIDES "ANSWERED", AND ONLY ONE OF THEM IS A SILENCE.
-      # UNCOUNTED and BLIND both keep the label -- clearing on either would be
-      # the forgery lib/answered.jq refuses -- but they are REPORTED, because
-      # reporting them as nothing is the defect (hf7y/realisateur#553, #568).
+      # UNCOUNTED and BLIND keep the label -- clearing would be forgery --
+      # but are REPORTED (#553): only one non-answer is a silence.
       issue_answered "$REPO" "$num"
       case $? in
         0) want=no; answered=1 ;;
@@ -188,9 +183,7 @@ say "$matched issue(s) agree, $findings issue finding(s), $label_findings label 
 say "$changed label(s) reconciled, $provisioned label(s) provisioned."
 [ $((findings + label_findings)) -gt 0 ] && [ "$APPLY" -eq 0 ] && \
   say 'Re-run with --apply. An UNDECLARED body is NOT fixed by a label -- edit line 1.'
-# A BLIND read is not a finding that --apply can fix, and it is not a clean
-# run either. Exiting 1 here would say "findings, go look"; exiting 0 would say
-# the repo agrees. Neither is true of an issue nobody could read.
+# A BLIND read is neither a finding --apply can fix nor a clean run.
 if [ "$BLIND_READS" -gt 0 ]; then
   printf '%s: BLIND -- %s issue(s) could not be read, so the report above is INCOMPLETE.\n' \
     "$CLI_NAME" "$BLIND_READS" >&2
