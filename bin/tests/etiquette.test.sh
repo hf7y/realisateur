@@ -24,10 +24,25 @@ if [ "$1" = "label" ] && [ "$2" = "list" ]; then
   [ -n "${GH_LABEL_FAIL:-}" ] && { echo "$GH_LABEL_FAIL" >&2; exit 1; }
   cat "${LABELS_FIXTURE:-/dev/null}"; exit 0
 fi
-if [ "$1" = "api" ]; then
-  # repos/<o>/<r>/issues/<n>/comments -- $ANSWERED_FIXTURE names the answered ones
-  n="${2##*/issues/}"; n="${n%%/*}"
-  grep -qx "$n" "${ANSWERED_FIXTURE:-/dev/null}" 2>/dev/null && echo "2026-08-19T00:00:00Z"
+if [ "$1" = "issue" ] && [ "$2" = "view" ]; then
+  # `gh issue view <n> --json number,labels,comments`. answered.sh moved off
+  # `api .../issues/<n>/comments` because that endpoint carries no LABELS, and
+  # without labels the `answered` override is invisible to etiquette.
+  #
+  # $ANSWERED_FIXTURE names the issues that have a comment, one per line, as
+  # `<number>` or `<number><TAB><createdAt>`. Labels come from $FIXTURE, so a
+  # test declares them in one place.
+  n="$3"
+  cdate="$(awk -F'\t' -v n="$n" '$1==n {print ($2=="" ? "2026-08-19T00:00:00Z" : $2)}' \
+            "${ANSWERED_FIXTURE:-/dev/null}" 2>/dev/null)"
+  labels="$(jq -c --argjson n "$n" '.[]|select(.number==$n)|.labels' "$FIXTURE" 2>/dev/null)"
+  if [ -n "$cdate" ]; then
+    # Authored by the owner and unstamped: a human's, per lib/answered.jq.
+    comments="[{\"author\":{\"login\":\"hf7y\"},\"body\":\"an answer\",\"createdAt\":\"$cdate\"}]"
+  else
+    comments='[]'
+  fi
+  printf '{"number":%s,"labels":%s,"comments":%s}\n' "$n" "${labels:-[]}" "$comments"
   exit 0
 fi
 if [ -n "${GH_FAIL:-}" ]; then echo "$GH_FAIL" >&2; exit 1; fi
@@ -84,7 +99,39 @@ hasnt "A'3 the unanswered one is untouched"   "$out" "#6"
 # A comment BEFORE the stamp era cannot be told from an agent's, and
 # unknowable is not an answer.
 : > "$T/edits"; out="$(ANSWERED_FIXTURE="$T/answered.txt" ANSWERED_STAMP_ERA=2026-12-01 run --apply 2>&1)"
-hasnt "A'4 a pre-stamp comment does not clear the label" "$out" "ANSWERED"
+hasnt "A'4 a pre-stamp comment does not clear the label" "$out" "ANSWERED    #5"
+
+# ...BUT IT IS NOT A SILENCE EITHER (hf7y/realisateur#553, #568). Reported as
+# unanswered with no line and no count, an issue carrying a human's own words
+# was indistinguishable from one carrying nothing, and the question got asked
+# again. Zach re-answered hf7y/chezz#4 that way on 2026-08-23.
+has  "A'5 ...and it SAYS SO"                    "$out" "UNCOUNTED   #5"
+has  "A'6 ...naming the date it declined"       "$out" "2026-08-19"
+eq   "A'7 ...and writes no label edit"          "$(grep -c 'remove-label' "$T/edits")" "0"
+
+section "A''. the \`answered\` label is the override for an answer given elsewhere"
+# hf7y/wtul#37's clasp call was settled on hf7y/wtul#34 100 minutes before #37
+# was filed. Nothing looks across issues, so it blocked nine days. One typed
+# label is the whole fix; decision-rot already read it, etiquette never did.
+cat > "$T/f.json" <<'EOF'
+[
+ {"number":8,"title":"answered elsewhere","body":"DECISION: @zach -- pick one","labels":[{"name":"needs-human"},{"name":"answered"}]},
+ {"number":9,"title":"not answered anywhere","body":"DECISION: @zach -- pick one","labels":[{"name":"needs-human"}]}
+]
+EOF
+: > "$T/edits"; out="$(run --apply 2>&1)"
+has   "A''1 the labelled one is ANSWERED"        "$out" "ANSWERED    #8"
+has   "A''2 ...and needs-human is removed"       "$(cat "$T/edits")" "--remove-label needs-human"
+hasnt "A''3 the unlabelled one is untouched"     "$out" "#9"
+
+# The override must outrank UNCOUNTED -- that is the case it exists for: the
+# comment on THIS issue is unreadable, and a human answered on another.
+printf '8\t2026-08-01T00:00:00Z\n' > "$T/answered.txt"
+: > "$T/edits"; out="$(ANSWERED_FIXTURE="$T/answered.txt" run --apply 2>&1)"
+has   "A''4 the label beats a pre-era comment"   "$out" "ANSWERED    #8"
+hasnt "A''5 ...so it is not reported UNCOUNTED"  "$out" "UNCOUNTED   #8"
+
+printf '5\n' > "$T/answered.txt"
 
 # B reads the section-A fixture; put it back.
 cat > "$T/f.json" <<'EOF'
