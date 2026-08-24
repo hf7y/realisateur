@@ -38,18 +38,15 @@ asserted:**
   makes the remote the source of truth for "what's outstanding" instead
   of this checkout.
 - **Documented as an intentional exception** — a repo whose registration
-  is itself missing or stale (no automated check for this currently
-  exists — #511 deleted the layer that reported it, `closeout-lint`'s
-  `[missing-repo]` row included — say so by hand), a branch
+  is itself missing/stale (no check for this exists now; #511 deleted
+  `closeout-lint`'s `[missing-repo]` row — say so by hand), a branch
   deliberately parked mid-experiment, etc. Say so in the session close
   (step 4) with the branch name and why — not as a new repo file, just
   in what you tell Zach.
 
-There is no longer a single command that clears all of this —
-`closeout-lint` did, and was deleted in #511 for reporting clean without
-looking (1,029 lines sampled across six guards, zero findings). Check
-each local branch by hand, against `origin`, not against what this
-checkout remembers:
+`closeout-lint` used to clear all of this in one run; #511 deleted it for
+reporting clean without looking. Check each branch by hand instead, against
+`origin` not this checkout, and handle anything left over the same way:
 
 ```
 git status                                          # uncommitted, and is it this run's or pre-existing
@@ -57,8 +54,6 @@ git cherry origin/main                               # anything not yet on main
 git merge-base --is-ancestor <branch> <remote-ref>    # tip already reachable via another remote ref
 gh pr list --head <branch>                            # an open PR already covers it
 ```
-
-For anything these don't clear:
 
 - **Uncommitted changes `git status` shows** -> commit (via a message file) or
   discard deliberately. Paths that predate this session are NOT that: leave
