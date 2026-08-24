@@ -156,7 +156,7 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
         ${disagree?`<div class="why">claimed ${H(c)}</div>`:""}
         ${hist?`<div class="dots">${hist}</div>`:""}</td>
       <td>${r.started_at?`${H(r.commits_added??0)}c / ${H(r.issues_closed??0)}i / ${H(r.prs_merged??0)}pr`:"&mdash;"}</td>
-      <td class="why">${H((a.release_tick||"no release tick").replace(/^\S+\s/,""))}</td>
+      <td class="why">${a.release_tick?H(a.release_tick.replace(/^\S+\s/,"")):"no release tick"}</td>
     </tr>`;
   }).join("");
 
