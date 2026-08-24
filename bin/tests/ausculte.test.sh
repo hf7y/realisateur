@@ -105,6 +105,20 @@ verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence
 out="$(run propagation)"; rc=$?
 check "a host still behind a build past the window is DOWN (5)" "$rc" "5"
 
+# A QUIET NIGHT IS NOT AN OUTAGE. NO_CHANGE means "gate green, no project
+# moved -- today's build is still current" (build-verbs.yml), and grading it
+# DOWN made 5 of the last 54 live decisions read as an outage. release-ledger.sh
+# has always graded it this way: a week with no cut is healthy if nothing
+# changed. BLOCKED and ERROR stay findings -- the case above still pins that.
+# NO_CHANGE publishes build_id "-", so the hosts are graded against last_cut.
+printf '#!/usr/bin/env bash\necho /usr/local/share/verb-builds/B\n' > "$TMP/stub/ssh"
+chmod +x "$TMP/stub/ssh"
+verdict "{\"decision\":\"NO_CHANGE\",\"build_id\":\"-\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"last_cut\":{\"at\":\"$fresh\",\"build_id\":\"B\"}}"
+out="$(run propagation)"; rc=$?
+check "a NO_CHANGE night is healthy (0), not DOWN" "$rc" "0"
+hasnt "and the channel is never called down for not moving" "$out" "the channel is NO_CHANGE"
+has "and the hosts are graded against the last cut, not against \"-\"" "$out" "every host is on it"
+
 verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"last_cut\":{\"at\":\"$fresh\",\"build_id\":\"B\"}}"
 printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"
 

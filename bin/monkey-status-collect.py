@@ -22,11 +22,24 @@ UID_LO, UID_HI = 3000, 3100          # the self-dev band (provision-selfdev-user
 CADENCE_H = 24                       # this page is republished daily
 GRACE_H = 4
 RUNS_KEPT = 5
+OUTSIDE_MAX = 20                     # paths shown before the tail is counted
+TICK_TAG = "realisateur:selfdev-release:TICK"
+# The trees this reads, overridable so a suite can probe a fixture instead of
+# the live estate. Nothing sets these in production.
+HOME_ROOT = os.environ.get("SELFDEV_HOME_ROOT", "/home")
+SUDOERS_D = os.environ.get("SELFDEV_SUDOERS_D", "/etc/sudoers.d")
 
 
 def sh(*cmd):
     p = subprocess.run(cmd, capture_output=True, text=True)
     return p.stdout if p.returncode == 0 else ""
+
+
+def sh_rc(*cmd):
+    """(returncode, stdout) -- for probes where "could not look" and "found
+    nothing" are different answers and sh()'s empty string conflates them."""
+    p = subprocess.run(cmd, capture_output=True, text=True)
+    return p.returncode, p.stdout
 
 
 def accounts():
@@ -41,7 +54,7 @@ def cron(user):
 
 def last_runs(user):
     """Most recent run records from this account's scheduler ledger."""
-    d = f"/home/{user}/.local/share/scheduler-runs"
+    d = f"{HOME_ROOT}/{user}/.local/share/scheduler-runs"
     recs = []
     for name in os.listdir(d) if os.path.isdir(d) else []:
         if not name.endswith(".jsonl"):
@@ -60,9 +73,18 @@ def last_runs(user):
     return [{k: r.get(k) for k in keep} for r in recs[-RUNS_KEPT:]][::-1]
 
 
-def release_tick(user):
-    """Last line of the account's verb-build release-tick status log."""
-    p = f"/home/{user}/.local/state/selfdev-release-tick.status"
+def release_tick(user, cron_lines):
+    """Last line of the account's verb-build release-tick status log -- but
+    only while the account still HAS a release tick.
+
+    TRAP: retire_cadence() (selfdev-release-tick.sh) removes the cron line and
+    the private build root and leaves the status file behind. Published on its
+    own, that file is a stopped clock: every row read pin=2026-08-12T183347Z
+    while the host was serving a build twelve days newer. No tick line in the
+    crontab, no status: null, which the page renders as an absence."""
+    if not any(TICK_TAG in l for l in cron_lines):
+        return None
+    p = f"{HOME_ROOT}/{user}/.local/state/selfdev-release-tick.status"
     if not os.path.exists(p):
         return None
     lines = [l.strip() for l in open(p) if l.strip()]
@@ -73,7 +95,7 @@ def containment(user, uid):
     """What this account reaches outside its own home. Three lists, and a
     null when the probe itself could not run -- an unreadable tree is not an
     empty one."""
-    home = f"/home/{user}"
+    home = f"{HOME_ROOT}/{user}"
     out = {"foreign_clones": [], "outside_home": [], "sudoers": []}
 
     # A clone whose origin is not this account's own repo.
@@ -90,17 +112,29 @@ def containment(user, uid):
         if url and not url.rstrip("/").endswith(f"/{user}") and not url.endswith(f"/{user}.git"):
             out["foreign_clones"].append({"path": d, "origin": url})
 
-    # The first file this uid owns outside its home. -quit so the sweep costs
-    # one hit, not a full walk; the account's OWN crontab is excluded because
-    # the clock lives on the consumer by design.
-    hit = sh("find", "/home", "/etc", "/usr/local", "/srv", "/var", "-xdev",
-             "-uid", str(uid), "-not", "-path", home, "-not", "-path", f"{home}/*",
-             "-not", "-path", f"/var/spool/cron/crontabs/{user}", "-print", "-quit").strip()
-    if hit:
-        out["outside_home"].append(hit)
+    # Every file this uid owns outside its home; the account's OWN crontab is
+    # excluded because the clock lives on the consumer by design.
+    #
+    # TRAP: find exits non-zero if ANY tree it walks is unreadable, and sh()
+    # reads that as "found nothing" -- a half-blind sweep publishing as
+    # contained, the same silent zero the safe.directory note above describes.
+    # A failed find is BLIND.
+    #
+    # TRAP: -quit made this list length 0 or 1 by construction, so ARGUMENT
+    # ORDER decided what a human was shown: 13 of 15 accounts reported the same
+    # /var/backups gitconfig and everything behind it was masked.
+    rc, found = sh_rc("find", HOME_ROOT, "/etc", "/usr/local", "/srv", "/var", "-xdev",
+                      "-uid", str(uid), "-not", "-path", home, "-not", "-path", f"{home}/*",
+                      "-not", "-path", f"/var/spool/cron/crontabs/{user}", "-print")
+    if rc != 0:
+        return None                           # could not look: BLIND, not clean
+    hits = [l for l in found.splitlines() if l.strip()]
+    out["outside_home"] = hits[:OUTSIDE_MAX]
+    if len(hits) > OUTSIDE_MAX:
+        out["outside_home"].append(f"... and {len(hits) - OUTSIDE_MAX} more")
 
-    for f in sorted(os.listdir("/etc/sudoers.d")) if os.path.isdir("/etc/sudoers.d") else []:
-        path = os.path.join("/etc/sudoers.d", f)
+    for f in sorted(os.listdir(SUDOERS_D)) if os.path.isdir(SUDOERS_D) else []:
+        path = os.path.join(SUDOERS_D, f)
         try:
             if any(l.split() and l.split()[0] == user for l in open(path)):
                 out["sudoers"].append(path)
@@ -116,7 +150,7 @@ def credentials(user):
     paths = {
         "app_key": "/etc/selfdev/app.pem",
         "claude_token": "/etc/selfdev/claude-token",
-        "claude_settings": f"/home/{user}/.claude/settings.json",
+        "claude_settings": f"{HOME_ROOT}/{user}/.claude/settings.json",
     }
     modes = {}
     for k, p in paths.items():
@@ -128,40 +162,43 @@ def credentials(user):
 
 
 
-now = time.time()
-out = {
-    "schema": 2,
-    "host": os.uname().nodename,
-    "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
-    "valid_until": time.strftime("%Y-%m-%dT%H:%M:%SZ",
-                                 time.gmtime(now + (CADENCE_H + GRACE_H) * 3600)),
-    "cadence_hours": CADENCE_H,
-    "grace_hours": GRACE_H,
-    # The verb build this host actually serves -- resolved through the
-    # `current` symlink, not read from a pin file that nothing proves was
-    # adopted.
-    #
-    # TRAP: resolving one named verb makes the whole build read as missing the
-    # day that verb is retired. The build root is what is being asked about.
-    "verb_build": os.path.basename(
-        os.path.realpath("/usr/local/share/verb-builds/current"))
-    if os.path.exists("/usr/local/share/verb-builds/current") else None,
-    "accounts": [],
-}
+# Importable so a suite can probe one function at a time; `python3 - <file`
+# (how monkey-watch.sh runs this) still enters here.
+if __name__ == "__main__":
+    now = time.time()
+    out = {
+        "schema": 2,
+        "host": os.uname().nodename,
+        "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
+        "valid_until": time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                                     time.gmtime(now + (CADENCE_H + GRACE_H) * 3600)),
+        "cadence_hours": CADENCE_H,
+        "grace_hours": GRACE_H,
+        # The verb build this host actually serves -- resolved through the
+        # `current` symlink, not read from a pin file that nothing proves was
+        # adopted.
+        #
+        # TRAP: resolving one named verb makes the whole build read as missing the
+        # day that verb is retired. The build root is what is being asked about.
+        "verb_build": os.path.basename(
+            os.path.realpath("/usr/local/share/verb-builds/current"))
+        if os.path.exists("/usr/local/share/verb-builds/current") else None,
+        "accounts": [],
+    }
 
-for u in accounts():
-    c = cron(u)
-    runs = last_runs(u)
-    out["accounts"].append({
-        "account": u,
-        "uid": pwd.getpwnam(u).pw_uid,
-        "armed": any("runner" in l or "scheduler" in l for l in c),
-        "cron": c,
-        "release_tick": release_tick(u),
-        "runs": runs,
-        "last_run": runs[0] if runs else None,
-        "containment": containment(u, pwd.getpwnam(u).pw_uid),
-        "credentials": credentials(u),
-    })
+    for u in accounts():
+        c = cron(u)
+        runs = last_runs(u)
+        out["accounts"].append({
+            "account": u,
+            "uid": pwd.getpwnam(u).pw_uid,
+            "armed": any("runner" in l or "scheduler" in l for l in c),
+            "cron": c,
+            "release_tick": release_tick(u, c),
+            "runs": runs,
+            "last_run": runs[0] if runs else None,
+            "containment": containment(u, pwd.getpwnam(u).pw_uid),
+            "credentials": credentials(u),
+        })
 
-print(json.dumps(out, indent=2))
+    print(json.dumps(out, indent=2))

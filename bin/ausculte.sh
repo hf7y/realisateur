@@ -174,7 +174,13 @@ if want propagation; then
       cut_epoch="$(date -u -d "$cut_at" +%s 2>/dev/null)" \
         && age_h=$(( ( $(date -u +%s) - cut_epoch ) / 3600 ))
     fi
-    if [ "$dec" != CUT ]; then
+    # NO_CHANGE IS A HEALTHY NIGHT, NOT AN OUTAGE: the gate ran, no project
+    # moved, so today's build is still the current one -- release-ledger.sh
+    # grades it the same way ("a week with no cut is HEALTHY if nothing
+    # changed"). Grading it DOWN made 5 of the last 54 decisions read as an
+    # outage, which is how a row trains its reader to ignore it. BLOCKED and
+    # ERROR stay findings.
+    if [ "$dec" != CUT ] && [ "$dec" != NO_CHANGE ]; then
       record propagation DOWN "the channel is $dec ($streak run(s) running); nothing has propagated since $cut_at"
     elif [ "$age_h" -lt 0 ]; then
       record propagation BLIND 'the verdict names no last cut this could age'
@@ -183,7 +189,12 @@ if want propagation; then
     else
       # Only with the channel proven live does what is installed mean
       # anything: a host behind the pin did not adopt.
-      bid="$(printf '%s' "$v" | jq -r '.build_id // empty' 2>/dev/null)"
+      # The build hosts are graded against is the one the AGE above was
+      # measured from -- last_cut. A NO_CHANGE night publishes build_id "-"
+      # (build-verbs.yml: `--build-id "${CUT_BUILD:--}"`), and grading a host
+      # against "-" reports every host behind a build that does not exist.
+      bid="$(printf '%s' "$v" | jq -r '.last_cut.build_id // .build_id // empty' 2>/dev/null)"
+      [ "$bid" = "-" ] && bid=""
       if [ -z "${PROP_HOST_PIN:-}" ]; then
         record propagation BLIND 'no propagation-set.sh reachable, so the host pin path is unknown'
         bid=""
