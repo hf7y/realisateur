@@ -20,6 +20,10 @@ bin/discipline	bin/discipline.sh
 bin/etiquette	bin/etiquette.sh
 bin/notify-senechal	bin/notify-senechal.sh
 bin/lib/answered.sh	bin/lib/answered.sh
+# answered.sh is a FEEDER; the predicate it feeds is answered.jq. Carried
+# without it, issue_answered() finds no predicate and returns BLIND for every
+# issue -- which would take `etiquette` to exit 6 estate-wide (#568).
+bin/lib/answered.jq	bin/lib/answered.jq
 bin/lib/body-grammar.sh	bin/lib/body-grammar.sh
 bin/lib/host-check.sh	bin/lib/host-check.sh
 bin/lib/labels.tsv	bin/lib/labels.tsv

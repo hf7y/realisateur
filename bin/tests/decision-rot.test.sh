@@ -174,7 +174,10 @@ EOF
 OUT="$(run "$T/u2.json" o/r)"; RC=$?
 rc    "C'''9 the label makes it answered, and open, so it is rot" 1 "$RC"
 has   "C'''10 counted answered"                    "$OUT" "1        1"
-hasnt "C'''11 ...and no longer uncounted"          "$OUT" "UNCOUNTED"
+# Not `hasnt "UNCOUNTED"` -- that word is a column header and is always there.
+hasnt "C'''11 ...and not listed as uncounted"      "$OUT" "#21    comment"
+S="$(run "$T/u2.json" o/r --json | jq -c 'select(.kind=="summary")')"
+has   "C'''12 ...and the uncounted count is zero"  "$S" '"uncounted":0'
 
 echo "-- E. SILENT ZERO: a gh failure exits 6, never 0"
 OUT="$(GH_FAIL='API rate limit exceeded' run "$T/a.json" o/r 2>&1)"; RC=$?
