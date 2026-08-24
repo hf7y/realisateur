@@ -24,26 +24,19 @@ if [ "$1" = "label" ] && [ "$2" = "list" ]; then
   [ -n "${GH_LABEL_FAIL:-}" ] && { echo "$GH_LABEL_FAIL" >&2; exit 1; }
   cat "${LABELS_FIXTURE:-/dev/null}"; exit 0
 fi
-if [ "$1" = "issue" ] && [ "$2" = "view" ]; then
-  # `gh issue view`: the REST comments endpoint carries no LABELS.
-  #
-  # $ANSWERED_FIXTURE: `<number>` or `<number><TAB><createdAt>`, one per line.
-  # Labels come from $FIXTURE, so a test declares them in one place.
-  n="$3"
-  cdate="$(awk -F'\t' -v n="$n" '$1==n {print ($2=="" ? "2026-08-19T00:00:00Z" : $2)}' \
-            "${ANSWERED_FIXTURE:-/dev/null}" 2>/dev/null)"
-  labels="$(jq -c --argjson n "$n" '.[]|select(.number==$n)|.labels' "$FIXTURE" 2>/dev/null)"
-  if [ -n "$cdate" ]; then
-    # Authored by the owner and unstamped: a human's, per lib/answered.jq.
-    comments="[{\"author\":{\"login\":\"hf7y\"},\"body\":\"an answer\",\"createdAt\":\"$cdate\"}]"
-  else
-    comments='[]'
-  fi
-  printf '{"number":%s,"labels":%s,"comments":%s}\n' "$n" "${labels:-[]}" "$comments"
-  exit 0
-fi
 if [ -n "${GH_FAIL:-}" ]; then echo "$GH_FAIL" >&2; exit 1; fi
-cat "$FIXTURE"
+# Bulk `gh issue list`: attach `comments` per issue from $ANSWERED_FIXTURE
+# (`<number>` or `<number><TAB><createdAt>`, one per line) -- #573 moved
+# etiquette.sh off a `gh issue view` call per issue onto this one bulk read,
+# so the fixture has to carry what that call used to synthesize.
+jq -c --rawfile af "${ANSWERED_FIXTURE:-/dev/null}" '
+  ( ($af | split("\n") | map(select(length > 0) | split("\t"))
+     | map({(.[0]): (.[1] // "2026-08-19T00:00:00Z")}) | add) // {} ) as $m
+  | map(. + {comments: (if $m[(.number|tostring)] then
+        # Owner-authored and unstamped: a human comment, per lib/answered.jq.
+        [{author: {login: "hf7y"}, body: "an answer", createdAt: $m[(.number|tostring)]}]
+      else [] end)})
+' "$FIXTURE"
 EOF
 chmod +x "$T/bin/gh"
 export PATH="$T/bin:$PATH"
