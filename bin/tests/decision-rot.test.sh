@@ -37,15 +37,24 @@ run() { FIXTURE="$1" bash "$SCRIPT" "${@:2}"; }
 
 STAMP='<!-- agent: hf7y/realisateur 2026-08-15 -->'
 
+# EVERY FIXTURE COMMENT BELOW IS DATED AFTER 2026-08-14 ON PURPOSE. This suite
+# was written when decision-rot had no stamp era, so its comments sat in late
+# July / early August; when the predicate merged into bin/lib/answered.jq
+# (#568) and the era came with it, 16 of these cases went from "answered" to
+# "uncounted" at once. The dates are incidental to what A-D actually pin (where
+# the stamp sits, whether a relay counts, open vs closed), so the clock moved
+# and the assertions did not. THE ERA ITSELF is pinned in section C''' below,
+# which is the case that did not exist before.
+
 echo "decision-rot.test.sh"
 
 echo "-- A. answered and still OPEN is rot; unanswered and open is not"
 cat > "$T/a.json" <<EOF
 [
  {"number":1,"title":"answered and open","state":"OPEN","labels":[],
-  "comments":[{"author":{"login":"owner"},"body":"build it","createdAt":"2026-08-01T00:00:00Z"}]},
+  "comments":[{"author":{"login":"owner"},"body":"build it","createdAt":"2026-08-17T00:00:00Z"}]},
  {"number":2,"title":"nobody answered this","state":"OPEN","labels":[],
-  "comments":[{"author":{"login":"somebodyelse"},"body":"any word on this?","createdAt":"2026-08-01T00:00:00Z"}]},
+  "comments":[{"author":{"login":"somebodyelse"},"body":"any word on this?","createdAt":"2026-08-17T00:00:00Z"}]},
  {"number":3,"title":"no comments at all","state":"OPEN","labels":[],"comments":[]}
 ]
 EOF
@@ -60,7 +69,7 @@ echo "-- B. TRAP 1: an answer on a CLOSED issue -- answered, but handled"
 cat > "$T/b.json" <<EOF
 [
  {"number":8,"title":"test dry-run (chezz#8 shape)","state":"CLOSED","labels":[],
-  "comments":[{"author":{"login":"owner"},"body":"yes, that is what it does","createdAt":"2026-07-30T00:00:00Z"}]}
+  "comments":[{"author":{"login":"owner"},"body":"yes, that is what it does","createdAt":"2026-08-15T00:00:00Z"}]}
 ]
 EOF
 OUT="$(run "$T/b.json" o/r)"; RC=$?
@@ -72,7 +81,7 @@ echo "-- C. TRAP 2: an agent's own comment under the shared owner token"
 cat > "$T/c.json" <<EOF
 [
  {"number":9,"title":"only the agent has spoken","state":"OPEN","labels":[],
-  "comments":[{"author":{"login":"owner"},"body":"Filed as requested: hf7y/realisateur#289.\n\n$STAMP","createdAt":"2026-08-01T00:00:00Z"}]}
+  "comments":[{"author":{"login":"owner"},"body":"Filed as requested: hf7y/realisateur#289.\n\n$STAMP","createdAt":"2026-08-17T00:00:00Z"}]}
 ]
 EOF
 OUT="$(run "$T/c.json" o/r)"; RC=$?
@@ -84,18 +93,18 @@ echo "-- C''. a RELAYED answer counts, or a spoken decision dies with the sessio
 cat > "$T/c3.json" <<EOF
 [
  {"number":10,"title":"agent wrote down what Zach said out loud","state":"OPEN","labels":[],
-  "comments":[{"author":{"login":"owner"},"body":"DECISION (Zach, in conversation): delete it.\n\n<!-- decision-by: zach 2026-08-21 -->\n\n$STAMP","createdAt":"2026-08-03T00:00:00Z"}]}
+  "comments":[{"author":{"login":"owner"},"body":"DECISION (Zach, in conversation): delete it.\n\n<!-- decision-by: zach 2026-08-21 -->\n\n$STAMP","createdAt":"2026-08-19T00:00:00Z"}]}
 ]
 EOF
 OUT="$(run "$T/c3.json" o/r)"; RC=$?
 rc  "C''1 exits 1 -- the relay IS an answer, and it is still open" 1 "$RC"
 has "C''2 counts it answered" "$OUT" "1        1"
-has "C''3 dated from the relay" "$OUT" "answered 2026-08-03"
+has "C''3 dated from the relay" "$OUT" "answered 2026-08-19"
 # Without the marker this is case C: stamped, therefore silent.
 cat > "$T/c4.json" <<EOF
 [
  {"number":10,"title":"same comment, no marker","state":"OPEN","labels":[],
-  "comments":[{"author":{"login":"owner"},"body":"DECISION (Zach, in conversation): delete it.\n\n$STAMP","createdAt":"2026-08-03T00:00:00Z"}]}
+  "comments":[{"author":{"login":"owner"},"body":"DECISION (Zach, in conversation): delete it.\n\n$STAMP","createdAt":"2026-08-19T00:00:00Z"}]}
 ]
 EOF
 OUT="$(run "$T/c4.json" o/r)"; RC=$?
@@ -105,21 +114,21 @@ echo "-- C'. the same issue, once the human actually replies, IS rot"
 cat > "$T/c2.json" <<EOF
 [
  {"number":9,"title":"agent stamped, then the human replied","state":"OPEN","labels":[],
-  "comments":[{"author":{"login":"owner"},"body":"Filed as requested.\n\n$STAMP","createdAt":"2026-08-01T00:00:00Z"},
-              {"author":{"login":"owner"},"body":"do the second shape","createdAt":"2026-08-02T00:00:00Z"}]}
+  "comments":[{"author":{"login":"owner"},"body":"Filed as requested.\n\n$STAMP","createdAt":"2026-08-17T00:00:00Z"},
+              {"author":{"login":"owner"},"body":"do the second shape","createdAt":"2026-08-18T00:00:00Z"}]}
 ]
 EOF
 OUT="$(run "$T/c2.json" o/r)"; RC=$?
 rc  "C'1 exits 1" 1 "$RC"
-has "C'2 dated from the HUMAN comment, not the stamped one" "$OUT" "answered 2026-08-02"
+has "C'2 dated from the HUMAN comment, not the stamped one" "$OUT" "answered 2026-08-18"
 
 echo "-- D. the stamp is the LAST NON-BLANK LINE ONLY"
 cat > "$T/d.json" <<EOF
 [
  {"number":10,"title":"quotes a stamp mid-body then answers","state":"OPEN","labels":[],
-  "comments":[{"author":{"login":"owner"},"body":"you wrote:\n\n$STAMP\n\nignore that, build it","createdAt":"2026-08-03T00:00:00Z"}]},
+  "comments":[{"author":{"login":"owner"},"body":"you wrote:\n\n$STAMP\n\nignore that, build it","createdAt":"2026-08-19T00:00:00Z"}]},
  {"number":11,"title":"stamped, with trailing blank lines","state":"OPEN","labels":[],
-  "comments":[{"author":{"login":"owner"},"body":"done\n\n$STAMP\n\n  \n","createdAt":"2026-08-03T00:00:00Z"}]}
+  "comments":[{"author":{"login":"owner"},"body":"done\n\n$STAMP\n\n  \n","createdAt":"2026-08-19T00:00:00Z"}]}
 ]
 EOF
 OUT="$(run "$T/d.json" o/r)"; RC=$?
@@ -127,6 +136,45 @@ rc  "D1 exits 1" 1 "$RC"
 has   "D2 exactly one answered -- the mid-body quote does not disqualify" "$OUT" "1        1"
 has   "D3 the mid-body-quote issue is the rotting one" "$OUT" "#10"
 hasnt "D4 trailing blank lines do not hide the stamp" "$OUT" "#11"
+
+echo "-- C'''. UNCOUNTED: a pre-era comment is not an answer, and not a silence"
+# hf7y/realisateur#553. Before 2026-08-23 this returned the same "no" as an
+# issue with no comments at all -- no line, no count, no name -- so an issue
+# carrying Zach's own words was indistinguishable from one carrying nothing,
+# and he was asked hf7y/chezz#4 a second time and gave the same answer twice.
+cat > "$T/u.json" <<EOF
+[
+ {"number":20,"title":"answered before the stamp era","state":"OPEN","labels":[],
+  "comments":[{"author":{"login":"owner"},"body":"standing yes","createdAt":"2026-08-11T00:00:00Z"}]}
+]
+EOF
+OUT="$(run "$T/u.json" o/r)"; RC=$?
+rc    "C'''1 exits 0 -- unknowable is not an answer, so it is not rot" 0 "$RC"
+has   "C'''2 zero answered"                       "$OUT" "0        0"
+has   "C'''3 ...but it is COUNTED as uncounted"   "$OUT" "UNCOUNTED"
+has   "C'''4 ...and NAMED, with its date"         "$OUT" "#20    comment 2026-08-11"
+has   "C'''5 ...and says what to do about it"     "$OUT" 'label the issue `answered`'
+
+OUT="$(run "$T/u.json" o/r --json)"
+S="$(printf '%s' "$OUT" | jq -c 'select(.kind=="summary")')"
+has "C'''6 the summary carries the uncounted count" "$S" '"uncounted":1'
+U="$(printf '%s' "$OUT" | jq -c 'select(.kind=="uncounted")')"
+has "C'''7 each uncounted line names its issue"     "$U" '"number":20'
+has "C'''8 ...and the date it declined to count"    "$U" '"comment_at":"2026-08-11"'
+
+# THE OVERRIDE. hf7y/wtul#37's clasp call was settled on hf7y/wtul#34 and
+# blocked nine days because nothing looks across issues. One typed label ends
+# it -- and it must outrank UNCOUNTED, which is the state it exists to leave.
+cat > "$T/u2.json" <<EOF
+[
+ {"number":21,"title":"answered on another issue","state":"OPEN","labels":[{"name":"answered"}],
+  "comments":[{"author":{"login":"owner"},"body":"standing yes","createdAt":"2026-08-11T00:00:00Z"}]}
+]
+EOF
+OUT="$(run "$T/u2.json" o/r)"; RC=$?
+rc    "C'''9 the label makes it answered, and open, so it is rot" 1 "$RC"
+has   "C'''10 counted answered"                    "$OUT" "1        1"
+hasnt "C'''11 ...and no longer uncounted"          "$OUT" "UNCOUNTED"
 
 echo "-- E. SILENT ZERO: a gh failure exits 6, never 0"
 OUT="$(GH_FAIL='API rate limit exceeded' run "$T/a.json" o/r 2>&1)"; RC=$?
