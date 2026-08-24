@@ -71,6 +71,11 @@ fi
 # origin/main answers the question this guard was built for (#516): is the
 # CARRY behind, or has bashified been hand-edited? A PR cannot fail that, and
 # a missing carry still goes red the moment it merges.
+# THE TABLE COMES FROM origin/main TOO, not the working tree. Reading it from
+# the branch reintroduced the same wedge one line down: a PR that ADDS a row
+# (bin/lib/answered.jq, #571) asks "is this carried yet?" about a file main has
+# never shipped, and the honest answer -- not yet -- was a red required check.
+# Found by checking #571's log instead of assuming the first fix covered it.
 REF_MAIN=""
 git -C "$REPO" fetch -q --depth=1 origin main:refs/remotes/origin/main 2>/dev/null || true
 if git -C "$REPO" rev-parse --verify -q "origin/main^{commit}" >/dev/null 2>&1; then
@@ -103,7 +108,8 @@ while IFS=$'\t' read -r carried src; do
   else
     bad "$carried DRIFTED from $src -- $REF_BASH ships a different file than $REF_MAIN develops. The carry is owed, or bashified was hand-edited."
   fi
-done < <(grep -v '^#' "$TABLE" | grep -v '^[[:space:]]*$')
+done < <(git -C "$REPO" show "$REF_MAIN:bin/lib/carries.tsv" 2>/dev/null \
+           | grep -v '^#' | grep -v '^[[:space:]]*$')
 
 if [ "$n" -gt 0 ]; then
   ok "checked $n carried file(s) from bin/lib/carries.tsv"
