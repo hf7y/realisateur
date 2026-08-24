@@ -105,12 +105,8 @@ verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence
 out="$(run propagation)"; rc=$?
 check "a host still behind a build past the window is DOWN (5)" "$rc" "5"
 
-# A QUIET NIGHT IS NOT AN OUTAGE. NO_CHANGE means "gate green, no project
-# moved -- today's build is still current" (build-verbs.yml), and grading it
-# DOWN made 5 of the last 54 live decisions read as an outage. release-ledger.sh
-# has always graded it this way: a week with no cut is healthy if nothing
-# changed. BLOCKED and ERROR stay findings -- the case above still pins that.
-# NO_CHANGE publishes build_id "-", so the hosts are graded against last_cut.
+# A QUIET NIGHT IS NOT AN OUTAGE: 5 of the last 54 graded DOWN. NO_CHANGE
+# publishes build_id "-", so the hosts are graded against last_cut.
 printf '#!/usr/bin/env bash\necho /usr/local/share/verb-builds/B\n' > "$TMP/stub/ssh"
 chmod +x "$TMP/stub/ssh"
 verdict "{\"decision\":\"NO_CHANGE\",\"build_id\":\"-\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"last_cut\":{\"at\":\"$fresh\",\"build_id\":\"B\"}}"
@@ -166,10 +162,8 @@ out="$(run arming)"; rc=$?
 check "a status document past its own valid_until is BLIND (6)" "$rc" "6"
 has "and it says nothing is publishing it" "$out" "expired at"
 
-# The `delivery` and `silence` probes went with delivery-audit.sh and
-# silence-audit.sh (DELETION-LIST.txt, 2026-08-22). Their cases are gone with
-# them rather than stubbed: a suite that keeps asserting the behaviour of a
-# deleted probe is the same shape of residue this sprint removed.
+# The `delivery` and `silence` probes went with their scripts (DELETION-LIST.txt);
+# their cases went too, rather than being stubbed against a deleted probe.
 
 echo
 echo "-- fleet: the reason an account gives for stopping ---------------------"

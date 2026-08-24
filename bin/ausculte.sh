@@ -174,12 +174,8 @@ if want propagation; then
       cut_epoch="$(date -u -d "$cut_at" +%s 2>/dev/null)" \
         && age_h=$(( ( $(date -u +%s) - cut_epoch ) / 3600 ))
     fi
-    # NO_CHANGE IS A HEALTHY NIGHT, NOT AN OUTAGE: the gate ran, no project
-    # moved, so today's build is still the current one -- release-ledger.sh
-    # grades it the same way ("a week with no cut is HEALTHY if nothing
-    # changed"). Grading it DOWN made 5 of the last 54 decisions read as an
-    # outage, which is how a row trains its reader to ignore it. BLOCKED and
-    # ERROR stay findings.
+    # NO_CHANGE IS A HEALTHY NIGHT -- gate green, nothing moved, today's build
+    # still current. 5 of the last 54 read as an outage. BLOCKED/ERROR remain.
     if [ "$dec" != CUT ] && [ "$dec" != NO_CHANGE ]; then
       record propagation DOWN "the channel is $dec ($streak run(s) running); nothing has propagated since $cut_at"
     elif [ "$age_h" -lt 0 ]; then
@@ -189,10 +185,7 @@ if want propagation; then
     else
       # Only with the channel proven live does what is installed mean
       # anything: a host behind the pin did not adopt.
-      # The build hosts are graded against is the one the AGE above was
-      # measured from -- last_cut. A NO_CHANGE night publishes build_id "-"
-      # (build-verbs.yml: `--build-id "${CUT_BUILD:--}"`), and grading a host
-      # against "-" reports every host behind a build that does not exist.
+      # Graded against the row the AGE came from: "-" names no build.
       bid="$(printf '%s' "$v" | jq -r '.last_cut.build_id // .build_id // empty' 2>/dev/null)"
       [ "$bid" = "-" ] && bid=""
       if [ -z "${PROP_HOST_PIN:-}" ]; then
@@ -249,12 +242,8 @@ if want rot; then
   else record rot BLIND 'decision-rot.sh not present'; fi
 fi
 
-# The `delivery` probe is gone with delivery-audit.sh (DELETION-LIST.txt,
-# 2026-08-22). It read 2 MET and 262 BLIND across 292 PRs, because the ledger
-# it graded is answered `- none` on 260 of them: a sensor measuring a field
-# nobody fills. A probe whose only output is BLIND transmits no bits about the
-# thing it names, and one that reports OK on `- none` is worse than absent.
-# Reinstating delivery proof properly is v2.
+# The `delivery` probe went with delivery-audit.sh (DELETION-LIST.txt): it read
+# 2 MET and 262 BLIND across 292 PRs. Reinstating delivery proof is v2.
 
 # Each ledger ends in a REASON column nothing has ever read.
 if want fleet; then

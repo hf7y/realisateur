@@ -24,10 +24,8 @@ GRACE_H = 4
 RUNS_KEPT = 5
 OUTSIDE_MAX = 20                     # paths shown before the tail is counted
 TICK_TAG = "realisateur:selfdev-release:TICK"
-# The trees this reads, overridable so a suite can probe a fixture instead of
-# the live estate. Nothing sets these in production.
-HOME_ROOT = os.environ.get("SELFDEV_HOME_ROOT", "/home")
-SUDOERS_D = os.environ.get("SELFDEV_SUDOERS_D", "/etc/sudoers.d")
+HOME_ROOT = os.environ.get("SELFDEV_HOME_ROOT", "/home")          # fixture seams:
+SUDOERS_D = os.environ.get("SELFDEV_SUDOERS_D", "/etc/sudoers.d")  # unset in production
 
 
 def sh(*cmd):
@@ -112,17 +110,8 @@ def containment(user, uid):
         if url and not url.rstrip("/").endswith(f"/{user}") and not url.endswith(f"/{user}.git"):
             out["foreign_clones"].append({"path": d, "origin": url})
 
-    # Every file this uid owns outside its home; the account's OWN crontab is
-    # excluded because the clock lives on the consumer by design.
-    #
-    # TRAP: find exits non-zero if ANY tree it walks is unreadable, and sh()
-    # reads that as "found nothing" -- a half-blind sweep publishing as
-    # contained, the same silent zero the safe.directory note above describes.
-    # A failed find is BLIND.
-    #
-    # TRAP: -quit made this list length 0 or 1 by construction, so ARGUMENT
-    # ORDER decided what a human was shown: 13 of 15 accounts reported the same
-    # /var/backups gitconfig and everything behind it was masked.
+    # TRAP: find exits non-zero on an unreadable tree and sh() read that as
+    # "found nothing"; -quit made the list 0 or 1 long, so ARGUMENT ORDER chose.
     rc, found = sh_rc("find", HOME_ROOT, "/etc", "/usr/local", "/srv", "/var", "-xdev",
                       "-uid", str(uid), "-not", "-path", home, "-not", "-path", f"{home}/*",
                       "-not", "-path", f"/var/spool/cron/crontabs/{user}", "-print")
@@ -162,9 +151,7 @@ def credentials(user):
 
 
 
-# Importable so a suite can probe one function at a time; `python3 - <file`
-# (how monkey-watch.sh runs this) still enters here.
-if __name__ == "__main__":
+if __name__ == "__main__":            # importable per function; `python3 - <file` still enters
     now = time.time()
     out = {
         "schema": 2,

@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
-#
-# SUBJECT: bin/monkey-status-collect.py -- the only producer of the account
-# rows on https://hf7y.com/monkey/. Hermetic: SELFDEV_HOME_ROOT and
-# SELFDEV_SUDOERS_D point at a fixture and `find` is a stub on PATH, so this
-# suite can never pass because the live estate happened to be contained.
-#
-# What it pins is the difference between "found nothing" and "could not look".
-# A sensor that reports the first when it means the second is worse than no
-# sensor: it retires the question.
+# SUBJECT: bin/monkey-status-collect.py. Hermetic -- fixture home root, fixture
+# sudoers dir, `find` stubbed: it cannot pass because the estate happened clean.
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 harness_tmp
@@ -20,9 +13,7 @@ mkdir -p "$T/homes/acct/.local/state" "$T/sudoers.d" "$T/stub"
 STATUS="$T/homes/acct/.local/state/selfdev-release-tick.status"
 printf '2026-08-13T05:49:02Z pin=2026-08-12T183347Z adopted\n' > "$STATUS"
 
-# The find stub answers from the environment, so a case says what the sweep
-# saw and what it exited with.
-cat > "$T/stub/find" <<'STUB'
+cat > "$T/stub/find" <<'STUB'   # a case says what the sweep saw and its rc
 #!/usr/bin/env bash
 [ -n "${FIND_OUT:-}" ] && printf '%s\n' "$FIND_OUT"
 exit "${FIND_RC:-0}"
@@ -47,8 +38,6 @@ probe() {
 }
 
 section "A. containment: an unreadable tree is not an empty one"
-# find exits non-zero when ANY directory it walks is unreadable, and it still
-# prints the hits it did reach. A partial sweep is BLIND, never contained.
 out="$(FIND_RC=1 FIND_OUT="/srv/thing" probe containment)"
 eq "a failing find is null (BLIND), not a containment record" "$out" "null"
 
@@ -73,8 +62,6 @@ eq "and the remainder is counted honestly" \
   "$(printf '%s' "$out" | jq -r '.outside_home[-1]')" "... and 5 more"
 
 section "C. release_tick: a retired clock is an absence, not a reading"
-# retire_cadence() removes the cron line and leaves the status file. Published
-# on its own it is a stopped clock -- 2026-08-12 pins under a 2026-08-24 build.
 [ -s "$STATUS" ] && ok "the fixture account HAS a status file to be tempted by" \
   || bad "fixture status file" "missing, so the case below proves nothing"
 
