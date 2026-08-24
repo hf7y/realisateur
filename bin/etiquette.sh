@@ -8,8 +8,7 @@
 # GATE: none -- reads live issue trackers; writes only with --apply
 # THE TEXT LIVES IN bin/lib/labels.tsv, NOT HERE (#397): a grammar copied into
 # 24 repos is 24 grammars. `needs-human` is DERIVED -- grammar_declaration()
-# reads line 1, issue_answered_json() reads the comments the bulk list below
-# already fetched. Typed, it was wrong 3 of 3.
+# reads line 1, issue_answered_json() reads the comments. Typed, it was wrong 3 of 3.
 #
 # TRAP: line 1 declaring NEITHER is UNDECLARED, never "no decision".
 # TRAP: a label absent from labels.tsv is left alone -- a floor, not a
@@ -139,9 +138,7 @@ json="$(gh issue list --repo "$REPO" --state open --limit 200 \
 findings=0; matched=0; changed=0; BLIND_READS=0
 while IFS=$'\t' read -r num has_label title; do
   [ -n "$num" ] || continue
-  # Sliced from the bulk read above, comments included -- issue_answered_json
-  # grades it with no further `gh` call. Before #573 this was one `gh issue
-  # view` per open DECISION issue.
+  # Sliced from the bulk read above -- comments included, no `gh` call here.
   issue_json="$(printf '%s' "$json" | jq -c --argjson n "$num" '.[]|select(.number==$n)')"
   body="$(printf '%s' "$issue_json" | jq -r '.body')"
   want='' ; answered=0 ; noted=0

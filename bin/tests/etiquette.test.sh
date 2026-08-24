@@ -26,14 +26,11 @@ if [ "$1" = "label" ] && [ "$2" = "list" ]; then
 fi
 if [ -n "${GH_FAIL:-}" ]; then echo "$GH_FAIL" >&2; exit 1; fi
 # Bulk `gh issue list`: attach `comments` per issue from $ANSWERED_FIXTURE
-# (`<number>` or `<number><TAB><createdAt>`, one per line) -- #573 moved
-# etiquette.sh off a `gh issue view` call per issue onto this one bulk read,
-# so the fixture has to carry what that call used to synthesize.
+# (`<number>` or `<number><TAB><createdAt>`, one per line), owner-authored.
 jq -c --rawfile af "${ANSWERED_FIXTURE:-/dev/null}" '
   ( ($af | split("\n") | map(select(length > 0) | split("\t"))
      | map({(.[0]): (.[1] // "2026-08-19T00:00:00Z")}) | add) // {} ) as $m
   | map(. + {comments: (if $m[(.number|tostring)] then
-        # Owner-authored and unstamped: a human comment, per lib/answered.jq.
         [{author: {login: "hf7y"}, body: "an answer", createdAt: $m[(.number|tostring)]}]
       else [] end)})
 ' "$FIXTURE"

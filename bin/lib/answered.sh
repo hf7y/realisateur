@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 # lib/answered.sh -- the feeder for bin/lib/answered.jq, where the predicate
-# lives and only lives. Two entry points, one gh call each -- ONE bulk `gh
-# issue list --json ...,comments` for a caller with many issues to grade
-# (bin/etiquette.sh), or ONE `gh issue view` for a caller with just one.
-# Neither spends a call per issue: that was etiquette.sh's own cost before
-# #573, one `gh api` per open DECISION issue, when the bulk list it already
-# makes could carry `comments` for free.
+# lives and only lives. Two entry points, one gh call each: a bulk-fed
+# issue_answered_json() for a caller already holding many issues (#573), and
+# issue_answered() for a caller with just one number.
 ANSWERED_STAMP_ERA="${ANSWERED_STAMP_ERA:-2026-08-14}"
 ANSWERED_OWNER="${ANSWERED_OWNER:-hf7y}"
 ANSWERED_JQ_FILE="${ANSWERED_JQ_FILE:-$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/answered.jq}"
@@ -15,9 +12,7 @@ ANSWERED_JQ_FILE="${ANSWERED_JQ_FILE:-$(dirname "$(readlink -f "${BASH_SOURCE[0]
 ANSWERED_WHY=''
 ANSWERED_AT=''
 
-# issue_answered_json <issue-json>  -- <issue-json> is one object shaped like
-# `gh issue list/view --json number,labels,comments` produces (a caller
-# already holding a bulk array slices one out with `jq -c`; no gh call here).
+# issue_answered_json <one issue's {number,labels,comments}> -- no gh call.
 #   0  answered      a human answered, or `answered` says one did elsewhere
 #   1  unanswered    nothing here that could be a human's
 #   2  uncounted     something could be, and cannot be counted -- NOT a silence
@@ -46,8 +41,7 @@ issue_answered_json() {
   esac
 }
 
-# issue_answered <owner/repo> <number> -- fetches the one issue, then defers
-# to issue_answered_json. Same four return codes.
+# issue_answered <owner/repo> <number> -- fetches, then defers to the above.
 issue_answered() {
   local repo="$1" num="$2" json
   ANSWERED_WHY=''; ANSWERED_AT=''
