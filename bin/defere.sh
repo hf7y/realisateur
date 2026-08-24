@@ -33,7 +33,7 @@ OWNER="${DEFERE_OWNER:-hf7y}"
 # Who is asked when a route needs a person. Not derived from the running
 # account: an agent account filing under its own name would be addressing the
 # decision to itself, which is the ownerless case with a handle stuck on it.
-DECIDER="${DEFERE_DECIDER:-zach}"
+DECIDER="${DEFERE_DECIDER:-hf7y}"
 WHAT=''; PROJECT=''; HUMAN=''; UNROUTABLE=''; BODY=''; FROM=''; REPO=''
 ALL=0
 DRY=0; MODE='file'   # quoted: `file` is a mode name, not file(1) -- SC2209
