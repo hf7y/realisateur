@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # defere.sh -- file the thing you were about to write a paragraph about.
 #
-# KIND: verb.  usage + exit codes: `--help`, from CLI_USAGE/CLI_EXITS below.
-#
+# KIND: verb
 # TRAP: "no owner" may NOT silently mean Zach -- refusing to choose among the
 #   three routes is a usage error, and an unresolvable project is refused with
 #   the --unroutable form PRINTED. A guessed destination loses the deferral.
