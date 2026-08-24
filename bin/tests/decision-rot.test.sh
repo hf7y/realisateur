@@ -3,10 +3,8 @@
 #
 # WHAT IS PINNED, and why each case exists rather than being a nice-to-have:
 #
-#   * THE TWO TRAPS THAT ALREADY ATE ANSWERS.
-#     B: an answer on a CLOSED issue. It must count as ANSWERED (so `--state
-#        open` can never be reintroduced for the answer scan) and must NOT
-#        count as ROT (closed is the estate's own signal for handled).
+#   * B: an answer on a CLOSED issue counts as ANSWERED (so `--state open` is
+#        never reintroduced for the answer scan) and NOT as ROT.
 #     C: an agent's own stamped comment, byte-indistinguishable from Zach's
 #        but for the trailing stamp. Only-stamped comments means zero answers.
 #   * D: the stamp is the LAST NON-BLANK LINE ONLY -- a mid-body quote must
@@ -145,7 +143,7 @@ rc    "C'''1 exits 0 -- unknowable is not an answer, so it is not rot" 0 "$RC"
 has   "C'''2 zero answered"                       "$OUT" "0        0"
 has   "C'''3 ...but it is COUNTED as uncounted"   "$OUT" "UNCOUNTED"
 has   "C'''4 ...and NAMED, with its date"         "$OUT" "#20    comment 2026-08-11"
-has   "C'''5 ...and says what to do about it"     "$OUT" 'label the issue `answered`'
+has   "C'''5 ...and says what to do about it"     "$OUT" 'label it `answered`'
 
 OUT="$(run "$T/u.json" o/r --json)"
 S="$(printf '%s' "$OUT" | jq -c 'select(.kind=="summary")')"
@@ -164,6 +162,23 @@ EOF
 OUT="$(run "$T/u2.json" o/r)"; RC=$?
 rc    "C'''9 the label makes it answered, and open, so it is rot" 1 "$RC"
 has   "C'''10 counted answered"                    "$OUT" "1        1"
+
+cat > "$T/u3.json" <<EOF
+[
+ {"number":30,"title":"closed, pre-era comment","state":"CLOSED","labels":[],
+  "comments":[{"author":{"login":"owner"},"body":"standing yes","createdAt":"2026-08-11T00:00:00Z"}]},
+ {"number":31,"title":"answered and open, so rot","state":"OPEN","labels":[],
+  "comments":[{"author":{"login":"owner"},"body":"do it","createdAt":"2026-08-19T00:00:00Z"}]}
+]
+EOF
+OUT="$(run "$T/u3.json" o/r)"; RC=$?
+hasnt "C4-1 a CLOSED uncounted issue is not listed"       "$OUT" "#30"
+has   "C4-2 ...and the open rot still is"                 "$OUT" "#31"
+eq    "C4-3 ...so tail -1 is a ROTTING row, which is what ausculte reports" \
+      "$(printf '%s' "$OUT" | tail -1 | grep -c answered)" "1"
+S3="$(run "$T/u3.json" o/r --json | jq -c 'select(.kind=="summary")')"
+has   "C4-4 uncounted_open counts only the open one"      "$S3" '"uncounted_open":0'
+has   "C4-5 ...while uncounted still counts all states"   "$S3" '"uncounted":1'
 # Not `hasnt "UNCOUNTED"` -- that word is a column header and is always there.
 hasnt "C'''11 ...and not listed as uncounted"      "$OUT" "#21    comment"
 S="$(run "$T/u2.json" o/r --json | jq -c 'select(.kind=="summary")')"
