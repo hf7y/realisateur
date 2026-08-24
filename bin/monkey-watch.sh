@@ -52,9 +52,8 @@ SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_dexter_monkey}"
 COLLECTOR="${COLLECTOR:-$HERE/bin/monkey-status-collect.py}"
 PAGE_SRC="${PAGE_SRC:-$HERE/share/monkey-status.html}"
 STATE_FILE="${STATE_FILE:-$HOME/.local/state/monkey-watch.last}"
-# The cron cadence on dexter, DECLARED so the published document can carry its
-# own valid_until. The page must be able to tell "monkey is down" from "the
-# watcher stopped ticking" -- without this it shows the last verdict forever.
+# The dexter cron cadence, DECLARED so the page carries a valid_until and can
+# tell "monkey is down" from "the watcher stopped".
 CADENCE_MIN="${CADENCE_MIN:-10}"
 GRACE_MIN="${GRACE_MIN:-20}"
 PUBLISH_REPO="${PUBLISH_REPO:-hf7y/hf7y.github.io}"
