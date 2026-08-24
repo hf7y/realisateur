@@ -175,7 +175,7 @@ install_cadence() {
   # stderr KEPT, merged into stdout, rather than sent to /dev/null. An empty
   # crontab writes "no crontab for <user>" there and exits 1 -- that is the
   # answer, not an error -- but so does a permission failure, and silencing
-  # both makes them one event. That conflation is bin/silence-audit.sh's
+  # both makes them one event. That conflation was the null-discriminator lint's
   cur="$(crontab -l 2>&1 || true)"
   case "$cur" in *"no crontab for"*) cur="" ;; esac
   new="$(printf '%s\n' "$cur" | grep -vF "$CRON_TAG")"

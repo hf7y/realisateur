@@ -22,7 +22,7 @@
 # The ledger was prose restating what the loop below already knows, because the
 # loop GLOBS. Each note now lives in the header of the suite it describes --
 # a file only the PR that adds that suite touches, so there is nothing to
-# contend for. `bin/suite-docs-lint.sh` asserts both halves: every suite still
+# contend for. A lint asserted both halves -- every suite still
 # carries a `# HERMETICITY:` note, and this file names no suite. It runs from
 # the very glob that made the ledger redundant.
 #

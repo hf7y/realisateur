@@ -165,7 +165,7 @@ fi
 # a stale path behind.
 # HOME_ROOT is a variable and not a literal for two reasons, one real and one
 # mechanical: a host that puts accounts somewhere other than /home is a real
-# configuration, and bin/hardcoded-home-lint.sh flags an absolute path into a
+# configuration, and an absolute path into a
 # named user's home in code -- correctly, since "a path under one user's home
 # is not a default". The rotation column itself MUST stay an absolute literal:
 # _paced*.conf is read by `while IFS='|' read`, not sourced, so $HOME does not

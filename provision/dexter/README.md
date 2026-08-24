@@ -138,7 +138,7 @@ cut without a human. That needs a Windows credential and is Zach's to authorise.
 
 **crt owns zaxon** (Zach, 2026-08-14), so its container form lives in
 `hf7y/crt` at `provision/dexter/zaxon/` — this repo ships the road, not the
-freight. `bin/dexter-service-deploy.sh` resolves a service from the owning
+freight. The deploy path resolved a service from the owning
 project's checkout; `DEXTER_SERVICE_PATH` overrides the search for a worktree
 or an owner that is not cloned locally.
 
