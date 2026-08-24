@@ -12,7 +12,7 @@
 #      plainly narrates the deletion still tripped the scan when the keyword
 #      ("deleted", "retired"...) landed a line or two away from the filename.
 #
-# HERMETIC. Builds its own throwaway git repo; touches nothing outside $T.
+# HERMETIC EXCEPT SECTION D, whose subject IS this repository.
 #
 # usage: ./bin/tests/defere-scan.test.sh
 
@@ -80,5 +80,24 @@ git -C "$REPO" add -A
 git -C "$REPO" commit -q -m "delete victim, leave only a manifest row"
 C1_OUT="$(scan)"; C1_RC=$?
 rc "C1 clean: nothing left names victim.txt except its own manifest row" 0 "$C1_RC"
+
+section "D. --all: THIS tree, and it is the guard for hf7y/realisateur#579"
+scan_all() { ( cd "$ROOT" && bash "$SCRIPT" --scan --all ) 2>&1; }
+D_OUT="$(scan_all)"; D_RC=$?
+rc  "D1 this repo names no script it does not have" 0 "$D_RC"
+has "D2 ...and says so rather than printing nothing" "$D_OUT" "every script path named in this tree exists"
+
+hasnt "D3 archive/ is not scanned"        "$D_OUT" "archive/"
+hasnt "D4 bin/tests/ fixtures are not scanned" "$D_OUT" "NAMES-NOTHING  bin/tests/"
+
+# Planted, or D1 proves only that the scanner ran. Tracked: git grep reads the index.
+PLANT="$ROOT/.claude/commands/_scan-all-probe.md"
+printf 'A doctrine sentence claiming `bin/definitely-not-here.sh` enforces something.\n' > "$PLANT"
+git -C "$ROOT" add -N "$PLANT" >/dev/null 2>&1
+E_OUT="$(scan_all)"; E_RC=$?
+git -C "$ROOT" rm -q --cached "$PLANT" >/dev/null 2>&1; rm -f "$PLANT"
+rc  "D5 a planted missing script is caught" 1 "$E_RC"
+has "D6 ...and named, with its file and line" "$E_OUT" "bin/definitely-not-here.sh"
+has "D7 ...and told to delete the sentence, not repoint it" "$E_OUT" "DELETE THE SENTENCE"
 
 summary

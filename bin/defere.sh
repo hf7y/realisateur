@@ -23,8 +23,10 @@ CLI_USAGE="  defere.sh '<one line>' --project <name>       file on hf7y/<name>
   defere.sh --forget                            discard the accumulated block
   defere.sh --scan                              what this branch deleted and
                                                 something still names
+  defere.sh --scan --all                        every script path named in the
+                                                tree that does not exist
   options: --body <text> --from <project> --repo owner/name --decider @who --dry-run"
-CLI_FLAGS='--project --human --unroutable --body --from --repo --decider --dry-run --ledger --forget --scan'
+CLI_FLAGS='--project --human --unroutable --body --from --repo --decider --dry-run --ledger --forget --scan --all'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  filed, or printed under --dry-run / --ledger
   1  could not file -- destination did not resolve, or gh refused
@@ -39,6 +41,7 @@ OWNER="${DEFERE_OWNER:-hf7y}"
 # decision to itself, which is the ownerless case with a handle stuck on it.
 DECIDER="${DEFERE_DECIDER:-zach}"
 WHAT=''; PROJECT=''; HUMAN=''; UNROUTABLE=''; BODY=''; FROM=''; REPO=''
+ALL=0
 DRY=0; MODE='file'   # quoted: `file` is a mode name, not file(1) -- SC2209
 
 while [ $# -gt 0 ]; do
@@ -54,6 +57,7 @@ while [ $# -gt 0 ]; do
     --ledger)     MODE=ledger; shift ;;
     --forget)     MODE=forget; shift ;;
     --scan)       MODE=scan; shift ;;
+    --all)        ALL=1; shift ;;
     -*)           cli_die "unknown flag: $1" ;;
     *)            [ -z "$WHAT" ] || cli_die "more than one description given; quote it as one argument: $1"
                   WHAT="$1"; shift ;;
@@ -86,24 +90,44 @@ case "$MODE" in
     lp="$(ledger_path)" || exit 1
     rm -f "$lp"; echo "defere: branch ledger discarded ($lp)"; exit 0 ;;
   scan)
-    # WHY THIS EXISTS. The DEFERRED block is answered honestly 34% of the time
-    # and DELIVERS 0.7%, with the SAME grammar and the same enforcement. The
-    # difference is that this verb emits the text you paste and DELIVERS does
-    # not. So the way to raise a ledger's honesty is never a stricter check --
-    # it is to make the true answer cheaper than `- none`.
-    #
-    # This branch deleted files. Anything that still NAMES one of them is work
-    # this branch left behind, and it is findable rather than remembered.
-    # hf7y/realisateur#511 shipped three of these under `- none`: a registry
-    # whose audit was gone, a conf naming a deleted script, and a carry with no
-    # detector. Nobody was lazy; the honest answer just cost more than the lie.
-    #
+    # Anything still NAMING a file this branch deleted is work left behind.
     # A LINE THAT SAYS THE THING IS GONE IS A RETRACTION, NOT A DANGLE, and is
-    # skipped. This estate propagates mechanism well and retracts claims badly
-    # -- an alarm outlived its own fix by 30 hours, a dashboard still reports a
-    # mechanism retired in #180. Retraction is the scarce behaviour here, so a
-    # scan that scolded someone for writing "deleted 2026-08-22" would be
-    # taxing the one thing it wants more of.
+    # skipped: retraction is the scarce behaviour here and must not be taxed.
+    # (#534 and the branch cases are pinned in bin/tests/defere-scan.test.sh.)
+    # --all (#579): A NAMED SCRIPT PATH THAT DOES NOT EXIST IS A FINDING.
+    # Exempt, as a RECORD is not a CLAIM: archive/, bin/tests/ fixtures,
+    # not-a-verb.tsv, DELETION-LIST.txt, .prose-ratchet (hf7y/etalon#10).
+    if [ "$ALL" -eq 1 ]; then
+      found=0
+      while IFS=: read -r hfile hlineno hpath; do
+        [ -n "${hpath:-}" ] || continue
+        # THIS repo's bin/: leading char keeps other repos' out (5 false).
+        hpath="bin/${hpath#*bin/}"
+        [ -e "$hpath" ] && continue
+        # A line that IS the path, or narrates the deletion, is a record.
+        line="$(sed -n "${hlineno}p" -- "$hfile" 2>/dev/null)"
+        trimmed="$(printf '%s' "$line" | sed 's/^[ \t]*//;s/[ \t]*$//')"
+        [ "$trimmed" = "$hpath" ] && continue
+        lo=$((hlineno - 2)); [ "$lo" -ge 1 ] || lo=1
+        sed -n "${lo},$((hlineno + 2))p" -- "$hfile" 2>/dev/null \
+          | grep -qiE 'deleted|removed|retire[sd]?|retiring|gone with|no longer|gone\b|gone,|used to|went with' && continue
+        found=$((found+1))
+        printf '\n  NAMES-NOTHING  %s:%s\n' "$hfile" "$hlineno"
+        printf '                 %s does not exist\n' "$hpath"
+        printf '                 %s\n' "${trimmed:0:96}"
+      done <<< "$(git grep -n -oE '(^|[^/[:alnum:]._-])(realisateur/)?bin/[a-z0-9_-]+\.(sh|py)' \
+                    -- . ':!archive/' ':!bin/tests/' ':!bin/lib/not-a-verb.tsv' \
+                       ':!DELETION-LIST.txt' ':!.prose-ratchet' 2>/dev/null)"
+      if [ "$found" -eq 0 ]; then
+        echo 'defere --scan --all: every script path named in this tree exists.'
+        exit 0
+      fi
+      printf '\n%s sentence(s) name a script that is not here. DELETE THE SENTENCE --\n' "$found"
+      printf 'do not repoint it at a replacement, which recreates the rot with a fresh\n'
+      printf 'name. Keep the FACT it was carrying, drop the NAME.\n'
+      exit 1
+    fi
+
     base="$(git merge-base HEAD "${DEFERE_BASE:-origin/main}" 2>/dev/null)" \
       || { echo "defere: BLIND -- no merge-base with ${DEFERE_BASE:-origin/main}; cannot tell what this branch deleted." >&2; exit 6; }
     # COMPARE TO THE WORKING TREE, NOT HEAD. This is the mandated pre-PR check

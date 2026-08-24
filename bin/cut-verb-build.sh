@@ -174,7 +174,7 @@ for repo in $repos; do
 
   # The declaration rule, applied to the fetched tree. Same two conditions
   # as verb-set.sh: executable bin/<n> AND man/<n>.1. bibliothecaire's
-  # bin/page92.py is executable, has no page, and correctly is not a verb --
+  # One script is executable, has no page, and correctly is not a verb --
   # which is why it has a row in lib/not-a-verb.tsv and not a man page.
   decl="$(printf '%s\n' "$tree" | awk '
       $1 == "100755" && $2 ~ /^bin\/[^\/]+$/ { n = substr($2, 5); exec_[n] = 1 }
