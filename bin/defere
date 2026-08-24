@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
 # defere.sh -- file the thing you were about to write a paragraph about.
 #
-# KIND: verb
+# KIND: verb.  usage + exit codes: `--help`, from CLI_USAGE/CLI_EXITS below.
 #
-# TRAP: "no owner" may NOT silently mean Zach. There are three routing
-#   states and refusing to choose is a usage error, not a quiet default.
-# TRAP: a project that does not resolve against a live `gh repo view` is
-#   refused with the --unroutable form PRINTED, never silently redirected.
-#   A guessed destination is how a deferral disappears.
-#
-# usage: `--help`, from CLI_USAGE below. One source.
-# exit codes: `--help`, from CLI_EXITS below. One source.
+# TRAP: "no owner" may NOT silently mean Zach -- refusing to choose among the
+#   three routes is a usage error, and an unresolvable project is refused with
+#   the --unroutable form PRINTED. A guessed destination loses the deferral.
 
 set -uo pipefail
 
@@ -66,7 +61,6 @@ done
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# ---------------------------------------------------------------------------
 # THE LEDGER FILE -- per branch, inside .git, so it is never committed and
 # never leaks between branches. A session that files six items and then has to
 ledger_path() {
@@ -91,9 +85,8 @@ case "$MODE" in
     rm -f "$lp"; echo "defere: branch ledger discarded ($lp)"; exit 0 ;;
   scan)
     # Anything still NAMING a file this branch deleted is work left behind.
-    # A LINE THAT SAYS THE THING IS GONE IS A RETRACTION, NOT A DANGLE, and is
-    # skipped: retraction is the scarce behaviour here and must not be taxed.
-    # (#534 and the branch cases are pinned in bin/tests/defere-scan.test.sh.)
+    # A LINE SAYING THE THING IS GONE IS A RETRACTION, NOT A DANGLE: skipped,
+    # because retraction is the scarce behaviour here (#534; pinned in tests).
     # --all (#579): A NAMED SCRIPT PATH THAT DOES NOT EXIST IS A FINDING.
     # Exempt, as a RECORD is not a CLAIM: archive/, bin/tests/ fixtures,
     # not-a-verb.tsv, DELETION-LIST.txt, .prose-ratchet (hf7y/etalon#10).
@@ -130,29 +123,18 @@ case "$MODE" in
 
     base="$(git merge-base HEAD "${DEFERE_BASE:-origin/main}" 2>/dev/null)" \
       || { echo "defere: BLIND -- no merge-base with ${DEFERE_BASE:-origin/main}; cannot tell what this branch deleted." >&2; exit 6; }
-    # COMPARE TO THE WORKING TREE, NOT HEAD. This is the mandated pre-PR check
-    # (#523), and the moment it exists to catch is BEFORE the deletion is
-    # committed. "$base"...HEAD only sees committed deletions, so a staged
-    # `git rm` reported "deletes nothing" right up until `git commit` -- silent
-    # at the one moment it was meant to be run (#534). Dropping the range for a
-    # single ref makes git diff compare that ref to the index+worktree, which
-    # is exactly "what this branch has done so far, including what's not
-    # committed yet".
+    # WORKING TREE, NOT HEAD: a single ref (no range) diffs against
+    # index+worktree, so a staged `git rm` is seen BEFORE the commit -- the
+    # moment this check exists for (#523, #534).
     gone="$(git diff --name-only --diff-filter=D "$base" 2>/dev/null)"
     [ -n "$gone" ] || { echo 'defere --scan: this branch deletes nothing, so it can dangle nothing.'; exit 0; }
     found=0
     while IFS= read -r path; do
       [ -n "$path" ] || continue
       b="$(basename "$path")"
-      # A MANIFEST LINE IS NOT A DEPENDENCY. A line whose whole content is the
-      # deleted path is a record OF the deletion (DELETION-LIST.txt is nothing
-      # else); a line that says anything more is a file still talking about
-      # something that is gone. One rule separates them, and it kept registry
-      # rows surfacing -- `path<TAB>owner` has a second field, which is how
-      # this found four stale rows in ownership-set.sh, itself deleted in #514.
-      #
-      # Search the worktree, not HEAD: on an uncommitted deletion the
-      # retraction prose lives only on disk, same as the deletion itself.
+      # A MANIFEST LINE IS NOT A DEPENDENCY: a line whose WHOLE content is the
+      # path records the deletion; anything more still talks about it. Search
+      # the worktree -- on an uncommitted deletion the prose is only on disk.
       hits=""
       while IFS=':' read -r hfile hlineno hline; do
         [ -n "${hfile:-}" ] || continue
@@ -262,7 +244,11 @@ fi
 
 # The issue this files must satisfy the same grammar bin/gh-sign.sh enforces
 # on `issue create` -- otherwise the front door emits bodies the front door
-# refuses. Each route implies its own declaration:
+# refuses. This comment once claimed that while the body carried no DELIVERS
+# block, so gh-sign refused EVERY filing (#568); a guard test binds it now.
+# DELIVERS is `- none`: filing an issue takes effect nowhere outside the repo.
+#
+# Each route implies its own declaration:
 #   --project      routed and owned; nothing to weigh -> NO-DECISION
 case "$LEDGER_KIND" in
   project) DECLARE="NO-DECISION: @$DECIDER -- routed to $DEST and owned there; nothing here needs a call" ;;
@@ -276,6 +262,10 @@ $BODY
 <!-- DEFERRED -->
 - none
 <!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->
 
 ---
 Deferred from **$FROM**${REPO:+ (}${REPO}${REPO:+)} by \`defere\` on $(date -u +%Y-%m-%d).
