@@ -87,20 +87,7 @@ if [ -f "$reg_lock" ] && ! flock -n "$reg_lock" -c true 2>/dev/null; then
   busy=1
 fi
 
-# -- 2. A LIVE INTERACTIVE SESSION -------------------------------------------
-# The other half of the same question: a job lock says
-# "automation is writing here"; this says "a human is". Written by
-# a session marker written from a Claude SessionStart hook.
-marker="$registry_dir/$project.interactive"
-if [ -f "$marker" ]; then
-  mpid="$(awk -F= '$1=="pid"{print $2}' "$marker" 2>/dev/null)"
-  if [ -n "$mpid" ] && kill -0 "$mpid" 2>/dev/null; then
-    echo "BUSY: interactive session (pid $mpid, since $(awk -F= '$1=="started_at"{print $2}' "$marker" 2>/dev/null))"
-    busy=1
-  fi
-fi
-
-# -- 3. per-job-dir fallback (pre-registry jobs) ------------------------------
+# -- 2. per-job-dir fallback (pre-registry jobs) ------------------------------
 # Skipped when the registry already answered: both sources describe the same
 # job, and reporting it twice makes one busy job read like two.
 reg_answered="$busy"
