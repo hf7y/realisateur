@@ -4,7 +4,6 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib/selfdev-claude-token.sh
 . "$ROOT/lib/selfdev-claude-token.sh"
 
 PROJECT="${1:-}"
@@ -17,19 +16,15 @@ case "$MODE" in --check|--apply) ;; *) echo "usage: $0 <project> [--check|--appl
 # cannot collide.
 UID_MIN="${SELFDEV_UID_MIN:-3000}"
 UID_MAX="${SELFDEV_UID_MAX:-3099}"
-# RUN AS ROOT, OR AS A USER WHO CAN SUDO -- both work, and the difference
 CRED_HOME="$HOME"
 if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
   CRED_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
   [ -n "$CRED_HOME" ] || CRED_HOME="$HOME"
 fi
-# Where the credential is read FROM. The HOST-WIDE copy first -- one token,
-# 0640 root:selfdev, the same topology as the App key, and the copy every live
-# account already agrees with. A human's home is the FALLBACK, because
-# ~zach/.claude-token on monkey was days stale and a stale token installs
-# CLEAN: file present, mode 600, every --check row OK, and the account
-# dispatches into nothing (realisateur#624). The env overrides still win --
-# SELFDEV_TOKEN_FILE through selfdev_token_path(), SELFDEV_TOKEN_SRC below.
+# Read FROM the HOST-WIDE copy first, a human's home only as fallback:
+# ~zach/.claude-token on monkey was stale, and a stale token installs CLEAN --
+# mode 600, every --check row OK, dispatching into nothing (realisateur#624).
+# The env overrides still win, and the row below names the file that was read.
 SRC_HOST="$(selfdev_token_path)"
 SRC_SETTINGS="${SELFDEV_TOKEN_SRC:-$CRED_HOME/.claude/settings.json}"
 SRC_TOKEN_FILE="$CRED_HOME/.claude-token"
@@ -47,14 +42,11 @@ echo "== provision-selfdev-user $PROJECT ($MODE) on $(hostname -s) =="
 # --- where does the token come from ------------------------------------------
 # Read it now, in --check too, because "there is a credential to copy" is the
 # single fact this script exists to act on. Never printed.
-# The row this prints is the SENSOR: it names the file the account will be
-# standing on, so a fallback to a human's home is visible, not inferred.
 TOKEN=""
 settings_token() {  # the env-block token in a settings.json, or nothing
   python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("env",{}).get("CLAUDE_CODE_OAUTH_TOKEN",""))' "$1" 2>/dev/null || true
 }
-SOURCES=()
-# An explicit SELFDEV_TOKEN_SRC is an override, so it outranks the host-wide copy.
+SOURCES=()   # an explicit SELFDEV_TOKEN_SRC outranks the host-wide copy
 [ -n "${SELFDEV_TOKEN_SRC:-}" ] && SOURCES+=("settings:$SRC_SETTINGS")
 SOURCES+=("file:$SRC_HOST" "settings:$SRC_SETTINGS" "file:$SRC_TOKEN_FILE")
 for src in "${SOURCES[@]}"; do
@@ -161,8 +153,7 @@ p.chmod(0o600)
 PY
 
 # --- the OTHER credential ------------------------------------------------------
-# gh, on the same argument as the claude token above, for
-# the same reason the rest of this script exists: bibliothecaire was the second
+# gh, on the same argument as the claude token above.
 GH_SRC="${SELFDEV_GH_HOSTS:-$CRED_HOME/.config/gh/hosts.yml}"
 if [ -r "$GH_SRC" ]; then
   # No `MODE` guard here: --check has already exited above. Everything from
