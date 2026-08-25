@@ -78,6 +78,7 @@ def main() -> int:
         "disk": os.environ["DISK"],
         "disk_home": os.environ["DISK_HOME"],
         "sshd": os.environ["SSHD"],
+        "screenshot": bool(os.environ.get("SCREENSHOT")),
         "uptime": os.environ.get("UPTIME") or None,
         "root_mount": os.environ.get("ROOTMOUNT") or None,
         "guest_error": guest_err,

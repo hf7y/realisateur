@@ -100,6 +100,22 @@ if command -v node >/dev/null 2>&1; then
   case "$got" in bad\ DOWN*) ok "an unreachable monkey headlines DOWN, in red -- not a green 0 ARMED" ;;
     *) bad "DOWN document renders DOWN" "got [$got] -- the page is deriving its own verdict again" ;; esac
 
+  itemsrender() {
+    node -e '
+      const fs=require("fs");
+      const src=fs.readFileSync(process.argv[1],"utf8").match(/<script>([\s\S]*)<\/script>/)[1];
+      let out="";
+      global.document={getElementById:()=>({set innerHTML(v){out=v;}})};
+      const body=src.replace(/fetch\([\s\S]*?\.then\(d=>\{/,"(d=>{").replace(/\}\)\.catch\([\s\S]*$/,"})(D);");
+      new Function("D",body)(JSON.parse(process.argv[2]));
+      console.log(out);
+    ' "$PAGE" "$1" 2>/dev/null
+  }
+  got="$(itemsrender "{\"accounts\":[],\"watcher\":{$FRESH,\"verdict\":\"DOWN\",\"why\":\"sshd silent\",\"vm_state\":\"running\",\"sshd\":\"silent\",\"disk_home\":\"internal\",\"screenshot\":true}}")"
+  has "a captured console screenshot is linked from the page" "$got" 'href="console.png"'
+  got="$(itemsrender "{\"accounts\":[],\"watcher\":{$FRESH,\"verdict\":\"DOWN\",\"why\":\"sshd silent\",\"vm_state\":\"running\",\"sshd\":\"silent\",\"disk_home\":\"internal\",\"screenshot\":false}}")"
+  hasnt "no screenshot means no dangling link to one" "$got" 'href="console.png"'
+
   got="$(render "{\"accounts\":[],\"watcher\":{\"generated\":\"2020-01-01T00:00:00Z\",\"valid_until\":\"2020-01-01T00:00:00Z\",\"verdict\":\"OK\",\"why\":\"fine\",\"vm_state\":\"running\",\"sshd\":\"answering\",\"disk_home\":\"internal\"}}")"
   case "$got" in *UNWATCHED*) ok "a watcher past its own valid_until reads UNWATCHED, not OK" ;;
     *) bad "a stale watcher reads UNWATCHED" "got [$got] -- a dead dexter would show its last verdict as current" ;; esac
@@ -112,5 +128,40 @@ else
   bad "node is available to render the page" \
     "node is not on PATH, so the renderer contract went UNCHECKED -- install node or run this suite where it exists"
 fi
+
+section "F. an outage that persists gets re-pinged, not one ticket and silence (#549)"
+. "$REPO/bin/lib/monkey-watch-alert.sh"
+harness_tmp
+SF="$T/state"
+T0="2026-08-20T00:00:00Z"; T0_1H="2026-08-20T01:00:00Z"; T0_13H="2026-08-20T13:00:00Z"
+
+d="$(mw_alert_decide DOWN OK "$SF" 12 "$T0")"
+eq "F1 OK -> DOWN is one TRANSITION ping" "$d" "TRANSITION OK DOWN"
+mw_alert_mark_sent "$SF" "$T0"
+
+d="$(mw_alert_decide DOWN DOWN "$SF" 12 "$T0_1H")"
+eq "F2 +1h against a 12h cadence is silence" "$d" "NONE"
+
+d="$(mw_alert_decide DOWN DOWN "$SF" 12 "$T0_13H")"
+eq "F3 +13h re-pings, carrying elapsed down-time" "$d" "PERSIST DOWN 13"
+mw_alert_mark_sent "$SF" "$T0_13H"
+
+rm -f "$SF" "$SF.since" "$SF.alerted"
+n=0; for now in "$T0" "$T0_1H" "$T0_13H"; do
+  d="$(mw_alert_decide OK OK "$SF" 12 "$now")"
+  [ "$d" = NONE ] || n=$((n + 1))
+done
+eq "F4 zero pings across any run where the verdict is OK" "$n" "0"
+
+d="$(mw_alert_decide DOWN OK "$SF" 12 "$T0")"; mw_alert_mark_sent "$SF" "$T0"
+d="$(mw_alert_decide OK DOWN "$SF" 12 "$T0_13H")"
+eq "F5 DOWN -> OK is one TRANSITION ping (recovery is not silence)" "$d" "TRANSITION DOWN OK"
+
+section "G. a DOWN verdict captures the console, not a guess about the cause (#560)"
+has "G1 no cause is baked into the sshd-down WHY string" "$(grep 'sshd is \$SSHD' "$W")" 'WHY="VM running but sshd is $SSHD"'
+hasnt "G1b the read-only-root inference is gone from the source" "$(code "$W")" "this is what a read-only root looks like"
+has "G2 the console is captured only on DOWN" "$(code "$W")" 'if [ "$VERDICT" = DOWN ]; then'
+has "G3 via screenshotpng, the same probe the issue's own repro used" "$(code "$W")" 'screenshotpng'
+has "G4 a stale screenshot from a past incident is cleared before republishing" "$(code "$W")" 'rm -f "$WORK/site/$PUBLISH_DIR/console.png"'
 
 summary

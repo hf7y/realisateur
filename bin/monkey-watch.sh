@@ -52,6 +52,7 @@ SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_dexter_monkey}"
 COLLECTOR="${COLLECTOR:-$HERE/bin/monkey-status-collect.py}"
 PAGE_SRC="${PAGE_SRC:-$HERE/share/monkey-status.html}"
 STATE_FILE="${STATE_FILE:-$HOME/.local/state/monkey-watch.last}"
+ALERT_EVERY_H="${ALERT_EVERY_H:-12}"
 # The dexter cron cadence, DECLARED so the page carries a valid_until and can
 # tell "monkey is down" from "the watcher stopped".
 CADENCE_MIN="${CADENCE_MIN:-10}"
@@ -60,6 +61,8 @@ PUBLISH_REPO="${PUBLISH_REPO:-hf7y/hf7y.github.io}"
 PUBLISH_DIR="${PUBLISH_DIR:-monkey}"
 # shellcheck source=lib/zaxon.sh
 . "$HERE/bin/lib/zaxon.sh"
+# shellcheck source=lib/monkey-watch-alert.sh
+. "$HERE/bin/lib/monkey-watch-alert.sh"
 APPLY=0
 [ "${1:-}" = "--apply" ] && APPLY=1
 
@@ -71,6 +74,7 @@ die() { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 2; }
 
 vbm() { "$VBOX" "$@" < /dev/null 2>&1 | tr -d '\0\r'; }
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 # --- host-side: always available --------------------------------------------
 VMSTATE="$(vbm showvminfo "$VM" --machinereadable | grep '^VMState=' | cut -d'"' -f2)"
@@ -127,17 +131,23 @@ fi
 # read-only root is called out separately from "down": it is the specific
 # recurring failure here, and it looks like up from most angles.
 if   [ "$VMSTATE" != "running" ];       then VERDICT="DOWN";     WHY="VM is $VMSTATE"
-elif [ "$SSHD" != "answering" ];        then VERDICT="DOWN";     WHY="VM running but sshd is $SSHD (this is what a read-only root looks like)"
+elif [ "$SSHD" != "answering" ];        then VERDICT="DOWN";     WHY="VM running but sshd is $SSHD"
 elif [ "$ROOTMOUNT" = "ro" ];           then VERDICT="DEGRADED"; WHY="root is mounted READ-ONLY"
 elif [ "$DISK_HOME" = "EXTERNAL-USB" ]; then VERDICT="DEGRADED"; WHY="disk is back on the external USB drive"
 elif [ -z "$GUEST_JSON" ];              then VERDICT="DEGRADED"; WHY="${GUEST_ERR:-guest detail unavailable}"
 else                                         VERDICT="OK";       WHY="running, sshd answering, root rw, disk internal"
 fi
 
+SCREENSHOT=""
+if [ "$VERDICT" = DOWN ]; then
+  vbm controlvm "$VM" screenshotpng "$WORK/console.png" >/dev/null
+  [ -s "$WORK/console.png" ] && SCREENSHOT=1
+fi
+
 payload="$(GUEST_JSON="$GUEST_JSON" NOW="$NOW" VMSTATE="$VMSTATE" DISK="$DISK" \
   CADENCE_MIN="$CADENCE_MIN" GRACE_MIN="$GRACE_MIN" \
   DISK_HOME="$DISK_HOME" SSHD="$SSHD" UPTIME="$UPTIME" ROOTMOUNT="$ROOTMOUNT" \
-  VERDICT="$VERDICT" WHY="$WHY" GUEST_ERR="$GUEST_ERR" \
+  VERDICT="$VERDICT" WHY="$WHY" GUEST_ERR="$GUEST_ERR" SCREENSHOT="$SCREENSHOT" \
   python3 "$HERE/bin/lib/monkey-watch-merge.py")"
 [ -n "$payload" ] || die "payload builder produced nothing -- publishing nothing."
 
@@ -146,22 +156,25 @@ printf '%s: %s -- %s\n' "$CLI_NAME" "$VERDICT" "$WHY"
 
 [ "$APPLY" = 1 ] || { printf '%s: NOT published (need --apply)\n' "$CLI_NAME"; exit 0; }
 
-# --- alert on CHANGE, not every tick ----------------------------------------
-# A watcher that messages every run trains its reader to ignore it, the same
-# way a NOTE-level lint stops being read.
 mkdir -p "$(dirname "$STATE_FILE")"
 LAST="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
-if [ "$VERDICT" != "$LAST" ]; then
-  printf '%s\n' "$VERDICT" > "$STATE_FILE"
-  if [ -n "$LAST" ]; then
-    msg="monkey: $LAST -> $VERDICT
+DECISION="$(mw_alert_decide "$VERDICT" "$LAST" "$STATE_FILE" "$ALERT_EVERY_H" "$NOW")"
+set -- $DECISION
+if [ "$1" != NONE ]; then
+  case "$1" in
+    TRANSITION) LABEL="$2 -> $3" ;;
+    PERSIST)    LABEL="still $2 (down ${3}h, unread past ${ALERT_EVERY_H}h)" ;;
+  esac
+  msg="monkey: $LABEL
 
 $WHY
 
 vm=$VMSTATE sshd=$SSHD root=${ROOTMOUNT:-?} disk=$DISK_HOME
 https://hf7y.com/$PUBLISH_DIR/"
-    tid="$(zaxon_ask "$msg" monkey-watch)"
-    [ -z "$tid" ] || printf '%s: alerted (%s -> %s) ticket %s\n' "$CLI_NAME" "$LAST" "$VERDICT" "$tid"
+  tid="$(zaxon_ask "$msg" monkey-watch)"
+  if [ -n "$tid" ]; then
+    mw_alert_mark_sent "$STATE_FILE" "$NOW"
+    printf '%s: alerted (%s) ticket %s\n' "$CLI_NAME" "$LABEL" "$tid"
   fi
 fi
 
@@ -169,12 +182,13 @@ fi
 # ALWAYS publishes. There is deliberately no "refusing to publish an empty
 # page" guard: an empty accounts[] IS the report when monkey is unreachable,
 # and refusing to publish it is exactly what hid the 2026-08-14 outage.
-WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 gh repo clone "$PUBLISH_REPO" "$WORK/site" -- -q --depth 1 2>/dev/null \
   || { echo "$CLI_NAME: could not clone $PUBLISH_REPO -- nothing published" >&2; exit 1; }
 mkdir -p "$WORK/site/$PUBLISH_DIR"
 printf '%s\n' "$payload" > "$WORK/site/$PUBLISH_DIR/status.json"
 [ -f "$PAGE_SRC" ] && cp "$PAGE_SRC" "$WORK/site/$PUBLISH_DIR/index.html"
+rm -f "$WORK/site/$PUBLISH_DIR/console.png"
+[ -n "$SCREENSHOT" ] && cp "$WORK/console.png" "$WORK/site/$PUBLISH_DIR/console.png"
 cd "$WORK/site" || die "could not enter the site clone"
 if [ -n "$(git status --porcelain "$PUBLISH_DIR")" ]; then
   git add "$PUBLISH_DIR"
