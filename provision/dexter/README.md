@@ -16,22 +16,9 @@ migrated yet; §6 says what would move and what that costs.
 
 ## 1. The failure this document is for
 
-zaxon — the only relay that carries a question to a human — ran in a WSL distro
-called `hermes` that no ecosystem document mentioned. When dexter rebooted, the
-`Ubuntu` distro came back and `hermes` did not. Nothing noticed for ten days.
-
-```
-# 2026-08-14, from dexter's Ubuntu distro
-uptime                       up 10 days,  6:19
-wslx -l -v                   Ubuntu Running / hermes Stopped / docker-desktop Stopped
-ss -ltn | grep 8643          (nothing)
-```
-
-The service was never broken: `hermes-gateway.service` is `enabled` and carries
-`Restart=always`. **A WSL distro has no supervisor above it** — `Restart=always`
-protects the process, nothing protects the distro. That is a missing layer, and
-no amount of care inside `hermes` would have caught it. The alarm now exists as
-`bin/dexter-liveness.sh`; its header carries the rest of this argument.
+zaxon — the only relay that carries a question to a human — was dead for ten
+days in a WSL distro nothing started. `bin/dexter-liveness.sh` is the alarm and
+its header carries the argument; §5b says why the outage was possible at all.
 
 ## 2. The canonical userland: the `Ubuntu` distro, and no other
 
@@ -112,20 +99,8 @@ That was the deliberate trade for fixing things unattended — senechal#253.
 
 ## 5b. Nothing here starts at boot — it starts at LOGIN
 
-The probe that matters most, and the one `bin/dexter-liveness.sh` runs last:
-
-```
-Windows LastBootUpTime          2026-08-03 16:25
-Ubuntu distro uptime            10 days          (i.e. it came up with that boot)
-hermes distro                   never started
-C:\Users\Zach\...\Startup\      monkey-vm.bat, senechal-wsl-autostart.vbs
-```
-
-Both live things on this host are started by **per-user Startup folder** items,
-which run at **login**. A reboot with nobody logging in leaves `monkey` down —
-that is *all* of self-dev — and looks, from outside, exactly like a quiet
-night. `hermes` was simply never given such an item, which is the entire
-ten-day outage.
+Both live things here start from **per-user Startup folder** items, so a reboot
+with nobody logged in leaves `monkey` — all of self-dev — down, and quiet-looking.
 
 `senechal-wsl-autostart.vbs` is the shape that works, and it already uses the
 `sleep infinity` anchor, because *"WSL tears the VM down when its last process

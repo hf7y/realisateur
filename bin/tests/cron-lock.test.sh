@@ -58,26 +58,38 @@ kill "$held" 2>/dev/null; wait "$held" 2>/dev/null
 has "A6 the lock path carries the uid -- 13 accounts share /tmp and one would deny twelve" \
   "$(grep -v '^#' "$LIB")" 'id -u'
 
-section "B. every clock in this repo takes it"
-found=0
-for f in "$REPO"/bin/*.sh; do
-  grep -q '^CRON_TAG=' "$f" || continue
-  found=$((found + 1))
-  n="${f##*/}"
+section "B. every clock cron actually invokes takes the lock"
+# Population comes from bin/lib/cron-invoked.tsv, not from a grep of this tree.
+# A crontab line on another machine is not visible from here, and the one clock
+# that stacked is exactly the one no derivation could have found.
+REG="$REPO/bin/lib/cron-invoked.tsv"
+[ -f "$REG" ] && ok "bin/lib/cron-invoked.tsv is present" \
+  || { bad "bin/lib/cron-invoked.tsv is present" "the population is unknown; this suite would pass by scanning nothing"; summary; exit 1; }
+
+rows=0
+while IFS=$'\t' read -r script host cadence caller; do
+  case "$script" in ''|'#'*) continue ;; esac
+  rows=$((rows + 1))
+  f="$REPO/bin/$script"
+  [ -f "$f" ] && ok "$script exists -- $host, $cadence" \
+    || { bad "$script exists" "cron on $host fires $cadence into a path this repo no longer has ($caller)"; continue; }
   body="$(grep -v '^[[:space:]]*#' "$f")"
   case "$body" in
-    *"lib/cron-lock.sh"*) ok "$n sources the shared guard" ;;
-    *) bad "$n sources the shared guard" \
-         "it declares a cron cadence (CRON_TAG) and does not source bin/lib/cron-lock.sh" ;;
+    *"cron_lock "*|*"flock -n"*) ok "$script takes a non-blocking lock" ;;
+    *) bad "$script takes a non-blocking lock" \
+         "cron fires it every $cadence on $host and a run that outlives that becomes a pile; caller: $caller" ;;
   esac
-  case "$body" in
-    *"cron_lock "*) ok "$n calls cron_lock" ;;
-    *) bad "$n calls cron_lock" \
-         "it sources the guard but never takes the lock, so its runs still stack" ;;
-  esac
+done < "$REG"
+[ "$rows" -gt 0 ] && ok "the registry named $rows clock(s)" \
+  || bad "the registry names at least one clock" "cron-invoked.tsv has no rows -- this suite graded nothing"
+
+section "C. a clock that declares itself cannot skip the registry"
+for f in "$REPO"/bin/*.sh; do
+  grep -q '^CRON_TAG=' "$f" || continue
+  n="${f##*/}"
+  if grep -q "^$n"$'\t' "$REG"; then ok "$n declares a CRON_TAG and has a registry row"
+  else bad "$n has a registry row" \
+         "it installs its own cron cadence and is not in bin/lib/cron-invoked.tsv, so B never graded it"; fi
 done
-[ "$found" -gt 0 ] && ok "found $found script(s) declaring a cron cadence" \
-  || bad "found a script declaring a cron cadence" \
-         "no bin/*.sh defines CRON_TAG -- the ratchet is scanning nothing and would pass blind"
 
 summary
