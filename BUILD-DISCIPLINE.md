@@ -161,16 +161,10 @@ not an inconvenience.
   Then `consulte list --from <this project>` and `consulte show <n>`.
   **Filing is free; answering is metered** — ask once and read the queue first.
 
-- **Acting, rather than filing or deferring** — when you find something fixable,
-  fix it, in whatever repo it actually lives in, and land it as a PR there.
-  Reversible operational fixes (restart a service, clear a cache, rotate a log,
-  free scratch space) you do unattended, then report. Only **privileged or
-  hard-to-undo** changes wait for the human, as a tested script they run.
-  Filing an issue in place of an available fix is not a first move, and
-  neither is ending a report with a finding "left for" someone: no scheduled
-  run reads prose, so nothing picks it up. `scheduler -i <project>` is for a
-  genuine judgement call that is somebody else's to make.
-  (senechal, 2026-08-11. Moved here 2026-08-25 after the superseded
-  file-it-don't-fix-it rule outlived its retirement by three months in two
-  places and was still producing deferrals in an unattended nightly run.)
+- **Finding something fixable** — fix it, in whatever repo it lives in, and
+  land it as a PR there. Reversible operational fixes you do unattended, then
+  report; only privileged or hard-to-undo ones wait, as a tested script. An
+  issue filed in place of an available fix is not a first move, and neither is
+  a finding "left for" someone — no scheduled run reads prose.
+  `scheduler -i <project>` is for a judgement call that is someone else's.
 ```
