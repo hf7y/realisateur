@@ -3,6 +3,10 @@
 
 set -uo pipefail
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/selfdev-claude-token.sh
+. "$ROOT/lib/selfdev-claude-token.sh"
+
 PROJECT="${1:-}"
 MODE="${2:---check}"
 case "$PROJECT" in ""|-*) echo "usage: $0 <project> [--check|--apply]" >&2; exit 2 ;; esac
@@ -13,16 +17,22 @@ case "$MODE" in --check|--apply) ;; *) echo "usage: $0 <project> [--check|--appl
 # cannot collide.
 UID_MIN="${SELFDEV_UID_MIN:-3000}"
 UID_MAX="${SELFDEV_UID_MAX:-3099}"
-# Where the credential is read FROM. The invoking user's own, by default --
-# one identity, one quota, which is the accepted topology.
 # RUN AS ROOT, OR AS A USER WHO CAN SUDO -- both work, and the difference
 CRED_HOME="$HOME"
 if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
   CRED_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
   [ -n "$CRED_HOME" ] || CRED_HOME="$HOME"
 fi
+# Where the credential is read FROM. The HOST-WIDE copy first -- one token,
+# 0640 root:selfdev, the same topology as the App key, and the copy every live
+# account already agrees with. A human's home is the FALLBACK, because
+# ~zach/.claude-token on monkey was days stale and a stale token installs
+# CLEAN: file present, mode 600, every --check row OK, and the account
+# dispatches into nothing (realisateur#624). The env overrides still win --
+# SELFDEV_TOKEN_FILE through selfdev_token_path(), SELFDEV_TOKEN_SRC below.
+SRC_HOST="$(selfdev_token_path)"
 SRC_SETTINGS="${SELFDEV_TOKEN_SRC:-$CRED_HOME/.claude/settings.json}"
-SRC_TOKEN_FILE="${SELFDEV_TOKEN_FILE:-$CRED_HOME/.claude-token}"
+SRC_TOKEN_FILE="$CRED_HOME/.claude-token"
 
 PASS=0; GAPS=0; BAD=0
 ok()  { printf '  OK      %s\n' "$*"; PASS=$((PASS+1)); }
@@ -37,16 +47,29 @@ echo "== provision-selfdev-user $PROJECT ($MODE) on $(hostname -s) =="
 # --- where does the token come from ------------------------------------------
 # Read it now, in --check too, because "there is a credential to copy" is the
 # single fact this script exists to act on. Never printed.
+# The row this prints is the SENSOR: it names the file the account will be
+# standing on, so a fallback to a human's home is visible, not inferred.
 TOKEN=""
-if [ -f "$SRC_SETTINGS" ]; then
-  TOKEN="$(python3 -c "import json;print(json.load(open('$SRC_SETTINGS')).get('env',{}).get('CLAUDE_CODE_OAUTH_TOKEN',''))" 2>/dev/null || true)"
-  [ -n "$TOKEN" ] && ok "source credential: $SRC_SETTINGS (env block)"
-fi
-if [ -z "$TOKEN" ] && [ -f "$SRC_TOKEN_FILE" ]; then
-  TOKEN="$(cat "$SRC_TOKEN_FILE" 2>/dev/null || true)"
-  [ -n "$TOKEN" ] && ok "source credential: $SRC_TOKEN_FILE"
-fi
-[ -n "$TOKEN" ] || bad "no credential to copy -- looked in $SRC_SETTINGS (env block) and $SRC_TOKEN_FILE. Run \`claude setup-token\` first; a project account with no token dispatches and produces NOTHING, silently."
+settings_token() {  # the env-block token in a settings.json, or nothing
+  python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("env",{}).get("CLAUDE_CODE_OAUTH_TOKEN",""))' "$1" 2>/dev/null || true
+}
+SOURCES=()
+# An explicit SELFDEV_TOKEN_SRC is an override, so it outranks the host-wide copy.
+[ -n "${SELFDEV_TOKEN_SRC:-}" ] && SOURCES+=("settings:$SRC_SETTINGS")
+SOURCES+=("file:$SRC_HOST" "settings:$SRC_SETTINGS" "file:$SRC_TOKEN_FILE")
+for src in "${SOURCES[@]}"; do
+  [ -n "$TOKEN" ] && break
+  p="${src#*:}"
+  case "$src" in
+    settings:*) [ -f "$p" ] || continue
+                TOKEN="$(settings_token "$p")"
+                [ -n "$TOKEN" ] && ok "source credential: $p (env block)" ;;
+    file:*)     selfdev_token_readable "$p" || continue
+                TOKEN="$(tr -d '\r\n' < "$p")"
+                [ -n "$TOKEN" ] && ok "source credential: $p" ;;
+  esac
+done
+[ -n "$TOKEN" ] || bad "no credential to copy -- looked in $SRC_HOST, $SRC_SETTINGS (env block) and $SRC_TOKEN_FILE. Run \`selfdev-claude-token.sh --install\` (or \`claude setup-token\`) first; a project account with no token dispatches and produces NOTHING, silently."
 
 # --- account -----------------------------------------------------------------
 if id "$PROJECT" >/dev/null 2>&1; then
@@ -67,7 +90,7 @@ else
 fi
 
 if [ "$(id -u)" -eq 0 ]; then
-  ok "running as root (credential read from ${SUDO_USER:-root}'s home)"
+  ok "running as root"
 elif sudo -n true >/dev/null 2>&1; then
   ok "passwordless sudo available"
 else
