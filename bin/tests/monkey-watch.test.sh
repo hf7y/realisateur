@@ -161,7 +161,9 @@ section "G. a DOWN verdict captures the console, not a guess about the cause (#5
 has "G1 no cause is baked into the sshd-down WHY string" "$(grep 'sshd is \$SSHD' "$W")" 'WHY="VM running but sshd is $SSHD"'
 hasnt "G1b the read-only-root inference is gone from the source" "$(code "$W")" "this is what a read-only root looks like"
 has "G2 the console is captured only on DOWN" "$(code "$W")" 'if [ "$VERDICT" = DOWN ]; then'
-has "G3 via screenshotpng, the same probe the issue's own repro used" "$(code "$W")" 'screenshotpng'
+has "G2b via vmhost_screenshot (#563), not a direct VBoxManage call" "$(code "$W")" 'vmhost_screenshot "$VM"'
+has "G3 vmhost's virtualbox backend uses screenshotpng, the same probe the issue's own repro used" \
+  "$(code "$REPO/bin/lib/vmhost.sh")" 'screenshotpng'
 has "G4 a stale screenshot from a past incident is cleared before republishing" "$(code "$W")" 'rm -f "$WORK/site/$PUBLISH_DIR/console.png"'
 
 section "H. the observer cannot inherit the outage it exists to report (2026-08-25)"
@@ -187,8 +189,12 @@ section "I. the virtual clock is published before it takes sshd (realisateur#630
 # deficit belongs to the VMM process. Nothing measured it, so the first symptom
 # was sshd dying.
 has "I1 the drift is read from the VM's own log" "$(code "$W")" 'offVirtualSyncGivenUp'
-has "I2 the log folder comes from VBoxManage, not a hardcoded path" \
-  "$(code "$W")" "grep '^LogFldr='"
+# The LogFldr= query itself moved to lib/vmhost.sh with the rest of the
+# backend vocabulary (#563); vmhost.test.sh C4/C5 hold it there. What this
+# file still owns is that monkey-watch ASKS the backend rather than knowing
+# where a VirtualBox log lives.
+has "I2 the log folder is asked of the backend, not a hardcoded path" \
+  "$(code "$W")" "vmhost_logdir"
 has "I3 the value reaches the document" "$(code "$W")" 'CLOCK_DRIFT_H="$CLOCK_DRIFT_H"'
 has "I4 merge publishes it" "$(code "$REPO/bin/lib/monkey-watch-merge.py")" 'clock_drift_hours'
 has "I5 an unreadable log is null, not zero" \
