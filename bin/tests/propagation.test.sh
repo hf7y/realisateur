@@ -31,14 +31,20 @@ echo "-- 1. EVERY ARTIFACT HAS EXACTLY ONE DECLARED CHANNEL ------------------"
 # The ratchet. A new script in bin/ cannot be merged without someone deciding
 # how it reaches the accounts that will use it. One file to edit, one line to
 # add -- and CI red until it is added.
-
+#
+# EXECUTABLE, NOT *.sh (#596). monkey-status-collect.py runs as root on
+# monkey and has no .sh suffix; a glob of bin/*.sh never asked prop_channel
+# about it. -type f -perm -u+x also skips bin/lib and bin/tests (directories)
+# and the non-executable data files bin/ carries (*.ratchet, *.quarantine).
 unclassified=""
-for f in "$REPO"/bin/*.sh; do
+while IFS= read -r f; do
   n="$(basename "$f")"
   prop_channel "$n" >/dev/null || unclassified="$unclassified $n"
-done
+done <<EOF
+$(find "$REPO/bin" -maxdepth 1 -type f -perm -u+x | sort)
+EOF
 if [ -z "$unclassified" ]; then
-  ok "every bin/*.sh is classified in bin/lib/propagation-set.sh"
+  ok "every executable in bin/ is classified in bin/lib/propagation-set.sh"
 else
   bad "UNCLASSIFIED, so they reach no account by any path:$unclassified"
   echo "       Add each to PROP_BOOTSTRAP_SCRIPTS, PROP_PROVISION_SCRIPTS,"
@@ -145,6 +151,30 @@ else
   else
     bad "verb(s) sourcing lib/ without readlink -f -- the guard will not load when installed as a symlink:$link_bad"
   fi
+fi
+
+# A LOCAL-CLASS FILE CAN STILL LAND ON A HOST (#596). carries.tsv's
+# libexec/* rows and prop_host_tools()'s probe list are two writers of the
+# same fact -- gh-sign.sh --delivers reads prop_host_tools() BECAUSE
+# prop_channel alone answers `local`, i.e. "reaches no host", for three
+# scripts that demonstrably do. Nothing before this asserted the two agree;
+# a probe added to one and not the other would silently stop deploying (or
+# start being claimed as delivered when it is not).
+carried_libexec="$(printf '%s\n' "$CARRIES_BLOCK" | awk -F'\t' '$1 ~ /^libexec\//{sub(/^libexec\//,"",$1); print $1}' | sort)"
+# prop_host_tools() also yields the provisioning set (dresse.sh, wire-*.sh,
+# ...); only its four LOCAL-class probes are meant to be carried into
+# libexec/. Restrict the comparison to names that are actually LOCAL-class.
+probed_local="$(prop_host_tools 2>/dev/null | sort -u | while read -r s; do
+  [ -n "$s" ] || continue
+  for m in $PROP_LOCAL_SCRIPTS; do [ "$m" = "$s" ] && printf '%s\n' "$s"; done
+done | sort -u)"
+if [ "$carried_libexec" = "$probed_local" ]; then
+  ok "carries.tsv's libexec/* rows match prop_host_tools()'s LOCAL-class probes exactly"
+else
+  bad "carries.tsv's libexec/* rows and prop_host_tools()'s LOCAL-class probes disagree:"
+  echo "       carried:  $(printf '%s' "$carried_libexec" | tr '\n' ' ')"
+  echo "       probed:   $(printf '%s' "$probed_local" | tr '\n' ' ')"
+  echo "       Add/remove the script in both bin/lib/carries.tsv and prop_host_tools()."
 fi
 
 # ===========================================================================
