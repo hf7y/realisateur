@@ -13,33 +13,9 @@
 # crontab and ledger; a missing ledger on an ARMED account is a finding, not a
 # blank. None of that is derivable from dexter.
 #
-# DELETED 2026-08-22 BY #511, RESTORED THE SAME DAY. DO NOT CUT IT AGAIN
-# WITHOUT READING THIS. It was swept up in the self-dev v1 subtraction as a
-# guard that "produces no findings" -- but it is not a guard. It is the ONLY
-# OBSERVER OUTSIDE THE SYSTEM IT OBSERVES.
-#
-# ausculte runs on monkey. The health cadence runs on monkey. Every issue the
-# estate files about itself is written by something ON monkey. So when monkey
-# goes down, the tracker does not fill with alarms -- it goes QUIET, which is
-# indistinguishable from a healthy night. dexter-liveness.sh's own header names
-# the mechanism: dexter starts its distro and VMs from the Windows Startup
-# folder, i.e. AT LOGIN, so a reboot nobody logs in after takes all of self-dev
-# with it and "reads from the outside like a quiet night".
-#
-# DELETION-LIST.txt:23 protected `publish-monkey-status.sh` and
-# `monkey-status-collect.py` by name -- "the dashboard Zach reads" -- and line
-# 97 deleted the only thing that invokes them. The list kept the payload and
-# cut its clock. That is realisateur#518, and this is its cause.
-#
-# The corpse kept running: dexter's crontab fired this path every ten minutes
-# for the whole interval and appended `not found` to
-# ~/.local/state/monkey-watch.log until it reached 47 MB. A cron entry pointing
-# at a deleted script is not inert; it is a fault indicator nobody reads.
-#
-# The rule this earns: a REACHABILITY SCAN CANNOT SEE AN OFF-HOST CALLER.
-# #511's scan read .github/workflows/ and this repo's own bin/; the caller here
-# is a crontab line on a different machine. Before deleting anything, ask what
-# invokes it FROM SOMEWHERE ELSE.
+# Deleted by #511 and restored the same day, because a reachability scan
+# cannot see an off-host caller. bin/tests/monkey-watch.test.sh is what
+# enforces that now, and bin/lib/cron-invoked.tsv is where the callers live.
 
 set -uo pipefail
 
