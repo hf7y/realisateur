@@ -206,10 +206,6 @@ verb-kind-lint.sh
 verbs-refresh.sh
 run-suites.sh
 "
-# monkey-status-collect.py is monkey-watch.sh's collector (#596): reached the
-# same way, the plain checkout dexter's crontab pulls, invoked by basename
-# from $HERE/bin. It has no .sh suffix, which is why prop_channel's caller
-# has to glob bin/ for executables, not just bin/*.sh, to ever see it.
 # repo-settings-provision.sh is LOCAL: its subject is the FLEET (it walks the
 # whole registry), and a per-account copy would be many writers on one
 # setting. It also needs admin on someone else's repo, which self-dev

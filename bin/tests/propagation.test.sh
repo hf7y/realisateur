@@ -31,13 +31,8 @@ echo "-- 1. EVERY ARTIFACT HAS EXACTLY ONE DECLARED CHANNEL ------------------"
 # The ratchet. A new script in bin/ cannot be merged without someone deciding
 # how it reaches the accounts that will use it. One file to edit, one line to
 # add -- and CI red until it is added.
-#
-# EXECUTABLE, NOT *.sh (#596). monkey-status-collect.py runs as root on
-# monkey and has no .sh suffix; a glob of bin/*.sh never asked prop_channel
-# about it. -type f -perm -u+x also skips bin/lib and bin/tests (directories)
-# and the non-executable data files bin/ carries (*.ratchet, *.quarantine).
 unclassified=""
-while IFS= read -r f; do
+while IFS= read -r f; do  # executables, not just *.sh -- monkey-status-collect.py has none (#596)
   n="$(basename "$f")"
   prop_channel "$n" >/dev/null || unclassified="$unclassified $n"
 done <<EOF
@@ -153,18 +148,8 @@ else
   fi
 fi
 
-# A LOCAL-CLASS FILE CAN STILL LAND ON A HOST (#596). carries.tsv's
-# libexec/* rows and prop_host_tools()'s probe list are two writers of the
-# same fact -- gh-sign.sh --delivers reads prop_host_tools() BECAUSE
-# prop_channel alone answers `local`, i.e. "reaches no host", for three
-# scripts that demonstrably do. Nothing before this asserted the two agree;
-# a probe added to one and not the other would silently stop deploying (or
-# start being claimed as delivered when it is not).
 carried_libexec="$(printf '%s\n' "$CARRIES_BLOCK" | awk -F'\t' '$1 ~ /^libexec\//{sub(/^libexec\//,"",$1); print $1}' | sort)"
-# prop_host_tools() also yields the provisioning set (dresse.sh, wire-*.sh,
-# ...); only its four LOCAL-class probes are meant to be carried into
-# libexec/. Restrict the comparison to names that are actually LOCAL-class.
-probed_local="$(prop_host_tools 2>/dev/null | sort -u | while read -r s; do
+probed_local="$(prop_host_tools 2>/dev/null | sort -u | while read -r s; do  # LOCAL probes only (#596), not dresse.sh/wire-*.sh
   [ -n "$s" ] || continue
   for m in $PROP_LOCAL_SCRIPTS; do [ "$m" = "$s" ] && printf '%s\n' "$s"; done
 done | sort -u)"
