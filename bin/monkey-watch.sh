@@ -74,6 +74,7 @@ die() { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 2; }
 
 vbm() { "$VBOX" "$@" < /dev/null 2>&1 | tr -d '\0\r'; }
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 # --- host-side: always available --------------------------------------------
 VMSTATE="$(vbm showvminfo "$VM" --machinereadable | grep '^VMState=' | cut -d'"' -f2)"
@@ -130,17 +131,23 @@ fi
 # read-only root is called out separately from "down": it is the specific
 # recurring failure here, and it looks like up from most angles.
 if   [ "$VMSTATE" != "running" ];       then VERDICT="DOWN";     WHY="VM is $VMSTATE"
-elif [ "$SSHD" != "answering" ];        then VERDICT="DOWN";     WHY="VM running but sshd is $SSHD (this is what a read-only root looks like)"
+elif [ "$SSHD" != "answering" ];        then VERDICT="DOWN";     WHY="VM running but sshd is $SSHD"
 elif [ "$ROOTMOUNT" = "ro" ];           then VERDICT="DEGRADED"; WHY="root is mounted READ-ONLY"
 elif [ "$DISK_HOME" = "EXTERNAL-USB" ]; then VERDICT="DEGRADED"; WHY="disk is back on the external USB drive"
 elif [ -z "$GUEST_JSON" ];              then VERDICT="DEGRADED"; WHY="${GUEST_ERR:-guest detail unavailable}"
 else                                         VERDICT="OK";       WHY="running, sshd answering, root rw, disk internal"
 fi
 
+SCREENSHOT=""
+if [ "$VERDICT" = DOWN ]; then
+  vbm controlvm "$VM" screenshotpng "$WORK/console.png" >/dev/null
+  [ -s "$WORK/console.png" ] && SCREENSHOT=1
+fi
+
 payload="$(GUEST_JSON="$GUEST_JSON" NOW="$NOW" VMSTATE="$VMSTATE" DISK="$DISK" \
   CADENCE_MIN="$CADENCE_MIN" GRACE_MIN="$GRACE_MIN" \
   DISK_HOME="$DISK_HOME" SSHD="$SSHD" UPTIME="$UPTIME" ROOTMOUNT="$ROOTMOUNT" \
-  VERDICT="$VERDICT" WHY="$WHY" GUEST_ERR="$GUEST_ERR" \
+  VERDICT="$VERDICT" WHY="$WHY" GUEST_ERR="$GUEST_ERR" SCREENSHOT="$SCREENSHOT" \
   python3 "$HERE/bin/lib/monkey-watch-merge.py")"
 [ -n "$payload" ] || die "payload builder produced nothing -- publishing nothing."
 
@@ -175,12 +182,13 @@ fi
 # ALWAYS publishes. There is deliberately no "refusing to publish an empty
 # page" guard: an empty accounts[] IS the report when monkey is unreachable,
 # and refusing to publish it is exactly what hid the 2026-08-14 outage.
-WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 gh repo clone "$PUBLISH_REPO" "$WORK/site" -- -q --depth 1 2>/dev/null \
   || { echo "$CLI_NAME: could not clone $PUBLISH_REPO -- nothing published" >&2; exit 1; }
 mkdir -p "$WORK/site/$PUBLISH_DIR"
 printf '%s\n' "$payload" > "$WORK/site/$PUBLISH_DIR/status.json"
 [ -f "$PAGE_SRC" ] && cp "$PAGE_SRC" "$WORK/site/$PUBLISH_DIR/index.html"
+rm -f "$WORK/site/$PUBLISH_DIR/console.png"
+[ -n "$SCREENSHOT" ] && cp "$WORK/console.png" "$WORK/site/$PUBLISH_DIR/console.png"
 cd "$WORK/site" || die "could not enter the site clone"
 if [ -n "$(git status --porcelain "$PUBLISH_DIR")" ]; then
   git add "$PUBLISH_DIR"
