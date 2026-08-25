@@ -113,4 +113,32 @@ else
     "node is not on PATH, so the renderer contract went UNCHECKED -- install node or run this suite where it exists"
 fi
 
+section "F. an outage that persists gets re-pinged, not one ticket and silence (#549)"
+. "$REPO/bin/lib/monkey-watch-alert.sh"
+harness_tmp
+SF="$T/state"
+T0="2026-08-20T00:00:00Z"; T0_1H="2026-08-20T01:00:00Z"; T0_13H="2026-08-20T13:00:00Z"
+
+d="$(mw_alert_decide DOWN OK "$SF" 12 "$T0")"
+eq "F1 OK -> DOWN is one TRANSITION ping" "$d" "TRANSITION OK DOWN"
+mw_alert_mark_sent "$SF" "$T0"
+
+d="$(mw_alert_decide DOWN DOWN "$SF" 12 "$T0_1H")"
+eq "F2 +1h against a 12h cadence is silence" "$d" "NONE"
+
+d="$(mw_alert_decide DOWN DOWN "$SF" 12 "$T0_13H")"
+eq "F3 +13h re-pings, carrying elapsed down-time" "$d" "PERSIST DOWN 13"
+mw_alert_mark_sent "$SF" "$T0_13H"
+
+rm -f "$SF" "$SF.since" "$SF.alerted"
+n=0; for now in "$T0" "$T0_1H" "$T0_13H"; do
+  d="$(mw_alert_decide OK OK "$SF" 12 "$now")"
+  [ "$d" = NONE ] || n=$((n + 1))
+done
+eq "F4 zero pings across any run where the verdict is OK" "$n" "0"
+
+d="$(mw_alert_decide DOWN OK "$SF" 12 "$T0")"; mw_alert_mark_sent "$SF" "$T0"
+d="$(mw_alert_decide OK DOWN "$SF" 12 "$T0_13H")"
+eq "F5 DOWN -> OK is one TRANSITION ping (recovery is not silence)" "$d" "TRANSITION DOWN OK"
+
 summary

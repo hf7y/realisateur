@@ -52,6 +52,7 @@ SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_dexter_monkey}"
 COLLECTOR="${COLLECTOR:-$HERE/bin/monkey-status-collect.py}"
 PAGE_SRC="${PAGE_SRC:-$HERE/share/monkey-status.html}"
 STATE_FILE="${STATE_FILE:-$HOME/.local/state/monkey-watch.last}"
+ALERT_EVERY_H="${ALERT_EVERY_H:-12}"
 # The dexter cron cadence, DECLARED so the page carries a valid_until and can
 # tell "monkey is down" from "the watcher stopped".
 CADENCE_MIN="${CADENCE_MIN:-10}"
@@ -60,6 +61,8 @@ PUBLISH_REPO="${PUBLISH_REPO:-hf7y/hf7y.github.io}"
 PUBLISH_DIR="${PUBLISH_DIR:-monkey}"
 # shellcheck source=lib/zaxon.sh
 . "$HERE/bin/lib/zaxon.sh"
+# shellcheck source=lib/monkey-watch-alert.sh
+. "$HERE/bin/lib/monkey-watch-alert.sh"
 APPLY=0
 [ "${1:-}" = "--apply" ] && APPLY=1
 
@@ -146,22 +149,25 @@ printf '%s: %s -- %s\n' "$CLI_NAME" "$VERDICT" "$WHY"
 
 [ "$APPLY" = 1 ] || { printf '%s: NOT published (need --apply)\n' "$CLI_NAME"; exit 0; }
 
-# --- alert on CHANGE, not every tick ----------------------------------------
-# A watcher that messages every run trains its reader to ignore it, the same
-# way a NOTE-level lint stops being read.
 mkdir -p "$(dirname "$STATE_FILE")"
 LAST="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
-if [ "$VERDICT" != "$LAST" ]; then
-  printf '%s\n' "$VERDICT" > "$STATE_FILE"
-  if [ -n "$LAST" ]; then
-    msg="monkey: $LAST -> $VERDICT
+DECISION="$(mw_alert_decide "$VERDICT" "$LAST" "$STATE_FILE" "$ALERT_EVERY_H" "$NOW")"
+set -- $DECISION
+if [ "$1" != NONE ]; then
+  case "$1" in
+    TRANSITION) LABEL="$2 -> $3" ;;
+    PERSIST)    LABEL="still $2 (down ${3}h, unread past ${ALERT_EVERY_H}h)" ;;
+  esac
+  msg="monkey: $LABEL
 
 $WHY
 
 vm=$VMSTATE sshd=$SSHD root=${ROOTMOUNT:-?} disk=$DISK_HOME
 https://hf7y.com/$PUBLISH_DIR/"
-    tid="$(zaxon_ask "$msg" monkey-watch)"
-    [ -z "$tid" ] || printf '%s: alerted (%s -> %s) ticket %s\n' "$CLI_NAME" "$LAST" "$VERDICT" "$tid"
+  tid="$(zaxon_ask "$msg" monkey-watch)"
+  if [ -n "$tid" ]; then
+    mw_alert_mark_sent "$STATE_FILE" "$NOW"
+    printf '%s: alerted (%s) ticket %s\n' "$CLI_NAME" "$LABEL" "$tid"
   fi
 fi
 
