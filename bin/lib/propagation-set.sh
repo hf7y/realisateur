@@ -158,6 +158,7 @@ selfdev-permissions-provision.sh
 selfdev-hooks-provision.sh
 install-verbs.sh
 stamp-verb-build.sh
+vault-group-provision.sh
 "
 
 # --- PAYLOAD: reaches user paths as a verb, inside a dated build ------------
