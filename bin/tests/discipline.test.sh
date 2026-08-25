@@ -82,4 +82,17 @@ printf '%s' "$out" | grep -q 'partial' \
 [ "$("$CMD" --path)" = "$REPO/BUILD-DISCIPLINE.md" ] \
   && ok "D3  --path names the one source" || bad "D3  --path names the one source"
 
+# --- E: rules that live ONLY in the one source ------------------------------
+# 11 repos once carried a byte-identical CORRUPTED checklist and nothing
+# noticed. Half matters too: a protocol drifting into the checklist half stops
+# being printed by --protocols, which is what gets read before writing out.
+printf '%s' "$("$CMD" --protocols)" | grep -q 'Finding something fixable' \
+  && ok "E1  acting authority is in the protocols half" \
+  || bad "E1  acting authority is in the protocols half" "$("$CMD" --protocols)"
+printf '%s' "$("$CMD" --checklist)" | grep -q 'Finding something fixable' \
+  && bad "E2  and not duplicated into the checklist half" "$("$CMD" --checklist)" \
+  || ok "E2  and not duplicated into the checklist half"
+n="$(printf '%s' "$("$CMD")" | grep -c 'Finding something fixable')"
+eq "E3  and appears exactly once in the whole baseline" "$n" "1"
+
 summary
