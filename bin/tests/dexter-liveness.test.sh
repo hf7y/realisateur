@@ -31,9 +31,10 @@ healthy() {
   cat > "$STUB_REPLY" <<EOF
 UPTIME_S=100000
 DOCKER=active
-CONTAINERS=zaxon-gateway,zaxon-relay,zaxon-watcher,
-PORTS=22,2223,8643,
+CONTAINERS=zaxon-gateway,zaxon-relay,zaxon-watcher,zaxon-whisper,
+PORTS=22,2223,8643,8090,
 MCP_SERVER=hermes
+STT=And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country.
 DISTROS=Ubuntu,
 VMS=monkey,
 WINBOOT=
@@ -65,8 +66,7 @@ has "spells out the consequence" "$out" "self-dev dispatch is down"
 
 echo
 echo "== 3b. ZAXON IS REPORTED APART FROM MONKEY ==============================="
-# Zach's requirement: zaxon must work without monkey. Both verdicts are exit 5,
-# so the OUTPUT is the only place they can be told apart.
+# zaxon must work without monkey; both are exit 5, so OUTPUT tells them apart.
 healthy
 sed -i 's/^VMS=.*/VMS=/' "$STUB_REPLY"
 out="$(bash "$PROBE" 2>&1)"
@@ -86,6 +86,36 @@ sed -i 's/^CONTAINERS=.*/CONTAINERS=zaxon-gateway,zaxon-watcher,/' "$STUB_REPLY"
 out="$(bash "$PROBE" 2>&1)"; rc=$?
 is "exit 5 when a declared container is gone" "$rc" "5"
 has "names it" "$out" "zaxon-relay"
+
+echo
+echo "== 3c. STT IS ASSERTED BY ITS WORDS, NOT BY ITS PORT ====================="
+# docker-proxy keeps 8090 LISTEN for the gateway, so a port check would not have
+# caught the three weeks. These cases drive the TRANSCRIPT, ports left healthy.
+healthy
+sed -i 's/^STT=.*/STT=STT command failed (rc=7): no stderr/' "$STUB_REPLY"
+out="$(bash "$PROBE" 2>&1)"; rc=$?
+is "exit 5 when the sample does not transcribe" "$rc" "5"
+has "quotes what came back instead" "$out" "rc=7"
+has "STT is DOWN" "$out" "STT   (voice notes):   DOWN"
+has "while the human channel is NOT blamed" "$out" "ZAXON (human channel): OK"
+
+healthy
+sed -i 's/^STT=.*/STT=and so my fellow americans/' "$STUB_REPLY"
+out="$(bash "$PROBE" 2>&1)"; rc=$?
+is "exit 5 when the transcript is wrong, not merely absent" "$rc" "5"
+has "names the phrase it wanted" "$out" "ask not what your country can do for you"
+
+healthy
+sed -i 's/^STT=.*/STT=/' "$STUB_REPLY"
+out="$(bash "$PROBE" 2>&1)"; rc=$?
+is "exit 5 when the self-test could not be run at all" "$rc" "5"
+has "and says it returned nothing" "$out" "returned nothing"
+
+healthy
+sed -i 's/^CONTAINERS=.*/CONTAINERS=zaxon-gateway,zaxon-relay,zaxon-watcher,/' "$STUB_REPLY"
+out="$(bash "$PROBE" 2>&1)"
+has "a missing whisper container is STT's finding" "$out" "zaxon-whisper"
+has "and lands on the STT verdict, not zaxon's" "$out" "ZAXON (human channel): OK"
 
 echo
 echo "== 4. BLIND IS NOT 'HEALTHY', AND NOT 'DOWN' ============================="
@@ -119,10 +149,17 @@ else
 fi
 healthy
 out="$(bash "$PROBE" --json 2>&1)"
-if printf '%s' "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d["zaxon"]=="OK" and d["selfdev_vm"]=="OK" and d["mcp_server"]=="hermes" else 1)' 2>/dev/null; then
-  ok "--json carries the two verdicts separately"
+if printf '%s' "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d["zaxon"]=="OK" and d["stt"]=="OK" and d["selfdev_vm"]=="OK" and d["mcp_server"]=="hermes" else 1)' 2>/dev/null; then
+  ok "--json carries the three verdicts separately"
 else
-  bad "--json lacks independent zaxon/selfdev_vm verdicts: $out"
+  bad "--json lacks independent zaxon/stt/selfdev_vm verdicts: $out"
+fi
+healthy
+out="$(bash "$PROBE" --json 2>&1)"
+if printf '%s' "$out" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if "ask not what your country" in d["transcript"] else 1)' 2>/dev/null; then
+  ok "--json carries the transcript itself, so a reader can judge it too"
+else
+  bad "--json lacks the transcript: $out"
 fi
 rm -f "$STUB_REPLY"
 out="$(bash "$PROBE" --json 2>&1)"
