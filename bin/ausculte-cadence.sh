@@ -27,6 +27,7 @@ CLI_EXITS='  0  every row OK, or a first-time DOWN recorded and not yet escalate
 cli_guard "$@"
 
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cron-lock.sh"
 STATE="${AUSCULTE_CADENCE_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/ausculte-cadence}"
 AUSCULTE="${AUSCULTE_BIN:-$HERE/ausculte.sh}"
 [ -x "$AUSCULTE" ] || AUSCULTE="$(command -v ausculte || true)"
@@ -60,6 +61,8 @@ if [ "$MODE" = cadence ]; then
   echo "  BAD     the cadence is NOT in the crontab -- nothing will run ausculte" >&2
   exit 1
 fi
+
+cron_lock ausculte-cadence
 
 [ -n "$AUSCULTE" ] && [ -x "$AUSCULTE" ] \
   || { echo "$CLI_NAME: BLIND -- ausculte is not runnable from here" >&2; exit 6; }
