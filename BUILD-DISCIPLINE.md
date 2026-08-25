@@ -108,9 +108,8 @@ done
 ## The baseline (ONE file, read through the `discipline` command)
 
 **The fenced block below is the ONE SOURCE, and it is the ONLY copy.**
-`discipline` prints it, and every project points one line at that command
-(senechal deleted its `CLAUDE.md` on 2026-08-25 for drifting and points from
-`README.md` instead; the pointer matters, the filename does not). Do not restate a row's reasoning here: a row that
+`discipline` prints it, and every project points one line at it from wherever
+its agent instructions live. Do not restate a row's reasoning here: a row that
 needs an argument has an issue, and this block is printed on every
 invocation.
 
@@ -161,10 +160,7 @@ not an inconvenience.
   Then `consulte list --from <this project>` and `consulte show <n>`.
   **Filing is free; answering is metered** — ask once and read the queue first.
 
-- **Finding something fixable** — fix it, in whatever repo it lives in, and
-  land it as a PR there. Reversible operational fixes you do unattended, then
-  report; only privileged or hard-to-undo ones wait, as a tested script. An
-  issue filed in place of an available fix is not a first move, and neither is
-  a finding "left for" someone — no scheduled run reads prose.
-  `scheduler -i <project>` is for a judgement call that is someone else's.
+- **Finding something fixable** — fix it in whatever repo it lives in and PR it
+  there. Reversible fixes run unattended; privileged ones wait, as a tested
+  script. An issue or a finding "left for" someone is not a move: nothing reads prose.
 ```

@@ -94,5 +94,7 @@ printf '%s' "$("$CMD" --protocols)" | grep -q 'Finding something fixable' \
 printf '%s' "$("$CMD" --checklist)" | grep -q 'Finding something fixable' \
   && bad "E2  and not duplicated into the checklist half" "$("$CMD" --checklist)" \
   || ok "E2  and not duplicated into the checklist half"
+n="$(printf '%s' "$("$CMD")" | grep -c 'Finding something fixable')"
+eq "E3  and appears exactly once in the whole baseline" "$n" "1"
 
 summary
