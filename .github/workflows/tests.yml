@@ -1,40 +1,26 @@
 # tests.yml -- run the suites in bin/tests/ on every pull request and on every
 # push to main.
 #
-# WHY THIS EXISTS. Before it, .github/workflows/verb-build-smoke.yml was the
-# only workflow in the repository and it ran 2 of the suites in bin/tests/,
-# behind a `paths:` filter that excluded most of the tree. Every other suite in
-# that directory had no automated runner at all. They were real tests, they
-# passed, and nothing ever ran them, which makes them documentation. This file
-# is the difference between a test that exists and a test that gates.
-# (`git log -- .github/workflows/verb-build-smoke.yml` has the roster as it
-# stood; naming it here would be the same append point, one sentence smaller.)
+# WHY THIS EXISTS. Before it, verb-build-smoke.yml ran 2 of the suites behind a
+# `paths:` filter that excluded most of the tree. The rest had no runner at
+# all: real tests, passing, never run, which makes them documentation. This
+# file is the difference between a test that exists and a test that gates.
 #
-# THIS HEADER NAMES NO SUITE, AND bin/suite-docs-lint.sh ENFORCES THAT.
+# IT NAMES NO SUITE AND NO COUNT, because the step below GLOBS. The header
+# used to carry a hand-written paragraph per file, and on 2026-08-07 three open
+# PRs appended to the same forty lines and produced three merge conflicts in
+# one day, every one of them here and nowhere else. A list maintained by hand
+# is the same defect as a count maintained by hand.
 #
-# It used to. It carried one hand-written paragraph per file in bin/tests/,
-# describing what makes that suite hermetic -- and every PR that added a suite
-# appended to the same forty lines. On 2026-08-07 three open PRs did exactly
-# that and produced three merge conflicts in one day, every one of them in this
-# file and in no other file in the repository: #97 merging broke #95 and #96,
-# and #95 merging broke #96 again after it had already been resolved once.
+#   (#631: two claims are gone from this header rather than restored. It said
+#   `bin/suite-docs-lint.sh` enforced the no-suite rule -- that script was
+#   deleted by #366 -- and that every suite carries a `# HERMETICITY:` note,
+#   which 5 of 45 do. A header describing a guard that does not exist is worse
+#   than no header: it reads as a gate.)
 #
-# The ledger was prose restating what the loop below already knows, because the
-# loop GLOBS. Each note now lives in the header of the suite it describes --
-# a file only the PR that adds that suite touches, so there is nothing to
-# contend for. A lint asserted both halves -- every suite still
-# carries a `# HERMETICITY:` note, and this file names no suite. It runs from
-# the very glob that made the ledger redundant.
-#
-# No suite count is stated here, on purpose: this header read "all nine" for
-# two suites longer than it was true. A number maintained by hand is the same
-# defect as a list maintained by hand, in one word.
-#
-# THE BAR, unchanged and the whole point. Editing a test so a new workflow can
-# open green is the exact move this repository's BUILD-DISCIPLINE.md exists to
-# prevent. Fixing a harness that tests the wrong thing is not that, and neither
-# is fixing shipped code. Nothing here weakens an assertion: what moved was
-# prose, and the guard above is what stops it moving back.
+# THE BAR, unchanged. Editing a test so a new workflow can open green is what
+# BUILD-DISCIPLINE.md exists to prevent. Fixing a harness that tests the wrong
+# thing is not that, and neither is fixing shipped code.
 
 name: tests
 
@@ -53,7 +39,38 @@ permissions:
   contents: read
 
 jobs:
+  # CARRY FIRST, ON MAIN ONLY. bin/tests/carry-drift.test.sh compares
+  # origin/main against origin/bashified -- repo state, not the diff under
+  # test -- so it went red on commits that touched no carried file, and stayed
+  # red until a human ran the carry. main's CI was not a function of main, and
+  # one owed carry blocked every open PR in the repo (#592).
+  #
+  # bin/carry.sh --apply is the actuator #636 gave it: plumbing only
+  # (commit-tree + push), no checkout, and a no-op when nothing drifted. So the
+  # state heals on the merge that owes the carry, and the suite below stops
+  # being the thing that reports a debt nobody in-band can pay.
+  #
+  # It writes to `bashified`, never to `main` -- main is protected and this
+  # would be refused anyway (CLAUDE.md).
+  carry:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: git fetch --no-tags origin +refs/heads/bashified:refs/remotes/origin/bashified
+      - name: Give git an identity for the carry commit
+        run: |
+          git config --global user.email "ci@realisateur.invalid"
+          git config --global user.name  "realisateur CI"
+      - run: bash bin/carry.sh --apply
+
   suites:
+    needs: [carry]
+    # `needs` on a job that is skipped on pull_request would skip this one too.
+    if: always() && (needs.carry.result == 'success' || needs.carry.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
