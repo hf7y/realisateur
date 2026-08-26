@@ -1,0 +1,18 @@
+# handoffs.tsv -- files this repo has handed to their owner, and the PR that
+# receives each one. Read by bin/reprise.sh and by nothing else.
+#
+# THE RULE THIS TABLE EXISTS TO ENFORCE (realisateur#368): "Deletion on this
+# side lands only after the receiving PR merges. A draft is not a delivery, and
+# a file deleted here before it exists there is an outage."
+#
+# That rule was written down in an issue body and then carried out by hand,
+# which is the shape this estate keeps failing at -- the senechal block moved
+# on 2026-08-22 and the deletion here was still owed four days later. A row
+# below is the same promise, in a form a clock can act on.
+#
+# Columns:  path here  TAB  receiving repo  TAB  receiving PR number  TAB  path there
+#
+# `path there` is checked on the RECEIVING REPO'S DEFAULT BRANCH, not on the
+# PR's branch. A merged PR whose file is not there is a FAILURE, never a
+# collection: squash-merges get reverted, paths get renamed in review, and a
+# merge is a fact about a pull request rather than about a tree.
