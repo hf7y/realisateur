@@ -13,33 +13,9 @@
 # crontab and ledger; a missing ledger on an ARMED account is a finding, not a
 # blank. None of that is derivable from dexter.
 #
-# DELETED 2026-08-22 BY #511, RESTORED THE SAME DAY. DO NOT CUT IT AGAIN
-# WITHOUT READING THIS. It was swept up in the self-dev v1 subtraction as a
-# guard that "produces no findings" -- but it is not a guard. It is the ONLY
-# OBSERVER OUTSIDE THE SYSTEM IT OBSERVES.
-#
-# ausculte runs on monkey. The health cadence runs on monkey. Every issue the
-# estate files about itself is written by something ON monkey. So when monkey
-# goes down, the tracker does not fill with alarms -- it goes QUIET, which is
-# indistinguishable from a healthy night. dexter-liveness.sh's own header names
-# the mechanism: dexter starts its distro and VMs from the Windows Startup
-# folder, i.e. AT LOGIN, so a reboot nobody logs in after takes all of self-dev
-# with it and "reads from the outside like a quiet night".
-#
-# DELETION-LIST.txt:23 protected `publish-monkey-status.sh` and
-# `monkey-status-collect.py` by name -- "the dashboard Zach reads" -- and line
-# 97 deleted the only thing that invokes them. The list kept the payload and
-# cut its clock. That is realisateur#518, and this is its cause.
-#
-# The corpse kept running: dexter's crontab fired this path every ten minutes
-# for the whole interval and appended `not found` to
-# ~/.local/state/monkey-watch.log until it reached 47 MB. A cron entry pointing
-# at a deleted script is not inert; it is a fault indicator nobody reads.
-#
-# The rule this earns: a REACHABILITY SCAN CANNOT SEE AN OFF-HOST CALLER.
-# #511's scan read .github/workflows/ and this repo's own bin/; the caller here
-# is a crontab line on a different machine. Before deleting anything, ask what
-# invokes it FROM SOMEWHERE ELSE.
+# Deleted by #511 and restored the same day, because a reachability scan
+# cannot see an off-host caller. bin/tests/monkey-watch.test.sh is what
+# enforces that now, and bin/lib/cron-invoked.tsv is where the callers live.
 
 set -uo pipefail
 
@@ -71,6 +47,14 @@ die() { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 2; }
 [ -f "$COLLECTOR" ] || die "collector not found at $COLLECTOR.
   This script runs from a realisateur checkout so the collector that runs is
   the one in the tree. Clone it rather than copying the collector next to me."
+
+# ONE AT A TIME. The cron tick is every 10 minutes and a stalled run outlives
+# it, so without this the runs stack for as long as monkey is unreachable --
+# seven of them on 2026-08-25. Non-blocking: a tick that finds the lock held
+# says so and leaves, rather than becoming the eighth.
+LOCK_FILE="${LOCK_FILE:-${TMPDIR:-/tmp}/monkey-watch.lock}"
+exec 9>"$LOCK_FILE" || die "cannot open $LOCK_FILE"
+flock -n 9 || { printf '%s: a run is already in flight -- leaving this tick to it\n' "$CLI_NAME" >&2; exit 0; }
 
 vbm() { "$VBOX" "$@" < /dev/null 2>&1 | tr -d '\0\r'; }
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -106,9 +90,18 @@ esac
 # feeds the collector an EMPTY program -- it ran, printed nothing usable, and
 # the watcher correctly reported DEGRADED instead of publishing a lie. Keep
 # stdin free here; mssh_n below is the variant for calls that send nothing.
-mssh()   { ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=20 \
+# EVERY ssh IS DEADLINED. ConnectTimeout bounds the CONNECT only, so a monkey
+# that completes TCP, sends its banner and then stalls in auth hangs these
+# forever -- and the banner probe above reports "answering" throughout, because
+# the banner does arrive. Measured 2026-08-25: seven --apply runs stacked up,
+# each holding an ssh, while hf7y.com/monkey stayed frozen on the last healthy
+# publish. The watcher that exists to report monkey being down inherited the
+# hang instead. Its header already tells this story about REFUSING to publish;
+# this is the same failure by a slower route.
+SSH_DEADLINE="${SSH_DEADLINE:-60}"
+mssh()   { timeout "$SSH_DEADLINE" ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=20 \
                -o StrictHostKeyChecking=accept-new "$MONKEY_IP" "$@" 2>/dev/null; }
-mssh_n() { ssh -n -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=20 \
+mssh_n() { timeout "$SSH_DEADLINE" ssh -n -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=20 \
                -o StrictHostKeyChecking=accept-new "$MONKEY_IP" "$@" 2>/dev/null; }
 
 GUEST_JSON=""; GUEST_ERR=""; ROOTMOUNT=""; UPTIME=""
@@ -116,9 +109,15 @@ if [ "$SSHD" = "answering" ]; then
   # Fed over STDIN rather than installed on monkey, so the version that runs is
   # the version in this checkout -- no second copy to drift. Borrowed wholesale
   # from publish-monkey-status.sh, which got this right.
-  GUEST_JSON="$(mssh 'sudo -n python3 -' < "$COLLECTOR" || true)"
+  GUEST_JSON="$(mssh 'sudo -n python3 -' < "$COLLECTOR")"; guest_rc=$?
   if ! printf '%s' "$GUEST_JSON" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if isinstance(d.get("accounts"),list) else 1)' 2>/dev/null; then
-    GUEST_ERR="collector ran but returned no usable accounts array"
+    # 124 is `timeout`'s. A stalled ssh and a collector that answered badly are
+    # different outages and the page said the second when it meant the first.
+    if [ "$guest_rc" -eq 124 ]; then
+      GUEST_ERR="sshd sent its banner but the session stalled -- no answer in ${SSH_DEADLINE}s"
+    else
+      GUEST_ERR="collector ran but returned no usable accounts array"
+    fi
     GUEST_JSON=""
   fi
   ROOTMOUNT="$(mssh_n 'mount | grep " / " | grep -o "(r[wo]" | tr -d "("' || true)"
