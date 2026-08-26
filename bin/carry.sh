@@ -79,8 +79,10 @@ while IFS=$'\t' read -r carried src; do
   if ! git cat-file -e "$REF_MAIN:$src" 2>/dev/null; then
     missing+=("$src (source of $carried)"); continue
   fi
-  a="$(git rev-parse "$REF_BASH:$carried" 2>/dev/null || echo -)"
-  b="$(git rev-parse "$REF_MAIN:$src" 2>/dev/null || echo =)"
+  # Two sentinels that can never be a sha and can never equal each other, so a
+  # path missing on either side reads as drift rather than as a match.
+  a="$(git rev-parse "$REF_BASH:$carried" 2>/dev/null || echo ABSENT-ON-CARRIED)"
+  b="$(git rev-parse "$REF_MAIN:$src" 2>/dev/null || echo ABSENT-ON-SOURCE)"
   [ "$a" = "$b" ] || drifted+=("$carried"$'\t'"$src")
 done <<< "$TABLE"
 
