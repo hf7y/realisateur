@@ -177,8 +177,18 @@ has "H2 the deadline is overridable for tests" "$(code "$W")" 'SSH_DEADLINE="${S
 hasnt "H3 no bare ssh call survives in the guest helpers" \
   "$(grep -E '^mssh(_n)?\(\)' -A1 "$W" | grep -c 'timeout "\$SSH_DEADLINE" ssh' | grep -q '^2$' && echo '' || echo 'undeadlined-helper')" \
   "undeadlined-helper"
-has "H4 a tick that finds a run in flight leaves rather than stacking" "$(code "$W")" 'flock -n 9'
-has "H5 the lock is taken before any probe" "$(code "$W")" 'exec 9>"$LOCK_FILE"'
+# The five inline lock lines became `cron_lock` (#632); lib/cron-lock.sh owns
+# the flock spelling and cron-lock.test.sh holds it there. What this file
+# still owns is that the lock is taken AT ALL, and taken BEFORE the first
+# probe -- an ordering claim no library can make for its caller.
+has "H4 a tick that finds a run in flight leaves rather than stacking" "$(code "$W")" 'cron_lock monkey-watch'
+lock_ln="$(grep -n 'cron_lock monkey-watch' "$W" | head -1 | cut -d: -f1)"
+probe_ln="$(grep -n 'vmhost_state\|/dev/tcp/' "$W" | head -1 | cut -d: -f1)"
+if [ -n "$lock_ln" ] && [ -n "$probe_ln" ] && [ "$lock_ln" -lt "$probe_ln" ]; then
+  ok "H5 the lock is taken before any probe"
+else
+  bad "H5 the lock is taken before any probe" "cron_lock at line ${lock_ln:-none}, first probe at line ${probe_ln:-none}"
+fi
 has "H6 a stalled session is named as such, not as a bad payload" \
   "$(code "$W")" 'the session stalled'
 has "H7 timeout's 124 is what distinguishes them" "$(code "$W")" '"$guest_rc" -eq 124'

@@ -48,13 +48,12 @@ vmhost_require || die "VBoxManage not at $VMHOST_VBOX -- this must run on the VM
   This script runs from a realisateur checkout so the collector that runs is
   the one in the tree. Clone it rather than copying the collector next to me."
 
-# ONE AT A TIME. The cron tick is every 10 minutes and a stalled run outlives
-# it, so without this the runs stack for as long as monkey is unreachable --
-# seven of them on 2026-08-25. Non-blocking: a tick that finds the lock held
-# says so and leaves, rather than becoming the eighth.
-LOCK_FILE="${LOCK_FILE:-${TMPDIR:-/tmp}/monkey-watch.lock}"
-exec 9>"$LOCK_FILE" || die "cannot open $LOCK_FILE"
-flock -n 9 || { printf '%s: a run is already in flight -- leaving this tick to it\n' "$CLI_NAME" >&2; exit 0; }
+# ONE AT A TIME (#629): the cron tick is every 10 minutes and a stalled run
+# outlives it, so without this the runs stack for as long as monkey is
+# unreachable -- seven of them on 2026-08-25.
+# shellcheck source=lib/cron-lock.sh
+. "$HERE/bin/lib/cron-lock.sh"
+cron_lock monkey-watch
 
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT

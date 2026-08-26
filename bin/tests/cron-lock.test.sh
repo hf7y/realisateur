@@ -75,7 +75,13 @@ while IFS=$'\t' read -r script host cadence caller; do
     || { bad "$script exists" "cron on $host fires $cadence into a path this repo no longer has ($caller)"; continue; }
   body="$(grep -v '^[[:space:]]*#' "$f")"
   case "$body" in
-    *"cron_lock "*|*"flock -n"*) ok "$script takes a non-blocking lock" ;;
+    # NARROWED to cron_lock (#632). The `flock -n` spelling was accepted only
+    # so #629's inline block and this library could land in either order; both
+    # have, and monkey-watch.sh was the last inline copy. Accepting two
+    # spellings from here on is how the second implementation comes back.
+    *"cron_lock "*) ok "$script takes the shared non-blocking lock" ;;
+    *"flock -n"*) bad "$script takes the SHARED non-blocking lock" \
+         "it locks inline instead of calling cron_lock -- one implementation, per lib/cron-lock.sh; caller: $caller" ;;
     *) bad "$script takes a non-blocking lock" \
          "cron fires it every $cadence on $host and a run that outlives that becomes a pile; caller: $caller" ;;
   esac

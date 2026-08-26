@@ -125,6 +125,29 @@ act "~/.local/bin, before the account's first login"
 sudo -u "$PROJECT" mkdir -p "$HOME_DIR/.local/bin" "$HOME_DIR/.local/share" "$HOME_DIR/.claude"
 sudo -u "$PROJECT" chmod 700 "$HOME_DIR/.claude"
 
+# PER-TENANT TMPDIR AND A PRIVATE UMASK (#620). Thirteen accounts share one
+# /tmp. On 2026-08-25 gardien's `git commit -F /tmp/commit-msg.txt` silently
+# read ecosim's leftover file of the same name and committed another project's
+# prose, under the wrong author, with no error anywhere -- caught only by a
+# habit of reading `git log -1` back. Two independent holes: a predictable
+# name space shared across tenants, and a default umask that leaves scratch
+# files world-readable. Both close in ~/.profile, which is read by the login
+# shell cron and ssh both start from.
+act "private TMPDIR and umask 077 in ~/.profile"
+sudo -u "$PROJECT" mkdir -p "$HOME_DIR/tmp"
+sudo -u "$PROJECT" chmod 700 "$HOME_DIR/tmp"
+if sudo -u "$PROJECT" grep -q '^# selfdev: private scratch' "$HOME_DIR/.profile" 2>/dev/null; then
+  act "  already present, left alone"
+else
+  sudo -u "$PROJECT" tee -a "$HOME_DIR/.profile" >/dev/null <<'PROFILE'
+
+# selfdev: private scratch (realisateur#620) -- a shared /tmp let one tenant's
+# stale file satisfy another tenant's read. Do not point these at /tmp.
+export TMPDIR="$HOME/tmp"
+umask 077
+PROFILE
+fi
+
 act "linger (a --user unit outlives logout; cheap now, needs root later)"
 sudo loginctl enable-linger "$PROJECT" >/dev/null 2>&1 || gap "enable-linger failed"
 
