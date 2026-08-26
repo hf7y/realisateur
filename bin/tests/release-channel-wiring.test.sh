@@ -21,8 +21,18 @@ TICK="$REPO/bin/selfdev-release-tick.sh"
 LEDGER="$REPO/bin/release-ledger.sh"
 PUBLISH="$REPO/bin/publish-release-verdict.sh"
 
-LIVE=0
-[ "${1:-}" = "--live" ] && LIVE=1
+# TWO LIVE CLAIMS, and they are separable on purpose.
+#   --drift  is the deployed workflow the one this repo develops? A question
+#            about THIS repo's own deploy, answerable by a PR author, and the
+#            one CI gates on (.github/workflows/tests.yml, deploy-drift job).
+#   --live   that, plus: is the published channel healthy right now? That one
+#            goes red on an outage nobody's PR caused, so it is for a human
+#            and for ausculte, never for a branch.
+LIVE=0; DRIFT=0
+case "${1:-}" in
+  --live)  LIVE=1; DRIFT=1 ;;
+  --drift) DRIFT=1 ;;
+esac
 
 
 echo "release-channel-wiring.test.sh$([ "$LIVE" = 1 ] && echo ' --live')"
@@ -202,16 +212,16 @@ else
 fi
 
 # ===========================================================================
-if [ "$LIVE" != 1 ]; then
+if [ "$DRIFT" != 1 ]; then
   echo
-  echo "  (--live checks skipped: deployed-workflow drift and endpoint freshness)"
+  echo "  (skipped: deployed-workflow drift (--drift) and endpoint freshness (--live))"
   echo
 summary
   exit
 fi
 
 echo
-echo "-- G. LIVE: THE VENDORED WORKFLOW IS THE DEPLOYED ONE ------------------"
+echo "-- G. DEPLOYED: THE VENDORED WORKFLOW IS THE ONE THAT RUNS -------------"
 # ===========================================================================
 # The vendored copy is only evidence about the real workflow while the two
 # agree. Drift here means every assertion above is about a file nothing runs.
@@ -229,6 +239,16 @@ fi
 sched="$(gh api repos/hf7y/verbs/actions/workflows --jq '.workflows[]|select(.name=="build-verbs")|.state' 2>/dev/null)"
 [ "$sched" = active ] && ok "the build-verbs workflow is ACTIVE on GitHub" \
                       || bad "build-verbs is '$sched' on GitHub, not active -- nothing is scheduled"
+
+if [ "$LIVE" != 1 ]; then
+  echo
+  echo "  (--live skipped: endpoint freshness. That is a claim about the"
+  echo "   CHANNEL's health right now, not about this branch, so CI does not"
+  echo "   gate on it -- ausculte's propagation probe is what pages.)"
+  echo
+summary
+  exit
+fi
 
 echo
 echo "-- H. LIVE: THE ENDPOINT IS REACHABLE, FRESH AND WELL-FORMED -----------"

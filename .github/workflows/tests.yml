@@ -93,6 +93,39 @@ jobs:
       - name: Run every suite in bin/tests/
         run: bash bin/run-suites.sh bin/tests/*.sh
 
+  # DEPLOY DRIFT. A separate job for the same reason shellcheck is one: it
+  # makes a DIFFERENT claim, and it is the only job here that reaches the
+  # network.
+  #
+  # WHY IT EXISTS. bin/tests/release-channel-wiring.test.sh section G has
+  # compared provision/verbs-meta/build-verbs.yml against the copy deployed at
+  # hf7y/verbs since it was written -- behind `--live`, which NOTHING EVER
+  # PASSED. A sensor that exists and never runs is the estate's signature
+  # defect, and on 2026-08-26 it cost exactly what it was built to prevent:
+  # #645 removed the release gate from the SOURCE, the deploy did not happen in
+  # the same change, and the deployed copy went on invoking a script that no
+  # longer existed -- rc=127, state=BLIND, the cut step skipped on its GREEN
+  # condition, and every night would have published a verdict and cut nothing.
+  # ausculte's `propagation` probe is what noticed, a day later.
+  #
+  # NOT in `suites`: that job is hermetic by construction and must stay so. A
+  # network call there would make every unrelated failure ambiguous.
+  #
+  # NOT a required check, deliberately. It reads another repository, so it goes
+  # red on an outage that is nobody's PR -- and a required check that can be
+  # broken by a third party is a wedge (realisateur#592's shape). It is loud
+  # and it is advisory; the propagation probe is the one that pages.
+  deploy-drift:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Is the deployed workflow the one this repo develops?
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash bin/tests/release-channel-wiring.test.sh --drift
+
   # SHELLCHECK. A separate job from `suites` on purpose: the suite above
   # asserts that bin/shellcheck-lint.sh BEHAVES (its regression path fires, it
   # goes BLIND rather than green), which is what a container can honestly say
