@@ -273,7 +273,7 @@ rc  'S8 --check-body re-runs it offline and FINDS it (1), refusing nothing' 1 "$
 has 'S9 --check-body names the same finding'         "$out" MISPLACED-DECISION
 
 section 'I. the CI backstop is wired to the same grammar'
-# deferral-ledger.yml was deleted 2026-08-22 (DELETION-LIST.txt). It was never
+# deferral-ledger.yml was deleted 2026-08-22 (#511). It was never
 # a required check, and it was green on every PR that answered `- none` -- 260
 # of 262. A backstop satisfied by declaring nothing backstops nothing. The
 # grammar itself is unchanged and still enforced at the write by

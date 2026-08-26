@@ -7,7 +7,7 @@
 # .github/workflows/ and this repo's bin/, found no caller for monkey-watch.sh,
 # and deleted it. Its caller was a CRONTAB LINE ON ANOTHER MACHINE -- dexter,
 # every ten minutes, out of a checkout dexter pulls itself.
-# The blast radius was not one script: DELETION-LIST.txt:23 protected the
+# The blast radius was not one script: #511 protected the
 # dashboard payload BY NAME while the same PR deleted its only invoker, keeping
 # the payload and cutting its clock (#518); #524 then deleted the merge lib as
 # an orphan. Dexter's cron kept firing into a deleted path, appending

@@ -92,7 +92,7 @@ else
 fi
 
 # Section D exercised session-marker.sh, deleted 2026-08-22
-# (DELETION-LIST.txt). It was a SessionStart hook installed in no hook config
+# (#511). It was a SessionStart hook installed in no hook config
 # on any host -- this suite's own header called it "the hook that no-opped for
 # eight days", and it had gone on no-opping. scheduler still READS the
 # interactive marker (bin/scheduler, "human-presence marker"); with nothing

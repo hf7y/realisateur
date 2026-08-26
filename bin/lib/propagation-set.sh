@@ -180,8 +180,8 @@ PROP_PAYLOAD_PENDING="
 PROP_LEAK_BOUND=7
 
 # --- LOCAL: never leaves this repo ------------------------------------------
-# release-gate.sh and publish-release-verdict.sh are LOCAL because they run in
-# the release pipeline (GitHub Actions checks realisateur out to get them), not
+# publish-release-verdict.sh is LOCAL because it runs in the release pipeline
+# (GitHub Actions checks realisateur out to get it), not
 #
 # "NEVER LEAVES THIS REPO" IS NOT "NEVER RUNS ANYWHERE ELSE", and reading it
 # that way cost the estate its only outside observer. A LOCAL script reaches a
@@ -199,7 +199,6 @@ monkey-watch.sh
 monkey-status-collect.py
 decision-rot.sh
 cut-verb-build.sh
-release-gate.sh
 publish-release-verdict.sh
 selfdev-credentials.sh
 shellcheck-lint.sh

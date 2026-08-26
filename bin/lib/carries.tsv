@@ -5,7 +5,7 @@
 # heredoc, so a guard owned a data structure that outlived it --
 # bin/tests/propagation.test.sh reads this mapping to answer "which script
 # backs verb <v>", which is a question about the repo, not about that guard.
-# carry-drift.sh was deleted 2026-08-22 (DELETION-LIST.txt); the table it held
+# carry-drift.sh was deleted 2026-08-22 (#511); the table it held
 # was not.
 #
 # Columns:  carried path (on bashified)  TAB  source path (on main)

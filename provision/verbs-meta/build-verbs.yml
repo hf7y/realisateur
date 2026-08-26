@@ -150,34 +150,6 @@ jobs:
           fi
           bash "$GITHUB_WORKSPACE/.realisateur/bin/cut-verb-build.sh" "${args[@]}"
 
-      # THE GATE. Runs AFTER assemble (so the manifest exists) and BEFORE
-      # anything is committed, tagged or pushed -- a gate that runs after the
-      # push is a report.
-      #
-      #   [rest: vault:realisateur/guard-archaeology-20260817.md]
-      - name: Gate the cut on CI green
-        id: gate
-        if: ${{ inputs.dry_run != true }}
-        env:
-          GH_TOKEN: ${{ secrets.VERBS_READ_TOKEN }}
-        run: |
-          set -uo pipefail
-          rc=0
-          bash "$GITHUB_WORKSPACE/.realisateur/bin/release-gate.sh" \
-            --owner hf7y --manifest "$GITHUB_WORKSPACE/manifest.tsv" \
-            > "$RUNNER_TEMP/gate.txt" 2>&1 || rc=$?
-          cat "$RUNNER_TEMP/gate.txt"
-          # One line, for the verdict's `reason` field.
-          summary="$(grep -E '^  [0-9]+ green,' "$RUNNER_TEMP/gate.txt" | tail -1 | sed 's/^ *//')"
-          echo "summary=${summary:-gate produced no summary}" >> "$GITHUB_OUTPUT"
-          case "$rc" in
-            0) echo "state=GREEN"   >> "$GITHUB_OUTPUT" ;;
-            1) echo "state=RED"     >> "$GITHUB_OUTPUT" ;;
-            4) echo "state=PENDING" >> "$GITHUB_OUTPUT" ;;
-            *) echo "state=BLIND"   >> "$GITHUB_OUTPUT" ;;
-          esac
-          exit 0
-
       # The publisher has to outlive the realisateur checkout, because it runs
       # `if: always()` -- including on the runs where the assemble itself
       # failed and there is nothing to drop from. Staged OUT of the workspace
@@ -200,11 +172,21 @@ jobs:
 
       - name: Commit and tag
         id: cut
-        # ONLY on a GREEN gate. A RED or PENDING gate means the fleet stays on
-        # the last good build -- that is the intended coupling, and the reason
-        # it is safe to state so bluntly is that the publish step below tells
-        # everyone, in one place, that it happened and why.
-        if: ${{ inputs.dry_run != true && steps.gate.outputs.state == 'GREEN' }}
+        # THE GATE IS GONE (#598, #599, #600). It asked whether every
+        # downstream project's default branch was green and refused the cut if
+        # not -- and it errored or blocked 39% of nights, while grading only a
+        # MINORITY of the manifest: three to ten verbs were UNGATED on every
+        # cut, so GREEN never meant what it read as. It also gated on `main`
+        # while the build ships from `bashified`, and the check that compared
+        # those two was deleted before it. A sensor that reports clean over a
+        # minority is the disease this estate keeps treating, so it was removed
+        # rather than repaired.
+        #
+        # The verdict below is UNAFFECTED and is why removing it is safe: every
+        # run still publishes what it did to one public URL, ausculte's
+        # `propagation` probe still reads it, and a broken cut is still ERROR.
+        # What is gone is the refusal, not the reporting.
+        if: ${{ inputs.dry_run != true }}
         run: |
           set -euo pipefail
           git config user.name  'verb-build'
@@ -265,8 +247,6 @@ jobs:
         if: always()
         env:
           STATUS_PAGE_TOKEN: ${{ secrets.STATUS_PAGE_TOKEN }}
-          GATE_STATE:   ${{ steps.gate.outputs.state }}
-          GATE_SUMMARY: ${{ steps.gate.outputs.summary }}
           CUT_STATE:    ${{ steps.cut.outputs.cut }}
           CUT_BUILD:    ${{ steps.cut.outputs.build_id }}
           CUT_VERBS:    ${{ steps.cut.outputs.verbs }}
@@ -287,29 +267,19 @@ jobs:
             exit 1
           fi
 
-          # Decide the verdict from what actually happened, in this order:
-          # a broken run beats a refusal beats a cut.
-          if [ -z "${GATE_STATE:-}" ]; then
-            decision=ERROR
-            reason="the run failed before the gate could decide"
-          elif [ "$GATE_STATE" = RED ]; then
-            decision=BLOCKED
-            reason="a project's default branch is RED -- ${GATE_SUMMARY:-see the gate step}"
-          elif [ "$GATE_STATE" = PENDING ]; then
-            decision=BLOCKED
-            reason="checks had not concluded at cut time -- ${GATE_SUMMARY:-see the gate step}"
-          elif [ "$GATE_STATE" = BLIND ]; then
-            decision=ERROR
-            reason="the gate could not read GitHub -- ${GATE_SUMMARY:-see the gate step}"
-          elif [ "${CUT_STATE:-}" = CUT ]; then
+          # Decide the verdict from what the run actually did. With the gate
+          # gone there is no BLOCKED case left: nothing refuses a cut, so an
+          # absent build is either NO_CHANGE or a broken run, and saying which
+          # is this step's whole job.
+          if [ "${CUT_STATE:-}" = CUT ]; then
             decision=CUT
-            reason="${CUT_VERBS:-?} verb(s); ${GATE_SUMMARY:-gate green}"
+            reason="${CUT_VERBS:-?} verb(s) cut"
           elif [ "${CUT_STATE:-}" = NO_CHANGE ]; then
             decision=NO_CHANGE
-            reason="gate green, no project moved -- today's build is still current"
+            reason="no project moved -- today's build is still current"
           else
             decision=ERROR
-            reason="the gate was ${GATE_STATE} but the cut step produced no result"
+            reason="the cut step produced no result; see run ${GITHUB_RUN_ID}"
           fi
 
           echo "verdict: $decision -- $reason"
@@ -343,14 +313,4 @@ jobs:
           echo "will grade BAD on every consumer once it passes its published valid_until."
           exit 1
 
-      # The run's own colour is the second signal, and it must not contradict
-      # the verdict: a BLOCKED night is a RED run in the Actions list, while a
-      # NO_CHANGE night is green. So "no cut because nothing changed" and "no
-      # cut because main is broken" differ in TWO independent places -- the
-      # published enum, and the run status an operator sees without clicking.
-      - name: Fail the run if the gate refused
-        if: ${{ always() && (steps.gate.outputs.state == 'RED' || steps.gate.outputs.state == 'PENDING' || steps.gate.outputs.state == 'BLIND') }}
-        run: |
-          echo "::error::RELEASE BLOCKED (gate: ${{ steps.gate.outputs.state }}). No build was cut."
-          echo "The fleet stays on the last good build. See https://hf7y.com/verbs/status.json"
           exit 1
