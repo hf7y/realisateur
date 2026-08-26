@@ -75,6 +75,20 @@ case "$DISK" in
   *)   DISK_HOME="unknown" ;;
 esac
 
+# --- host-side: the virtual clock -------------------------------------------
+# realisateur#630. Nanoseconds with SPACE separators: strip them or 41.8h reads
+# as 0.0h forever. Pinned by monkey-watch.test.sh I6 with the real log line.
+CLOCK_DRIFT_H=""
+LOGFLDR="$(vbm showvminfo "$VM" --machinereadable | grep '^LogFldr=' | cut -d'"' -f2)"
+if [ -n "$LOGFLDR" ]; then
+  VBOXLOG="$(printf '%s' "$LOGFLDR" | sed 's|\\|/|g; s|^\([A-Za-z]\):|/mnt/\L\1|')/VBox.log"
+  if [ -r "$VBOXLOG" ]; then
+    CLOCK_DRIFT_H="$(grep -o 'offVirtualSyncGivenUp=[0-9 ]*' "$VBOXLOG" 2>/dev/null \
+      | tail -1 | cut -d= -f2 | tr -d ' ' \
+      | awk 'length($0)>0 {printf "%.1f", $0/3600000000000}')"
+  fi
+fi
+
 # --- guest-side: best effort ------------------------------------------------
 # THE SSH BANNER IS THE PROBE, NOT A TCP CONNECT. A read-only root accepts TCP
 # and then resets at key exchange, so a port check reports green on precisely
@@ -144,6 +158,7 @@ if [ "$VERDICT" = DOWN ]; then
 fi
 
 payload="$(GUEST_JSON="$GUEST_JSON" NOW="$NOW" VMSTATE="$VMSTATE" DISK="$DISK" \
+  CLOCK_DRIFT_H="$CLOCK_DRIFT_H" \
   CADENCE_MIN="$CADENCE_MIN" GRACE_MIN="$GRACE_MIN" \
   DISK_HOME="$DISK_HOME" SSHD="$SSHD" UPTIME="$UPTIME" ROOTMOUNT="$ROOTMOUNT" \
   VERDICT="$VERDICT" WHY="$WHY" GUEST_ERR="$GUEST_ERR" SCREENSHOT="$SCREENSHOT" \

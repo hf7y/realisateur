@@ -109,31 +109,4 @@ reach its remote?
 
 ## 5. Doing a pass
 
-1. `check-project-busy <project>` if the repo is not your own. Defer on `BUSY`.
-2. Work on a **branch off `main`**. Never `git add -A`; stage only named files.
-   **Not a worktree** — Zach's 2026-08-06 instruction, and this file told you
-   to make one until 2026-08-17.
-3. Read the file whole. Classify **each paragraph** by §1's question.
-4. **Re-derive every trap you intend to preserve** against the code. Put the
-   witness command in the file.
-5. Convert every actionable paragraph to a **GitHub issue** (§3). Count them;
-   the count is part of the report.
-6. Deposit the narrative in the vault under `<project>/`, then **commit and
-   push**, under `consigne lock` when a local clone is shared — the vault is
-   one checkout with thirteen writers and nothing else serializes them
-   (`#213`).
-7. Verify **behaviour is unchanged**: for a config file, a byte-identical
-   preview from whatever consumes it, plus its witness tests.
-8. Report the before/after count from the repo's `.prose-ratchet`, and
-   **the list of expired-premise paragraphs with the mechanism each was
-   defending**. That list is a deliverable, not a footnote.
-
-**The generators matter more than the output.** Cutting prose without cutting
-what mandates it means the ratchet gets paid rather than obeyed — `#321`
-measured 84 mandatory prose lines per 180 lines of mechanism. Before trimming a
-header, ask what *required* it: a guard demanding a reason, a ledger demanding
-a rationale column, a derivation that reads prose and so makes prose
-load-bearing. Delete that first.
-
-`git commit -F <file>` for anything multi-line; a dirty tree at exit is a
-failed run.
+`/reap` is the pass. This file is the criterion it applies.

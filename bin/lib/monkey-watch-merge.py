@@ -80,6 +80,12 @@ def main() -> int:
         "sshd": os.environ["SSHD"],
         "screenshot": bool(os.environ.get("SCREENSHOT")),
         "uptime": os.environ.get("UPTIME") or None,
+        # realisateur#630: hours VirtualBox has GIVEN UP making up. None means
+        # the log was unreadable, which is not the same as zero drift.
+        "clock_drift_hours": (
+            float(os.environ["CLOCK_DRIFT_H"])
+            if os.environ.get("CLOCK_DRIFT_H", "").strip() else None
+        ),
         "root_mount": os.environ.get("ROOTMOUNT") or None,
         "guest_error": guest_err,
         "accounts_from": (
