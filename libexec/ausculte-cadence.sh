@@ -159,12 +159,12 @@ Reproduce: \`ausculte $name\`
     fi
   fi
 
-  if [ -r "$HERE/lib/zaxon.sh" ]; then
-    # shellcheck source=lib/zaxon.sh
-    . "$HERE/lib/zaxon.sh"
-    zaxon_ask "ausculte: $name $word twice. $(printf '%s' "$detail" | cut -c1-90)" ausculte-cadence >/dev/null 2>&1 \
-      && echo "  ..      asked over zaxon"
-  fi
+  # THIS DOES NOT ASK ZACH. 47 questions sent, 0 ever answered, 44% of the
+  # relay's lifetime traffic; the single slot (hf7y/crt#67) meant each held the
+  # only channel to him for its full TTL. bin/tests/ausculte-cadence.test.sh
+  # section H is what enforces that, not this comment. The issue above is the
+  # escalation and always was.
+
 done <<< "$rows"
 
 [ "$escalated" -eq 0 ] || exit 5
