@@ -6,7 +6,7 @@
 #
 # TRAPS (the rest of this header is in the vault):
 # WHAT IT ADDS over `install-verb-build.sh --check`:
-#   - AGE. A channel can be up to date and months old: if the nightly cutter
+#   - AGE. A channel can be up to date and months old: if the cutter
 #     stops, --check says "up to date" forever. Stale-and-current is a finding.
 #   - OFF-CHANNEL LINKS. A verb whose symlink points at a FIXED build dir
 #     rather than through `current` never moves when a build is adopted -- the
@@ -36,7 +36,11 @@ cli_guard "$@"
 BUILD_ROOT="${BUILD_ROOT:-$HOME/.local/share/verb-builds}"
 VERB_BIN="${VERB_BIN:-$HOME/.local/bin}"
 INSTALL_VERB_BUILD="${INSTALL_VERB_BUILD:-$(dirname "${BASH_SOURCE[0]}")/install-verb-build.sh}"
-STALE_DAYS="${STALE_DAYS:-14}"
+# 45 days: one 30-day cut interval plus slack, kept in step with
+# bin/gh-sign.sh's STALE_DAYS, which cites this line as its source. At 45 with
+# nothing newer the cutter genuinely has stopped -- monthly or not -- so the
+# grade and the exit 1 below stay (realisateur#603).
+STALE_DAYS="${STALE_DAYS:-45}"
 
 APPLY=0
 QUIET=0
@@ -81,7 +85,7 @@ say "verbs: on build $pin${age_days:+ ($age_days day(s) old)}"
 findings=0
 
 if [ -n "$age_days" ] && [ "$age_days" -gt "$STALE_DAYS" ]; then
-  say "  STALE  this build is $age_days days old (> $STALE_DAYS). If nothing newer exists either, the nightly cutter has stopped -- that is the finding, not the age."
+  say "  STALE  this build is $age_days days old (> $STALE_DAYS). If nothing newer exists either, the cutter has stopped -- that is the finding, not the age."
   findings=$((findings+1))
 fi
 
@@ -161,7 +165,7 @@ if [ "$QUIET" = 1 ] && [ "$findings" -gt 0 ]; then
   elif [ "$off" -gt 0 ]; then
     nag "$off verb(s) pinned off-channel" "run $CLI_NAME to name them; reconcile via installe"
   else
-    nag "build $pin is $age_days days old and nothing newer exists" "the nightly cutter has probably stopped"
+    nag "build $pin is $age_days days old and nothing newer exists" "the cutter has probably stopped"
   fi
 fi
 

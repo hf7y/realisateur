@@ -168,7 +168,23 @@ if want propagation; then
   else
     cut_at="$(printf '%s' "$v" | jq -r '.last_cut.at // empty' 2>/dev/null)"
     streak="$(printf '%s' "$v" | jq -r '.blocked_streak // 0' 2>/dev/null)"
+    # TWO NUMBERS, NOT ONE (realisateur#603). They answer different questions
+    # and under a monthly cut they differ by 29 days:
+    #   max_h      the ADOPTION window -- how long a host may lag a cut it has
+    #              been told about. Keyed to the emitter's cadence, which stays
+    #              nightly, so this is unchanged at 28h.
+    #   cut_max_h  the BUILD-AGE floor -- how old the newest build may be
+    #              before the cutter is presumed dead. Keyed to the cut
+    #              interval the channel publishes, plus one adoption window.
+    # Conflating them graded a healthy 20-day-old monthly build as DOWN on 29
+    # nights in 30, and -- because line :183 below returns first -- meant the
+    # adoption branch at the bottom of this block could never be reached.
     max_h=$(( $(printf '%s' "$v" | jq -r '.cadence_hours // 24') + $(printf '%s' "$v" | jq -r '.grace_hours // 4') ))
+    # A document that declares no interval is a NIGHTLY one: defaulting to 0
+    # makes cut_max_h == max_h, i.e. exactly the pre-#603 grade. A schema-2
+    # verdict therefore reads identically after this change, which is what
+    # lets the publisher and the consumers move on different nights.
+    cut_max_h=$(( $(printf '%s' "$v" | jq -r '.cut_interval_days // 0') * 24 + max_h ))
     age_h=-1
     if [ -n "$cut_at" ]; then
       cut_epoch="$(date -u -d "$cut_at" +%s 2>/dev/null)" \
@@ -180,8 +196,8 @@ if want propagation; then
       record propagation DOWN "the channel is $dec ($streak run(s) running); nothing has propagated since $cut_at"
     elif [ "$age_h" -lt 0 ]; then
       record propagation BLIND 'the verdict names no last cut this could age'
-    elif [ "$age_h" -gt "$max_h" ]; then
-      record propagation DOWN "the newest build is ${age_h}h old, past its ${max_h}h cadence"
+    elif [ "$age_h" -gt "$cut_max_h" ]; then
+      record propagation DOWN "the newest build is ${age_h}h old, past the ${cut_max_h}h its cut interval allows -- the cutter has stopped"
     else
       # Only with the channel proven live does what is installed mean
       # anything: a host behind the pin did not adopt.

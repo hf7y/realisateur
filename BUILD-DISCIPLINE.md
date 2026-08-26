@@ -80,4 +80,15 @@ not an inconvenience.
 - **Finding something fixable** — fix it in whatever repo it lives in and PR it
   there. Reversible fixes run unattended; privileged ones wait, as a tested
   script. An issue or a finding "left for" someone is not a move: nothing reads prose.
+
+- **Filing during the v1 freeze** — `realisateur` takes `durable` only: a bug, a
+  broken guard, a missing credential. Anything `decayable` — an idea or a build
+  that may be obviated before it is reached — goes where v2 lives:
+  `defere '<line>' --project scheduler` (hf7y/scheduler#303-308). The two words
+  are the pair already in `bin/lib/labels.tsv`; this is not new vocabulary.
+  **The freeze is enforced at the channel, not here**: once the monthly cut
+  predicate is deployed (realisateur#602), a merge to realisateur `main` does
+  not reach any host until the next window, or until Zach approves a
+  `workflow_dispatch` with `force_cut: true`. So this bullet is a routing rule,
+  and the thing that actually holds is the cadence.
 ```
