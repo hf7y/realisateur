@@ -26,3 +26,25 @@
 bin/consigne	hf7y/bibliothecaire	68	bin/fonde
 man/consigne.1	hf7y/bibliothecaire	68	man/fonde.1
 bin/tests/consigne.test.sh	hf7y/bibliothecaire	68	test/fonde-consign-test.sh
+
+# monkey-watch and its parts -> hf7y/senechal, which owns what exists on a
+# host and already received the three monkey provisioning scripts (senechal#355).
+# Carried WITH #621 (the vmhost seam) and #639 (the virtual clock) already in.
+# The witness for each is the file on senechal's default branch; the dexter
+# crontab line is retargeted at merge time, which is why these must not
+# collect on the merge alone.
+#
+# provision/dexter/README.md is NOT a row. It went to the VAULT, not to
+# senechal -- a plan proposed 2026-08-14 on empty ground and never executed,
+# now at vault:senechal/dexter-host-layout-20260814.md with its actionable
+# half at senechal#439. A deposit is not a handoff, so it is deleted here
+# outright rather than waited on.
+bin/monkey-watch.sh	hf7y/senechal	441	bin/monkey-watch.sh
+bin/monkey-status-collect.py	hf7y/senechal	441	bin/monkey-status-collect.py
+bin/lib/monkey-watch-alert.sh	hf7y/senechal	441	bin/lib/monkey-watch-alert.sh
+bin/lib/monkey-watch-merge.py	hf7y/senechal	441	bin/lib/monkey-watch-merge.py
+bin/lib/vmhost.sh	hf7y/senechal	441	bin/lib/vmhost.sh
+share/monkey-status.html	hf7y/senechal	441	share/monkey-status.html
+bin/tests/monkey-watch.test.sh	hf7y/senechal	441	test/monkey-watch.test.sh
+bin/tests/vmhost.test.sh	hf7y/senechal	441	test/vmhost.test.sh
+bin/tests/monkey-status-collect.test.sh	hf7y/senechal	441	test/monkey-status-collect.test.sh
