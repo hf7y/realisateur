@@ -138,4 +138,56 @@ has "H3 it still files the issue, which is the durable escalation" "$(cat "$CAD"
 has "H4 it still dedupes that issue rather than filing per tick" "$(cat "$CAD")" 'already filed as'
 has "H5 it still exits 5 so the caller sees an escalation" "$(cat "$CAD")" 'exit 5'
 
+section "I. recovery closes the issue the escalation filed"
+# THE HOLE THIS CLOSES. Recovery cleared the streak FILE and stopped there, so
+# an issue reading "propagation has been DOWN for two consecutive runs" stayed
+# open after propagation came back. And the dedup in section H's H4 matches an
+# OPEN issue of that title, so the stale one SUPPRESSED the next real filing --
+# the channel escalates once and then goes quiet, which is worse than noisy.
+cat > "$T/bin/gh" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$GH_LOG"
+case "$*" in
+  *"issue list"*) echo 654 ;;
+esac
+exit 0
+STUB
+chmod +x "$T/bin/gh"
+recov() { OUT="$(PATH="$T/bin:$PATH" GH_LOG="$T/gh.log" ZAXON='http://127.0.0.1:1/mcp' \
+                 AUSCULTE_BIN="$T/bin/ausculte.sh" AUSCULTE_CADENCE_STATE="$T/state" \
+                 bash "$SCRIPT" 2>&1)"; RC=$?; }
+
+rm -f "$T/gh.log"; : > "$T/gh.log"
+rm -f "$T/state"/*.down "$T/state"/*.blind
+stub_ausculte "$DOWN_ROW"
+recov; recov                       # first strike, then escalate -- an issue now exists
+stub_ausculte "$OK_ROW"
+recov                              # the probe recovers
+rc "I1 a recovery exits 0" 0 "$RC"
+has "I2 it says which issue it closed" "$OUT" "recovered; closed"
+has "I3 it actually called gh issue close on the number gh issue list returned" \
+    "$(cat "$T/gh.log")" "issue close 654"
+[ -f "$T/state/arming.down" ] && bad "I4 the streak file is still cleared" "state file survived" \
+  || ok "I4 the streak file is still cleared"
+
+# A SECOND OK MUST NOT CLOSE ANYTHING. Without the streak-file guard this would
+# fire a gh call every four hours forever, and would close an issue a HUMAN
+# filed under that title after the outage was over.
+: > "$T/gh.log"
+recov
+case "$(cat "$T/gh.log")" in
+  *"issue close"*) bad "I5 an OK with no streak on disk closes nothing" "it called gh issue close anyway" ;;
+  *)               ok  "I5 an OK with no streak on disk closes nothing" ;;
+esac
+
+# BLIND has its own streak, so it must have its own retraction -- section D's
+# whole point is that the two never collapse into one.
+: > "$T/gh.log"
+stub_ausculte '[{"probe":"arming","status":"BLIND","detail":"no credential"}]'
+recov; recov
+stub_ausculte "$OK_ROW"
+recov
+has "I6 a recovered BLIND closes the BLIND issue, not the DOWN one" \
+    "$(cat "$T/gh.log")" 'has been BLIND'
+
 summary
