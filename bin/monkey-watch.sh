@@ -21,7 +21,6 @@ set -uo pipefail
 
 CLI_NAME='monkey-watch'
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VBOX="${VBOX:-/mnt/c/Program Files/Oracle/VirtualBox/VBoxManage.exe}"
 VM="${VM:-monkey}"
 MONKEY_IP="${MONKEY_IP:-100.121.83.23}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_dexter_monkey}"
@@ -39,11 +38,12 @@ PUBLISH_DIR="${PUBLISH_DIR:-monkey}"
 . "$HERE/bin/lib/zaxon.sh"
 # shellcheck source=lib/monkey-watch-alert.sh
 . "$HERE/bin/lib/monkey-watch-alert.sh"
+. "$HERE/bin/lib/vmhost.sh"
 APPLY=0
 [ "${1:-}" = "--apply" ] && APPLY=1
 
 die() { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 2; }
-[ -x "$VBOX" ] || die "VBoxManage not at $VBOX -- this must run on the VM host (dexter)."
+vmhost_require || die "VBoxManage not at $VMHOST_VBOX -- this must run on the VM host (dexter)."
 [ -f "$COLLECTOR" ] || die "collector not found at $COLLECTOR.
   This script runs from a realisateur checkout so the collector that runs is
   the one in the tree. Clone it rather than copying the collector next to me."
@@ -56,32 +56,25 @@ LOCK_FILE="${LOCK_FILE:-${TMPDIR:-/tmp}/monkey-watch.lock}"
 exec 9>"$LOCK_FILE" || die "cannot open $LOCK_FILE"
 flock -n 9 || { printf '%s: a run is already in flight -- leaving this tick to it\n' "$CLI_NAME" >&2; exit 0; }
 
-vbm() { "$VBOX" "$@" < /dev/null 2>&1 | tr -d '\0\r'; }
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 # --- host-side: always available --------------------------------------------
-VMSTATE="$(vbm showvminfo "$VM" --machinereadable | grep '^VMState=' | cut -d'"' -f2)"
-[ -n "$VMSTATE" ] || VMSTATE="unknown"
-DISK="$(vbm showvminfo "$VM" --machinereadable | grep '^"SATA-0-0"=' | cut -d'"' -f4)"
-
+VMSTATE="$(vmhost_state "$VM")"
+DISK="$(vmhost_disk_raw "$VM")"
 # WHERE THE DISK LIVES IS A PUBLISHED FACT, not trivia: the whole outage was a
 # virtual disk on an external USB drive that logged 1580 controller errors in a
 # week. If this ever reads EXTERNAL-USB again, someone reverted the fix and the
 # page should say so rather than waiting to be asked.
-case "$DISK" in
-  C:*) DISK_HOME="internal" ;;
-  D:*) DISK_HOME="EXTERNAL-USB" ;;
-  *)   DISK_HOME="unknown" ;;
-esac
+DISK_HOME="$(vmhost_classify_disk "$DISK")"
 
 # --- host-side: the virtual clock -------------------------------------------
 # realisateur#630. Nanoseconds with SPACE separators: strip them or 41.8h reads
 # as 0.0h forever. Pinned by monkey-watch.test.sh I6 with the real log line.
 CLOCK_DRIFT_H=""
-LOGFLDR="$(vbm showvminfo "$VM" --machinereadable | grep '^LogFldr=' | cut -d'"' -f2)"
-if [ -n "$LOGFLDR" ]; then
-  VBOXLOG="$(printf '%s' "$LOGFLDR" | sed 's|\\|/|g; s|^\([A-Za-z]\):|/mnt/\L\1|')/VBox.log"
+LOGDIR="$(vmhost_logdir "$VM")"
+if [ -n "$LOGDIR" ]; then
+  VBOXLOG="$LOGDIR/VBox.log"
   if [ -r "$VBOXLOG" ]; then
     CLOCK_DRIFT_H="$(grep -o 'offVirtualSyncGivenUp=[0-9 ]*' "$VBOXLOG" 2>/dev/null \
       | tail -1 | cut -d= -f2 | tr -d ' ' \
@@ -153,7 +146,7 @@ fi
 
 SCREENSHOT=""
 if [ "$VERDICT" = DOWN ]; then
-  vbm controlvm "$VM" screenshotpng "$WORK/console.png" >/dev/null
+  vmhost_screenshot "$VM" "$WORK/console.png"
   [ -s "$WORK/console.png" ] && SCREENSHOT=1
 fi
 
