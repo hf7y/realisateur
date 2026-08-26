@@ -197,7 +197,8 @@ mkdir -p "$FIX/projects" "$FIX/bin" "$FIX/schedule"
 
   # F4/F5: an UNREADABLE registry is BLIND, never "nothing is a utility".
   # Reporting every project UNREGISTERED because the registry could not be read
-  # would be the strong claim made from an absence -- BUILD-DISCIPLINE #1.
+  # would be the strong claim made from an absence -- pattern #1, now at
+  # vault:realisateur/build-discipline-patterns-20260826.md.
   o="$(SCHEDULE_DIR="$FIX/nosuchdir" "$INSTALL_VERBS" 2>&1)"
   if printf '%s' "$o" | grep -q 'BLIND: cannot read the registry'; then printf '  ok   F4 an unreadable registry reports BLIND\n'
   else printf '  FAIL F4 an unreadable registry reports BLIND\n'; exit 1; fi
