@@ -18,7 +18,6 @@ set -uo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 WF="$REPO/provision/verbs-meta/build-verbs.yml"
 TICK="$REPO/bin/selfdev-release-tick.sh"
-GATE="$REPO/bin/release-gate.sh"
 LEDGER="$REPO/bin/release-ledger.sh"
 PUBLISH="$REPO/bin/publish-release-verdict.sh"
 
@@ -32,10 +31,10 @@ echo "release-channel-wiring.test.sh$([ "$LIVE" = 1 ] && echo ' --live')"
 echo
 echo "-- A. THE PIECES EXIST AT ALL ------------------------------------------"
 # ===========================================================================
-for f in "$WF" "$TICK" "$GATE" "$LEDGER" "$PUBLISH"; do
+for f in "$WF" "$TICK" "$LEDGER" "$PUBLISH"; do
   [ -f "$f" ] && ok "exists: ${f#$REPO/}" || bad "MISSING: ${f#$REPO/}"
 done
-for f in "$TICK" "$GATE" "$LEDGER" "$PUBLISH"; do
+for f in "$TICK" "$LEDGER" "$PUBLISH"; do
   [ -x "$f" ] && ok "executable: $(basename "$f")" || bad "not executable: $(basename "$f")"
 done
 
@@ -51,28 +50,22 @@ has "it can also be dispatched by hand for a recovery run" "$WFSRC" "workflow_di
 
 # ===========================================================================
 echo
-echo "-- C. THE CUT IS GATED ON GREEN ----------------------------------------"
+echo "-- C. NOTHING REFUSES THE CUT, AND THAT IS ASSERTED ---------------------"
 # ===========================================================================
-has "the workflow invokes the release gate" "$WFSRC" "release-gate.sh"
-has "the gate is handed the manifest the build just made" "$WFSRC" "--manifest"
-
-# The gate must run BEFORE anything is tagged or pushed. A gate that runs
-# after the push is a report, not a gate.
-gate_line="$(printf '%s' "$WFSRC" | grep -n 'release-gate.sh' | head -1 | cut -d: -f1)"
-tag_line="$(printf '%s' "$WFSRC"  | grep -n 'git tag'          | head -1 | cut -d: -f1)"
-if [ -n "$gate_line" ] && [ -n "$tag_line" ] && [ "$gate_line" -lt "$tag_line" ]; then
-  ok "the gate runs before the tag is cut (line $gate_line < $tag_line)"
+# The gate is DELETED (#598, #599, #600): it errored or blocked 39% of nights
+# while grading a minority of the manifest. This section used to assert it ran
+# before `git tag` and that its refusal was not swallowed. Those assertions
+# would now pass vacuously against a file that mentions no gate, which is the
+# worst outcome -- a green line about a thing that is not there. So the claim
+# is INVERTED: no gate may come back without this suite being rewritten to
+# describe it, and section D below is what still holds the channel honest.
+if printf '%s' "$WFSRC" | grep -qE 'release-gate\.sh|steps\.gate\.outputs'; then
+  bad "the workflow calls a release gate again" \
+    "it was removed for grading a minority of the manifest; if it is back, this suite must assert what it now covers"
 else
-  bad "the gate does not run before 'git tag' (gate=$gate_line tag=$tag_line)"
+  ok "no release gate stands between the assemble and the tag"
 fi
-
-# A gate whose refusal is swallowed is decoration. `|| true` on the gate line
-# is the specific way this dies quietly.
-if printf '%s' "$WFSRC" | grep 'release-gate.sh' | grep -q '|| true'; then
-  bad "the gate's refusal is swallowed by '|| true' -- it cannot block anything"
-else
-  ok "the gate's refusal is not swallowed"
-fi
+has "the cut still runs only outside a dry run" "$WFSRC" "inputs.dry_run != true"
 
 # ===========================================================================
 echo

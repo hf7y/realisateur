@@ -1,1 +1,0 @@
-system that manages a thunderbolt 2 raid 5 system (4 x 3tb drives totalling 9tb + parity) designed to make nightly backups of both mandark and dexter computers. generally designed to make backups of computers, runs on a schedule, can handle incomplete. explore git logic where project histories can be preserved on the raid but only recent branch checkouts on workstations

@@ -242,7 +242,7 @@ if want rot; then
   else record rot BLIND 'decision-rot.sh not present'; fi
 fi
 
-# The `delivery` probe went with delivery-audit.sh (DELETION-LIST.txt): it read
+# The `delivery` probe went with delivery-audit.sh (#511): it read
 # 2 MET and 262 BLIND across 292 PRs. Reinstating delivery proof is v2.
 
 # Each ledger ends in a REASON column nothing has ever read.
@@ -332,7 +332,7 @@ if want fleet; then
   esac
 fi
 
-# The `silence` probe is gone with silence-audit.sh (DELETION-LIST.txt,
+# The `silence` probe is gone with silence-audit.sh (#511,
 # 2026-08-22). Its [unwired] test counted a script NAMED IN A DOC as wired, so
 # ausculte-cadence.sh -- installed, on a 4-hourly clock, and a no-op the whole
 # time -- passed it. A guard satisfied by documentation measures documentation.

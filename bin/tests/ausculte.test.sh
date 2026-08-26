@@ -162,7 +162,7 @@ out="$(run arming)"; rc=$?
 check "a status document past its own valid_until is BLIND (6)" "$rc" "6"
 has "and it says nothing is publishing it" "$out" "expired at"
 
-# The `delivery` and `silence` probes went with their scripts (DELETION-LIST.txt);
+# The `delivery` and `silence` probes went with their scripts (#511);
 # their cases went too, rather than being stubbed against a deleted probe.
 
 echo

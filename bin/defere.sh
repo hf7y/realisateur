@@ -88,7 +88,7 @@ case "$MODE" in
     # because retraction is the scarce behaviour here (#534; pinned in tests).
     # --all (#579): A NAMED SCRIPT PATH THAT DOES NOT EXIST IS A FINDING.
     # Exempt, as a RECORD is not a CLAIM: archive/, bin/tests/ fixtures,
-    # not-a-verb.tsv, DELETION-LIST.txt, .prose-ratchet (hf7y/etalon#10).
+    # not-a-verb.tsv, .prose-ratchet (hf7y/etalon#10).
     if [ "$ALL" -eq 1 ]; then
       found=0
       while IFS=: read -r hfile hlineno hpath; do
@@ -109,7 +109,7 @@ case "$MODE" in
         printf '                 %s\n' "${trimmed:0:96}"
       done <<< "$(git grep -n -oE '(^|[^/[:alnum:]._-])(realisateur/)?bin/[a-z0-9_-]+\.(sh|py)' \
                     -- . ':!archive/' ':!bin/tests/' ':!bin/lib/not-a-verb.tsv' \
-                       ':!DELETION-LIST.txt' ':!.prose-ratchet' 2>/dev/null)"
+                       ':!.prose-ratchet' 2>/dev/null)"
       if [ "$found" -eq 0 ]; then
         echo 'defere --scan --all: every script path named in this tree exists.'
         exit 0

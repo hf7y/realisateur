@@ -141,7 +141,7 @@ jobs:
         run: bash bin/shellcheck-lint.sh
 
   # The `surface` job is gone with carry-drift.sh and directive-prose.sh
-  # (DELETION-LIST.txt, 2026-08-22). Neither was a required check, and both
+  # (#511, 2026-08-22). Neither was a required check, and both
   # belonged to the guard layer this repo just removed: six sampled guards
   # were 1,029 lines and produced zero findings. `suites` and `shellcheck`
   # remain separate on purpose -- a required check answering two questions
