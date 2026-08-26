@@ -206,9 +206,13 @@ verb-kind-lint.sh
 verbs-refresh.sh
 run-suites.sh
 carry.sh
+reprise.sh
 "
 # carry.sh is LOCAL: it writes to a BRANCH of this repo, not to a host. A
 # per-account copy would be many writers racing one force-with-lease.
+# reprise.sh is LOCAL for the same reason and one more: its subject is
+# bin/lib/handoffs.tsv, which is THIS repo's ledger of what it has given away.
+# On another account it would be a tool with nothing to read.
 # repo-settings-provision.sh is LOCAL: its subject is the FLEET (it walks the
 # whole registry), and a per-account copy would be many writers on one
 # setting. It also needs admin on someone else's repo, which self-dev

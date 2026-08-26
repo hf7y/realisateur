@@ -10,7 +10,7 @@ CLI_SUMMARY='is self-dev healthy enough to stop watching?'
 CLI_USAGE='  ausculte              every probe; the exit code is the answer
   ausculte --json       one object per probe
   ausculte <probe>      just one: channel hosts arming propagation rot
-                        fleet'
+                        fleet handoff'
 CLI_FLAGS='--json'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  every declared probe answered OK
@@ -228,6 +228,27 @@ if want propagation; then
       else record propagation OK "channel cut $bid ${age_h}h ago; every host is on it$_sk"; fi
     fi
   fi
+fi
+
+if want handoff; then
+  # A HANDOFF THAT NEVER COMPLETES IS INVISIBLE. The senechal block moved on
+  # 2026-08-22 and the deletion owed here was still outstanding four days
+  # later, because "delete once it merges" lived in an issue body and nothing
+  # read it on a clock. reprise reads bin/lib/handoffs.tsv instead.
+  if rp="$(part reprise.sh)"; then
+    out="$(bash "$rp" --check 2>&1)"; rc=$?
+    case $rc in
+      0) if printf '%s' "$out" | grep -q 'collectable'; then
+           record handoff OK "$(printf '%s' "$out" | grep -E '^reprise: [0-9]+ row' | tail -1)"
+         else record handoff OK 'no handoffs outstanding'; fi ;;
+      1) record handoff DOWN "$(printf '%s' "$out" | grep -E 'MERGED but' | head -1)" ;;
+      2) record handoff BLIND 'ausculte invoked reprise wrongly -- fix ausculte' ;;
+      *) record handoff BLIND "$(printf '%s' "$out" | tail -1)" ;;
+    esac
+  # NOT-MINE, not BLIND: reprise is LOCAL to realisateur and the table it reads
+  # is realisateur's. On any other account this row would otherwise be an alarm
+  # that can never clear -- the exact failure the fourth state exists for.
+  else not_mine handoff 'realisateur -- handoffs.tsv is its table'; fi
 fi
 
 if want rot; then
