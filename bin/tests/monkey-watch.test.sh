@@ -164,4 +164,21 @@ has "G2 the console is captured only on DOWN" "$(code "$W")" 'if [ "$VERDICT" = 
 has "G3 via screenshotpng, the same probe the issue's own repro used" "$(code "$W")" 'screenshotpng'
 has "G4 a stale screenshot from a past incident is cleared before republishing" "$(code "$W")" 'rm -f "$WORK/site/$PUBLISH_DIR/console.png"'
 
+section "H. the observer cannot inherit the outage it exists to report (2026-08-25)"
+# Measured that day: monkey answered TCP, sent its SSH banner, then stalled in
+# auth. The banner probe reported "answering", every mssh hung with no deadline,
+# seven --apply runs stacked at one per cron tick, and hf7y.com/monkey stayed
+# frozen on the last healthy publish for 35 minutes while the fleet was down.
+has "H1 every guest ssh carries a deadline, not just a ConnectTimeout" \
+  "$(code "$W")" 'timeout "$SSH_DEADLINE" ssh'
+has "H2 the deadline is overridable for tests" "$(code "$W")" 'SSH_DEADLINE="${SSH_DEADLINE:-'
+hasnt "H3 no bare ssh call survives in the guest helpers" \
+  "$(grep -E '^mssh(_n)?\(\)' -A1 "$W" | grep -c 'timeout "\$SSH_DEADLINE" ssh' | grep -q '^2$' && echo '' || echo 'undeadlined-helper')" \
+  "undeadlined-helper"
+has "H4 a tick that finds a run in flight leaves rather than stacking" "$(code "$W")" 'flock -n 9'
+has "H5 the lock is taken before any probe" "$(code "$W")" 'exec 9>"$LOCK_FILE"'
+has "H6 a stalled session is named as such, not as a bad payload" \
+  "$(code "$W")" 'the session stalled'
+has "H7 timeout's 124 is what distinguishes them" "$(code "$W")" '"$guest_rc" -eq 124'
+
 summary
