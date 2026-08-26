@@ -16,3 +16,13 @@
 # PR's branch. A merged PR whose file is not there is a FAILURE, never a
 # collection: squash-merges get reverted, paths get renamed in review, and a
 # merge is a fact about a pull request rather than about a tree.
+
+# consigne -> hf7y/bibliothecaire, which owns lib/consign-prose.sh and bin/fonde.
+# NOT a relocation: consigne was a 559-line forwarder to that mechanism with
+# zero callers estate-wide. bibliothecaire#68 carries the one capability it
+# added -- `consigne status` -- back as `fonde consign --report`. The witness
+# is bin/fonde on bibliothecaire's default branch, so these rows collect only
+# once the report is actually there to replace what they remove.
+bin/consigne	hf7y/bibliothecaire	68	bin/fonde
+man/consigne.1	hf7y/bibliothecaire	68	man/fonde.1
+bin/tests/consigne.test.sh	hf7y/bibliothecaire	68	test/fonde-consign-test.sh
