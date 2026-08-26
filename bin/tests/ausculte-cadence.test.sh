@@ -115,4 +115,27 @@ else
   bad "G3 that body passes lib/body-grammar.sh" "$findings"
 fi
 
+section "H. it does not reach Zach's phone, and that is deliberate"
+# Measured 2026-08-26 against the relay's own ticket store: this sender had
+# 47 questions, 47 stale, 0 EVER answered, 2026-08-21 to 2026-08-26 -- 44% of
+# every ticket the relay has carried. Zach: "it means nothing to me. I've
+# ignored it." The relay holds ONE question at a time (hf7y/crt#67), so each
+# held the only channel to him for its full TTL. This guard exists because the
+# comment saying "do not re-add" is prose, and prose is what failed here.
+CAD="$SCRIPT"
+live="$(grep -vE '^[[:space:]]*#' "$CAD")"
+case "$live" in
+  *zaxon_ask*) bad "H1 no live call to zaxon_ask" "it is back -- see the header; 47 sent, 0 answered" ;;
+  *)           ok  "H1 no live call to zaxon_ask" ;;
+esac
+case "$live" in
+  *"lib/zaxon.sh"*) bad "H2 it does not even source the relay lib" "sourcing it is how the call comes back" ;;
+  *)                ok  "H2 it does not even source the relay lib" ;;
+esac
+# The escalation still HAPPENS -- only the phone leg is gone. If these three go
+# quiet, the cadence has stopped escalating at all, which is a different bug.
+has "H3 it still files the issue, which is the durable escalation" "$(cat "$CAD")" 'gh issue create -R "$ISSUE_REPO"'
+has "H4 it still dedupes that issue rather than filing per tick" "$(cat "$CAD")" 'already filed as'
+has "H5 it still exits 5 so the caller sees an escalation" "$(cat "$CAD")" 'exit 5'
+
 summary
