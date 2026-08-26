@@ -68,28 +68,19 @@ claim; what left is the story.
     waits on clear without a human? If not, it needs a deadline or a voice,
     not just a refusal.
 
-## The disciplines (stated as mechanical rules)
+## The disciplines the printed block does NOT carry
 
-- **Fail loud by default.** No silent no-op path.
-- **"Working" needs a witness.** A test name or a human-sense observation,
-  not an exit code alone.
 - **Wire-on-commit.** Nothing is done until something runs it on the real path.
 - **Name what you retire.** A new mechanism that overlaps an old one says
   which one is dead.
 - **One source of truth for config.** Read from one place, never retyped per
   file. This is not only about config: ten failures in one day were all two
   copies of a truth with nothing watching for drift.
-- **Deploy is a git operation.** Deploy targets are clones; drift fails loud.
-- **No secret in a tracked file.**
-- **Probe, don't quote.** Re-run the command before repeating a written claim
-  about system state.
 - **Write the mechanism, not the weather** (pattern 7). Say what a thing DOES
   and must keep doing; correct at the source, never by a comment beside it.
 - **Never `2>/dev/null` a privileged probe.** Discarding stderr turns "not
   permitted" into "not present".
-- **Verify at the consumer's location, not the producer's.**
 - **The runner writes the verdict, not the actor.**
-- **Commit messages go through a file, never through the shell.**
 - **Subagents work on branches.** A dirty tree at exit is a failed run.
 
 ### Settled definition: "pushed" (2026-08-01, Zach)
@@ -108,8 +99,8 @@ done
 ## The baseline (ONE file, read through the `discipline` command)
 
 **The fenced block below is the ONE SOURCE, and it is the ONLY copy.**
-`discipline` prints it, and every project's `CLAUDE.md` carries one line
-pointing at that command. Do not restate a row's reasoning here: a row that
+`discipline` prints it, and every project points one line at it from wherever
+its agent instructions live. Do not restate a row's reasoning here: a row that
 needs an argument has an issue, and this block is printed on every
 invocation.
 
@@ -159,4 +150,8 @@ not an inconvenience.
   would settle it against you is asking for agreement, not research.
   Then `consulte list --from <this project>` and `consulte show <n>`.
   **Filing is free; answering is metered** — ask once and read the queue first.
+
+- **Finding something fixable** — fix it in whatever repo it lives in and PR it
+  there. Reversible fixes run unattended; privileged ones wait, as a tested
+  script. An issue or a finding "left for" someone is not a move: nothing reads prose.
 ```
