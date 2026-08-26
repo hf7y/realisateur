@@ -111,9 +111,9 @@ done < <(printf '%s\n' "${drifted[@]}")
 [ "$MODE" = --apply ] || { printf '%s: NOT carried (need --apply)\n' "$CLI_NAME"; exit 0; }
 
 # --- build the commit with PLUMBING, not a checkout --------------------------
-# No second worktree (bin/no-worktree-lint.sh) and no branch switch in the
-# caller's tree: read bashified's tree into a temp index, replace only the
-# carried paths, write it back.
+# No second worktree and no branch switch in the caller's tree: read
+# bashified's tree into a temp index, replace only the carried paths, write it
+# back. A checkout here would also fight whatever the caller has in flight.
 OLD="$(git rev-parse "$REF_BASH")"
 IDX="$(mktemp)"; trap 'rm -f "$IDX"' EXIT
 GIT_INDEX_FILE="$IDX" git read-tree "$REF_BASH" || die "could not read $REF_BASH into a temp index"
