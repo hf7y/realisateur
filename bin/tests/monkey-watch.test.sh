@@ -181,4 +181,30 @@ has "H6 a stalled session is named as such, not as a bad payload" \
   "$(code "$W")" 'the session stalled'
 has "H7 timeout's 124 is what distinguishes them" "$(code "$W")" '"$guest_rc" -eq 124'
 
+section "I. the virtual clock is published before it takes sshd (realisateur#630)"
+# 2026-08-25: VirtualBox gave up 41.8h of virtual sync across a 54h session and
+# the guest read as a hung kernel. `controlvm reset` could not clear it -- the
+# deficit belongs to the VMM process. Nothing measured it, so the first symptom
+# was sshd dying.
+has "I1 the drift is read from the VM's own log" "$(code "$W")" 'offVirtualSyncGivenUp'
+has "I2 the log folder comes from VBoxManage, not a hardcoded path" \
+  "$(code "$W")" "grep '^LogFldr='"
+has "I3 the value reaches the document" "$(code "$W")" 'CLOCK_DRIFT_H="$CLOCK_DRIFT_H"'
+has "I4 merge publishes it" "$(code "$REPO/bin/lib/monkey-watch-merge.py")" 'clock_drift_hours'
+has "I5 an unreadable log is null, not zero" \
+  "$(code "$REPO/bin/lib/monkey-watch-merge.py")" 'else None'
+
+# THE PARSING TRAP, pinned with the real shape. VirtualBox writes the value in
+# nanoseconds with SPACE thousands separators; without `tr -d " "` this parses
+# as 150 and reports 0.0h forever -- a sensor that is always green.
+drift_of() {  # <log line> -> hours, using the script's own pipeline
+  printf '%s\n' "$1" | grep -o 'offVirtualSyncGivenUp=[0-9 ]*' | tail -1 | cut -d= -f2 \
+    | tr -d ' ' | awk 'length($0)>0 {printf "%.1f", $0/3600000000000}'
+}
+eq "I6 the real 2026-08-25 line reads 41.8h, not 0.0" \
+  "$(drift_of 'TMR3UtcNow: nsNow=1 787 700 091 442 068 751 offVirtualSync=150 576 693 643 850 offVirtualSyncGivenUp=150 576 693 340 001, NowAgain=1')" \
+  "41.8"
+eq "I7 a fresh session reads 0.0" "$(drift_of 'offVirtualSyncGivenUp=0,')" "0.0"
+eq "I8 no such line yields nothing, not a number" "$(drift_of 'nothing here')" ""
+
 summary

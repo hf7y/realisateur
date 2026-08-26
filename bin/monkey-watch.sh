@@ -75,6 +75,28 @@ case "$DISK" in
   *)   DISK_HOME="unknown" ;;
 esac
 
+# --- host-side: the virtual clock -------------------------------------------
+# realisateur#630. VirtualBox's virtual clock falls behind and, past some point,
+# it GIVES UP catching up. On 2026-08-25 it reached 41.8h across a 54h session
+# and the guest read as a hung kernel -- systemd:1 blocked, soft lockups on all
+# four CPUs, rcu_preempt starved -- when it was really running in slow motion.
+# `controlvm reset` cannot clear it: the deficit belongs to the VMM process, so
+# only a poweroff + startvm helps. This publishes the number so the drift is
+# visible hours before it takes sshd.
+# The value is nanoseconds with SPACE thousands separators, e.g.
+# `offVirtualSyncGivenUp=150 576 693 340 001,` -- strip the spaces or it parses
+# as 150.
+CLOCK_DRIFT_H=""
+LOGFLDR="$(vbm showvminfo "$VM" --machinereadable | grep '^LogFldr=' | cut -d'"' -f2)"
+if [ -n "$LOGFLDR" ]; then
+  VBOXLOG="$(printf '%s' "$LOGFLDR" | sed 's|\\|/|g; s|^\([A-Za-z]\):|/mnt/\L\1|')/VBox.log"
+  if [ -r "$VBOXLOG" ]; then
+    CLOCK_DRIFT_H="$(grep -o 'offVirtualSyncGivenUp=[0-9 ]*' "$VBOXLOG" 2>/dev/null \
+      | tail -1 | cut -d= -f2 | tr -d ' ' \
+      | awk 'length($0)>0 {printf "%.1f", $0/3600000000000}')"
+  fi
+fi
+
 # --- guest-side: best effort ------------------------------------------------
 # THE SSH BANNER IS THE PROBE, NOT A TCP CONNECT. A read-only root accepts TCP
 # and then resets at key exchange, so a port check reports green on precisely
@@ -144,6 +166,7 @@ if [ "$VERDICT" = DOWN ]; then
 fi
 
 payload="$(GUEST_JSON="$GUEST_JSON" NOW="$NOW" VMSTATE="$VMSTATE" DISK="$DISK" \
+  CLOCK_DRIFT_H="$CLOCK_DRIFT_H" \
   CADENCE_MIN="$CADENCE_MIN" GRACE_MIN="$GRACE_MIN" \
   DISK_HOME="$DISK_HOME" SSHD="$SSHD" UPTIME="$UPTIME" ROOTMOUNT="$ROOTMOUNT" \
   VERDICT="$VERDICT" WHY="$WHY" GUEST_ERR="$GUEST_ERR" SCREENSHOT="$SCREENSHOT" \

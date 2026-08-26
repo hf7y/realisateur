@@ -111,11 +111,28 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
       ${fact("root fs",w.root_mount||"unknown", w.root_mount==="rw"?"ok":w.root_mount==="ro"?"bad":"mut")}
       ${fact("disk",w.disk_home, w.disk_home==="internal"?"ok":"bad")}
       ${fact("uptime",w.uptime||"unknown","mut")}
+      ${fact("clock drift", w.clock_drift_hours==null ? "unreadable"
+              : `${w.clock_drift_hours} h`,
+             w.clock_drift_hours==null ? "mut"
+              : w.clock_drift_hours>=24 ? "bad"
+              : w.clock_drift_hours>=6  ? "warn" : "ok")}
       ${fact("verb build",d.verb_build||"none",d.verb_build?"":"mut")}
     </div>` : "";
 
   // ---- 4. findings the collector probes and this page used to discard -----
   const items=[];
+  // realisateur#630. VirtualBox gives up making up virtual time, and past ~40h
+  // the guest reads as a hung kernel while really running in slow motion. A
+  // `reset` cannot clear it -- the deficit belongs to the VMM process. Said
+  // here because the page is where it is seen before sshd dies.
+  const drift = w ? w.clock_drift_hours : null;
+  if (drift != null && drift >= 6) items.push(
+    `${el(drift>=24?"bad":"warn", `virtual clock ${drift} h behind`)} &mdash;
+     VirtualBox has GIVEN UP making this up. The guest will read as a hung
+     kernel (soft lockups, <code>systemd:1</code> blocked) while it is really
+     running slowly. <b>A <code>reset</code> will not clear it</b>; the deficit
+     belongs to the VMM process, so it needs
+     <code>controlvm poweroff</code> then <code>startvm</code>.`);
   if (w && w.verdict!=="OK") items.push(`${el(cls,H(w.verdict))} &mdash; ${H(w.why)}`);
   if (w && w.screenshot) items.push(`<a href="console.png">console screenshot</a>, captured this run`);
   reach.forEach(a=>{
