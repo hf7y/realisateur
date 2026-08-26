@@ -76,16 +76,8 @@ case "$DISK" in
 esac
 
 # --- host-side: the virtual clock -------------------------------------------
-# realisateur#630. VirtualBox's virtual clock falls behind and, past some point,
-# it GIVES UP catching up. On 2026-08-25 it reached 41.8h across a 54h session
-# and the guest read as a hung kernel -- systemd:1 blocked, soft lockups on all
-# four CPUs, rcu_preempt starved -- when it was really running in slow motion.
-# `controlvm reset` cannot clear it: the deficit belongs to the VMM process, so
-# only a poweroff + startvm helps. This publishes the number so the drift is
-# visible hours before it takes sshd.
-# The value is nanoseconds with SPACE thousands separators, e.g.
-# `offVirtualSyncGivenUp=150 576 693 340 001,` -- strip the spaces or it parses
-# as 150.
+# realisateur#630. Nanoseconds with SPACE separators: strip them or 41.8h reads
+# as 0.0h forever. Pinned by monkey-watch.test.sh I6 with the real log line.
 CLOCK_DRIFT_H=""
 LOGFLDR="$(vbm showvminfo "$VM" --machinereadable | grep '^LogFldr=' | cut -d'"' -f2)"
 if [ -n "$LOGFLDR" ]; then
