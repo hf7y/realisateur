@@ -203,6 +203,21 @@ out="$(GH_SIGN_BUILD_ROOTS="$TMP/builds" PATH="$TMP/stub:$PATH" "$BASH_BIN" "$ST
 check "--self-check exits 1 on a stale build, so a clock can ask" "$rc" "1"
 contains "...and demands the refresh by name" "$out" "selfdev-release-tick.sh --apply"
 
+# A MONTH-OLD BUILD IS NOT STALE UNDER A MONTHLY CUT (#603). At STALE_DAYS=14
+# this stamped STALE into every signed body for ~16 of every 30 days and exited
+# 1 from --self-check the whole time -- so the marker meant "it is the 15th",
+# not "the channel stopped". 30 days is a healthy build mid-interval.
+MONTHOLD="$(mkbuild "$(date -u -d '-30 days' +%Y-%m-%dT%H%MZ)")"
+out="$(GH_SIGN_BUILD_ROOTS="$TMP/builds" PATH="$TMP/stub:$PATH" "$BASH_BIN" "$MONTHOLD" --stamp)"
+hasnt "a 30-day build under a monthly cadence is not marked stale" "$out" "STALE"
+GH_SIGN_BUILD_ROOTS="$TMP/builds" PATH="$TMP/stub:$PATH" "$BASH_BIN" "$MONTHOLD" --self-check >/dev/null 2>&1
+check "...and --self-check does not page for it" "$?" "0"
+
+# The seam is an env override, because the number has to track a cadence this
+# script deliberately does not read at runtime.
+out="$(GH_SIGN_STALE_DAYS=7 GH_SIGN_BUILD_ROOTS="$TMP/builds" PATH="$TMP/stub:$PATH" "$BASH_BIN" "$MONTHOLD" --stamp)"
+contains "GH_SIGN_STALE_DAYS moves the threshold" "$out" "STALE"
+
 reset
 out="$(GH_SIGN_BUILD_ROOTS="$TMP/builds" GH_LOG="$TMP/gh.log" GH_LAST_BODY="$TMP/gh.body" \
        PATH="$TMP/stub:$PATH" "$BASH_BIN" "$STALE" issue comment 7 --repo hf7y/w --body hi 2>&1 >/dev/null)"

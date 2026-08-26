@@ -52,7 +52,12 @@ PUBLISH_REPO="${PUBLISH_REPO:-hf7y/hf7y.github.io}"
 PUBLISH_DIR="${PUBLISH_DIR:-verbs}"
 STATUS_URL="${RELEASE_STATUS_URL:-https://hf7y.com/verbs/status.json}"
 PAGE_URL="${RELEASE_STATUS_PAGE:-https://hf7y.com/verbs/}"
-HISTORY_MAX="${PUBLISH_HISTORY_MAX:-60}"
+# 120 nights, not 60. `last_cut` is a scan of `history` for the newest CUT
+# row, so the window has to outlive the cut interval by a margin: at one cut
+# per 30 nights, 60 rows holds ~2 cuts and ONE skipped window pushes the last
+# CUT out entirely -- after which last_cut is null and ausculte records BLIND
+# for a month (realisateur#603).
+HISTORY_MAX="${PUBLISH_HISTORY_MAX:-120}"
 DECISIONS="CUT NO_CHANGE BLOCKED ERROR"
 
 # THE CADENCE, AND THE ONE PLACE IT IS WRITTEN DOWN. build-verbs.yml runs on
@@ -61,6 +66,14 @@ DECISIONS="CUT NO_CHANGE BLOCKED ERROR"
 # badly, and widening it is a decision to be told about a dead emitter later.
 PUBLISH_CADENCE_H="${PUBLISH_CADENCE_H:-24}"
 PUBLISH_GRACE_H="${PUBLISH_GRACE_H:-4}"
+
+# THE CUT INTERVAL IS A DIFFERENT NUMBER FROM THE CADENCE, and conflating them
+# is realisateur#603. The workflow ASSEMBLES nightly (above) and CUTS monthly
+# (#602), so the emitter speaking every 24h and a build being 20 days old are
+# both healthy at once. A consumer that ages `last_cut.at` against
+# cadence_hours reads DOWN on 29 nights in 30; publishing this lets it age the
+# build against the interval it was actually cut on.
+PUBLISH_CUT_INTERVAL_D="${PUBLISH_CUT_INTERVAL_D:-30}"
 
 DECISION=''; REASON=''; MAIN_SHA='-'; CI_RUN='-'; BUILD_ID='-'
 APPLY=0; DRY=0; OUT=''
@@ -131,6 +144,7 @@ PREV_HISTORY="$PREV_HISTORY" NOW="$NOW" DECISION="$DECISION" REASON="$REASON" \
 MAIN_SHA="$MAIN_SHA" CI_RUN="$CI_RUN" BUILD_ID="$BUILD_ID" \
 VALID_UNTIL="$VALID_UNTIL" HISTORY_MAX="$HISTORY_MAX" \
 PUBLISH_CADENCE_H="$PUBLISH_CADENCE_H" PUBLISH_GRACE_H="$PUBLISH_GRACE_H" \
+PUBLISH_CUT_INTERVAL_D="$PUBLISH_CUT_INTERVAL_D" \
 DECISIONS="$DECISIONS" \
 python3 - "$RENDER" <<'PY'
 import json, os, sys
@@ -157,7 +171,11 @@ doc = {
   # because a consumer that reads valid_until and one that does not are
   # different consumers, and which of them am I talking to has to be
   # answerable from the document.
-  "schema": 2,
+  # schema 3 adds cut_interval_days, for the same reason: a consumer that ages
+  # last_cut against the CUT interval and one that ages it against the emitter
+  # cadence disagree by 29 days, and the document has to say which it is
+  # talking to (realisateur#603).
+  "schema": 3,
   "generated": env["NOW"],
   # WHEN THIS DOCUMENT STOPS BEING EVIDENCE. Past it, a consumer must grade
   # the channel BAD regardless of decision -- a stale success is the failure
@@ -165,6 +183,9 @@ doc = {
   "valid_until": env["VALID_UNTIL"],
   "cadence_hours": int(env["PUBLISH_CADENCE_H"]),
   "grace_hours": int(env["PUBLISH_GRACE_H"]),
+  # How often a BUILD is cut, as opposed to how often this document is
+  # written. Age last_cut against this, never against cadence_hours.
+  "cut_interval_days": int(env["PUBLISH_CUT_INTERVAL_D"]),
   "decision": row["decision"],
   "reason": row["reason"],
   "main_sha": row["main_sha"],

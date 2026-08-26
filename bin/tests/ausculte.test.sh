@@ -85,10 +85,21 @@ out="$(run propagation)"; rc=$?
 check "a refusing channel is DOWN (5)" "$rc" "5"
 has "and it names the decision and the date nothing has propagated since" "$out" "the channel is ERROR"
 
+# BUILD AGE IS GRADED AGAINST THE CUT INTERVAL, NOT THE EMITTER CADENCE
+# (#603). Under a 30-day interval the floor is 30d+28h, so the fixture has to
+# be older than that to fail -- at -6d this row used to read DOWN, which is
+# exactly the false alarm that would have fired on 29 nights in 30.
+ancient="$(date -u -d '-40 days' +%Y-%m-%dT%H:%M:%SZ)"
+verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"cut_interval_days\":30,\"last_cut\":{\"at\":\"$ancient\",\"build_id\":\"B\"}}"
+out="$(run propagation)"; rc=$?
+check "a build older than its CUT INTERVAL is DOWN (5)" "$rc" "5"
+has "and it says the cutter has stopped, not that a cadence slipped" "$out" "the cutter has stopped"
+
+# A DOCUMENT DECLARING NO INTERVAL IS A NIGHTLY ONE: cut_max_h collapses to
+# max_h, so a schema-2 verdict grades exactly as it did before #603.
 verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"last_cut\":{\"at\":\"$old\",\"build_id\":\"B\"}}"
 out="$(run propagation)"; rc=$?
-check "a build older than its cadence is DOWN (5)" "$rc" "5"
-has "and it names the age against the cadence" "$out" "past its 28h cadence"
+check "a schema-2 verdict with no cut_interval_days still grades at 28h (5)" "$rc" "5"
 
 verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"last_cut\":{\"at\":\"$fresh\",\"build_id\":\"B\"}}"
 out="$(run propagation)"; rc=$?
@@ -124,6 +135,30 @@ out="$(run propagation)"; rc=$?
 check "no propagation-set means BLIND, not unreachable hosts" "$rc" "6"
 hasnt "and it never blames the hosts for a missing lib" "$out" "unreachable"
 mv "$TMP/bin/lib/propagation-set.away" "$TMP/bin/lib/propagation-set.sh"
+
+# THE MONTHLY CADENCE (#603). Kept at the END of this section on purpose: the
+# rows above are order-dependent on which ssh stub is in place, and one that
+# reaches the host half-way through changes what a later row measures.
+printf '#!/usr/bin/env bash\necho /usr/local/share/verb-builds/B\n' > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"
+
+# The behaviour change, and nothing pinned it before: a monthly channel
+# mid-interval is healthy. Twenty days old, every host on it.
+midcycle="$(date -u -d '-20 days' +%Y-%m-%dT%H:%M:%SZ)"
+verdict "{\"decision\":\"NO_CHANGE\",\"build_id\":\"-\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"cut_interval_days\":30,\"last_cut\":{\"at\":\"$midcycle\",\"build_id\":\"B\"}}"
+out="$(run propagation)"; rc=$?
+check "a 20-day-old build under a 30-day interval is OK (0)" "$rc" "0"
+has "and it says every host is on it" "$out" "every host is on it"
+
+# THE ADOPTION BRANCH, REACHABLE FOR THE FIRST TIME. Before the split there
+# was one number, so the build-age test returned DOWN first and the clause
+# naming a host that failed to ADOPT could never be true -- a host that never
+# took the build was reported as a channel-age problem instead. Here the build
+# is well inside cut_max_h, so the only thing wrong is the host.
+printf '#!/usr/bin/env bash\necho OLDBUILD\n' > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"
+verdict "{\"decision\":\"CUT\",\"build_id\":\"B\",\"blocked_streak\":0,\"cadence_hours\":24,\"grace_hours\":4,\"cut_interval_days\":30,\"last_cut\":{\"at\":\"$old\",\"build_id\":\"B\"}}"
+out="$(run propagation)"; rc=$?
+check "a host that missed its adoption window under a healthy channel is DOWN (5)" "$rc" "5"
+has "and the reason is ADOPTION, not the age of the build" "$out" "adoption window"
 
 printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"
 out="$(run propagation)"; rc=$?

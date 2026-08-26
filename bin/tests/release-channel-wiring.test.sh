@@ -153,7 +153,11 @@ if [ -s "$TG/status.json" ]; then
   SJ="$(cat "$TG/status.json")"
   has "the document declares when it stops being evidence" "$SJ" '"valid_until"'
   has "it publishes the cadence that expiry is derived from" "$SJ" '"cadence_hours"'
-  has "the schema is bumped so a consumer knows which shape it has" "$SJ" '"schema": 2'
+  has "the schema is bumped so a consumer knows which shape it has" "$SJ" '"schema": 3'
+  # THE CUT INTERVAL IS NOT THE EMITTER CADENCE (#603). The document has to
+  # carry both, because a consumer that ages last_cut against cadence_hours
+  # grades a healthy monthly channel DOWN on 29 nights in 30.
+  has "it publishes the interval a BUILD is cut on, not only the emitter's" "$SJ" '"cut_interval_days"'
   has "it still carries the decision"  "$SJ" '"decision": "BLOCKED"'
   # END TO END, through the consumer's real --url path rather than a
   # paraphrase of it: the publisher's own output, graded by the real grader.
@@ -176,7 +180,7 @@ if [ -s "$TG/status.json" ]; then
   has "...and is named EXPIRED rather than alive" "$O" "VERDICT EXPIRED"
 else
   bad "the publisher wrote no status.json"
-  for m in "valid_until" "cadence_hours" "schema 2" "decision" "end-to-end grade"; do
+  for m in "valid_until" "cadence_hours" "schema 3" "cut_interval_days" "decision" "end-to-end grade"; do
     bad "(skipped, no status.json): $m"
   done
 fi
