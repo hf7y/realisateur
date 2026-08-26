@@ -103,7 +103,32 @@ while IFS= read -r row; do
   # claim about the observer. It gets its own streak, its own word, and its own
   # issue title, so the two never collapse into one number again.
   case "$status" in
-    OK)    rm -f "$STATE/$name.down" "$STATE/$name.blind"; continue ;;
+    OK)
+      # CLEAR-DOWN -- the inverse of the escalation below, which did not exist.
+      # Recovery cleared the STREAK FILE and nothing else, so an issue saying a
+      # probe "has been DOWN for two consecutive runs" outlived the outage it
+      # described. Worse: the dedup search below matches an OPEN issue of that
+      # title, so the stale one then SUPPRESSED the next real filing -- an
+      # escalation channel that goes quiet after its first use.
+      # Reached only when this run actually read OK, and only for a streak this
+      # host recorded, so it can never close an issue it did not file.
+      for suffix in down blind; do
+        [ -f "$STATE/$name.$suffix" ] || continue
+        rm -f "$STATE/$name.$suffix"
+        [ "$NO_ESC" -eq 1 ] && continue
+        command -v gh >/dev/null 2>&1 || continue
+        case "$suffix" in down) w=DOWN ;; *) w=BLIND ;; esac
+        n="$(gh issue list -R "$ISSUE_REPO" --search "in:title \"ausculte: $name has been $w\"" \
+               --state open --json number --jq '.[0].number' 2>/dev/null)"
+        [ -n "$n" ] || continue
+        if err="$(gh issue close "$n" -R "$ISSUE_REPO" \
+                    --comment "Recovered: \`ausculte $name\` read OK. Filed by the health cadence, closed by it." 2>&1 >/dev/null)"; then
+          echo "  ..      $name recovered; closed $ISSUE_REPO#$n"
+        else
+          echo "  BAD     $name recovered but $ISSUE_REPO#$n is still open: ${err:-no reason given}"
+        fi
+      done
+      continue ;;
     DOWN)  f="$STATE/$name.down";  rm -f "$STATE/$name.blind"
            word=DOWN;  said='is not serving' ;;
     BLIND) f="$STATE/$name.blind"; rm -f "$STATE/$name.down"
