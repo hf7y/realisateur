@@ -159,12 +159,24 @@ Reproduce: \`ausculte $name\`
     fi
   fi
 
-  if [ -r "$HERE/lib/zaxon.sh" ]; then
-    # shellcheck source=lib/zaxon.sh
-    . "$HERE/lib/zaxon.sh"
-    zaxon_ask "ausculte: $name $word twice. $(printf '%s' "$detail" | cut -c1-90)" ausculte-cadence >/dev/null 2>&1 \
-      && echo "  ..      asked over zaxon"
-  fi
+  # THIS DOES NOT ASK ZACH, AND MUST NOT BE RE-ADDED. It used to call
+  # zaxon_ask on every tick where a streak was >= 2. Its lifetime record,
+  # measured 2026-08-26 against the relay's own ticket store:
+  #
+  #     47 questions sent, 2026-08-21 to 2026-08-26
+  #     47 stale, 0 ANSWERED, EVER
+  #     44% of every ticket the relay has ever carried
+  #
+  # Zach: "it means nothing to me. I've ignored it." The relay holds ONE
+  # question at a time (hf7y/crt#67), so each of those 47 held the only channel
+  # to him for its full TTL -- about 47 hours of a shared, scarce resource
+  # spent on a sender with a 0% answer rate, crowding out senders that needed
+  # it. A notification nobody has ever acted on is not a quiet cost; it is the
+  # reason the channel was full.
+  #
+  # The issue above IS the escalation: durable, deduplicated, and readable by
+  # the run that can act on it. `ausculte` still exits 5, and hf7y.com/monkey
+  # still shows the row. Nothing is silenced except the phone.
 done <<< "$rows"
 
 [ "$escalated" -eq 0 ] || exit 5
