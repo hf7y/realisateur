@@ -16,9 +16,7 @@ migrated yet; §6 says what would move and what that costs.
 
 ## 1. The failure this document is for
 
-zaxon — the only relay that carries a question to a human — was dead for ten
-days in a WSL distro nothing started. `bin/dexter-liveness.sh` is the alarm and
-its header carries the argument; §5b says why the outage was possible at all.
+`bin/dexter-liveness.sh` is the alarm and its header carries the argument.
 
 ## 2. The canonical userland: the `Ubuntu` distro, and no other
 
@@ -99,42 +97,14 @@ That was the deliberate trade for fixing things unattended — senechal#253.
 
 ## 5b. Nothing here starts at boot — it starts at LOGIN
 
-Both live things here start from **per-user Startup folder** items, so a reboot
-with nobody logged in leaves `monkey` — all of self-dev — down, and quiet-looking.
+Measured by `bin/dexter-liveness.sh`, which files a finding past an hour of
+drift. Making these boot-scoped rather than login-scoped needs a Windows
+credential and is Zach's to authorise; senechal owns the working shape
+(`remedies/dexter-wsl-autostart.sh`).
 
-`senechal-wsl-autostart.vbs` is the shape that works, and it already uses the
-`sleep infinity` anchor, because *"WSL tears the VM down when its last process
-exits."* It is owned by senechal (`remedies/dexter-wsl-autostart.sh`) and has a
-matching scheduled task. **The fix is not a third such script — it is to make
-these boot-scoped rather than login-scoped**, so the host recovers from a power
-cut without a human. That needs a Windows credential and is Zach's to authorise.
+## 6. zaxon
 
-## 6. Moving zaxon, and the one rule that governs it
-
-**crt owns zaxon** (Zach, 2026-08-14), so its container form lives in
-`hf7y/crt` at `provision/dexter/zaxon/` — this repo ships the road, not the
-freight. The deploy path resolved a service from the owning
-project's checkout; `DEXTER_SERVICE_PATH` overrides the search for a worktree
-or an owner that is not cloned locally.
-
-**The WhatsApp bridge is Baileys, a LINKED DEVICE** (probed 2026-08-14:
-`@whiskeysockets/baileys` 7.0.0-rc13, Node + express on :3000, session as plain
-files in `~/.hermes/whatsapp/session`). This retires the belief that a phone
-must stay powered on — a linked device keeps working while the phone is off,
-and is needed only to pair and, roughly every two weeks, to refresh.
-
-**Exactly one process may own that session.** Two — a container and the old
-distro — and WhatsApp logs the link out, costing a QR scan to recover. The
-deploy script enforces this by refusing while `hermes` runs; the cutover order
-is stop, move, start, never overlap. (`auth.json` is unrelated: it holds the
-model-provider credential.)
-
-`whisper-server` is the CPU-heavy half and moves second. STT degrades
-gracefully; the relay does not.
-
-**Not settled here**: whether dexter is a build host that happens to hold
-zaxon, or the estate's always-on service host — `monkey` is also always-on and
-is where zaxon's callers live. The layout is right either way; the roster is not.
-
-**Still missing**: nothing has been migrated yet, and dexter's autostart is
-still login-scoped (§5b).
+**crt owns zaxon** (Zach, 2026-08-14): container form in `hf7y/crt` at
+`provision/dexter/zaxon/`. The one-holder rule for `data/whatsapp/session` is
+no longer written here because it is enforced there — `zaxon-watch.sh` reports
+any other registered WSL distro as a hazard, hourly, at `hf7y.com/zaxon`.
