@@ -30,6 +30,7 @@ cli_guard "$@"
 # The support library sits beside this script in both layouts, on purpose.
 . "$(dirname "${BASH_SOURCE[0]}")/lib/propagation-set.sh"
 . "$(dirname "${BASH_SOURCE[0]}")/lib/host-check.sh"
+. "$(dirname "${BASH_SOURCE[0]}")/lib/cron-lock.sh"
 
 # --- knobs. Every one exists so bin/tests/propagation.test.sh can run against
 # fixture homes with no network, no ssh and no sudo. Same reasoning as
@@ -388,6 +389,8 @@ if [ "$CADENCE" = 1 ]; then
   [ "$BAD" -eq 0 ] || exit 1
   exit 0
 fi
+
+[ "$MODE" = apply ] && cron_lock selfdev-release-tick
 
 echo "-- clock --------------------------------------------------------------"
 check_clock
