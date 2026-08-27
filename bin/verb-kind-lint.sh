@@ -9,7 +9,7 @@
 # THE CRITERION, semantic and not linguistic, decided 2026-08-05:
 #     a VERB is a thing you tell the machine to do
 #     a PRODUCT is a thing with a name of its own
-#     a PERSONAL tool is a front door only Zach walks through (#552, 2026-08-23)
+#     a PERSONAL tool is a front door only Zach walks through (#552)
 # French-ness is a convention the workchain follows, not the property that
 # decides which channel an artifact ships on -- so this reads a DECLARATION
 # (`# KIND: verb` / `product` / `personal` in the command's own file, within
@@ -125,9 +125,7 @@ while IFS=$'\t' read -r project verb sha url; do
   case "$kind" in
     verb)    DECLARED_VERBS+=("$project/$verb") ;;
     product) PRODUCTS+=("$project/$verb") ;;
-    # THE THIRD KIND (#552). The 2026-08-11 test -- "would another agent or
-    # Zach ever call one of those?" -- gains a second reading: a front door FOR
-    # WHOM. Needs no man page; the man page IS the verb contract.
+    # THE THIRD KIND (#552): a front door FOR WHOM. Needs no man page.
     personal) PERSONAL+=("$project/$verb") ;;
     '')      if forgiven "$project/$verb"; then GRANDFATHERED+=("$project/$verb")
              else UNDECLARED+=("$project/$verb|no '# KIND: verb', '# KIND: product' or '# KIND: personal' in its first $HEAD_LINES lines"); fi ;;
@@ -174,8 +172,8 @@ done
 
 say ""
 say "== C. NO PERSONAL TOOL RIDES THE VERB BUILD =="
-# NAMED, NOT SILENTLY DROPPED: a command that leaves without a line saying so
-# is indistinguishable from one that was never in it.
+# NAMED: a command that leaves without a line saying so is indistinguishable
+# from one that was never in it.
 for x in ${PERSONAL+"${PERSONAL[@]}"}; do
   loud "  PERSONAL ${x}: declares '# KIND: personal' but is in the verb manifest."
   loud "           A personal tool reaches PATH as a symlink into its own checkout"

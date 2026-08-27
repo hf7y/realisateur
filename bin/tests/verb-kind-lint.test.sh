@@ -122,8 +122,7 @@ else bad "expected exactly 1 violation line, got $n"; printf '%s\n' "$OUT" | sed
 # --- 2b. the third kind (#552) ----------------------------------------------
 echo
 echo "== 2b. A PERSONAL TOOL RIDING THE VERB BUILD =="
-# Before this there were two states -- distributed to all 13 accounts, or
-# undeclared litter -- and `canon` sat in the second from 2026-08-05.
+# Two states before this: distributed to all 13 accounts, or undeclared litter.
 b="$(new_build personal)"
 add_cmd "$b" scheduler   fx-arme    '# KIND: verb'
 add_cmd "$b" vim-arcade  vim-arcade '# KIND: personal'
@@ -140,7 +139,6 @@ else
   ok "the sibling verb is NOT flagged -- one violation, not a sweep"
 fi
 
-# THE MAN PAGE IS THE VERB CONTRACT, and this is not a verb.
 b="$(new_build personal-no-man)"
 add_cmd "$b" scheduler  fx-arme '# KIND: verb'
 add_cmd "$b" space-canon canon   '# KIND: personal'
@@ -152,8 +150,7 @@ else
   ok "a personal tool owes no man/<name>.1"
 fi
 
-# NOT RATCHETABLE, for the same reason a product is not: the ratchet forgives
-# SILENCE, never a declaration that says outright it is on the wrong channel.
+# NOT RATCHETABLE: the ratchet forgives SILENCE, never a wrong-channel claim.
 b="$(new_build personal-not-ratchetable)"
 add_cmd "$b" scheduler  fx-arme    '# KIND: verb'
 add_cmd "$b" vim-arcade vim-arcade '# KIND: personal'
@@ -161,7 +158,6 @@ RATCHET_FILE="$WORK/r3"; write_ratchet "$RATCHET_FILE" 'undeclared vim-arcade/vi
 expect "the ratchet cannot forgive a declared personal tool in the verb build" 1 "$b"
 RATCHET_FILE=""
 
-# The "not a channel" branch must stop claiming there are two.
 b="$(new_build bogus-kind)"
 add_cmd "$b" scheduler fx-arme '# KIND: verb'
 add_cmd "$b" scheduler fx-dose '# KIND: LOCAL'

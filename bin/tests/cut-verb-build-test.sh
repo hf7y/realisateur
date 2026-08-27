@@ -442,9 +442,7 @@ esac
 : > "$TMP/verb-kind.ratchet"
 
 # 14d. A PERSONAL tool leaves the manifest, and the cut still succeeds (#552).
-# THE ORDERING IS THE POINT: the cut drops it and says so; the lint stays a
-# backstop. #552 -- "land the type first, reclassify, then let a build cut
-# prove the command left the manifest."
+# THE ORDERING IS THE POINT: the cut drops it and says so; the lint is backstop.
 mkrepo kappa kv
 printf '#!/usr/bin/env bash\n# KIND: personal\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "kp\\n"\n' \
     > "$FIX/kappa.git/bin/kp"

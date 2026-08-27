@@ -434,11 +434,10 @@ if [ -n "$ASSEMBLE" ]; then
   [ "$bad" -eq 0 ] || die "$bad verb(s) did not assemble runnably. Refusing."
 
   # --- 6a0. a PERSONAL tool leaves the manifest, and is NAMED leaving ------
-  # DROPPED HERE, NOT REFUSED BY THE LINT BELOW (#552). Section C is a
-  # backstop; were it the only mechanism, the day a project reclassified its
-  # tool would be the day every cut failed -- the correct act breaking the
-  # channel. Also the first point the declaration is readable at all: the
-  # derivation upstream sees a git tree listing, not file contents.
+  # DROPPED HERE, NOT REFUSED BY THE LINT BELOW (#552). Were the lint the only
+  # mechanism, reclassifying a tool would break every cut -- the correct act
+  # breaking the channel. Also the first point the declaration is readable: the
+  # derivation upstream sees a tree listing, not file contents.
   personal_out=0
   kept="$tmp/manifest.kept"; : > "$kept"
   while IFS= read -r mline; do
@@ -448,9 +447,9 @@ if [ -n "$ASSEMBLE" ]; then
                | sed -n 's/^#[[:space:]]*KIND:[[:space:]]*//p' | head -1)"
     case "${mkind%%[[:space:]]*}" in
       personal)
-        say "  PERSONAL $mproject/$mverb: declares '# KIND: personal' -- NOT carried to any account."
-        say "           It reaches PATH as a symlink into its own checkout, and that is the"
-        say "           intended permanent state. Omitted from this build."
+        say "  PERSONAL $mproject/$mverb: declares '# KIND: personal' -- NOT carried to any"
+        say "           account. It reaches PATH as a symlink into its own checkout, and that"
+        say "           is the intended permanent state. Omitted from this build."
         rm -f "$ASSEMBLE/$mproject/bin/$mverb"
         personal_out=$((personal_out + 1)) ;;
       *) printf '%s\n' "$mline" >> "$kept" ;;
