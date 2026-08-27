@@ -8,7 +8,7 @@
 [ -n "${ROSTER_SET_LIB:-}" ] && return 0
 ROSTER_SET_LIB=1
 
-. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/gh-owner.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/estate-set.sh"
 ROSTER_OWNER="${ROSTER_OWNER:-$GH_ESTATE_OWNER}"
 
 # SWEPT, NOT ARMED. Membership says which repos to READ. Liveness is a

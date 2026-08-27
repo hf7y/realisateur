@@ -32,6 +32,7 @@ part() {
   return 1
 }
 . "$HERE/lib/host-check.sh"
+. "$HERE/lib/estate-set.sh"
 JSON=0; ONLY=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -104,7 +105,7 @@ fi
 
 if want arming; then
   # WHAT THE ACCOUNTS ARE DOING, not how often the word "armed" appears.
-  st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://hf7y.com/monkey/status.json}" 2>/dev/null)"
+  st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://$GH_ESTATE_SITE/monkey/status.json}" 2>/dev/null)"
   if ! printf '%s' "$st" | jq -e '.accounts' >/dev/null 2>&1; then
     record arming BLIND 'the published monkey status could not be read'
   elif vu="$(printf '%s' "$st" | jq -r '.valid_until // empty')" && [ -n "$vu" ] \
@@ -188,7 +189,7 @@ if want propagation; then
   done
   # shellcheck source=lib/propagation-set.sh
   [ -n "$ps" ] && . "$ps"
-  v="$(curl -s -m 15 "${VERBS_STATUS_URL:-https://hf7y.com/verbs/status.json}" 2>/dev/null)"
+  v="$(curl -s -m 15 "${VERBS_STATUS_URL:-https://$GH_ESTATE_SITE/verbs/status.json}" 2>/dev/null)"
   dec="$(printf '%s' "$v" | jq -r '.decision // empty' 2>/dev/null)"
   if [ -z "$dec" ]; then
     record propagation BLIND 'cannot read the release channel verdict'

@@ -14,7 +14,7 @@ cp "$HERE/../lib/cli-guard.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/host-check.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/zaxon.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/propagation-set.sh" "$TMP/bin/lib/"
-cp "$HERE/../lib/gh-owner.sh" "$TMP/bin/lib/"
+cp "$HERE/../lib/estate-set.sh" "$TMP/bin/lib/"
 
 stub() { printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s"\nexit %s\n' "${3:-}" "$2" > "$TMP/bin/$1"; chmod +x "$TMP/bin/$1"; }
 

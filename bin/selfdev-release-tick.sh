@@ -48,7 +48,8 @@ CRON_SPEC="${TICK_CRON_SPEC:-41 5 * * *}"
 #
 # The host-scoped tick needs it, because every path it works on is deliberately
 CRON_ENV="${TICK_CRON_ENV:-}"
-RELEASE_STATUS_URL="${RELEASE_STATUS_URL:-https://hf7y.com/verbs/status.json}"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
+RELEASE_STATUS_URL="${RELEASE_STATUS_URL:-https://$GH_ESTATE_SITE/verbs/status.json}"
 # Whether adoption also writes the bin links. OFF by default and it stays off
 # for a per-ACCOUNT tick, because `installe` owns that account's ~/.local/bin
 # and install-verb-build.sh's --link exists to not clobber it.

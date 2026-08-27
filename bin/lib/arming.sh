@@ -8,7 +8,7 @@
 [ -n "${ARMING_LIB:-}" ] && return 0
 ARMING_LIB=1
 
-. "${BASH_SOURCE[0]%/*}/gh-owner.sh"
+. "${BASH_SOURCE[0]%/*}/estate-set.sh"
 ARMING_ROSTER_REPO="${ARMING_ROSTER_REPO:-$GH_ESTATE_OWNER/scheduler}"
 ARMING_ROSTER_PATH="${ARMING_ROSTER_PATH:-schedule/ROSTER}"
 

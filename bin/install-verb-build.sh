@@ -34,7 +34,7 @@ CLI_EXITS='  0  done, or --check found you current
 cli_guard "$@"
 
 BUILD_ROOT="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"
-. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
 REMOTE="${VERB_BUILD_REMOTE:-https://github.com/$GH_ESTATE_OWNER/verbs.git}"
 BIN="${INSTALLE_BIN:-$HOME/.local/bin}"
 CMD_DEST="${CMD_DEST:-$HOME/.claude/commands}"

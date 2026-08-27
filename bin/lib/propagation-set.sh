@@ -31,7 +31,7 @@
 # TRAP: PAYLOAD without a man page ships nothing, silently (#85).
 
 if [ -n "${BASH_SOURCE:-}" ]; then
-  . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/gh-owner.sh"
+  . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/estate-set.sh"
 fi
 PROP_RELEASE_REPO="$GH_ESTATE_OWNER/verbs"
 PROP_RELEASE_REMOTE="https://github.com/$GH_ESTATE_OWNER/verbs.git"

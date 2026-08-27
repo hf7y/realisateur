@@ -30,7 +30,7 @@ CLI_EXITS='  0  filed, or printed under --dry-run / --ledger
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 
-. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
 OWNER="${DEFERE_OWNER:-$GH_ESTATE_OWNER}"
 # Who is asked when a route needs a person. Not derived from the running
 # account: an agent account filing under its own name would be addressing the

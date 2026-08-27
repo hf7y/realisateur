@@ -27,7 +27,7 @@ CLI_EXITS='  0  a complete manifest was derived
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
 OWNER="${VERB_BUILD_OWNER:-$GH_ESTATE_OWNER}"
 VERB_META_REPO="${VERB_META_REPO:-verbs}"   # holds the published manifest the guard compares against
 BUILD_ROOT="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"

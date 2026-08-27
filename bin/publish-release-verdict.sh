@@ -48,11 +48,11 @@ CLI_EXITS='  0  published, or rendered under --dry-run
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
-PUBLISH_REPO="${PUBLISH_REPO:-$GH_ESTATE_OWNER/hf7y.github.io}"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
+PUBLISH_REPO="${PUBLISH_REPO:-$GH_ESTATE_OWNER/$GH_ESTATE_SITE_REPO}"
 PUBLISH_DIR="${PUBLISH_DIR:-verbs}"
-STATUS_URL="${RELEASE_STATUS_URL:-https://hf7y.com/verbs/status.json}"
-PAGE_URL="${RELEASE_STATUS_PAGE:-https://hf7y.com/verbs/}"
+STATUS_URL="${RELEASE_STATUS_URL:-https://$GH_ESTATE_SITE/verbs/status.json}"
+PAGE_URL="${RELEASE_STATUS_PAGE:-https://$GH_ESTATE_SITE/verbs/}"
 # 120 nights, not 60. `last_cut` is a scan of `history` for the newest CUT
 # row, so the window has to outlive the cut interval by a margin: at one cut
 # per 30 nights, 60 rows holds ~2 cuts and ONE skipped window pushes the last
