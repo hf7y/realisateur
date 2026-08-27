@@ -43,6 +43,33 @@ stub decision-rot.sh 1 "rot found"
 run rot >/dev/null
 check "a probe DOWN exits DOWN" "$?" "5"
 
+# THE HEADLINE IS A COUNT AND THE OLDEST ROW. `tail -1` read the LAST line of a
+# block sorted oldest-first, so it named the NEWEST rot and hid the rest: one
+# 2d tracker stood in for 69 rotting decisions, and a 12d question of Zach's in
+# the same output was never mentioned. Fixture is decision-rot.sh's real shape.
+cat > "$TMP/bin/decision-rot.sh" <<'ROT'
+#!/usr/bin/env bash
+cat <<'OUT'
+REPO                ANSWERED  ROTTING  OLDEST_DAYS   UNC_OPEN
+groc-mangr                 3        1           12          0
+realisateur                9        1            2          0
+TOTAL                     12        2                       0
+
+ROTTING -- answered, still open:
+  groc-mangr       #10    answered 2026-08-14    12d  DECISION: delivery windows
+  realisateur      #577   answered 2026-08-24     2d  TRACKER: provisioning block
+OUT
+exit 1
+ROT
+chmod +x "$TMP/bin/decision-rot.sh"
+out="$(run rot)"
+case "$out" in *"2 answered decision(s) still open"*) ok "the rot headline carries the COUNT, not one row" ;;
+  *) bad "rot headline counts" "got: $out" ;; esac
+case "$out" in *"#10"*) ok "...and names the OLDEST row" ;;
+  *) bad "rot headline names the oldest" "got: $out" ;; esac
+case "$out" in *"#577"*) bad "rot headline names the newest" "got: $out" ;;
+  *) ok "...and not the newest one" ;; esac
+
 # --- arming reads what the accounts DID ----------------------------------
 # Counting the word "armed" said OK while three accounts had been dead eight
 # days. And the first draft of the fix printed OK off a jq error, because the
