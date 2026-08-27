@@ -22,14 +22,30 @@ T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 # The fake gh. `--json` calls print $FIXTURE; $GH_FAIL makes it die like the
 # real one does on a token or rate-limit failure.
 mkdir -p "$T/bin"
+# `gh api` is the ARMING ROSTER read (lib/arming.sh) and `gh issue list` is the
+# issue read. One fake, two answers -- a fixture that served the issue array to
+# both would have made every repo read as absent-from-the-roster.
 cat > "$T/bin/gh" <<'EOF'
 #!/usr/bin/env bash
+if [ "$1" = api ]; then
+  if [ -n "${ROSTER_FAIL:-}" ]; then echo "$ROSTER_FAIL" >&2; exit 1; fi
+  cat "$ROSTER_FIXTURE"; exit 0
+fi
 if [ -n "${GH_FAIL:-}" ]; then echo "$GH_FAIL" >&2; exit 1; fi
 cat "$FIXTURE"
 EOF
 chmod +x "$T/bin/gh"
 export PATH="$T/bin:$PATH"
 export DECISION_ROT_OWNER=owner
+
+# The default world for A-H: the repo under test dispatches, so those cases keep
+# pinning the predicate rather than the arming split.
+cat > "$T/roster.default" <<'EOF'
+# project | account@host | rate | state
+r        | r@monkey        | 20m | live
+parked   | parked@monkey   | 6h  | parked
+EOF
+export ROSTER_FIXTURE="$T/roster.default"
 
 run() { FIXTURE="$1" bash "$SCRIPT" "${@:2}"; }
 
@@ -237,6 +253,59 @@ done
 [ -z "$_armed" ] \
   && ok "H2 the newly swept repos are NOT in the dispatching set" \
   || bad "H2 swept is not armed" "in ROSTER_PROJECTS, and so spending quota:$_armed"
+
+# --- I. a parked repo is not rotting (Zach, 2026-08-26) ---------------------
+# 19 of 69 rows were in dcp-gate-site (parked) and front-door (no roster row).
+# Nothing is armed to act on either, so the alarm could never clear -- and an
+# alarm that can never clear is one its reader learns to ignore.
+section "I. rot is only rot where something dispatches"
+
+cat > "$T/i.json" <<EOF
+[
+ {"number":1,"title":"answered and open","state":"OPEN","labels":[],
+  "comments":[{"author":{"login":"owner"},"body":"build it","createdAt":"2026-08-17T00:00:00Z"}]}
+]
+EOF
+
+OUT="$(run "$T/i.json" o/r)"; RC=$?
+rc  "I1 answered+open in a LIVE repo is rot" 1 "$RC"
+has "I2 ...and the rotting block names it" "$OUT" "ROTTING"
+
+OUT="$(run "$T/i.json" o/parked)"; RC=$?
+rc  "I3 the SAME issue in a PARKED repo is not rot -- exit 0" 0 "$RC"
+has "I4 ...it is reported as NOT-MINE, never dropped" "$OUT" "NOT-MINE"
+has "I5 ...and says which, so parked is not confused with unrostered" "$OUT" "(parked)"
+hasnt "I6 ...and no rotting block is printed" "$OUT" "ROTTING --"
+
+OUT="$(run "$T/i.json" o/nowhere)"; RC=$?
+rc  "I7 a repo with NO roster row is not rot either" 0 "$RC"
+has "I8 ...and is named absent, not parked" "$OUT" "(absent)"
+
+# A COUNT OF ZERO HERE MUST NOT BE A READING. Defaulting to armed re-raises the
+# alarm this lowered; defaulting to parked silences a real one.
+OUT="$(ROSTER_FAIL='gh: Not Found' run "$T/i.json" o/r 2>&1)"; RC=$?
+rc  "I9 an unreadable roster is BLIND (6), never clean and never rot" 6 "$RC"
+has "I10 ...and says it classified none of them" "$OUT" "Classifying none"
+
+# ausculte.sh reads the TOTAL row POSITIONALLY: `awk '$1=="TOTAL"{print $3}'`.
+OUT="$(run "$T/i.json" o/r)"
+_f3="$(printf '%s\n' "$OUT" | awk '$1 == "TOTAL" { print $3 }')"
+[ "$_f3" = "1" ] \
+  && ok "I11 ROTTING is still field 3 of TOTAL (ausculte parses it by position)" \
+  || bad "I11 ROTTING is field 3 of TOTAL" "got [$_f3]"
+
+OUT="$(run "$T/i.json" --json o/parked)"
+has "I12 --json carries the not-mine rows" "$OUT" '"kind":"not-mine"'
+has "I13 ...and the summary counts them" "$OUT" '"not_mine":1'
+
+# THE GUARD AGAINST AGENTS IS MECHANICAL, NOT A COMMENT. schedule/ROSTER's own
+# header says an agent may read it and must not change it.
+if grep -qE '\-X (PUT|POST|PATCH|DELETE)|--method|--field|-f ' \
+     "$(cd "$(dirname "$0")/.." && pwd)/lib/arming.sh"; then
+  bad "I14 lib/arming.sh holds no write path" "a write verb appeared in it"
+else
+  ok "I14 lib/arming.sh holds no write path -- an agent cannot edit the ROSTER through it"
+fi
 
 echo
 summary

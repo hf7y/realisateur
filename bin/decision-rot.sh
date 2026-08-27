@@ -4,7 +4,7 @@
 # RUNNER: no -- a SURVEY: run in a triage pass, or ahead of /ideate.
 # GUARD-TEST: bin/tests/decision-rot.test.sh, offline behind a fake `gh`
 # GATE: none -- reads every roster repo's live issue tracker
-# ROT: ANSWERED **AND** STILL OPEN -- handed over, never taken up. Zach answers
+# ROT: ANSWERED **AND** STILL OPEN **AND** SOMETHING IS ARMED TO ACT. Zach answers
 # by COMMENTING and leaves it open; the nightly CLOSES what it handles. The
 # predicate is bin/lib/answered.jq, shared with `etiquette`.
 # TRAP: if a change here needs a convention INVENTED to work, THE AUDIT IS
@@ -20,9 +20,9 @@ CLI_USAGE='  decision-rot.sh --all              audit every ecosystem1 repo
   decision-rot.sh --all --json      machine-readable NDJSON + summary line'
 CLI_FLAGS='--all --json'
 CLI_POSITIONAL=any
-CLI_EXITS='  0  clean -- every answered issue has been closed
+CLI_EXITS='  0  clean -- every answered issue in a repo that dispatches is closed
   1  rot found -- at least one answered issue is still open
-  6  BLIND -- a repo could not be read; the count is NOT trustworthy'
+  6  BLIND -- a repo or the arming roster could not be read; the count is NOT trustworthy'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
@@ -78,6 +78,18 @@ command -v jq >/dev/null || { echo "decision-rot.sh: jq not on PATH" >&2; exit 6
 }
 DECISION_ROT_JQ="$(cat "$ANSWERED_JQ_FILE")"
 
+# ROT IS ONLY ROT WHERE SOMETHING CAN ACT ON IT (Zach, 2026-08-26: "parked repos
+# shouldn't count as rotting"). 19 of 69 rows were in dcp-gate-site (parked) and
+# front-door (no roster row) -- an alarm no one could clear, which is the exact
+# thing ausculte's fourth state exists to stop being an alarm.
+# shellcheck source=bin/lib/arming.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/arming.sh"
+if ! arming_load; then
+  printf '%s: BLIND -- could not read %s:%s, so no repo can be told from a parked one. Classifying none of them.\n' \
+    "$CLI_NAME" "$ARMING_ROSTER_REPO" "$ARMING_ROSTER_PATH" >&2
+  exit 6
+fi
+
 # Verdicts: `number<TAB>verdict<TAB>at<TAB>state<TAB>title`. DETAIL is OPEN ONLY
 # (318 listed, 3 real); COUNT stays all-states, matching `answered` (B2).
 verdicts() {
@@ -108,8 +120,10 @@ TOTAL_ANSWERED=0
 TOTAL_ROT=0
 TOTAL_UNCOUNTED=0
 TOTAL_UNC_OPEN=0
-ROWS=''   # repo<TAB>answered<TAB>rot<TAB>oldest_days<TAB>uncounted
+TOTAL_NOT_MINE=0
+ROWS=''   # repo<TAB>answered<TAB>rot<TAB>not_mine<TAB>oldest_days<TAB>uncounted
 ROT=''    # repo<TAB>number<TAB>answered_at<TAB>age_days<TAB>title
+NOTMINE='' # repo<TAB>count<TAB>arming
 UNC=''    # repo<TAB>number<TAB>comment_date<TAB>title
 
 for repo in "${REPOS[@]}"; do
@@ -138,11 +152,23 @@ for repo in "${REPOS[@]}"; do
   n_rot=$(printf '%s\n' "$rows" | grep -c .)
   oldest=$(printf '%s\n' "$rows" | grep . | cut -f3 | sort -rn | head -n1)
 
+  # THE SPLIT. Same predicate, same rows -- only the question "is anything armed
+  # to act here?" separates a finding from a fact about somebody else's repo.
+  arming="$(arming_state "${repo#*/}")"
+  n_not_mine=0
+  case "$arming" in
+    live) ;;
+    *) n_not_mine=$n_rot; n_rot=0; rows=''; oldest=''
+       [ "$n_not_mine" -gt 0 ] && \
+         NOTMINE+="${repo#*/}"$'\t'"$n_not_mine"$'\t'"$arming"$'\n' ;;
+  esac
+
   TOTAL_ANSWERED=$((TOTAL_ANSWERED + n_answered))
   TOTAL_ROT=$((TOTAL_ROT + n_rot))
+  TOTAL_NOT_MINE=$((TOTAL_NOT_MINE + n_not_mine))
   TOTAL_UNCOUNTED=$((TOTAL_UNCOUNTED + n_uncounted))
   TOTAL_UNC_OPEN=$((TOTAL_UNC_OPEN + n_unc_open))
-  ROWS+="${repo#*/}"$'\t'"$n_answered"$'\t'"$n_rot"$'\t'"${oldest:-0}"$'\t'"$n_unc_open"$'\n'
+  ROWS+="${repo#*/}"$'\t'"$n_answered"$'\t'"$n_rot"$'\t'"$n_not_mine"$'\t'"${oldest:-0}"$'\t'"$n_unc_open"$'\n'
   while IFS= read -r line; do
     [ -n "$line" ] && ROT+="$repo"$'\t'"$line"$'\n'
   done <<< "$rows"
@@ -163,17 +189,25 @@ if [ "$JSON" = 1 ]; then
     jq -cn --arg repo "$r" --argjson number "$n" --arg comment_at "$a" --arg title "$t" \
            '{kind:"uncounted",repo:$repo,number:$number,comment_at:$comment_at,title:$title}'
   done
-  jq -cn --argjson repos "${#REPOS[@]}" --argjson answered "$TOTAL_ANSWERED" \
-         --argjson rotting "$TOTAL_ROT" --argjson uncounted "$TOTAL_UNCOUNTED" \
-         --argjson uncounted_open "$TOTAL_UNC_OPEN" --argjson errors "$ERRORS" \
-         '{kind:"summary",repos:$repos,answered:$answered,rotting:$rotting,uncounted:$uncounted,uncounted_open:$uncounted_open,errors:$errors}'
-else
-  printf '%-18s %9s %8s %12s %10s\n' REPO ANSWERED ROTTING OLDEST_DAYS UNC_OPEN
-  printf '%s' "$ROWS" | while IFS=$'\t' read -r r a n o u; do
+  printf '%s' "$NOTMINE" | while IFS=$'\t' read -r r c a; do
     [ -n "$r" ] || continue
-    printf '%-18s %9s %8s %12s %10s\n' "$r" "$a" "$n" "$o" "$u"
+    jq -cn --arg repo "$r" --argjson count "$c" --arg arming "$a" \
+           '{kind:"not-mine",repo:$repo,count:$count,arming:$arming}'
   done
-  printf '%-18s %9s %8s %12s %10s\n' TOTAL "$TOTAL_ANSWERED" "$TOTAL_ROT" '' "$TOTAL_UNC_OPEN"
+  jq -cn --argjson repos "${#REPOS[@]}" --argjson answered "$TOTAL_ANSWERED" \
+         --argjson rotting "$TOTAL_ROT" --argjson not_mine "$TOTAL_NOT_MINE" \
+         --argjson uncounted "$TOTAL_UNCOUNTED" \
+         --argjson uncounted_open "$TOTAL_UNC_OPEN" --argjson errors "$ERRORS" \
+         '{kind:"summary",repos:$repos,answered:$answered,rotting:$rotting,not_mine:$not_mine,uncounted:$uncounted,uncounted_open:$uncounted_open,errors:$errors}'
+else
+  # ROTTING STAYS FIELD 3 of the TOTAL row: bin/ausculte.sh reads it positionally
+  # with `awk '$1 == "TOTAL" { print $3 }'`. NOT_MINE is appended, never inserted.
+  printf '%-18s %9s %8s %9s %12s %10s\n' REPO ANSWERED ROTTING NOT_MINE OLDEST_DAYS UNC_OPEN
+  printf '%s' "$ROWS" | while IFS=$'\t' read -r r a n m o u; do
+    [ -n "$r" ] || continue
+    printf '%-18s %9s %8s %9s %12s %10s\n' "$r" "$a" "$n" "$m" "$o" "$u"
+  done
+  printf '%-18s %9s %8s %9s %12s %10s\n' TOTAL "$TOTAL_ANSWERED" "$TOTAL_ROT" "$TOTAL_NOT_MINE" '' "$TOTAL_UNC_OPEN"
   if [ "$TOTAL_UNC_OPEN" -gt 0 ]; then
     echo
     # UNCOUNTED FIRST, ROTTING LAST: ausculte reads `tail -1` as the DOWN reason.
@@ -184,6 +218,16 @@ else
       printf '  %-16s #%-5s comment %s  %s\n' "${r#*/}" "$n" "$a" "$t"
     done
   fi
+  if [ "$TOTAL_NOT_MINE" -gt 0 ]; then
+    echo
+    echo "NOT-MINE -- $TOTAL_NOT_MINE answered-and-open in repos nothing dispatches to."
+    echo 'Not rot: no account is armed to act, so no run could ever close them.'
+    printf '%s' "$NOTMINE" | sort -t$'\t' -k2,2rn | while IFS=$'\t' read -r r c a; do
+      [ -n "$r" ] || continue
+      printf '  %-16s %3s  (%s)\n' "$r" "$c" "$a"
+    done
+  fi
+  # ROTTING LAST: ausculte reads the first row after this header as the oldest.
   if [ "$TOTAL_ROT" -gt 0 ]; then
     echo
     echo 'ROTTING -- answered, still open:'

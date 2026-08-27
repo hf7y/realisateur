@@ -10,9 +10,18 @@ ROSTER_SET_LIB=1
 
 ROSTER_OWNER="${ROSTER_OWNER:-hf7y}"
 
+# SWEPT, NOT ARMED. This array says which repos to READ; whether anything
+# dispatches to one is a different question with a different authority, read at
+# run time by lib/arming.sh from hf7y/scheduler's schedule/ROSTER. Do not infer
+# liveness from membership here -- dcp-gate-site sat in this list, parked, for
+# as long as its 12 answered-and-open rows read as rot nobody could clear.
+# NOT `apms`, though it is a `live` ROSTER row: hf7y/apms does not exist, and a
+# 404 here makes the whole sweep exit BLIND. A live row dispatching at a repo
+# nobody can read is hf7y/scheduler's finding, not a name to add to this list.
 ROSTER_PROJECTS=(
-  baudin bibliothecaire chezz crt ecosim gardien groc-mangr nine-speakers
-  realisateur scheduler secretaire senechal sequestria vim-arcade wtul
+  abletim baudin bibliothecaire chezz crt ecosim gardien groc-mangr
+  nine-speakers realisateur scheduler secretaire senechal sequestria
+  vim-arcade wtul
 )
 
 # ECOSYSTEM: carries decisions, never dispatches. WIRED, NOT ARMED -- swept by
@@ -42,7 +51,7 @@ ROSTER_PROJECTS=(
 ROSTER_ECOSYSTEM=(
   verbs front-door basheur
   dcp-gate-site musc-2300 scriba-senatus french-textbook
-  abletim etalon vitae space-canon
+  etalon vitae space-canon
 )
 
 ROSTER=("${ROSTER_PROJECTS[@]}" "${ROSTER_ECOSYSTEM[@]}")
