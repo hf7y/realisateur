@@ -2,7 +2,7 @@
 # verbs-refresh.sh -- the clock mandark does not have: tell me my verbs are
 # stale, and pull the new ones when I say so.
 #
-# KIND: LOCAL
+# KIND: personal
 #
 # TRAPS (the rest of this header is in the vault):
 # WHAT IT ADDS over `install-verb-build.sh --check`:

@@ -9,10 +9,11 @@
 # THE CRITERION, semantic and not linguistic, decided 2026-08-05:
 #     a VERB is a thing you tell the machine to do
 #     a PRODUCT is a thing with a name of its own
+#     a PERSONAL tool is a front door only Zach walks through (#552, 2026-08-23)
 # French-ness is a convention the workchain follows, not the property that
 # decides which channel an artifact ships on -- so this reads a DECLARATION
-# (`# KIND: verb` / `# KIND: product` in the command's own file, within the
-# first 90 lines) and not a wordlist. A list in this repo would rot; the
+# (`# KIND: verb` / `product` / `personal` in the command's own file, within
+# the first 90 lines) and not a wordlist. A list in this repo would rot; the
 # project's own file cannot go stale about itself.
 #
 # TRAP: it reads no opt-out file, and bin/lib/not-a-verb.tsv in particular.
@@ -28,7 +29,7 @@
 set -uo pipefail
 
 CLI_NAME='verb-kind-lint.sh'
-CLI_SUMMARY='every command in a verb build declares its channel, and no product rides the workchain'
+CLI_SUMMARY='every command in a verb build declares its channel, and only verbs ride it'
 CLI_USAGE='  verb-kind-lint.sh --build <dir>        lint the build tree at <dir> (REQUIRED)
   verb-kind-lint.sh --build <dir> --accept
                                          shrink the grandfather ratchet to what is still needed
@@ -102,7 +103,7 @@ forgiven() { case "$FORGIVEN" in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 # BLIND lines, then findings. A guard that streams its output prints them in
 # whatever order the manifest happens to be sorted in, and the admission ends
 # up under the noise.
-declare -a BLIND_LINES=() PRODUCTS=() UNDECLARED=() GRANDFATHERED=() DECLARED_VERBS=()
+declare -a BLIND_LINES=() PRODUCTS=() UNDECLARED=() GRANDFATHERED=() DECLARED_VERBS=() PERSONAL=()
 
 while IFS=$'\t' read -r project verb sha url; do
   [ -n "${verb:-}" ] || continue
@@ -124,12 +125,25 @@ while IFS=$'\t' read -r project verb sha url; do
   case "$kind" in
     verb)    DECLARED_VERBS+=("$project/$verb") ;;
     product) PRODUCTS+=("$project/$verb") ;;
+    # THE THIRD KIND (#552, Zach 2026-08-23: "both should be personal tools.
+    # neither should be distributed to other users as verbs. if this doesn't
+    # have a formal type yet, we should invent it").
+    #
+    # The 2026-08-11 test -- "would another agent or Zach ever call one of
+    # those?" -- decides membership. This adds a second reading of it: a front
+    # door FOR WHOM. `canon` and `vim-arcade` are doors only Zach walks
+    # through, and there was no way to say so, so the only two states were
+    # "distributed to all 13 accounts" and "undeclared litter".
+    #
+    # It needs NO man page: the man page IS the verb contract, and this is not
+    # a verb. Section C below is what keeps it off the channel.
+    personal) PERSONAL+=("$project/$verb") ;;
     '')      if forgiven "$project/$verb"; then GRANDFATHERED+=("$project/$verb")
-             else UNDECLARED+=("$project/$verb|no '# KIND: verb' or '# KIND: product' in its first $HEAD_LINES lines"); fi ;;
+             else UNDECLARED+=("$project/$verb|no '# KIND: verb', '# KIND: product' or '# KIND: personal' in its first $HEAD_LINES lines"); fi ;;
     *)       # A marker that is not a kind is worse than none: it looks
              # declared to a reader. Never forgiven by the ratchet, which
              # forgives silence only.
-             UNDECLARED+=("$project/$verb|'# KIND: $kind' is not a channel. Say 'verb' or 'product'.") ;;
+             UNDECLARED+=("$project/$verb|'# KIND: $kind' is not a channel. Say 'verb', 'product' or 'personal'.") ;;
   esac
 done < <(grep -v '^#' "$MANIFEST")
 
@@ -149,7 +163,7 @@ for d in ${DECLARED_VERBS+"${DECLARED_VERBS[@]}"}; do say "  ok    $d: verb"; do
 # instructions. All of them live in 12 OTHER projects' repositories and cannot
 if [ "${#GRANDFATHERED[@]}" -gt 0 ]; then
   loud "  OWED  ${#GRANDFATHERED[@]} undeclared, held by the ratchet: ${GRANDFATHERED[*]}"
-  loud "        each needs '# KIND: verb' or '# KIND: product' in its own project's file"
+  loud "        each needs '# KIND: verb', 'product' or 'personal' in its own project's file"
 fi
 for u in ${UNDECLARED+"${UNDECLARED[@]}"}; do
   loud "  UNDECLARED ${u%%|*}: ${u#*|}"
@@ -166,6 +180,21 @@ for p in ${PRODUCTS+"${PRODUCTS[@]}"}; do
   violations=$((violations + 1))
 done
 [ "${#PRODUCTS[@]}" -eq 0 ] && say "  ok    no product in this build's manifest"
+
+say ""
+say "== C. NO PERSONAL TOOL RIDES THE VERB BUILD =="
+# NAMED, NOT SILENTLY DROPPED (#552's own wording). A command that leaves the
+# manifest without a line saying so is indistinguishable from one that was
+# never in it, and `install-verb-build.sh --link`'s COUNT MISMATCH is then the
+# only sensor -- which reads as a short build, not a deliberate removal.
+for x in ${PERSONAL+"${PERSONAL[@]}"}; do
+  loud "  PERSONAL ${x}: declares '# KIND: personal' but is in the verb manifest."
+  loud "           A personal tool reaches PATH as a symlink into its own checkout"
+  loud "           and is never carried to the 13 self-dev accounts. Take it off"
+  loud "           the channel; that symlink is the intended permanent state."
+  violations=$((violations + 1))
+done
+[ "${#PERSONAL[@]}" -eq 0 ] && say "  ok    no personal tool in this build's manifest"
 
 # --- the ratchet's own hygiene ----------------------------------------------
 # An entry whose command has declared itself, or has left the build, is stale.

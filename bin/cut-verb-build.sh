@@ -433,6 +433,45 @@ if [ -n "$ASSEMBLE" ]; then
   done < <(grep -v '^#' "$manifest")
   [ "$bad" -eq 0 ] || die "$bad verb(s) did not assemble runnably. Refusing."
 
+  # --- 6a0. a PERSONAL tool leaves the manifest, and is NAMED leaving ------
+  # #552, Zach 2026-08-23: "both should be personal tools. neither should be
+  # distributed to other users as verbs."
+  #
+  # DROPPED HERE, NOT REFUSED BY THE LINT BELOW. The lint's section C is a
+  # backstop for a command that reached the build anyway; if it were the only
+  # mechanism, the day a project reclassified its tool would be the day every
+  # cut failed -- so the correct act would break the channel. This is the
+  # ordering #552 asks for: land the type, reclassify, and let the next cut
+  # PROVE the command left the manifest.
+  #
+  # This is the first point in the pipeline where the files are local, so it is
+  # the first point the declaration can be read at all: the derivation upstream
+  # sees a git tree listing, not file contents.
+  personal_out=0
+  kept="$tmp/manifest.kept"; : > "$kept"
+  while IFS= read -r mline; do
+    case "$mline" in '#'*|'') printf '%s\n' "$mline" >> "$kept"; continue ;; esac
+    mproject="${mline%%$'\t'*}"; mrest="${mline#*$'\t'}"; mverb="${mrest%%$'\t'*}"
+    mkind="$(sed -n "1,${KIND_HEAD_LINES:-90}p" "$ASSEMBLE/$mproject/bin/$mverb" 2>/dev/null \
+               | sed -n 's/^#[[:space:]]*KIND:[[:space:]]*//p' | head -1)"
+    case "${mkind%%[[:space:]]*}" in
+      personal)
+        say "  PERSONAL $mproject/$mverb: declares '# KIND: personal' -- NOT carried to any account."
+        say "           It reaches PATH as a symlink into its own checkout, and that is the"
+        say "           intended permanent state. Omitted from this build."
+        rm -f "$ASSEMBLE/$mproject/bin/$mverb"
+        personal_out=$((personal_out + 1)) ;;
+      *) printf '%s\n' "$mline" >> "$kept" ;;
+    esac
+  done < "$manifest"
+  if [ "$personal_out" -gt 0 ]; then
+    cp "$kept" "$manifest"
+    cp "$manifest" "$ASSEMBLE/manifest.tsv"
+    verb_count="$(grep -cv '^#' "$manifest" || true)"
+    [ "$verb_count" -gt 0 ] || die 'every command in this build declared itself personal. That is a misread, not an ecosystem with no verbs -- refusing.'
+    say "  $personal_out personal tool(s) omitted; $verb_count verb(s) remain"
+  fi
+
   # --- 6a. every command declares which CHANNEL it belongs to -------------
   # bin/verb-kind-lint.sh, run against the tree that was just assembled --
   # which is the only place in this pipeline where the files are on local
