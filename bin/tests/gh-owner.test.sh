@@ -44,13 +44,10 @@ eq "C6 a new owner reaches the release channel" \
    "https://github.com/neworg/verbs.git"
 
 section "D. the lib stays POSIX-sourceable"
-# stamp-verb-build.sh generates a /bin/sh commit-msg hook that sources
-# propagation-set.sh and FAILS OPEN, so a bash-only line there ends the
-# Verb-Build trailer estate-wide with nothing to report it.
 SH="$(command -v dash || command -v busybox || echo sh)"
 case "$SH" in */busybox) SH="busybox sh" ;; esac
 OUT="$($SH -c ". '$LIB'; . '$HERE/bin/lib/propagation-set.sh'; printf '%s' \"\$PROP_RELEASE_REPO\"" 2>&1)"
-eq "D1 propagation-set.sh sources under $SH" "$OUT" "hf7y/verbs"
+eq "D1 propagation-set.sh sources under $SH -- stamp-verb-build.sh's hook is /bin/sh and FAILS OPEN, so a bash-only line here ends the Verb-Build trailer estate-wide" "$OUT" "hf7y/verbs"
 HOOKSRC="$(cat "$HERE/bin/stamp-verb-build.sh")"
 has "D2 the generated hook pre-sources gh-owner.sh" "$HOOKSRC" '. "$GH_OWNER_SH" || exit 0'
 
