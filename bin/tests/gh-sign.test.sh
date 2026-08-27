@@ -388,12 +388,8 @@ case "$(cat "$TMP/gh.log")" in
 esac
 
 # --- the refusal teaches, at BOTH ends (#627) --------------------------------
-# The findings printed FIRST and the example LAST, so a caller piping through
-# `tail` -- which is what the musc-2300 agent did on 2026-08-25, and what I did
-# on 2026-08-27 -- saw the example's trailing ledger lines and never the
-# finding. It read as live state from another repo, so a grammar refusal looked
-# like an interception. Truncation from either end must now land on something
-# true: the way out at the head, what is wrong at the tail.
+# Truncation from either end must land on something true: the way out at the
+# head, what is wrong at the tail.
 : > "$TMP/gh.log"
 printf 'DECISION: @zach -- no blocks at all\n' > "$TMP/bad.txt"
 out="$(run issue create --title t --body "$(cat "$TMP/bad.txt")" -R o/r 2>&1)"; rc=$?
@@ -419,8 +415,6 @@ case "$tail3" in
   *) ok "...and no issue reference, which is what read as another repo's state" ;;
 esac
 
-# The example is FENCED and uses placeholders, so a truncated fence still
-# cannot be mistaken for a reading of anything.
 case "$out" in
   *"an illustration, NOT state of any repo"*) ok "the example says outright that it is one" ;;
   *) bad "the example is labelled" "no fence header in the refusal" ;;

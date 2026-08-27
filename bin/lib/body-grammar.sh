@@ -65,12 +65,8 @@ grammar_default_after() {
   return 1
 }
 
-# THE EXAMPLE USES PLACEHOLDERS, NOT REAL ISSUE NUMBERS (#627). It carried
-# `hf7y/chezz#12` and `hf7y/realisateur#330`, and a caller piping the refusal
-# through `tail` saw those two lines and nothing else -- so an example read as
-# live ledger state from another repo, and the agent that hit it went looking
-# for a glitch instead of a grammar. The caller fences this; the placeholders
-# mean a truncated fence still cannot be mistaken for a reading.
+# PLACEHOLDERS, NOT REAL ISSUE NUMBERS (#627): the caller fences this, and a
+# truncated fence still cannot be mistaken for another repo's ledger.
 grammar_template() {
   cat <<'EOF'
 DECISION: @hf7y -- may a verb build claim /usr/local/bin/gh on monkey?
