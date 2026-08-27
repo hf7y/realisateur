@@ -14,8 +14,7 @@ cp "$HERE/../lib/cli-guard.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/host-check.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/zaxon.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/propagation-set.sh" "$TMP/bin/lib/"
-# propagation-set.sh reads the estate owner from lib/gh-owner.sh (#673), so
-# the fixture carries it too -- a lib's dependencies travel with the lib.
+# a lib's dependencies travel with the lib (#673)
 cp "$HERE/../lib/gh-owner.sh" "$TMP/bin/lib/"
 
 stub() { printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s"\nexit %s\n' "${3:-}" "$2" > "$TMP/bin/$1"; chmod +x "$TMP/bin/$1"; }

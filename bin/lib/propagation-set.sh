@@ -30,14 +30,10 @@
 #
 # TRAP: PAYLOAD without a man page ships nothing, silently (#85).
 
-# THIS FILE IS SOURCED BY A /bin/sh HOOK, so nothing here may be bash-only.
-# bin/stamp-verb-build.sh generates a `#!/bin/sh` commit-msg hook that sources
-# this file; ${BASH_SOURCE[0]} is unset under dash, and because that hook FAILS
-# OPEN a broken source here would silently stop every commit on every self-dev
-# account from carrying its Verb-Build trailer, with nothing to report it.
-# So: locate the sibling only when bash can, and let the hook pre-source it by
-# absolute path (which it does) in every other case.
-# shellcheck source=bin/lib/gh-owner.sh
+# POSIX-SOURCEABLE: stamp-verb-build.sh's `#!/bin/sh` hook sources this file,
+# ${BASH_SOURCE[0]} is unset under dash, and that hook FAILS OPEN -- so a broken
+# source here silently ends the Verb-Build trailer estate-wide. Locate the
+# sibling only when bash can; the hook pre-sources it by absolute path.
 if [ -n "${BASH_SOURCE:-}" ]; then
   . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/gh-owner.sh"
 fi

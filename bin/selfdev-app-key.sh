@@ -50,7 +50,6 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cli_guard "$@"
 . "$HERE/lib/selfdev-app-key.sh"
 
-# shellcheck source=bin/lib/gh-owner.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
 MODE=--check; FROM=""; APP_ID=""; OWNER="${SELFDEV_GH_OWNER:-$GH_ESTATE_OWNER}"
 UMIN="${CRED_UID_MIN:-3000}"; UMAX="${CRED_UID_MAX:-3099}"

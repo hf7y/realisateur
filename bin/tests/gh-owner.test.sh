@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
-# gh-owner.test.sh -- the estate's GitHub owner has ONE home, and no script
-# re-spells it. hf7y/realisateur#673.
-#
-# THE BUG THIS HOLDS THE LINE ON: `hf7y` was a fallback default in eighteen
-# places under ten variable names. Setting one moved five call sites. The
-# others kept resolving to the old account -- and because GitHub redirects a
-# transferred repo indefinitely, they kept WORKING, exit 0, with the estate
-# split across two owners and nothing to see. A break would have been kinder.
+# gh-owner.test.sh -- the estate's GitHub owner has ONE home and no script
+# re-spells it (#673). The bug held down here: 18 defaults under 10 names, and
+# because GitHub redirects a transferred repo forever, the stragglers keep
+# WORKING against the old owner. See bin/lib/gh-owner.sh.
 
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
@@ -21,15 +17,10 @@ eq "A4 sourcing twice is a no-op" \
    "$(bash -c ". '$LIB'; . '$LIB'; printf '%s' \"\$GH_ESTATE_OWNER\"")" "hf7y"
 
 section "B. no script re-spells the owner"
-# THE DEFECT IS AN OWNER IN A POSITION THAT ADDRESSES GITHUB -- a variable
-# assignment default, or a github.com URL. It is NOT prose: issue citations
-# (hf7y/scheduler#259), usage strings and body templates all name the owner
-# harmlessly, and a citation redirects after a transfer like any other link.
-# Nor is hf7y.com an owner -- that is a DOMAIN and does not move with a repo.
-#
-# hf7y.github.io keeps its literal repo NAME deliberately: a User Pages repo is
-# named after its account, so transferring it changes the published URL. That
-# is a decision, not a substitution -- hf7y/realisateur#672 carries it.
+# ADDRESSING positions only: an assignment default or a github.com URL. Prose
+# is exempt -- citations, usage strings and body templates redirect like any
+# link. hf7y.com is a DOMAIN. hf7y.github.io keeps its repo NAME: a User Pages
+# repo is named for its account, so moving it changes the URL -- see #672.
 ADDRESSES='(:-|:=|=)"?hf7y([/"]|$)|github\.com/hf7y'
 offenders=""
 while IFS= read -r f; do

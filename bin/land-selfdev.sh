@@ -26,7 +26,6 @@ case "$MODE" in --check|--land) ;; *) echo "usage: $0 [--check|--land]" >&2; exi
 # One name for "where projects live", shared with install-verbs.sh, verb-set.sh
 # and installe -- four tools that must not be able to disagree about this.
 PROJECTS="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}"
-# shellcheck source=bin/lib/gh-owner.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
 GH_OWNER="${SELFDEV_GH_OWNER:-$GH_ESTATE_OWNER}"
 

@@ -8,7 +8,6 @@
 [ -n "${ROSTER_SET_LIB:-}" ] && return 0
 ROSTER_SET_LIB=1
 
-# shellcheck source=bin/lib/gh-owner.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/gh-owner.sh"
 ROSTER_OWNER="${ROSTER_OWNER:-$GH_ESTATE_OWNER}"
 

@@ -22,7 +22,6 @@ SCHED_ROOT="${SCHED_ROOT:-$PROJECTS_ROOT/scheduler}"
 die() { printf 'notify-senechal: FAIL: %s\n' "$*" >&2; exit 1; }
 
 # THIS DOOR NO LONGER ACCEPTS PROSE (hf7y/senechal#323, #324).
-# shellcheck source=bin/lib/gh-owner.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
 DOORS_REPO="${NOTIFY_DOORS_REPO:-$GH_ESTATE_OWNER/senechal}"
 DOORS_PATH="${NOTIFY_DOORS_PATH:-registry/front-doors.json}"

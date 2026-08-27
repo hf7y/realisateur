@@ -48,7 +48,6 @@ CLI_EXITS='  0  published, or rendered under --dry-run
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-# shellcheck source=bin/lib/gh-owner.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
 PUBLISH_REPO="${PUBLISH_REPO:-$GH_ESTATE_OWNER/hf7y.github.io}"
 PUBLISH_DIR="${PUBLISH_DIR:-verbs}"

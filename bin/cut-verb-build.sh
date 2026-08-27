@@ -27,7 +27,6 @@ CLI_EXITS='  0  a complete manifest was derived
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-# shellcheck source=bin/lib/gh-owner.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
 OWNER="${VERB_BUILD_OWNER:-$GH_ESTATE_OWNER}"
 VERB_META_REPO="${VERB_META_REPO:-verbs}"   # holds the published manifest the guard compares against
