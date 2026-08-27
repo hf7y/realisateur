@@ -187,10 +187,9 @@ for repo in $repos; do
     ' | sort)"
   verbs="$(printf '%s\n' "$decl" | awk -F'\t' '$1 == "VERB" { print $2 }')"
 
-  # Recorded BEFORE the `continue` below. A project whose every executable is
-  # half-declared derives no verbs at all, and skipping it here for that reason
-  # is precisely how ecosim's whole bin/ went unmentioned for weeks.
-  # A here-string, not a pipe: half_bad has to survive the loop.
+  # Recorded BEFORE the `continue` below: a project whose every executable is
+  # half-declared derives no verbs, and skipping it there is how ecosim's whole
+  # bin/ went unmentioned. A here-string, not a pipe: half_bad must survive.
   while IFS=$'\t' read -r tag name why; do
     [ "$tag" = HALF ] || continue
     if reason="$(exempt_reason "$repo" "$name")"; then
@@ -214,10 +213,8 @@ done
 [ "$blind" -eq 0 ] || die "$blind repository tree(s) did not read. Refusing to cut a build that is short by an unknown amount."
 
 # --- 2a. half-declarations ----------------------------------------------
-# Same posture as the two refusals on either side of this line: a build that
-# is short by an unknown amount is refused, and so is one that is short by a
-# KNOWN amount it never mentioned. The names are already on stderr, one line
-# each, from the loop above.
+# Same posture as the refusals either side: a build short by an unknown amount
+# is refused, and so is one short by a KNOWN amount it never mentioned.
 exempt_count="$(grep -c '^NOT-A-VERB' "$halves" || true)"
 [ "$exempt_count" -eq 0 ] || \
   say "  $exempt_count executable(s) recorded as not-a-verb in $NOT_A_VERB -- each is named in the manifest"
@@ -432,6 +429,35 @@ if [ -n "$ASSEMBLE" ]; then
     esac
   done < <(grep -v '^#' "$manifest")
   [ "$bad" -eq 0 ] || die "$bad verb(s) did not assemble runnably. Refusing."
+
+  # --- 6a0. a PERSONAL tool leaves the manifest, and is NAMED leaving ------
+  # DROPPED HERE, NOT REFUSED BY THE LINT BELOW (#552): were the lint the only
+  # mechanism, reclassifying a tool would break every cut. Also the first point
+  # the declaration is readable -- the derivation sees a tree listing.
+  personal_out=0
+  kept="$tmp/manifest.kept"; : > "$kept"
+  while IFS= read -r mline; do
+    case "$mline" in '#'*|'') printf '%s\n' "$mline" >> "$kept"; continue ;; esac
+    mproject="${mline%%$'\t'*}"; mrest="${mline#*$'\t'}"; mverb="${mrest%%$'\t'*}"
+    mkind="$(sed -n "1,${KIND_HEAD_LINES:-90}p" "$ASSEMBLE/$mproject/bin/$mverb" 2>/dev/null \
+               | sed -n 's/^#[[:space:]]*KIND:[[:space:]]*//p' | head -1)"
+    case "${mkind%%[[:space:]]*}" in
+      personal)
+        say "  PERSONAL $mproject/$mverb: declares '# KIND: personal' -- NOT carried to any"
+        say "           account. It reaches PATH as a symlink into its own checkout, and that"
+        say "           is the intended permanent state. Omitted from this build."
+        rm -f "$ASSEMBLE/$mproject/bin/$mverb"
+        personal_out=$((personal_out + 1)) ;;
+      *) printf '%s\n' "$mline" >> "$kept" ;;
+    esac
+  done < "$manifest"
+  if [ "$personal_out" -gt 0 ]; then
+    cp "$kept" "$manifest"
+    cp "$manifest" "$ASSEMBLE/manifest.tsv"
+    verb_count="$(grep -cv '^#' "$manifest" || true)"
+    [ "$verb_count" -gt 0 ] || die 'every command in this build declared itself personal. That is a misread, not an ecosystem with no verbs -- refusing.'
+    say "  $personal_out personal tool(s) omitted; $verb_count verb(s) remain"
+  fi
 
   # --- 6a. every command declares which CHANNEL it belongs to -------------
   # bin/verb-kind-lint.sh, run against the tree that was just assembled --

@@ -119,6 +119,54 @@ n="$(printf '%s\n' "$OUT" | grep -cE '^  (FLAG|PRODUCT|UNDECLARED)')"
 if [ "$n" -eq 1 ]; then ok "exactly one violation, not a project-wide sweep"
 else bad "expected exactly 1 violation line, got $n"; printf '%s\n' "$OUT" | sed 's/^/       | /'; fi
 
+# --- 2b. the third kind (#552) ----------------------------------------------
+echo
+echo "== 2b. A PERSONAL TOOL RIDING THE VERB BUILD =="
+b="$(new_build personal)"
+add_cmd "$b" scheduler   fx-arme    '# KIND: verb'
+add_cmd "$b" vim-arcade  vim-arcade '# KIND: personal'
+expect "a command declaring KIND: personal is refused a place in the verb build" 1 "$b"
+run_lint "$b"
+if printf '%s\n' "$OUT" | grep -q '^  PERSONAL vim-arcade/vim-arcade'; then
+  ok "it is NAMED and not silently dropped -- a quiet removal reads as a short build"
+else
+  bad "the refusal does not name vim-arcade/vim-arcade as PERSONAL"; printf '%s\n' "$OUT" | sed 's/^/       | /'
+fi
+if printf '%s\n' "$OUT" | grep -E '^  (FLAG|PRODUCT|PERSONAL|UNDECLARED|OWED)' | grep -q 'fx-arme'; then
+  bad "it flagged fx-arme, which is a legitimate verb"
+else
+  ok "the sibling verb is NOT flagged -- one violation, not a sweep"
+fi
+
+b="$(new_build personal-no-man)"
+add_cmd "$b" scheduler  fx-arme '# KIND: verb'
+add_cmd "$b" space-canon canon   '# KIND: personal'
+rm -f "$b/space-canon/man/canon.1" 2>/dev/null || true
+run_lint "$b"
+if printf '%s\n' "$OUT" | grep -qi 'man page.*canon\|canon.*man page'; then
+  bad "a personal tool was asked for a man page"
+else
+  ok "a personal tool owes no man/<name>.1"
+fi
+
+# NOT RATCHETABLE: the ratchet forgives SILENCE, not a wrong-channel claim.
+b="$(new_build personal-not-ratchetable)"
+add_cmd "$b" scheduler  fx-arme    '# KIND: verb'
+add_cmd "$b" vim-arcade vim-arcade '# KIND: personal'
+RATCHET_FILE="$WORK/r3"; write_ratchet "$RATCHET_FILE" 'undeclared vim-arcade/vim-arcade'
+expect "the ratchet cannot forgive a declared personal tool in the verb build" 1 "$b"
+RATCHET_FILE=""
+
+b="$(new_build bogus-kind)"
+add_cmd "$b" scheduler fx-arme '# KIND: verb'
+add_cmd "$b" scheduler fx-dose '# KIND: LOCAL'
+run_lint "$b"
+if printf '%s\n' "$OUT" | grep -q "Say 'verb', 'product' or 'personal'"; then
+  ok "a marker that is not a kind names all three, so the fix is in the message"
+else
+  bad "the not-a-kind message does not offer the third kind"; printf '%s\n' "$OUT" | sed 's/^/       | /'
+fi
+
 # --- 3. undeclared is a failure, never a default ----------------------------
 echo
 echo "== 3. A COMMAND THAT DECLARES NOTHING FAILS; IT DOES NOT DEFAULT =="

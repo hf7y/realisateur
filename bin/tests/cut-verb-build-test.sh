@@ -441,5 +441,33 @@ case "$(cat "$TMP/e14c")" in
 esac
 : > "$TMP/verb-kind.ratchet"
 
+# 14d. A PERSONAL tool leaves the manifest, and the cut still succeeds (#552).
+# ORDERING IS THE POINT: the cut drops it and says so; the lint is backstop.
+mkrepo kappa kv
+printf '#!/usr/bin/env bash\n# KIND: personal\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "kp\\n"\n' \
+    > "$FIX/kappa.git/bin/kp"
+chmod +x "$FIX/kappa.git/bin/kp"
+printf '.TH KP 1\n' > "$FIX/kappa.git/man/kp.1"
+g -C "$FIX/kappa.git" add -A
+g -C "$FIX/kappa.git" commit -m 'kp is a personal tool, fully declared as a verb would be'
+printf 'kappa\n' > "$TMP/repolist"
+cut --assemble "$TMP/asm14d" >/dev/null 2>"$TMP/e14d"
+check "a personal tool does NOT refuse the cut" "$?" "0"
+case "$(cat "$TMP/e14d")" in
+    *PERSONAL*kappa/kp*) ok "...and it is NAMED leaving, not silently dropped" ;;
+    *) bad "the cut names the personal tool it omitted" "got: $(cat "$TMP/e14d")" ;;
+esac
+if grep -q "kappa\skp" "$TMP/asm14d/manifest.tsv" 2>/dev/null; then
+    bad "the personal tool left the manifest" "kappa/kp is still in it"
+else
+    ok "...and it is gone from the manifest a consumer installs from"
+fi
+[ -f "$TMP/asm14d/kappa/bin/kp" ] \
+    && bad "the personal tool left the assembled tree" "the file is still there" \
+    || ok "...and gone from the assembled tree, so --link cannot carry it"
+[ -f "$TMP/asm14d/kappa/bin/kv" ] \
+    && ok "the sibling VERB is untouched -- one command omitted, not a project" \
+    || bad "the sibling verb survived" "kappa/kv is missing too"
+
 echo
 summary
