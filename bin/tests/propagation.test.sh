@@ -164,6 +164,27 @@ fi
 
 # ===========================================================================
 echo
+echo "-- 1b. A HOST TOOL'S LIB REACHES THE HOST WHATEVER ITS EXTENSION -------"
+# ===========================================================================
+SHIPPED_LIBS="$(prop_support_libs "$REPO/bin")"
+missing=""
+for s in $PROP_BOOTSTRAP_SCRIPTS $(prop_host_tools); do
+  [ -f "$REPO/bin/$s" ] || continue
+  for l in $(grep -ohE 'lib/[a-z0-9-]+\.[a-z0-9]+' "$REPO/bin/$s" 2>/dev/null | sort -u); do
+    [ -f "$REPO/bin/$l" ] || continue
+    case $'\n'"$SHIPPED_LIBS"$'\n' in *$'\n'"$l"$'\n'*) ;; *) missing="$missing $s->$l" ;; esac
+  done
+done
+[ -z "$missing" ] && ok "every lib/ file a shipped script names, and that exists on disk, is in prop_support_libs" \
+                  || bad "named by a shipped script, present on disk, and NOT shipped:$missing"
+
+case $'\n'"$SHIPPED_LIBS"$'\n' in
+  *$'\n'lib/answered.jq$'\n'*) ok "lib/answered.jq ships -- the .sh|.tsv whitelist that stranded it is gone (rot read BLIND on monkey, 2026-08-27)" ;;
+  *) bad "lib/answered.jq is still not in the support set; decision-rot cannot read its own predicate" ;;
+esac
+
+# ===========================================================================
+echo
 echo "-- 2. main IS NOT A DEPLOY REF, AND THE LEAK MAY NOT GROW --------------"
 # ===========================================================================
 # The prize in separating dev from prod is that `main` gets to STAY FAST. If
