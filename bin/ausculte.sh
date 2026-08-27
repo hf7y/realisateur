@@ -271,14 +271,13 @@ if want rot; then
   if dr="$(part decision-rot.sh)"; then
     out="$(bash "$dr" --all 2>&1)"; rc=$?
       case $rc in
-      0) record rot OK 'no answered-and-abandoned issues' ;;
-      # A COUNT AND THE OLDEST ROW, NOT `tail -1`. The rotting block is sorted
-      # oldest-first, so `tail -1` named the NEWEST row -- realisateur#577 at
-      # 2d as the headline while groc-mangr#10, a question of Zach's answered
-      # and open for 12 days, sat unmentioned in the same output. Worse, one
-      # row read as the whole finding: 69 rotting decisions across twelve
-      # repos looked like one tracker, and closing the named row only promoted
-      # the next arbitrary one (#655, #657).
+      0) nm="$(printf '%s\n' "$out" | awk '$1 == "TOTAL" { print $4 }')"
+         if [ "${nm:-0}" -gt 0 ] 2>/dev/null; then
+           # Never silently: 30 real rows would otherwise vanish here.
+           record rot OK "no answered decision open where anything dispatches ($nm NOT-MINE -- nothing is armed to act)"
+         else record rot OK 'no answered-and-abandoned issues'; fi ;;
+      # A COUNT AND THE OLDEST ROW, NOT `tail -1`: the block is sorted
+      # oldest-first, so tail named the NEWEST and hid the rest (#661).
       1) n="$(printf '%s\n' "$out" | awk '$1 == "TOTAL" { print $3 }')"
          oldest="$(printf '%s\n' "$out" \
                     | awk '/^ROTTING/ { f = 1; next } f && NF { sub(/^ +/, ""); print; exit }')"
