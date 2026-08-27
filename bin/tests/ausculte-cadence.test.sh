@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
-# SUBJECT: bin/ausculte-cadence.sh. Hermetic -- ausculte is a stub and
-# --no-escalate is used throughout, so a test run can never reach a person.
+# SUBJECT: bin/ausculte-cadence.sh. Hermetic -- ausculte is a stub, and the
+# script has no channel to a person left to reach. G and H are what keep it
+# that way; they are the point of this file now, not an afterthought in it.
 #
 # Usage: bin/tests/ausculte-cadence.test.sh   (exit 0 = all pass)
 
@@ -18,39 +19,49 @@ stub_ausculte() { # <json> [exit]
   chmod +x "$T/bin/ausculte.sh"
 }
 run() { OUT="$(AUSCULTE_BIN="$T/bin/ausculte.sh" AUSCULTE_CADENCE_STATE="$T/state" \
-               bash "$SCRIPT" --no-escalate "$@" 2>&1)"; RC=$?; }
+               bash "$SCRIPT" "$@" 2>&1)"; RC=$?; }
 
 DOWN_ROW='[{"probe":"arming","status":"DOWN","detail":"two accounts stopped"}]'
 OK_ROW='[{"probe":"arming","status":"OK","detail":"all dispatching"}]'
 
-section "A. a first DOWN is recorded, not escalated"
+section "A. a DOWN row is reported and recorded"
 stub_ausculte "$DOWN_ROW"
 run
-rc "A1 exit 0 on the first strike" 0 "$RC"
-has "A2 it says the next one escalates" "$OUT" "escalates if it is DOWN again"
-[ -f "$T/state/arming.down" ] && ok "A3 the streak is on disk, so the next run knows" \
-  || bad "A3 the streak is on disk" "no state file"
+rc "A1 exit 5 -- a DOWN row is DOWN on the first reading, not the second" 5 "$RC"
+has "A2 it names the row and its detail" "$OUT" "arming"
+[ -f "$T/state/arming.down" ] && ok "A3 the state is on disk, so a later reader can date it" \
+  || bad "A3 the state is on disk" "no state file"
 
-section "B. the second consecutive DOWN escalates"
+section "B. the record is a SINCE, not a counter"
+# Rewriting the file each run would reset its mtime and destroy the only fact
+# it carries -- how long the row has been saying this. That mtime is what a
+# status page needs and what the escalation never produced usefully.
+touch -d '2001-01-01T00:00:00Z' "$T/state/arming.down"
 run
-rc "B1 exit 5" 5 "$RC"
-has "B2 it names the row and says twice running" "$OUT" "arming -- twice running"
+rc "B1 still DOWN, still exit 5" 5 "$RC"
+_m="$(date -u -r "$T/state/arming.down" +%Y 2>/dev/null)"
+[ "$_m" = 2001 ] && ok "B2 a persisting state does not rewrite its own timestamp" \
+  || bad "B2 a persisting state keeps its timestamp" "mtime year is now [$_m]"
+has "B3 and the row is reported as having held since then" "$OUT" "since 2001-01-01"
 
-section "C. a recovery clears the streak"
+section "C. a recovery clears the record"
 stub_ausculte "$OK_ROW"
 run
 rc "C1 exit 0" 0 "$RC"
-[ -f "$T/state/arming.down" ] && bad "C2 the streak is cleared" "state file survived" \
-  || ok "C2 the streak is cleared"
+[ -f "$T/state/arming.down" ] && bad "C2 the record is cleared" "state file survived" \
+  || ok "C2 the record is cleared"
 stub_ausculte "$DOWN_ROW"
 run
-rc "C3 the next DOWN is a first strike again, not an escalation" 0 "$RC"
+has "C3 the next DOWN dates from now, not from the cleared record" "$OUT" "since now"
 
 section "D. BLIND from ausculte is BLIND here"
 stub_ausculte '[{"probe":"hosts","status":"BLIND","detail":"cannot reach dexter"}]'
 run
-rc "D1 a BLIND row is not escalated and not called OK" 0 "$RC"
-hasnt "D2 BLIND is never reported as twice running" "$OUT" "twice running"
+rc "D1 a BLIND row is not DOWN and not OK" 0 "$RC"
+[ -f "$T/state/hosts.blind" ] && ok "D2 BLIND keeps its own record, never the DOWN one" \
+  || bad "D2 BLIND keeps its own record" "no hosts.blind"
+[ -f "$T/state/hosts.down" ] && bad "D3 a BLIND row never writes the DOWN record" "hosts.down exists" \
+  || ok "D3 a BLIND row never writes the DOWN record"
 
 section "E. a non-array answer is BLIND, never 'no rows'"
 printf '#!/usr/bin/env bash\nprintf "not json\\n"\nexit 0\n' > "$T/bin/ausculte.sh"
@@ -66,12 +77,12 @@ printf '#!/usr/bin/env bash\nprintf "[{\\"probe\\":\\"rot\\",\\"status\\":\\"OK\
 chmod +x "$T/bin/ausculte.sh"
 OUT="$(AUSCULTE_BIN="$T/bin/ausculte.sh" AUSCULTE_CADENCE_STATE="$T/state" \
        SELFDEV_APP_MINT="$T/bin/mint.sh" GH_TOKEN='' GITHUB_TOKEN='' \
-       bash "$SCRIPT" --no-escalate 2>&1)"; RC=$?
+       bash "$SCRIPT" 2>&1)"; RC=$?
 has "E2a the minted token reaches the probes" "$OUT" "ghs_fixturetoken"
 
 OUT="$(AUSCULTE_BIN="$T/bin/ausculte.sh" AUSCULTE_CADENCE_STATE="$T/state" \
        SELFDEV_APP_MINT="$T/bin/mint.sh" GH_TOKEN=ghs_alreadyhere \
-       bash "$SCRIPT" --no-escalate 2>&1)"
+       bash "$SCRIPT" 2>&1)"
 has "E2b an existing credential is not replaced" "$OUT" "ghs_alreadyhere"
 
 section "F. --install-cadence writes nothing without --apply"
@@ -80,114 +91,71 @@ run --install-cadence
 has "F1 it prints the line it would install" "$OUT" "realisateur:ausculte:CADENCE"
 eq "F2 the crontab is untouched" "$(crontab -l 2>/dev/null | md5sum)" "$before"
 
-section "G. the body it escalates with passes the grammar gh-sign enforces"
-# THE HOLE THIS CLOSES. Every section above passes --no-escalate, so the body
-# this script writes was never built, let alone graded. On monkey `gh` IS
-# gh-sign, which REFUSES `issue create` when lib/body-grammar.sh finds
-# anything (exit 7) -- and this body carried no DELIVERS block, so it failed
-# UNSHIPPED. Measured 2026-08-22: four rows BLIND, streak files on disk since
-# 04:37, second strike reached every run, and zero issues ever filed. The
-# health monitor could not pass its own repo's body grammar, and said so only
-# to a cron mailbox monkey does not have.
+section "G. it files nothing at anybody"
+# 10 issues in 5 days over 5 distinct rows, and on 2026-08-26 Zach closed three
+# in one batch: "Closing as probe output, not a work item." The channel's own
+# reader ruled its output is not work, so filing into it again is how that
+# ruling went unread. Deleted 2026-08-27 on his call: "gh issue create DELETED".
+#
+# The stub below FAILS the test by succeeding: if any gh write survives, it is
+# captured here and the assertion fires. A grep of the source would pass on a
+# call assembled from variables; running the thing cannot be fooled that way.
 cat > "$T/bin/gh" <<'STUB'
 #!/usr/bin/env bash
-while [ $# -gt 0 ]; do
-  case "$1" in --body) printf '%s' "$2" > "$GH_BODY_OUT"; shift 2 ;; *) shift ;; esac
-done
+printf '%s\n' "$*" >> "$GH_LOG"
+case "$*" in *"issue list"*) echo 654 ;; esac
 exit 0
 STUB
 chmod +x "$T/bin/gh"
-rm -f "$T/state"/*.down "$T/state"/*.blind
-stub_ausculte "$DOWN_ROW"
-esc() { OUT="$(PATH="$T/bin:$PATH" GH_BODY_OUT="$T/body.txt" ZAXON='http://127.0.0.1:1/mcp' \
-               AUSCULTE_BIN="$T/bin/ausculte.sh" AUSCULTE_CADENCE_STATE="$T/state" \
-               bash "$SCRIPT" 2>&1)"; RC=$?; }
-esc   # first strike -- recorded
-esc   # second strike -- escalates, and writes the body
-rc "G1 the second strike escalates with escalation ENABLED" 5 "$RC"
-[ -s "$T/body.txt" ] && ok "G2 a body reached gh issue create" \
-  || bad "G2 a body reached gh issue create" "nothing was captured"
-# shellcheck source=bin/lib/body-grammar.sh
-. "$(dirname "$SCRIPT")/lib/body-grammar.sh"
-if findings="$(grammar_check "$(cat "$T/body.txt" 2>/dev/null)")"; then
-  ok "G3 that body passes lib/body-grammar.sh, so gh-sign will not refuse it"
-else
-  bad "G3 that body passes lib/body-grammar.sh" "$findings"
-fi
+ghrun() { OUT="$(PATH="$T/bin:$PATH" GH_LOG="$T/gh.log" ZAXON='http://127.0.0.1:1/mcp' \
+                 AUSCULTE_BIN="$T/bin/ausculte.sh" AUSCULTE_CADENCE_STATE="$T/state" \
+                 bash "$SCRIPT" 2>&1)"; RC=$?; }
 
-section "H. it does not reach Zach's phone, and that is deliberate"
-# Measured 2026-08-26 against the relay's own ticket store: this sender had
-# 47 questions, 47 stale, 0 EVER answered, 2026-08-21 to 2026-08-26 -- 44% of
-# every ticket the relay has carried. Zach: "it means nothing to me. I've
-# ignored it." The relay holds ONE question at a time (hf7y/crt#67), so each
-# held the only channel to him for its full TTL. This guard exists because the
-# comment saying "do not re-add" is prose, and prose is what failed here.
+: > "$T/gh.log"; rm -f "$T/state"/*.down "$T/state"/*.blind
+stub_ausculte "$DOWN_ROW"
+ghrun; ghrun            # twice: the old code escalated on exactly this second run
+rc "G1 a row DOWN twice running still exits 5" 5 "$RC"
+case "$(cat "$T/gh.log")" in
+  *"issue create"*) bad "G2 no issue is ever created" "it called gh issue create" ;;
+  *)                ok  "G2 no issue is ever created" ;;
+esac
+
+# AND NO CLOSE EITHER. The recovery close existed only to retract the filing;
+# with nothing filed it can only close an issue a HUMAN opened under that title.
+: > "$T/gh.log"
+stub_ausculte "$OK_ROW"
+ghrun
+rc "G3 a recovery exits 0" 0 "$RC"
+case "$(cat "$T/gh.log")" in
+  *"issue close"*) bad "G4 no issue is ever closed" "it called gh issue close" ;;
+  *)               ok  "G4 no issue is ever closed" ;;
+esac
+[ -f "$T/state/arming.down" ] && bad "G5 the record is still cleared on recovery" "state survived" \
+  || ok "G5 the record is still cleared on recovery"
+
+section "H. it reaches no human at all, by either route"
+# Measured 2026-08-26 against the relay's own ticket store: the phone leg had
+# 47 questions, 47 stale, 0 EVER answered, 44% of every ticket the relay has
+# carried. Zach: "it means nothing to me. I've ignored it." The relay holds ONE
+# question at a time, so each held the only channel to him for its full TTL.
+# These guards exist because the comment saying "do not re-add" is prose, and
+# prose is what failed here.
 CAD="$SCRIPT"
 live="$(grep -vE '^[[:space:]]*#' "$CAD")"
 case "$live" in
-  *zaxon_ask*) bad "H1 no live call to zaxon_ask" "it is back -- see the header; 47 sent, 0 answered" ;;
+  *zaxon_ask*) bad "H1 no live call to zaxon_ask" "it is back -- 47 sent, 0 answered" ;;
   *)           ok  "H1 no live call to zaxon_ask" ;;
 esac
 case "$live" in
   *"lib/zaxon.sh"*) bad "H2 it does not even source the relay lib" "sourcing it is how the call comes back" ;;
   *)                ok  "H2 it does not even source the relay lib" ;;
 esac
-# The escalation still HAPPENS -- only the phone leg is gone. If these three go
-# quiet, the cadence has stopped escalating at all, which is a different bug.
-has "H3 it still files the issue, which is the durable escalation" "$(cat "$CAD")" 'gh issue create -R "$ISSUE_REPO"'
-has "H4 it still dedupes that issue rather than filing per tick" "$(cat "$CAD")" 'already filed as'
-has "H5 it still exits 5 so the caller sees an escalation" "$(cat "$CAD")" 'exit 5'
-
-section "I. recovery closes the issue the escalation filed"
-# THE HOLE THIS CLOSES. Recovery cleared the streak FILE and stopped there, so
-# an issue reading "propagation has been DOWN for two consecutive runs" stayed
-# open after propagation came back. And the dedup in section H's H4 matches an
-# OPEN issue of that title, so the stale one SUPPRESSED the next real filing --
-# the channel escalates once and then goes quiet, which is worse than noisy.
-cat > "$T/bin/gh" <<'STUB'
-#!/usr/bin/env bash
-printf '%s\n' "$*" >> "$GH_LOG"
-case "$*" in
-  *"issue list"*) echo 654 ;;
+case "$live" in
+  *"issue create"*) bad "H3 the issue leg is gone from the source too" "gh issue create is back" ;;
+  *)                ok  "H3 the issue leg is gone from the source too" ;;
 esac
-exit 0
-STUB
-chmod +x "$T/bin/gh"
-recov() { OUT="$(PATH="$T/bin:$PATH" GH_LOG="$T/gh.log" ZAXON='http://127.0.0.1:1/mcp' \
-                 AUSCULTE_BIN="$T/bin/ausculte.sh" AUSCULTE_CADENCE_STATE="$T/state" \
-                 bash "$SCRIPT" 2>&1)"; RC=$?; }
-
-rm -f "$T/gh.log"; : > "$T/gh.log"
-rm -f "$T/state"/*.down "$T/state"/*.blind
-stub_ausculte "$DOWN_ROW"
-recov; recov                       # first strike, then escalate -- an issue now exists
-stub_ausculte "$OK_ROW"
-recov                              # the probe recovers
-rc "I1 a recovery exits 0" 0 "$RC"
-has "I2 it says which issue it closed" "$OUT" "recovered; closed"
-has "I3 it actually called gh issue close on the number gh issue list returned" \
-    "$(cat "$T/gh.log")" "issue close 654"
-[ -f "$T/state/arming.down" ] && bad "I4 the streak file is still cleared" "state file survived" \
-  || ok "I4 the streak file is still cleared"
-
-# A SECOND OK MUST NOT CLOSE ANYTHING. Without the streak-file guard this would
-# fire a gh call every four hours forever, and would close an issue a HUMAN
-# filed under that title after the outage was over.
-: > "$T/gh.log"
-recov
-case "$(cat "$T/gh.log")" in
-  *"issue close"*) bad "I5 an OK with no streak on disk closes nothing" "it called gh issue close anyway" ;;
-  *)               ok  "I5 an OK with no streak on disk closes nothing" ;;
-esac
-
-# BLIND has its own streak, so it must have its own retraction -- section D's
-# whole point is that the two never collapse into one.
-: > "$T/gh.log"
-stub_ausculte '[{"probe":"arming","status":"BLIND","detail":"no credential"}]'
-recov; recov
-stub_ausculte "$OK_ROW"
-recov
-has "I6 a recovered BLIND closes the BLIND issue, not the DOWN one" \
-    "$(cat "$T/gh.log")" 'has been BLIND'
+# EXIT 5 IS WHAT IS LEFT, and it must not go quiet: a cadence that reports
+# nothing and exits 0 is the no-op this file's own history is full of.
+has "H4 a DOWN row still exits 5, so a caller can still see it" "$live" 'exit 5'
 
 summary
