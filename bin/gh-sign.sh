@@ -367,10 +367,20 @@ case "${1:-} ${2:-}" in
   'issue create'|'pr create')
     if [ "$grammar_ok" -eq 1 ]; then
       if findings="$(grammar_check "$body")"; then :; else
-        printf 'gh-sign: REFUSED -- this %s body breaks the grammar in %s:\n' "$1 $2" "$GRAMMAR" >&2
+        # THE DOOR FIRST, THE FINDING LAST, THE EXAMPLE FENCED BETWEEN (#627).
+        # This printed the findings first and the template last, so a caller
+        # piping through `tail` -- which is what both agents that hit this did
+        # -- saw the example's trailing lines and never the finding. It read as
+        # ledger state from another repo, so the refusal looked like a glitch.
+        # Now `head` lands on the way out and `tail` lands on what is wrong.
+        printf 'gh-sign: REFUSED -- this %s body breaks the grammar in %s.\n' "$1 $2" "$GRAMMAR" >&2
+        printf 'gh-sign: `defere` composes a valid body; `gh-sign.sh --check-body <file>` re-runs this check.\n' >&2
+        printf 'gh-sign: nothing was created.\n\n' >&2
+        printf '  +-- EXAMPLE BODY -- an illustration, NOT state of any repo ---\n' >&2
+        grammar_template | while IFS= read -r _t; do printf '  | %s\n' "$_t" >&2; done
+        printf '  +------------------------------------------------------------\n\n' >&2
+        printf 'gh-sign: what is wrong with YOUR body:\n' >&2
         while IFS= read -r _f; do printf '  %s\n' "$_f" >&2; done <<<"$findings"
-        printf 'gh-sign: nothing was created. `gh-sign.sh --check-body <file>` re-runs this check.\n\n' >&2
-        grammar_template >&2
         # WON'T DO: the shim declined to create it.
         exit 7
       fi

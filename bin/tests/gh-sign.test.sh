@@ -387,5 +387,53 @@ case "$(cat "$TMP/gh.log")" in
   *) bad "--default-after reached gh" "got: $(cat "$TMP/gh.log")" ;;
 esac
 
+# --- the refusal teaches, at BOTH ends (#627) --------------------------------
+# The findings printed FIRST and the example LAST, so a caller piping through
+# `tail` -- which is what the musc-2300 agent did on 2026-08-25, and what I did
+# on 2026-08-27 -- saw the example's trailing ledger lines and never the
+# finding. It read as live state from another repo, so a grammar refusal looked
+# like an interception. Truncation from either end must now land on something
+# true: the way out at the head, what is wrong at the tail.
+: > "$TMP/gh.log"
+printf 'DECISION: @zach -- no blocks at all\n' > "$TMP/bad.txt"
+out="$(run issue create --title t --body "$(cat "$TMP/bad.txt")" -R o/r 2>&1)"; rc=$?
+check "a body breaking the grammar is REFUSED (7)" "$rc" "7"
+
+head3="$(printf '%s\n' "$out" | head -3)"
+case "$head3" in
+  *defere*) ok "the FIRST lines name the door -- \`defere\` composes a valid body" ;;
+  *) bad "the head names the door" "got: $head3" ;;
+esac
+case "$head3" in
+  *--check-body*) ok "...and how to check one by hand" ;;
+  *) bad "the head names --check-body" "got: $head3" ;;
+esac
+
+tail3="$(printf '%s\n' "$out" | tail -3)"
+case "$tail3" in
+  *UNLEDGERED*|*UNSHIPPED*) ok "the LAST lines are the finding, so \`tail\` sees what is wrong" ;;
+  *) bad "the tail is the finding" "got: $tail3" ;;
+esac
+case "$tail3" in
+  *'hf7y/'*'#'*) bad "the tail carries no issue reference" "an example ref is back at the tail: $tail3" ;;
+  *) ok "...and no issue reference, which is what read as another repo's state" ;;
+esac
+
+# The example is FENCED and uses placeholders, so a truncated fence still
+# cannot be mistaken for a reading of anything.
+case "$out" in
+  *"an illustration, NOT state of any repo"*) ok "the example says outright that it is one" ;;
+  *) bad "the example is labelled" "no fence header in the refusal" ;;
+esac
+_egrep="$(printf '%s\n' "$out" | grep -c 'hf7y/chezz#12\|hf7y/realisateur#330' || true)"
+[ "${_egrep:-0}" -eq 0 ] \
+  && ok "the example carries placeholders, not real issue numbers" \
+  || bad "the example uses placeholders" "real refs are back in it"
+
+case "$(cat "$TMP/gh.log")" in
+  '') ok "...and nothing reached gh -- a refusal creates nothing" ;;
+  *) bad "the refusal reached gh" "got: $(cat "$TMP/gh.log")" ;;
+esac
+
 echo
 summary
