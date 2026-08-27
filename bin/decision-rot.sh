@@ -75,7 +75,6 @@ command -v jq >/dev/null || { echo "decision-rot.sh: jq not on PATH" >&2; exit 6
 }
 DECISION_ROT_JQ="$(cat "$ANSWERED_JQ_FILE")"
 
-# ROT IS ONLY ROT WHERE SOMETHING CAN ACT ON IT (Zach, 2026-08-26).
 # shellcheck source=bin/lib/arming.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/arming.sh"
 if ! arming_load; then
@@ -219,7 +218,6 @@ else
       printf '  %-16s %3s  (%s)\n' "$r" "$c" "$a"
     done
   fi
-  # ROTTING LAST: ausculte reads the first row after this header.
   if [ "$TOTAL_ROT" -gt 0 ]; then
     echo
     echo 'ROTTING -- answered, still open:'

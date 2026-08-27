@@ -22,7 +22,6 @@ T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 # The fake gh. `--json` calls print $FIXTURE; $GH_FAIL makes it die like the
 # real one does on a token or rate-limit failure.
 mkdir -p "$T/bin"
-# Two answers from one fake: `gh api` is the roster read, the rest issues.
 cat > "$T/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 if [ "$1" = api ]; then
@@ -36,7 +35,6 @@ chmod +x "$T/bin/gh"
 export PATH="$T/bin:$PATH"
 export DECISION_ROT_OWNER=owner
 
-# The default world for A-H: the repo under test dispatches.
 cat > "$T/roster.default" <<'EOF'
 # project | account@host | rate | state
 r        | r@monkey        | 20m | live
@@ -275,7 +273,6 @@ OUT="$(run "$T/i.json" o/nowhere)"; RC=$?
 rc  "I7 a repo with NO roster row is not rot either" 0 "$RC"
 has "I8 ...and is named absent, not parked" "$OUT" "(absent)"
 
-# A count of zero must not be a reading.
 OUT="$(ROSTER_FAIL='gh: Not Found' run "$T/i.json" o/r 2>&1)"; RC=$?
 rc  "I9 an unreadable roster is BLIND (6), never clean and never rot" 6 "$RC"
 has "I10 ...and says it classified none of them" "$OUT" "Classifying none"
@@ -290,7 +287,6 @@ OUT="$(run "$T/i.json" --json o/parked)"
 has "I12 --json carries the not-mine rows" "$OUT" '"kind":"not-mine"'
 has "I13 ...and the summary counts them" "$OUT" '"not_mine":1'
 
-# The guard against agents is mechanical, not a comment.
 if grep -qE '\-X (PUT|POST|PATCH|DELETE)|--method|--field|-f ' \
      "$(cd "$(dirname "$0")/.." && pwd)/lib/arming.sh"; then
   bad "I14 lib/arming.sh holds no write path" "a write verb appeared in it"
