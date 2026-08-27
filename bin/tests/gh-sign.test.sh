@@ -387,8 +387,7 @@ case "$(cat "$TMP/gh.log")" in
   *) bad "--default-after reached gh" "got: $(cat "$TMP/gh.log")" ;;
 esac
 
-# --- the refusal teaches, at BOTH ends (#627) --------------------------------
-# Truncation either way must land on something true.
+# --- the refusal teaches at BOTH ends (#627) --------------------------------
 : > "$TMP/gh.log"
 printf 'DECISION: @zach -- no blocks at all\n' > "$TMP/bad.txt"
 out="$(run issue create --title t --body "$(cat "$TMP/bad.txt")" -R o/r 2>&1)"; rc=$?

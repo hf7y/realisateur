@@ -65,8 +65,7 @@ grammar_default_after() {
   return 1
 }
 
-# PLACEHOLDERS, NOT REAL ISSUE NUMBERS (#627): the caller fences this, and a
-# truncated fence still cannot be mistaken for another repo's ledger.
+# PLACEHOLDERS: a truncated fence must not read as another repo's ledger (#627).
 grammar_template() {
   cat <<'EOF'
 DECISION: @hf7y -- may a verb build claim /usr/local/bin/gh on monkey?
