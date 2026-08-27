@@ -8,9 +8,6 @@
 [ -n "${ARMING_LIB:-}" ] && return 0
 ARMING_LIB=1
 
-# Parameter expansion, not readlink: decision-rot.test.sh I14 greps this WHOLE
-# FILE (comments too) for gh write flags, to prove an agent cannot edit ROSTER
-# through it. Nothing here may look like one.
 . "${BASH_SOURCE[0]%/*}/gh-owner.sh"
 ARMING_ROSTER_REPO="${ARMING_ROSTER_REPO:-$GH_ESTATE_OWNER/scheduler}"
 ARMING_ROSTER_PATH="${ARMING_ROSTER_PATH:-schedule/ROSTER}"

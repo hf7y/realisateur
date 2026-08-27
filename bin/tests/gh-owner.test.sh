@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# gh-owner.test.sh -- the estate's GitHub owner has ONE home and no script
-# re-spells it (#673). The bug held down here: 18 defaults under 10 names, and
-# because GitHub redirects a transferred repo forever, the stragglers keep
-# WORKING against the old owner. See bin/lib/gh-owner.sh.
+# gh-owner.test.sh -- one home for the estate's GitHub owner (#673).
 
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
@@ -17,10 +14,6 @@ eq "A4 sourcing twice is a no-op" \
    "$(bash -c ". '$LIB'; . '$LIB'; printf '%s' \"\$GH_ESTATE_OWNER\"")" "hf7y"
 
 section "B. no script re-spells the owner"
-# ADDRESSING positions only: an assignment default or a github.com URL. Prose
-# is exempt -- citations, usage strings and body templates redirect like any
-# link. hf7y.com is a DOMAIN. hf7y.github.io keeps its repo NAME: a User Pages
-# repo is named for its account, so moving it changes the URL -- see #672.
 ADDRESSES='(:-|:=|=)"?hf7y([/"]|$)|github\.com/hf7y'
 offenders=""
 while IFS= read -r f; do
@@ -49,5 +42,16 @@ eq "C5 a new owner reaches a caller" \
 eq "C6 a new owner reaches the release channel" \
    "$(bash -c "export GH_ESTATE_OWNER=neworg; . '$HERE/bin/lib/propagation-set.sh' >/dev/null 2>&1; printf '%s' \"\$PROP_RELEASE_REMOTE\"")" \
    "https://github.com/neworg/verbs.git"
+
+section "D. the lib stays POSIX-sourceable"
+# stamp-verb-build.sh generates a /bin/sh commit-msg hook that sources
+# propagation-set.sh and FAILS OPEN, so a bash-only line there ends the
+# Verb-Build trailer estate-wide with nothing to report it.
+SH="$(command -v dash || command -v busybox || echo sh)"
+case "$SH" in */busybox) SH="busybox sh" ;; esac
+OUT="$($SH -c ". '$LIB'; . '$HERE/bin/lib/propagation-set.sh'; printf '%s' \"\$PROP_RELEASE_REPO\"" 2>&1)"
+eq "D1 propagation-set.sh sources under $SH" "$OUT" "hf7y/verbs"
+HOOKSRC="$(cat "$HERE/bin/stamp-verb-build.sh")"
+has "D2 the generated hook pre-sources gh-owner.sh" "$HOOKSRC" '. "$GH_OWNER_SH" || exit 0'
 
 summary

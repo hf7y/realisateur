@@ -30,10 +30,6 @@
 #
 # TRAP: PAYLOAD without a man page ships nothing, silently (#85).
 
-# POSIX-SOURCEABLE: stamp-verb-build.sh's `#!/bin/sh` hook sources this file,
-# ${BASH_SOURCE[0]} is unset under dash, and that hook FAILS OPEN -- so a broken
-# source here silently ends the Verb-Build trailer estate-wide. Locate the
-# sibling only when bash can; the hook pre-sources it by absolute path.
 if [ -n "${BASH_SOURCE:-}" ]; then
   . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/gh-owner.sh"
 fi
