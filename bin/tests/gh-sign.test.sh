@@ -388,8 +388,7 @@ case "$(cat "$TMP/gh.log")" in
 esac
 
 # --- the refusal teaches, at BOTH ends (#627) --------------------------------
-# Truncation from either end must land on something true: the way out at the
-# head, what is wrong at the tail.
+# Truncation either way must land on something true.
 : > "$TMP/gh.log"
 printf 'DECISION: @zach -- no blocks at all\n' > "$TMP/bad.txt"
 out="$(run issue create --title t --body "$(cat "$TMP/bad.txt")" -R o/r 2>&1)"; rc=$?

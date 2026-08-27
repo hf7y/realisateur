@@ -77,13 +77,11 @@ not an inconvenience.
   Then `consulte list --from <this project>` and `consulte show <n>`.
   **Filing is free; answering is metered** — ask once and read the queue first.
 
-- **Filing an issue or opening a PR, in ANY repo** — the body is a grammar, not
-  prose, and `gh` refuses one that breaks it (exit 7). Line 1 must open with
-  `DECISION:` or `NO-DECISION:`, and the body must carry a `<!-- DEFERRED -->`
-  and a `<!-- DELIVERS -->` block — `- none` is a valid entry in both. Run
-  `defere '<line>' --project <p>` and it composes a conforming body for you, or
-  check one you wrote with `gh-sign.sh --check-body <file>`. Learning this from
-  the refusal costs a round trip and reads like a glitch (realisateur#627).
+- **Filing an issue or opening a PR, in ANY repo** — the body is a grammar and
+  `gh` refuses one that breaks it (exit 7): line 1 opens with `DECISION:` or
+  `NO-DECISION:`, and a `<!-- DEFERRED -->` and `<!-- DELIVERS -->` block must
+  be present (`- none` is valid in both). `defere '<line>' --project <p>`
+  composes one; `gh-sign.sh --check-body <file>` checks one (realisateur#627).
 
 - **Finding something fixable** — fix it in whatever repo it lives in and PR it
   there. Reversible fixes run unattended; privileged ones wait, as a tested
