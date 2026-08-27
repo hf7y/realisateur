@@ -22,9 +22,7 @@ T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 # The fake gh. `--json` calls print $FIXTURE; $GH_FAIL makes it die like the
 # real one does on a token or rate-limit failure.
 mkdir -p "$T/bin"
-# `gh api` is the ARMING ROSTER read (lib/arming.sh) and `gh issue list` is the
-# issue read. One fake, two answers -- a fixture that served the issue array to
-# both would have made every repo read as absent-from-the-roster.
+# Two answers from one fake: `gh api` is the roster read, the rest issues.
 cat > "$T/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 if [ "$1" = api ]; then
@@ -38,8 +36,7 @@ chmod +x "$T/bin/gh"
 export PATH="$T/bin:$PATH"
 export DECISION_ROT_OWNER=owner
 
-# The default world for A-H: the repo under test dispatches, so those cases keep
-# pinning the predicate rather than the arming split.
+# The default world for A-H: the repo under test dispatches.
 cat > "$T/roster.default" <<'EOF'
 # project | account@host | rate | state
 r        | r@monkey        | 20m | live
@@ -255,9 +252,6 @@ done
   || bad "H2 swept is not armed" "in ROSTER_PROJECTS, and so spending quota:$_armed"
 
 # --- I. a parked repo is not rotting (Zach, 2026-08-26) ---------------------
-# 19 of 69 rows were in dcp-gate-site (parked) and front-door (no roster row).
-# Nothing is armed to act on either, so the alarm could never clear -- and an
-# alarm that can never clear is one its reader learns to ignore.
 section "I. rot is only rot where something dispatches"
 
 cat > "$T/i.json" <<EOF
@@ -281,13 +275,11 @@ OUT="$(run "$T/i.json" o/nowhere)"; RC=$?
 rc  "I7 a repo with NO roster row is not rot either" 0 "$RC"
 has "I8 ...and is named absent, not parked" "$OUT" "(absent)"
 
-# A COUNT OF ZERO HERE MUST NOT BE A READING. Defaulting to armed re-raises the
-# alarm this lowered; defaulting to parked silences a real one.
+# A count of zero must not be a reading.
 OUT="$(ROSTER_FAIL='gh: Not Found' run "$T/i.json" o/r 2>&1)"; RC=$?
 rc  "I9 an unreadable roster is BLIND (6), never clean and never rot" 6 "$RC"
 has "I10 ...and says it classified none of them" "$OUT" "Classifying none"
 
-# ausculte.sh reads the TOTAL row POSITIONALLY: `awk '$1=="TOTAL"{print $3}'`.
 OUT="$(run "$T/i.json" o/r)"
 _f3="$(printf '%s\n' "$OUT" | awk '$1 == "TOTAL" { print $3 }')"
 [ "$_f3" = "1" ] \
@@ -298,8 +290,7 @@ OUT="$(run "$T/i.json" --json o/parked)"
 has "I12 --json carries the not-mine rows" "$OUT" '"kind":"not-mine"'
 has "I13 ...and the summary counts them" "$OUT" '"not_mine":1'
 
-# THE GUARD AGAINST AGENTS IS MECHANICAL, NOT A COMMENT. schedule/ROSTER's own
-# header says an agent may read it and must not change it.
+# The guard against agents is mechanical, not a comment.
 if grep -qE '\-X (PUT|POST|PATCH|DELETE)|--method|--field|-f ' \
      "$(cd "$(dirname "$0")/.." && pwd)/lib/arming.sh"; then
   bad "I14 lib/arming.sh holds no write path" "a write verb appeared in it"

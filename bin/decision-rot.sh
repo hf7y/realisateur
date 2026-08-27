@@ -8,8 +8,8 @@
 # by COMMENTING and leaves it open; the nightly CLOSES what it handles. The
 # predicate is bin/lib/answered.jq, shared with `etiquette`.
 # TRAP: if a change here needs a convention INVENTED to work, THE AUDIT IS
-#   WRONG -- report and stop. A draft keyed to "no commit references the issue"
-#   worked, and would have gone stale SILENTLY when commit shape changed.
+#   WRONG -- report and stop. A draft keyed to "no commit references the
+#   issue" worked, and would have gone stale SILENTLY.
 #
 set -uo pipefail
 
@@ -26,17 +26,15 @@ CLI_EXITS='  0  clean -- every answered issue in a repo that dispatches is close
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-# DECISION_ROT_OWNER exists for bin/tests/decision-rot.test.sh, which pins the
-# predicate against fixture JSON whose author login is not this estate's.
+# DECISION_ROT_OWNER: for the suite, whose fixture logins are not this estate's.
 OWNER="${DECISION_ROT_OWNER:-hf7y}"
 
 # shellcheck source=bin/lib/roster-set.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/roster-set.sh"
 
 # A MISSING ROSTER IS BLIND, NOT AN EMPTY ESTATE. `.` on an absent file does
-# not abort under `set -uo pipefail`, so the walk iterates zero repos, exits 0,
-# and `ausculte` renders that "rot OK" -- live 2026-08-22 over 48 rotting
-# decisions. ROSTER_SET_LIB is the load sentinel.
+# not abort under `set -uo pipefail`, so the walk iterates zero repos and exits
+# 0 -- live 2026-08-22 over 48 rotting decisions. ROSTER_SET_LIB is the sentinel.
 if [ "${ROSTER_SET_LIB:-}" != 1 ] || [ "${#ROSTER[@]}" -eq 0 ]; then
   printf '%s: BLIND -- lib/roster-set.sh did not load, so this audited NO repositories. A count of zero here is the absence of a reading, not the absence of rot.\n' \
     "$CLI_NAME" >&2
@@ -65,9 +63,8 @@ fi
 command -v gh >/dev/null || { echo "decision-rot.sh: gh not on PATH" >&2; exit 6; }
 command -v jq >/dev/null || { echo "decision-rot.sh: jq not on PATH" >&2; exit 6; }
 
-# THE PREDICATE IS NOT HERE: bin/lib/answered.jq, fed the bulk array below.
-# It is a jq PROGRAM, not a bash function, so this stays ONE call per repo --
-# issue_answered() would cost one per issue, hundreds across 26 repos.
+# THE PREDICATE IS NOT HERE: bin/lib/answered.jq, fed the bulk array below. A
+# jq PROGRAM, so this stays ONE call per repo rather than one per issue.
 #
 # shellcheck source=bin/lib/answered.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/answered.sh"
@@ -78,10 +75,7 @@ command -v jq >/dev/null || { echo "decision-rot.sh: jq not on PATH" >&2; exit 6
 }
 DECISION_ROT_JQ="$(cat "$ANSWERED_JQ_FILE")"
 
-# ROT IS ONLY ROT WHERE SOMETHING CAN ACT ON IT (Zach, 2026-08-26: "parked repos
-# shouldn't count as rotting"). 19 of 69 rows were in dcp-gate-site (parked) and
-# front-door (no roster row) -- an alarm no one could clear, which is the exact
-# thing ausculte's fourth state exists to stop being an alarm.
+# ROT IS ONLY ROT WHERE SOMETHING CAN ACT ON IT (Zach, 2026-08-26).
 # shellcheck source=bin/lib/arming.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/arming.sh"
 if ! arming_load; then
@@ -90,8 +84,8 @@ if ! arming_load; then
   exit 6
 fi
 
-# Verdicts: `number<TAB>verdict<TAB>at<TAB>state<TAB>title`. DETAIL is OPEN ONLY
-# (318 listed, 3 real); COUNT stays all-states, matching `answered` (B2).
+# `number<TAB>verdict<TAB>at<TAB>state<TAB>title`. DETAIL is OPEN ONLY; COUNT
+# stays all-states, matching `answered` (B2).
 verdicts() {
   jq -r --arg owner "$1" --arg era "$ANSWERED_STAMP_ERA" "$DECISION_ROT_JQ"'
     .[]
@@ -152,8 +146,8 @@ for repo in "${REPOS[@]}"; do
   n_rot=$(printf '%s\n' "$rows" | grep -c .)
   oldest=$(printf '%s\n' "$rows" | grep . | cut -f3 | sort -rn | head -n1)
 
-  # THE SPLIT. Same predicate, same rows -- only the question "is anything armed
-  # to act here?" separates a finding from a fact about somebody else's repo.
+  # THE SPLIT: same rows. Only "is anything armed here?" separates a finding
+  # from a fact about somebody else's repo.
   arming="$(arming_state "${repo#*/}")"
   n_not_mine=0
   case "$arming" in
@@ -200,8 +194,7 @@ if [ "$JSON" = 1 ]; then
          --argjson uncounted_open "$TOTAL_UNC_OPEN" --argjson errors "$ERRORS" \
          '{kind:"summary",repos:$repos,answered:$answered,rotting:$rotting,not_mine:$not_mine,uncounted:$uncounted,uncounted_open:$uncounted_open,errors:$errors}'
 else
-  # ROTTING STAYS FIELD 3 of the TOTAL row: bin/ausculte.sh reads it positionally
-  # with `awk '$1 == "TOTAL" { print $3 }'`. NOT_MINE is appended, never inserted.
+  # ROTTING STAYS FIELD 3: ausculte reads the TOTAL row positionally.
   printf '%-18s %9s %8s %9s %12s %10s\n' REPO ANSWERED ROTTING NOT_MINE OLDEST_DAYS UNC_OPEN
   printf '%s' "$ROWS" | while IFS=$'\t' read -r r a n m o u; do
     [ -n "$r" ] || continue
@@ -227,7 +220,7 @@ else
       printf '  %-16s %3s  (%s)\n' "$r" "$c" "$a"
     done
   fi
-  # ROTTING LAST: ausculte reads the first row after this header as the oldest.
+  # ROTTING LAST: ausculte reads the first row after this header.
   if [ "$TOTAL_ROT" -gt 0 ]; then
     echo
     echo 'ROTTING -- answered, still open:'
