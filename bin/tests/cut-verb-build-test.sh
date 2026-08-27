@@ -442,11 +442,8 @@ esac
 : > "$TMP/verb-kind.ratchet"
 
 # 14d. A PERSONAL tool leaves the manifest, and the cut still succeeds (#552).
-# THE ORDERING IS THE POINT. If the lint's refusal were the only mechanism, the
-# day a project reclassified its tool would be the day every cut failed -- so
-# the correct act would break the channel, and the pressure would be to revert
-# it. The cut drops it and says so; the lint stays a backstop for one that got
-# through anyway. #552: "land the type first, reclassify, then let a build cut
+# THE ORDERING IS THE POINT: the cut drops it and says so; the lint stays a
+# backstop. #552 -- "land the type first, reclassify, then let a build cut
 # prove the command left the manifest."
 mkrepo kappa kv
 printf '#!/usr/bin/env bash\n# KIND: personal\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "kp\\n"\n' \

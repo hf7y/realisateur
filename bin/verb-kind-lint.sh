@@ -125,18 +125,9 @@ while IFS=$'\t' read -r project verb sha url; do
   case "$kind" in
     verb)    DECLARED_VERBS+=("$project/$verb") ;;
     product) PRODUCTS+=("$project/$verb") ;;
-    # THE THIRD KIND (#552, Zach 2026-08-23: "both should be personal tools.
-    # neither should be distributed to other users as verbs. if this doesn't
-    # have a formal type yet, we should invent it").
-    #
-    # The 2026-08-11 test -- "would another agent or Zach ever call one of
-    # those?" -- decides membership. This adds a second reading of it: a front
-    # door FOR WHOM. `canon` and `vim-arcade` are doors only Zach walks
-    # through, and there was no way to say so, so the only two states were
-    # "distributed to all 13 accounts" and "undeclared litter".
-    #
-    # It needs NO man page: the man page IS the verb contract, and this is not
-    # a verb. Section C below is what keeps it off the channel.
+    # THE THIRD KIND (#552). The 2026-08-11 test -- "would another agent or
+    # Zach ever call one of those?" -- gains a second reading: a front door FOR
+    # WHOM. Needs no man page; the man page IS the verb contract.
     personal) PERSONAL+=("$project/$verb") ;;
     '')      if forgiven "$project/$verb"; then GRANDFATHERED+=("$project/$verb")
              else UNDECLARED+=("$project/$verb|no '# KIND: verb', '# KIND: product' or '# KIND: personal' in its first $HEAD_LINES lines"); fi ;;
@@ -183,10 +174,8 @@ done
 
 say ""
 say "== C. NO PERSONAL TOOL RIDES THE VERB BUILD =="
-# NAMED, NOT SILENTLY DROPPED (#552's own wording). A command that leaves the
-# manifest without a line saying so is indistinguishable from one that was
-# never in it, and `install-verb-build.sh --link`'s COUNT MISMATCH is then the
-# only sensor -- which reads as a short build, not a deliberate removal.
+# NAMED, NOT SILENTLY DROPPED: a command that leaves without a line saying so
+# is indistinguishable from one that was never in it.
 for x in ${PERSONAL+"${PERSONAL[@]}"}; do
   loud "  PERSONAL ${x}: declares '# KIND: personal' but is in the verb manifest."
   loud "           A personal tool reaches PATH as a symlink into its own checkout"

@@ -122,11 +122,8 @@ else bad "expected exactly 1 violation line, got $n"; printf '%s\n' "$OUT" | sed
 # --- 2b. the third kind (#552) ----------------------------------------------
 echo
 echo "== 2b. A PERSONAL TOOL RIDING THE VERB BUILD =="
-# Zach, 2026-08-23: "both should be personal tools. neither should be
-# distributed to other users as verbs. if this doesn't have a formal type yet,
-# we should invent it." Before this there were two states -- distributed to all
-# 13 self-dev accounts, or undeclared litter -- and `canon` sat in the second
-# from 2026-08-05 because there was no way to say the true thing about it.
+# Before this there were two states -- distributed to all 13 accounts, or
+# undeclared litter -- and `canon` sat in the second from 2026-08-05.
 b="$(new_build personal)"
 add_cmd "$b" scheduler   fx-arme    '# KIND: verb'
 add_cmd "$b" vim-arcade  vim-arcade '# KIND: personal'
@@ -143,9 +140,7 @@ else
   ok "the sibling verb is NOT flagged -- one violation, not a sweep"
 fi
 
-# THE MAN PAGE IS THE VERB CONTRACT, and this is not a verb. A personal tool
-# owing one would make the third kind cost exactly what the second kind costs,
-# which is the reason it did not already exist.
+# THE MAN PAGE IS THE VERB CONTRACT, and this is not a verb.
 b="$(new_build personal-no-man)"
 add_cmd "$b" scheduler  fx-arme '# KIND: verb'
 add_cmd "$b" space-canon canon   '# KIND: personal'
@@ -166,9 +161,7 @@ RATCHET_FILE="$WORK/r3"; write_ratchet "$RATCHET_FILE" 'undeclared vim-arcade/vi
 expect "the ratchet cannot forgive a declared personal tool in the verb build" 1 "$b"
 RATCHET_FILE=""
 
-# AND IT IS A REAL KIND, so the "not a channel" branch must stop claiming there
-# are two. `bin/verbs-refresh.sh` declared `# KIND: LOCAL` and was invisible
-# only because it never entered a build; the day it did, it was a violation.
+# The "not a channel" branch must stop claiming there are two.
 b="$(new_build bogus-kind)"
 add_cmd "$b" scheduler fx-arme '# KIND: verb'
 add_cmd "$b" scheduler fx-dose '# KIND: LOCAL'

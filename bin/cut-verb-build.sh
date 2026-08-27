@@ -434,19 +434,11 @@ if [ -n "$ASSEMBLE" ]; then
   [ "$bad" -eq 0 ] || die "$bad verb(s) did not assemble runnably. Refusing."
 
   # --- 6a0. a PERSONAL tool leaves the manifest, and is NAMED leaving ------
-  # #552, Zach 2026-08-23: "both should be personal tools. neither should be
-  # distributed to other users as verbs."
-  #
-  # DROPPED HERE, NOT REFUSED BY THE LINT BELOW. The lint's section C is a
-  # backstop for a command that reached the build anyway; if it were the only
-  # mechanism, the day a project reclassified its tool would be the day every
-  # cut failed -- so the correct act would break the channel. This is the
-  # ordering #552 asks for: land the type, reclassify, and let the next cut
-  # PROVE the command left the manifest.
-  #
-  # This is the first point in the pipeline where the files are local, so it is
-  # the first point the declaration can be read at all: the derivation upstream
-  # sees a git tree listing, not file contents.
+  # DROPPED HERE, NOT REFUSED BY THE LINT BELOW (#552). Section C is a
+  # backstop; were it the only mechanism, the day a project reclassified its
+  # tool would be the day every cut failed -- the correct act breaking the
+  # channel. Also the first point the declaration is readable at all: the
+  # derivation upstream sees a git tree listing, not file contents.
   personal_out=0
   kept="$tmp/manifest.kept"; : > "$kept"
   while IFS= read -r mline; do
