@@ -6,25 +6,21 @@
 # GUARD-TEST: bin/tests/verb-kind-lint.test.sh
 # GATE: default --build $TREE
 #
-# THE CRITERION, semantic and not linguistic, decided 2026-08-05:
+# THE CRITERION, semantic and not linguistic (2026-08-05, #552):
 #     a VERB is a thing you tell the machine to do
 #     a PRODUCT is a thing with a name of its own
-#     a PERSONAL tool is a front door only Zach walks through (#552)
-# French-ness is a convention the workchain follows, not the property that
-# decides which channel an artifact ships on -- so this reads a DECLARATION
-# (`# KIND: verb` / `product` / `personal` in the command's own file, within
-# the first 90 lines) and not a wordlist. A list in this repo would rot; the
-# project's own file cannot go stale about itself.
+#     a PERSONAL tool is a front door only Zach walks through
+# So this reads a DECLARATION -- `# KIND: verb`/`product`/`personal` in the
+# command's own file, within the first 90 lines -- and not a wordlist, which
+# would rot here while the project's own file cannot go stale about itself.
 #
-# TRAP: it reads no opt-out file, and bin/lib/not-a-verb.tsv in particular.
-#   The populations are disjoint by construction -- not-a-verb.tsv names
-#   things that never enter the build, this lints things that did -- so
-#   honouring it here would wire two mechanisms that can never overlap.
+# TRAP: it reads no opt-out file, bin/lib/not-a-verb.tsv in particular. The
+#   populations are disjoint -- that file names things that never enter the
+#   build, this lints things that did.
 #
-# TRAP: the ratchet NAMES the pairs it forgives rather than counting them.
-#   A count-based bound is defeated in the ordinary course of business:
-#   declare one, add one, and the count is unchanged while the debt moved.
-#   It only ever shrinks; `--accept` drops entries whose command now declares.
+# TRAP: the ratchet NAMES the pairs it forgives rather than counting them; a
+#   count is defeated by declare-one-add-one, unchanged while the debt moved.
+#   It only shrinks; `--accept` drops entries whose command now declares.
 #
 set -uo pipefail
 
@@ -44,7 +40,7 @@ CLI_EXITS='  0  every command declares itself; no product in the workchain build
 cli_guard "$@"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# --build IS REQUIRED. There is deliberately no default.
+# --build IS REQUIRED; no default.
 #
 # This resolved the host's own adopted-build pin (the path PROP_PIN_PATH
 BUILD=''
@@ -72,17 +68,15 @@ blind() { printf 'BLIND: %s\n' "$*" >&2
           exit 6; }
 
 # --- the build --------------------------------------------------------------
-# No --build is a USAGE error (2), not a verdict. It is the same exit code as
-# BLIND on purpose: both mean "this run graded nothing", and the one thing
-# neither may ever be mistaken for is clean.
+# No --build is a USAGE error (2), not a verdict -- the same code as BLIND on
+# purpose: both mean "this run graded nothing", and neither is clean.
 [ -n "$BUILD" ] || { printf '%s: --build <dir> is required; there is no default build.\n' "$CLI_NAME" >&2
                      printf '%s\n' "$CLI_USAGE" >&2; exit 2; }
 [ -d "$BUILD" ] || blind "no build tree at $BUILD"
 MANIFEST="$BUILD/manifest.tsv"
 [ -f "$MANIFEST" ] || blind "$BUILD carries no manifest.tsv -- it is not a build"
-# `grep -c` PRINTS 0 and EXITS 1 when it matches nothing, so the obvious
-# `|| echo 0` fallback appends a SECOND zero and rows becomes "0\n0". The
-# empty-manifest case still reached BLIND, but by accident: `[ "0\n0" -gt 0 ]`
+# `grep -c` PRINTS 0 and EXITS 1 on no match, so `|| echo 0` appends a SECOND
+# zero and rows becomes "0\n0". Empty-manifest reached BLIND by accident:
 rows="$(grep -cv '^#' "$MANIFEST" 2>/dev/null || true)"
 [ -n "$rows" ] || rows=0
 [ "$rows" -gt 0 ] || blind "$MANIFEST has no rows. A build with no commands is an unreadable build, not an ecosystem with none."
@@ -99,10 +93,8 @@ fi
 forgiven() { case "$FORGIVEN" in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 
 # --- read every row ---------------------------------------------------------
-# TWO PASSES, and the order is the point. Pass one collects; pass two prints
-# BLIND lines, then findings. A guard that streams its output prints them in
-# whatever order the manifest happens to be sorted in, and the admission ends
-# up under the noise.
+# TWO PASSES, and the order is the point: pass one collects, pass two prints
+# BLIND lines then findings. Streaming buries the admission under the noise.
 declare -a BLIND_LINES=() PRODUCTS=() UNDECLARED=() GRANDFATHERED=() DECLARED_VERBS=() PERSONAL=()
 
 while IFS=$'\t' read -r project verb sha url; do
@@ -148,8 +140,7 @@ violations=0
 say "== A. EVERY COMMAND IN THE BUILD DECLARES ITS CHANNEL =="
 for d in ${DECLARED_VERBS+"${DECLARED_VERBS[@]}"}; do say "  ok    $d: verb"; done
 # The grandfathered set is named EVERY run -- an entry that goes quiet is one
-# nobody ever retires -- but on ONE line, not one loud line each carrying fix
-# instructions. All of them live in 12 OTHER projects' repositories and cannot
+# nobody retires -- but on ONE line. They live in 12 other repositories and cannot
 if [ "${#GRANDFATHERED[@]}" -gt 0 ]; then
   loud "  OWED  ${#GRANDFATHERED[@]} undeclared, held by the ratchet: ${GRANDFATHERED[*]}"
   loud "        each needs '# KIND: verb', 'product' or 'personal' in its own project's file"
@@ -172,8 +163,8 @@ done
 
 say ""
 say "== C. NO PERSONAL TOOL RIDES THE VERB BUILD =="
-# NAMED: a command that leaves without a line saying so is indistinguishable
-# from one that was never in it.
+# NAMED: leaving without a line saying so is indistinguishable from never
+# having been in it.
 for x in ${PERSONAL+"${PERSONAL[@]}"}; do
   loud "  PERSONAL ${x}: declares '# KIND: personal' but is in the verb manifest."
   loud "           A personal tool reaches PATH as a symlink into its own checkout"
@@ -184,9 +175,8 @@ done
 [ "${#PERSONAL[@]}" -eq 0 ] && say "  ok    no personal tool in this build's manifest"
 
 # --- the ratchet's own hygiene ----------------------------------------------
-# An entry whose command has declared itself, or has left the build, is stale.
-# Left in place it would silently re-forgive that name if it ever regressed,
-# which is a ratchet quietly loosening itself.
+# A stale entry would silently re-forgive its name if it regressed, which is a
+# ratchet quietly loosening itself.
 STALE=""
 if [ -n "$FORGIVEN" ]; then
   for e in $FORGIVEN; do

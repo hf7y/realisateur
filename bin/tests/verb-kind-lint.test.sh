@@ -122,7 +122,6 @@ else bad "expected exactly 1 violation line, got $n"; printf '%s\n' "$OUT" | sed
 # --- 2b. the third kind (#552) ----------------------------------------------
 echo
 echo "== 2b. A PERSONAL TOOL RIDING THE VERB BUILD =="
-# Two states before this: distributed to all 13 accounts, or undeclared litter.
 b="$(new_build personal)"
 add_cmd "$b" scheduler   fx-arme    '# KIND: verb'
 add_cmd "$b" vim-arcade  vim-arcade '# KIND: personal'
@@ -150,7 +149,7 @@ else
   ok "a personal tool owes no man/<name>.1"
 fi
 
-# NOT RATCHETABLE: the ratchet forgives SILENCE, never a wrong-channel claim.
+# NOT RATCHETABLE: the ratchet forgives SILENCE, not a wrong-channel claim.
 b="$(new_build personal-not-ratchetable)"
 add_cmd "$b" scheduler  fx-arme    '# KIND: verb'
 add_cmd "$b" vim-arcade vim-arcade '# KIND: personal'
