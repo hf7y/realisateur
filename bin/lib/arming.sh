@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # lib/arming.sh -- DOES ANYTHING DISPATCH TO THIS REPO? Read-only, one call.
 # Authority: hf7y/scheduler's schedule/ROSTER, whose header allows exactly this
-# ("inert prose an agent may read but must not change"). The read-only rule is
-# enforced by a grep in decision-rot.test.sh I14, not by this sentence.
-# NOT lib/roster-set.sh: that is the SWEEP set. BLIND classifies NOTHING.
+# ("inert prose an agent may read but must not change"); the read-only rule is
+# enforced by decision-rot.test.sh I14, not by this sentence. NOT
+# lib/roster-set.sh, which is the SWEEP set. BLIND classifies NOTHING.
 
 [ -n "${ARMING_LIB:-}" ] && return 0
 ARMING_LIB=1
@@ -30,8 +30,8 @@ arming_load() {
   return 0
 }
 
-# arming_state <project> -- live|parked|absent; empty while BLIND, so a caller
-# that forgot to check cannot read a guess as an answer.
+# arming_state <project> -- live|parked|absent; empty while BLIND, so a
+# forgetful caller cannot read a guess as an answer.
 arming_state() {
   [ "$ARMING_BLIND" = 0 ] || { printf ''; return 6; }
   local s

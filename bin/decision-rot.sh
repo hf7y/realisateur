@@ -146,8 +146,8 @@ for repo in "${REPOS[@]}"; do
   n_rot=$(printf '%s\n' "$rows" | grep -c .)
   oldest=$(printf '%s\n' "$rows" | grep . | cut -f3 | sort -rn | head -n1)
 
-  # THE SPLIT: same rows. Only "is anything armed here?" separates a finding
-  # from a fact about somebody else's repo.
+  # THE SPLIT: only "is anything armed here?" separates a finding from a fact
+  # about somebody else's repo. ROTTING stays field 3; ausculte parses it so.
   arming="$(arming_state "${repo#*/}")"
   n_not_mine=0
   case "$arming" in
@@ -194,7 +194,6 @@ if [ "$JSON" = 1 ]; then
          --argjson uncounted_open "$TOTAL_UNC_OPEN" --argjson errors "$ERRORS" \
          '{kind:"summary",repos:$repos,answered:$answered,rotting:$rotting,not_mine:$not_mine,uncounted:$uncounted,uncounted_open:$uncounted_open,errors:$errors}'
 else
-  # ROTTING STAYS FIELD 3: ausculte reads the TOTAL row positionally.
   printf '%-18s %9s %8s %9s %12s %10s\n' REPO ANSWERED ROTTING NOT_MINE OLDEST_DAYS UNC_OPEN
   printf '%s' "$ROWS" | while IFS=$'\t' read -r r a n m o u; do
     [ -n "$r" ] || continue
