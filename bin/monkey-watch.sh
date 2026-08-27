@@ -32,7 +32,9 @@ ALERT_EVERY_H="${ALERT_EVERY_H:-12}"
 # tell "monkey is down" from "the watcher stopped".
 CADENCE_MIN="${CADENCE_MIN:-10}"
 GRACE_MIN="${GRACE_MIN:-20}"
-PUBLISH_REPO="${PUBLISH_REPO:-hf7y/hf7y.github.io}"
+# shellcheck source=bin/lib/gh-owner.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
+PUBLISH_REPO="${PUBLISH_REPO:-$GH_ESTATE_OWNER/hf7y.github.io}"
 PUBLISH_DIR="${PUBLISH_DIR:-monkey}"
 # shellcheck source=lib/zaxon.sh
 . "$HERE/bin/lib/zaxon.sh"

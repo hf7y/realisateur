@@ -140,7 +140,12 @@ are idempotent."
 # deploy keys do not serve. --apply makes the key readable, --wire makes git use it.
 say "4/8 the GitHub App credential (host-wide key, then this account's git helper)"
 if [ -x "$HERE/selfdev-app-key.sh" ]; then
-  appkey_out="$("$HERE/selfdev-app-key.sh" --apply --owner "${SELFDEV_GH_OWNER:-hf7y}" 2>&1)"; appkey_rc=$?
+  # rc read from the command, not from a pipeline whose last stage is `sed`.
+  # `set -o pipefail` is on here and would carry it, but the 3/4 block in this
+  # same file records what that assumption cost once already.
+# shellcheck source=bin/lib/gh-owner.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
+  appkey_out="$("$HERE/selfdev-app-key.sh" --apply --owner "${SELFDEV_GH_OWNER:-$GH_ESTATE_OWNER}" 2>&1)"; appkey_rc=$?
   printf '%s\n' "$appkey_out" | sed 's/^/  /'
   [ "$appkey_rc" -eq 0 ] && echo "  OK      $PROJECT can read the host-wide App key" \
     || die "selfdev-app-key.sh --apply failed -- $PROJECT cannot mint an App token, so

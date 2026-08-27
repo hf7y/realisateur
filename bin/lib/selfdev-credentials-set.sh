@@ -34,7 +34,9 @@ CRED_SHARED_REPOS="realisateur scheduler senechal"
 # gh-app.conf declares a DIFFERENT id or owner is not obviously wrong (the
 CRED_APP_GROUP="${CRED_APP_GROUP:-selfdev}"
 CRED_APP_ID="${CRED_APP_ID:-4521586}"
-CRED_GH_OWNER="${CRED_GH_OWNER:-hf7y}"
+# shellcheck source=bin/lib/gh-owner.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/gh-owner.sh"
+CRED_GH_OWNER="${CRED_GH_OWNER:-$GH_ESTATE_OWNER}"
 
 # --- the baseline file set, under ~/.config/selfdev/ ----------------------
 CRED_BASELINE_FILES="app.pem gh-app.conf"

@@ -73,7 +73,9 @@ _env_owner="${SELFDEV_GH_OWNER:-}"
 [ -r "$CONF" ] && . "$CONF"
 APP_ID="${_env_app_id:-${SELFDEV_APP_ID:-}}"
 APP_KEY="${_env_app_key:-${SELFDEV_APP_KEY:-${SELFDEV_APP_PEM_DEFAULT:-/etc/selfdev/app.pem}}}"
-OWNER="${_env_owner:-${SELFDEV_GH_OWNER:-hf7y}}"
+# shellcheck source=bin/lib/gh-owner.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
+OWNER="${_env_owner:-${SELFDEV_GH_OWNER:-$GH_ESTATE_OWNER}}"
 API="${SELFDEV_GH_API:-https://api.github.com}"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/selfdev-gh-app"
 

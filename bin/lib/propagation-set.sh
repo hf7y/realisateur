@@ -30,8 +30,19 @@
 #
 # TRAP: PAYLOAD without a man page ships nothing, silently (#85).
 
-PROP_RELEASE_REPO="hf7y/verbs"
-PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
+# THIS FILE IS SOURCED BY A /bin/sh HOOK, so nothing here may be bash-only.
+# bin/stamp-verb-build.sh generates a `#!/bin/sh` commit-msg hook that sources
+# this file; ${BASH_SOURCE[0]} is unset under dash, and because that hook FAILS
+# OPEN a broken source here would silently stop every commit on every self-dev
+# account from carrying its Verb-Build trailer, with nothing to report it.
+# So: locate the sibling only when bash can, and let the hook pre-source it by
+# absolute path (which it does) in every other case.
+# shellcheck source=bin/lib/gh-owner.sh
+if [ -n "${BASH_SOURCE:-}" ]; then
+  . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/gh-owner.sh"
+fi
+PROP_RELEASE_REPO="$GH_ESTATE_OWNER/verbs"
+PROP_RELEASE_REMOTE="https://github.com/$GH_ESTATE_OWNER/verbs.git"
 
 # A version is a UTC-timestamp build id, so lexical sort is chronological.
 # ONE pin per HOST since #180: /usr/local/share/verb-builds/current. This path

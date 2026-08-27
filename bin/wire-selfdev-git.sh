@@ -22,7 +22,9 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$REPO" ] || { echo "usage: $0 <repo> [--check|--apply] [--rw]" >&2; exit 2; }
 
-OWNER="${SELFDEV_GH_OWNER:-hf7y}"
+# shellcheck source=bin/lib/gh-owner.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/gh-owner.sh"
+OWNER="${SELFDEV_GH_OWNER:-$GH_ESTATE_OWNER}"
 USER_NAME="$(id -un)"
 HOST_NAME="$(hostname -s 2>/dev/null || echo unknown)"
 SSH_DIR="$HOME/.ssh"
