@@ -469,5 +469,18 @@ fi
     && ok "the sibling VERB is untouched -- one command omitted, not a project" \
     || bad "the sibling verb survived" "kappa/kv is missing too"
 
+printf 'kappa\tkv\nkappa\tkp\n' > "$TMP/published14e"  # 14e: a KIND:personal drop is a shrink too (realisateur#703)
+FIXTURE_PUBLISHED="$TMP/published14e" \
+  cut --assemble "$TMP/asm14e" >/dev/null 2>"$TMP/e14e"
+check "a personal-tool reclassification alone is refused as a shrink" "$?" "1"
+case "$(cat "$TMP/e14e")" in
+    *SMALLER*) ok "...and the refusal gives the shrink reason" ;;
+    *) bad "the refusal names the shrink" "got: $(cat "$TMP/e14e")" ;;
+esac
+
+FIXTURE_PUBLISHED="$TMP/published14e" \
+  cut --assemble "$TMP/asm14e" --allow-shrink >/dev/null 2>"$TMP/e14e2"
+check "--allow-shrink accepts a personal-tool-caused shrink" "$?" "0"
+
 echo
 summary
