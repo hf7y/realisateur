@@ -124,6 +124,8 @@ EOF
 # equivalent of testing against production. Empty here means nothing is exempt.
 printf '#project\tname\twhy\n' > "$TMP/not-a-verb.tsv"
 
+printf '#project\tverb\twhy\n' > "$TMP/retired-verbs.tsv"  # empty: nothing declared retired, same fixture-not-production posture
+
 # And the channel guard's grandfather ratchet, for the same reason. Section
 # 6a runs bin/verb-kind-lint.sh over the assembled tree, and that lint reads
 # bin/verb-kind-lint.ratchet -- 33 real commands this suite knows nothing
@@ -136,6 +138,7 @@ cut() {
     FIXTURE_REPOLIST="$TMP/repolist" FIXTURE_DIR="$FIX" \
     FIXTURE_PUBLISHED="${FIXTURE_PUBLISHED:-}" \
     VERB_NOT_A_VERB_FILE="$TMP/not-a-verb.tsv" \
+    VERB_RETIRED_VERBS_FILE="$TMP/retired-verbs.tsv" \
     VERB_KIND_RATCHET="$TMP/verb-kind.ratchet" \
     GIT_CONFIG_GLOBAL="$TMP/gitconfig" GIT_CONFIG_NOSYSTEM=1 \
     bash "$CUT" --owner "$OWNER" --build-root "$TMP/no-such-build-root" "$@"
@@ -481,6 +484,34 @@ esac
 FIXTURE_PUBLISHED="$TMP/published14e" \
   cut --assemble "$TMP/asm14e" --allow-shrink >/dev/null 2>"$TMP/e14e2"
 check "--allow-shrink accepts a personal-tool-caused shrink" "$?" "0"
+
+mkrepo omega ov1 ov2   # 14f/g: a declared retirement (realisateur#696), matched by NAME not just count (realisateur#699 point 1)
+g -C "$FIX/omega.git" rm -q bin/ov2 man/ov2.1
+g -C "$FIX/omega.git" commit -m 'ov2 retired upstream, on omega'"'"'s own bashified'
+printf 'omega\n' > "$TMP/repolist"
+printf 'omega\tov1\nomega\tov2\n' > "$TMP/published14f"
+
+FIXTURE_PUBLISHED="$TMP/published14f" \
+  cut --assemble "$TMP/asm14f" >/dev/null 2>"$TMP/e14f"
+check "an undeclared verb-level shrink is refused" "$?" "1"
+case "$(cat "$TMP/e14f")" in
+    *"omega"*"ov2"*) ok "...and it names the missing verb" ;;
+    *) bad "the refusal names the missing verb" "got: $(cat "$TMP/e14f")" ;;
+esac
+
+printf '#project\tverb\twhy\nomega\tov2\ttest retirement\n' > "$TMP/retired-verbs.tsv"
+FIXTURE_PUBLISHED="$TMP/published14f" \
+  cut --assemble "$TMP/asm14g" >/dev/null 2>"$TMP/e14g"
+check "a DECLARED retirement is accepted with no --allow-shrink" "$?" "0"
+case "$(cat "$TMP/e14g")" in
+    *"fully explained"*) ok "...and it says the shrink was explained by the declaration" ;;
+    *) bad "the accept names the explanation" "got: $(cat "$TMP/e14g")" ;;
+esac
+check "...and the surviving verb is still assembled" \
+      "$([ -f "$TMP/asm14g/omega/bin/ov1" ] && echo present || echo absent)" "present"
+check "...and the retired verb is gone from the manifest" \
+      "$(grep -c "$(printf 'omega\tov2')" "$TMP/asm14g/manifest.tsv" 2>/dev/null)" "0"
+printf '#project\tverb\twhy\n' > "$TMP/retired-verbs.tsv"
 
 echo
 summary
