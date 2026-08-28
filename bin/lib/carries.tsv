@@ -27,6 +27,7 @@ bin/lib/answered.jq	bin/lib/answered.jq
 bin/lib/body-grammar.sh	bin/lib/body-grammar.sh
 bin/lib/host-check.sh	bin/lib/host-check.sh
 bin/lib/labels.tsv	bin/lib/labels.tsv
+bin/lib/propagation-set.sh	bin/lib/propagation-set.sh
 bin/lib/zaxon.sh	bin/lib/zaxon.sh
 BUILD-DISCIPLINE.md	BUILD-DISCIPLINE.md
 commands/cloture.md	.claude/commands/cloture.md
