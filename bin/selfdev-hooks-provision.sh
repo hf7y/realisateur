@@ -1,23 +1,22 @@
 #!/usr/bin/env bash
 # selfdev-hooks-provision.sh -- every self-dev account runs THE-FLOOR gate
-# 3.2's closeout hooks (SubagentStop, Stop): wired in settings.json, and file.
+# 3.2's closeout hooks (SubagentStop, Stop) and the verb-pin hook (SessionStart, #708): wired in settings.json, and file.
 #
 # RUNNER: bin/tests/selfdev-hooks-provision.test.sh -- and an operator, on the host
 # GUARD-TEST: bin/tests/selfdev-hooks-provision.test.sh
 # GATE: strict
 #
-# THE SPLIT (#272): something else installs the hook FILE; this wires
-# settings.json ("Zach's file"), which #282 crossed that boundary for with
-# `permissions`. The file half is the verb build -- carried in
-# bin/lib/carries.tsv, installed on the release tick -- since #264 got off
-# shims. A sibling of selfdev-permissions-provision.sh, not a merge (#294).
+# THE SPLIT (#272): something else installs the hook FILE; this wires settings.json
+# ("Zach's file"), which #282 crossed that boundary for with `permissions`. The file half
+# is the verb build -- carried in bin/lib/carries.tsv, installed on the release tick --
+# since #264 got off shims. A sibling of selfdev-permissions-provision.sh, not a merge (#294).
 #
-# Env overrides (tests only): HOME_ROOT, ACCOUNTS, SUDO, SELFDEV_HOOK_SRC, SELFDEV_STOP_HOOK_SRC.
+# Env overrides (tests only): HOME_ROOT, ACCOUNTS, SUDO, SELFDEV_HOOK_SRC, SELFDEV_STOP_HOOK_SRC, SELFDEV_SESSIONSTART_HOOK_SRC.
 
 set -uo pipefail
 
 CLI_NAME='selfdev-hooks-provision.sh'
-CLI_SUMMARY='wire the SubagentStop and Stop closeout hooks every self-dev account already has installed'
+CLI_SUMMARY='wire the SubagentStop, Stop and SessionStart hooks every self-dev account already has installed'
 CLI_USAGE='  selfdev-hooks-provision.sh            report drift, change nothing
   selfdev-hooks-provision.sh --apply    write the block
   selfdev-hooks-provision.sh --strict   exit 1 if any account drifts
@@ -78,6 +77,16 @@ read -r -d '' HOOKS <<'JSON'
         }
       ]
     }
+  ],
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "~/.claude/hooks/session-start-verb-pin.sh"
+        }
+      ]
+    }
   ]
 }
 JSON
@@ -107,6 +116,7 @@ drift=0; blind=0; okc=0
 declare -A HOOK_SRC=(
   [subagent-closeout.sh]="${SELFDEV_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/subagent-closeout.sh}"
   [stop-residue-gate.sh]="${SELFDEV_STOP_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/stop-residue-gate.sh}"
+  [session-start-verb-pin.sh]="${SELFDEV_SESSIONSTART_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/session-start-verb-pin.sh}"
 )
 hook_drift=0
 hook_sum() { $SUDO md5sum "$1" 2>/dev/null | cut -d' ' -f1; }
