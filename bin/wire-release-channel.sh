@@ -57,7 +57,7 @@ HOST_LIBEXEC="${HOST_SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}"
 HOST_STATE="${HOST_TICK_STATE:-/var/lib/selfdev-release}"
 
 # --- THE CHECKOUT THIS INSTALLS FROM MUST BE CURRENT --------------------
-# BUILD-DISCIPLINE: "Deploy verified against a git ref; drift fails loud."
+# Deploy verified against a git ref; drift fails loud.
 # This script is the deploy and it verified nothing. Cost, 2026-08-22:
 # /root/realisateur-refresh sat 12 commits behind main, `--host --apply` ran
 # happily out of it, reported `3 ok, 0 gap, 0 bad`, and installed the OLD

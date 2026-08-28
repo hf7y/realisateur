@@ -18,7 +18,7 @@ CLI_USAGE='  carry.sh            print which carried files have drifted
   carry.sh --check    the same; writes nothing (default)
   carry.sh --apply    build one commit on bashified carrying every drifted file'
 
-# Self-locating through the symlink, as discipline.sh is, and overridable so
+# Self-locating through the symlink, and overridable so
 # bin/tests/carry.test.sh can point it at a throwaway repo -- the shape
 # ETIQUETTE_GRAMMAR uses in etiquette.sh, for the same reason: a tool that can
 # only ever act on its own repo cannot be tested against a fixture.

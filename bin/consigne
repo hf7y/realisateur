@@ -114,9 +114,9 @@ set -uo pipefail
 SELF_NAME='consigne'
 
 # ---- config, read here and nowhere else ------------------------------------
-# THE SAME VARIABLE AND THE SAME DEFAULT AS `fonde`, deliberately. This is the
-# "config read from one source, not retyped per file" row of BUILD-DISCIPLINE
-# applied across a project boundary: a caller who has exported
+# THE SAME VARIABLE AND THE SAME DEFAULT AS `fonde`, deliberately. Config read
+# from one source, not retyped per file, applied across a project boundary: a
+# caller who has exported
 # BIBLIOTHECAIRE_VAULT to point the old door somewhere must not have to learn
 # a second name to point the new one at the same place, and a `consigne` that
 # invented CONSIGNE_VAULT would deposit into a different tree than
@@ -459,9 +459,8 @@ do_status() {
 # regardless of what comes after it, so it is stripped out here, before
 # anything -- including the `lock` dispatch below -- looks at argv position.
 # Only consumed ahead of the first `--`, so a value a wrapped command passes
-# after its own `--` is never touched. Config read from one source
-# (BUILD-DISCIPLINE.md): this is now the only place `--vault`/`--vault=PATH`
-# is parsed, for every form.
+# after its own `--` is never touched. Config read from one source: this is
+# now the only place `--vault`/`--vault=PATH` is parsed, for every form.
 _pre=()
 while [ $# -gt 0 ]; do
   case "$1" in

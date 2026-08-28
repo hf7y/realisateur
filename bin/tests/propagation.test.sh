@@ -476,8 +476,8 @@ echo "-- 5c. FAIL-OPEN ON OPERATION, FAIL-CLOSED ON ADOPTION -----------------"
 # ===========================================================================
 # An unreachable release channel must not stop the account. It keeps running
 # the build it already has -- fully verified when installed -- and says BLIND
-# loudly. BUILD-DISCIPLINE's rule is "fail LOUD", not "fail STOPPED": halting
-# a nightly tick on a network blip is just a different silent failure.
+# loudly. The rule is "fail LOUD", not "fail STOPPED": halting a nightly tick
+# on a network blip is just a different silent failure.
 
 mkdir -p "$T/pinned/.local/share/verb-builds/2026-08-06T043915Z"
 ln -sfn "$T/pinned/.local/share/verb-builds/2026-08-06T043915Z" \
