@@ -316,4 +316,36 @@ grammar_default_after "$(_da 'nothing here')" >/dev/null 2>&1 \
   && bad "absent default returns 1" "it returned 0" \
   || ok "an absent default returns 1, so the actuator can tell 'blocks forever' from 'not read'"
 
+# --- ANSWERED-BY: a duplicate question points at the one that settled it (#568) ---
+section "ANSWERED-BY"
+
+_ab() { printf 'NO-DECISION: q\n%s\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n' "$1"; }
+
+grammar_check "$(_ab 'ANSWERED-BY hf7y/wtul#34')" >/dev/null 2>&1 \
+  && ok "a well-formed pointer is accepted" \
+  || bad "a well-formed pointer is accepted" "it was refused"
+
+out="$(grammar_check "$(_ab 'ANSWERED-BY wtul#34')" 2>&1)"
+case "$out" in *BAD-ANSWERED-BY*) ok "no owner (bare repo#n) is BAD-ANSWERED-BY" ;;
+  *) bad "no owner is BAD-ANSWERED-BY" "got: $out" ;; esac
+
+out="$(grammar_check "$(_ab 'ANSWERED-BY hf7y/wtul')" 2>&1)"
+case "$out" in *BAD-ANSWERED-BY*) ok "no issue number is BAD-ANSWERED-BY" ;;
+  *) bad "no issue number is BAD-ANSWERED-BY" "got: $out" ;; esac
+
+out="$(grammar_check "$(_ab 'ANSWERED-BY see the other issue')" 2>&1)"
+case "$out" in *BAD-ANSWERED-BY*) ok "prose instead of a ref is BAD-ANSWERED-BY" ;;
+  *) bad "prose instead of a ref is BAD-ANSWERED-BY" "got: $out" ;; esac
+
+# OPTIONAL, same as DEFAULT-AFTER: most bodies name no duplicate at all.
+grammar_check "$(printf 'NO-DECISION: q\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n')" >/dev/null 2>&1 \
+  && ok "a body with no pointer is still valid" \
+  || bad "no pointer is still valid" "it was refused"
+
+got="$(grammar_answered_by "$(_ab 'ANSWERED-BY hf7y/wtul#34')")"
+eq "the reader returns the ref" "$got" "hf7y/wtul#34"
+grammar_answered_by "$(_ab 'nothing here')" >/dev/null 2>&1 \
+  && bad "absent pointer returns 1" "it returned 0" \
+  || ok "an absent pointer returns 1, so the caller can tell 'no pointer' from 'not read'"
+
 summary

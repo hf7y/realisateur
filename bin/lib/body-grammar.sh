@@ -17,6 +17,7 @@
 #   EMPTY-SHIP          no entries; write "- none"
 #   UNTYPED-DELIVERY    an entry naming no <kind>:<value>
 #   BAD-DEFAULT         a DEFAULT-AFTER line that is not `<n>d: <action>`
+#   BAD-ANSWERED-BY     an ANSWERED-BY line that is not `<owner>/<repo>#<n>`
 #
 # DEFAULT-AFTER -- OPTIONAL, AND THE POINT IS THAT IT IS CHEAP (2026-08-22).
 # A `DECISION:` body may carry, on its own line:
@@ -39,6 +40,17 @@
 #
 # NO-OWNER: is not a destination -- #327 deferred two things to it and both
 # are lost. `defere` files one in a command; cite the number.
+#
+# ANSWERED-BY -- a duplicate question points at the issue that already
+# settled it (#568). `bin/lib/answered.sh`'s `issue_answered()` follows it ONE
+# HOP: if the cited issue is answered, this one is. Not recursive -- a cycle
+# (A points at B, B points at A) must not hang the predicate, so the target's
+# OWN pointer is never read. hf7y/wtul#37 was re-asked nine days after
+# hf7y/wtul#34 had already settled it; the `answered` label already covers
+# this ("a human answered somewhere this cannot see"), but that override is
+# untyped and has to be applied by hand. This is the citable, one-line form:
+#
+#     ANSWERED-BY hf7y/wtul#34
 
 GRAMMAR_DECIDER_RE='@[A-Za-z0-9][-A-Za-z0-9_/]*'
 
@@ -60,6 +72,30 @@ grammar_default_after() {
     action="${action#"${action%%[![:space:]]*}"}"
     [ -n "$action" ] || continue
     printf '%s\t%s\n' "$days" "$action"
+    return 0
+  done <<<"$body"
+  return 1
+}
+
+# grammar_answered_by <body> -- print "<owner>/<repo>#<n>" and return 0 when
+# the body carries a well-formed ANSWERED-BY; return 1 when it carries none.
+# Same shape as grammar_default_after: pure bash, first well-formed hit wins.
+grammar_answered_by() {
+  local body="$1" line stripped rest ref
+  while IFS= read -r line; do
+    stripped="${line#"${line%%[![:space:]]*}"}"
+    case "$stripped" in
+      [Aa][Nn][Ss][Ww][Ee][Rr][Ee][Dd]-[Bb][Yy]\ *) ;;
+      *) continue ;;
+    esac
+    rest="${stripped#* }"
+    ref="${rest%% *}"
+    case "$ref" in
+      */*'#'[0-9]*) ;;
+      *) continue ;;
+    esac
+    case "${ref#*'#'}" in ''|*[!0-9]*) continue ;; esac
+    printf '%s\n' "$ref"
     return 0
   done <<<"$body"
   return 1
@@ -213,6 +249,22 @@ grammar_check() {
             "line $lineno: DEFAULT-AFTER needs a day count -- \`DEFAULT-AFTER 14d: <reversible action>\`." ;;
           *) [ -n "$_da_act" ] || _find BAD-DEFAULT \
                "line $lineno: DEFAULT-AFTER names a window but no action. Say what happens when nobody answers." ;;
+        esac
+        [ "$first_seen" -eq 0 ] && [ "$open" -eq 0 ] && [ "$sopen" -eq 0 ] && _find UNDECLARED \
+          'line 1 is neither `DECISION:` nor `NO-DECISION:`. Every body declares one.' ;;
+      [Aa][Nn][Ss][Ww][Ee][Rr][Ee][Dd]-[Bb][Yy]*)
+        # A malformed pointer is worse than none: it reads as a citation to a
+        # human and is invisible to grammar_answered_by, so the duplicate
+        # looks resolved and stays unresolved.
+        _ab_ref="${decl#* }"
+        _ab_ref="${_ab_ref%% *}"
+        case "$_ab_ref" in
+          */*'#'[0-9]*) case "${_ab_ref#*'#'}" in
+              ''|*[!0-9]*) _find BAD-ANSWERED-BY \
+                "line $lineno: ANSWERED-BY needs \`<owner>/<repo>#<n>\` -- got: ${decl:0:60}" ;;
+            esac ;;
+          *) _find BAD-ANSWERED-BY \
+               "line $lineno: ANSWERED-BY needs \`<owner>/<repo>#<n>\` -- got: ${decl:0:60}" ;;
         esac
         [ "$first_seen" -eq 0 ] && [ "$open" -eq 0 ] && [ "$sopen" -eq 0 ] && _find UNDECLARED \
           'line 1 is neither `DECISION:` nor `NO-DECISION:`. Every body declares one.' ;;

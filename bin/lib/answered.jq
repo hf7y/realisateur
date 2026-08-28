@@ -49,6 +49,16 @@ def latest: sort_by(.createdAt) | last;
 # comment's date.
 def labelled: ((.labels // []) | any(.name == "answered"));
 
+# ANSWERED-BY <owner>/<repo>#<n> (#568): the citable, one-line form of the
+# same "answered somewhere else" fact the `answered` label carries untyped.
+# Extraction only -- this predicate has no network, so it cannot itself
+# follow the pointer. That hop is bin/lib/answered.sh's issue_answered(),
+# and it is ONE HOP: the target's own pointer, if it has one, is never read.
+def answered_by:
+  (.body // "") as $b
+  | ($b | [scan("(?im)^\\s*ANSWERED-BY\\s+(\\S+/\\S+#[0-9]+)")]) as $m
+  | if ($m | length) > 0 then $m[-1][0] else null end;
+
 def verdict:
   . as $i
   | ($i | candidates | latest) as $a
@@ -65,4 +75,4 @@ def verdict:
       { verdict: "unanswered", at: null,
         why: "no comment that could be a human's" }
     end
-  | . + { number: $i.number };
+  | . + { number: $i.number, answered_by: ($i | answered_by) };
