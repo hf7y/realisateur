@@ -125,15 +125,10 @@ For each unarchived artifact:
   inferred **v1 core** of the idea, filed as a `milestone` issue,
   `status: not-started`. That milestone is what every later idea against
   the project gets park-by-default-triaged against.
-- **Point every new project at `discipline`; do NOT copy the checklist in.**
-  Its root `CLAUDE.md` gets a one-line pointer to the command. Copying the
-  block is what realisateur#263 retired.
-  - Write a baseline `.gitignore` before the first `git add`: `*.env`, `.env`,
-    `secrets/`, `*secret*`, `*cred*`, `*.pem`, `*.key`, `id_rsa*`, `*.img`,
-    `*.img.xz`, `*.iso`, `*.efi`, `*.dmg`, `*.log`, `__pycache__/`, `*.pyc`,
-    `.DS_Store`. Real secrets go in an untracked `.env`/`secrets/`.
-  - Prove it took by RUNNING `discipline` from the new project and seeing the
-    full checklist, not by trusting that a file was written.
+- Write a baseline `.gitignore` before the first `git add`: `*.env`, `.env`,
+  `secrets/`, `*secret*`, `*cred*`, `*.pem`, `*.key`, `id_rsa*`, `*.img`,
+  `*.img.xz`, `*.iso`, `*.efi`, `*.dmg`, `*.log`, `__pycache__/`, `*.pyc`,
+  `.DS_Store`. Real secrets go in an untracked `.env`/`secrets/`.
 - If the new project is the kind of thing that benefits from unattended
   nightly iteration (most agent/codebase projects are), wire it into the
   scheduler, per the scheduler's own `README.md`, which is the source of
