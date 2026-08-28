@@ -17,6 +17,7 @@
 #   EMPTY-SHIP          no entries; write "- none"
 #   UNTYPED-DELIVERY    an entry naming no <kind>:<value>
 #   BAD-DEFAULT         a DEFAULT-AFTER line that is not `<n>d: <action>`
+#   BAD-ANSWERED-BY     an ANSWERED-BY line that is not `<owner>/<repo>#<n>`
 #
 # DEFAULT-AFTER -- OPTIONAL, AND THE POINT IS THAT IT IS CHEAP (2026-08-22).
 # A `DECISION:` body may carry, on its own line:
@@ -60,6 +61,27 @@ grammar_default_after() {
     action="${action#"${action%%[![:space:]]*}"}"
     [ -n "$action" ] || continue
     printf '%s\t%s\n' "$days" "$action"
+    return 0
+  done <<<"$body"
+  return 1
+}
+
+grammar_answered_by() {  # <body> -- print the ref (#568), 1 if none; shape of grammar_default_after
+  local body="$1" line stripped rest ref
+  while IFS= read -r line; do
+    stripped="${line#"${line%%[![:space:]]*}"}"
+    case "$stripped" in
+      [Aa][Nn][Ss][Ww][Ee][Rr][Ee][Dd]-[Bb][Yy]\ *) ;;
+      *) continue ;;
+    esac
+    rest="${stripped#* }"
+    ref="${rest%% *}"
+    case "$ref" in
+      */*'#'[0-9]*) ;;
+      *) continue ;;
+    esac
+    case "${ref#*'#'}" in ''|*[!0-9]*) continue ;; esac
+    printf '%s\n' "$ref"
     return 0
   done <<<"$body"
   return 1
@@ -213,6 +235,19 @@ grammar_check() {
             "line $lineno: DEFAULT-AFTER needs a day count -- \`DEFAULT-AFTER 14d: <reversible action>\`." ;;
           *) [ -n "$_da_act" ] || _find BAD-DEFAULT \
                "line $lineno: DEFAULT-AFTER names a window but no action. Say what happens when nobody answers." ;;
+        esac
+        [ "$first_seen" -eq 0 ] && [ "$open" -eq 0 ] && [ "$sopen" -eq 0 ] && _find UNDECLARED \
+          'line 1 is neither `DECISION:` nor `NO-DECISION:`. Every body declares one.' ;;
+      [Aa][Nn][Ss][Ww][Ee][Rr][Ee][Dd]-[Bb][Yy]*)
+        _ab_ref="${decl#* }"  # malformed reads as settled to a human, unresolved to grammar_answered_by
+        _ab_ref="${_ab_ref%% *}"
+        case "$_ab_ref" in
+          */*'#'[0-9]*) case "${_ab_ref#*'#'}" in
+              ''|*[!0-9]*) _find BAD-ANSWERED-BY \
+                "line $lineno: ANSWERED-BY needs \`<owner>/<repo>#<n>\` -- got: ${decl:0:60}" ;;
+            esac ;;
+          *) _find BAD-ANSWERED-BY \
+               "line $lineno: ANSWERED-BY needs \`<owner>/<repo>#<n>\` -- got: ${decl:0:60}" ;;
         esac
         [ "$first_seen" -eq 0 ] && [ "$open" -eq 0 ] && [ "$sopen" -eq 0 ] && _find UNDECLARED \
           'line 1 is neither `DECISION:` nor `NO-DECISION:`. Every body declares one.' ;;
