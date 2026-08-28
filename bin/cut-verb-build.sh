@@ -72,6 +72,15 @@ exempt_reason() {
     | awk -F'\t' -v p="$1" -v n="$2" '$1 == p && $2 == n { print $3; f = 1; exit } END { exit !f }'
 }
 
+RETIRED_VERBS="${VERB_RETIRED_VERBS_FILE:-$(dirname "${BASH_SOURCE[0]}")/lib/retired-verbs.tsv}"  # same one-file posture as not-a-verb.tsv (realisateur#696)
+retired=''
+if [ -f "$RETIRED_VERBS" ]; then
+  retired="$(grep -v '^[[:space:]]*#' "$RETIRED_VERBS" \
+             | awk -F'\t' 'NF>=2 && $1 != "" && $2 != "" { printf "%s\t%s\n", $1, $2 }')"
+else
+  say "  note: $RETIRED_VERBS not found -- no declared retirements will apply"
+fi
+
 # --dry-run is for CI with NO org credential (the smoke workflow). Its read is
 # short BY CONSTRUCTION, so it must be incapable of producing an installable.
 if [ "$DRY_RUN" -eq 1 ] && { [ -n "$ASSEMBLE" ] || [ "$WRITE" -eq 1 ]; }; then
@@ -243,35 +252,57 @@ fi
 # FIRST -- the only reading that exists everywhere. $BUILD_ROOT is a CONSUMER
 # path: absent on the CI runner that cuts nightly, so #399 lost 17 in silence.
 prev_count=0
+prev_rows=''   # project\tverb pairs, same source as prev_count -- names, not just an integer (realisateur#696)
 prev_where='(nothing published, nothing local)'
 if [ "$DRY_RUN" -eq 1 ]; then   # a short read grades the credential, not this
   prev_where='(skipped: --dry-run reads a subset)'
 elif published="$(gh api "repos/$OWNER/$VERB_META_REPO/contents/manifest.tsv" \
                   --jq '.content' 2>/dev/null | base64 -d 2>/dev/null)" \
    && [ -n "$published" ]; then
-  prev_count="$(printf '%s\n' "$published" | grep -cv '^#' || echo 0)"
+  prev_rows="$(printf '%s\n' "$published" | grep -v '^#')"
+  prev_count="$(printf '%s\n' "$prev_rows" | grep -cv '^$' || echo 0)"
   prev_where="github.com/$OWNER/$VERB_META_REPO manifest.tsv"
 fi
 if [ "$DRY_RUN" -eq 0 ] && [ -L "$BUILD_ROOT/current" ] && [ -f "$BUILD_ROOT/current/manifest.tsv" ]; then
-  local_prev="$(grep -cv '^#' "$BUILD_ROOT/current/manifest.tsv" 2>/dev/null || echo 0)"
+  local_rows="$(grep -v '^#' "$BUILD_ROOT/current/manifest.tsv" 2>/dev/null)"
+  local_prev="$(printf '%s\n' "$local_rows" | grep -cv '^$' || echo 0)"
   if [ "$local_prev" -gt "$prev_count" ]; then
     prev_count="$local_prev"
+    prev_rows="$local_rows"
     prev_where="$BUILD_ROOT/current/manifest.tsv"
   fi
 fi
 if [ -n "$ASSEMBLE" ] && [ -f "$ASSEMBLE/manifest.tsv" ]; then
-  assembled_prev="$(grep -cv '^#' "$ASSEMBLE/manifest.tsv" 2>/dev/null || echo 0)"
+  assembled_rows="$(grep -v '^#' "$ASSEMBLE/manifest.tsv" 2>/dev/null)"
+  assembled_prev="$(printf '%s\n' "$assembled_rows" | grep -cv '^$' || echo 0)"
   if [ "$assembled_prev" -gt "$prev_count" ]; then
     prev_count="$assembled_prev"
+    prev_rows="$assembled_rows"
     prev_where="$ASSEMBLE/manifest.tsv"
   fi
 fi
 [ "$prev_count" -gt 0 ] || say "  note: no previous build readable $prev_where -- the shrink guard cannot fire"
-if [ "$prev_count" -gt "$verb_count" ] && [ "$ALLOW_SHRINK" -eq 0 ]; then
-  say "  previous build: $prev_count verb(s)  <- $prev_where"
-  say "  this build:     $verb_count verb(s)"
-  die 'this build is SMALLER than the current one. A verb that vanished because an API call flaked looks exactly like one that was retired. Re-run, or pass --allow-shrink if the loss is real.'
-fi
+prev_names="$(printf '%s\n' "$prev_rows" | awk -F'\t' 'NF>=2{print $1"\t"$2}' | sort -u)"
+check_shrink() {  # <curr-names>: project\tverb pairs, so a retirement can be subtracted BY NAME; 6a0 can shrink verb_count again after the first call (realisateur#703/#696)
+  local curr_names="$1" missing unexplained
+  [ "$prev_count" -gt "$verb_count" ] || return 0
+  missing="$(comm -23 <(printf '%s\n' "$prev_names") <(printf '%s\n' "$curr_names" | sort -u))"
+  [ -n "$missing" ] || return 0   # count shrank but every prev name still present -- nothing to explain
+  unexplained="$(comm -23 <(printf '%s\n' "$missing") <(printf '%s\n' "$retired" | sort -u))"
+  if [ -z "$unexplained" ]; then
+    say "  shrink of $((prev_count - verb_count)) verb(s) fully explained by bin/lib/retired-verbs.tsv:"
+    printf '%s\n' "$missing" | sed 's/^/    /' >&2
+    return 0
+  fi
+  if [ "$ALLOW_SHRINK" -eq 0 ]; then
+    say "  previous build: $prev_count verb(s)  <- $prev_where"
+    say "  this build:     $verb_count verb(s)"
+    say "  missing and NOT in bin/lib/retired-verbs.tsv:"
+    printf '%s\n' "$unexplained" | sed 's/^/    /' >&2
+    die 'this build is SMALLER than the current one, and not every loss is declared. A verb that vanished because an API call flaked looks exactly like one that was retired. Re-run, pass --allow-shrink if the loss is real, or add a bin/lib/retired-verbs.tsv row if it is a declared retirement.'
+  fi
+}
+check_shrink "$(awk -F'\t' '{print $1"\t"$2}' "$rows")"
 
 # --- 5. emit ------------------------------------------------------------
 # The build id is a UTC date-time so builds sort lexically and a nightly
@@ -457,6 +488,7 @@ if [ -n "$ASSEMBLE" ]; then
     verb_count="$(grep -cv '^#' "$manifest" || true)"
     [ "$verb_count" -gt 0 ] || die 'every command in this build declared itself personal. That is a misread, not an ecosystem with no verbs -- refusing.'
     say "  $personal_out personal tool(s) omitted; $verb_count verb(s) remain"
+    check_shrink "$(grep -v '^#' "$manifest" | awk -F'\t' '{print $1"\t"$2}')"   # verb_count just moved -- the guard above graded a count that's now stale
   fi
 
   # --- 6a. every command declares which CHANNEL it belongs to -------------

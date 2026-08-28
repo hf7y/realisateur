@@ -49,10 +49,28 @@ def latest: sort_by(.createdAt) | last;
 # comment's date.
 def labelled: ((.labels // []) | any(.name == "answered"));
 
+# `unsettled` is the mirror OVERRIDE (#705): the owner replied and the reply
+# did not settle the question -- a contradiction, a non-answer, an answer to a
+# different question. `candidates`/`latest` can only see THAT a comment
+# exists, never whether it settled anything, so a typed label says what the
+# predicate cannot. Checked before the comment branch, same precedence
+# `answered` already has, so it wins over "there is a reply" rather than
+# losing to it.
+def unsettled_labelled: ((.labels // []) | any(.name == "unsettled"));
+
+# ANSWERED-BY <owner>/<repo>#<n> (#568), extraction only -- see body-grammar.sh.
+def answered_by:
+  (.body // "") as $b
+  | ($b | [scan("(?im)^\\s*ANSWERED-BY\\s+(\\S+/\\S+#[0-9]+)")]) as $m
+  | if ($m | length) > 0 then $m[-1][0] else null end;
+
 def verdict:
   . as $i
   | ($i | candidates | latest) as $a
-  | if $a != null and ($a.createdAt[0:10] >= $era) then
+  | if ($i | unsettled_labelled) then
+      { verdict: "unanswered", at: null,
+        why: "the `unsettled` label -- the owner replied and it did not settle the question" }
+    elif $a != null and ($a.createdAt[0:10] >= $era) then
       { verdict: "answered",   at: $a.createdAt,
         why: "an unstamped or relayed comment" }
     elif ($i | labelled) then
@@ -65,4 +83,4 @@ def verdict:
       { verdict: "unanswered", at: null,
         why: "no comment that could be a human's" }
     end
-  | . + { number: $i.number };
+  | . + { number: $i.number, answered_by: ($i | answered_by) };

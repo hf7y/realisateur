@@ -33,6 +33,8 @@ commands/cloture.md	.claude/commands/cloture.md
 commands/ideate.md	.claude/commands/ideate.md
 commands/reap.md	.claude/commands/reap.md
 hooks/subagent-closeout.sh	hooks/subagent-closeout.sh
+hooks/stop-residue-gate.sh	hooks/stop-residue-gate.sh
+hooks/session-start-verb-pin.sh	hooks/session-start-verb-pin.sh
 
 # HOST TOOLS, under libexec/ so nothing reads them as verbs. These are the
 # LOCAL-class probes `prop_host_tools()` rides to /usr/local/libexec/selfdev

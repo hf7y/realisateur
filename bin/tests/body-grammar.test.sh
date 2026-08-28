@@ -31,6 +31,7 @@ findings() { local o; o="$(grammar_check "$1")"; printf '%s' "$?"; : "$o"; }
 codes()    { grammar_check "$1" | while read -r c _; do printf '%s ' "$c"; done; }
 
 GOOD='DECISION: @zach -- link the shim host-wide?
+DEFAULT-AFTER 14d: link it and say so; unlinking is one command
 
 Prose about the change.
 
@@ -303,11 +304,18 @@ out="$(grammar_check "$(_da 'DEFAULT-AFTER 14d:')" 2>&1)"
 case "$out" in *BAD-DEFAULT*) ok "a window with no action is BAD-DEFAULT -- a timer to nowhere" ;;
   *) bad "no action is BAD-DEFAULT" "got: $out" ;; esac
 
-# OPTIONAL ON PURPOSE. An irreversible call must be able to block forever;
-# making the line mandatory would produce ritual defaults on exactly those.
-grammar_check "$(printf 'DECISION: @zach -- q\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n')" >/dev/null 2>&1 \
-  && ok "a DECISION with NO default is still valid -- blocking is a legitimate answer" \
-  || bad "no default is still valid" "it was refused; irreversible calls could not block"
+_nodefault="$(printf 'DECISION: @zach -- q\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n')"
+out="$(grammar_check "$_nodefault" 2>&1)"
+case "$out" in *NO-DEFAULT*) ok "#680: a DECISION with no DEFAULT-AFTER is NO-DEFAULT -- blocking by omission is refused" ;;
+  *) bad "no default is NO-DEFAULT" "got: $out" ;; esac
+
+grammar_check "$(_da 'DEFAULT-AFTER 0d: block -- irreversible, no default')" >/dev/null 2>&1 \
+  && ok "#680: blocking forever stays legal when DECLARED as 0d, so an irreversible call has a spelling" \
+  || bad "0d blocks forever" "it was refused; irreversible calls lost their spelling"
+
+grammar_check "$(printf 'NO-DECISION: agent work\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n')" >/dev/null 2>&1 \
+  && ok "#680: NO-DECISION needs no default -- the rule binds the bodies that ask, not the ones that report" \
+  || bad "NO-DECISION needs no default" "it was refused"
 
 # The reader the actuator consumes.
 got="$(grammar_default_after "$(_da 'DEFAULT-AFTER 14d: close it as declined')")"
@@ -315,5 +323,35 @@ eq "the reader returns days and action, tab-separated" "$got" "$(printf '14\tclo
 grammar_default_after "$(_da 'nothing here')" >/dev/null 2>&1 \
   && bad "absent default returns 1" "it returned 0" \
   || ok "an absent default returns 1, so the actuator can tell 'blocks forever' from 'not read'"
+
+section "ANSWERED-BY"
+
+_ab() { printf 'NO-DECISION: q\n%s\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n' "$1"; }
+
+grammar_check "$(_ab 'ANSWERED-BY hf7y/wtul#34')" >/dev/null 2>&1 \
+  && ok "a well-formed pointer is accepted" \
+  || bad "a well-formed pointer is accepted" "it was refused"
+
+out="$(grammar_check "$(_ab 'ANSWERED-BY wtul#34')" 2>&1)"
+case "$out" in *BAD-ANSWERED-BY*) ok "no owner (bare repo#n) is BAD-ANSWERED-BY" ;;
+  *) bad "no owner is BAD-ANSWERED-BY" "got: $out" ;; esac
+
+out="$(grammar_check "$(_ab 'ANSWERED-BY hf7y/wtul')" 2>&1)"
+case "$out" in *BAD-ANSWERED-BY*) ok "no issue number is BAD-ANSWERED-BY" ;;
+  *) bad "no issue number is BAD-ANSWERED-BY" "got: $out" ;; esac
+
+out="$(grammar_check "$(_ab 'ANSWERED-BY see the other issue')" 2>&1)"
+case "$out" in *BAD-ANSWERED-BY*) ok "prose instead of a ref is BAD-ANSWERED-BY" ;;
+  *) bad "prose instead of a ref is BAD-ANSWERED-BY" "got: $out" ;; esac
+
+grammar_check "$(printf 'NO-DECISION: q\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n')" >/dev/null 2>&1 \
+  && ok "a body with no pointer is still valid" \
+  || bad "no pointer is still valid" "it was refused"
+
+got="$(grammar_answered_by "$(_ab 'ANSWERED-BY hf7y/wtul#34')")"
+eq "the reader returns the ref" "$got" "hf7y/wtul#34"
+grammar_answered_by "$(_ab 'nothing here')" >/dev/null 2>&1 \
+  && bad "absent pointer returns 1" "it returned 0" \
+  || ok "an absent pointer returns 1, so the caller can tell 'no pointer' from 'not read'"
 
 summary

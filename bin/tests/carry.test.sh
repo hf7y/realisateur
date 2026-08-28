@@ -84,7 +84,8 @@ esac
 ok "C0 fixture repo built (bashified holds a file main does not)"
 
 run_carry() { ( cd "$T" && CARRY_REPO="$T" CARRY_REMOTE=origin CARRY_BRANCH=bashified \
-   CARRY_REF_MAIN=origin/main CARRY_REF_BASH=origin/bashified bash "$C" "$@" 2>&1 ); }
+   CARRY_REF_MAIN=origin/main CARRY_REF_BASH=origin/bashified CARRY_PROJECT_NAME=fixtureproj \
+   bash "$C" "$@" 2>&1 ); }
 
 out="$(run_carry --check)"
 case "$out" in *"CARRIED.md"*) ok "C1 --check names the drifted carried file" ;;
@@ -114,6 +115,68 @@ fi
 out="$(run_carry --check)"
 case "$out" in *"none drifted"*) ok "C7 a second --check is clean: the carry took" ;;
   *) bad "C7 a second --check is clean: the carry took" "got: $out" ;; esac
+
+section "E. a DECLARED retirement deletes bin/<verb> and man/<verb>.1 from bashified, and nothing else"
+( cd "$T" \
+  && git fetch -q origin \
+  && git checkout -q main && git reset -q --hard origin/main \
+  && printf '#project\tverb\twhy\nfixtureproj\tzeta\ttest retirement\nother\teta\tanother project'"'"'s row -- must not fire here\n' \
+       > bin/lib/retired-verbs.tsv \
+  && git add -A && git commit -qm main-retired-verbs \
+  && git checkout -q bashified && git reset -q --hard origin/bashified \
+  && mkdir -p bin man \
+  && printf '#!/usr/bin/env bash\necho zeta\n' > bin/zeta && chmod +x bin/zeta \
+  && printf '.TH ZETA 1\n' > man/zeta.1 \
+  && printf '#!/usr/bin/env bash\necho eta\n' > bin/eta && chmod +x bin/eta \
+  && printf '.TH ETA 1\n' > man/eta.1 \
+  && git add -A && git commit -qm bashified-zeta-eta \
+  && git checkout -q main \
+  && git push -q origin main bashified \
+  && git fetch -q origin \
+) >/dev/null 2>&1 || bad "E0 fixture extended with a retiree verb" "setup failed"
+
+out="$(run_carry --check)"
+case "$out" in *"RETIRE"*"bin/zeta"*) ok "E1 --check names the file staged for retirement" ;;
+  *) bad "E1 --check names the file staged for retirement" "got: $out" ;; esac
+case "$out" in *"man/zeta.1"*) ok "E2 --check names the man page too" ;;
+  *) bad "E2 --check names the man page too" "got: $out" ;; esac
+case "$out" in *"NOT carried"*) ok "E3 --check writes nothing" ;;
+  *) bad "E3 --check writes nothing" "got: $out" ;; esac
+before="$( cd "$T" && git rev-parse origin/bashified )"
+after="$( cd "$T" && git fetch -q origin && git rev-parse origin/bashified )"
+eq "E4 --check moved the branch not at all" "$before" "$after"
+
+out="$(run_carry --apply)"
+( cd "$T" && git fetch -q origin ) >/dev/null 2>&1
+if ( cd "$T" && git cat-file -e origin/bashified:bin/zeta 2>/dev/null ); then
+  bad "E5 bin/zeta is gone from bashified after --apply" "it is still there"
+else
+  ok "E5 bin/zeta is gone from bashified after --apply"
+fi
+if ( cd "$T" && git cat-file -e origin/bashified:man/zeta.1 2>/dev/null ); then
+  bad "E6 man/zeta.1 is gone from bashified after --apply" "it is still there"
+else
+  ok "E6 man/zeta.1 is gone from bashified after --apply"
+fi
+if ( cd "$T" && git cat-file -e origin/bashified:bin/eta 2>/dev/null ); then
+  ok "E7 a retirement row naming a DIFFERENT project does not fire here"
+else
+  bad "E7 a retirement row naming a DIFFERENT project does not fire here" "bin/eta was deleted too"
+fi
+if ( cd "$T" && git cat-file -e origin/bashified:CARRIED.md 2>/dev/null ); then
+  ok "E8 an unrelated carried file survives a retirement-only commit"
+else
+  bad "E8 an unrelated carried file survives a retirement-only commit" "CARRIED.md is gone too"
+fi
+if ( cd "$T" && git cat-file -e origin/bashified:only-on-bashified 2>/dev/null ); then
+  ok "E9 an untracked bashified-only file survives too"
+else
+  bad "E9 an untracked bashified-only file survives too" "only-on-bashified is gone"
+fi
+
+out="$(run_carry --check)"
+case "$out" in *"no declared retirement pending"*) ok "E10 idempotent: a second run finds nothing left to retire" ;;
+  *) bad "E10 idempotent: a second run finds nothing left to retire" "got: $out" ;; esac
 
 section "D2. overriding where to read without where to write is a usage error"
 # The 2026-08-25 accident: this suite handed carry.sh a fixture's refs while
