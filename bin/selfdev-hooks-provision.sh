@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # selfdev-hooks-provision.sh -- every self-dev account runs THE-FLOOR gate
-# 3.2's closeout hook: wired in settings.json, and the CURRENT file.
+# 3.2's closeout hooks (SubagentStop, Stop): wired in settings.json, and file.
 #
 # RUNNER: bin/tests/selfdev-hooks-provision.test.sh -- and an operator, on the host
 # GUARD-TEST: bin/tests/selfdev-hooks-provision.test.sh
@@ -12,12 +12,12 @@
 # bin/lib/carries.tsv, installed on the release tick -- since #264 got off
 # shims. A sibling of selfdev-permissions-provision.sh, not a merge (#294).
 #
-# Env overrides (test suite only): HOME_ROOT, ACCOUNTS, SUDO, SELFDEV_HOOK_SRC.
+# Env overrides (tests only): HOME_ROOT, ACCOUNTS, SUDO, SELFDEV_HOOK_SRC, SELFDEV_STOP_HOOK_SRC.
 
 set -uo pipefail
 
 CLI_NAME='selfdev-hooks-provision.sh'
-CLI_SUMMARY='wire the SubagentStop closeout hook every self-dev account already has installed'
+CLI_SUMMARY='wire the SubagentStop and Stop closeout hooks every self-dev account already has installed'
 CLI_USAGE='  selfdev-hooks-provision.sh            report drift, change nothing
   selfdev-hooks-provision.sh --apply    write the block
   selfdev-hooks-provision.sh --strict   exit 1 if any account drifts
@@ -68,6 +68,16 @@ read -r -d '' HOOKS <<'JSON'
         }
       ]
     }
+  ],
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "~/.claude/hooks/stop-residue-gate.sh"
+        }
+      ]
+    }
   ]
 }
 JSON
@@ -91,38 +101,44 @@ echo
 
 drift=0; blind=0; okc=0
 
-# THE FILE, NOT ONLY THE BLOCK: the verb build refreshes it from a local
-# CLONE 13 of 15 accounts lost to #385/#386. FOUR live versions, none main's.
-# PROP_HOST_PIN, not the literal layout: propagation-set.sh owns it.
+# THE FILES, NOT ONLY THE BLOCK: refreshed from a local CLONE -- #385/#386 lost 13 of 15 accounts to this, FOUR live versions and none of them main's. PROP_HOST_PIN, not the literal layout: propagation-set.sh owns it.
 # shellcheck source=bin/lib/propagation-set.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/propagation-set.sh"
-HOOK_SRC="${SELFDEV_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/subagent-closeout.sh}"
+declare -A HOOK_SRC=(
+  [subagent-closeout.sh]="${SELFDEV_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/subagent-closeout.sh}"
+  [stop-residue-gate.sh]="${SELFDEV_STOP_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/stop-residue-gate.sh}"
+)
 hook_drift=0
 hook_sum() { $SUDO md5sum "$1" 2>/dev/null | cut -d' ' -f1; }
-want_sum="$(hook_sum "$HOOK_SRC")"
-[ -n "$want_sum" ] || echo "  BLIND the hook file source is unreadable at $HOOK_SRC -- not checked"
+declare -A HOOK_WANT_SUM=()
+for hn in "${!HOOK_SRC[@]}"; do
+  HOOK_WANT_SUM[$hn]="$(hook_sum "${HOOK_SRC[$hn]}")"
+  [ -n "${HOOK_WANT_SUM[$hn]}" ] || echo "  BLIND the hook file source is unreadable at ${HOOK_SRC[$hn]} -- not checked"
+done
 
 for u in "$@"; do
   f="$HOME_ROOT/$u/.claude/settings.json"
 
-  if [ -n "$want_sum" ]; then
-    hf="$HOME_ROOT/$u/.claude/hooks/subagent-closeout.sh"
+  for hn in "${!HOOK_SRC[@]}"; do
+    want_sum="${HOOK_WANT_SUM[$hn]}"
+    [ -n "$want_sum" ] || continue
+    hf="$HOME_ROOT/$u/.claude/hooks/$hn"
     got_sum="$(hook_sum "$hf")"
     if [ "$got_sum" = "$want_sum" ]; then
       :
     else
-      echo "  DRIFT $u: hook FILE is ${got_sum:-absent}, build has ${want_sum}"
+      echo "  DRIFT $u: hook FILE is ${got_sum:-absent}, build has ${want_sum} ($hn)"
       hook_drift=$((hook_drift+1))
       if [ "$APPLY" = 1 ]; then
-        if $SUDO install -m 755 -D "$HOOK_SRC" "$hf" 2>/dev/null; then
+        if $SUDO install -m 755 -D "${HOOK_SRC[$hn]}" "$hf" 2>/dev/null; then
           $SUDO chown "$u:$u" "$hf" 2>/dev/null || true
-          echo "        -> refreshed from the build"
+          echo "        -> refreshed from the build ($hn)"
         else
-          echo "        -> FAILED to refresh the hook file"
+          echo "        -> FAILED to refresh the hook file ($hn)"
         fi
       fi
     fi
-  fi
+  done
 
   if ! $SUDO test -f "$f" 2>/dev/null; then
     echo "  DRIFT $u: no settings.json at all"
