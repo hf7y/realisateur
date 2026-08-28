@@ -31,8 +31,13 @@ ROSTER_PROJECTS=(
 #
 # ARMING IS A SEPARATE ACT and deliberately not done here: being swept costs
 # one API read per run, being armed costs quota every night.
+# NOT front-door: ARCHIVED 2026-08-23, and swept anyway until 2026-08-28. An
+# archived repo is READ-ONLY, so its 4 open `needs-human` issues could not be
+# answered, relabelled or closed -- decision-rot reported them as live
+# blockers for five days and `etiquette --apply` would have failed on them.
+# Membership must mean "a sweep can act here", not merely "issues are legible".
 ROSTER_ECOSYSTEM=(
-  verbs front-door basheur
+  verbs basheur
   dcp-gate-site musc-2300 scriba-senatus french-textbook
   etalon vitae space-canon
 )
