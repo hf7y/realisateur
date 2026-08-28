@@ -113,6 +113,20 @@ printf '8\t2026-08-01T00:00:00Z\n' > "$T/answered.txt"
 has   "A''4 the label beats a pre-era comment"   "$out" "ANSWERED    #8"
 hasnt "A''5 ...so it is not reported UNCOUNTED"  "$out" "UNCOUNTED   #8"
 
+section "A'''. \`unsettled\` is the mirror override: a reply that did not answer"  # #705, baudin#29
+cat > "$T/f.json" <<'EOF'
+[
+ {"number":12,"title":"replied but unsettled, still labelled","body":"DECISION: @zach -- pick one","labels":[{"name":"needs-human"},{"name":"unsettled"}]},
+ {"number":13,"title":"replied but unsettled, not yet labelled","body":"DECISION: @zach -- pick one","labels":[{"name":"unsettled"}]}
+]
+EOF
+printf '12\n13\n' > "$T/answered.txt"
+: > "$T/edits"; out="$(ANSWERED_FIXTURE="$T/answered.txt" run --apply 2>&1)"
+hasnt "A'''1 the labelled one is not read ANSWERED despite the reply" "$out" "ANSWERED    #12"
+has   "A'''2 the unlabelled one is still MISSING needs-human"         "$out" "MISSING     #13"
+has   "A'''3 ...and --apply adds it back, reply notwithstanding"      "$(cat "$T/edits")" "issue edit 13"
+eq    "A'''4 the already-labelled one gets no edit"                   "$(grep -c 'edit 12' "$T/edits")" "0"
+
 printf '5\n' > "$T/answered.txt"
 
 # B reads the section-A fixture; put it back.
