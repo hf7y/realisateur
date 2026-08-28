@@ -43,6 +43,7 @@ cat > "$BIN/wire-selfdev-git.sh" <<'STUB'
 # env var: run_as invokes it through `env -i`.
 repo="$1"; d="$(cd "$(dirname "$0")/.." && pwd)"
 printf '%s\n' "$repo" >> "$d/wire-calls"
+printf '%s\n' "$PWD" >> "$d/wire-cwd"
 echo "== wire-selfdev-git stub $repo =="
 if grep -qxF "$repo" "$d/wire-fail-list" 2>/dev/null; then
   echo "  BAD     WITNESS FAILED: git@github-$repo did not serve -- the wiring is not live"
@@ -115,7 +116,7 @@ chmod +x "$TMP/stub"/*
 
 # setup <failing repo>... -- one run of the script under test.
 setup() {
-    rm -f "$PHOME/wire-calls" "$PHOME/LANDED" "$TMP/RELEASE-BOOTSTRAPPED"
+    rm -f "$PHOME/wire-calls" "$PHOME/wire-cwd" "$PHOME/LANDED" "$TMP/RELEASE-BOOTSTRAPPED"
     : > "$PHOME/wire-fail-list"
     for r in "$@"; do printf '%s\n' "$r" >> "$PHOME/wire-fail-list"; done
     PATH="$TMP/stub:$PATH" SUDO_USER=fixturehands \
@@ -173,6 +174,24 @@ case "$(cat "$TMP/err")" in
     *scheduler*) bad "the refusal names only what failed" "scheduler wired fine and is named: $(cat "$TMP/err")" ;;
     *) ok "...and NOT the repo that wired cleanly" ;;
 esac
+
+echo
+echo "-- 8b. run_as lands in a directory the PROJECT user can stat -----------"
+# Every documented way to invoke this script is from a 0700 home -- another
+# account's realisateur clone, or root's. run_as never cd'd, so the project
+# user inherited that cwd and `git` refused before reaching GitHub: "fatal:
+# failed to stat '/root/realisateur-fix': Permission denied", reported as
+# WITNESS FAILED, i.e. as a credential fault. Found 2026-08-28 onboarding
+# dcp-gate-site, and only after the TARGET abort on the same line was fixed.
+setup
+if [ -s "$PHOME/wire-cwd" ]; then
+  strays="$(grep -vxF "$PHOME" "$PHOME/wire-cwd" | sort -u)"
+  [ -z "$strays" ] && ok "8b1 every wiring call runs from the project home" \
+                   || bad "8b1 every wiring call runs from the project home" "ran from: $strays"
+  check "8b2 all four repos were reached" "$(wc -l < "$PHOME/wire-cwd")" "4"
+else
+  bad "8b1 every wiring call runs from the project home" "no wire-cwd recorded"
+fi
 
 echo
 echo "-- 9. the project's own runtime secrets: declared, never supplied -------"

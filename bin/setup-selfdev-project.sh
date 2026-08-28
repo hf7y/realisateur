@@ -99,7 +99,7 @@ run_as() {
     HOME="$HOME_DIR" USER="$PROJECT" LOGNAME="$PROJECT" \
     PATH="$HOME_DIR/.local/bin:/usr/local/bin:/usr/bin:/bin" \
     SELFDEV_PROJECTS="senechal $PROJECT" \
-    bash -lc "$1"
+    bash -lc "cd '$HOME_DIR' || exit 1; $1"
 }
 
 # STAGE, don't reach across accounts. $HERE is whatever checkout this script
