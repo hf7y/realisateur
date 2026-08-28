@@ -337,7 +337,6 @@ out="$(grammar_check "$(_ab 'ANSWERED-BY see the other issue')" 2>&1)"
 case "$out" in *BAD-ANSWERED-BY*) ok "prose instead of a ref is BAD-ANSWERED-BY" ;;
   *) bad "prose instead of a ref is BAD-ANSWERED-BY" "got: $out" ;; esac
 
-# OPTIONAL, same as DEFAULT-AFTER: most bodies name no duplicate at all.
 grammar_check "$(printf 'NO-DECISION: q\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n')" >/dev/null 2>&1 \
   && ok "a body with no pointer is still valid" \
   || bad "no pointer is still valid" "it was refused"

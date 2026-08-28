@@ -49,8 +49,7 @@ def latest: sort_by(.createdAt) | last;
 # comment's date.
 def labelled: ((.labels // []) | any(.name == "answered"));
 
-# ANSWERED-BY <owner>/<repo>#<n> (#568): extraction only -- no network here,
-# so answered.sh's issue_answered() does the one-hop follow, not this.
+# ANSWERED-BY <owner>/<repo>#<n> (#568), extraction only -- see body-grammar.sh.
 def answered_by:
   (.body // "") as $b
   | ($b | [scan("(?im)^\\s*ANSWERED-BY\\s+(\\S+/\\S+#[0-9]+)")]) as $m

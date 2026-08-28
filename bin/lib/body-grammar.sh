@@ -42,8 +42,7 @@
 # are lost. `defere` files one in a command; cite the number.
 #
 # ANSWERED-BY <owner>/<repo>#<n> (#568): a duplicate points at the issue that
-# already settled it. `answered.sh`'s issue_answered() follows it ONE HOP,
-# never the target's own pointer, so A->B->A cannot hang the predicate.
+# already settled it -- answered.sh's issue_answered() follows it ONE HOP.
 
 GRAMMAR_DECIDER_RE='@[A-Za-z0-9][-A-Za-z0-9_/]*'
 
