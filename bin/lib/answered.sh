@@ -13,8 +13,7 @@ ANSWERED_WHY=''
 ANSWERED_AT=''
 ANSWERED_BY=''   # the ANSWERED-BY target this issue's body names, or empty
 
-# issue_answered_json <one issue's {number,labels,comments[,body]}> -- no gh
-# call, so ANSWERED_BY is surfaced but never followed (issue_answered() does).
+# issue_answered_json <one issue's {number,labels,comments[,body]}> -- no gh call.
 #   0  answered      a human answered, or `answered` says one did elsewhere
 #   1  unanswered    nothing here that could be a human's
 #   2  uncounted     something could be, and cannot be counted -- NOT a silence
@@ -44,12 +43,9 @@ issue_answered_json() {
   esac
 }
 
-# issue_answered <owner/repo> <number> -- fetches, then defers to the above.
-# `issue view`, not `api .../comments`: the REST list carries no labels.
-#
-# ANSWERED-BY, ONE HOP (#568): on a non-answered verdict, adopt the named
-# issue's own verdict via issue_answered_json -- never issue_answered, which
-# is what keeps a cycle (A->B->A) from hanging this.
+# issue_answered <owner/repo> <number> -- fetches (`issue view`, labels the
+# REST comment list lacks), then follows ANSWERED-BY (#568) ONE HOP via
+# issue_answered_json -- never issue_answered, so A->B->A cannot hang it.
 issue_answered() {
   local repo="$1" num="$2" json rc target t_repo t_num t_json t_rc t_why
   ANSWERED_WHY=''; ANSWERED_AT=''; ANSWERED_BY=''

@@ -316,7 +316,6 @@ grammar_default_after "$(_da 'nothing here')" >/dev/null 2>&1 \
   && bad "absent default returns 1" "it returned 0" \
   || ok "an absent default returns 1, so the actuator can tell 'blocks forever' from 'not read'"
 
-# --- ANSWERED-BY: a duplicate question points at the one that settled it (#568) ---
 section "ANSWERED-BY"
 
 _ab() { printf 'NO-DECISION: q\n%s\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n' "$1"; }

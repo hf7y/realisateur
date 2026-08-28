@@ -40,9 +40,6 @@
 #
 # NO-OWNER: is not a destination -- #327 deferred two things to it and both
 # are lost. `defere` files one in a command; cite the number.
-#
-# ANSWERED-BY <owner>/<repo>#<n> (#568): a duplicate points at the issue that
-# already settled it -- answered.sh's issue_answered() follows it ONE HOP.
 
 GRAMMAR_DECIDER_RE='@[A-Za-z0-9][-A-Za-z0-9_/]*'
 
@@ -69,9 +66,7 @@ grammar_default_after() {
   return 1
 }
 
-# grammar_answered_by <body> -- print "<owner>/<repo>#<n>", 1 if none. Same
-# shape as grammar_default_after.
-grammar_answered_by() {
+grammar_answered_by() {  # <body> -- print the ref (#568), 1 if none; shape of grammar_default_after
   local body="$1" line stripped rest ref
   while IFS= read -r line; do
     stripped="${line#"${line%%[![:space:]]*}"}"
