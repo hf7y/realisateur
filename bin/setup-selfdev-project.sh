@@ -99,12 +99,11 @@ run_as() {
     HOME="$HOME_DIR" USER="$PROJECT" LOGNAME="$PROJECT" \
     PATH="$HOME_DIR/.local/bin:/usr/local/bin:/usr/bin:/bin" \
     SELFDEV_PROJECTS="senechal $PROJECT" \
-    bash -lc "$1"
+    bash -lc "cd '$HOME_DIR' || exit 1; $1"
 }
 
-# STAGE, don't reach across accounts. $HERE is whatever checkout this script
-# was invoked from -- typically an EXISTING project account's own realisateur
-# clone, e.g. bibliothecaire's -- and every project home is 0700 (provisioned
+# STAGE, don't reach across accounts: $HERE is typically another project's
+# realisateur clone, and every project home is 0700 (see run_as).
 STAGE="$HOME_DIR/.selfdev-setup"
 install -d -m 700 -o "$PROJECT" -g "$PROJECT" "$STAGE"
 install -m 700 -o "$PROJECT" -g "$PROJECT" \

@@ -43,6 +43,7 @@ cat > "$BIN/wire-selfdev-git.sh" <<'STUB'
 # env var: run_as invokes it through `env -i`.
 repo="$1"; d="$(cd "$(dirname "$0")/.." && pwd)"
 printf '%s\n' "$repo" >> "$d/wire-calls"
+printf '%s\n' "$PWD" >> "$d/wire-cwd"
 echo "== wire-selfdev-git stub $repo =="
 if grep -qxF "$repo" "$d/wire-fail-list" 2>/dev/null; then
   echo "  BAD     WITNESS FAILED: git@github-$repo did not serve -- the wiring is not live"
@@ -115,7 +116,7 @@ chmod +x "$TMP/stub"/*
 
 # setup <failing repo>... -- one run of the script under test.
 setup() {
-    rm -f "$PHOME/wire-calls" "$PHOME/LANDED" "$TMP/RELEASE-BOOTSTRAPPED"
+    rm -f "$PHOME/wire-calls" "$PHOME/wire-cwd" "$PHOME/LANDED" "$TMP/RELEASE-BOOTSTRAPPED"
     : > "$PHOME/wire-fail-list"
     for r in "$@"; do printf '%s\n' "$r" >> "$PHOME/wire-fail-list"; done
     PATH="$TMP/stub:$PATH" SUDO_USER=fixturehands \
@@ -173,6 +174,20 @@ case "$(cat "$TMP/err")" in
     *scheduler*) bad "the refusal names only what failed" "scheduler wired fine and is named: $(cat "$TMP/err")" ;;
     *) ok "...and NOT the repo that wired cleanly" ;;
 esac
+
+echo
+echo "-- 8b. run_as lands somewhere the PROJECT user can stat ----------------"
+setup
+if [ -s "$PHOME/wire-cwd" ]; then
+  strays="$(grep -vxF "$PHOME" "$PHOME/wire-cwd" | sort -u)"
+  [ -z "$strays" ] \
+    && ok "8b1 every wiring call runs from the project home, not the invoker's 0700 one" \
+    || bad "8b1 every wiring call runs from the project home, not the invoker's 0700 one" \
+           "ran from: $strays -- git cannot stat it, and reports that as WITNESS FAILED"
+  check "8b2 all four repos were reached" "$(wc -l < "$PHOME/wire-cwd")" "4"
+else
+  bad "8b1 every wiring call runs from the project home" "no wire-cwd recorded"
+fi
 
 echo
 echo "-- 9. the project's own runtime secrets: declared, never supplied -------"

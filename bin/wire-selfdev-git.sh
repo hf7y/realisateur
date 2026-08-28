@@ -141,6 +141,7 @@ fi
 # Configuration is not capability. Everything above is a file; this is GitHub
 # answering. This ecosystem has already lost four days to "a key exists" being
 # read as "GitHub accepts it".
+TARGET="git@$ALIAS:$OWNER/$REPO.git"
 if [ "$MODE" = --apply ] || [ -f "$KEY" ]; then
   if GIT_SSH_COMMAND="ssh -o BatchMode=yes -o StrictHostKeyChecking=yes" \
      git ls-remote "$TARGET" HEAD >/dev/null 2>&1; then
