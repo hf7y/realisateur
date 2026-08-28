@@ -166,7 +166,6 @@ etiquette.sh
 check-project-busy.sh
 notify-senechal.sh
 gh-sign.sh
-discipline.sh
 consigne
 ausculte.sh
 "
