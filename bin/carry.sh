@@ -72,6 +72,9 @@ done
 TABLE="$(git show "$REF_MAIN:bin/lib/carries.tsv" 2>/dev/null | grep -v '^#' | grep -v '^[[:space:]]*$')"
 [ -n "$TABLE" ] || blind "carries.tsv is empty or unreadable on $REF_MAIN"
 
+PROJECT_NAME="${CARRY_PROJECT_NAME:-$(basename "$HERE")}"  # a row naming another project is not this repo's to act on (realisateur#696)
+RETIRED="$(git show "$REF_MAIN:bin/lib/retired-verbs.tsv" 2>/dev/null | grep -v '^#' | grep -v '^[[:space:]]*$')"
+
 drifted=(); missing=(); n=0
 while IFS=$'\t' read -r carried src; do
   [ -n "$carried" ] || continue
@@ -97,16 +100,36 @@ if [ "${#missing[@]}" -gt 0 ]; then
   exit 1
 fi
 
-if [ "${#drifted[@]}" -eq 0 ]; then
-  printf '%s: %d carried file(s), none drifted\n' "$CLI_NAME" "$n"
+retiring=()
+while IFS=$'\t' read -r rproj rverb rwhy; do
+  [ -n "$rproj" ] && [ -n "$rverb" ] || continue
+  [ "$rproj" = "$PROJECT_NAME" ] || continue
+  for p in "bin/$rverb" "man/$rverb.1"; do
+    git cat-file -e "$REF_BASH:$p" 2>/dev/null || continue
+    retiring+=("$p"$'\t'"$rverb retired: ${rwhy:-(no reason recorded)}")
+  done
+done <<< "$RETIRED"
+
+if [ "${#drifted[@]}" -eq 0 ] && [ "${#retiring[@]}" -eq 0 ]; then
+  printf '%s: %d carried file(s), none drifted; no declared retirement pending\n' "$CLI_NAME" "$n"
   exit 0
 fi
 
-printf '%s: %d of %d carried file(s) have drifted:\n' "$CLI_NAME" "${#drifted[@]}" "$n"
-while IFS=$'\t' read -r carried src; do
-  [ -n "$carried" ] || continue
-  printf '  %s  <-  %s\n' "$carried" "$src"
-done < <(printf '%s\n' "${drifted[@]}")
+if [ "${#drifted[@]}" -gt 0 ]; then
+  printf '%s: %d of %d carried file(s) have drifted:\n' "$CLI_NAME" "${#drifted[@]}" "$n"
+  while IFS=$'\t' read -r carried src; do
+    [ -n "$carried" ] || continue
+    printf '  %s  <-  %s\n' "$carried" "$src"
+  done < <(printf '%s\n' "${drifted[@]}")
+fi
+if [ "${#retiring[@]}" -gt 0 ]; then
+  printf '%s: %d file(s) staged for retirement (bin/lib/retired-verbs.tsv, project %s):\n' \
+         "$CLI_NAME" "${#retiring[@]}" "$PROJECT_NAME"
+  while IFS=$'\t' read -r p why; do
+    [ -n "$p" ] || continue
+    printf '  RETIRE  %s  (%s)\n' "$p" "$why"
+  done < <(printf '%s\n' "${retiring[@]}")
+fi
 
 [ "$MODE" = --apply ] || { printf '%s: NOT carried (need --apply)\n' "$CLI_NAME"; exit 0; }
 
@@ -128,13 +151,26 @@ while IFS=$'\t' read -r carried src; do
     || die "could not stage $carried"
 done < <(printf '%s\n' "${drifted[@]}")
 
+while IFS=$'\t' read -r p why; do  # --force-remove: purely against the temp index, no working-tree file to stat
+  [ -n "$p" ] || continue
+  GIT_INDEX_FILE="$IDX" git update-index --force-remove -- "$p" \
+    || die "could not stage removal of $p"
+done < <(printf '%s\n' "${retiring[@]}")
+
 TREE="$(GIT_INDEX_FILE="$IDX" git write-tree)" || die "could not write the carried tree"
 if [ "$TREE" = "$(git rev-parse "$REF_BASH^{tree}")" ]; then
   printf '%s: the carried tree is identical -- nothing to push\n' "$CLI_NAME"
   exit 0
 fi
 
-MSG="carry: $(printf '%s\n' "${drifted[@]}" | cut -f1 | tr '\n' ' ' | sed 's/ $//') from ${REF_MAIN#origin/}"
+MSG=''
+if [ "${#drifted[@]}" -gt 0 ]; then
+  MSG="carry: $(printf '%s\n' "${drifted[@]}" | cut -f1 | tr '\n' ' ' | sed 's/ $//') from ${REF_MAIN#origin/}"
+fi
+if [ "${#retiring[@]}" -gt 0 ]; then
+  ret_paths="$(printf '%s\n' "${retiring[@]}" | cut -f1 | tr '\n' ' ' | sed 's/ $//')"
+  MSG="${MSG:+$MSG; }retire: $ret_paths"
+fi
 COMMIT="$(git commit-tree "$TREE" -p "$OLD" -m "$MSG")" || die "could not commit the carried tree"
 
 # --force-with-lease against the sha we read, so a bashified that moved while
@@ -142,4 +178,5 @@ COMMIT="$(git commit-tree "$TREE" -p "$OLD" -m "$MSG")" || die "could not commit
 git push -q "$REMOTE" "$COMMIT:refs/heads/$BRANCH" \
   --force-with-lease="refs/heads/$BRANCH:$OLD" \
   || die "push refused -- $BRANCH moved since $OLD was read. Re-run."
-printf '%s: carried %d file(s) onto %s (%s)\n' "$CLI_NAME" "${#drifted[@]}" "$BRANCH" "${COMMIT:0:8}"
+printf '%s: carried %d file(s), retired %d file(s), onto %s (%s)\n' \
+       "$CLI_NAME" "${#drifted[@]}" "${#retiring[@]}" "$BRANCH" "${COMMIT:0:8}"
