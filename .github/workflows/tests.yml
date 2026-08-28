@@ -18,8 +18,8 @@
 #   which 5 of 45 do. A header describing a guard that does not exist is worse
 #   than no header: it reads as a gate.)
 #
-# THE BAR, unchanged. Editing a test so a new workflow can open green is the
-# move this suite exists to catch. Fixing a harness that tests the wrong
+# THE BAR, unchanged. Editing a test so a new workflow can open green is what
+# BUILD-DISCIPLINE.md exists to prevent. Fixing a harness that tests the wrong
 # thing is not that, and neither is fixing shipped code.
 
 name: tests
