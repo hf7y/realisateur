@@ -38,11 +38,21 @@ unroutable	D93F0B	written:defere	No repo owns this yet. Its own state, never a s
 # `gh issue edit --add-label` fails on a repo that lacks them and that failure
 # is what left the dashboard's type key dead in 24 of 24 repos.
 #
-# WHAT THE PAIR IS FOR RIGHT NOW (2026-08-26): the v1 freeze. realisateur takes
-# `durable` only; `decayable` goes to hf7y/scheduler, where v2 lives. Both stay
-# `typed` -- nothing derives them and nothing new writes them, so the "who
-# writes it" question above is answered unchanged. The freeze is enforced by
-# the monthly cut (realisateur#602), not by these labels: they sort the queue,
-# they do not gate it.
+# WHAT THE PAIR IS FOR. v1 is the stable build the estate develops AGAINST; v2
+# is the work in progress. Not a freeze with an end date -- the split is
+# permanent, and the older wording ("holds the channel stable until v1 is
+# tagged") read as something that expires and misled an agent into asking
+# whether the freeze was over when the v1 tag was cut on 2026-08-28.
+#
+# THE ROUTING RULE, which lived in BUILD-DISCIPLINE.md until it was purged on
+# 2026-08-27 (#684/#687) and now lives here, at the point of use: realisateur
+# takes `durable` only -- a bug, a broken guard, a missing credential.
+# Anything `decayable` -- an idea, or a build that may be obviated before it
+# is reached -- goes to hf7y/scheduler, where v2 is built:
+#   defere '<line>' --project scheduler
+# Both stay `typed`: nothing derives them and nothing new writes them, so the
+# "who writes it" question above is answered unchanged. They SORT the queue,
+# they do not gate it -- the cadence is what would hold, and the monthly cut
+# predicate (realisateur#602) is still unbuilt, so nothing enforces it today.
 decayable	0E8A16	typed	An idea or build that may already be obviated by the time it is reached. Mutually exclusive with `durable`.
 durable	1D76DB	typed	A bug, broken guard, or missing credential: stays exactly as broken until fixed. Mutually exclusive with `decayable`.
