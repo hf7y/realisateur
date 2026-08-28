@@ -267,11 +267,19 @@ if [ -n "$ASSEMBLE" ] && [ -f "$ASSEMBLE/manifest.tsv" ]; then
   fi
 fi
 [ "$prev_count" -gt 0 ] || say "  note: no previous build readable $prev_where -- the shrink guard cannot fire"
-if [ "$prev_count" -gt "$verb_count" ] && [ "$ALLOW_SHRINK" -eq 0 ]; then
-  say "  previous build: $prev_count verb(s)  <- $prev_where"
-  say "  this build:     $verb_count verb(s)"
-  die 'this build is SMALLER than the current one. A verb that vanished because an API call flaked looks exactly like one that was retired. Re-run, or pass --allow-shrink if the loss is real.'
-fi
+# A FUNCTION, NOT A ONE-SHOT CHECK: verb_count taken here is PRE-filter --
+# 6a0 below can still drop verbs (a KIND: personal reclassification) after
+# this point, and that drop is invisible unless the same comparison runs
+# again once verb_count is truly final (realisateur#703: the guard compared
+# 19 against 19 here and never saw the 18 that 6a0 produced afterward).
+check_shrink() {
+  if [ "$prev_count" -gt "$verb_count" ] && [ "$ALLOW_SHRINK" -eq 0 ]; then
+    say "  previous build: $prev_count verb(s)  <- $prev_where"
+    say "  this build:     $verb_count verb(s)"
+    die 'this build is SMALLER than the current one. A verb that vanished because an API call flaked looks exactly like one that was retired, or a KIND: personal reclassification dropped it. Re-run, or pass --allow-shrink if the loss is real.'
+  fi
+}
+check_shrink
 
 # --- 5. emit ------------------------------------------------------------
 # The build id is a UTC date-time so builds sort lexically and a nightly
@@ -457,6 +465,7 @@ if [ -n "$ASSEMBLE" ]; then
     verb_count="$(grep -cv '^#' "$manifest" || true)"
     [ "$verb_count" -gt 0 ] || die 'every command in this build declared itself personal. That is a misread, not an ecosystem with no verbs -- refusing.'
     say "  $personal_out personal tool(s) omitted; $verb_count verb(s) remain"
+    check_shrink   # verb_count just moved -- the guard above graded a count that's now stale
   fi
 
   # --- 6a. every command declares which CHANNEL it belongs to -------------

@@ -469,5 +469,24 @@ fi
     && ok "the sibling VERB is untouched -- one command omitted, not a project" \
     || bad "the sibling verb survived" "kappa/kv is missing too"
 
+# 14e. A PERSONAL reclassification IS a shrink, and the guard must see it.
+# Section 4's comparison runs on verb_count as derived at line 228, BEFORE
+# 6a0 drops personal tools and lowers it again -- so a build that only
+# shrinks because a verb was reclassified KIND: personal sailed through with
+# ALLOW_SHRINK=0 unexamined (realisateur#703: the guard compared 19 against
+# 19 and never saw the 18 that actually shipped).
+printf 'kappa\tkv\nkappa\tkp\n' > "$TMP/published14e"
+FIXTURE_PUBLISHED="$TMP/published14e" \
+  cut --assemble "$TMP/asm14e" >/dev/null 2>"$TMP/e14e"
+check "a personal-tool reclassification alone is refused as a shrink" "$?" "1"
+case "$(cat "$TMP/e14e")" in
+    *SMALLER*) ok "...and the refusal gives the shrink reason" ;;
+    *) bad "the refusal names the shrink" "got: $(cat "$TMP/e14e")" ;;
+esac
+
+FIXTURE_PUBLISHED="$TMP/published14e" \
+  cut --assemble "$TMP/asm14e" --allow-shrink >/dev/null 2>"$TMP/e14e2"
+check "--allow-shrink accepts a personal-tool-caused shrink" "$?" "0"
+
 echo
 summary
