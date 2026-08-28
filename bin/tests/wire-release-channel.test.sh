@@ -140,7 +140,7 @@ grep -q 'ln -sfn "$HOST_LIBEXEC/dresse.sh" "$HOST_BIN/dresse"' "$SCRIPT" \
 
 
 # --- the checkout these bytes come from (2026-08-22) ------------------------
-# BUILD-DISCIPLINE: "Deploy verified against a git ref; drift fails loud."
+# Deploy verified against a git ref; drift fails loud.
 # This script IS the deploy and it verified nothing. /root/realisateur-refresh
 # sat 12 commits behind main, `--host --apply` ran out of it, reported
 # "3 ok, 0 gap, 0 bad", and installed the OLD install-verb-build.sh -- so

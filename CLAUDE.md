@@ -32,22 +32,3 @@ When dispatching a subagent to do work in this ecosystem:
   it reverted. One modified a live crontab under a second user account.
 - Its status claims are **stale by construction** — verify before
   relaying. Three reported already-completed work as still outstanding.
-
-## Build discipline and ecosystem protocols
-
-Run **`discipline`** before marking anything done. It prints the
-build-discipline checklist and the ecosystem protocols — what to do when a
-change reaches outside this repo (senechal, check-project-busy,
-consulte). `discipline --checklist` and `discipline --protocols` print one
-half each.
-
-**If `discipline` is not on PATH, that is a finding — say so loudly. Do not
-recite the checklist from memory and do not do the steps by hand.** A missing
-guard is a finding, not an inconvenience.
-
-The text lives in one place, `BUILD-DISCIPLINE.md`, and is read at the point of
-use. It is deliberately **not copied into this file or any other project's**.
-Stamping it into 17 repos is what produced eleven byte-identical corrupted
-copies, a source 36 lines behind its own copies, and a drift detector reporting
-OK throughout — the full post-mortem is in `BUILD-DISCIPLINE.md` under
-"## The baseline".

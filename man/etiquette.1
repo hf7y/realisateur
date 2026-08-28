@@ -20,11 +20,9 @@ grades one repository against it.
 The grammar has exactly one home,
 .BR bin/lib/labels.tsv ,
 and is read at the point of use rather than copied into each repository. A
-grammar copied into twenty-four repositories is twenty-four grammars. This is
-the same shape as
-.BR discipline (1),
-adopted for the same reason: stamped copies do not travel, they rot, and the
-drift detector reports OK throughout.
+grammar copied into twenty-four repositories is twenty-four grammars:
+stamped copies do not travel, they rot, and the drift detector reports OK
+throughout.
 .PP
 Each row declares a label, its colour, its
 .B source
@@ -85,6 +83,5 @@ BLIND \(em the grammar or the issue list could not be read. Never 0: an
 unreadable tracker is not a clean one, and a grammar that failed to load is
 not an empty grammar.
 .SH SEE ALSO
-.BR discipline (1),
 .BR defere (1),
 .BR gh-sign (1)

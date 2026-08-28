@@ -2,8 +2,8 @@
 #
 # Zach, 2026-08-18 (hf7y/realisateur#397): "Repos need to look into a central
 # place to see the grammar." NEVER copied into a repo -- read at the point of
-# use by `etiquette`, the `discipline`/BUILD-DISCIPLINE.md shape. The verb
-# build carries it, and a guard test proves the carried copy still matches.
+# use by `etiquette`. The verb build carries it, and a guard test proves the
+# carried copy still matches.
 #
 # Columns:  name  color  source  meaning
 #
@@ -43,6 +43,6 @@ unroutable	D93F0B	written:defere	No repo owns this yet. Its own state, never a s
 # `typed` -- nothing derives them and nothing new writes them, so the "who
 # writes it" question above is answered unchanged. The freeze is enforced by
 # the monthly cut (realisateur#602), not by these labels: they sort the queue,
-# they do not gate it. BUILD-DISCIPLINE.md's protocols block carries the rule.
+# they do not gate it.
 decayable	0E8A16	typed	An idea or build that may already be obviated by the time it is reached. Mutually exclusive with `durable`.
 durable	1D76DB	typed	A bug, broken guard, or missing credential: stays exactly as broken until fixed. Mutually exclusive with `decayable`.
