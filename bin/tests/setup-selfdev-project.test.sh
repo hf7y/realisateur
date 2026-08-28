@@ -176,18 +176,14 @@ case "$(cat "$TMP/err")" in
 esac
 
 echo
-echo "-- 8b. run_as lands in a directory the PROJECT user can stat -----------"
-# Every documented way to invoke this script is from a 0700 home -- another
-# account's realisateur clone, or root's. run_as never cd'd, so the project
-# user inherited that cwd and `git` refused before reaching GitHub: "fatal:
-# failed to stat '/root/realisateur-fix': Permission denied", reported as
-# WITNESS FAILED, i.e. as a credential fault. Found 2026-08-28 onboarding
-# dcp-gate-site, and only after the TARGET abort on the same line was fixed.
+echo "-- 8b. run_as lands somewhere the PROJECT user can stat ----------------"
 setup
 if [ -s "$PHOME/wire-cwd" ]; then
   strays="$(grep -vxF "$PHOME" "$PHOME/wire-cwd" | sort -u)"
-  [ -z "$strays" ] && ok "8b1 every wiring call runs from the project home" \
-                   || bad "8b1 every wiring call runs from the project home" "ran from: $strays"
+  [ -z "$strays" ] \
+    && ok "8b1 every wiring call runs from the project home, not the invoker's 0700 one" \
+    || bad "8b1 every wiring call runs from the project home, not the invoker's 0700 one" \
+           "ran from: $strays -- git cannot stat it, and reports that as WITNESS FAILED"
   check "8b2 all four repos were reached" "$(wc -l < "$PHOME/wire-cwd")" "4"
 else
   bad "8b1 every wiring call runs from the project home" "no wire-cwd recorded"

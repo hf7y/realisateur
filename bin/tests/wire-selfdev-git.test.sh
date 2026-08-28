@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# wire-selfdev-git.test.sh -- bin/tests/wire-selfdev-git.test.sh (exit 0 = pass)
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
