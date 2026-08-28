@@ -183,6 +183,28 @@ case $'\n'"$SHIPPED_LIBS"$'\n' in
   *) bad "lib/answered.jq is still not in the support set; decision-rot cannot read its own predicate" ;;
 esac
 
+echo
+echo "-- 1c. A CARRIED SCRIPT'S LIB IS ITSELF CARRIED, NOT JUST NEEDED -------"
+carried_libs="$(printf '%s\n' "$CARRIES_BLOCK" | awk -F'\t' '$1 ~ /^bin\/lib\//{sub(/^bin\//,"",$1); print $1}' | sort -u)"
+carried_bin="$(printf '%s\n' "$CARRIES_BLOCK" | awk -F'\t' '$1 ~ /^bin\//{print $1"\t"$2}')"
+unlisted=""
+while IFS=$'\t' read -r carried src; do            # realisateur#682
+  [ -n "${src:-}" ] || continue
+  f="$REPO/$src"
+  [ -f "$f" ] || continue
+  for l in $(grep -E '^[[:space:]]*(\.|source)[[:space:]]' "$f" 2>/dev/null \
+               | grep -ohE 'lib/[a-z0-9-]+\.[a-z0-9]+' | sort -u); do
+    case $'\n'"$carried_libs"$'\n' in
+      *$'\n'"$l"$'\n'*) ;;
+      *) unlisted="$unlisted $carried->$l" ;;
+    esac
+  done
+done <<EOF
+$carried_bin
+EOF
+[ -z "$unlisted" ] && ok "every lib/ a carried script sources is itself a bin/lib/* row in carries.tsv" \
+                   || bad "carried, sources a lib NOT in carries.tsv's bin/lib/* rows:$unlisted"
+
 # ===========================================================================
 echo
 echo "-- 2. main IS NOT A DEPLOY REF, AND THE LEAK MAY NOT GROW --------------"
