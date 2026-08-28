@@ -267,12 +267,7 @@ if [ -n "$ASSEMBLE" ] && [ -f "$ASSEMBLE/manifest.tsv" ]; then
   fi
 fi
 [ "$prev_count" -gt 0 ] || say "  note: no previous build readable $prev_where -- the shrink guard cannot fire"
-# A FUNCTION, NOT A ONE-SHOT CHECK: verb_count taken here is PRE-filter --
-# 6a0 below can still drop verbs (a KIND: personal reclassification) after
-# this point, and that drop is invisible unless the same comparison runs
-# again once verb_count is truly final (realisateur#703: the guard compared
-# 19 against 19 here and never saw the 18 that 6a0 produced afterward).
-check_shrink() {
+check_shrink() {  # a function, not a one-shot: 6a0 can shrink verb_count again after this first call (realisateur#703)
   if [ "$prev_count" -gt "$verb_count" ] && [ "$ALLOW_SHRINK" -eq 0 ]; then
     say "  previous build: $prev_count verb(s)  <- $prev_where"
     say "  this build:     $verb_count verb(s)"
