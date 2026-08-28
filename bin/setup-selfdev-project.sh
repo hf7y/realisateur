@@ -7,8 +7,8 @@
 #   1. bin/provision-selfdev-user.sh <p> --apply   (root)  account + creds
 #   2. the hands key into <p>'s authorized_keys    (root)  see --no-key
 #   3. bin/wire-selfdev-git.sh <repo> --apply      (as <p>) per-repo deploy keys
-#   4. bin/land-selfdev.sh --land                  (as <p>) clones + verbs
-#   5. the App credential, host-wide               (root)  see 5/8 below
+#   4. the App credential + selfdev-gh-app.sh --wire  (root, as <p>) see 4/8
+#   5. bin/land-selfdev.sh --land                  (as <p>) clones + verbs
 #   6. the RELEASE BOOTSTRAP + its clock            (as <p>) see below
 #   7. bin/selfdev-permissions-provision.sh        (root)  the permissions
 #      block, without which the account's first unattended night cannot write
@@ -54,9 +54,10 @@ if [ "$MODE" = --check ]; then
   [ "$WANT_KEY" -eq 1 ] && echo "    2. copy $HANDS's authorized_keys into /home/$PROJECT/.ssh/" \
                         || echo "    2. SKIPPED (--no-key)"
   echo "    3. wire-selfdev-git.sh for realisateur, scheduler, senechal, $PROJECT"
-  echo "    4. land-selfdev.sh --land as $PROJECT"
-  echo "    5. selfdev-app-key.sh --apply: the host-wide GitHub App credential,"
-  echo "       and $PROJECT into the group that can read it"
+  echo "    4. selfdev-app-key.sh --apply: the host-wide GitHub App credential, and"
+  echo "       $PROJECT into the group that can read it; then selfdev-gh-app.sh"
+  echo "       --wire as $PROJECT, without which no https clone can authenticate"
+  echo "    5. land-selfdev.sh --land as $PROJECT"
   echo "    6. release bootstrap into ~$PROJECT/.local/libexec/selfdev/, then"
   echo "       selfdev-release-tick.sh --install-cadence --apply as $PROJECT"
   echo "    7. selfdev-permissions-provision.sh --apply: the permissions block"
@@ -135,30 +136,41 @@ line means the key exists and GitHub did not accept it), then re-run:
 and re-run this script when every repo wires clean; the steps before this one
 are idempotent."
 
-say "4/8 land"
-run_as "'$STAGE/land-selfdev.sh' --land" 2>&1 | tail -25
-
-# --- 5. the release bootstrap, and the account's own clock -------------------
-# DELEGATED to bin/wire-release-channel.sh since 2026-08-10, not reimplemented.
-# It was inline here, which meant the only way to give an account a clock was
-say "5/8 the GitHub App credential (host-wide)"
+# BEFORE LANDING (#692): land-selfdev.sh clones over https, which step 3's
+# deploy keys do not serve. --apply makes the key readable, --wire makes git use it.
+say "4/8 the GitHub App credential (host-wide key, then this account's git helper)"
 if [ -x "$HERE/selfdev-app-key.sh" ]; then
-  # rc read from the command, not from a pipeline whose last stage is `sed`.
-  # `set -o pipefail` is on here and would carry it, but the 3/4 block in this
-  # same file records what that assumption cost once already.
   appkey_out="$("$HERE/selfdev-app-key.sh" --apply --owner "${SELFDEV_GH_OWNER:-hf7y}" 2>&1)"; appkey_rc=$?
   printf '%s\n' "$appkey_out" | sed 's/^/  /'
-  if [ "$appkey_rc" -eq 0 ]; then
-    echo "  OK      $PROJECT can read the host-wide App key"
-  else
-    echo "  BAD     selfdev-app-key.sh --apply failed -- $PROJECT cannot mint an App token."
-    echo "          This is not fatal to the rest of provisioning, but the account is"
-    echo "          incomplete: fix it with \`sudo $HERE/selfdev-app-key.sh --check\` before arming."
-  fi
+  [ "$appkey_rc" -eq 0 ] && echo "  OK      $PROJECT can read the host-wide App key" \
+    || die "selfdev-app-key.sh --apply failed -- $PROJECT cannot mint an App token, so
+the clone in 5/8 has no credential and would report 'landed' over a failure.
+Fix it with \`sudo $HERE/selfdev-app-key.sh --check\`, then re-run; every step
+above is idempotent."
 else
-  echo "  MISSING $HERE/selfdev-app-key.sh -- cannot place the App credential"
+  die "$HERE/selfdev-app-key.sh missing -- cannot place the App credential"
 fi
 
+GH_APP="${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/selfdev-gh-app.sh"
+[ -x "$GH_APP" ] || die "$GH_APP is not installed, so $PROJECT gets no git credential
+helper and cannot clone over https. Install the host tools first:
+    sudo $HERE/wire-release-channel.sh --host --apply"
+run_as "'$GH_APP' --wire" 2>&1 | sed 's/^/  /'
+[ "${PIPESTATUS[0]}" -eq 0 ] || die "selfdev-gh-app.sh --wire failed for $PROJECT -- no git
+credential helper, so the clone in 5/8 cannot authenticate. Read the rows above."
+
+# A STEP THAT CANNOT FAIL IS NOT A STEP: `| tail -25` dropped the status.
+say "5/8 land"
+land_out="$(run_as "'$STAGE/land-selfdev.sh' --land" 2>&1)"; land_rc=$?
+printf '%s\n' "$land_out" | tail -25
+[ "$land_rc" -eq 0 ] || die "land-selfdev.sh exited $land_rc -- $PROJECT is NOT landed.
+Its own summary line above counts the BAD rows; the full output is longer than
+the 25 lines shown. Re-run it directly to see all of them:
+    sudo -u $PROJECT -H $STAGE/land-selfdev.sh --land"
+
+# --- 6. the release bootstrap, and the account's own clock -------------------
+# DELEGATED to bin/wire-release-channel.sh since 2026-08-10, not reimplemented.
+# It was inline here, which meant the only way to give an account a clock was
 say "6/8 release bootstrap + clock"
 "$HERE/wire-release-channel.sh" "$PROJECT" --apply
 

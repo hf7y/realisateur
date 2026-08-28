@@ -57,6 +57,15 @@ cat > "$BIN/land-selfdev.sh" <<'STUB'
 d="$(cd "$(dirname "$0")/.." && pwd)"
 : > "$d/LANDED"
 echo "land stub: $*"
+[ -f "$d/land-fail" ] && { echo "land-selfdev: 15 ok, 2 missing, 2 bad."; exit 1; }
+exit 0
+STUB
+
+cat > "$BIN/selfdev-app-key.sh" <<'STUB'
+#!/usr/bin/env bash
+echo "app-key stub: $*"
+[ -f "${TMPROOT:-}/appkey-fail" ] && exit 5
+exit 0
 STUB
 
 cat > "$BIN/wire-release-channel.sh" <<'STUB'
@@ -66,6 +75,16 @@ d="$(cd "$(dirname "$0")/.." && pwd)"
 echo "release-channel stub: $*"
 STUB
 chmod +x "$BIN"/*.sh
+
+mkdir -p "$TMP/libexec"
+cat > "$TMP/libexec/selfdev-gh-app.sh" <<STUB
+#!/usr/bin/env bash
+: > "$TMP/WIRED"
+echo "gh-app stub: \$*"
+[ -f "$TMP/wire-app-fail" ] && exit 5
+exit 0
+STUB
+chmod +x "$TMP/libexec/selfdev-gh-app.sh"
 
 # --- the privileged surface, stubbed -------------------------------------
 REAL_INSTALL="$(PATH=/usr/bin:/bin command -v install)"
@@ -116,10 +135,11 @@ chmod +x "$TMP/stub"/*
 
 # setup <failing repo>... -- one run of the script under test.
 setup() {
-    rm -f "$PHOME/wire-calls" "$PHOME/wire-cwd" "$PHOME/LANDED" "$TMP/RELEASE-BOOTSTRAPPED"
+    rm -f "$PHOME/wire-calls" "$PHOME/wire-cwd" "$PHOME/LANDED" "$TMP/RELEASE-BOOTSTRAPPED" "$TMP/WIRED"
     : > "$PHOME/wire-fail-list"
     for r in "$@"; do printf '%s\n' "$r" >> "$PHOME/wire-fail-list"; done
     PATH="$TMP/stub:$PATH" SUDO_USER=fixturehands \
+      TMPROOT="$TMP" SELFDEV_LIBEXEC="$TMP/libexec" \
       bash "$BIN/setup-selfdev-project.sh" "$PROJECT" --apply --no-key \
       > "$TMP/out" 2> "$TMP/err"
 }
@@ -136,6 +156,36 @@ check "...all four repos were wired" "$(sort -u "$PHOME/wire-calls" | tr '\n' ' 
 check "...landing ran" "$([ -f "$PHOME/LANDED" ] && echo ran || echo skipped)" "ran"
 check "...and the release bootstrap ran" \
       "$([ -f "$TMP/RELEASE-BOOTSTRAPPED" ] && echo ran || echo skipped)" "ran"
+
+check "...the git credential helper was wired" \
+      "$([ -f "$TMP/WIRED" ] && echo wired || echo skipped)" "wired"
+case "$(cat "$TMP/out")" in
+  *"4/8 the GitHub App credential"*"5/8 land"*)
+      ok "...and it was wired BEFORE landing -- land-selfdev clones over https, which deploy keys do not serve" ;;
+  *)  bad "the App credential step precedes landing" "order: $(grep '^== ' "$TMP/out" | tr '\n' ' ')" ;;
+esac
+
+: > "$PHOME/land-fail"
+setup
+rc=$?
+rm -f "$PHOME/land-fail"
+check "landing BAD rows refuse the run instead of reporting 'landed'" \
+      "$([ "$rc" -ne 0 ] && echo refused || echo "exited 0")" "refused"
+case "$(cat "$TMP/err")" in
+  *"is NOT landed"*) ok "...naming the account as not landed, which the old tail -25 hid above its window" ;;
+  *) bad "the refusal says the account is not landed" "stderr: $(cat "$TMP/err")" ;;
+esac
+check "...and did NOT run the release bootstrap over a failed clone" \
+      "$([ -f "$TMP/RELEASE-BOOTSTRAPPED" ] && echo ran || echo stopped)" "stopped"
+
+: > "$TMP/wire-app-fail"
+setup
+rc=$?
+rm -f "$TMP/wire-app-fail"
+check "a failed --wire refuses too -- the clone would have no credential" \
+      "$([ "$rc" -ne 0 ] && echo refused || echo "exited 0")" "refused"
+check "...before landing" "$([ -f "$PHOME/LANDED" ] && echo landed || echo stopped)" "stopped"
+
 
 # --- 2. ONE repo failing stops the run and names it ----------------------
 # This is the account-#4 case exactly: the deploy key for one repo does not
