@@ -11,14 +11,11 @@ ANSWERED_JQ_FILE="${ANSWERED_JQ_FILE:-$(dirname "$(readlink -f "${BASH_SOURCE[0]
 # throwing away the reason the predicate already computed would rebuild it.
 ANSWERED_WHY=''
 ANSWERED_AT=''
-# The ANSWERED-BY target this issue's body names, or empty. Set by both
-# entry points; only issue_answered() has the network to follow it.
-ANSWERED_BY=''
+ANSWERED_BY=''   # the ANSWERED-BY target this issue's body names, or empty
 
 # issue_answered_json <one issue's {number,labels,comments[,body]}> -- no gh
-# call, so an ANSWERED-BY pointer is surfaced in $ANSWERED_BY but never
-# followed here -- following it is a second fetch, which belongs to the
-# caller that has a `gh` (issue_answered(), below).
+# call, so ANSWERED_BY is surfaced but never followed -- that hop needs a
+# second fetch, which belongs to issue_answered(), below.
 #   0  answered      a human answered, or `answered` says one did elsewhere
 #   1  unanswered    nothing here that could be a human's
 #   2  uncounted     something could be, and cannot be counted -- NOT a silence
@@ -49,17 +46,14 @@ issue_answered_json() {
 }
 
 # issue_answered <owner/repo> <number> -- fetches, then defers to the above.
-# `issue view`, not `api .../comments`: the REST comment list carries no
-# labels, and without labels the `answered` override cannot be seen here.
+# `issue view`, not `api .../comments`: the REST list carries no labels, and
+# without labels the `answered` override cannot be seen here.
 #
-# ANSWERED-BY, ONE HOP (#568): if the local verdict is not already
-# `answered` and the body names a target, fetch THAT issue's own local
-# verdict -- via issue_answered_json, never issue_answered -- and adopt it if
-# it is `answered`. Reading the target through the *_json entry point rather
-# than recursing here is what keeps this to one hop: the target's own
-# ANSWERED-BY, if it has one, is never read, so a cycle (A -> B -> A) cannot
-# hang the predicate. A target that cannot be read (BLIND) or is itself
-# unanswered leaves this issue's original verdict standing.
+# ANSWERED-BY, ONE HOP (#568): on a non-`answered` local verdict, fetch the
+# named issue's own local verdict via issue_answered_json (never
+# issue_answered -- that recursion is what a cycle A->B->A would hang on)
+# and adopt it if `answered`. A BLIND or still-unanswered target leaves this
+# issue's own verdict standing.
 issue_answered() {
   local repo="$1" num="$2" json rc target t_repo t_num t_json t_rc t_why
   ANSWERED_WHY=''; ANSWERED_AT=''; ANSWERED_BY=''
@@ -86,9 +80,7 @@ issue_answered() {
         return 0
       fi
     fi
-    # The hop did not confirm an answer -- restore this issue's own verdict
-    # rather than leave the target's WHY/AT sitting under this issue's number.
-    issue_answered_json "$json"; rc=$?
+    issue_answered_json "$json"; rc=$?  # unconfirmed hop: restore this issue's own verdict
   fi
   return "$rc"
 }
