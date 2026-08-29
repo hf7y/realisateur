@@ -91,12 +91,8 @@ else
   bad "C1  every extraction of PROJECT_REPO_PATH is expanded" "unexpanded:$c_bad"
 fi
 
-# Section D exercised session-marker.sh, deleted 2026-08-22
-# (#511). It was a SessionStart hook installed in no hook config
-# on any host -- this suite's own header called it "the hook that no-opped for
-# eight days", and it had gone on no-opping. scheduler still READS the
-# interactive marker (bin/scheduler, "human-presence marker"); with nothing
-# writing one, an absent marker means "no human present", which is what it
-# already meant. Its three references in scheduler are comments, not calls.
+# Section D exercised session-marker.sh; RESTORED at hooks/session-marker.sh
+# (hf7y/vim-arcade#207), sourcing this file's conf_repo_path as before -- see
+# bin/tests/selfdev-hooks-provision.test.sh section I/J for its wiring coverage.
 
 summary
