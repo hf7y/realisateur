@@ -76,6 +76,16 @@ else
   ok "no release gate stands between the assemble and the tag"
 fi
 has "the cut still runs only outside a dry run" "$WFSRC" "inputs.dry_run != true"
+has "the cut step names a cut interval distinct from the emitter cadence (#602)" "$WFSRC" "CUT_INTERVAL_DAYS"
+has "the interval defaults to the same 30 days publish-release-verdict.sh ages last_cut against" \
+    "$WFSRC" 'CUT_INTERVAL_DAYS:-30'
+has "the age of the last build tag is measured, not assumed" "$WFSRC" "git tag -l 'build/*'"
+has "a payload change with the interval unelapsed still resets to NO_CHANGE" \
+    "$WFSRC" 'interval_elapsed" -eq 0'
+has "...and it says why, distinctly from nothing having moved" \
+    "$WFSRC" "waiting on the cut interval"
+has "a first-ever build (no prior tag) is never blocked on an interval that has nothing to measure from" \
+    "$WFSRC" "no previous build tag"
 
 # ===========================================================================
 echo
