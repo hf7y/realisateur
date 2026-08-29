@@ -27,6 +27,7 @@ bin/lib/cli-guard.sh	bin/lib/cli-guard.sh
 bin/lib/body-grammar.sh	bin/lib/body-grammar.sh
 bin/lib/host-check.sh	bin/lib/host-check.sh
 bin/lib/labels.tsv	bin/lib/labels.tsv
+bin/lib/path-guard.tsv	bin/lib/path-guard.tsv
 bin/lib/propagation-set.sh	bin/lib/propagation-set.sh
 bin/lib/zaxon.sh	bin/lib/zaxon.sh
 commands/cloture.md	.claude/commands/cloture.md
@@ -35,6 +36,7 @@ commands/reap.md	.claude/commands/reap.md
 hooks/subagent-closeout.sh	hooks/subagent-closeout.sh
 hooks/stop-residue-gate.sh	hooks/stop-residue-gate.sh
 hooks/session-start-verb-pin.sh	hooks/session-start-verb-pin.sh
+hooks/pretooluse-path-guard.sh	hooks/pretooluse-path-guard.sh
 
 # HOST TOOLS, under libexec/ so nothing reads them as verbs. These are the
 # LOCAL-class probes `prop_host_tools()` rides to /usr/local/libexec/selfdev

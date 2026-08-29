@@ -90,17 +90,22 @@ has "I: Stop is the wired event too (#681)" "$WANT" "Stop"
 has "I: the residue-gate hook is the command" "$WANT" "stop-residue-gate.sh"
 has "I: SessionStart is the wired event too (#708)" "$WANT" "SessionStart"
 has "I: the verb-pin hook is the command" "$WANT" "session-start-verb-pin.sh"
+has "I: PreToolUse is the wired event too (#707)" "$WANT" "PreToolUse"
+has "I: the path-guard hook is the command" "$WANT" "pretooluse-path-guard.sh"
+has "I: the PreToolUse matcher is Write|Edit" "$WANT" "Write|Edit"
 [ "$(printf '%s' "$WANT" | jq -r '.SubagentStop[0].hooks[0].type')" = "command" ] \
   && ok "I: the hook type is command" || bad "I: the hook type is not command"
 [ "$(printf '%s' "$WANT" | jq -r '.Stop[0].hooks[0].type')" = "command" ] \
   && ok "I: the Stop hook type is command too" || bad "I: the Stop hook type is not command"
 [ "$(printf '%s' "$WANT" | jq -r '.SessionStart[0].hooks[0].type')" = "command" ] \
   && ok "I: the SessionStart hook type is command too" || bad "I: the SessionStart hook type is not command"
+[ "$(printf '%s' "$WANT" | jq -r '.PreToolUse[0].hooks[0].type')" = "command" ] \
+  && ok "I: the PreToolUse hook type is command too" || bad "I: the PreToolUse hook type is not command"
 
 mkdir -p "$T/hj/acctj/.claude/hooks"
 printf '%s' "$WANT" | jq '{hooks:.}' > "$T/hj/acctj/.claude/settings.json"
 SRC="$T/hook-src.sh"; printf '#!/usr/bin/env bash\necho current\n' > "$SRC"; chmod +x "$SRC"
-run_hj() { HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$SRC" SELFDEV_STOP_HOOK_SRC="$SRC" SELFDEV_SESSIONSTART_HOOK_SRC="$SRC" "$SCRIPT" "$@" 2>&1; }
+run_hj() { HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$SRC" SELFDEV_STOP_HOOK_SRC="$SRC" SELFDEV_SESSIONSTART_HOOK_SRC="$SRC" SELFDEV_PRETOOLUSE_HOOK_SRC="$SRC" "$SCRIPT" "$@" 2>&1; }
 
 printf '#!/usr/bin/env bash\necho stale\n' > "$T/hj/acctj/.claude/hooks/subagent-closeout.sh"
 O="$(run_hj)"
@@ -123,12 +128,17 @@ if [ "$(cat "$T/hj/acctj/.claude/hooks/session-start-verb-pin.sh")" = "$(cat "$S
 else
   bad "J: --apply did not install session-start-verb-pin.sh"
 fi
+if [ "$(cat "$T/hj/acctj/.claude/hooks/pretooluse-path-guard.sh")" = "$(cat "$SRC")" ]; then
+  ok "J: --apply installs the PreToolUse hook file too, absent -> present (#707)"
+else
+  bad "J: --apply did not install pretooluse-path-guard.sh"
+fi
 
 O="$(run_hj)"
 case "$O" in *"hook FILE is"*) bad "J: a current hook file should not report drift: $O" ;;
-  *) ok "J: all three current hook files stop being a finding" ;; esac
+  *) ok "J: all four current hook files stop being a finding" ;; esac
 
-O="$(HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$T/no-such-build" SELFDEV_STOP_HOOK_SRC="$T/no-such-build" SELFDEV_SESSIONSTART_HOOK_SRC="$T/no-such-build" "$SCRIPT" 2>&1)"
+O="$(HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$T/no-such-build" SELFDEV_STOP_HOOK_SRC="$T/no-such-build" SELFDEV_SESSIONSTART_HOOK_SRC="$T/no-such-build" SELFDEV_PRETOOLUSE_HOOK_SRC="$T/no-such-build" "$SCRIPT" 2>&1)"
 case "$O" in *"BLIND the hook file source"*) ok "J: an unreadable build source says BLIND, not ok" ;;
   *) bad "J: unreadable source did not report BLIND: $O" ;; esac
 
