@@ -15,6 +15,48 @@ cwd="$(sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p;q' <<<"$payl
 
 transcript="$(sed -n 's/.*"transcript_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p;q' <<<"$payload")"  # not agent_transcript_path -- that's SubagentStop's field
 
+human_step_violations() { # <this-turn's assistant text> -> one line per HUMAN-STEP block with no verified: field (#714 Rule 2)
+  awk '
+    /^[[:space:]]*HUMAN-STEP[[:space:]]*$/ {
+      if (inblock && !sawverified) print "HUMAN-STEP block with no verified: field" (what == "" ? "" : " (" what ")")
+      inblock = 1; sawverified = 0; what = ""; next
+    }
+    inblock && /^[[:space:]]*what:/ { line = $0; sub(/^[[:space:]]*what:[[:space:]]*/, "", line); what = line }
+    inblock && /^[[:space:]]*verified:/ {
+      line = $0; sub(/^[[:space:]]*verified:[[:space:]]*/, "", line); gsub(/[[:space:]]+$/, "", line)
+      if (line != "") sawverified = 1
+      next
+    }
+    inblock && /^[[:space:]]*$/ {
+      if (!sawverified) print "HUMAN-STEP block with no verified: field" (what == "" ? "" : " (" what ")")
+      inblock = 0
+    }
+    END { if (inblock && !sawverified) print "HUMAN-STEP block with no verified: field" (what == "" ? "" : " (" what ")") }
+  '
+}
+
+if [ -n "$transcript" ] && [ -r "$transcript" ] && command -v jq >/dev/null 2>&1; then
+  turn_text="$(jq -rs '
+    . as $all |
+    ([range(0; length) | select($all[.].type == "user" and ($all[.] | has("toolUseResult") | not))] | last) as $b |
+    if $b == null then empty else
+      $all[($b + 1):][] | select(.type == "assistant") | (.message.content // [])[] | select(.type == "text") | .text
+    end
+  ' "$transcript" 2>/dev/null)" || turn_text=""
+  hs_report="$(human_step_violations <<<"$turn_text")"
+  if [ -n "$hs_report" ]; then
+    {
+      echo "BLOCKED: this turn asked a human to perform a manual step without confirming it can work."
+      echo
+      printf '%s\n' "$hs_report"
+      echo
+      echo "verified: is the load-bearing field -- state HOW you confirmed the target system will"
+      echo "accept this, even if the honest answer is that you have not checked yet. Then check."
+    } >&2
+    exit 2
+  fi
+fi
+
 command -v git >/dev/null 2>&1 || { log "git not on PATH -- cannot check tree state"; exit 1; }
 
 discover_written_trees() { # a worktree-isolated turn can write outside cwd (#363's shape, one scope up)
