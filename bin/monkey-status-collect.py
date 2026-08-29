@@ -25,6 +25,7 @@ RUNS_KEPT = 5
 OUTSIDE_MAX = 20                     # paths shown before the tail is counted
 TICK_TAG = "realisateur:selfdev-release:TICK"
 RUNNER_TAG = "scheduler:scheduler-paced-runner:RUNNER"
+BOOTSTRAP_CLONES = {"realisateur", "scheduler"}  # land-selfdev.sh clones both into EVERY account unconditionally, so either is expected, not foreign
 HOME_ROOT = os.environ.get("SELFDEV_HOME_ROOT", "/home")          # fixture seams:
 SUDOERS_D = os.environ.get("SELFDEV_SUDOERS_D", "/etc/sudoers.d")  # unset in production
 
@@ -119,7 +120,9 @@ def containment(user, uid):
         d = os.path.join(projects, name)
         url = sh("git", "-c", "safe.directory=*", "-C", d,
                  "config", "--get", "remote.origin.url").strip()
-        if url and not url.rstrip("/").endswith(f"/{user}") and not url.endswith(f"/{user}.git"):
+        expected = {user, *BOOTSTRAP_CLONES}
+        if url and not any(url.rstrip("/").endswith(f"/{e}") or url.endswith(f"/{e}.git")
+                            for e in expected):
             out["foreign_clones"].append({"path": d, "origin": url})
 
     # TRAP: find exits non-zero on an unreadable tree and sh() read that as
