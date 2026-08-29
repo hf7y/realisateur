@@ -8,7 +8,8 @@
 [ -n "${ARMING_LIB:-}" ] && return 0
 ARMING_LIB=1
 
-ARMING_ROSTER_REPO="${ARMING_ROSTER_REPO:-hf7y/scheduler}"
+. "${BASH_SOURCE[0]%/*}/estate-set.sh"
+ARMING_ROSTER_REPO="${ARMING_ROSTER_REPO:-$GH_ESTATE_OWNER/scheduler}"
 ARMING_ROSTER_PATH="${ARMING_ROSTER_PATH:-schedule/ROSTER}"
 
 ARMING_ROSTER=''   # project<TAB>state, one per line

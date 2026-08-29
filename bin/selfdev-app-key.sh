@@ -50,7 +50,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cli_guard "$@"
 . "$HERE/lib/selfdev-app-key.sh"
 
-MODE=--check; FROM=""; APP_ID=""; OWNER="${SELFDEV_GH_OWNER:-hf7y}"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
+MODE=--check; FROM=""; APP_ID=""; OWNER="${SELFDEV_GH_OWNER:-$GH_ESTATE_OWNER}"
 UMIN="${CRED_UID_MIN:-3000}"; UMAX="${CRED_UID_MAX:-3099}"
 while [ $# -gt 0 ]; do
   case "$1" in

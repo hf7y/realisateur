@@ -30,8 +30,11 @@
 #
 # TRAP: PAYLOAD without a man page ships nothing, silently (#85).
 
-PROP_RELEASE_REPO="hf7y/verbs"
-PROP_RELEASE_REMOTE="https://github.com/hf7y/verbs.git"
+if [ -n "${BASH_SOURCE:-}" ]; then
+  . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/estate-set.sh"
+fi
+PROP_RELEASE_REPO="$GH_ESTATE_OWNER/verbs"
+PROP_RELEASE_REMOTE="https://github.com/$GH_ESTATE_OWNER/verbs.git"
 
 # A version is a UTC-timestamp build id, so lexical sort is chronological.
 # ONE pin per HOST since #180: /usr/local/share/verb-builds/current. This path

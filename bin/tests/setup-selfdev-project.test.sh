@@ -23,9 +23,10 @@ PROJECT=fixtureproj
 BIN="$TMP/bin"                 # stands in for the script's own $HERE
 HOMES="$TMP/homes"             # what the stub `getent passwd` reports
 PHOME="$HOMES/$PROJECT"
-mkdir -p "$BIN" "$TMP/stub" "$PHOME"
+mkdir -p "$BIN/lib" "$TMP/stub" "$PHOME"
 
 cp "$SETUP" "$BIN/setup-selfdev-project.sh"
+cp "$HERE/../lib/estate-set.sh" "$BIN/lib/estate-set.sh"
 
 # --- the four scripts it sequences, as stubs -----------------------------
 # Each records that it ran, where the harness can see it. The wiring stub is

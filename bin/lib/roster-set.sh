@@ -8,7 +8,8 @@
 [ -n "${ROSTER_SET_LIB:-}" ] && return 0
 ROSTER_SET_LIB=1
 
-ROSTER_OWNER="${ROSTER_OWNER:-hf7y}"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/estate-set.sh"
+ROSTER_OWNER="${ROSTER_OWNER:-$GH_ESTATE_OWNER}"
 
 # SWEPT, NOT ARMED. Membership says which repos to READ. Liveness is a
 # different authority, read at run time by lib/arming.sh.

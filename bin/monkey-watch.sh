@@ -32,7 +32,8 @@ ALERT_EVERY_H="${ALERT_EVERY_H:-12}"
 # tell "monkey is down" from "the watcher stopped".
 CADENCE_MIN="${CADENCE_MIN:-10}"
 GRACE_MIN="${GRACE_MIN:-20}"
-PUBLISH_REPO="${PUBLISH_REPO:-hf7y/hf7y.github.io}"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
+PUBLISH_REPO="${PUBLISH_REPO:-$GH_ESTATE_OWNER/$GH_ESTATE_SITE_REPO}"
 PUBLISH_DIR="${PUBLISH_DIR:-monkey}"
 # shellcheck source=lib/zaxon.sh
 . "$HERE/bin/lib/zaxon.sh"
@@ -176,7 +177,7 @@ if [ "$1" != NONE ]; then
 $WHY
 
 vm=$VMSTATE sshd=$SSHD root=${ROOTMOUNT:-?} disk=$DISK_HOME
-https://hf7y.com/$PUBLISH_DIR/"
+https://$GH_ESTATE_SITE/$PUBLISH_DIR/"
   tid="$(zaxon_ask "$msg" monkey-watch)"
   if [ -n "$tid" ]; then
     mw_alert_mark_sent "$STATE_FILE" "$NOW"
@@ -198,7 +199,7 @@ rm -f "$WORK/site/$PUBLISH_DIR/console.png"
 cd "$WORK/site" || die "could not enter the site clone"
 if [ -n "$(git status --porcelain "$PUBLISH_DIR")" ]; then
   git add "$PUBLISH_DIR"
-  git -c user.name='monkey-watch' -c user.email='noreply@hf7y.com' \
+  git -c user.name='monkey-watch' -c user.email="noreply@$GH_ESTATE_SITE" \
       commit -q -m "monkey-watch: $VERDICT ($WHY)"
   git push -q || { echo "$CLI_NAME: push failed" >&2; exit 1; }
   printf '%s: published %s\n' "$CLI_NAME" "$VERDICT"

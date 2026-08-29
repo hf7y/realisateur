@@ -37,6 +37,7 @@ cli_guard "$@"
 # about which build an account is on. bin/tests/propagation.test.sh enforces
 # that mechanically by grepping every bin/*.sh for the layout path.
 PROP_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/propagation-set.sh"
+ESTATE_SET_SH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/estate-set.sh"
 # shellcheck source=bin/lib/propagation-set.sh
 # shellcheck disable=SC1090  # resolved at runtime: the same relative path holds
                              # in this repo and in an account's bootstrap, which
@@ -76,6 +77,8 @@ write_hook() {
 # reader of that fact. Fails OPEN: an unresolvable lib means an unstamped
 # commit, never a blocked one.
 msg="\$1"
+[ -r "$ESTATE_SET_SH" ] || exit 0
+. "$ESTATE_SET_SH" || exit 0
 [ -r "$PROP_LIB" ] || exit 0
 . "$PROP_LIB" || exit 0
 line="\$(prop_build_trailer)" || exit 0
