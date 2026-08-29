@@ -54,6 +54,7 @@ RELEASE_STATUS_URL="${RELEASE_STATUS_URL:-https://hf7y.com/verbs/status.json}"
 # and install-verb-build.sh's --link exists to not clobber it.
 #
 TICK_LINK="${TICK_LINK:-0}"
+HOST_LIBEXEC="${TICK_HOST_LIBEXEC:-}"  # #517: empty means "do not touch"; wire_host() sets it for the host-wide cron line only. Only the libexec/ rows in the adopted build's OWN carries.tsv are refreshed here -- the payload-class probes that already travel with no checkout and no self-overwrite hazard. dresse.sh and the provision-class scripts stay a human's act on purpose (carries.tsv's own note on why they are not carried).
 SURVEY_HOST="${TICK_SURVEY_HOST:-monkey}"
 SURVEY_PASSWD="${TICK_SURVEY_PASSWD:-/etc/passwd}"
 UID_MIN="${TICK_UID_MIN:-3000}"
@@ -156,6 +157,40 @@ check_pin() {
     *) bad "install-verb-build.sh --check exited $rc, which is not a verdict this script knows how to read" ;;
   esac
   return "$rc"
+}
+
+host_tools_carried() { # <pin-dir> -> "carried-path<TAB>basename" for every libexec/ row in THAT BUILD's own carries.tsv
+  local tsv="$1/realisateur/bin/lib/carries.tsv" carried source
+  [ -r "$tsv" ] || return 1
+  while IFS=$'\t' read -r carried source; do
+    case "$carried" in libexec/*) printf '%s\t%s\n' "$carried" "$(basename "$carried")" ;; esac
+  done < "$tsv"
+}
+
+sync_host_tools() {  # #517: the payload half of prop_host_tools, refreshed on the clock that already runs -- gated to the host-wide tick only, and only for what the adopted build itself carries
+  [ "$TICK_LINK" = 1 ] && [ -n "$HOST_LIBEXEC" ] || return 0
+  local pin="$BUILD_ROOT/current" rows carried base src dst
+  echo
+  echo "-- host tools (payload-class, #517) ------------------------------------"
+  if ! rows="$(host_tools_carried "$pin")"; then
+    bad "cannot read $pin/realisateur/bin/lib/carries.tsv -- host tool freshness is UNVERIFIED"
+    return 0
+  fi
+  [ -n "$rows" ] || { gap "no libexec/ row in carries.tsv -- nothing to refresh"; return 0; }
+  while IFS=$'\t' read -r carried base; do
+    src="$pin/realisateur/$carried"; dst="$HOST_LIBEXEC/$base"
+    if [ ! -f "$src" ]; then bad "$carried is not in the adopted build -- cannot refresh $dst"; continue; fi
+    if [ "$MODE" != apply ]; then
+      if cmp -s "$src" "$dst" 2>/dev/null; then ok "$base matches the adopted build"
+      else gap "$base is stale or absent at $dst -- refresh: $0 --apply"; fi
+      continue
+    fi
+    if install -m 755 "$src" "$dst" 2>/dev/null && cmp -s "$src" "$dst"; then
+      ok "$base refreshed from the adopted build"
+    else
+      bad "could not install $dst from $src"
+    fi
+  done <<<"$rows"
 }
 
 # ---------------------------------------------------------------------------
@@ -434,6 +469,8 @@ if [ "$MODE" = apply ] && [ "$pin_rc" = 1 ]; then
     bad "adoption refused or failed -- current is unchanged. The account is still on $(current_pin || echo '<none>'), which is a known verified state."
   fi
 fi
+
+sync_host_tools
 
 echo
 summary="$(printf '%d ok, %d gap, %d bad' "$PASS" "$GAPS" "$BAD")"

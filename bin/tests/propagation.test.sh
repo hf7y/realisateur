@@ -547,6 +547,66 @@ fi
 has "the fetch bound is configurable rather than hardcoded" "$(cat "$INST")" "VERB_BUILD_NET_TIMEOUT"
 has "a credential prompt cannot be the second way to hang" "$(cat "$INST")" "GIT_TERMINAL_PROMPT=0"
 
+echo
+echo "-- 5e. THE PAYLOAD-CLASS HOST TOOLS REFRESH ON THE CLOCK THAT ALREADY RUNS (#517)"  # only the libexec/ rows in the ADOPTED BUILD's own carries.tsv, and only for the host-wide tick -- a per-account tick must never touch a host-wide path even if the env var leaks in, and dresse.sh / provision-class scripts stay a human's act (carries.tsv's own note on why they are not carried)
+HT="$T/hosttools"
+mkdir -p "$HT/build/current/realisateur/bin/lib" "$HT/build/current/realisateur/libexec" "$HT/libexec"
+printf 'libexec/ausculte-cadence.sh\tbin/ausculte-cadence.sh\nbin/gh\tbin/gh-sign.sh\n' \
+  > "$HT/build/current/realisateur/bin/lib/carries.tsv"
+printf '#!/usr/bin/env bash\necho cadence-v2\n' > "$HT/build/current/realisateur/libexec/ausculte-cadence.sh"
+chmod +x "$HT/build/current/realisateur/libexec/ausculte-cadence.sh"
+
+O="$(TICK_LINK=0 TICK_HOST_LIBEXEC="$HT/libexec" VERB_BUILD_ROOT="$HT/build" \
+     TICK_STATE="$T/s_ht_a" TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"
+hasnt "TICK_LINK=0 never runs the host-tools section, even with the var set" "$O" "host tools (payload-class"
+[ ! -e "$HT/libexec/ausculte-cadence.sh" ] \
+  && ok "...and nothing was written to the host libexec dir" \
+  || bad "a per-account tick wrote into the host libexec dir"
+
+O="$(TICK_LINK=1 VERB_BUILD_ROOT="$HT/build" TICK_STATE="$T/s_ht_b" \
+     TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"
+hasnt "TICK_HOST_LIBEXEC unset -> host-tools section never runs either" "$O" "host tools (payload-class"
+
+O="$(TICK_LINK=1 TICK_HOST_LIBEXEC="$HT/libexec" VERB_BUILD_ROOT="$HT/build" \
+     TICK_STATE="$T/s_ht_c" TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"
+has "--check reports the missing host tool as a gap" "$O" "gap"
+has "...naming it" "$O" "ausculte-cadence.sh"
+has "...and the fix" "$O" "refresh: $TICK --apply"
+[ ! -e "$HT/libexec/ausculte-cadence.sh" ] \
+  && ok "--check writes nothing" || bad "--check installed a file"
+
+O="$(TICK_LINK=1 TICK_HOST_LIBEXEC="$HT/libexec" VERB_BUILD_ROOT="$HT/build" \
+     TICK_STATE="$T/s_ht_d" TICK_INSTALLER="$INST_CURRENT" "$TICK" --apply 2>&1)"
+has "--apply refreshes it, ok not gap" "$O" "ok"
+has "...naming it too" "$O" "ausculte-cadence.sh refreshed"
+[ -x "$HT/libexec/ausculte-cadence.sh" ] \
+  && ok "the file landed, executable" || bad "the file did not land executable"
+eq "...with the adopted build's own content" \
+  "$(cat "$HT/libexec/ausculte-cadence.sh")" \
+  "$(cat "$HT/build/current/realisateur/libexec/ausculte-cadence.sh")"
+
+O="$(TICK_LINK=1 TICK_HOST_LIBEXEC="$HT/libexec" VERB_BUILD_ROOT="$HT/build" \
+     TICK_STATE="$T/s_ht_e" TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"
+has "a second --check now reports ok, matching the adopted build" "$O" "ok"
+hasnt "and no gap remains for it" "$O" "stale or absent"
+
+rm -f "$HT/build/current/realisateur/libexec/ausculte-cadence.sh"
+O="$(TICK_LINK=1 TICK_HOST_LIBEXEC="$HT/libexec" VERB_BUILD_ROOT="$HT/build" \
+     TICK_STATE="$T/s_ht_f" TICK_INSTALLER="$INST_CURRENT" "$TICK" --apply 2>&1)"
+has "a carried file missing from the adopted build is reported bad, not silently skipped" "$O" "bad"
+has "...naming it" "$O" "is not in the adopted build"
+
+rm -f "$HT/build/current/realisateur/bin/lib/carries.tsv"
+O="$(TICK_LINK=1 TICK_HOST_LIBEXEC="$HT/libexec" VERB_BUILD_ROOT="$HT/build" \
+     TICK_STATE="$T/s_ht_g" TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"
+has "a missing carries.tsv in the adopted build is UNVERIFIED, not clean" "$O" "UNVERIFIED"
+
+mkdir -p "$HT/build2/current/realisateur/bin/lib"
+printf 'bin/gh\tbin/gh-sign.sh\n' > "$HT/build2/current/realisateur/bin/lib/carries.tsv"
+O="$(TICK_LINK=1 TICK_HOST_LIBEXEC="$HT/libexec" VERB_BUILD_ROOT="$HT/build2" \
+     TICK_STATE="$T/s_ht_h" TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"
+has "a carries.tsv with no libexec/ row says so, and is not a failure" "$O" "no libexec/ row"
+
 # ===========================================================================
 echo
 echo "-- 6. FOUND NOTHING IS NOT NOTHING IS WRONG ----------------------------"
