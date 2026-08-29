@@ -9,7 +9,7 @@
 #     bibliothecaire actually had: {"allow":[...]} with no defaultMode and no
 #     deny -- a key that exists and grants nothing, which is #294's "a guard
 #     that exists and grades nothing" in config form)
-#   C already correct                  -> ok, and --apply rewrites nothing
+#   C already correct (perms + TMPDIR) -> ok, and --apply rewrites nothing
 #   D unparseable settings.json        -> BLIND, never overwritten
 #   E the human's own account (zach)   -> never visited
 #   F --apply PRESERVES env and the other keys (the OAuth token lives in env;
@@ -18,6 +18,10 @@
 #   H an empty roster                  -> BLIND (3), never a clean 0
 #   I --print emits valid JSON, and the deny floor is non-empty
 #   J bare invocation writes NOTHING
+#   K correct permissions but missing/wrong env.TMPDIR -> still DRIFT (#620:
+#     the Bash-tool shell never sources ~/.profile, so settings.json's own
+#     env block is the only place TMPDIR reaches it), and --apply both
+#     writes it and creates the account's own 0700 tmp dir
 #
 # Usage: bin/tests/selfdev-permissions-provision.test.sh  (exit 0 = all pass)
 set -uo pipefail
@@ -39,15 +43,21 @@ mkhome() { # $1 = root name, $2 = account, $3 = settings content ('' = no file)
   [ -n "$3" ] && printf '%s\n' "$3" > "$T/$1/$2/.claude/settings.json"
   return 0
 }
+# correct() builds a settings.json body that is fully correct for the given
+# root/account: the permissions block AND env.TMPDIR pointed at that
+# account's own tmp dir under the root.
+correct() { jq -cn --argjson w "$WANT" --arg tmpdir "$T/$1/$2/tmp" \
+  '{permissions:$w, env:{TMPDIR:$tmpdir}}'; }
 # shellcheck disable=SC1007  # see the note on WANT above: empty SUDO on purpose.
 run() { local r="$1"; shift; HOME_ROOT="$T/$r" SUDO= "$SCRIPT" "$@" 2>&1; }
 
 # --- A/B/C/D/E: one tree carrying every shape -------------------------------
 mkhome h1 blank    '{"env":{"CLAUDE_CODE_OAUTH_TOKEN":"secret"},"enabledPlugins":["honey"]}'
 mkhome h1 partial  '{"permissions":{"allow":["WebSearch","WebFetch"]}}'
-mkhome h1 correct  "$(jq -cn --argjson w "$WANT" '{permissions:$w}')"
+mkhome h1 correct  "$(correct h1 correct)"
 mkhome h1 broken   'this is not json {{{'
 mkhome h1 zach     '{"env":{}}'
+mkdir -p "$T/h1/correct/tmp"; chmod 700 "$T/h1/correct/tmp"
 
 out="$(run h1)"; run h1 >/dev/null 2>&1; got=$?
 has  "A: a missing permissions key is DRIFT"  "$out" "DRIFT blank"
@@ -85,8 +95,22 @@ ls "$T/h2/nofile/.claude/"settings.json.bak-* >/dev/null 2>&1 \
   && bad "G: backed up a file that did not exist" \
   || ok "G: no spurious backup for an account that had no settings.json"
 
+# --- K: TMPDIR alone -- created and asserted --------------------------------
+got_tmpdir="$(jq -r '.env.TMPDIR' "$T/h2/blank/.claude/settings.json")"
+[ "$got_tmpdir" = "$T/h2/blank/tmp" ] \
+  && ok "K: env.TMPDIR points at this account's own tmp dir" \
+  || bad "K: env.TMPDIR is wrong: $got_tmpdir"
+[ -d "$T/h2/blank/tmp" ] && ok "K: the tmp dir was created" || bad "K: no tmp dir created"
+[ "$(stat -c%a "$T/h2/blank/tmp" 2>/dev/null)" = "700" ] \
+  && ok "K: the tmp dir is 0700" || bad "K: tmp dir is not 0700"
+
+mkhome h2 rightperms_wrongtmp "$(jq -cn --argjson w "$WANT" '{permissions:$w, env:{TMPDIR:"/tmp"}}')"
+out="$(run h2)"
+has "K: correct permissions but wrong TMPDIR is still DRIFT" "$out" "DRIFT rightperms_wrongtmp"
+
 # --- C: --apply on an already-correct account rewrites nothing --------------
-mkhome h3 correct "$(jq -cn --argjson w "$WANT" '{permissions:$w}')"
+mkhome h3 correct "$(correct h3 correct)"
+mkdir -p "$T/h3/correct/tmp"; chmod 700 "$T/h3/correct/tmp"
 before="$(ls "$T/h3/correct/.claude/")"
 out="$(run h3 --apply)"
 has "C: --apply leaves a correct account alone" "$out" "ok    correct"
