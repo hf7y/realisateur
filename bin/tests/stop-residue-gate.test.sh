@@ -142,13 +142,11 @@ has "D1 names which step, from its what:" "$D1_OUT" "add a CNAME"
 D2_OUT="$(run "$T/d" "$T/d2.jsonl")"; D2_RC=$?
 rc "D2 a filled verified: does not block" 0 "$D2_RC"
 
-# the bad block is from a PRIOR turn (before the last real user message) -- must not block THIS turn
-{ asst_turn "$BAD_STEP"; user_turn "ok now do the next thing"; asst_turn "no HUMAN-STEP here, all done."; } > "$T/d3.jsonl"
+{ asst_turn "$BAD_STEP"; user_turn "ok now do the next thing"; asst_turn "no HUMAN-STEP here, all done."; } > "$T/d3.jsonl"  # the bad block is from a PRIOR turn -- must not block THIS turn
 D3_RC=$(run "$T/d" "$T/d3.jsonl" >/dev/null 2>&1; echo $?)
 rc "D3 an unverified block from a PRIOR turn does not block THIS turn" 0 "$D3_RC"
 
-# a tool_result is also type=user but is not a turn boundary -- the bad block after it is still THIS turn
-{ user_turn "set up the netlify subdomain"; tool_result; asst_turn "$BAD_STEP"; } > "$T/d4.jsonl"
+{ user_turn "set up the netlify subdomain"; tool_result; asst_turn "$BAD_STEP"; } > "$T/d4.jsonl"  # tool_result is type=user too, but not a turn boundary
 D4_RC=$(run "$T/d" "$T/d4.jsonl" >/dev/null 2>&1; echo $?)
 rc "D4 a tool_result in between is not mistaken for a new turn" 2 "$D4_RC"
 
