@@ -22,7 +22,8 @@ SCHED_ROOT="${SCHED_ROOT:-$PROJECTS_ROOT/scheduler}"
 die() { printf 'notify-senechal: FAIL: %s\n' "$*" >&2; exit 1; }
 
 # THIS DOOR NO LONGER ACCEPTS PROSE (hf7y/senechal#323, #324).
-DOORS_REPO="${NOTIFY_DOORS_REPO:-hf7y/senechal}"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
+DOORS_REPO="${NOTIFY_DOORS_REPO:-$GH_ESTATE_OWNER/senechal}"
 DOORS_PATH="${NOTIFY_DOORS_PATH:-registry/front-doors.json}"
 DOORS_URL="$DOORS_REPO/$DOORS_PATH"
 
@@ -176,7 +177,7 @@ command -v gh >/dev/null 2>&1 || die "gh is not on PATH -- cannot file, and coul
 # --- 1. file it through the front door, and capture the issue it created ----
 #
 # THE FRONT DOOR IS GITHUB (scheduler#22). `scheduler -i`
-DEST_REPO="${NOTIFY_SENECHAL_REPO:-hf7y/senechal}"
+DEST_REPO="${NOTIFY_SENECHAL_REPO:-$GH_ESTATE_OWNER/senechal}"
 FROM_PROJECT="${NOTIFY_FROM_PROJECT:-realisateur}"
 
 # The title is the first line, bounded; the body carries the whole note. A

@@ -32,6 +32,7 @@ part() {
   return 1
 }
 . "$HERE/lib/host-check.sh"
+. "$HERE/lib/estate-set.sh"
 JSON=0; ONLY=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -104,7 +105,7 @@ fi
 
 if want arming; then
   # WHAT THE ACCOUNTS ARE DOING, not how often the word "armed" appears.
-  st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://hf7y.com/monkey/status.json}" 2>/dev/null)"
+  st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://$GH_ESTATE_SITE/monkey/status.json}" 2>/dev/null)"
   if ! printf '%s' "$st" | jq -e '.accounts' >/dev/null 2>&1; then
     record arming BLIND 'the published monkey status could not be read'
   elif vu="$(printf '%s' "$st" | jq -r '.valid_until // empty')" && [ -n "$vu" ] \
@@ -152,7 +153,7 @@ if want arming; then
 fi
 
 if want hygiene; then  # THE QUESTION'S OWNER, NOT ECOSIM'S CI (#706): hf7y/ecosim#91 refused a CI grant onto 0700 self-dev homes for "is any account holding something it shouldn't" -- a host fact about monkey, read where host facts about monkey already get read. monkey-status-collect.py (schema 2) already publishes containment and credentials per account; this probe only grades what it already collects.
-  st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://hf7y.com/monkey/status.json}" 2>/dev/null)"
+  st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://$GH_ESTATE_SITE/monkey/status.json}" 2>/dev/null)"
   if ! printf '%s' "$st" | jq -e '.accounts' >/dev/null 2>&1; then
     record hygiene BLIND 'the published monkey status could not be read'
   elif [ "$(printf '%s' "$st" | jq -r '.schema // 0')" -lt 2 ] 2>/dev/null; then
@@ -188,7 +189,7 @@ if want propagation; then
   done
   # shellcheck source=lib/propagation-set.sh
   [ -n "$ps" ] && . "$ps"
-  v="$(curl -s -m 15 "${VERBS_STATUS_URL:-https://hf7y.com/verbs/status.json}" 2>/dev/null)"
+  v="$(curl -s -m 15 "${VERBS_STATUS_URL:-https://$GH_ESTATE_SITE/verbs/status.json}" 2>/dev/null)"
   dec="$(printf '%s' "$v" | jq -r '.decision // empty' 2>/dev/null)"
   if [ -z "$dec" ]; then
     record propagation BLIND 'cannot read the release channel verdict'
