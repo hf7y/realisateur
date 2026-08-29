@@ -106,12 +106,14 @@ fi
 if want arming; then
   # WHAT THE ACCOUNTS ARE DOING, not how often the word "armed" appears.
   st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://$GH_ESTATE_SITE/monkey/status.json}" 2>/dev/null)"
+  vu="$(printf '%s' "$st" | jq -r '.watcher.valid_until // .valid_until // empty' 2>/dev/null)"
   if ! printf '%s' "$st" | jq -e '.accounts' >/dev/null 2>&1; then
     record arming BLIND 'the published monkey status could not be read'
-  elif vu="$(printf '%s' "$st" | jq -r '.valid_until // empty')" && [ -n "$vu" ] \
-       && [ "$(date -u +%s)" -gt "$(date -u -d "$vu" +%s 2>/dev/null || echo 0)" ]; then
+  elif [ -n "$vu" ] && [ "$(date -u +%s)" -gt "$(date -u -d "$vu" +%s 2>/dev/null || echo 0)" ]; then
     # A document past the freshness it declares for itself is not evidence.
     record arming BLIND "the published monkey status expired at $vu -- nothing is publishing it"
+  elif [ "$(printf '%s' "$st" | jq -r '.accounts | length' 2>/dev/null)" = 0 ]; then
+    record arming BLIND "the published monkey status lists no accounts: $(printf '%s' "$st" | jq -r '.watcher.accounts_from // .accounts_from // "no reason given"' 2>/dev/null)"
   else
     # TRAP: fromdateiso8601 rejects a "+00:00" offset and takes only "Z", so
     # the timestamps make jq exit mid-stream and this row printed OK off an

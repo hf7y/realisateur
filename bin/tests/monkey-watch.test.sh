@@ -191,6 +191,10 @@ section "H. the observer cannot inherit the outage it exists to report (2026-08-
 has "H1 every guest ssh carries a deadline, not just a ConnectTimeout" \
   "$(code "$W")" 'timeout "$SSH_DEADLINE" ssh'
 has "H2 the deadline is overridable for tests" "$(code "$W")" 'SSH_DEADLINE="${SSH_DEADLINE:-'
+mw_deadline="$(sed -n 's/^SSH_DEADLINE="${SSH_DEADLINE:-\([0-9]*\)}"/\1/p' "$W")"
+[ "${mw_deadline:-0}" -ge 120 ] \
+  && ok "H2b the deadline clears the collector's measured 53.5s cost" \
+  || bad "H2b the deadline clears the collector's measured 53.5s cost" "got: ${mw_deadline:-unset}"
 hasnt "H3 no bare ssh call survives in the guest helpers" \
   "$(grep -E '^mssh(_n)?\(\)' -A1 "$W" | grep -c 'timeout "\$SSH_DEADLINE" ssh' | grep -q '^2$' && echo '' || echo 'undeadlined-helper')" \
   "undeadlined-helper"
