@@ -62,29 +62,40 @@ bin/tests/monkey-status-collect.test.sh	hf7y/senechal	441	test/monkey-status-col
 # /usr/local/libexec/selfdev, and the set it installs includes THIS repo's
 # ausculte probes. scheduler's lib/provision-set.sh declares it as a step
 # dresse runs without claiming to own the file.
-bin/dresse.sh	hf7y/scheduler	312	bin/dresse.sh
-man/dresse.1	hf7y/scheduler	312	man/dresse.1
-bin/provision-selfdev-user.sh	hf7y/scheduler	312	bin/provision-selfdev-user.sh
-bin/setup-selfdev-project.sh	hf7y/scheduler	312	bin/setup-selfdev-project.sh
-bin/land-selfdev.sh	hf7y/scheduler	312	bin/land-selfdev.sh
-bin/enrole-selfdev.sh	hf7y/scheduler	312	bin/enrole-selfdev.sh
-bin/wire-selfdev-git.sh	hf7y/scheduler	312	bin/wire-selfdev-git.sh
-bin/selfdev-app-key.sh	hf7y/scheduler	312	bin/selfdev-app-key.sh
-bin/selfdev-claude-token.sh	hf7y/scheduler	312	bin/selfdev-claude-token.sh
-bin/selfdev-credentials.sh	hf7y/scheduler	312	bin/selfdev-credentials.sh
-bin/selfdev-permissions-provision.sh	hf7y/scheduler	312	bin/selfdev-permissions-provision.sh
-bin/selfdev-hooks-provision.sh	hf7y/scheduler	312	bin/selfdev-hooks-provision.sh
-bin/vault-group-provision.sh	hf7y/scheduler	312	bin/vault-group-provision.sh
-provision/monkey-scheduler-system.sh	hf7y/scheduler	312	provision/monkey-scheduler-system.sh
-bin/lib/selfdev-app-key.sh	hf7y/scheduler	312	bin/lib/selfdev-app-key.sh
-bin/lib/selfdev-claude-token.sh	hf7y/scheduler	312	bin/lib/selfdev-claude-token.sh
-bin/lib/selfdev-credentials-set.sh	hf7y/scheduler	312	bin/lib/selfdev-credentials-set.sh
-bin/tests/dresse.test.sh	hf7y/scheduler	312	tests/dresse.test.sh
-bin/tests/setup-selfdev-project.test.sh	hf7y/scheduler	312	tests/setup-selfdev-project.test.sh
-bin/tests/enrole-selfdev.test.sh	hf7y/scheduler	312	tests/enrole-selfdev.test.sh
-bin/tests/selfdev-app-key.test.sh	hf7y/scheduler	312	tests/selfdev-app-key.test.sh
-bin/tests/selfdev-claude-token.test.sh	hf7y/scheduler	312	tests/selfdev-claude-token.test.sh
-bin/tests/selfdev-credentials.test.sh	hf7y/scheduler	312	tests/selfdev-credentials.test.sh
-bin/tests/selfdev-permissions-provision.test.sh	hf7y/scheduler	312	tests/selfdev-permissions-provision.test.sh
-bin/tests/selfdev-hooks-provision.test.sh	hf7y/scheduler	312	tests/selfdev-hooks-provision.test.sh
-bin/tests/vault-group-provision.test.sh	hf7y/scheduler	312	tests/vault-group-provision.test.sh
+#
+# PAUSED 2026-08-29 (realisateur#577 follow-up): #312 merged into scheduler
+# while this block kept being edited HERE -- #729 (session-marker wiring)
+# landed in bin/selfdev-hooks-provision.sh 29 minutes after #312 merged.
+# reprise only checks that `there` EXISTS on scheduler's default branch, not
+# that it matches; every one of these 17 paths already differs from what is
+# below, and selfdev-hooks-provision.sh alone is missing five hook blocks
+# added since #577 was measured (#681, #708, #707, #714, #715, vim-arcade#207).
+# `reprise --apply` would delete the more-advanced originals here for a stale
+# snapshot there. Commented out until scheduler's self-dev ports the drift or
+# #577 decides these stay authoritative here; see the #577 comment thread.
+# bin/dresse.sh	hf7y/scheduler	312	bin/dresse.sh
+# man/dresse.1	hf7y/scheduler	312	man/dresse.1
+# bin/provision-selfdev-user.sh	hf7y/scheduler	312	bin/provision-selfdev-user.sh
+# bin/setup-selfdev-project.sh	hf7y/scheduler	312	bin/setup-selfdev-project.sh
+# bin/land-selfdev.sh	hf7y/scheduler	312	bin/land-selfdev.sh
+# bin/enrole-selfdev.sh	hf7y/scheduler	312	bin/enrole-selfdev.sh
+# bin/wire-selfdev-git.sh	hf7y/scheduler	312	bin/wire-selfdev-git.sh
+# bin/selfdev-app-key.sh	hf7y/scheduler	312	bin/selfdev-app-key.sh
+# bin/selfdev-claude-token.sh	hf7y/scheduler	312	bin/selfdev-claude-token.sh
+# bin/selfdev-credentials.sh	hf7y/scheduler	312	bin/selfdev-credentials.sh
+# bin/selfdev-permissions-provision.sh	hf7y/scheduler	312	bin/selfdev-permissions-provision.sh
+# bin/selfdev-hooks-provision.sh	hf7y/scheduler	312	bin/selfdev-hooks-provision.sh
+# bin/vault-group-provision.sh	hf7y/scheduler	312	bin/vault-group-provision.sh
+# provision/monkey-scheduler-system.sh	hf7y/scheduler	312	provision/monkey-scheduler-system.sh
+# bin/lib/selfdev-app-key.sh	hf7y/scheduler	312	bin/lib/selfdev-app-key.sh
+# bin/lib/selfdev-claude-token.sh	hf7y/scheduler	312	bin/lib/selfdev-claude-token.sh
+# bin/lib/selfdev-credentials-set.sh	hf7y/scheduler	312	bin/lib/selfdev-credentials-set.sh
+# bin/tests/dresse.test.sh	hf7y/scheduler	312	tests/dresse.test.sh
+# bin/tests/setup-selfdev-project.test.sh	hf7y/scheduler	312	tests/setup-selfdev-project.test.sh
+# bin/tests/enrole-selfdev.test.sh	hf7y/scheduler	312	tests/enrole-selfdev.test.sh
+# bin/tests/selfdev-app-key.test.sh	hf7y/scheduler	312	tests/selfdev-app-key.test.sh
+# bin/tests/selfdev-claude-token.test.sh	hf7y/scheduler	312	tests/selfdev-claude-token.test.sh
+# bin/tests/selfdev-credentials.test.sh	hf7y/scheduler	312	tests/selfdev-credentials.test.sh
+# bin/tests/selfdev-permissions-provision.test.sh	hf7y/scheduler	312	tests/selfdev-permissions-provision.test.sh
+# bin/tests/selfdev-hooks-provision.test.sh	hf7y/scheduler	312	tests/selfdev-hooks-provision.test.sh
+# bin/tests/vault-group-provision.test.sh	hf7y/scheduler	312	tests/vault-group-provision.test.sh
