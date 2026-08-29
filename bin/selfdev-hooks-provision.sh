@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # selfdev-hooks-provision.sh -- every self-dev account runs THE-FLOOR gate
-# 3.2's closeout hooks (SubagentStop, Stop), the verb-pin hook (SessionStart, #708) and the path guard (PreToolUse, #707): wired in settings.json, and file.
+# 3.2's closeout hooks (SubagentStop, Stop), the verb-pin hook (SessionStart, #708), the path guard (PreToolUse, #707) and the credential hold (PreToolUse+UserPromptSubmit, #714): wired in settings.json, and file.
 #
 # RUNNER: bin/tests/selfdev-hooks-provision.test.sh -- and an operator, on the host
 # GUARD-TEST: bin/tests/selfdev-hooks-provision.test.sh
@@ -11,12 +11,12 @@
 # is the verb build -- carried in bin/lib/carries.tsv, installed on the release tick --
 # since #264 got off shims. A sibling of selfdev-permissions-provision.sh, not a merge (#294).
 #
-# Env overrides (tests only): HOME_ROOT, ACCOUNTS, SUDO, SELFDEV_HOOK_SRC, SELFDEV_STOP_HOOK_SRC, SELFDEV_SESSIONSTART_HOOK_SRC, SELFDEV_PRETOOLUSE_HOOK_SRC.
+# Env overrides (tests only): HOME_ROOT, ACCOUNTS, SUDO, SELFDEV_HOOK_SRC, SELFDEV_STOP_HOOK_SRC, SELFDEV_SESSIONSTART_HOOK_SRC, SELFDEV_PRETOOLUSE_HOOK_SRC, SELFDEV_CREDENTIAL_HOLD_HOOK_SRC.
 
 set -uo pipefail
 
 CLI_NAME='selfdev-hooks-provision.sh'
-CLI_SUMMARY='wire the SubagentStop, Stop, SessionStart and PreToolUse hooks every self-dev account already has installed'
+CLI_SUMMARY='wire the SubagentStop, Stop, SessionStart, PreToolUse and UserPromptSubmit hooks every self-dev account already has installed'
 CLI_USAGE='  selfdev-hooks-provision.sh            report drift, change nothing
   selfdev-hooks-provision.sh --apply    write the block
   selfdev-hooks-provision.sh --strict   exit 1 if any account drifts
@@ -97,6 +97,25 @@ read -r -d '' HOOKS <<'JSON'
           "command": "~/.claude/hooks/pretooluse-path-guard.sh"
         }
       ]
+    },
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "~/.claude/hooks/pretooluse-credential-hold.sh"
+        }
+      ]
+    }
+  ],
+  "UserPromptSubmit": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "~/.claude/hooks/pretooluse-credential-hold.sh"
+        }
+      ]
     }
   ]
 }
@@ -127,6 +146,7 @@ declare -A HOOK_SRC=(
   [stop-residue-gate.sh]="${SELFDEV_STOP_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/stop-residue-gate.sh}"
   [session-start-verb-pin.sh]="${SELFDEV_SESSIONSTART_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/session-start-verb-pin.sh}"
   [pretooluse-path-guard.sh]="${SELFDEV_PRETOOLUSE_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pretooluse-path-guard.sh}"
+  [pretooluse-credential-hold.sh]="${SELFDEV_CREDENTIAL_HOLD_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pretooluse-credential-hold.sh}"
 )
 hook_drift=0
 hook_sum() { $SUDO md5sum "$1" 2>/dev/null | cut -d' ' -f1; }
