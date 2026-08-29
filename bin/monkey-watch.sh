@@ -115,7 +115,7 @@ esac
 # publish. The watcher that exists to report monkey being down inherited the
 # hang instead. Its header already tells this story about REFUSING to publish;
 # this is the same failure by a slower route.
-SSH_DEADLINE="${SSH_DEADLINE:-60}"
+SSH_DEADLINE="${SSH_DEADLINE:-180}"
 mssh()   { timeout "$SSH_DEADLINE" ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=20 \
                -o StrictHostKeyChecking=accept-new "$MONKEY_IP" "$@" 2>/dev/null; }
 mssh_n() { timeout "$SSH_DEADLINE" ssh -n -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=20 \

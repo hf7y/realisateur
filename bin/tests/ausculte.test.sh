@@ -102,6 +102,22 @@ out="$(run arming)"; rc=$?
 check "a status document with no accounts is BLIND (6)" "$rc" "6"
 hasnt "and never reports an account count it did not read" "$out" "account(s) armed"
 
+status "{\"accounts\":[],\"watcher\":{\"accounts_from\":\"NOT COLLECTED -- the guest was unreachable\"}}"
+out="$(run arming)"; rc=$?
+check "an empty accounts[] is BLIND (6) -- it read OK through the 2026-08-29 wedge" "$rc" "6"
+has "and it repeats why the publisher collected nothing" "$out" "NOT COLLECTED"
+hasnt "and it never calls zero accounts armed" "$out" "0 account(s) armed"
+
+expired="$(date -u -d '-1 hour' +%Y-%m-%dT%H:%M:%SZ)"
+status "{\"accounts\":[{\"account\":\"live\",\"armed\":true,\"last_run\":{\"started_at\":\"$recent\"}}],\"watcher\":{\"valid_until\":\"$expired\"}}"
+out="$(run arming)"; rc=$?
+check "a status past its own valid_until is BLIND (6) even with healthy accounts -- a DEAD watcher publishes nothing new" "$rc" "6"
+has "and it names the expiry" "$out" "expired at"
+
+status "{\"accounts\":[{\"account\":\"live\",\"armed\":true,\"last_run\":{\"started_at\":\"$recent\"}}],\"valid_until\":\"$expired\"}"
+out="$(run arming)"; rc=$?
+check "and the flat shape expires too, so neither side of the schema is a blind spot" "$rc" "6"
+
 hygiene() { printf '#!/usr/bin/env bash\ncat <<'"'"'J'"'"'\n%s\nJ\n' "$1" > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"; }  # hygiene grades what monkey-status-collect.py already publishes (#706); ecosim#91 refused a CI grant onto 0700 self-dev homes, so the question is answered here instead, off the same published status arming reads
 CLEAN='{"account":"a","uid":1,"containment":{"foreign_clones":[],"outside_home":[],"sudoers":[]},"credentials":{"claude_settings":"0o600"}}'
 
