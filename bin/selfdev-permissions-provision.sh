@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # selfdev-permissions-provision.sh -- give every self-dev account the
-# permissions block it was documented as having, and the per-account
-# TMPDIR that keeps its Bash-tool shell out of the shared /tmp namespace,
-# so an unattended run can record what it did instead of dying at the gate.
+# permissions block it was documented as having, so an unattended run can
+# record what it did instead of dying at the gate.
 #
 # RUNNER: bin/tests/selfdev-permissions-provision.test.sh
 # GUARD-TEST: bin/tests/selfdev-permissions-provision.test.sh
@@ -13,15 +12,7 @@
 # real work and two writes were REFUSED. The gate fails closed and an agent
 # cannot self-grant; only a human-authorised pass closes it.
 # Runs ON the host that owns the accounts; every read and write of another
-# account's file goes through sudo.
-# #620's TMPDIR fix (provision-selfdev-user.sh) writes to ~/.profile, which
-# is read by a LOGIN shell. The Bash tool's own shell is neither login nor
-# interactive (`case $- in *i*)`, so ~/.bashrc bails too) -- it never sources
-# either file, so a settings.json-only account never gets TMPDIR at all, and
-# an already-provisioned account only carries the fix in shells it doesn't
-# actually use for tool calls. settings.json's own `env` block is read at
-# session start regardless of shell type; asserting TMPDIR there closes the
-# gap the shell-init files cannot reach.
+# account's file goes through sudo. Also asserts env.TMPDIR (#620).
 #
 
 set -uo pipefail
@@ -119,9 +110,7 @@ drift=0; blind=0; okc=0
 
 for u in "$@"; do
   f="$HOME_ROOT/$u/.claude/settings.json"
-  # Per-account, not a literal like PERMS: each account's TMPDIR points at
-  # its OWN home, never another tenant's.
-  tmpdir="$HOME_ROOT/$u/tmp"
+  tmpdir="$HOME_ROOT/$u/tmp"  # this account's own home, never another tenant's
 
   if ! $SUDO test -f "$f" 2>/dev/null; then
     # No settings file at all is drift, not BLIND: the state is known (there
@@ -140,15 +129,12 @@ for u in "$@"; do
       continue
     fi
 
-    # Drift is measured against the WHOLE permissions block, not just the
-    # presence of a `permissions` key. bibliothecaire had
-    # {"allow":["WebSearch","WebFetch"]} and no defaultMode and no deny -- a
-    # key that exists and grants nothing is exactly the "a guard that exists
-    # and grades nothing" shape (#294). env.TMPDIR rides the same drift check
-    # (#620): a settings.json that already has the permissions block but not
-    # TMPDIR is still drifted.
+    # Drift is measured against the WHOLE block, not just the presence of a
+    # `permissions` key. bibliothecaire had {"allow":["WebSearch","WebFetch"]}
+    # and no defaultMode and no deny -- a key that exists and grants nothing
+    # is exactly the "a guard that exists and grades nothing" shape (#294).
     if printf '%s' "$cur" | jq -e --argjson want "$PERMS" --arg tmpdir "$tmpdir" \
-        '.permissions == $want and .env.TMPDIR == $tmpdir' >/dev/null 2>&1; then
+        '.permissions == $want and .env.TMPDIR == $tmpdir' >/dev/null 2>&1; then  # #620: TMPDIR rides the same check
       echo "  ok    $u"
       okc=$((okc+1))
       continue
@@ -160,22 +146,17 @@ for u in "$@"; do
     [ "$APPLY" = 1 ] || continue
   fi
 
-  # A settings.json TMPDIR that points nowhere is worse than none -- create
-  # the directory itself before pointing an account's shell at it. 0700: the
-  # directory permission is what keeps a cross-tenant read out even if a
-  # file inside it is created world-readable (#620).
   if ! $SUDO test -d "$tmpdir" 2>/dev/null; then
-    $SUDO mkdir -p "$tmpdir" 2>/dev/null
+    $SUDO mkdir -p "$tmpdir" 2>/dev/null   # 0700 gates a cross-tenant read regardless of file mode (#620)
     $SUDO chown "$u:$u" "$tmpdir" 2>/dev/null
     $SUDO chmod 700 "$tmpdir" 2>/dev/null
   fi
 
   # WRITE. Merge, never replace: env/enabledPlugins/extraKnownMarketplaces are
   # this account's live config (the OAuth token lives in env) and clobbering
-  # them would take the account off the air to fix its permissions. env is
-  # merged key-by-key for the same reason -- only .env.TMPDIR is asserted.
+  # them would take the account off the air to fix its permissions.
   new="$(printf '%s' "$cur" | jq --argjson want "$PERMS" --arg tmpdir "$tmpdir" \
-    '.permissions = $want | .env.TMPDIR = $tmpdir' 2>/dev/null)"
+    '.permissions = $want | .env.TMPDIR = $tmpdir' 2>/dev/null)"  # only .env.TMPDIR is merged
   if [ -z "$new" ]; then
     echo "        -> FAILED to build the new settings; left untouched"
     continue

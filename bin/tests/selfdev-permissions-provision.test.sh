@@ -18,10 +18,6 @@
 #   H an empty roster                  -> BLIND (3), never a clean 0
 #   I --print emits valid JSON, and the deny floor is non-empty
 #   J bare invocation writes NOTHING
-#   K correct permissions but missing/wrong env.TMPDIR -> still DRIFT (#620:
-#     the Bash-tool shell never sources ~/.profile, so settings.json's own
-#     env block is the only place TMPDIR reaches it), and --apply both
-#     writes it and creates the account's own 0700 tmp dir
 #
 # Usage: bin/tests/selfdev-permissions-provision.test.sh  (exit 0 = all pass)
 set -uo pipefail
@@ -43,11 +39,8 @@ mkhome() { # $1 = root name, $2 = account, $3 = settings content ('' = no file)
   [ -n "$3" ] && printf '%s\n' "$3" > "$T/$1/$2/.claude/settings.json"
   return 0
 }
-# correct() builds a settings.json body that is fully correct for the given
-# root/account: the permissions block AND env.TMPDIR pointed at that
-# account's own tmp dir under the root.
 correct() { jq -cn --argjson w "$WANT" --arg tmpdir "$T/$1/$2/tmp" \
-  '{permissions:$w, env:{TMPDIR:$tmpdir}}'; }
+  '{permissions:$w, env:{TMPDIR:$tmpdir}}'; }  # a fully-correct settings.json body for $1/$2
 # shellcheck disable=SC1007  # see the note on WANT above: empty SUDO on purpose.
 run() { local r="$1"; shift; HOME_ROOT="$T/$r" SUDO= "$SCRIPT" "$@" 2>&1; }
 
@@ -95,7 +88,6 @@ ls "$T/h2/nofile/.claude/"settings.json.bak-* >/dev/null 2>&1 \
   && bad "G: backed up a file that did not exist" \
   || ok "G: no spurious backup for an account that had no settings.json"
 
-# --- K: TMPDIR alone -- created and asserted --------------------------------
 got_tmpdir="$(jq -r '.env.TMPDIR' "$T/h2/blank/.claude/settings.json")"
 [ "$got_tmpdir" = "$T/h2/blank/tmp" ] \
   && ok "K: env.TMPDIR points at this account's own tmp dir" \
