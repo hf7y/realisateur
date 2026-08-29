@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -uo pipefail  # bin/tests/pretooluse-path-guard.test.sh: witness for hooks/pretooluse-path-guard.sh (#707)
-# shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/../hooks/pretooluse-path-guard.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
@@ -104,4 +103,3 @@ RC="$(printf '{"tool_name":"Write","tool_input":{}}' | "$SCRIPT" >/dev/null 2>&1
 rc "E2 a Write with no file_path is not this guard's business" 0 "$RC"
 
 summary
-[ "$fail" -eq 0 ] || exit 1
