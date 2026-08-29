@@ -6,13 +6,16 @@ harness_tmp
 
 echo "vmhost.test.sh"
 
-FAKE="$T/VBoxManage.exe"  # showvminfo prints $FAKE_VMINFO; controlvm screenshotpng writes a dummy PNG
+FAKE="$T/VBoxManage.exe"  # showvminfo prints $FAKE_VMINFO; controlvm screenshotpng writes a dummy PNG; savestate/startvm log to $CALLS
 FAKE_VMINFO="$T/vminfo"
+CALLS="$T/calls"
 cat > "$FAKE" <<STUB
 #!/usr/bin/env bash
 case "\$1" in
   showvminfo) cat "$FAKE_VMINFO" ;;
-  controlvm)  [ "\$3" = screenshotpng ] && printf '\x89PNG-fake' > "\$4" ;;
+  controlvm)  [ "\$3" = screenshotpng ] && printf '\x89PNG-fake' > "\$4"
+              [ "\$3" = savestate ] && printf 'controlvm %s savestate\n' "\$2" >> "$CALLS" ;;
+  startvm)    printf 'startvm %s %s %s\n' "\$2" "\$3" "\$4" >> "$CALLS" ;;
 esac
 STUB
 chmod +x "$FAKE"
@@ -56,6 +59,19 @@ rm -f "$SHOT"
 vmhost_screenshot monkey "$SHOT"
 [ -s "$SHOT" ] && ok "E1 a screenshot lands at the given path" || bad "E1 a screenshot lands at the given path" "nothing written to $SHOT"
 
+section "H. vmhost_save -- #704's pause actuator, savestate not acpipowerbutton"
+rm -f "$CALLS"
+vmhost_save monkey
+eq "H1 drives controlvm savestate, not an ACPI request" "$(cat "$CALLS")" "controlvm monkey savestate"
+
+section "I. vmhost_start -- #704's resume actuator"
+rm -f "$CALLS"
+vmhost_start monkey
+eq "I1 defaults to a headless launch" "$(cat "$CALLS")" "startvm monkey --type headless"
+rm -f "$CALLS"
+VMHOST_START_TYPE=gui vmhost_start monkey
+eq "I2 \$VMHOST_START_TYPE overrides the launch type" "$(cat "$CALLS")" "startvm monkey --type gui"
+
 section "G. vmhost_logdir -- the query AND the path translation, both backend-specific (#639)"
 printf 'LogFldr="C:\\Users\\zach\\VirtualBox VMs\\monkey\\Logs"\n' > "$FAKE_VMINFO"
 eq "G1 the folder comes from the backend, and lands in coordinates this host can open" \
@@ -69,5 +85,7 @@ VMHOST_BACKEND=hyperv vmhost_state monkey 2>/dev/null; rc "F1 vmhost_state" 2 $?
 VMHOST_BACKEND=hyperv vmhost_disk_raw monkey 2>/dev/null; rc "F2 vmhost_disk_raw" 2 $?
 VMHOST_BACKEND=hyperv vmhost_screenshot monkey "$T/x.png" 2>/dev/null; rc "F3 vmhost_screenshot" 2 $?
 VMHOST_BACKEND=hyperv vmhost_logdir monkey 2>/dev/null; rc "F4 vmhost_logdir" 2 $?
+VMHOST_BACKEND=hyperv vmhost_save monkey 2>/dev/null; rc "F5 vmhost_save" 2 $?
+VMHOST_BACKEND=hyperv vmhost_start monkey 2>/dev/null; rc "F6 vmhost_start" 2 $?
 
 summary
