@@ -285,8 +285,6 @@ out="$(run fleet)"; rc=$?
 check "a checkout frozen 3+ ticks is DOWN (5); the runner will not self-heal" "$rc" "5"
 has  "and says a merged fix cannot land" "$out" "cannot land"
 
-# THE CAUSE THIS ROW USED TO IGNORE: scheduler@monkey sat dirty-tracked 22h on
-# 2026-08-28 and this probe read OK throughout.
 fleet "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
 FLEET-PULL scheduler 2 dirty-tracked 0
 FLEET-LEDGERS 1"
