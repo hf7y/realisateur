@@ -61,6 +61,16 @@ WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 # --- host-side: always available --------------------------------------------
 VMSTATE="$(vmhost_state "$VM")"
+
+PSTATUS="$(vmhost_pause_status "$VM" "$NOW")"  # #704: repose only writes the declaration -- THIS TICK is the resume actuator, so a missed one costs at most CADENCE_MIN
+PKIND="${PSTATUS%% *}"; PWHEN="${PSTATUS#* }"
+if [ "$PKIND" = EXPIRED ]; then
+  vmhost_start "$VM" >/dev/null 2>&1
+  vmhost_pause_mark_resumed "$VM" "$NOW"
+  VMSTATE="$(vmhost_state "$VM")"
+  PKIND="RESUMING"; PWHEN="$NOW"
+fi
+
 DISK="$(vmhost_disk_raw "$VM")"
 # WHERE THE DISK LIVES IS A PUBLISHED FACT, not trivia: the whole outage was a
 # virtual disk on an external USB drive that logged 1580 controller errors in a
@@ -133,10 +143,30 @@ else
   GUEST_ERR="sshd is $SSHD -- the collector could not be run"
 fi
 
+RESUME_GRACE_MIN="${RESUME_GRACE_MIN:-30}"  # bounds RESUMING after an expired pause; past it and still not up is DOWN, loud -- the resume actuator's own failure mode
+PAUSE_ACTIVE=0; PAUSE_WHY=""
+case "$PKIND" in
+  PAUSED)
+    PAUSE_ACTIVE=1; PAUSE_WHY="declared pause, resumes $PWHEN"
+    ;;
+  RESUMING)
+    if [ "$VMSTATE" = running ] && [ "$SSHD" = answering ]; then
+      vmhost_pause_clear "$VM"   # the pause cycle is complete
+    else
+      resumed_s="$(date -u -d "$PWHEN" +%s 2>/dev/null || echo 0)"
+      now_s="$(date -u -d "$NOW" +%s 2>/dev/null || echo 0)"
+      if [ $(( now_s - resumed_s )) -lt $(( RESUME_GRACE_MIN * 60 )) ]; then
+        PAUSE_ACTIVE=1; PAUSE_WHY="pause expired, resume triggered $PWHEN -- waiting for boot"
+      fi  # else: grace exhausted and still not up -- fall through to DOWN, loud
+    fi
+    ;;
+esac
+
 # --- verdict ----------------------------------------------------------------
 # read-only root is called out separately from "down": it is the specific
 # recurring failure here, and it looks like up from most angles.
-if   [ "$VMSTATE" != "running" ];       then VERDICT="DOWN";     WHY="VM is $VMSTATE"
+if   [ "$PAUSE_ACTIVE" = 1 ];           then VERDICT="PAUSED";   WHY="$PAUSE_WHY"
+elif [ "$VMSTATE" != "running" ];       then VERDICT="DOWN";     WHY="VM is $VMSTATE"
 elif [ "$SSHD" != "answering" ];        then VERDICT="DOWN";     WHY="VM running but sshd is $SSHD"
 elif [ "$ROOTMOUNT" = "ro" ];           then VERDICT="DEGRADED"; WHY="root is mounted READ-ONLY"
 elif [ "$DISK_HOME" = "EXTERNAL-USB" ]; then VERDICT="DEGRADED"; WHY="disk is back on the external USB drive"

@@ -9,7 +9,13 @@ mw_alert_decide() {  # <verdict> <last> <state_file> <alert_every_h> <now_iso> -
   if [ "$verdict" != "$last" ]; then
     printf '%s\n' "$verdict" > "$state_file"
     printf '%s\n' "$now_iso" > "$since_file"
-    if [ -n "$last" ]; then echo "TRANSITION $last $verdict"; else echo NONE; fi
+    if [ "$verdict" = PAUSED ] || { [ "$last" = PAUSED ] && [ "$verdict" = OK ]; }; then  # #704: entering/leaving a declared pause cleanly is not a fault; PAUSED->anything-but-OK still falls through, loud
+      echo NONE
+    elif [ -n "$last" ]; then
+      echo "TRANSITION $last $verdict"
+    else
+      echo NONE
+    fi
     return 0
   fi
 
