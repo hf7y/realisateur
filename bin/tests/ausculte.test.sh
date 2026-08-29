@@ -101,6 +101,52 @@ out="$(run arming)"; rc=$?
 check "a status document with no accounts is BLIND (6)" "$rc" "6"
 hasnt "and never reports an account count it did not read" "$out" "account(s) armed"
 
+hygiene() { printf '#!/usr/bin/env bash\ncat <<'"'"'J'"'"'\n%s\nJ\n' "$1" > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"; }  # hygiene grades what monkey-status-collect.py already publishes (#706); ecosim#91 refused a CI grant onto 0700 self-dev homes, so the question is answered here instead, off the same published status arming reads
+CLEAN='{"account":"a","uid":1,"containment":{"foreign_clones":[],"outside_home":[],"sudoers":[]},"credentials":{"claude_settings":"0o600"}}'
+
+hygiene "{\"schema\":1,\"accounts\":[$CLEAN]}"
+out="$(run hygiene)"; rc=$?
+check "a status document older than schema 2 is BLIND (6)" "$rc" "6"
+has "and names the schema" "$out" "schema 1"
+
+hygiene '{"nonsense":true}'
+out="$(run hygiene)"; rc=$?
+check "a status document with no accounts is BLIND (6)" "$rc" "6"
+
+hygiene "{\"schema\":2,\"accounts\":[$CLEAN]}"
+out="$(run hygiene)"; rc=$?
+check "clean containment and one shared credential shape is OK" "$rc" "0"
+
+BAD_CLONE='{"account":"b","uid":2,"containment":{"foreign_clones":[{"path":"/home/b/Documents/Projects/x","origin":"https://github.com/hf7y/x.git"}],"outside_home":[],"sudoers":[]},"credentials":{"claude_settings":"0o600"}}'
+hygiene "{\"schema\":2,\"accounts\":[$CLEAN,$BAD_CLONE]}"
+out="$(run hygiene)"; rc=$?
+check "an account with a foreign clone is DOWN (5)" "$rc" "5"
+has "and it is named" "$out" "b"
+
+BAD_SUDO='{"account":"c","uid":3,"containment":{"foreign_clones":[],"outside_home":[],"sudoers":["/etc/sudoers.d/c-extra"]},"credentials":{"claude_settings":"0o600"}}'
+hygiene "{\"schema\":2,\"accounts\":[$CLEAN,$BAD_SUDO]}"
+out="$(run hygiene)"; rc=$?
+check "an account with an unexpected sudoers.d entry is DOWN (5)" "$rc" "5"
+has "and it is named too" "$out" "c"
+
+ODD_SHAPE='{"account":"d","uid":4,"containment":{"foreign_clones":[],"outside_home":[],"sudoers":[]},"credentials":{"claude_settings":"0o640"}}'
+hygiene "{\"schema\":2,\"accounts\":[$CLEAN,$ODD_SHAPE]}"
+out="$(run hygiene)"; rc=$?
+check "one account off the shared credential shape is DOWN (5)" "$rc" "5"
+has "and it says shapes differ, not which is 'right'" "$out" "distinct credential permission shapes"
+
+NULL_CONTAINMENT='{"account":"e","uid":5,"containment":null,"credentials":{"claude_settings":"0o600"}}'
+hygiene "{\"schema\":2,\"accounts\":[$CLEAN,$NULL_CONTAINMENT]}"
+out="$(run hygiene)"; rc=$?
+check "an account containment could not read is BLIND (6), not clean" "$rc" "6"
+has "and it is named" "$out" "e"
+
+hygiene "{\"schema\":2,\"accounts\":[$BAD_CLONE,$NULL_CONTAINMENT]}"
+out="$(run hygiene)"; rc=$?
+check "a real DOWN finding outranks an unrelated BLIND account" "$rc" "5"
+has "and both are named" "$out" "b"
+has "the unreadable account is named too, not silently dropped" "$out" "e"
+
 # --- propagation reads the channel's VERDICT, not the verb count ---------
 # The count said OK through two days of a refusing cutter. curl/ssh stubbed.
 verdict() { printf '#!/usr/bin/env bash\ncat <<'"'"'J'"'"'\n%s\nJ\n' "$1" > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"; }

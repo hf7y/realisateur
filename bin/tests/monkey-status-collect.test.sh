@@ -63,6 +63,36 @@ eq "25 hits are capped at 20 plus one line naming the rest" \
 eq "and the remainder is counted honestly" \
   "$(printf '%s' "$out" | jq -r '.outside_home[-1]')" "... and 5 more"
 
+section "E. containment: foreign_clones exempts the account's own repo and the two universal bootstrap clones"
+mkdir -p "$T/homes/acct2/Documents/Projects/acct2" \
+         "$T/homes/acct2/Documents/Projects/realisateur" \
+         "$T/homes/acct2/Documents/Projects/scheduler" \
+         "$T/homes/acct2/Documents/Projects/stray"
+mkrepo() { # mkrepo <dir> <origin-url>
+  git init -q "$1"
+  git -C "$1" remote add origin "$2"
+}
+mkrepo "$T/homes/acct2/Documents/Projects/acct2"       "https://github.com/hf7y/acct2.git"
+mkrepo "$T/homes/acct2/Documents/Projects/realisateur" "https://github.com/hf7y/realisateur.git"
+mkrepo "$T/homes/acct2/Documents/Projects/scheduler"   "https://github.com/hf7y/scheduler.git"
+mkrepo "$T/homes/acct2/Documents/Projects/stray"       "https://github.com/hf7y/some-other-project.git"
+
+cat > "$T/probe2.py" <<'PY'
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("collect", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+print(json.dumps(m.containment("acct2", 4242)))
+PY
+out="$(PATH="$T/stub:$PATH" SELFDEV_HOME_ROOT="$T/homes" SELFDEV_SUDOERS_D="$T/sudoers.d" \
+  PYTHONDONTWRITEBYTECODE=1 FIND_RC=0 FIND_OUT="" \
+  python3 "$T/probe2.py" "$COLLECTOR")"
+eq "the account's own repo and both bootstrap clones are NOT foreign" \
+  "$(printf '%s' "$out" | jq '.foreign_clones | length')" "1"
+has "the one real foreign clone is named" "$out" "/Projects/stray"
+hasnt "realisateur is never reported foreign" "$out" '"path":"'"$T"'/homes/acct2/Documents/Projects/realisateur"'
+hasnt "scheduler is never reported foreign" "$out" '"path":"'"$T"'/homes/acct2/Documents/Projects/scheduler"'
+
 section "C. release_tick: a retired clock is an absence, not a reading"
 [ -s "$STATUS" ] && ok "the fixture account HAS a status file to be tempted by" \
   || bad "fixture status file" "missing, so the case below proves nothing"
