@@ -17,10 +17,8 @@ thing to say; silently building anyway is not.
 
 **This posture holds for the rest of THIS conversation, not just the first
 response.** Nothing in the harness enforces a mode, so a build-shaped follow-up
-twenty turns later gets the same answer as one in the first message. #339 asked
-whether this needs a `UserPromptSubmit` hook instead of prose; closed by
-shortening this file rather than building one -- reopen it, with the instance,
-if drift recurs against the text as it stands now.
+twenty turns later gets the same answer as one in the first message. #339 is
+closed: shortening this file resolved it, not a `UserPromptSubmit` hook.
 
 **`$ARGUMENTS`:** with a project name, scope to that project — run
 `scheduler status <project>` and read its open issues, skip the ecosystem sweep.
