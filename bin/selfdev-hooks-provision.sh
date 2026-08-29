@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # selfdev-hooks-provision.sh -- every self-dev account runs THE-FLOOR gate
-# 3.2's closeout hooks (SubagentStop, Stop), the verb-pin hook (SessionStart, #708), the path guard (PreToolUse, #707) and the credential hold (PreToolUse+UserPromptSubmit, #714): wired in settings.json, and file.
+# 3.2's closeout hooks (SubagentStop, Stop), the verb-pin hook (SessionStart, #708), the path guard (PreToolUse, #707), the credential hold (PreToolUse+UserPromptSubmit, #714) and the memory budget guard+report (PreToolUse+SessionStart, #715): wired in settings.json, and file.
 #
 # RUNNER: bin/tests/selfdev-hooks-provision.test.sh -- and an operator, on the host
 # GUARD-TEST: bin/tests/selfdev-hooks-provision.test.sh
@@ -11,7 +11,7 @@
 # is the verb build -- carried in bin/lib/carries.tsv, installed on the release tick --
 # since #264 got off shims. A sibling of selfdev-permissions-provision.sh, not a merge (#294).
 #
-# Env overrides (tests only): HOME_ROOT, ACCOUNTS, SUDO, SELFDEV_HOOK_SRC, SELFDEV_STOP_HOOK_SRC, SELFDEV_SESSIONSTART_HOOK_SRC, SELFDEV_PRETOOLUSE_HOOK_SRC, SELFDEV_CREDENTIAL_HOLD_HOOK_SRC.
+# Env overrides (tests only): HOME_ROOT, ACCOUNTS, SUDO, SELFDEV_HOOK_SRC, SELFDEV_STOP_HOOK_SRC, SELFDEV_SESSIONSTART_HOOK_SRC, SELFDEV_PRETOOLUSE_HOOK_SRC, SELFDEV_CREDENTIAL_HOLD_HOOK_SRC, SELFDEV_MEMORY_BUDGET_HOOK_SRC, SELFDEV_SESSIONSTART_MEMORY_BUDGET_HOOK_SRC.
 
 set -uo pipefail
 
@@ -84,6 +84,10 @@ read -r -d '' HOOKS <<'JSON'
         {
           "type": "command",
           "command": "~/.claude/hooks/session-start-verb-pin.sh"
+        },
+        {
+          "type": "command",
+          "command": "~/.claude/hooks/session-start-memory-budget.sh"
         }
       ]
     }
@@ -95,6 +99,10 @@ read -r -d '' HOOKS <<'JSON'
         {
           "type": "command",
           "command": "~/.claude/hooks/pretooluse-path-guard.sh"
+        },
+        {
+          "type": "command",
+          "command": "~/.claude/hooks/pretooluse-memory-budget.sh"
         }
       ]
     },
@@ -147,6 +155,8 @@ declare -A HOOK_SRC=(
   [session-start-verb-pin.sh]="${SELFDEV_SESSIONSTART_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/session-start-verb-pin.sh}"
   [pretooluse-path-guard.sh]="${SELFDEV_PRETOOLUSE_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pretooluse-path-guard.sh}"
   [pretooluse-credential-hold.sh]="${SELFDEV_CREDENTIAL_HOLD_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pretooluse-credential-hold.sh}"
+  [pretooluse-memory-budget.sh]="${SELFDEV_MEMORY_BUDGET_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pretooluse-memory-budget.sh}"
+  [session-start-memory-budget.sh]="${SELFDEV_SESSIONSTART_MEMORY_BUDGET_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/session-start-memory-budget.sh}"
 )
 hook_drift=0
 hook_sum() { $SUDO md5sum "$1" 2>/dev/null | cut -d' ' -f1; }
