@@ -37,6 +37,7 @@ hooks/subagent-closeout.sh	hooks/subagent-closeout.sh
 hooks/stop-residue-gate.sh	hooks/stop-residue-gate.sh
 hooks/session-start-verb-pin.sh	hooks/session-start-verb-pin.sh
 hooks/pretooluse-path-guard.sh	hooks/pretooluse-path-guard.sh
+hooks/pretooluse-credential-hold.sh	hooks/pretooluse-credential-hold.sh
 
 # HOST TOOLS, under libexec/ so nothing reads them as verbs. These are the
 # LOCAL-class probes `prop_host_tools()` rides to /usr/local/libexec/selfdev
