@@ -139,6 +139,37 @@ out="$(bash "$PROBE" 2>&1)"
 has "notices the distro started long after Windows booted" "$out" "autostart is login-scoped"
 
 echo
+echo "== 5b. A DECLARED PAUSE IS NOT THE OUTAGE THIS PROBE EXISTS FOR (#704) ===="
+healthy
+sed -i 's/^VMS=.*/VMS=/' "$STUB_REPLY"
+{ printf 'PAUSE_MONKEY=until=2999-01-01T00:00:00Z;declared_at=2026-08-29T00:00:00Z;\n'; } >> "$STUB_REPLY"
+out="$(bash "$PROBE" 2>&1)"; rc=$?
+is "exit 0 inside a declared pause window -- not the failure exit 5" "$rc" "0"
+has "the VM line says PAUSED, not DOWN" "$out" "MONKEY (self-dev VM): PAUSED"
+has "the finding names the declared resume time" "$out" "resumes 2999-01-01T00:00:00Z"
+
+healthy
+sed -i 's/^VMS=.*/VMS=/' "$STUB_REPLY"
+{ printf 'PAUSE_MONKEY=until=2020-01-01T00:00:00Z;declared_at=2019-01-01T00:00:00Z;\n'; } >> "$STUB_REPLY"
+out="$(bash "$PROBE" 2>&1)"; rc=$?
+is "exit 5 once the pause is EXPIRED with no resume yet triggered" "$rc" "5"
+has "still named as the VM being down" "$out" "MONKEY (self-dev VM): DOWN"
+
+healthy
+sed -i 's/^VMS=.*/VMS=/' "$STUB_REPLY"
+{ printf 'PAUSE_MONKEY=until=2020-01-01T00:00:00Z;resumed_at=%s;\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"; } >> "$STUB_REPLY"
+out="$(bash "$PROBE" 2>&1)"; rc=$?
+is "exit 0 while inside the post-expiry boot grace window" "$rc" "0"
+has "reads as PAUSED, waiting for boot -- not a fresh outage" "$out" "waiting for boot"
+
+healthy
+sed -i 's/^VMS=.*/VMS=/' "$STUB_REPLY"
+{ printf 'PAUSE_MONKEY=until=2020-01-01T00:00:00Z;resumed_at=2020-01-01T01:00:00Z;\n'; } >> "$STUB_REPLY"
+out="$(bash "$PROBE" 2>&1)"; rc=$?
+is "exit 5 once the boot grace window itself is exhausted -- the loud case" "$rc" "5"
+has "the resume actuator failing is still named as the VM down" "$out" "MONKEY (self-dev VM): DOWN"
+
+echo
 echo "== 6. --json IS PARSEABLE ================================================"
 healthy
 out="$(bash "$PROBE" --json 2>&1)"
