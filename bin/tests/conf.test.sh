@@ -91,13 +91,8 @@ else
   bad "C1  every extraction of PROJECT_REPO_PATH is expanded" "unexpanded:$c_bad"
 fi
 
-# Section D exercised session-marker.sh, deleted 2026-08-22 (#511) as a no-op
-# -- it was a SessionStart hook installed in no hook config on any host, so an
-# absent marker read as "no human present", which is what it already meant.
-# RESTORED at hooks/session-marker.sh (hf7y/vim-arcade#207), sourcing this
-# file's conf_repo_path exactly as before, and this time actually wired via
-# bin/selfdev-hooks-provision.sh's SessionStart/SessionEnd block -- see
-# bin/tests/selfdev-hooks-provision.test.sh section I/J for that wiring's
-# coverage.
+# Section D exercised session-marker.sh; RESTORED at hooks/session-marker.sh
+# (hf7y/vim-arcade#207), sourcing this file's conf_repo_path as before -- see
+# bin/tests/selfdev-hooks-provision.test.sh section I/J for its wiring coverage.
 
 summary

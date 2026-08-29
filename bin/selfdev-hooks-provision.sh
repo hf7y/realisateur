@@ -10,15 +10,7 @@
 # ("Zach's file"), which #282 crossed that boundary for with `permissions`. The file half
 # is the verb build -- carried in bin/lib/carries.tsv, installed on the release tick --
 # since #264 got off shims. A sibling of selfdev-permissions-provision.sh, not a merge (#294).
-#
-# SESSION MARKER (hf7y/vim-arcade#207): hooks/session-marker.sh was deleted
-# 2026-08-22 (#511) as a no-op -- it was wired into NO account's settings.json
-# on any host, so scheduler's lib/registry-lock.sh had been reading an
-# always-absent $REGISTRY_DIR/<project>.interactive marker as "no human
-# present" regardless of whether one was. That reader was never removed. This
-# restores the writer and, unlike before, actually wires it below, so a live
-# interactive session in a self-dev account's own checkout makes that
-# project's unattended jobs defer instead of racing it.
+# Session marker (hf7y/vim-arcade#207): wires hooks/session-marker.sh below; rationale is at that file's own header.
 #
 # Env overrides (tests only): HOME_ROOT, ACCOUNTS, SUDO, SELFDEV_HOOK_SRC, SELFDEV_STOP_HOOK_SRC, SELFDEV_SESSIONSTART_HOOK_SRC, SELFDEV_PRETOOLUSE_HOOK_SRC, SELFDEV_CREDENTIAL_HOLD_HOOK_SRC, SELFDEV_MEMORY_BUDGET_HOOK_SRC, SELFDEV_SESSIONSTART_MEMORY_BUDGET_HOOK_SRC, SELFDEV_SESSION_MARKER_HOOK_SRC.
 
