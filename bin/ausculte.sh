@@ -153,7 +153,7 @@ if want arming; then
 fi
 
 if want hygiene; then  # THE QUESTION'S OWNER, NOT ECOSIM'S CI (#706): hf7y/ecosim#91 refused a CI grant onto 0700 self-dev homes for "is any account holding something it shouldn't" -- a host fact about monkey, read where host facts about monkey already get read. monkey-status-collect.py (schema 2) already publishes containment and credentials per account; this probe only grades what it already collects.
-  st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://hf7y.com/monkey/status.json}" 2>/dev/null)"
+  st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://$GH_ESTATE_SITE/monkey/status.json}" 2>/dev/null)"
   if ! printf '%s' "$st" | jq -e '.accounts' >/dev/null 2>&1; then
     record hygiene BLIND 'the published monkey status could not be read'
   elif [ "$(printf '%s' "$st" | jq -r '.schema // 0')" -lt 2 ] 2>/dev/null; then

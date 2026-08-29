@@ -93,8 +93,7 @@ done
 # The verdict must go to a URL, not into a clone. A file in a repo drifts the
 # moment anyone clones it, which is the bug being fixed.
 PUBSRC="$(cat "$PUBLISH" 2>/dev/null || true)"
-# The RESOLVED target, not the source text (#672).
-. "$REPO/bin/lib/estate-set.sh"
+. "$REPO/bin/lib/estate-set.sh"  # the RESOLVED target, not the source text (#672)
 eq "the publisher targets the public Pages site" \
    "${PUBLISH_REPO:-$GH_ESTATE_OWNER/$GH_ESTATE_SITE_REPO}" "hf7y/hf7y.github.io"
 has "the publisher writes a machine-readable endpoint" "$PUBSRC" "status.json"
