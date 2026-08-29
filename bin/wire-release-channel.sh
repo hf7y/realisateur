@@ -177,6 +177,7 @@ TICK_ENV=(
   "INSTALLE_BIN=$HOST_BIN"
   "TICK_STATE=$HOST_STATE"
   "TICK_LINK=1"
+  "TICK_HOST_LIBEXEC=$HOST_LIBEXEC"  # #517: so the clock this installs keeps refreshing the libexec/ probes it already just installed once, not only on the next human --host --apply
 )
 
 wire_host() {
