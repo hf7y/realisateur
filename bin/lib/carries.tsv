@@ -40,6 +40,7 @@ hooks/pretooluse-path-guard.sh	hooks/pretooluse-path-guard.sh
 hooks/pretooluse-credential-hold.sh	hooks/pretooluse-credential-hold.sh
 hooks/pretooluse-memory-budget.sh	hooks/pretooluse-memory-budget.sh
 hooks/session-start-memory-budget.sh	hooks/session-start-memory-budget.sh
+hooks/session-marker.sh	hooks/session-marker.sh
 
 # HOST TOOLS, under libexec/ so nothing reads them as verbs. These are the
 # LOCAL-class probes `prop_host_tools()` rides to /usr/local/libexec/selfdev
