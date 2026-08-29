@@ -80,6 +80,28 @@ vmhost_screenshot() {  # <vm> <path> -- capture the VM console to <path> as a PN
   esac
 }
 
+vmhost_save() {  # <vm> -- suspend to disk and free the host's RAM. savestate, not acpipowerbutton: #704 measured the VM still `running` 60s after an ACPI request
+  local vm="$1"
+  case "$(vmhost_backend)" in
+    virtualbox)
+      _vmhost_require_vbox || return 2
+      _vbm controlvm "$vm" savestate >/dev/null
+      ;;
+    *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
+  esac
+}
+
+vmhost_start() {  # <vm> -- resume from a saved state or cold-boot; $VMHOST_START_TYPE overrides the default headless launch
+  local vm="$1"
+  case "$(vmhost_backend)" in
+    virtualbox)
+      _vmhost_require_vbox || return 2
+      _vbm startvm "$vm" --type "${VMHOST_START_TYPE:-headless}" >/dev/null
+      ;;
+    *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
+  esac
+}
+
 vmhost_logdir() {  # <vm> -> the VM's log directory, as a path THIS host can read
   # The backend answers in its own coordinates -- VirtualBox on a Windows host
   # says `C:\Users\...`, which is not a path dexter's WSL side can open. The
