@@ -39,15 +39,21 @@ bin/tests/consigne.test.sh	hf7y/bibliothecaire	68	test/fonde-consign-test.sh
 # now at vault:senechal/dexter-host-layout-20260814.md with its actionable
 # half at senechal#439. A deposit is not a handoff, so it is deleted here
 # outright rather than waited on.
-bin/monkey-watch.sh	hf7y/senechal	441	bin/monkey-watch.sh
-bin/monkey-status-collect.py	hf7y/senechal	441	bin/monkey-status-collect.py
-bin/lib/monkey-watch-alert.sh	hf7y/senechal	441	bin/lib/monkey-watch-alert.sh
-bin/lib/monkey-watch-merge.py	hf7y/senechal	441	bin/lib/monkey-watch-merge.py
-bin/lib/vmhost.sh	hf7y/senechal	441	bin/lib/vmhost.sh
-share/monkey-status.html	hf7y/senechal	441	share/monkey-status.html
-bin/tests/monkey-watch.test.sh	hf7y/senechal	441	test/monkey-watch.test.sh
-bin/tests/vmhost.test.sh	hf7y/senechal	441	test/vmhost.test.sh
-bin/tests/monkey-status-collect.test.sh	hf7y/senechal	441	test/monkey-status-collect.test.sh
+#
+# PR 441 was closed unmerged, superseded by 513, then 520, then 522 (rebases
+# past prose-ratchet unit-2 fallout, senechal#442). reprise checks `merged` on
+# the literal PR number in this row, so a superseded number reports OWED
+# forever even after the real successor merges -- retarget this row on every
+# supersession, not just once (hf7y/realisateur#651).
+bin/monkey-watch.sh	hf7y/senechal	522	bin/monkey-watch.sh
+bin/monkey-status-collect.py	hf7y/senechal	522	bin/monkey-status-collect.py
+bin/lib/monkey-watch-alert.sh	hf7y/senechal	522	bin/lib/monkey-watch-alert.sh
+bin/lib/monkey-watch-merge.py	hf7y/senechal	522	bin/lib/monkey-watch-merge.py
+bin/lib/vmhost.sh	hf7y/senechal	522	bin/lib/vmhost.sh
+share/monkey-status.html	hf7y/senechal	522	share/monkey-status.html
+bin/tests/monkey-watch.test.sh	hf7y/senechal	522	test/monkey-watch.test.sh
+bin/tests/vmhost.test.sh	hf7y/senechal	522	test/vmhost.test.sh
+bin/tests/monkey-status-collect.test.sh	hf7y/senechal	522	test/monkey-status-collect.test.sh
 
 # the self-dev provisioning block -> hf7y/scheduler, which owns arming and
 # dispatch (ROSTER, dose, usage-gate.sh, sync-crontab.sh). realisateur#577
