@@ -321,7 +321,6 @@ fi
 # The `delivery` probe went with delivery-audit.sh (#511): it read
 # 2 MET and 262 BLIND across 292 PRs. Reinstating delivery proof is v2.
 
-# Each ledger ends in a REASON column nothing has ever read.
 if want fleet; then
   # LOCALHOST IS NOT AN SSH TARGET -- the same fix the propagation row above
   # already carries. This probe ssh'd to ${AUSCULTE_FLEET_HOST:-monkey}
@@ -356,7 +355,8 @@ if want fleet; then
     *FLEET-LEDGERS*)
       n_led="$(printf '%s\n' "$led" | sed -n 's/^FLEET-LEDGERS //p')"
       gate_err="$(printf '%s\n' "$led" | awk '$1=="FLEET-GATE-ERR" && $3+0 >= 2 {print $2"("$3")"}' | tr '\n' ' ')"
-      frozen="$(printf '%s\n' "$led" | awk '$1=="FLEET-PULL" && $4=="fetch-failed" && $3+0 >= 3 {print $2"("$3")"}' | tr '\n' ' ')"
+      # ANY cause, and >=2 not 3: the escalation dies before writing back.
+      frozen="$(printf '%s\n' "$led" | awk '$1=="FLEET-PULL" && $3+0 >= 2 {print $2"("$3" "$4")"}' | tr '\n' ' ')"
       if [ -n "$gate_err" ]; then
         record fleet DOWN "the usage gate is ERRORing, not pacing: $gate_err consecutive failure(s) -- no account here is being held on purpose"
       elif [ -n "$frozen" ]; then
