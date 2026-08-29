@@ -197,6 +197,7 @@ ausculte-cadence.sh
 dexter-liveness.sh
 monkey-watch.sh
 monkey-status-collect.py
+repose.sh
 decision-rot.sh
 stale-paths.sh
 cut-verb-build.sh
