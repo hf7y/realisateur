@@ -121,9 +121,7 @@ echo
 
 drift=0; blind=0; okc=0
 
-# THE FILES, NOT ONLY THE BLOCK: refreshed from a local CLONE -- #385/#386 lost 13 of 15 accounts to this, FOUR live versions and none of them main's. PROP_HOST_PIN, not the literal layout: propagation-set.sh owns it.
-# shellcheck source=bin/lib/propagation-set.sh
-. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/propagation-set.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/propagation-set.sh"  # THE FILES, NOT ONLY THE BLOCK: refreshed from a local CLONE -- #385/#386 lost 13 of 15 accounts to this, FOUR live versions and none of them main's. PROP_HOST_PIN, not the literal layout: propagation-set.sh owns it.
 declare -A HOOK_SRC=(
   [subagent-closeout.sh]="${SELFDEV_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/subagent-closeout.sh}"
   [stop-residue-gate.sh]="${SELFDEV_STOP_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/stop-residue-gate.sh}"
