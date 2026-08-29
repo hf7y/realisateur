@@ -35,11 +35,16 @@ zaxon_ask() {
       -H 'Accept: application/json,text/event-stream' -H "mcp-session-id: $sid" \
       -X POST "$url" -d '{"jsonrpc":"2.0","method":"notifications/initialized"}' >/dev/null 2>&1
     MSG="$msg" FROM="$from" python3 -c 'import json,os; print(json.dumps({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ask_zach","arguments":{"question":os.environ["MSG"],"from_agent":os.environ["FROM"]}}}))' > "$body" || continue
-    tid="$(curl -s -m 30 -H 'Content-Type: application/json' \
+    ans="$(curl -s -m 30 -H 'Content-Type: application/json' \
       -H 'Accept: application/json,text/event-stream' -H "mcp-session-id: $sid" \
-      -X POST "$url" --data-binary "@$body" 2>/dev/null | tr -d '\r' \
-      | grep -oE '"ticket_id\\?": ?\\?"[0-9a-f]+' | grep -oE '[0-9a-f]{6,}$' | head -1)"
-    [ -n "$tid" ] || continue
+      -X POST "$url" --data-binary "@$body" 2>/dev/null | tr -d '\r')"
+    tid="$(printf '%s' "$ans" | grep -oE '"ticket_id\\?": ?\\?"[0-9a-f]+' | grep -oE '[0-9a-f]{6,}$' | head -1)"
+    if [ -z "$tid" ]; then
+      why="$(printf '%s' "$ans" | grep -oE '\\?"error\\?": ?\\?"[^"\\]*' | sed 's/.*"//' | head -1)"
+      [ -n "$why" ] && { rm -f "$hdr" "$body"
+        printf 'zaxon_ask: the relay REFUSED this message: %s\n' "$why" >&2; return 0; }
+      continue
+    fi
     rm -f "$hdr" "$body"; printf '%s\n' "$tid"; return 0
   done
   rm -f "$hdr" "$body"

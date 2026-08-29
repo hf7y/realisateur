@@ -202,12 +202,16 @@ if [ "$1" != NONE ]; then
     TRANSITION) LABEL="$2 -> $3" ;;
     PERSIST)    LABEL="still $2 (down ${3}h, unread past ${ALERT_EVERY_H}h)" ;;
   esac
-  msg="monkey: $LABEL
-
-$WHY
-
-vm=$VMSTATE sshd=$SSHD root=${ROOTMOUNT:-?} disk=$DISK_HOME
-https://$GH_ESTATE_SITE/$PUBLISH_DIR/"
+  ZAXON_MAX="${ZAXON_MAX:-110}"
+  alert_url="https://$GH_ESTATE_SITE/$PUBLISH_DIR/"
+  alert_head="monkey: $LABEL"
+  room=$(( ZAXON_MAX - ${#alert_head} - ${#alert_url} - 2 ))
+  [ "$room" -lt 0 ] && room=0
+  alert_why="$WHY"
+  [ "${#alert_why}" -gt "$room" ] && alert_why="${alert_why:0:$room}"
+  msg="$alert_head
+$alert_why
+$alert_url"
   tid="$(zaxon_ask "$msg" monkey-watch)"
   if [ -n "$tid" ]; then
     mw_alert_mark_sent "$STATE_FILE" "$NOW"

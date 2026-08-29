@@ -265,4 +265,27 @@ else
   bad "J7 grace exhaustion falls through to DOWN" "expected the bound before its exhausted-case comment"
 fi
 
+
+mw_page() { ZM="${3:-120}" bash -c '
+  u="https://hf7y.com/monkey/"; h="monkey: $1"; r=$(( ZM - ${#h} - ${#u} - 2 ))
+  [ "$r" -lt 0 ] && r=0; w="$2"; [ "${#w}" -gt "$r" ] && w="${w:0:$r}"
+  printf "%s\n%s\n%s" "$h" "$w" "$u"' _ "$1" "$2"; }
+
+p="$(mw_page "OK -> DEGRADED" "sshd sent its banner but the session stalled -- no answer in 60s")"
+[ "${#p}" -le 140 ] && ok "P1 the DEGRADED page that was refused at 162 chars now fits" \
+  || bad "P1 the DEGRADED page that was refused at 162 chars now fits" "got ${#p}"
+has "P2 and the reason survives untruncated" "$p" "no answer in 60s"
+p="$(mw_page "still DOWN (down 24h, unread past 12h)" "$(printf 'x%.0s' $(seq 1 300))")"
+[ "${#p}" -le 140 ] && ok "P3 even a 300-char WHY cannot push the page over the ceiling" \
+  || bad "P3 even a 300-char WHY cannot push the page over the ceiling" "got ${#p}"
+has "P4 and the status URL is never the part that gets trimmed" "$p" "https://hf7y.com/monkey/"
+p="$(mw_page "still DOWN (down 24h, unread past 12h)" "$(printf 'x%.0s' $(seq 1 300))" 110)"
+tag="[monkey-watch] "
+[ $(( ${#p} + ${#tag} )) -le 140 ] && ok "P6 the page still fits once the relay prepends its [monkey-watch] tag" \
+  || bad "P6 the page still fits once the relay prepends its [monkey-watch] tag" "got $(( ${#p} + ${#tag} ))"
+
+refusal='data: {"jsonrpc":"2.0","result":{"content":[{"text":"{\n  \"status\": \"refused\",\n  \"error\": \"rendered message is 785 chars; must be at most 140\"\n}","type":"text"}]}}'
+why="$(printf '%s' "$refusal" | grep -oE '\\?"error\\?": ?\\?"[^"\\]*' | sed 's/.*"//' | head -1)"
+has "P5 zaxon reports the relay's OWN refusal reason, not 'no relay answered'" "$why" "must be at most 140"
+
 summary
