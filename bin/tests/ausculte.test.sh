@@ -332,6 +332,19 @@ out="$(run fleet)"; rc=$?
 check "a checkout frozen 3+ ticks is DOWN (5); the runner will not self-heal" "$rc" "5"
 has  "and says a merged fix cannot land" "$out" "cannot land"
 
+fleet "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
+FLEET-PULL scheduler 2 dirty-tracked 0
+FLEET-LEDGERS 1"
+out="$(run fleet)"; rc=$?
+check "a dirty-tracked freeze is DOWN (5) too, not just fetch-failed" "$rc" "5"
+has  "and it names the cause, not only the count" "$out" "scheduler(2 dirty-tracked)"
+
+fleet "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
+FLEET-PULL scheduler 1 dirty-tracked 0
+FLEET-LEDGERS 1"
+out="$(run fleet)"; rc=$?
+check "one blocked tick is a blip, not a freeze" "$rc" "0"
+
 # THE FALSE OK THIS PROBE WAS BORN WITH: it globbed a path no account had.
 fleet "FLEET-LEDGERS 0"
 out="$(run fleet)"; rc=$?
