@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # selfdev-hooks-provision.sh -- every self-dev account runs THE-FLOOR gate
-# 3.2's closeout hooks (SubagentStart baseline + SubagentStop, Stop), the verb-pin hook (SessionStart, #708), the path guard (PreToolUse, #707), the credential hold (PreToolUse+UserPromptSubmit, #714), the memory budget guard+report (PreToolUse+SessionStart, #715) and the session marker (SessionStart+SessionEnd, hf7y/vim-arcade#207): wired in settings.json, and file.
+# 3.2's closeout hooks (SubagentStart baseline + SubagentStop, SessionStart baseline + Stop), the verb-pin hook (SessionStart, #708), the path guard (PreToolUse, #707), the credential hold (PreToolUse+UserPromptSubmit, #714), the memory budget guard+report (PreToolUse+SessionStart, #715) and the session marker (SessionStart+SessionEnd, hf7y/vim-arcade#207): wired in settings.json, and file.
 #
 # RUNNER: bin/tests/selfdev-hooks-provision.test.sh -- and an operator, on the host
 # GUARD-TEST: bin/tests/selfdev-hooks-provision.test.sh
@@ -92,6 +92,10 @@ read -r -d '' HOOKS <<'JSON'
   "SessionStart": [
     {
       "hooks": [
+        {
+          "type": "command",
+          "command": "~/.claude/hooks/stop-residue-gate.sh --baseline"
+        },
         {
           "type": "command",
           "command": "~/.claude/hooks/session-start-verb-pin.sh"
