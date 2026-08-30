@@ -71,6 +71,8 @@ gh-sign -- the shim that stands in front of `gh` and signs what an agent writes.
                             bodies are graded against lib/body-grammar.sh
   gh --self-check           which real gh, which build, how old, which grammar
   gh --stamp                the stamp this host and account would append
+  gh issue close <n>        refused when it closes as completed with nothing
+                            landed and nothing said -- see close_check below
   gh --check-body <path>    grade a body; `-` reads stdin
   gh --default-after <f>    read a DECISION body's DEFAULT-AFTER: prints
                             "<days><TAB><action>"; 1 = none (blocks forever)
@@ -323,6 +325,90 @@ if [ "$signable" -ne 1 ] || human_at_keyboard; then exec "$GH" "$@"; fi
 # lines in front of every `gh pr view` is how a warning stops being read.
 case "$(origin)" in *STALE*) demand_refresh ;; esac
 
+# CLOSED HAVING LANDED NOTHING is the estate's largest measured failure class:
+# 317 of 936 agent-filed closed issues (33.9%), machine-filed 172 of 246, and
+# until this NOTHING ANYWHERE LOOKED (hf7y/realisateur#752, measured over
+# 138,400 lines). hf7y/realisateur#294 named the cause on 2026-08-15 -- "no
+# organ that closes decisions" -- and its point 1 was never built. This is that
+# organ, at the one place that already sees every agent close.
+#
+# NOT A BAN: not every issue owes a diff, and demanding one makes this a toll
+# booth. Four ways past it, all honest and all cheap:
+#   --reason "not planned"        it landed nothing, and says so
+#   --comment "closed by #N"      it landed, and names where
+#   --comment "... path:/x ..."   it landed off-repo -- the DELIVERS vocabulary
+#   a DECISION: body              a decision closes on an answer, not a diff
+#
+# Measured by replaying grammar_landing_ref over 1,348 real closes in 20 hf7y
+# repos: 49 refused (3.6%), 10 of the 968 since the agent stamp exists (1.0%).
+# Two of those ten are Zach's own closes, which never reach here. Of the eight
+# agent closes, seven say in their own words that nothing was done -- "premise
+# expired", "a map, not work", "not a real research request" -- and owed
+# `--reason "not planned"`. The eighth is a workflow sensor closing its own row.
+#
+# FAIL OPEN ON EVERYTHING: no grammar, no issue number, no API, no answer --
+# the close goes through. A shim that refuses closes when GitHub is slow wedges
+# every agent on 18 accounts, which is worse than the leak it is plugging.
+close_check() {
+  local comment="$1" i skip=0 sel='' reason='' out url rest o r n body landed
+  local -a view=()
+
+  [ "$grammar_ok" -eq 1 ] || return 0
+
+  for ((i = 2; i < ${#args[@]}; i++)); do
+    if [ "$skip" -eq 1 ]; then skip=0; continue; fi
+    case "${args[$i]}" in
+      -r|--reason)   reason="${args[$((i + 1))]:-}"; skip=1 ;;
+      --reason=*)    reason="${args[$i]#--reason=}" ;;
+      -R|--repo)     view=(--repo "${args[$((i + 1))]:-}"); skip=1 ;;
+      --repo=*)      view=(--repo "${args[$i]#--repo=}") ;;
+      -c|--comment)  skip=1 ;;
+      --comment=*)   comment="${args[$i]#--comment=}" ;;
+      -*)            ;;
+      *)             [ -n "$sel" ] || sel="${args[$i]}" ;;
+    esac
+  done
+
+  # Any reason but `completed` is already an honest close -- NOT_PLANNED today,
+  # DUPLICATE and whatever GitHub adds next without an edit here. Only a
+  # COMPLETED close claims something was done.
+  case "${reason,,}" in ''|completed) ;; *) return 0 ;; esac
+
+  grammar_landing_ref "$comment" >/dev/null && return 0
+  [ -n "$sel" ] || return 0
+
+  # `gh issue view` resolves the repo exactly as `gh issue close` just did --
+  # --repo, GH_REPO, the git remote -- so this shim never reimplements that.
+  # One call answers two questions: which issue, and what its line 1 declares.
+  out="$("$GH" issue view "$sel" "${view[@]}" --json url,body --jq '.url, .body' 2>/dev/null)" || return 0
+  url="${out%%$'\n'*}"
+  body="${out#*$'\n'}"
+  case "$url" in *://*/*/*/issues/[0-9]*) ;; *) return 0 ;; esac
+
+  # A DECISION: closes on an answer. Demanding a diff for one would refuse
+  # every question this estate asks itself.
+  [ "$(grammar_declaration "$body")" = decision ] && return 0
+
+  n="${url##*/}"; rest="${url%/issues/*}"
+  r="${rest##*/}"; rest="${rest%/*}"; o="${rest##*/}"
+  landed="$("$GH" api "repos/$o/$r/issues/$n/timeline?per_page=100" --paginate --jq \
+    '.[] | select(.commit_id != null or (.event == "cross-referenced" and .source.issue.pull_request.merged_at != null)) | "landed"' \
+    2>/dev/null)" || return 0
+  [ -n "$landed" ] && return 0
+
+  printf 'gh-sign: REFUSED -- closing %s/%s#%s as completed, and nothing says what landed.\n' "$o" "$r" "$n" >&2
+  printf 'gh-sign: No merged pull request and no commit reference it, and this close names\n' >&2
+  printf 'gh-sign: nothing a check could go and look at. Nothing was closed.\n\n' >&2
+  printf '  +-- ANY ONE OF THESE CLOSES IT --------------------------------\n' >&2
+  printf '  | gh issue close %s --reason "not planned"\n' "$sel" >&2
+  printf '  | gh issue close %s --comment "closed by %s/%s#<n>"\n' "$sel" "$o" "$r" >&2
+  printf '  | gh issue close %s --comment "landed as path:/usr/local/bin/<verb> on <host>"\n' "$sel" >&2
+  printf '  +--------------------------------------------------------------\n\n' >&2
+  printf 'gh-sign: 317 of 936 agent-filed closed issues closed with nothing landed and\n' >&2
+  printf 'gh-sign: nothing said -- 33.9%%, the largest class measured (hf7y/realisateur#752).\n' >&2
+  exit 7
+}
+
 # Read the body out of argv, whichever spelling. No body at all opens $EDITOR.
 body=''; found=0; idx=0; bi=0; kind=''
 args=("$@")
@@ -345,7 +431,12 @@ if [ "$api_comment" -eq 1 ]; then
     esac
   done
 fi
-if [ "$found" -ne 1 ] || [ "$bi" -ge "${#args[@]}" ]; then exec "$GH" "$@"; fi
+# A close with no --comment AT ALL is the very case this guard is for, so it is
+# graded before the no-body bail-out rather than after it.
+if [ "$found" -ne 1 ] || [ "$bi" -ge "${#args[@]}" ]; then
+  case "${1:-} ${2:-}" in 'issue close') close_check '' ;; esac
+  exec "$GH" "$@"
+fi
 
 if [ "$kind" = api_inline ]; then
   body="${args[$bi]#body=}"
@@ -380,6 +471,7 @@ case "${1:-} ${2:-}" in
     else
       printf 'gh-sign: BLIND -- no grammar library at %s; body not checked.\n' "$GRAMMAR" >&2
     fi ;;
+  'issue close') close_check "$body" ;;
 esac
 
 # Already signed. Signing twice pushes the first stamp off the last line.

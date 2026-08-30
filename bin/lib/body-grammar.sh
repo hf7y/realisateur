@@ -20,6 +20,9 @@
 #   NO-DEFAULT          a DECISION: body carrying no DEFAULT-AFTER at all
 #   NEGATED-CLOSE       a closing keyword + reference in a sentence DENYING it
 #
+# grammar_landing_ref is not one of those codes: it grades a CLOSE, not a body.
+# gh-sign's `issue close` guard asks it whether the closer named anything.
+#
 # DEFAULT-AFTER -- MANDATORY ON A DECISION SINCE #680 (Zach, 2026-08-28),
 # because 21 of 45 open `needs-human` blocked by omission. Past the window the
 # owning account applies it, says so, and leaves the issue open to be
@@ -72,6 +75,63 @@ grammar_negated_close() {  # <line> <heading-negates> -- print "<keyword> <ref>"
     return 0
   done
   return 1
+}
+
+# grammar_landing_ref <text> -- print the first thing <text> names that a check
+# could go and look at, and return 0; return 1 when it names none.
+#
+# CLOSED HAVING LANDED NOTHING is this estate's largest measured failure class:
+# 317 of 936 agent-filed closed issues, 33.9%, and machine-filed 172 of 246
+# (hf7y/realisateur#752, measured over 138,400 lines of its own prose). The
+# remedy is not to ban the close -- most closes owe no diff -- it is that a
+# close SAY what it did, in a form something can follow. Prose cannot be
+# followed, which is the same argument UNTYPED-DELIVERY already makes about
+# DELIVERS, so the shapes accepted here are the ones this estate already writes:
+#
+#   #N / owner/repo#N / an issue, pull or commit URL    GitHub resolves it
+#   a 7-40 char hex token                               a commit
+#   <kind>:<value>                                      the DELIVERS vocabulary
+#   a `code span` holding a path or a filename          the older idiom for it
+#
+# The code span is the one that looks arbitrary and is not. Replayed over 1,348
+# real closes in 20 hf7y repos, dropping it takes the guard from 49 refusals to
+# 91: the 42 it acquits are `notify-senechal` door rows a machine absorbed and
+# acknowledged (18), and "already done, see `bin/x`" closes (24). Refusing
+# those is the toll booth, not the guard.
+grammar_landing_ref() {
+  local text="$1" words=() w seg rest
+  local IFS=$' \t\n'
+
+  # `-d ''` IS LOAD-BEARING: without it `read` stops at the first newline and a
+  # statement two lines down goes unread. grammar_negated_close's bare `read -ra`
+  # is correct only because grammar_check hands it one line at a time; a close
+  # comment arrives whole.
+  read -rd '' -a words <<<"$text" || :
+  for w in "${words[@]}"; do
+    w="${w//\`/}"; w="${w%[.,;:)]}"
+    case "$w" in
+      '#'[0-9]*|*[a-zA-Z0-9]/[a-zA-Z0-9]*'#'[0-9]*) printf '%s\n' "$w"; return 0 ;;
+      *://*/pull/[0-9]*|*://*/issues/[0-9]*|*://*/commit/*) printf '%s\n' "$w"; return 0 ;;
+      *host:*|*path:*|*clock:*|*tag:*|*secret:*|*unit:*|*port:*|*repo:*) printf '%s\n' "$w"; return 0 ;;
+    esac
+    case "$w" in                      # a commit: hex only, and never all digits
+      *[!0-9a-f]*) ;;
+      *[a-f]*) [ "${#w}" -ge 7 ] && [ "${#w}" -le 40 ] && { printf '%s\n' "$w"; return 0; } ;;
+    esac
+  done
+
+  rest="$text"                        # same code-span walk as grammar_negated_close
+  while :; do
+    case "$rest" in *'`'*) ;; *) return 1 ;; esac
+    rest="${rest#*\`}"
+    case "$rest" in
+      *'`'*) seg="${rest%%\`*}"; rest="${rest#*\`}" ;;
+      *) return 1 ;;
+    esac
+    case "$seg" in
+      *[A-Za-z0-9_-][/.][A-Za-z0-9_-]*) printf '%s\n' "$seg"; return 0 ;;
+    esac
+  done
 }
 
 # grammar_default_after <body> -- print "<days><TAB><action>" and return 0 when
