@@ -127,8 +127,10 @@ A clean start line is the pass:
 Four `active' lines, or Zach has no notification channel and does not know it.
 .SH FACTS THAT CHANGE THE COMMANDS
 .nf
-C:  53G free   monkey.vdi is 39.5G and lives HERE \- rollback depends on it
-D:  2.6T free  every large write goes here, never to C:
+C:  53G free   monkey.vdi is 39.5G and lives HERE \- rollback depends on it,
+               and it is the INTERNAL NVMe: the guest's disk belongs here
+D:  2.6T free  BULK SCRATCH ONLY \- tarballs and exports. It is the WD Elements
+               USB drive from realisateur#274. NEVER put a guest disk here.
 monkey.vbox is on D: while monkey.vdi is on C: \- the VM is split across drives
 distros: docker\-desktop (DEFAULT), Ubuntu, hermes \- and hermes is NOT spare:
   it holds ask_zach, the WhatsApp watcher and whisper (senechal#557)
@@ -251,7 +253,7 @@ open a connection to. Anyone extending this witness should add a liveness
 field that fails when the node is down, and it must be a SEPARATE field: a
 held ts_nodeid and a dead node are different facts and collapsing them is
 what let this look finished.
-.SS And monkey's root is now on an EXTERNAL USB DISK
+.SS And monkey's root went back onto the drive that caused realisateur#274
 Not a classification quirk \- measured on the Windows side 2026\-08\-30:
 .nf
 
@@ -259,13 +261,52 @@ Not a classification quirk \- measured on the Windows side 2026\-08\-30:
   C:  DiskNumber 0  BusType NVMe  KINGSTON OM8PGP4512Q-A0    477 GB
 .fi
 .PP
-This file says "Imports land on D:, never C:" and "every large write goes here",
-and it says that to protect C: SPACE \- 53G free, holding the 37G rollback VDI.
-It never weighed the other half: monkey.vdi lived on C:, internal NVMe, and the
-23.32G ext4.vhdx now lives on removable media on a USB bus. That is a
-durability and latency change nobody chose; it fell out of a space rule.
+This is not a tradeoff nobody weighed. It is a DOCUMENTED FIX, REVERTED.
 .PP
-.B monkey\-watch reports it correctly and always did.
+realisateur#274/#275, 2026\-08\-14: monkey.vdi was on D:, THIS drive, which
+logged 1580 `disk' Event ID 11 controller errors between 08\-07 and 08\-14 \- one
+every 5\-10 minutes for a week. One landed on an NTFS transaction\-log flush,
+VirtualBox lost its handle, root remounted read\-only, and sshd then RESET EVERY
+CONNECTION AT KEY EXCHANGE because it could not write. All 14 accounts were
+unreachable for hours and nothing reported it. `bin/monkey\-vdi\-to\-internal.sh'
+exists to undo exactly this, and its stated invariant is that it NEVER WRITES
+TO D:.
+.PP
+`bin/monkey\-watch.sh' says so at the point of measurement:
+.nf
+
+  # If this ever reads EXTERNAL-USB again, someone reverted the fix and the
+  # page should say so rather than waiting to be asked.
+.fi
+.PP
+It read EXTERNAL\-USB because this runbook told the operator to put it there.
+The instruction "Imports land on D:, never C:" was written to protect C: SPACE
+and directly contradicts #275's invariant; the two were never reconciled. That
+line is corrected above \- the tar is bulk scratch and belongs on D:, the guest
+disk does not.
+.PP
+.B Note the symptom match.
+#274 presented as `sshd silent'. The page says `sshd is silent' today. The
+cause is different \- the shared\-netns :22 collision above \- but an operator
+reading the page cannot tell those apart, which is precisely why the disk row
+is published rather than inferred.
+.PP
+.B How bad is it RIGHT NOW: not an emergency, and still wrong.
+Measured 2026\-08\-30 on the Windows event log:
+.nf
+
+  Event ID 11 on \eDevice\eHarddisk1\eDR2: 5 in the LAST 30 DAYS
+    (the outage week ran ~1580 in seven days)
+  newest 2026\-08\-28 04:47; ZERO since the import began 13:36 today
+  ReadErrorsTotal 0, Temperature 42, PowerOnHours 5094
+.fi
+.PP
+So the drive is emitting the same error class at about one per six days rather
+than 225 per day. It is not failing now. It IS the drive that failed, and #274
+escalated from occasional to catastrophic, so this is a placement to correct
+deliberately rather than an alarm to answer tonight.
+.PP
+.B monkey\-watch reported it correctly and immediately.
 `vmhost_classify_disk' maps the drive LETTER (C: internal, D: EXTERNAL\-USB)
 rather than probing the bus, so its EXTERNAL\-USB was an assumption \- but the
 assumption is TRUE here, confirmed by `Get\-Disk'. The seam itself is working:
@@ -339,7 +380,8 @@ nothing, because the rehearsal wants no tailscale state at all.
 100.121.83.23. Everything that reaches monkey by name \- `Host monkey' in every
 agent's ssh config, and 12 runner registrations \- resolves through it.
 .PP
-ON dexter, Windows route. Imports land on D:, never C:
+ON dexter, Windows route. The TAR lands on D: because it is bulk scratch.
+.B The IMPORT MUST NOT: see #274 below \- a guest disk on D: is the outage.
 .nf
 
   wsl.exe \-\-import monkey\-rehearsal D:\ewsl\-migration\emonkey\-rehearsal \e
