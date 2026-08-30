@@ -168,8 +168,8 @@ did not name one as unattributed rather than as belonging to the caller.
 2026\-08\-30  NOT run, and deliberately so: the CUTOVER. It is a production
             change to a shared host and needs Zach's go, not an agent's.
 
-DIVERGED, recorded 2026\-08\-30 09:50Z by etat.sh:
-  long_readout 4 \-> 5 and soft_lockup 1 \-> 2 WHILE THIS WAS BEING WRITTEN.
+DIVERGED, recorded 2026\-08\-30 09:50Z, re\-probed 17:42Z by etat.sh:
+  long_readout 4 \-> 5 and soft_lockup 1 \-> 4 SINCE THE BASELINE.
   The series this boot, clocksource stall and the matching CPU lockup:
 
     02:52:36    1.85 s
@@ -177,6 +177,8 @@ DIVERGED, recorded 2026\-08\-30 09:50Z by etat.sh:
     03:35:32   14.60 s
     05:24:24   41.57 s   soft lockup: CPU#0 stuck for 42s  [swapper/0:0]
     09:42:09  415.67 s   soft lockup: CPU#0 stuck for 390s [swapper/0:0]
+    15:22:00       \-     soft lockup: CPU#0 stuck for 26s  [swapper/0:0]
+    17:18:26       \-     soft lockup: CPU#0 stuck for 24s  [swapper/0:0]
 
   Read the 390 s, not the 415 s. The stall is what the clock noticed; 390 s is
   how long monkey WAS ACTUALLY UNRESPONSIVE \- six and a half minutes \- and
@@ -185,9 +187,58 @@ DIVERGED, recorded 2026\-08\-30 09:50Z by etat.sh:
   finished, on [swapper/0:0], the IDLE task, which allocates nothing. This is
   the shape senechal#530 says precedes the guest going silent, one step
   further along.
+.PP
+.B The last two lockups carry NO clocksource line, and that is a grading trap.
+long_readout has sat at 5 since 09:42 while the guest wedged twice more. A
+watcher reading only the stall counter would have called the wedge plateaued
+through both. Grade BOTH counters, or grade neither. The gaps do not shorten
+monotonically \- 4h18, then 5h40, then 1h56 \- but the most recent is the
+shortest yet, and it happened at a load average of 0.11.
+.PP
   Consequence for whoever runs the cutover: monkey is degrading now, and the
   window is not open-ended. Reported on senechal#530 and #553.
+.PP
+.B GATE 1 IS NOT A CUTOVER BLOCKER \- measured 2026\-08\-30 17:40Z.
+etat.sh prints step 7 as a flat BLOCKED because a forced cut needs Zach. But
+the thing it was supposed to block is already delivered by another route, so
+the cut approval gates nothing in section 3:
+.nf
+
+  dexter carries /home/zach/realisateur at d93dfe0 \- current main, clean tree \-
+    and all three wsl arms are present in its bin/lib/vmhost.sh
+  its monkey\-watch crontab runs `git pull \-\-ff\-only' every 10 minutes before
+    each run, so host tools reach dexter by GIT, not by the verb cut
+  vmhost.sh is not in the cut at all: build/2026\-08\-29T080004Z ships the seven
+    verbs and no lib. A forced cut would not have delivered it either.
+  last cut is 1 day old, not 30 \- the interval simply has not elapsed
 .fi
+.PP
+So the only Zach-gated item that touches the cutover is the tailscale auth key
+below. Do not read step 7's BLOCKED as a stop.
+.PP
+.B THE ONE OPEN TECHNICAL RISK is rehearsal\-verdict.tsv's last UNTESTED line:
+whether a LOGGED\-IN tailscaled inside a distro coexists with dexter's Windows
+tailscaled under networkingMode=mirrored. The cutover keeps tailscaled.state,
+and `Host monkey' plus 12 runner registrations resolve through it, so this is
+the field that decides whether monkey is still reachable by name afterwards.
+Measuring it needs a FRESH auth key against a throwaway node name. Minting one
+is Zach's, and an agent must ask rather than go looking.
+.PP
+.B Verified ready 2026\-08\-30 17:42Z, so the next agent need not re\-probe:
+.nf
+
+  windows route   port 22 answers `dexter\ezach'; wsl \-l \-v lists 3 distros
+  dexter->monkey  direct key reaches 100.121.83.23, prints `monkey'
+  C: 53G free     the 37G rollback VDI is still there
+  D: 2.6T free    room for the 22G tar and the 23G vhdx
+  monkey          up 14:51, 12 runners active, load 0.11
+  human channel   6 containers up, whisper /health ok \- and it had just proved
+                  itself: dexter's Ubuntu restarted at 17:11Z and every
+                  container came back UNATTENDED, which is exactly the bounce
+                  `wsl \-\-import' causes in section 3
+  docker\-desktop  still the DEFAULT distro, still the bare\-`wsl \-d' trap
+.fi
+
 .SH 0. BASELINE, BEFORE ANYTHING TOUCHES MONKEY
 .nf
 
