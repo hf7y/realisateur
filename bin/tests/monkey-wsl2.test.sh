@@ -28,6 +28,8 @@ if command -v man >/dev/null 2>&1; then
   has "A20 ufw and ssh are disarmed because the netns is shared" "$RF" "ufw would install iptables rules"
   has "A21 a rehearsal's expected rc=5 fields are named, not read as faults" "$RF" "A rehearsal legitimately exits 5"
   has "A22 interop can break after --terminate, and the repair is named" "$RF" "systemd-binfmt"
+  has "A23 the cutover is recorded as deliberately not run by an agent" "$RF" "needs Zach's go, not an agent's"
+  has "A24 the live wedge progression is recorded where the operator reads it" "$RF" "monkey is degrading now"
   has "A8 ...and says why: they would contend with the live fleet's agents" "$RF" "SAME agents as the live monkey"
   has "A9 --shutdown's blast radius names the human channel" "$R" "zaxon-relay-mcp.service"
   has "A10 it says a probe inside a distro cannot identify what it measured" "$R" "cannot tell you which distro it measured"
