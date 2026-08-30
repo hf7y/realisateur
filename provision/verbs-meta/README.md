@@ -59,14 +59,14 @@ shadowed rather than adopted (VERB-DISTRIBUTION §7 reconciles the two).
 
 1. delete the source on `main`, and remove its `bin/lib/carries.tsv` row
 2. delete the file from the project's `bashified` branch
-3. dispatch `build-verbs.yml` (its `allow_shrink` input exists only on
-   `workflow_dispatch`; the guard's own critique is #699)
+3. declare the loss in `bin/lib/retired-verbs.tsv`
 
-**Step 1 is the only one an agent can do, and alone it ships a zombie.**
-`carry.sh` is copy-only, so `carries.tsv` is an allow-list of what to COPY and
-never a manifest of what should EXIST, and the cut reads `bashified`. **Step 3
-is gated on Zach**: `workflow_dispatch` runs in the `release` environment,
-whose rule is `required_reviewers: hf7y`. Never do step 2 unattended.
+**Step 1 alone ships a zombie.** `carry.sh` is copy-only, so `carries.tsv` is
+an allow-list of what to COPY and never a manifest of what should EXIST, and
+the cut reads `bashified`. **Step 2 without step 3 refuses every nightly**:
+since #749 the cut diffs verb NAMES and dies on a disappearance no
+`retired-verbs.tsv` row explains, because a verb lost to a flaked API call
+looks exactly like a retired one.
 
 ## On a consumer
 
