@@ -201,6 +201,7 @@ vault-spool-drain.sh
 stale-paths.sh
 cut-verb-build.sh
 registry-standup.sh
+branch-protection-provision.sh
 publish-release-verdict.sh
 selfdev-credentials.sh
 shellcheck-lint.sh
@@ -215,6 +216,8 @@ reprise.sh
 # host, so per-account copies would be many writers racing one force-with-lease.
 # reprise also reads bin/lib/handoffs.tsv, THIS repo's ledger, empty elsewhere.
 # registry-standup.sh is LOCAL: its subject is the FLEET, and it writes nothing.
+# branch-protection-provision.sh is LOCAL for the same reason: its subject is
+# every registered repo's protection, and it needs admin on someone else's repo.
 # publish-release-verdict.sh is LOCAL because it runs in the release pipeline.
 
 # prop_host_tools -- what a provisioned host carries under
