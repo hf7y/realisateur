@@ -127,12 +127,21 @@ ON dexter (route: ssh dexter):
 \&       \-\-exclude=./proc \-\-exclude=./sys \-\-exclude=./dev \-\-exclude=./run \e
 \&       \-\-exclude=./tmp \-\-exclude=./mnt \-\-exclude=./media \e
 \&       \-\-exclude=./lost+found \-\-exclude=./swapfile \e
-\&       \-\-exclude=./var/lib/tailscale/tailscaled.state .' \e
+\&       \-\-exclude=./var/lib/tailscale .' \e
     > /mnt/d/wsl\-migration/monkey\-rehearsal.tar
 .fi
 .PP
-tailscaled.state is dropped ON PURPOSE here: the rehearsal takes a FRESH
-identity so monkey's own node is never at risk. The cutover keeps it.
+.B The whole of /var/lib/tailscale is dropped ON PURPOSE here
+so the rehearsal takes a FRESH identity and monkey's own node is never at risk.
+Excluding just tailscaled.state is enough \- verified 2026\-08\-30, the identity
+is in that file's `_machinekey' and `_profiles' keys, while profile\-data/ holds
+only netmap caches \- but the whole directory is strictly safer and costs
+nothing, because the rehearsal wants no tailscale state at all.
+.PP
+.B The cutover KEEPS it, and that is the point.
+`tailscaled.state' is what carries node nyzii8E1C221CNTRL and the address
+100.121.83.23. Everything that reaches monkey by name \- `Host monkey' in every
+agent's ssh config, and 12 runner registrations \- resolves through it.
 .PP
 ON dexter, Windows route. Imports land on D:, never C:
 .nf
@@ -288,6 +297,23 @@ HUMAN\-STEP
 .PP
 A Long readout count that does NOT fall to 0 means monkey is still being
 descheduled, and the migration did not buy what it was for.
+.SS And what a WRONG target produces, so it is recognisable
+Pointed at a distro that is not monkey, the witness refuses rather than passes.
+This is real output, from `\-\-target wsl:Ubuntu' against monkey's baseline:
+.nf
+
+  MOVED  machine_id       25cb8cab... \-> 1f1ba15d...
+  MOVED  hostname         monkey \-> dexter
+  MOVED  accounts         18 \-> 0
+  ABSENT ts_nodeid        was nyzii8E1C221CNTRL \- no tailscale identity here
+  FLIP   backend          oracle \-> wsl
+  LOST   runners_enabled  0 (was 12)
+  OK     long_readout     0 (was 4)
+  rc=5
+.fi
+.PP
+Note that `backend' FLIPs and the wedge counters read OK even here. A green
+backend line is NOT the verification \- the MUST\-HOLD block is.
 .SH RETIRING THIS
 When etat.sh reports the cutover DONE and a week has passed with long_readout
 at 0, delete this directory, the saved VM, and D:\ewsl\-migration. Fold the
