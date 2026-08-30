@@ -2,11 +2,10 @@
 # body-grammar.test.sh -- witness for bin/lib/body-grammar.sh and the
 # admission control bin/gh-sign.sh builds on it.
 #
-# SUBJECT: bin/lib/body-grammar.sh, bin/gh-sign.sh, .github/workflows/deferral-ledger.yml
+# SUBJECT: bin/lib/body-grammar.sh, bin/gh-sign.sh
 #
-# Replaces bin/tests/deferral-ledger.test.sh: same rules, enforced at the
-# write instead of audited after it. Section S is what the old suite could not
-# have -- proof that a malformed body never reaches the network.
+# Section S is the claim an after-the-fact audit could not make: a malformed
+# body never reaches the network.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
@@ -16,8 +15,7 @@ ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 SHIM="$ROOT/gh-sign.sh"
 harness_tmp
 
-# A stub `gh` that records that it was reached. Its existence is the assertion
-# in section S: if the file appears, the write went through.
+# A stub `gh`: if $T/reached appears, section S's write went through.
 mkdir -p "$T/bin"
 cat > "$T/bin/gh" <<EOF
 #!/usr/bin/env bash
@@ -52,8 +50,7 @@ eq 'A4 markdown furniture is stripped' "$(grammar_declaration '## DECISION: stil
 eq 'A5 leading blank lines are skipped' "$(grammar_declaration '
 
 DECISION: after two blanks')" decision
-# The word must OPEN the line: a body that merely QUOTES the convention must
-# not exempt itself. This false positive is the one guard-estate's check E hit.
+# The word must OPEN the line, or a body QUOTING the convention exempts itself.
 eq 'A6 a mention mid-line is not a declaration' \
   "$(grammar_declaration 'this PR follows the DECISION: convention')" none
 
@@ -88,7 +85,6 @@ NO-DECISION: buried at line 3
 <!-- DEFERRED -->
 - none
 <!-- /DEFERRED -->')" MISPLACED-DECISION
-# A decision inside a fenced block is quoted code, not a claim on a human.
 eq  'B3 a fenced example is not a buried decision' \
   "$(findings 'NO-DECISION: @zach nothing to weigh
 
@@ -149,9 +145,8 @@ eq 'D3 a URL is a destination' "$(findings 'NO-DECISION: @zach ok
 <!-- DELIVERS -->
 - none
 <!-- /DELIVERS -->')" 0
-# NO-OWNER is refused however well argued. #327 filed two of them: the issue
-# it DID cite is open and findable, and both ownerless entries are lost --
-# 0 issues mention gh-sign anywhere, and #327 merged as a no-op because of it.
+# NO-OWNER is refused however well argued. #327 filed two and lost both, while
+# the issue it DID cite is open and findable; it merged as a no-op.
 has 'D4 NO-OWNER is refused even with a full reason' "$(codes 'NO-DECISION: @zach ok
 <!-- DEFERRED -->
 - NO-OWNER: it needs a human call about all thirteen accounts at once
@@ -258,8 +253,7 @@ out="$(run_shim issue create --title T --body-file "$T/good.md")"
 if [ -f "$T/reached" ]; then ok 'S5 a well-formed body reaches gh'
 else bad 'S5 a well-formed body reaches gh' "gh was never called: $out"; fi
 
-# The library FINDS it; the shim is what stops the write. gh-sign.sh needed no
-# change to gain this code -- it refuses on any finding grammar_check reports.
+# gh-sign.sh needed no change: it refuses on any finding grammar_check reports.
 printf 'NO-DECISION: agent work\n\nThis does not close #79.\n\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n' > "$T/negated.md"
 rm -f "$T/reached"
 out="$(run_shim pr create --title T --body-file "$T/negated.md")"; got=$?
@@ -284,20 +278,15 @@ rc  'S8 --check-body re-runs it offline and FINDS it (1), refusing nothing' 1 "$
 has 'S9 --check-body names the same finding'         "$out" MISPLACED-DECISION
 
 section 'I. the CI backstop is wired to the same grammar'
-# deferral-ledger.yml was deleted 2026-08-22 (#511). It was never
-# a required check, and it was green on every PR that answered `- none` -- 260
-# of 262. A backstop satisfied by declaring nothing backstops nothing. The
-# grammar itself is unchanged and still enforced at the write by
-# gh-sign.sh --check-body, which sections A-H above exercise directly.
-# Reinstating a delivery check that asks for a claim, not a field, is v2.
+# deferral-ledger.yml was deleted 2026-08-22 (#511): never required, and green
+# on 260 of 262 PRs because `- none` satisfied it. A backstop satisfied by
+# declaring nothing backstops nothing; the write-time check is the one holding.
 
 hasnt 'I5 the deleted script is really gone' "$(ls "$ROOT")" 'deferral-ledger.sh'
 
 # --- DEFAULT-AFTER: the unanswered decision resolves itself (2026-08-22) -----
-# 36 open `needs-human` issues, each subtracting from its repo's `actionable`
-# count in tempo.sh -- so every unanswered question was also a brake on the
-# repo that asked it. #262: the only brake in the loop was a person's
-# attention, "which is why the estate could not be left alone".
+# 36 open `needs-human` each subtracted from `actionable` in tempo.sh, so every
+# unanswered question also braked the repo that asked it (#262).
 section "DEFAULT-AFTER"
 
 _da() { printf 'DECISION: @zach -- q\n%s\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n' "$1"; }
@@ -364,10 +353,9 @@ grammar_answered_by "$(_ab 'nothing here')" >/dev/null 2>&1 \
   && bad "absent pointer returns 1" "it returned 0" \
   || ok "an absent pointer returns 1, so the caller can tell 'no pointer' from 'not read'"
 
-# --- NEGATED-CLOSE: the sentence denies the close, GitHub does it anyway -----
-# hf7y/scheduler#180 auto-closed scheduler#79 -- the ROSTER consolidation --
-# from a sentence under a heading titled "What this is not". It stayed closed,
-# the work stayed undone, and #282 had to be filed 10 days later to say so.
+# --- NEGATED-CLOSE ----------------------------------------------------------
+# hf7y/scheduler#180 shut scheduler#79 -- the ROSTER consolidation -- from a
+# sentence under a heading titled "What this is not".
 section "NEGATED-CLOSE"
 
 _nc() { printf 'NO-DECISION: agent work\n%s\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n' "$1"; }
@@ -379,14 +367,11 @@ has 'N1 the sentence that cost scheduler#79 is refused' \
 This does not retire `RUNNER_CRON` or close #79/#81'"'"'s `onekey`/`perproject` probes — `bin/roster-target.sh` is unchanged at 4/6 by this commit.')")" NEGATED-CLOSE
 
 # THE STANDING DECISION, Zach 2026-08-04: "batch agents should close shipped
-# issues automatically. this can't be a regular clean up by hand." If this
-# fixture ever goes missing the guard can silently become a ban, which
-# reverses it. It is the reason NEGATED-CLOSE is not "no closing keywords".
+# issues automatically. this can't be a regular clean up by hand." Lose this
+# fixture and the guard can silently become the ban that reverses it.
 eq 'N2 a plain `Closes #123` still closes -- the standing decision is intact' \
   "$(findings "$(_nc 'Closes #123')")" 0
 
-# A bare reference closes nothing, so denying next to one is correct writing,
-# and it is the remedy the finding names.
 eq 'N3 a bare #79 inside a denial is the fix, not the defect' \
   "$(findings "$(_nc 'This does not retire RUNNER_CRON or touch #79 at all.')")" 0
 
@@ -395,7 +380,6 @@ eq 'N4 a fenced example is quoted code, not a close' \
 This PR does not close #79.
 ```')")" 0
 
-# grammar_declaration'"'"'s problem: a body quoting the rule must not refuse itself.
 eq 'N5 an inline code span is a quotation, so this rule can be written down' \
   "$(findings "$(_nc 'Never write `close #79` in a denial; write the bare number.')")" 0
 
@@ -413,9 +397,7 @@ nothing here
 
 Closes #123')")" 0
 
-# COMPOSITION: the grammar reports every finding, not the first. A body can be
-# malformed AND auto-close what it says it does not, and a guard that stopped
-# at one would hide whichever it saw second.
+# COMPOSITION: every finding, not the first, or the second one is hidden.
 _compose="$(printf 'a body that declares nothing\n\nThis does not close hf7y/scheduler#79.\n')"
 has 'N8 composed: UNDECLARED is still reported'    "$(codes "$_compose")" UNDECLARED
 has 'N9 composed: NEGATED-CLOSE is reported too'   "$(codes "$_compose")" NEGATED-CLOSE
