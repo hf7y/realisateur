@@ -32,6 +32,7 @@ DRAIN_BIN 1
 BUILD_LIBEXEC 2
 FD_ANCHOR 200
 FD_PROSE 200
+APMS_PROSE 200
 EOF
 }
 unarmed() {
@@ -52,6 +53,7 @@ DRAIN_BIN 0
 BUILD_LIBEXEC 0
 FD_ANCHOR 200
 FD_PROSE 404
+APMS_PROSE 404
 EOF
 }
 run() {  # run <ledger> <today> -- OUT/RC
@@ -148,6 +150,7 @@ DRAIN_BIN 0
 BUILD_LIBEXEC 0
 FD_ANCHOR 200
 FD_PROSE 404
+APMS_PROSE 404
 EOF
 mkledger "$T/L4" "$(printf 'fragment-adoption\t2026-08-13\t30d\tUNARMED\tconvert the confs')"
 run "$T/L4" 2026-08-30

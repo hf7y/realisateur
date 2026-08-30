@@ -63,6 +63,8 @@ printf "DRAIN_BIN %s\n" "$($SUDO test -x /usr/local/libexec/selfdev/vault-spool-
 FD=https://raw.githubusercontent.com/hf7y/front-door/main
 printf "FD_ANCHOR %s\n" "$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$FD/.agent-project" 2>/dev/null)"
 printf "FD_PROSE %s\n" "$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$FD/.github/workflows/prose.yml" 2>/dev/null)"
+TOK="$($SUDO /usr/local/libexec/selfdev/selfdev-gh-app.sh --token 2>/dev/null | tail -1)"
+case "$TOK" in gh[a-z]_*) printf "APMS_PROSE %s\n" "$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 -H "Authorization: Bearer $TOK" https://api.github.com/repos/hf7y/apms-2173/contents/.github/workflows/prose.yml 2>/dev/null)" ;; esac
 [ -d '"$PROP_HOST_PIN"' ] && printf "BUILD_LIBEXEC %s\n" "$(ls '"$PROP_HOST_PIN"'/*/libexec/ 2>/dev/null | grep -cE "^(unarmed|vault-spool-drain)\.sh$")"
 exit 0'   # ALWAYS LAST, and unconditional: a fact line that reads nothing costs its own row, never the other nine (#815).
   if on_target_host "$HOST"; then
@@ -174,6 +176,16 @@ probe_front_door_guard() {
     200) echo "ARMED hf7y/front-door carries .github/workflows/prose.yml, so its pull requests reach the shared guard" ;;
     404) echo "UNARMED hf7y/front-door ships ratify.yml and ritual.yml and no prose.yml, so no pull request there reaches the shared prose guard" ;;
     *)   echo "BLIND reading hf7y/front-door's prose.yml gave HTTP '$p'" ;;
+  esac
+}
+
+probe_apms_guard() {
+  local p; p="$(fact APMS_PROSE)"
+  { host_readable && [ -n "$p" ]; } || { echo "BLIND no App token on $HOST, so whether hf7y/apms-2173 reaches the shared guard is unread"; return; }
+  case "$p" in
+    200) echo "ARMED hf7y/apms-2173 carries .github/workflows/prose.yml, so its pull requests reach the shared guard" ;;
+    404) echo "UNARMED hf7y/apms-2173 is a declared project carrying no .github/workflows at all, so no pull request there reaches the shared prose guard" ;;
+    *)   echo "BLIND reading hf7y/apms-2173's prose.yml gave HTTP '$p'" ;;
   esac
 }
 
