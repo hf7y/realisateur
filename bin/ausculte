@@ -42,6 +42,13 @@ while [ $# -gt 0 ]; do
   esac; shift
 done
 
+_monkey_status=''; _monkey_status_fetched=0
+fetch_monkey_status() {  # one curl per run for monkey/status.json -- hosts and arming both want it, and two fetches could disagree with each other about the same fact
+  [ "$_monkey_status_fetched" = 1 ] && return 0
+  _monkey_status_fetched=1
+  _monkey_status="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://$GH_ESTATE_SITE/monkey/status.json}" 2>/dev/null)"
+}
+
 down=0; blind=0; rows=()
 # FOUR STATES, NOT THREE (2026-08-22). OK / DOWN / BLIND could not express
 # "this host must not answer that question", so containment showed up as
@@ -100,12 +107,26 @@ if want hosts; then
       6) record hosts BLIND 'cannot reach dexter' ;;
       *) record hosts DOWN "$(printf '%s' "$out" | grep -iE 'down|missing|not running' | head -1)" ;;
     esac
-  else record hosts BLIND 'dexter-liveness.sh not present'; fi
+  else
+    fetch_monkey_status  # not present does not mean BLIND (#735): monkey-watch.sh already publishes this exact verdict from dexter every 10 minutes
+    wv="$(printf '%s' "$_monkey_status" | jq -r '.watcher.verdict // empty' 2>/dev/null)"
+    wvu="$(printf '%s' "$_monkey_status" | jq -r '.watcher.valid_until // empty' 2>/dev/null)"
+    why="$(printf '%s' "$_monkey_status" | jq -r '.watcher.why // empty' 2>/dev/null)"
+    if [ -z "$wv" ]; then
+      record hosts BLIND 'dexter-liveness.sh not present, and the published monkey-watch status could not be read'
+    elif [ -n "$wvu" ] && [ "$(date -u +%s)" -gt "$(date -u -d "$wvu" +%s 2>/dev/null || echo 0)" ]; then
+      record hosts BLIND "the published monkey-watch status expired at $wvu -- nothing is publishing it"
+    elif [ "$wv" = OK ]; then
+      record hosts OK 'monkey-watch (dexter) reports dexter serves what it declares'
+    else
+      record hosts DOWN "${why:-monkey-watch (dexter) reports $wv}"
+    fi
+  fi
 fi
 
 if want arming; then
   # WHAT THE ACCOUNTS ARE DOING, not how often the word "armed" appears.
-  st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://$GH_ESTATE_SITE/monkey/status.json}" 2>/dev/null)"
+  fetch_monkey_status; st="$_monkey_status"
   vu="$(printf '%s' "$st" | jq -r '.watcher.valid_until // .valid_until // empty' 2>/dev/null)"
   if ! printf '%s' "$st" | jq -e '.accounts' >/dev/null 2>&1; then
     record arming BLIND 'the published monkey status could not be read'
