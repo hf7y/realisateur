@@ -141,6 +141,10 @@ read -r -d '' HOOKS <<'JSON'
         {
           "type": "command",
           "command": "~/.claude/hooks/pretooluse-credential-hold.sh"
+        },
+        {
+          "type": "command",
+          "command": "~/.claude/hooks/pre-issue-dup-check.sh"
         }
       ]
     }
@@ -183,6 +187,7 @@ declare -A HOOK_SRC=(
   [stop-residue-gate.sh]="${SELFDEV_STOP_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/stop-residue-gate.sh}"
   [session-start-verb-pin.sh]="${SELFDEV_SESSIONSTART_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/session-start-verb-pin.sh}"
   [pretooluse-path-guard.sh]="${SELFDEV_PRETOOLUSE_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pretooluse-path-guard.sh}"
+  [pre-issue-dup-check.sh]="${SELFDEV_DUPCHECK_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pre-issue-dup-check.sh}"
   [pretooluse-credential-hold.sh]="${SELFDEV_CREDENTIAL_HOLD_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pretooluse-credential-hold.sh}"
   [pretooluse-memory-budget.sh]="${SELFDEV_MEMORY_BUDGET_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pretooluse-memory-budget.sh}"
   [session-start-memory-budget.sh]="${SELFDEV_SESSIONSTART_MEMORY_BUDGET_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/session-start-memory-budget.sh}"
