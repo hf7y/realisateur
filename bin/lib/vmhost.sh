@@ -1,11 +1,24 @@
 #!/usr/bin/env bash
 VMHOST_VBOX="${VMHOST_VBOX:-/mnt/c/Program Files/Oracle/VirtualBox/VBoxManage.exe}"  # vmhost.sh: backend-neutral VM-host vocabulary (#563) -- VMHOST_BACKEND=hyperv swaps the driver, not every call site
+VMHOST_WSL="${VMHOST_WSL:-/mnt/c/Windows/System32/wsl.exe}"  # the wsl backend's driver: monkey is decided to become a WSL2 distro on dexter, so the vocabulary has to survive VirtualBox being deleted
 
-vmhost_backend() {  # "virtualbox" | "unknown", from $VMHOST_BACKEND or detected via $VMHOST_VBOX
+_VMHOST_WSL_DISTROS=""
+_vmhost_wsl_has() {  # <name> -- is there a WSL distro by that name? one launch per process, then cached
+  [ -x "$VMHOST_WSL" ] || return 1
+  [ -n "$_VMHOST_WSL_DISTROS" ] || _VMHOST_WSL_DISTROS="$(_wsl -l -q)"
+  printf '%s\n' "$_VMHOST_WSL_DISTROS" | grep -qx "$1"
+}
+
+vmhost_backend() {  # [vm] -> "virtualbox" | "wsl" | "unknown", from $VMHOST_BACKEND or detected from the drivers present
+  local vm="${1:-}"
   if [ -n "${VMHOST_BACKEND:-}" ]; then
     printf '%s\n' "$VMHOST_BACKEND"
+  elif [ -n "$vm" ] && [ -x "$VMHOST_VBOX" ] && [ -x "$VMHOST_WSL" ] && _vmhost_wsl_has "$vm"; then
+    printf 'wsl\n'   # both drivers installed is the migration window: a live distro by that name wins over a VirtualBox registration that may be a leftover
   elif [ -x "$VMHOST_VBOX" ]; then
     printf 'virtualbox\n'
+  elif [ -x "$VMHOST_WSL" ]; then
+    printf 'wsl\n'
   else
     printf 'unknown\n'
   fi
@@ -17,22 +30,35 @@ _vmhost_require_vbox() {
   return 2
 }
 
-vmhost_require() {  # 0 if the active backend can be driven, else 2 and a reason on stderr
-  case "$(vmhost_backend)" in
+_vmhost_require_wsl() {
+  [ -x "$VMHOST_WSL" ] && return 0
+  printf 'vmhost: wsl.exe not at %s\n' "$VMHOST_WSL" >&2
+  return 2
+}
+
+vmhost_require() {  # [vm] -- 0 if the active backend can be driven, else 2 and a reason on stderr
+  case "$(vmhost_backend "${1:-}")" in
     virtualbox) _vmhost_require_vbox ;;
+    wsl) _vmhost_require_wsl ;;
+    unknown) printf 'vmhost: no VM host driver here (no VBoxManage at %s, no wsl.exe at %s)\n' "$VMHOST_VBOX" "$VMHOST_WSL" >&2; return 2 ;;
     *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
   esac
 }
 
 _vbm() { "$VMHOST_VBOX" "$@" < /dev/null 2>&1 | tr -d '\0\r'; }
+_wsl() { "$VMHOST_WSL" "$@" < /dev/null 2>&1 | tr -d '\0\r'; }
 
 vmhost_state() {  # <vm> -> running | poweroff | paused | unknown
   local vm="$1" s
-  case "$(vmhost_backend)" in
+  case "$(vmhost_backend "$vm")" in
     virtualbox)
       _vmhost_require_vbox || return 2
       s="$(_vbm showvminfo "$vm" --machinereadable | grep '^VMState=' | cut -d'"' -f2)"
       printf '%s\n' "${s:-unknown}"
+      ;;
+    wsl)
+      _vmhost_require_wsl || return 2
+      if _wsl -l -q --running | grep -qx "$vm"; then printf 'running\n'; else printf 'poweroff\n'; fi  # a stopped distro holds no RAM, so --running answers the only question this vocabulary asks
       ;;
     *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
   esac
@@ -40,7 +66,7 @@ vmhost_state() {  # <vm> -> running | poweroff | paused | unknown
 
 vmhost_disk_raw() {  # <vm> -> the backend's own disk descriptor, published as-is
   local vm="$1"
-  case "$(vmhost_backend)" in
+  case "$(vmhost_backend "$vm")" in
     virtualbox)
       _vmhost_require_vbox || return 2
       _vbm showvminfo "$vm" --machinereadable | grep '^"SATA-0-0"=' | cut -d'"' -f4
@@ -71,7 +97,7 @@ vmhost_disk() {  # <vm> -> vmhost_disk_raw, then vmhost_classify_disk
 
 vmhost_screenshot() {  # <vm> <path> -- capture the VM console to <path> as a PNG
   local vm="$1" path="$2"
-  case "$(vmhost_backend)" in
+  case "$(vmhost_backend "$vm")" in
     virtualbox)
       _vmhost_require_vbox || return 2
       _vbm controlvm "$vm" screenshotpng "$path" >/dev/null
@@ -82,21 +108,38 @@ vmhost_screenshot() {  # <vm> <path> -- capture the VM console to <path> as a PN
 
 vmhost_save() {  # <vm> -- suspend to disk and free the host's RAM. savestate, not acpipowerbutton: #704 measured the VM still `running` 60s after an ACPI request
   local vm="$1"
-  case "$(vmhost_backend)" in
+  case "$(vmhost_backend "$vm")" in
     virtualbox)
       _vmhost_require_vbox || return 2
       _vbm controlvm "$vm" savestate >/dev/null
       ;;
+    wsl)
+      _vmhost_require_wsl || return 2
+      _wsl --terminate "$vm" >/dev/null  # --terminate, NEVER --shutdown: --shutdown stops EVERY distro including dexter's own Ubuntu, the route in; terminating one distro is what returns its RAM to the host
+      ;;
+    *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
+  esac
+}
+
+vmhost_save_cmd() {  # <vm> -- the exact command vmhost_save would run, so a dry run can print it rather than describe it
+  local vm="$1"
+  case "$(vmhost_backend "$vm")" in
+    virtualbox) printf '%s controlvm %s savestate\n' "$VMHOST_VBOX" "$vm" ;;
+    wsl)        printf '%s --terminate %s\n' "$VMHOST_WSL" "$vm" ;;
     *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
   esac
 }
 
 vmhost_start() {  # <vm> -- resume from a saved state or cold-boot; $VMHOST_START_TYPE overrides the default headless launch
   local vm="$1"
-  case "$(vmhost_backend)" in
+  case "$(vmhost_backend "$vm")" in
     virtualbox)
       _vmhost_require_vbox || return 2
       _vbm startvm "$vm" --type "${VMHOST_START_TYPE:-headless}" >/dev/null
+      ;;
+    wsl)
+      _vmhost_require_wsl || return 2
+      _wsl -d "$vm" --exec /bin/true >/dev/null  # a distro boots by being run in; $VMHOST_START_TYPE is a VirtualBox notion and does not apply
       ;;
     *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
   esac
@@ -160,7 +203,7 @@ vmhost_logdir() {  # <vm> -> the VM's log directory, as a path THIS host can rea
   # translation is as backend-specific as the query, so it lives here with it
   # rather than at the call site (#639's clock probe was the call site).
   local vm="$1" d
-  case "$(vmhost_backend)" in
+  case "$(vmhost_backend "$vm")" in
     virtualbox)
       _vmhost_require_vbox || return 2
       d="$(_vbm showvminfo "$vm" --machinereadable | grep '^LogFldr=' | cut -d'"' -f2)"

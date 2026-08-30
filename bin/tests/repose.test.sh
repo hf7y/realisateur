@@ -86,4 +86,28 @@ case "$out" in PAUSED\ *) ok "E4 ...and the declaration is left in place, not si
   *) bad "E4 the declaration survives a failed --cancel" "got: $out" ;; esac
 bash "$R" monkey --cancel >/dev/null 2>&1
 
+section "F. --check -- the dry run: name the backend and the exact actuator, touch nothing"
+rm -f "$CALLS"
+out="$(bash "$R" monkey --check)"; rcv="$?"
+rc "F1 --check exits 0 on the VM host" 0 "$rcv"
+has "F2 names the backend it detected" "$out" "backend=virtualbox"
+has "F3 prints the command verbatim -- savestate, not pause" "$out" "controlvm monkey savestate"
+[ -f "$CALLS" ] && bad "F4 --check drove nothing" "the actuator ran: $(cat "$CALLS")" || ok "F4 --check drove nothing"
+out="$(bash "$R" monkey --status)"
+eq "F5 ...and declared nothing" "$out" "NONE"
+
+WSL="$T/wsl.exe"
+cat > "$WSL" <<'STUB'
+#!/usr/bin/env bash
+[ "$1" = -l ] && printf 'Ubuntu\nmonkey\n'
+STUB
+chmod +x "$WSL"
+out="$(VMHOST_VBOX="$T/nowhere" VMHOST_WSL="$WSL" bash "$R" monkey --check)"
+has "F6 on a wsl-only host it detects the wsl backend, with no VirtualBox present" "$out" "backend=wsl"
+has "F7 ...and the actuator is --terminate <distro>" "$out" "--terminate monkey"
+hasnt "F8 ...never --shutdown, which would kill dexter's own Ubuntu" "$out" "--shutdown"
+
+VMHOST_VBOX="$T/nowhere" VMHOST_WSL="$T/nowhere" bash "$R" monkey --check >/dev/null 2>&1
+rc "F9 off any VM host, --check refuses (2) rather than reporting a backend" 2 "$?"
+
 summary
