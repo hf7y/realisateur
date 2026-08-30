@@ -38,6 +38,7 @@ hooks/subagent-closeout.sh	hooks/subagent-closeout.sh
 hooks/stop-residue-gate.sh	hooks/stop-residue-gate.sh
 hooks/session-start-verb-pin.sh	hooks/session-start-verb-pin.sh
 hooks/pretooluse-path-guard.sh	hooks/pretooluse-path-guard.sh
+hooks/pre-issue-dup-check.sh	hooks/pre-issue-dup-check.sh
 hooks/pretooluse-credential-hold.sh	hooks/pretooluse-credential-hold.sh
 hooks/pretooluse-memory-budget.sh	hooks/pretooluse-memory-budget.sh
 hooks/session-start-memory-budget.sh	hooks/session-start-memory-budget.sh
