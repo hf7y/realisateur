@@ -130,6 +130,10 @@ vmhost_save_cmd() {  # <vm> -- the exact command vmhost_save would run, so a dry
   esac
 }
 
+vmhost_running_vms_cmd() {  # -> the command that lists running VM names, one per line, on the VM HOST -- for a payload that runs THERE and so cannot source this file. Every driver present answers: detection picks one ACTUATOR, because savestate and --terminate are exclusive, and a read-only listing is not
+  printf '%s\n' "{ [ -x \"$VMHOST_VBOX\" ] && \"$VMHOST_VBOX\" list runningvms | sed 's/\" .*//;s/\"//'; [ -x \"$VMHOST_WSL\" ] && \"$VMHOST_WSL\" -l -q --running; } 2>/dev/null | tr -d '\\0\\r'"
+}
+
 vmhost_start() {  # <vm> -- resume from a saved state or cold-boot; $VMHOST_START_TYPE overrides the default headless launch
   local vm="$1"
   case "$(vmhost_backend "$vm")" in

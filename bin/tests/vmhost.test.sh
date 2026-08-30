@@ -16,6 +16,7 @@ case "\$1" in
   controlvm)  [ "\$3" = screenshotpng ] && printf '\x89PNG-fake' > "\$4"
               [ "\$3" = savestate ] && printf 'controlvm %s savestate\n' "\$2" >> "$CALLS" ;;
   startvm)    printf 'startvm %s %s %s\n' "\$2" "\$3" "\$4" >> "$CALLS" ;;
+  list)       [ "\$2" = runningvms ] && printf '"monkey" {a1b2}\n"nomac" {c3d4}\n' ;;
 esac
 STUB
 chmod +x "$FAKE"
@@ -166,6 +167,19 @@ _VMHOST_WSL_DISTROS=""
 eq "L2 virtualbox names savestate, not pause -- pause holds the RAM" \
   "$(VMHOST_WSL="$T/nowhere" vmhost_save_cmd monkey)" "$FAKE controlvm monkey savestate"
 VMHOST_BACKEND=hyperv vmhost_save_cmd monkey 2>/dev/null; rc "L3 an unsupported backend fails loud rather than printing a wrong command" 2 $?
+section "M. vmhost_running_vms_cmd -- the liveness probe runs ON the VM host, so the seam has to travel to it as a command"
+run_vms() { sh -c "$(vmhost_running_vms_cmd)" | tr '\n' ','; }
+eq "M1 virtualbox: the name comes back unwrapped from VBoxManage's quotes and UUID" \
+  "$(VMHOST_WSL="$T/nowhere" run_vms)" "monkey,nomac,"
+eq "M2 wsl: a running distro IS the VM once monkey moves -- the answer the literal VBoxManage path could never give" \
+  "$(VMHOST_VBOX="$T/nowhere" run_vms)" "Ubuntu,monkey,"
+eq "M3 the migration window: both drivers answer, so neither host shape reads empty mid-move" \
+  "$(run_vms)" "monkey,nomac,Ubuntu,monkey,"
+has "M4 a command is emitted even where no driver is installed -- the HOST it lands on decides, not this one" \
+  "$(VMHOST_VBOX="$T/nowhere" VMHOST_WSL="$T/nowhere" vmhost_running_vms_cmd)" "nowhere"
+eq "M5 ...and running it there is empty, not a crash -- the probe reports BLIND on its own terms" \
+  "$(VMHOST_VBOX="$T/nowhere" VMHOST_WSL="$T/nowhere" run_vms)" ""
+
 unset VMHOST_WSL
 
 section "F. an unsupported backend fails loud on every verb, not just detection"
