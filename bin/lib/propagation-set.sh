@@ -201,6 +201,7 @@ repose.sh
 decision-rot.sh
 stale-paths.sh
 cut-verb-build.sh
+registry-standup.sh
 publish-release-verdict.sh
 selfdev-credentials.sh
 shellcheck-lint.sh
@@ -216,6 +217,7 @@ reprise.sh
 # reprise.sh is LOCAL for the same reason and one more: its subject is
 # bin/lib/handoffs.tsv, which is THIS repo's ledger of what it has given away.
 # On another account it would be a tool with nothing to read.
+# registry-standup.sh is LOCAL: its subject is the FLEET, and it writes nothing.
 
 # prop_host_tools -- what a provisioned host carries under
 # /usr/local/libexec/selfdev beyond the bootstrap: the verb a human types and
