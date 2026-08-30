@@ -51,7 +51,18 @@ chmod +x "$T/bin/gh"
 # The env prefixes bind to the SCRIPT, not `payload`: it is across the pipe.
 runpr() { payload "$1" "${2:-}" | STUB_PR="$T/pr-state" PATH="$T/bin:$PATH" "$SCRIPT" 2>&1; }
 rcof()  { payload "$1" "${2:-}" | STUB_PR="$T/pr-state" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
-transcript_pr() { printf 'opened https://github.com/hf7y/widget/pull/7 today\n' > "$1"; }
+transcript_pr() {
+  printf '%s\n' \
+    '{"message":{"content":[{"type":"tool_use","id":"tu1","name":"Bash","input":{"command":"gh pr create --fill"}}]}}' \
+    '{"message":{"content":[{"type":"tool_result","tool_use_id":"tu1","content":"https://github.com/hf7y/widget/pull/7"}]}}' \
+    > "$1"
+}
+transcript_pr_quoted() {
+  printf '%s\n' \
+    '{"message":{"content":[{"type":"tool_use","id":"tu1","name":"Bash","input":{"command":"cat bin/tests/subagent-closeout.test.sh"}}]}}' \
+    '{"message":{"content":[{"type":"tool_result","tool_use_id":"tu1","content":"transcript_pr() { printf https://github.com/hf7y/widget/pull/7 ; }"}]}}' \
+    > "$1"
+}
 
 section "A. baseline behavior is unchanged"
 
@@ -136,6 +147,12 @@ rc "G7 an unreadable tracker reports but does not block" 0 "$RC"
 printf 'open\tfalse\tNO-DECISION: x' > "$T/pr-state"
 RC="$(payload "$G" "$TR" | STUB_PR="$T/pr-state" PATH="$T/bin:/usr/bin:/bin" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?")"
 rc "G8 it blocks even with no closeout-lint on PATH (the fallback path)" 2 "$RC"
+
+printf 'open\tfalse\tNO-DECISION: x' > "$T/pr-state"
+QTR="$T/g-quoted"; transcript_pr_quoted "$QTR"
+OUT="$(runpr "$G" "$QTR")"; RC="$(rcof "$G" "$QTR")"
+rc  "G9 a PR URL the agent only READ does not block" 0 "$RC"
+hasnt "G10 and is not reported at all" "$OUT" "pull/7"
 
 section "H. scoped to THIS agent's changes (the 2026-08-29 shared-checkout bug)"
 
