@@ -46,6 +46,23 @@ def accounts():
     return sorted(p.pw_name for p in pwd.getpwall() if UID_LO <= p.pw_uid < UID_HI)
 
 
+# What this census does NOT cover, said in the document rather than left for a
+# reader to infer from an empty list. A survey scoped to the self-dev band and
+# reporting nothing outside it is "none where I looked", which exit-codes.sh
+# names as this estate's recorded pathology: "I could not look" reported as "I
+# looked and found nothing".
+#
+# It is not hypothetical. scheduler/examples/vkv-inventory-bug-sweep-loop.sh:8
+# recorded "There are none, verified 2026-08-10" for per-project wrapper
+# scripts. Two were running at that moment from /home/svc-vaporwave/bin/ on
+# uid 1001 -- outside this band, so invisible here and to any check that
+# enumerates accounts the way this does (hf7y/scheduler#368).
+def accounts_scope():
+    return (f"uid {UID_LO}-{UID_HI - 1} only. Accounts outside this band are NOT "
+            f"enumerated: this list is not a census of everything on the host that "
+            f"runs work. Service accounts (e.g. uid 1001) are invisible here.")
+
+
 def cron(user):
     """The account's own crontab, comments stripped."""
     return [l.strip() for l in sh("crontab", "-l", "-u", user).splitlines()
@@ -186,6 +203,7 @@ if __name__ == "__main__":            # importable per function; `python3 - <fil
             os.path.realpath("/usr/local/share/verb-builds/current"))
         if os.path.exists("/usr/local/share/verb-builds/current") else None,
         "accounts": [],
+        "accounts_scope": accounts_scope(),
     }
 
     for u in accounts():
