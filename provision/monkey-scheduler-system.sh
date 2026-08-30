@@ -13,8 +13,9 @@
 # read-only monitor depend on a privilege grant. `ecosim`'s rotation sensor hit
 # exactly that and had to grow a `sudo -n` arm to see monkey at all.
 #
-# THE SHAPE. One copy per host, owned by root, readable by everyone, writable
-# by nobody but root:
+# THE SHAPE it installs. Measured on monkey 2026-08-30: NOT INSTALLED --
+# /srv/scheduler is absent and only /etc/scheduler/deploy_key survives. One copy
+# per host, owned by root, readable by everyone, writable by nobody but root:
 #
 #     /srv/scheduler          root:root 0755, world-readable (a+rX)
 #     /etc/scheduler/deploy_key  root:root 0600, the READ-ONLY deploy key

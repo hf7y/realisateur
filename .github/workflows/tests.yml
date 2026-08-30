@@ -111,10 +111,11 @@ jobs:
   # NOT in `suites`: that job is hermetic by construction and must stay so. A
   # network call there would make every unrelated failure ambiguous.
   #
-  # NOT a required check, deliberately. It reads another repository, so it goes
-  # red on an outage that is nobody's PR -- and a required check that can be
-  # broken by a third party is a wedge (realisateur#592's shape). It is loud
-  # and it is advisory; the propagation probe is the one that pages.
+  # ADVISORY, deliberately: it reads another repository, and a required check a
+  # third party can break is a wedge (realisateur#592's shape). It is loud, and
+  # the propagation probe is the one that pages. Which checks actually gate
+  # `main` is read from the API, not asserted here:
+  # bin/tests/branch-protection.test.sh.
   deploy-drift:
     runs-on: ubuntu-latest
     permissions:

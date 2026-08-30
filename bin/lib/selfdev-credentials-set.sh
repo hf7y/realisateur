@@ -30,7 +30,7 @@ CRED_UID_MAX="${CRED_UID_MAX:-3099}"
 CRED_SHARED_REPOS="realisateur scheduler senechal"
 
 # --- the fleet-wide App --------------------------------------------------
-# One App across all ten accounts, decided 2026-08-07. An account whose
+# One App across every self-dev account, decided 2026-08-07. An account whose
 # gh-app.conf declares a DIFFERENT id or owner is not obviously wrong (the
 CRED_APP_GROUP="${CRED_APP_GROUP:-selfdev}"
 CRED_APP_ID="${CRED_APP_ID:-4521586}"

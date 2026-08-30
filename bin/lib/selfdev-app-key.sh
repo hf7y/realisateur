@@ -13,8 +13,10 @@
 # the last of those four, found nothing, and reported "cannot converge this
 # without a human (a new App key needs a browser click)" -- while the key sat
 # two directories away. Hit live converging secretaire@monkey (realisateur#209).
-# Thirteen copies also means thirteen things to rotate, and a rotation that
-# misses one leaves an account minting tokens from a revoked key.
+# A copy per account also means one thing to rotate per account, and a rotation
+# that misses one leaves an account minting tokens from a revoked key. All four
+# paths above are RETIRED; that they stay retired, and the mode of what replaced
+# them, is bin/tests/selfdev-host-credential.test.sh.
 
 [ -n "${SELFDEV_APP_KEY_LIB:-}" ] && return 0
 SELFDEV_APP_KEY_LIB=1
