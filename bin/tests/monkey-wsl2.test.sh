@@ -30,6 +30,7 @@ if command -v man >/dev/null 2>&1; then
   has "A22 interop can break after --terminate, and the repair is named" "$RF" "systemd-binfmt"
   has "A23 the cutover is recorded as deliberately not run by an agent" "$RF" "needs Zach's go, not an agent's"
   has "A24 the live wedge progression is recorded where the operator reads it" "$RF" "monkey is degrading now"
+  has "A25 the operator is pointed at the unresponsiveness, not the clock stall" "$RF" "Read the 390 s, not the 415 s"
   has "A8 ...and says why: they would contend with the live fleet's agents" "$RF" "SAME agents as the live monkey"
   has "A9 --shutdown's blast radius names the human channel" "$R" "zaxon-relay-mcp.service"
   has "A10 it says a probe inside a distro cannot identify what it measured" "$R" "cannot tell you which distro it measured"

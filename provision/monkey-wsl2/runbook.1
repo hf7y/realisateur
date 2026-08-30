@@ -170,10 +170,21 @@ did not name one as unattributed rather than as belonging to the caller.
 
 DIVERGED, recorded 2026\-08\-30 09:50Z by etat.sh:
   long_readout 4 \-> 5 and soft_lockup 1 \-> 2 WHILE THIS WAS BEING WRITTEN.
-  The 09:42:09 stall was 415.67 s \- 6.9 minutes - and it happened at load
-  0.32, eighteen minutes AFTER the 22G tar finished. The series this boot is
-  1.85s \-> 4.39s \-> 14.6s \-> 41.6s \-> 415.7s, which is the shape senechal#530
-  says precedes the guest going silent, one step further along.
+  The series this boot, clocksource stall and the matching CPU lockup:
+
+    02:52:36    1.85 s
+    02:56:29    4.39 s
+    03:35:32   14.60 s
+    05:24:24   41.57 s   soft lockup: CPU#0 stuck for 42s  [swapper/0:0]
+    09:42:09  415.67 s   soft lockup: CPU#0 stuck for 390s [swapper/0:0]
+
+  Read the 390 s, not the 415 s. The stall is what the clock noticed; 390 s is
+  how long monkey WAS ACTUALLY UNRESPONSIVE \- six and a half minutes \- and
+  nothing observed it, because VMState reads `running' throughout a NEM
+  deschedule. It happened at load 0.32, eighteen minutes AFTER the 22G tar
+  finished, on [swapper/0:0], the IDLE task, which allocates nothing. This is
+  the shape senechal#530 says precedes the guest going silent, one step
+  further along.
   Consequence for whoever runs the cutover: monkey is degrading now, and the
   window is not open-ended. Reported on senechal#530 and #553.
 .fi
