@@ -92,7 +92,6 @@ bin/tests/monkey-status-collect.test.sh	hf7y/senechal	522	test/monkey-status-col
 # bin/selfdev-permissions-provision.sh	hf7y/scheduler	312	bin/selfdev-permissions-provision.sh
 # bin/selfdev-hooks-provision.sh	hf7y/scheduler	312	bin/selfdev-hooks-provision.sh
 # bin/vault-group-provision.sh	hf7y/scheduler	312	bin/vault-group-provision.sh
-# provision/monkey-scheduler-system.sh	hf7y/scheduler	312	provision/monkey-scheduler-system.sh
 # bin/lib/selfdev-app-key.sh	hf7y/scheduler	312	bin/lib/selfdev-app-key.sh
 # bin/lib/selfdev-claude-token.sh	hf7y/scheduler	312	bin/lib/selfdev-claude-token.sh
 # bin/lib/selfdev-credentials-set.sh	hf7y/scheduler	312	bin/lib/selfdev-credentials-set.sh
