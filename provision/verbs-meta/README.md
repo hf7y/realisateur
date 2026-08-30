@@ -1,97 +1,80 @@
-# provision/verbs-meta — standing up the verb meta-repo
+# provision/verbs-meta — the verb channel
 
-The design and the reasoning are in `vault:realisateur/VERB-DISTRIBUTION.md`.
-This file is only the sequence, and what is left of it.
+`build-verbs.yml` belongs at `hf7y/verbs/.github/workflows/build-verbs.yml`
+and is deployed there **by hand**; it is kept here because realisateur owns the
+build logic it calls. `tests.yml`'s `deploy-drift` job is the only thing that
+notices the two disagreeing, and it is advisory, never required. Design:
+`vault:realisateur/VERB-DISTRIBUTION.md`.
 
-`build-verbs.yml` belongs at `hf7y/verbs/.github/workflows/build-verbs.yml`.
-It is kept here because realisateur owns the build logic it calls
-(`bin/cut-verb-build.sh`), and a workflow living only in the repo it writes
-to is a workflow nobody reviews next to the script it runs.
+## The channel, hop by hop
 
-## Where the sequence has got to
-
-Steps 1 and 2 ran on **2026-08-04**. `hf7y/verbs` exists, private, carrying
-the workflow and a generated-do-not-edit README:
+THE LEVER. A merged fix reaches a running account this way and no other:
 
 ```
-$ gh repo view hf7y/verbs --json url,isPrivate
-https://github.com/hf7y/verbs  private=true
-$ gh workflow list --repo hf7y/verbs
-build-verbs   active   327473587
+<project>/main                the source
+  -> <project>/bashified      a project DECLARES a verb by carrying an
+                              executable bin/<n> AND a matching man/<n>.1
+                              there (bin/lib/verb-set.sh). realisateur's own
+                              carry is bin/carry.sh, from bin/lib/carries.tsv
+  -> bin/cut-verb-build.sh    reads every hf7y bashified branch, applies that
+                              rule, and REFUSES a half-declaration --
+                              bin/lib/not-a-verb.tsv is the written opt-out
+  -> build-verbs.yml          on hf7y/verbs, nightly `30 1 * * *`: assembles
+                              every night, cuts every CUT_INTERVAL_DAYS (30)
+  -> selfdev-release-tick.sh  from a crontab. PULL: no ssh, no push, no
+                              hands-account reaching into a 0700 home
+  -> install-verb-build.sh    verifies every verb the manifest promises and
+                              discards the WHOLE build if any is missing,
+                              then moves ONE symlink: <root>/current
 ```
 
-**Step 3 is the whole remaining gate, and only Zach can pass it.**
+`hf7y/verbs` is **public**, so the tick needs no credential to pull. The cut
+still needs `VERBS_READ_TOKEN`, a PAT with READ on the account's repositories:
+the default `GITHUB_TOKEN` sees only the public ones and would cut a SHORT
+build that looks complete. **The count is in `manifest.tsv`, never in prose.**
+
+## Two tiers, and only one has a clock everywhere
+
+| tier | installed at | refreshed by |
+|---|---|---|
+| verbs | `/usr/local/bin` → `/usr/local/share/verb-builds/current` | the tick |
+| host tools | `/usr/local/libexec/selfdev/**` | the tick, **host-wide only** |
+
+`TICK_HOST_LIBEXEC` is empty unless `wire-release-channel.sh --host` set it
+(#517), so the probes ride the clock on a host-wide install and **not** on a
+per-account one: on mandark 2026-08-29 the verb pin was that morning's build
+while `~/.local/libexec/selfdev` was 18 days old. The provision-class half is
+a human's act on purpose (`bin/lib/carries.tsv` says why).
+
+## Host-wide, not per-account
+
+`wire-release-channel.sh --host` is the shape, and the reason is not tidiness:
+`ssh <host> <verb>` is not a login shell, so its PATH holds nothing under
+`$HOME` and a per-account install is **invisible from outside the account**.
+mandark is per-account deliberately -- `~/.local/bin` PRECEDES `/usr/local/bin`
+there and is full of `installe`-owned links, so a host-wide install would be
+shadowed rather than adopted (VERB-DISTRIBUTION §7 reconciles the two).
+
+## Retiring a verb is three acts
+
+1. delete the source on `main`, and remove its `bin/lib/carries.tsv` row
+2. delete the file from the project's `bashified` branch
+3. dispatch `build-verbs.yml` (its `allow_shrink` input exists only on
+   `workflow_dispatch`; the guard's own critique is #699)
+
+**Step 1 is the only one an agent can do, and alone it ships a zombie.**
+`carry.sh` is copy-only, so `carries.tsv` is an allow-list of what to COPY and
+never a manifest of what should EXIST, and the cut reads `bashified`. **Step 3
+is gated on Zach**: `workflow_dispatch` runs in the `release` environment,
+whose rule is `required_reviewers: hf7y`. Never do step 2 unattended.
+
+## On a consumer
 
 ```sh
-# 3. the credential. Fine-grained PAT, READ on the account's repositories.
-#    NOT the default GITHUB_TOKEN: it is scoped to hf7y/verbs alone, so it
-#    would see only the public projects and cut a SHORT build that looks
-#    complete.
-gh secret set VERBS_READ_TOKEN --repo hf7y/verbs
-
-# 4. cut one by hand first and READ THE MANIFEST before any host installs it
-gh workflow run build-verbs --repo hf7y/verbs
-gh run watch --repo hf7y/verbs
-```
-
-Until step 3 happens the workflow **cannot run at all**, and it says so
-rather than half-running. Verified 2026-08-04 by dispatching it with no
-secret present (run 30968541374):
-
-```
-##[error]VERBS_READ_TOKEN is not set on this repository.
-...
-looks complete. Refusing to run rather than produce one.
-```
-
-That also means the nightly `30 1 * * *` schedule fails every night until
-the PAT is minted. That is intended noise: a build pipeline not yet able to
-build should say so once a day, not sit quiet.
-
-## What the first real run should produce
-
-A hand run of the same script on mandark, 2026-08-04:
-
-```
-$ bin/cut-verb-build.sh --assemble /tmp/vb --owner hf7y
-derived 32 verb(s) from 13 project(s)
-assembled 32 verb(s) under /tmp/vb        # 1.6M, all 32 passing --help
-```
-
-If CI's first run derives materially fewer than that, the credential is
-narrower than intended — read the manifest, do not install the build. The
-`cueille` collision that made the very first hand run refuse was resolved on
-2026-08-04 (bibliothecaire keeps it; `quatre-vingt-douze` is archived), so a
-refusal now is news, not the expected greeting.
-
-## Validating the pipeline without the PAT
-
-`.github/workflows/verb-build-smoke.yml`, in **this** repository, runs both
-contract suites and a live `--dry-run` derivation using only the default
-`GITHUB_TOKEN`. It exists because the meta-repo's own workflow cannot be
-exercised without the secret — its first real step checks out private
-`hf7y/realisateur` — so "dry run in the meta-repo" is not in fact a
-credential-free path, and this job is.
-
-A dry run's verb count is **not** a build's verb count: it sees only public
-repositories. `cut-verb-build.sh` refuses `--dry-run` together with
-`--assemble` or `--write`, so no short read can become an artifact.
-
-## Then, on a consumer
-
-```sh
-install-verb-build.sh --check              # is a newer build out? exit 3 = BLIND
+install-verb-build.sh --check              # 1 = a newer build exists; 6 = BLIND
 install-verb-build.sh --latest --apply     # install it and switch, atomically
-install-verb-build.sh --list               # what is here, and what is current
-install-verb-build.sh --rollback <id>      # back to a build already on disk (no network)
+install-verb-build.sh --rollback <id>      # back to a build already on disk
 ```
 
-`--link` (writing `~/.local/bin`) is **off by default**: `installe` owns that
-directory and its manifest, and this script leaves anything installe owns
-alone rather than clobbering it. Reconciling the two is a deliberate sitting
-— see `vault:realisateur/VERB-DISTRIBUTION.md` §7.
-
-## Retiring this
-
-Delete `hf7y/verbs`. Nothing else in the ecosystem depends on it until
-`installe` is taught to read a build, which has not happened.
+**BLIND is 6, not 3** (#334, #394): "could not reach the channel" is never
+"up to date". `--link` is **off by default**; `installe` owns `~/.local/bin`.
