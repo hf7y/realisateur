@@ -18,6 +18,7 @@
 #   BAD-DEFAULT         a DEFAULT-AFTER line that is not `<n>d: <action>`
 #   BAD-ANSWERED-BY     an ANSWERED-BY line that is not `<owner>/<repo>#<n>`
 #   NO-DEFAULT          a DECISION: body carrying no DEFAULT-AFTER at all
+#   UNRETIRED           a PR delivers something and never says what it takes out
 #
 # DEFAULT-AFTER -- MANDATORY ON A DECISION SINCE #680 (Zach, 2026-08-28).
 #
@@ -100,6 +101,14 @@ DEFAULT-AFTER 14d: ship it unsigned and open a follow-up; reverse by saying so
 - none
 <!-- /DELIVERS -->
 
+...and a PR that delivers something also says what it takes out, bare when
+that is nothing. `bin/supersession.sh` reads these and goes and looks.
+
+<!-- DELIVERS -->
+- path:bin/new-guard.sh -- the replacement
+- retires: path:bin/old-guard.sh -> path:bin/new-guard.sh -- why
+<!-- /DELIVERS -->
+
 ...or one line each, every one naming an issue. `defere` files them:
 
 <!-- DEFERRED -->
@@ -125,11 +134,11 @@ grammar_declaration() {
 }
 
 # Prints `CODE  message` per violation; returns the count. Never exits.
-grammar_check() {
-  local body="$1" line stripped n=0 lineno=0 first_seen=0
+grammar_check() {  # <body> [kind] -- kind `pr` also grades the retirement claim; an issue does not retire anything
+  local body="$1" kind="${2:-}" line stripped n=0 lineno=0 first_seen=0
   local open=0 in_block=0 entries=0 entry='' fenced=0
   local sopen=0 in_ship=0 ships=0 ship='' indent=''
-  local has_default=0
+  local has_default=0 none_ships=0 has_retires=0
 
   _find() { printf '%s  %s\n' "$1" "$2"; n=$((n + 1)); }
 
@@ -152,16 +161,17 @@ grammar_check() {
     entry=''
   }
 
-  # A delivery claim names WHERE the change takes effect, so `delivery-audit`
-  # can go and look. Untyped prose cannot be checked, which is how "merged"
-  # became the finish line for changes that never landed anywhere.
+  # A delivery names WHERE the change takes effect, so bin/supersession.sh can go and look. Untyped prose cannot be checked, which is how "merged" became the finish line for changes that never landed anywhere.
   _judge_ship() {
     [ -n "$ship" ] || return 0
     ships=$((ships + 1))
     case "$ship" in
-      '- none'|'- none.'|'-none')                       ship=''; return 0 ;;
+      '- none'|'- none.'|'-none') none_ships=$((none_ships + 1)); ship=''; return 0 ;;
+      # BARE LITERAL, the DEFERRED discipline: prose after it is what the probe cannot read (#754)
+      '- retires: none'|'- retires: none.') has_retires=1; ship=''; return 0 ;;
+      '- retires: none'*)                                ship=''; return 0 ;;
+      *retires:*) has_retires=1; ship=''; return 0 ;;
       *host:*|*path:*|*clock:*|*tag:*|*secret:*|*unit:*|*port:*|*repo:*) ship=''; return 0 ;;
-      *retires:*) ship=''; return 0 ;;  # `retires: <ref> -> <ref>` is a delivery too: what the change takes OUT, which bin/supersession.sh checks actually went (#754)
     esac
     _find UNTYPED-DELIVERY "names no <kind>:<value> a check could look for: ${ship:0:60}"
     ship=''
@@ -267,6 +277,11 @@ grammar_check() {
   [ "$sopen" -eq 0 ] && _find UNSHIPPED 'no <!-- DELIVERS --> block. Say where this takes effect outside the repo, or "- none".'
   [ "$sopen" -gt 1 ] && _find MULTI-SHIP "$sopen DELIVERS blocks -- a reader cannot tell which is current."
   [ "$sopen" -ge 1 ] && [ "$ships" -eq 0 ] && _find EMPTY-SHIP 'the DELIVERS block is empty. Write "- none".'
+
+  # Silence about a retirement reads exactly like retiring nothing -- what
+  # bin/supersession.sh catches, one level up. "- none" already lands nowhere.
+  [ "$kind" = pr ] && [ "$((ships - none_ships))" -gt 0 ] && [ "$has_retires" -eq 0 ] && _find UNRETIRED \
+    'the DELIVERS block says nothing about what this takes out. Name it -- `- retires: <ref> -> <ref> -- why` -- or claim nothing with the bare `- retires: none`.'
 
   [ "$n" -gt 125 ] && n=125
   return "$n"

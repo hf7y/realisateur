@@ -98,10 +98,7 @@ while IFS=$'\t' read -r retired armed witness note; do
   judge "$retired" "${armed:--}" "${witness:-no witness}" "${note:-}" "$SELF"
 done < "$LEDGER"
 
-# THE CHEAP DECLARATION. DELIVERS is already mandatory and already typed
-# (lib/body-grammar.sh), so `- retires: <ref> -> <ref>` costs one bullet in a
-# block the author is writing anyway. Narrowed to bodies carrying the word.
-if [ "$LOCAL" -eq 0 ]; then
+if [ "$LOCAL" -eq 0 ]; then  # THE CHEAP DECLARATION: DELIVERS is mandatory and typed already, so `- retires: <ref> -> <ref>` costs one bullet, and lib/body-grammar.sh REFUSES a PR that omits it. Narrowed to bodies carrying the word: one call.
   if ! command -v gh >/dev/null; then
     blind 'gh is not on PATH, so no merged PR declaration was read'
   elif ! prs="$(gh search prs --owner "$OWNER" --merged 'retires:' --limit 100 \

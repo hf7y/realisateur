@@ -71,7 +71,7 @@ gh-sign -- the shim that stands in front of `gh` and signs what an agent writes.
                             bodies are graded against lib/body-grammar.sh
   gh --self-check           which real gh, which build, how old, which grammar
   gh --stamp                the stamp this host and account would append
-  gh --check-body <path>    grade a body; `-` reads stdin
+  gh --check-body <path> [pr]   grade a body; `-` reads stdin; `pr` also grades the retirement claim
   gh --default-after <f>    read a DECISION body's DEFAULT-AFTER: prints
                             "<days><TAB><action>"; 1 = none (blocks forever)
   gh --delivers             emit this branch's DELIVERS block, derived from
@@ -182,7 +182,7 @@ case "${1:-}" in
   --check-body)
     [ "$grammar_ok" -eq 1 ] || { printf 'gh-sign: BLIND -- no grammar library at %s\n' "$GRAMMAR" >&2; exit 6; }
     if [ "${2:--}" = - ]; then _b="$(cat)"; else _b="$(cat -- "$2")" || exit 6; fi
-    grammar_check "$_b"; _n=$?
+    grammar_check "$_b" "${3:-}"; _n=$?
     # Asked to look and found something: 1. It creates nothing to refuse.
     [ "$_n" -eq 0 ] && { echo 'gh-sign: body is well-formed'; exit 0; }
     exit 1 ;;
@@ -364,7 +364,8 @@ fi
 case "${1:-} ${2:-}" in
   'issue create'|'pr create')
     if [ "$grammar_ok" -eq 1 ]; then
-      if findings="$(grammar_check "$body")"; then :; else
+      _gkind=''; [ "$1" = pr ] && _gkind='pr'   # only a PR retires anything (#754)
+      if findings="$(grammar_check "$body" "$_gkind")"; then :; else
         # DOOR FIRST, FINDING LAST, EXAMPLE FENCED BETWEEN: findings first
         # meant `tail` saw the example and never the finding (#627).
         printf 'gh-sign: REFUSED -- this %s body breaks the grammar in %s.\n' "$1 $2" "$GRAMMAR" >&2

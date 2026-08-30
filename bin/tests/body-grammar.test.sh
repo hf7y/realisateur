@@ -27,8 +27,8 @@ EOF
 chmod +x "$T/bin/gh"
 
 # findings <body> -- the grammar's finding count, as a string.
-findings() { local o; o="$(grammar_check "$1")"; printf '%s' "$?"; : "$o"; }
-codes()    { grammar_check "$1" | while read -r c _; do printf '%s ' "$c"; done; }
+findings() { local o; o="$(grammar_check "$1" "${2:-}")"; printf '%s' "$?"; : "$o"; }
+codes()    { grammar_check "$1" "${2:-}" | while read -r c _; do printf '%s ' "$c"; done; }
 
 GOOD='DECISION: @zach -- link the shim host-wide?
 DEFAULT-AFTER 14d: link it and say so; unlinking is one command
@@ -362,5 +362,70 @@ eq "the reader returns the ref" "$got" "hf7y/wtul#34"
 grammar_answered_by "$(_ab 'nothing here')" >/dev/null 2>&1 \
   && bad "absent pointer returns 1" "it returned 0" \
   || ok "an absent pointer returns 1, so the caller can tell 'no pointer' from 'not read'"
+
+
+section "R. a PR says what it takes out, or says nothing on purpose (#754)"
+eq 'R1 a PR that delivers and never mentions a retirement is refused' \
+   "$(codes 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- path:bin/new.sh -- the replacement
+<!-- /DELIVERS -->' pr)" 'UNRETIRED '
+eq 'R2 the bare claim is the answer, exactly as DEFERRED takes "- none"' \
+   "$(findings 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- path:bin/new.sh -- the replacement
+- retires: none
+<!-- /DELIVERS -->' pr)" 0
+eq 'R3 an explanation after the bare claim is prose the probe cannot read' \
+   "$(codes 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- path:bin/new.sh -- x
+- retires: none -- nothing existed before
+<!-- /DELIVERS -->' pr)" 'UNRETIRED '
+eq 'R4 a real retirement satisfies it' \
+   "$(findings 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- retires: path:bin/old.sh -> path:bin/new.sh -- why
+<!-- /DELIVERS -->' pr)" 0
+eq 'R5 a PR that lands nowhere is not asked twice' \
+   "$(findings 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- none
+<!-- /DELIVERS -->' pr)" 0
+eq 'R6 an ISSUE retires nothing, so it is never asked' \
+   "$(findings 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- path:bin/new.sh -- the replacement
+<!-- /DELIVERS -->')" 0
 
 summary

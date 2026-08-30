@@ -332,6 +332,23 @@ case "$(cat "$TMP/gh.log")" in
   '') ok "...and it created nothing to refuse" ;;
   *) bad "--check-body reached gh" "got: $(cat "$TMP/gh.log")" ;;
 esac
+DELIVERS_NO_RETIRES='NO-DECISION: nothing to weigh
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- path:bin/new.sh -- the replacement
+<!-- /DELIVERS -->'
+
+reset
+run pr create --title t --body "$DELIVERS_NO_RETIRES" >/dev/null 2>&1
+check "a PR that delivers and declares no retirement is REFUSED (7) (#754)" "$?" "7"
+reset
+run issue create --title t --body "$DELIVERS_NO_RETIRES" >/dev/null 2>&1
+check "the same body as an ISSUE is fine -- an issue retires nothing" "$?" "0"
+
 reset
 run pr create --title t --body 'no declaration line at all' >/dev/null 2>&1
 check "a write the shim DECLINES to make is REFUSED (7)" "$?" "7"
