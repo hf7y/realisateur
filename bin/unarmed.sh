@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # unarmed.sh -- has the set of built-but-unarmed mechanisms GROWN? (#754)
-# GUARD-TEST: bin/tests/unarmed.test.sh, offline behind UNARMED_SSH
-# FLOOR: bin/lib/unarmed.tsv -- the rules for adding a row live at the row.
+# RUNNER: no -- DEBT, not liveness, so it wants a weekly clock, not ausculte's.
+# GUARD-TEST: bin/tests/unarmed.test.sh -- offline behind UNARMED_SSH
+# GATE: none -- it reads a remote host's crontabs, never this tree
 set -uo pipefail
 
 CLI_NAME='unarmed.sh'

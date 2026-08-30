@@ -8,7 +8,6 @@ SCRIPT="$ROOT/unarmed.sh"
 harness_tmp
 echo "unarmed.test.sh"
 
-# A FAKE ssh: $T/facts is whatever the host is pretending to say.
 cat > "$T/ssh" <<'EOF'
 #!/usr/bin/env bash
 cat "$FACTS_FILE"
