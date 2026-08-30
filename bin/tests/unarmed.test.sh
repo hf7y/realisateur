@@ -216,5 +216,32 @@ section "J. it is declared, so it reaches a host by a named channel"
 ch="$(prop_channel unarmed.sh 2>/dev/null)" || ch=""
 eq "J1 prop_channel classifies unarmed.sh" "$ch" "local"
 
+section "K. a fact line that reads nothing blinds its own row, not the floor (#815)"
+mkdir -p "$T/stub" "$T/pin/current/verbs/libexec"
+touch "$T/pin/current/verbs/libexec/unarmed.sh" "$T/pin/current/verbs/libexec/vault-spool-drain.sh"
+printf '#!/usr/bin/env bash\n[ "${1:-}" = -n ] && shift\nexec "$@"\n' > "$T/stub/sudo"
+printf '#!/usr/bin/env bash\nexit 1\n'                                 > "$T/stub/crontab"
+printf '#!/usr/bin/env bash\nprintf 200\n'                             > "$T/stub/curl"
+printf '#!/usr/bin/env bash\nexec bash -c "${!#}"\n'                   > "$T/ssh-run"
+printf '#!/usr/bin/env bash\nexit 255\n'                               > "$T/ssh-dead"
+chmod +x "$T"/stub/* "$T/ssh-run" "$T/ssh-dead"
+mkledger "$T/L8"
+runreal() {  # runreal <ssh> <build-root> -- RUNS the generated script offline, moving only the pin it reads last. A-J feed collect() a CANNED answer, so none of them can see its exit status.
+  OUT="$(UNARMED_LEDGER="$T/L8" UNARMED_TODAY=2026-08-30 UNARMED_HOST=fixture-host \
+         UNARMED_SCHED_ROOT="$T/no-sched" VERB_HOST_BUILD_ROOT="$2" \
+         PATH="$T/stub:$PATH" UNARMED_SSH="$1" "$SCRIPT" --check 2>&1)"; RC=$?
+}
+
+runreal "$T/ssh-run" "$T/no-such-root"
+has "K1 an absent build pin does not blind the rows it never touched" "$OUT" "HELD      host-mode"
+has "K2 and the row that truly cannot tell still reads BLIND" "$OUT" "BLIND     libexec-payload"
+
+runreal "$T/ssh-run" "$T/pin"
+has "K3 a present build pin still yields its fact -- the guard was not deleted" "$OUT" "LOWER     libexec-payload"
+
+runreal "$T/ssh-dead" "$T/pin"
+has "K4 a transport that fails blinds every row, which is a different event" "$OUT" "BLIND     host-mode"
+rc  "K5 and that exits 6" 6 $RC
+
 echo
 summary

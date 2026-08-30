@@ -63,13 +63,14 @@ printf "DRAIN_BIN %s\n" "$($SUDO test -x /usr/local/libexec/selfdev/vault-spool-
 FD=https://raw.githubusercontent.com/hf7y/front-door/main
 printf "FD_ANCHOR %s\n" "$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$FD/.agent-project" 2>/dev/null)"
 printf "FD_PROSE %s\n" "$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$FD/.github/workflows/prose.yml" 2>/dev/null)"
-[ -d '"$PROP_HOST_PIN"' ] && printf "BUILD_LIBEXEC %s\n" "$(ls '"$PROP_HOST_PIN"'/*/libexec/ 2>/dev/null | grep -cE "^(unarmed|vault-spool-drain)\.sh$")"'
+[ -d '"$PROP_HOST_PIN"' ] && printf "BUILD_LIBEXEC %s\n" "$(ls '"$PROP_HOST_PIN"'/*/libexec/ 2>/dev/null | grep -cE "^(unarmed|vault-spool-drain)\.sh$")"
+exit 0'   # ALWAYS LAST, and unconditional: a fact line that reads nothing costs its own row, never the other nine (#815).
   if on_target_host "$HOST"; then
     FACTS="$(bash -c "$script" 2>/dev/null)"; rc=$?
   else
     FACTS="$(${UNARMED_SSH:-ssh} -n -o ConnectTimeout=10 -o BatchMode=yes "$HOST" "$script" 2>/dev/null)"; rc=$?
   fi
-  [ "$rc" -eq 0 ] || FACTS=''
+  [ "$rc" -eq 0 ] || FACTS=''   # the script always exits 0, so a bad rc is the TRANSPORT, not a fact line.
 }
 collect
 
