@@ -32,29 +32,23 @@ FINDINGS=0
 BLIND=0
 ROWS=0
 
-# blind <why> -- a ref this run could not resolve. Never folded into clean.
-blind() { printf '  BLIND    %s\n' "$1"; BLIND=$((BLIND + 1)); }
+blind() {  # <why> -- a ref this run could not resolve. Never folded into clean
+  printf '  BLIND    %s\n' "$1"; BLIND=$((BLIND + 1))
+}
 
-# gh_exists <api path> <what> -- 0 there, 1 not there, 2 could not tell. A 404
-# is an ANSWER; anything else is BLIND, because a rate limit that reads as
-# "absent" would clear the very alarm this exists to raise.
-gh_exists() {
+gh_exists() {  # <api path> <what> -> 0 there, 1 not there, 2 could not tell. A 404 is an ANSWER; a rate limit read as "absent" would clear the very alarm this raises
   local err
   err="$(gh api "$1" 2>&1 >/dev/null)" && return 0
   case "$err" in *'Not Found'*|*404*) return 1 ;; esac
   blind "cannot read $2: ${err%%$'\n'*}"; return 2
 }
 
-# ref_present <ref> <repo the ref was declared in>
-#   0 present   1 absent   2 could not tell (already reported)
-ref_present() {
+ref_present() {  # <ref> <repo it was declared in> -> 0 present, 1 absent, 2 could not tell (already reported). This repo answers from its own tree; another repo's only over the API
   local ref="$1" repo="$2" p st
   case "$ref" in
     path:/*) [ -e "${ref#path:}" ] && return 0 || return 1 ;;
     path:*)
       p="${ref#path:}"
-      # This repo answers from its own tree, so the row is checkable with no
-      # network at all; another repo's tree is only reachable over the API.
       if [ "$repo" = "$SELF" ]; then [ -e "$ROOT/$p" ] && return 0 || return 1; fi
       gh_exists "repos/$repo/contents/$p" "$p in $repo" ;;
     branch:*)
@@ -68,10 +62,7 @@ ref_present() {
   esac
 }
 
-# judge <retired> <armed> <witness> <note> <repo> -- the whole predicate, and
-# the only place a row turns into a line a human reads. It names the thing and
-# what replaced it, the way check_shrink() names the verb it refused over.
-judge() {
+judge() {  # <retired> <armed> <witness> <note> <repo> -- the predicate, and the one place a row becomes a line: it names the thing and what replaced it, the way check_shrink() names the verb it refused over
   local retired="$1" armed="$2" witness="$3" note="$4" repo="$5"
   ROWS=$((ROWS + 1))
   if [ "$retired" != - ]; then
@@ -107,11 +98,9 @@ while IFS=$'\t' read -r retired armed witness note; do
   judge "$retired" "${armed:--}" "${witness:-no witness}" "${note:-}" "$SELF"
 done < "$LEDGER"
 
-# THE CHEAP DECLARATION. A PR body's DELIVERS block is already mandatory and
-# already typed (lib/body-grammar.sh), so `- retires: <ref> -> <ref>` costs one
-# bullet in a block the author is writing anyway -- no second artifact, and
-# nothing to remember at the moment of building. The search is narrowed to
-# bodies carrying the word, so this is one API call however large the estate.
+# THE CHEAP DECLARATION. DELIVERS is already mandatory and already typed
+# (lib/body-grammar.sh), so `- retires: <ref> -> <ref>` costs one bullet in a
+# block the author is writing anyway. Narrowed to bodies carrying the word.
 if [ "$LOCAL" -eq 0 ]; then
   if ! command -v gh >/dev/null; then
     blind 'gh is not on PATH, so no merged PR declaration was read'

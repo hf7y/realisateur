@@ -342,13 +342,7 @@ if want rot; then
 fi
 
 if want supersession; then
-  # THE OTHER HALF OF "can I stop looking?" (#754). Every row above asks
-  # whether a live thing is serving. This one asks whether a transition
-  # FINISHED -- the retired end gone, the armed end there -- because a
-  # replacement that lands beside the thing it replaces, and a build whose
-  # switch is never flipped, are the same defect at opposite ends and neither
-  # one makes any other row here go red.
-  if sp="$(part supersession.sh)"; then
+  if sp="$(part supersession.sh)"; then  # THE OTHER HALF OF "can I stop looking?" (#754): every row above asks whether a live thing is serving, this one whether a transition FINISHED -- retired end gone, armed end there
     out="$(bash "$sp" 2>&1)"; rc=$?
     case $rc in
       0) record supersession OK "$(printf '%s\n' "$out" | awk '$1 == "TOTAL" { print $2 " declared transition(s), all finished" }')" ;;
@@ -358,9 +352,6 @@ if want supersession; then
     esac
   else record supersession BLIND 'supersession.sh not present'; fi
 fi
-
-# The `delivery` probe went with delivery-audit.sh (#511): it read
-# 2 MET and 262 BLIND across 292 PRs. Reinstating delivery proof is v2.
 
 if want fleet; then
   # LOCALHOST IS NOT AN SSH TARGET -- the same fix the propagation row above
@@ -448,11 +439,6 @@ if want fleet; then
     *) record fleet BLIND 'could not read the accounts paced-runner ledgers' ;;
   esac
 fi
-
-# The `silence` probe is gone with silence-audit.sh (#511,
-# 2026-08-22). Its [unwired] test counted a script NAMED IN A DOC as wired, so
-# ausculte-cadence.sh -- installed, on a 4-hourly clock, and a no-op the whole
-# time -- passed it. A guard satisfied by documentation measures documentation.
 
 [ ${#rows[@]} -gt 0 ] || { printf '%s: no such probe: %s\n' "$CLI_NAME" "${ONLY[*]}" >&2; exit 2; }
 
