@@ -2,8 +2,8 @@
 # lib/cron-lock.sh -- one run at a time, for anything on a clock.
 #
 # A tick that finds the lock held says so and LEAVES (exit 0). Blocking would
-# queue the runs this exists to prevent. Per-uid path: on monkey thirteen
-# accounts run the same tick, and a shared /tmp path would deny twelve of them.
+# queue the runs this exists to prevent. Per-uid path: on monkey every self-dev
+# account runs the same tick, and a shared /tmp path would deny all but one.
 cron_lock() {
   local name="${1:?cron_lock: need a lock name}"
   local f="${CRON_LOCK_FILE:-${TMPDIR:-/tmp}/$name.$(id -u).lock}"
