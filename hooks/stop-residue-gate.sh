@@ -172,10 +172,6 @@ if command -v gh >/dev/null 2>&1; then
       log "note: $url is still a DRAFT -- a draft claims nothing, which is a valid way to stop."
       continue
     fi
-    # AUTO-MERGE ARMED is the third honest exit, and the best one. The claim is
-    # real and its landing is gated on the checks rather than on an agent's
-    # judgement or a human remembering. Batching merges by hand is what made
-    # four branches conflict on 2026-08-30; armed PRs land as they go green.
     if [ "$am" = true ]; then
       log "note: $url has AUTO-MERGE ARMED -- it lands when its required checks pass. Valid way to stop."
       continue
