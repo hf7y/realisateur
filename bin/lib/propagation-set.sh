@@ -204,6 +204,7 @@ cut-verb-build.sh
 publish-release-verdict.sh
 selfdev-credentials.sh
 shellcheck-lint.sh
+comment-claims.sh
 verb-kind-lint.sh
 verbs-refresh.sh
 run-suites.sh
