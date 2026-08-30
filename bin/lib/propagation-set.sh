@@ -215,9 +215,6 @@ reprise.sh
 # reprise.sh is LOCAL for the same reason and one more: its subject is
 # bin/lib/handoffs.tsv, which is THIS repo's ledger of what it has given away.
 # On another account it would be a tool with nothing to read.
-# repo-settings-provision.sh is LOCAL: its subject is the FLEET (it walks the
-# whole registry), and a per-account copy would be many writers on one
-# setting. It also needs admin on someone else's repo, which self-dev
 
 # prop_host_tools -- what a provisioned host carries under
 # /usr/local/libexec/selfdev beyond the bootstrap: the verb a human types and
