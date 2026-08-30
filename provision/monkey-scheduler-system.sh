@@ -6,24 +6,21 @@
 # scheduler gets added as a self-dev user, it still looks to the system-wide
 # scheduler tool, it doesn't take ownership."
 #
-# THE PROBLEM IT SOLVES. monkey gives every project its own unix user with a
-# 0700 home, and each of those users carried its own
-# clone of scheduler. So "what will this host dispatch" could only be answered
-# by reading INTO another account's home -- which needs root, and which made a
-# read-only monitor depend on a privilege grant. `ecosim`'s rotation sensor hit
-# exactly that and had to grow a `sudo -n` arm to see monkey at all.
+# THE PROBLEM IT SOLVES. Every project on monkey has its own 0700 home, and
+# each carried its own clone, so "what will this host dispatch" could only be
+# answered by reading into another account -- which needs root, and which made a
+# read-only monitor depend on a privilege grant.
 #
-# THE SHAPE. One copy per host, owned by root, readable by everyone, writable
-# by nobody but root:
+# THE SHAPE it installs -- one copy per host, owned by root, readable by
+# everyone. NOT INSTALLED on monkey, measured 2026-08-30: /srv/scheduler is
+# absent and only /etc/scheduler/deploy_key survives.
 #
 #     /srv/scheduler          root:root 0755, world-readable (a+rX)
 #     /etc/scheduler/deploy_key  root:root 0600, the READ-ONLY deploy key
 #     /etc/ssh/ssh_known_hosts   github.com, so root can pull unattended
 #
-# OWNERSHIP IS THE POINT, not the path. When `scheduler` itself becomes a
-# self-dev user on this host it must POINT AT /srv/scheduler, not chown it.
-# A shared tool that one participant owns is that participant's tool, and the
-# next reader cannot tell the difference until it matters.
+# OWNERSHIP IS THE POINT, not the path: `scheduler` as a self-dev user must
+# POINT AT /srv/scheduler, not chown it.
 #
 #   ./monkey-scheduler-system.sh --check     probe only; changes nothing
 #   ./monkey-scheduler-system.sh --install    idempotent; safe to re-run
