@@ -203,6 +203,7 @@ cut-verb-build.sh
 registry-standup.sh
 branch-protection-provision.sh
 unarmed.sh
+atteste.sh
 publish-release-verdict.sh
 selfdev-credentials.sh
 shellcheck-lint.sh
