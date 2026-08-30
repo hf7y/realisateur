@@ -188,6 +188,92 @@ DIVERGED, recorded 2026\-08\-30 09:50Z by etat.sh:
   Consequence for whoever runs the cutover: monkey is degrading now, and the
   window is not open-ended. Reported on senechal#530 and #553.
 .fi
+.SH THE CUTOVER RAN 2026\-08\-30. IT PASSES, AND MONKEY IS UNREACHABLE.
+Both halves are true, and the second is not visible in the verdict. Read this
+before trusting a green `constate.sh'.
+.PP
+.B What the migration bought, measured:
+.nf
+
+  FLIP  backend         oracle -> wsl
+  OK    long_readout    0 (was 4)      <- the wedge is GONE
+  OK    soft_lockup     0 (was 1)
+  OK    runners_active  12 (was 12), and online at GitHub
+  HOLD  machine_id, hostname, accounts, crontabs, etc_selfdev, verbs_on_path
+  mem_total_mb 5925 -> 7941
+.fi
+.PP
+.B What it cost: `ssh monkey' does not work, and cannot, as a WSL2 distro
+sharing dexter's namespace. Three measurements, each one closing a door:
+.nf
+
+  1. monkey's sshd CANNOT BIND :22. ssh.socket failed and systemd came up
+     `degraded'. Windows sshd already holds :22 and it is the control plane,
+     so it cannot be moved. Section 2 does not disarm ssh -- the rehearsal
+     did, and the cutover has no equivalent, which is why this surfaced only
+     here.
+
+  2. A KERNEL\-TUN tailscaled BREAKS dexter's own tailnet. Its
+     `ts\-input' chain lands in the SHARED netns and carries
+       \-A ts\-input \-s 100.64.0.0/10 ! \-i tailscale0 \-j DROP
+     which drops tailnet traffic arriving on eth0 -- dexter's own mirrored
+     address. `ssh dexter' (2223) went dead the moment monkey booted with
+     systemd. PROVEN BY EXPERIMENT: `tailscale down' on monkey restored 2223
+     instantly. `\-\-netfilter\-mode=off' removes the chain but does NOT fix it;
+     the tailscale0 interface itself is the conflict.
+
+  3. USERSPACE networking keeps the namespace clean but points the name at
+     the WRONG HOST. With `\-\-tun=userspace\-networking' the rehearsal's
+     0\-kernel\-interfaces result holds, 2223 survives, monkey reaches out
+     (`tailscale ping dexter' -> pong), and both nodes coexist in `tailscale
+     status'. But monkey's own sshd is still not listening, so 100.121.83.23:22
+     is answered by DEXTER'S WINDOWS SSHD. Measured: ssh\-keyscan returns
+     BYTE\-IDENTICAL rsa/ecdsa/ed25519 keys for 100.121.83.23 and
+     100.107.253.56. `ssh monkey \\'sudo ...\\'' would run on dexter.
+.fi
+.PP
+.B That third one is why monkey is currently OFF the tailnet.
+`tailscale down' makes `ssh monkey' fail with a timeout, which is safe. Leaving
+it up makes the name silently resolve to another host, which is not. A wrong
+target must refuse, never answer.
+.SS The witness passes all of this, and that is its own finding
+`constate.sh \-\-target wsl:monkey \-\-diff before.tsv' exits 0 and prints
+.B HOLD ts_ip
+and
+.B HOLD ts_nodeid
+for a monkey that is not on the tailnet at all -- tailscale was DOWN when it
+was graded. The witness reads `tailscaled.state' on disk, which the tar
+faithfully carried, and never asks whether anything can reach the node.
+.PP
+So the MUST\-HOLD block certifies identity FILES, not REACHABILITY, and the
+runbook's own "WHAT A GOOD RUN PRODUCES" reads green on a monkey nothing can
+open a connection to. Anyone extending this witness should add a liveness
+field that fails when the node is down, and it must be a SEPARATE field: a
+held ts_nodeid and a dead node are different facts and collapsing them is
+what let this look finished.
+.SH THE DECISION THIS LEAVES, WHICH IS ZACH'S
+The estate is intact and safe as it stands: dexter's 2223 route works, the
+container channel is up, 12 runners are online, and the VirtualBox guest is
+SAVED so rollback is one command. Three ways forward:
+.nf
+
+  A. ROLL BACK. `ssh monkey' and the tailnet identity return exactly as
+     before, and so does the wedge -- which was accelerating (soft_lockup
+     1 -> 4 in one day, gaps 4h18/5h40/1h56). ROLLBACK section, unchanged.
+
+  B. STAY, and reach monkey through dexter. Runners need no inbound path and
+     are already online; they connect OUT to GitHub. Everything that says
+     `Host monkey' must instead go through `wsl \-d monkey' on dexter, which
+     is an estate\-wide ssh\-config change, not a local one.
+
+  C. STAY, and use TAILSCALE SSH. tailscaled terminates ssh itself in
+     userspace mode, so it needs no :22 in the shared namespace and leaves
+     the netns clean. This is the only option that restores the literal
+     `ssh monkey'. It moves authentication from authorized_keys to tailnet
+     ACLs, which is a real security change and needs Zach's decision plus
+     ACL work. UNTESTED -- do not assume it works until it is measured.
+.fi
+
 .SH 0. BASELINE, BEFORE ANYTHING TOUCHES MONKEY
 .nf
 
