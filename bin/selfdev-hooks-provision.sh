@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # selfdev-hooks-provision.sh -- every self-dev account runs THE-FLOOR gate
-# 3.2's closeout hooks (SubagentStop, Stop), the verb-pin hook (SessionStart, #708), the path guard (PreToolUse, #707), the credential hold (PreToolUse+UserPromptSubmit, #714), the memory budget guard+report (PreToolUse+SessionStart, #715) and the session marker (SessionStart+SessionEnd, hf7y/vim-arcade#207): wired in settings.json, and file.
+# 3.2's closeout hooks (SubagentStart baseline + SubagentStop, Stop), the verb-pin hook (SessionStart, #708), the path guard (PreToolUse, #707), the credential hold (PreToolUse+UserPromptSubmit, #714), the memory budget guard+report (PreToolUse+SessionStart, #715) and the session marker (SessionStart+SessionEnd, hf7y/vim-arcade#207): wired in settings.json, and file.
 #
 # RUNNER: bin/tests/selfdev-hooks-provision.test.sh -- and an operator, on the host
 # GUARD-TEST: bin/tests/selfdev-hooks-provision.test.sh
@@ -17,7 +17,7 @@
 set -uo pipefail
 
 CLI_NAME='selfdev-hooks-provision.sh'
-CLI_SUMMARY='wire the SubagentStop, Stop, SessionStart, SessionEnd, PreToolUse and UserPromptSubmit hooks every self-dev account already has installed'
+CLI_SUMMARY='wire the SubagentStart, SubagentStop, Stop, SessionStart, SessionEnd, PreToolUse and UserPromptSubmit hooks every self-dev account already has installed'
 CLI_USAGE='  selfdev-hooks-provision.sh            report drift, change nothing
   selfdev-hooks-provision.sh --apply    write the block
   selfdev-hooks-provision.sh --strict   exit 1 if any account drifts
@@ -59,6 +59,16 @@ done
 # One jq literal: the drift check and the write read the SAME value.
 read -r -d '' HOOKS <<'JSON'
 {
+  "SubagentStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "~/.claude/hooks/subagent-closeout.sh --baseline"
+        }
+      ]
+    }
+  ],
   "SubagentStop": [
     {
       "hooks": [
