@@ -201,6 +201,7 @@ vault-spool-drain.sh
 stale-paths.sh
 cut-verb-build.sh
 registry-standup.sh
+branch-protection-provision.sh
 unarmed.sh
 publish-release-verdict.sh
 selfdev-credentials.sh
@@ -215,7 +216,7 @@ reprise.sh
 # carry.sh and reprise.sh are LOCAL: they write to a BRANCH of this repo, not a
 # host, so per-account copies would be many writers racing one force-with-lease.
 # reprise also reads bin/lib/handoffs.tsv, THIS repo's ledger, empty elsewhere.
-# registry-standup.sh, unarmed.sh: LOCAL. FLEET subjects, no writes; unarmed rides prop_host_tools.
+# registry-standup.sh, unarmed.sh, branch-protection-provision.sh: LOCAL. FLEET subjects; unarmed rides prop_host_tools.
 # publish-release-verdict.sh is LOCAL because it runs in the release pipeline.
 
 # prop_host_tools -- what a provisioned host carries under
