@@ -1,28 +1,19 @@
 # CLAUDE.md
 
-## `vault:` is an ARCHIVE. Agents do not read it. (Zach, 2026-08-29)
+## `vault:` is an ARCHIVE. Agents do not read it. (Zach, 2026-08-29, #762)
 
 `vault:<project>/<file>` names a path in the private **`hf7y/ecosystem1-vault`**
-remote. Recognise the notation; do not follow it. **The vault is where prose goes
-when it stops being true** — `consigne` deposits superseded text there
-(`basheur`, `retired-verbs-20260818`, `retired-claude-memory-20260829`, 26% of
-whose assessed files were FALSE). Reading it back is how a retired fact returns
-as documentation: on 2026-08-29 vault prose reached a subagent brief as "the
-registry says dexter is a laptop that sleeps" — it says `kind: windows-mini-pc`,
-`expect: always-on`. Establish facts from live code, config, or API; if you
-cannot, it is UNVERIFIED — say so and act on nothing. Writing (`consigne`) is
-unaffected. Deeper vault design: realisateur#762.
+remote — where prose goes when it stops being true. Recognise the notation;
+never follow it. Reading a retired fact back is how it returns as documentation.
+Establish facts from live code, config or API, else UNVERIFIED — say so and act
+on nothing. Writing (`consigne`) is unaffected.
 
 ## Push permission (2026-08-14, reaped: main is a protected branch)
 
 `main` is protected on the remote (required status checks, `enforce_admins`
 on). A direct push to `main` is rejected for everyone, including admins and
 including this repo's own automation. Open a pull request; never commit to
-local `main`. The previous grant here said the opposite and cost the monkey
-self-dev account 5 failed runs and 15 stranded salvage branches.
-
-
-
+local `main`.
 
 ## Subagent rules (2026-07-25, from the propagation pass)
 
