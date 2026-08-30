@@ -42,7 +42,7 @@ grep -q 'rm -rf' "$SCRIPT" && bad "D2 the script contains an rm -rf" || ok "D2 n
 
 section "F. the read door (#742): the spool, its clock, and the interlock"
 mkdir -p "$T/home2/proj/.claude" "$T/vaultdir" "$T/fakebin"
-chmod 2775 "$T/vaultdir"
+chmod 2770 "$T/vaultdir"
 OUT="$(HOME_ROOT="$T/home2" SUDO='' PATH="$T/fakebin:$PATH" \
        "$SCRIPT" --check --dir "$T/vaultdir" --spool "$T/no-spool" 2>&1)"
 has "F1 a missing spool is a finding -- deposits would have nowhere to go" "$OUT" "no-spool does not exist"
@@ -57,7 +57,7 @@ printf '#!/bin/sh\n# CONSIGNE_SPOOL\n' > "$T/fakebin/consigne"; chmod +x "$T/fak
 OUT="$(HOME_ROOT="$T/home2" SUDO='' PATH="$T/fakebin:$PATH" \
        "$SCRIPT" --check --dir "$T/vaultdir" 2>&1)"
 hasnt "F5 with a spool-capable consigne the interlock stands down" "$OUT" "cannot spool"
-has   "F6 and 2775 is then reported as the open door it is" "$OUT" "the read door is open"
+has   "F6 and 2770 is still reported as the open door it is" "$OUT" "the read door is open"
 
 chmod 0700 "$T/vaultdir"; chmod g-s "$T/vaultdir"   # numeric chmod does NOT clear setgid on a dir
 OUT="$(HOME_ROOT="$T/home2" SUDO='' PATH="$T/fakebin:$PATH" \
