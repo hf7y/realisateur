@@ -163,12 +163,17 @@ if command -v gh >/dev/null 2>&1; then
   while IFS= read -r url; do
     [ -n "$url" ] || continue
     slug="${url#https://github.com/}"; num="${slug##*/}"; slug="${slug%/pull/*}"
-    meta="$(gh api "repos/$slug/pulls/$num" --jq '"\(.state)\t\(.draft)\t\(.body // "")"' 2>/dev/null)" || {
+    meta="$(gh api "repos/$slug/pulls/$num" --jq '"\(.state)\t\(.draft)\t\(.auto_merge != null)\t\(.body // "")"' 2>/dev/null)" || {
       log "could not read $url -- not blocking on a tracker this hook cannot reach"; continue; }
-    st="${meta%%$'\t'*}"; rest="${meta#*$'\t'}"; dr="${rest%%$'\t'*}"; body="${rest#*$'\t'}"
+    st="${meta%%$'\t'*}"; rest="${meta#*$'\t'}"; dr="${rest%%$'\t'*}"
+    rest="${rest#*$'\t'}"; am="${rest%%$'\t'*}"; body="${rest#*$'\t'}"
     [ "$st" = open ] || continue
     if [ "$dr" = true ]; then
       log "note: $url is still a DRAFT -- a draft claims nothing, which is a valid way to stop."
+      continue
+    fi
+    if [ "$am" = true ]; then
+      log "note: $url has AUTO-MERGE ARMED -- it lands when its required checks pass. Valid way to stop."
       continue
     fi
     pr_report+="  $url is still open and not a draft"$'\n'
@@ -184,9 +189,11 @@ if [ -n "$pr_report" ]; then
     echo
     printf '%s' "$pr_report"
     echo
-    echo "Merging is the middle of the job, not the end of it. Either land it"
-    echo "(green checks, then merge), or convert it to a DRAFT -- a draft claims"
-    echo "nothing and is the honest way to stop with work in flight."
+    echo "Merging is the middle of the job, not the end of it. Three honest exits:"
+    echo "  gh pr merge <n> --repo <slug> --squash --auto --delete-branch"
+    echo "      arm auto-merge -- it lands when the required checks pass. PREFER THIS."
+    echo "  land it now, if every required check is already green."
+    echo "  convert it to a DRAFT -- a draft claims nothing, for work still in flight."
   } >&2
   exit 2
 fi
