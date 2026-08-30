@@ -404,5 +404,56 @@ else
   echo "  (skipped: no flock on PATH)"
 fi
 
+# ===========================================================================
+echo
+echo "-- I. THE SPOOL: depositing into a vault this account cannot read (#742)"
+# ===========================================================================
+# The switch is the vault's own mode, not a flag -- so these cases set the mode
+# and assert the behaviour flips with it, which is the property that makes the
+# chmod on monkey safe to do without a flag day.
+if [ "$(id -u)" -eq 0 ]; then
+  echo "  (skipped: running as root, which can read a 0700 directory)"
+else
+  VS="$TMP/vault-shut"; mkdir -p "$VS"; chmod 0700 "$VS"; chmod 0000 "$VS"
+  SPOOL="$TMP/spool"; mkdir -p "$SPOOL"
+  echo "hello" > "$TMP/DOC.md"
+
+  OUT="$(PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" \
+         BIBLIOTHECAIRE_VAULT="$VS" CONSIGNE_SPOOL="$SPOOL" \
+         "$CONSIGNE" "$TMP/DOC.md" 2>&1)"; rc=$?
+  check "an unreadable vault spools instead of blinding" "$rc" "0"
+  has   "and says SPOOLED, not DEPOSITED"      "$OUT" "SPOOLED"
+  has   "and says the OPPOSITE of the impl's safe-to-remove report" "$OUT" "NOTHING is safe to remove"
+  has   "and says the deposit has NOT happened yet"   "$OUT" "NOT yet deposited"
+
+  n="$(find "$SPOOL" -maxdepth 1 -type f -name 'req-*' | wc -l | tr -d ' ')"
+  check "one request landed in the spool" "$n" "1"
+  REQ="$(find "$SPOOL" -maxdepth 1 -type f -name 'req-*' | head -1)"
+  has "the request names the absolute source path" "$(cat "$REQ")" "$TMP/DOC.md"
+  has "the request names the depositing account"   "$(cat "$REQ")" "$(id -un)"
+  hasnt "the request carries no prose -- only a pointer" "$(cat "$REQ")" "hello"
+
+  # The impl must NOT have been called: the whole point is that the deposit
+  # happens on the far side of the door, not here.
+  if [ -f "$ARGV_LOG" ]; then
+    hasnt "consign-prose was not run against the closed vault" "$(cat "$ARGV_LOG")" "$VS"
+  fi
+
+  OUT="$(PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" \
+         BIBLIOTHECAIRE_VAULT="$VS" CONSIGNE_SPOOL="$TMP/no-such-spool" \
+         "$CONSIGNE" "$TMP/DOC.md" 2>&1)"; rc=$?
+  check "a closed vault with NO spool is BLIND, never a silent success" "$rc" "6"
+  has   "and names the provisioner as the remedy" "$OUT" "vault-group-provision"
+
+  OUT="$(PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" \
+         BIBLIOTHECAIRE_VAULT="$VS" CONSIGNE_SPOOL="$SPOOL" \
+         "$CONSIGNE" "$TMP/no-such-doc.md" 2>&1)"; rc=$?
+  check "a source that does not exist is caught HERE, not at 03:00 in the drainer" "$rc" "2"
+
+  chmod 0755 "$VS"
+fi
+
+has "the spool default is the FHS location beside the vault" "$SRC_TEXT" "CONSIGNE_SPOOL_DEFAULT=/srv/vault-spool"
+
 echo
 summary

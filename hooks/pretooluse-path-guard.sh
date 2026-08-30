@@ -6,6 +6,52 @@ log() { printf 'pretooluse-path-guard: %s\n' "$*" >&2; }
 payload="$(cat 2>/dev/null)" || { log "could not read hook payload from stdin"; exit 1; }
 
 tool="$(sed -n 's/.*"tool_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p;q' <<<"$payload")"
+
+deny() { # deny <why, and what to do instead> -- the read guard's refusal
+  echo "BLOCKED: $1" >&2
+  exit 2
+}
+
+# ---- THE VAULT IS AN ARCHIVE: READS ARE DENIED (#742, #762) -----------------
+# Zach, 2026-08-29, reaffirmed 2026-08-30: "there should just not be reading at
+# all." CLAUDE.md says so, and prose is the weakest form of a rule this estate
+# keeps proving does not hold -- on 2026-08-29 vault prose reached a subagent
+# brief as a live fact about dexter and an agent with write access was
+# dispatched to "correct" a correct registry entry. That is the measured harm,
+# and it happened through a rule that was already written down.
+#
+# Two routes, both denied here, because closing one leaves the other open:
+#   the credential route  gh api repos/hf7y/ecosystem1-vault/contents/<path>
+#   the filesystem route  /srv/ecosystem1-vault on monkey
+#
+# WHAT DOES NOT TRIP IT, which is #762's open question answered: `consigne`'s
+# own writes. This fires on the read TOOLS (Read/Grep/Glob) and on a Bash
+# command that names the vault -- and a Bash command that also names one of
+# the deposit front doors is a deposit, not a retrieval, so it passes. A
+# depositor never has to learn a second rule to keep depositing.
+#
+# This is a guard against habit, not against an adversary: an agent that wants
+# past it can get past it. The rule it enforces was already the rule.
+VAULT_DOOR='the vault is an ARCHIVE -- prose goes there when it stops being true, so reading one back is how a retired fact returns as documentation (CLAUDE.md, #762). Establish the fact from live code, config or API instead; if you cannot, say UNVERIFIED and act on nothing. Depositing is unaffected: `consigne <path>`.'
+case "$tool" in
+  Read|Grep|Glob|NotebookRead)
+    case "$payload" in
+      *ecosystem1-vault*) deny "$VAULT_DOOR" ;;
+    esac
+    ;;
+  Bash)
+    case "$payload" in
+      *ecosystem1-vault*)
+        # A deposit front door in the same command means this is a write path.
+        case "$payload" in
+          *consigne*|*fonde*|*fauche*|*vault-group-provision*|*vault-spool-drain*|*"vault.sh"*) ;;
+          *) deny "$VAULT_DOOR" ;;
+        esac
+        ;;
+    esac
+    ;;
+esac
+
 case "$tool" in
   Write|Edit) ;;
   *) exit 0 ;;  # not a file write this guard has an opinion about

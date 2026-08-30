@@ -42,10 +42,17 @@ another pointing elsewhere:
 
 **The `vault:` notation.** `vault:<project>/<file>` names a path inside the
 **remote**, never one on disk — mandark holds no clone and
-`/srv/ecosystem1-vault` exists only on monkey. Resolve with `gh api
-repos/hf7y/ecosystem1-vault/contents/<path>`. **This is the only definition**;
+`/srv/ecosystem1-vault` exists only on monkey. **This is the only definition**;
 hf7y/ecosim#73 read these as dangling, which was true of the disk and of the
 notation being undefined, not of the deposit.
+
+**DO NOT RESOLVE ONE** (Zach, 2026-08-29; #742, #762). The line that stood here
+was the retrieval how-to, and it was the invitation: everything in the vault is
+there because §1 ruled it non-current, so following a pointer re-imports a
+premise that was already retired. Recognise the notation; establish the fact
+from live code, config or API instead, and if you cannot, say UNVERIFIED and act
+on nothing. Both routes are refused mechanically by
+`hooks/pretooluse-path-guard.sh`. Depositing is unaffected.
 
 **GitHub issues** — the work. One actionable item, one issue, in its own repo.
 
