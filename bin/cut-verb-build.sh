@@ -105,7 +105,6 @@ repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].nam
 [ -n "$repos" ] || die "$OWNER has no readable repositories -- BLIND, not empty."
 
 # --- 1b. THE REGISTRY: which repos are agent PROJECTS ----------------------
-#
 # Distinct from the verb set, and the difference is the whole reason this
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
 registry=""
@@ -481,9 +480,14 @@ if [ -n "$ASSEMBLE" ]; then
   done < "$manifest"
   if [ "$personal_out" -gt 0 ]; then
     cp "$kept" "$manifest"
-    cp "$manifest" "$ASSEMBLE/manifest.tsv"
     verb_count="$(grep -cv '^#' "$manifest" || true)"
     [ "$verb_count" -gt 0 ] || die 'every command in this build declared itself personal. That is a misread, not an ecosystem with no verbs -- refusing.'
+    # SECTION 5 WROTE THE HEADER BEFORE THIS DROP; $kept carries it back (#750).
+    projects="$(grep -v '^#' "$manifest" | cut -f1 | sort -u | grep -c .)"
+    awk -v v="$verb_count" -v p="$projects" '
+      !seen && sub(/^# [0-9]+ verb\(s\), [0-9]+ project\(s\)\./, "# " v " verb(s), " p " project(s).") { seen=1 }
+      { print }' "$manifest" > "$tmp/manifest.hdr" && mv "$tmp/manifest.hdr" "$manifest"
+    cp "$manifest" "$ASSEMBLE/manifest.tsv"
     say "  $personal_out personal tool(s) omitted; $verb_count verb(s) remain"
     check_shrink "$(grep -v '^#' "$manifest" | awk -F'\t' '{print $1"\t"$2}')"   # verb_count just moved -- the guard above graded a count that's now stale
   fi
