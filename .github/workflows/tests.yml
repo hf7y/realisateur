@@ -112,10 +112,9 @@ jobs:
   # network call there would make every unrelated failure ambiguous.
   #
   # ADVISORY, deliberately: it reads another repository, and a required check a
-  # third party can break is a wedge (realisateur#592's shape). It is loud, and
-  # the propagation probe is the one that pages. Which checks actually gate
-  # `main` is read from the API, not asserted here:
-  # bin/tests/branch-protection.test.sh.
+  # third party can break is a wedge (realisateur#592's shape). It is loud; the
+  # propagation probe pages. Which checks actually gate `main` is read from the
+  # API, not asserted here: bin/tests/branch-protection.test.sh.
   deploy-drift:
     runs-on: ubuntu-latest
     permissions:

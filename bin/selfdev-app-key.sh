@@ -15,14 +15,13 @@
 #
 # IDEMPOTENT: --apply on a host already at the target changes nothing and says
 # so. REVERSIBLE: --retire-copies is the only step that deletes, it is a
-# separate flag, it refuses unless the host-wide key is in place AND readable
-# by the account it is about to strip, and every account keeps working because
-# it is reading the host-wide file by then. Restoring a per-account copy is
+# separate flag, and it refuses unless the host-wide key is in place AND
+# readable by the account it is about to strip. Restoring one copy is
 # `install -m 600 -o <a> -g <a> /etc/selfdev/app.pem ~<a>/.config/selfdev/app.pem`.
 #
 # THE ORDER MATTERS AND IS ENFORCED: place host-wide, prove each account can
-# read it, and only then remove the copies. Doing it the other way round is a
-# fleet-wide outage with no credential left to fall back to.
+# read it, and only then remove the copies. The other way round is a fleet-wide
+# outage with no credential to fall back to.
 set -uo pipefail
 
 CLI_NAME='selfdev-app-key.sh'

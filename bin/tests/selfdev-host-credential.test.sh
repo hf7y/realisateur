@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 # selfdev-host-credential.test.sh -- the host-wide credential layout, read off
-# the host it describes.
+# the host it describes. Every other suite in this family builds /etc/selfdev as
+# a FIXTURE, deliberately, so the real layout was asserted only in prose: a mode
+# change, or a per-account copy coming back, moved nothing red.
 #
 # RUNNER: .github/workflows/tests.yml (suites), where /etc/selfdev is absent and
 # this says BLIND. It does its work on the self-dev host, under any account.
-# WHY: every other suite in this family builds /etc/selfdev as a FIXTURE under
-# $TMP -- deliberately, so they stay hermetic. The consequence is that the real
-# layout was asserted only in prose: a mode change, or a per-account copy coming
-# back, moved nothing red.
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 # shellcheck source=bin/lib/selfdev-app-key.sh
@@ -47,9 +45,8 @@ for f in app.pem claude-token; do
     "Remedy: sudo chown root:$GROUP $p && sudo chmod 0640 $p"
 done
 
-# ONE COPY, NOT N. realisateur#171/#209: the same key was on disk under four
-# names, and a rotation that misses one leaves an account minting tokens from a
-# revoked key. --retire-copies removed them; a copy here means that regressed.
+# ONE COPY, NOT N (realisateur#171/#209): a rotation that misses one leaves an
+# account minting tokens from a revoked key. A copy here means that regressed.
 section "B. the per-account copies stay retired"
 copy="$HOME/.config/selfdev/app.pem"
 if [ -e "$copy" ]; then

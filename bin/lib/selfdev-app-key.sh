@@ -2,21 +2,13 @@
 # selfdev-app-key.sh -- WHERE THE SELF-DEV GITHUB APP CREDENTIAL LIVES.
 # One answer, one host-wide location, sourced by every reader.
 #
-# TRAPS (the rest of this header is in the vault):
-#   ~/.config/selfdev/app.pem              on each of 13 accounts (13 copies)
-#   ~/.config/selfdev/monkey/monkey.pem    mandark, written by selfdev-gh-app.sh --adopt
-#   ~/.config/selfdev/ecosim/ecosim.pem    mandark, a DIFFERENT key, orphaned
-#   ~/.config/selfdev/app.pem              mandark -- the path the converge
-#                                          step reads, which never existed
-# The cost was not hypothetical. `selfdev-credentials.sh --apply <account>`
-# exists to converge an account that is missing the credential; it looked for
-# the last of those four, found nothing, and reported "cannot converge this
-# without a human (a new App key needs a browser click)" -- while the key sat
-# two directories away. Hit live converging secretaire@monkey (realisateur#209).
-# A copy per account also means one thing to rotate per account, and a rotation
-# that misses one leaves an account minting tokens from a revoked key. All four
-# paths above are RETIRED; that they stay retired, and the mode of what replaced
-# them, is bin/tests/selfdev-host-credential.test.sh.
+# TRAPS (the rest of this header is in the vault): the key was once on disk
+# under four names across two hosts, and `selfdev-credentials.sh --apply` read a
+# fifth that never existed -- so it refused to converge secretaire@monkey for
+# want of a key sitting two directories away (realisateur#209). A copy per
+# account is also one thing to rotate per account, and a rotation that misses
+# one leaves that account minting tokens from a revoked key. All four are
+# RETIRED; bin/tests/selfdev-host-credential.test.sh is what keeps them so.
 
 [ -n "${SELFDEV_APP_KEY_LIB:-}" ] && return 0
 SELFDEV_APP_KEY_LIB=1

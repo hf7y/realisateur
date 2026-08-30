@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 # branch-protection.test.sh -- which checks actually gate `main`, read from the
-# API rather than asserted in a comment.
+# API rather than asserted in a comment. An agent decides whether it may merge
+# its own PR from this, and a comment saying it goes false silently.
 #
 # RUNNER: .github/workflows/tests.yml (suites)
-# WHY: an agent decides whether it may merge its own PR from this fact. A
-# comment stating it goes false the instant someone edits protection, silently,
-# and the reader has no way to tell. Reading it is one call.
-#
 # Exit: 0 asserted, or could not look and SAID so. 1 the contract moved.
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -14,10 +11,9 @@ set -uo pipefail
 REPO="${BRANCH_PROTECTION_REPO:-hf7y/realisateur}"
 BRANCH="${BRANCH_PROTECTION_BRANCH:-main}"
 
-# THE CONTRACT, in one place. `suites` and `shellcheck` are this repo's own and
-# hermetic; `prose / prose` is hf7y/etalon's reusable guard. deploy-drift and
-# comment-claims run on every PR and are deliberately NOT here -- deploy-drift
-# reads another repository, so a third party could wedge every PR in this repo.
+# THE CONTRACT, in one place. deploy-drift and comment-claims run on every PR
+# and are deliberately NOT required -- deploy-drift reads another repository, so
+# a third party could otherwise wedge every PR here.
 REQUIRED=("prose / prose" "shellcheck" "suites")
 ADVISORY=("comment-claims" "deploy-drift")
 
