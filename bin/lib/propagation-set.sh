@@ -157,6 +157,7 @@ selfdev-app-key.sh
 selfdev-claude-token.sh
 selfdev-permissions-provision.sh
 selfdev-hooks-provision.sh
+unland-realisateur-clone.sh
 install-verbs.sh
 stamp-verb-build.sh
 vault-group-provision.sh
@@ -180,8 +181,7 @@ PROP_PAYLOAD_PENDING="
 PROP_LEAK_BOUND=7
 
 # --- LOCAL: never leaves this repo ------------------------------------------
-# publish-release-verdict.sh is LOCAL because it runs in the release pipeline
-# (GitHub Actions checks realisateur out to get it), not
+# publish-release-verdict.sh is LOCAL because it runs in the release pipeline.
 #
 # "NEVER LEAVES THIS REPO" IS NOT "NEVER RUNS ANYWHERE ELSE", and reading it
 # that way cost the estate its only outside observer. A LOCAL script reaches a
