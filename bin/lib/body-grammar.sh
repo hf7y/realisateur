@@ -102,7 +102,7 @@ DEFAULT-AFTER 14d: ship it unsigned and open a follow-up; reverse by saying so
 <!-- /DELIVERS -->
 
 ...and a PR that delivers something also says what it takes out, bare when
-that is nothing. `bin/supersession.sh` reads these and goes and looks.
+that is nothing. The claim is recorded; no probe reads it yet (#754).
 
 <!-- DELIVERS -->
 - path:bin/new-guard.sh -- the replacement
@@ -161,7 +161,7 @@ grammar_check() {  # <body> [kind] -- kind `pr` also grades the retirement claim
     entry=''
   }
 
-  # A delivery names WHERE the change takes effect, so bin/supersession.sh can go and look. Untyped prose cannot be checked, which is how "merged" became the finish line for changes that never landed anywhere.
+  # A delivery names WHERE the change takes effect, so a probe can go and look. Untyped prose cannot be checked, which is how "merged" became the finish line for changes that never landed anywhere.
   _judge_ship() {
     [ -n "$ship" ] || return 0
     ships=$((ships + 1))
@@ -279,7 +279,7 @@ grammar_check() {  # <body> [kind] -- kind `pr` also grades the retirement claim
   [ "$sopen" -ge 1 ] && [ "$ships" -eq 0 ] && _find EMPTY-SHIP 'the DELIVERS block is empty. Write "- none".'
 
   # Silence about a retirement reads exactly like retiring nothing -- what
-  # bin/supersession.sh catches, one level up. "- none" already lands nowhere.
+  # a probe would catch, one level up. "- none" already lands nowhere.
   [ "$kind" = pr ] && [ "$((ships - none_ships))" -gt 0 ] && [ "$has_retires" -eq 0 ] && _find UNRETIRED \
     'the DELIVERS block says nothing about what this takes out. Name it -- `- retires: <ref> -> <ref> -- why` -- or claim nothing with the bare `- retires: none`.'
 

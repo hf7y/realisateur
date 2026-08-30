@@ -28,7 +28,6 @@ bin/lib/body-grammar.sh	bin/lib/body-grammar.sh
 bin/lib/host-check.sh	bin/lib/host-check.sh
 bin/lib/labels.tsv	bin/lib/labels.tsv
 bin/lib/path-guard.tsv	bin/lib/path-guard.tsv
-bin/lib/superseded.tsv	bin/lib/superseded.tsv
 bin/lib/propagation-set.sh	bin/lib/propagation-set.sh
 bin/lib/estate-set.sh	bin/lib/estate-set.sh
 bin/lib/zaxon.sh	bin/lib/zaxon.sh
@@ -61,4 +60,10 @@ hooks/session-marker.sh	hooks/session-marker.sh
 libexec/ausculte-cadence.sh	bin/ausculte-cadence.sh
 libexec/dexter-liveness.sh	bin/dexter-liveness.sh
 libexec/decision-rot.sh	bin/decision-rot.sh
-libexec/supersession.sh	bin/supersession.sh
+libexec/unarmed.sh	bin/unarmed.sh
+# vault-spool-drain.sh is not a probe: it is the privileged half of `consigne`
+# once the vault's read door is shut (#742), and /etc/cron.d/vault-spool-drain
+# invokes it by its libexec path. It rides for the same reason the probes do --
+# a host tool that only a human refreshes is a host tool that goes stale, and
+# here staleness means deposits queue forever in a spool nobody can list.
+libexec/vault-spool-drain.sh	bin/vault-spool-drain.sh

@@ -10,7 +10,7 @@ CLI_SUMMARY='is self-dev healthy enough to stop watching?'
 CLI_USAGE='  ausculte              every probe; the exit code is the answer
   ausculte --json       one object per probe
   ausculte <probe>      just one: channel hosts arming hygiene propagation
-                        rot fleet handoff supersession'
+                        rot fleet handoff'
 CLI_FLAGS='--json'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  every declared probe answered OK
@@ -66,11 +66,6 @@ down=0; blind=0; rows=()
 # not it, and it names who. dexter is watched from dexter by monkey-watch.sh,
 # which publishes where monkey cannot suppress it -- that is the answer, and it
 # is a better one than a guest reaching across the boundary to ask.
-#
-# Ashby S.8/7, the argument this file keeps making: a transducer with fewer
-# output values than its input has distinct states loses distinctions. Three
-# words for four states is exactly that, and the lost distinction here is the
-# one between a broken estate and a correctly contained one.
 record() {
   rows+=("$1|$2|$3")
   case "$2" in DOWN) down=1 ;; BLIND) blind=1 ;; esac
@@ -341,17 +336,6 @@ if want rot; then
   else record rot BLIND 'decision-rot.sh not present'; fi
 fi
 
-if want supersession; then
-  if sp="$(part supersession.sh)"; then  # THE OTHER HALF OF "can I stop looking?" (#754): every row above asks whether a live thing is serving, this one whether a transition FINISHED -- retired end gone, armed end there
-    out="$(bash "$sp" 2>&1)"; rc=$?
-    case $rc in
-      0) record supersession OK "$(printf '%s\n' "$out" | awk '$1 == "TOTAL" { print $2 " declared transition(s), all finished" }')" ;;
-      1) record supersession DOWN "$(printf '%s\n' "$out" | awk '$1 == "TOTAL" { print $4 }') half-finished: $(printf '%s\n' "$out" | awk '/^ +(RESIDUE|UNARMED) / { sub(/^ +/, ""); print; exit }')" ;;
-      2) record supersession BLIND 'ausculte invoked supersession.sh wrongly -- fix ausculte' ;;
-      *) record supersession BLIND "$(printf '%s\n' "$out" | awk '/BLIND/ { sub(/^ +/, ""); print; exit }')" ;;
-    esac
-  else record supersession BLIND 'supersession.sh not present'; fi
-fi
 
 if want fleet; then
   # LOCALHOST IS NOT AN SSH TARGET -- the same fix the propagation row above
@@ -439,6 +423,7 @@ if want fleet; then
     *) record fleet BLIND 'could not read the accounts paced-runner ledgers' ;;
   esac
 fi
+
 
 [ ${#rows[@]} -gt 0 ] || { printf '%s: no such probe: %s\n' "$CLI_NAME" "${ONLY[*]}" >&2; exit 2; }
 

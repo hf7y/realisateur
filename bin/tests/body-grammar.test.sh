@@ -201,7 +201,7 @@ eq 'T3b what a change TAKES OUT is a delivery too (#754)' "$(findings 'NO-DECISI
 <!-- /DEFERRED -->
 
 <!-- DELIVERS -->
-- retires: path:hooks/old-guard.sh -> path:hooks/new-guard.sh -- bin/supersession.sh checks it went
+- retires: path:hooks/old-guard.sh -> path:hooks/new-guard.sh -- the old one is gone
 <!-- /DELIVERS -->')" 0
 eq 'T4 prose a check cannot look for is a finding' "$(codes 'NO-DECISION: x
 
