@@ -25,7 +25,7 @@ RUNS_KEPT = 5
 OUTSIDE_MAX = 20                     # paths shown before the tail is counted
 TICK_TAG = "realisateur:selfdev-release:TICK"
 RUNNER_TAG = "scheduler:scheduler-paced-runner:RUNNER"
-BOOTSTRAP_CLONES = {"realisateur", "scheduler"}  # scheduler: land-selfdev.sh clones it into EVERY account, so it is expected. realisateur: NO LONGER minted per account (#134) -- still whitelisted only because the clones land-selfdev.sh already planted are still on disk. Narrow this to {"scheduler"} once they are swept, and 17 accounts will correctly read as foreign.
+BOOTSTRAP_CLONES = {"scheduler"}  # land-selfdev.sh clones scheduler into EVERY account, so it is expected. realisateur is NOT: #134 stopped minting it per account, so a realisateur clone is now residue and must read as foreign. Line 133 keeps `{user, *BOOTSTRAP_CLONES}`, so realisateur@monkey's own checkout stays expected.
 HOME_ROOT = os.environ.get("SELFDEV_HOME_ROOT", "/home")          # fixture seams:
 SUDOERS_D = os.environ.get("SELFDEV_SUDOERS_D", "/etc/sudoers.d")  # unset in production
 

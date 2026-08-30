@@ -63,7 +63,7 @@ eq "25 hits are capped at 20 plus one line naming the rest" \
 eq "and the remainder is counted honestly" \
   "$(printf '%s' "$out" | jq -r '.outside_home[-1]')" "... and 5 more"
 
-section "E. containment: foreign_clones exempts the account's own repo and the two universal bootstrap clones"
+section "E. containment: foreign_clones exempts the account's own repo and the one universal bootstrap clone"
 mkdir -p "$T/homes/acct2/Documents/Projects/acct2" \
          "$T/homes/acct2/Documents/Projects/realisateur" \
          "$T/homes/acct2/Documents/Projects/scheduler" \
@@ -87,11 +87,15 @@ PY
 out="$(PATH="$T/stub:$PATH" SELFDEV_HOME_ROOT="$T/homes" SELFDEV_SUDOERS_D="$T/sudoers.d" \
   PYTHONDONTWRITEBYTECODE=1 FIND_RC=0 FIND_OUT="" \
   python3 "$T/probe2.py" "$COLLECTOR")"
-eq "the account's own repo and both bootstrap clones are NOT foreign" \
-  "$(printf '%s' "$out" | jq '.foreign_clones | length')" "1"
+eq "the account's own repo and the scheduler bootstrap clone are NOT foreign" \
+  "$(printf '%s' "$out" | jq '.foreign_clones | length')" "2"
 has "the one real foreign clone is named" "$out" "/Projects/stray"
-hasnt "realisateur is never reported foreign" "$out" '"path":"'"$T"'/homes/acct2/Documents/Projects/realisateur"'
-hasnt "scheduler is never reported foreign" "$out" '"path":"'"$T"'/homes/acct2/Documents/Projects/scheduler"'
+# jq, not a substring: the old spelling matched '"path":"' which json.dumps
+# never emits (it writes '"path": "'), so it passed no matter what.
+eq "realisateur IS foreign now that #134 stopped minting it per account" \
+  "$(printf '%s' "$out" | jq '[.foreign_clones[] | select(.path | endswith("/Documents/Projects/realisateur"))] | length')" "1"
+eq "scheduler is never reported foreign" \
+  "$(printf '%s' "$out" | jq '[.foreign_clones[] | select(.path | endswith("/Documents/Projects/scheduler"))] | length')" "0"
 
 section "C. release_tick: a retired clock is an absence, not a reading"
 [ -s "$STATUS" ] && ok "the fixture account HAS a status file to be tempted by" \
