@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# TRAPS (the rest of this header is in the vault):
+# TRAPS:
 # Hermetic. No network, no GitHub, no `gh`:
 #   * a fake `gh` earlier on PATH answers `auth status`, `repo list` and the
 #     tree API out of local fixture repositories;
@@ -36,11 +36,8 @@ mkrepo() {
     rm -rf "$d"; mkdir -p "$d/bin" "$d/man" "$d/lib"
     printf 'verb_fixture_lib_loaded=1\n' > "$d/lib/verb.sh"
     for v in "$@"; do
-        # `# KIND: verb` is part of the fixture because it is part of the
-        # declaration contract: bin/verb-kind-lint.sh runs over the
-        # assembled tree in section 6a and refuses a build containing a
-        # command that declares no channel. A fixture without it would test
-        # a build shape the cutter no longer accepts.
+        # `# KIND: verb` is contract, not decoration: verb-kind-lint.sh
+        # (section 6a) refuses a build whose command declares no channel.
         cat > "$d/bin/$v" <<EOF
 #!/usr/bin/env bash
 # KIND: verb
@@ -126,11 +123,8 @@ printf '#project\tname\twhy\n' > "$TMP/not-a-verb.tsv"
 
 printf '#project\tverb\twhy\n' > "$TMP/retired-verbs.tsv"  # empty: nothing declared retired, same fixture-not-production posture
 
-# And the channel guard's grandfather ratchet, for the same reason. Section
-# 6a runs bin/verb-kind-lint.sh over the assembled tree, and that lint reads
-# bin/verb-kind-lint.ratchet -- 33 real commands this suite knows nothing
-# about. Empty here means nothing is grandfathered, so every fixture verb
-# must declare its channel exactly as a real one must.
+# Empty grandfather ratchet too: verb-kind-lint.ratchet's 33 real commands
+# are none of this suite's business, so every fixture verb declares its channel.
 : > "$TMP/verb-kind.ratchet"
 
 cut() {
@@ -175,9 +169,8 @@ check "...and the tree is unchanged" \
       "$(diff -r "$OUT/alpha" "$OUT/alpha" >/dev/null && echo same || echo differs)" "same"
 
 # --- 3. RETIREMENT: a project that stops declaring leaves the build ------
-# Archiving a repository is how a project says "I am no longer a
-# participant" (vault:realisateur/VERB-DISTRIBUTION.md section 5), and to `gh repo list
-# --no-archived` that is exactly this: the name stops coming back.
+# Archiving is how a project says "no longer a participant", and to
+# `gh repo list --no-archived` that is just: the name stops coming back.
 printf 'alpha\nbeta\n' > "$TMP/repolist"
 printf '#project\tverb\twhy\ngamma\tga\tfixture: gamma retired\n' > "$TMP/retired-verbs.tsv"
 cut --assemble "$OUT" >/dev/null 2>"$TMP/e3"
