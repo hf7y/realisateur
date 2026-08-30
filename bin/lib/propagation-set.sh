@@ -201,6 +201,7 @@ vault-spool-drain.sh
 stale-paths.sh
 cut-verb-build.sh
 registry-standup.sh
+unarmed.sh
 publish-release-verdict.sh
 selfdev-credentials.sh
 shellcheck-lint.sh
@@ -215,6 +216,8 @@ reprise.sh
 # host, so per-account copies would be many writers racing one force-with-lease.
 # reprise also reads bin/lib/handoffs.tsv, THIS repo's ledger, empty elsewhere.
 # registry-standup.sh is LOCAL: its subject is the FLEET, and it writes nothing.
+# unarmed.sh is LOCAL for the same reason, and rides prop_host_tools: a host
+# that cannot run it is BLIND about what it has built and never turned on.
 # publish-release-verdict.sh is LOCAL because it runs in the release pipeline.
 
 # prop_host_tools -- what a provisioned host carries under
@@ -224,7 +227,7 @@ reprise.sh
 prop_host_tools() {
   # The probes ausculte composes are LOCAL-class and ride here, or it is
   # BLIND about them on a host.
-  printf 'dresse.sh\nausculte-cadence.sh\ndexter-liveness.sh\ndecision-rot.sh\nvault-spool-drain.sh\n'
+  printf 'dresse.sh\nausculte-cadence.sh\ndexter-liveness.sh\ndecision-rot.sh\nvault-spool-drain.sh\nunarmed.sh\n'
   local s; for s in $PROP_PROVISION_SCRIPTS; do [ "$s" = dresse.sh ] || printf '%s\n' "$s"; done
 }
 
