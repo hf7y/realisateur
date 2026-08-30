@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# TRAPS (the rest of this header is in the vault):
+# TRAPS:
 # Hermetic. No network, no GitHub, no `gh`:
 #   * a fake `gh` earlier on PATH answers `auth status`, `repo list` and the
 #     tree API out of local fixture repositories;
@@ -36,11 +36,8 @@ mkrepo() {
     rm -rf "$d"; mkdir -p "$d/bin" "$d/man" "$d/lib"
     printf 'verb_fixture_lib_loaded=1\n' > "$d/lib/verb.sh"
     for v in "$@"; do
-        # `# KIND: verb` is part of the fixture because it is part of the
-        # declaration contract: bin/verb-kind-lint.sh runs over the
-        # assembled tree in section 6a and refuses a build containing a
-        # command that declares no channel. A fixture without it would test
-        # a build shape the cutter no longer accepts.
+        # `# KIND: verb` is contract, not decoration: verb-kind-lint.sh
+        # (section 6a) refuses a build whose command declares no channel.
         cat > "$d/bin/$v" <<EOF
 #!/usr/bin/env bash
 # KIND: verb
@@ -126,11 +123,7 @@ printf '#project\tname\twhy\n' > "$TMP/not-a-verb.tsv"
 
 printf '#project\tverb\twhy\n' > "$TMP/retired-verbs.tsv"  # empty: nothing declared retired, same fixture-not-production posture
 
-# And the channel guard's grandfather ratchet, for the same reason. Section
-# 6a runs bin/verb-kind-lint.sh over the assembled tree, and that lint reads
-# bin/verb-kind-lint.ratchet -- 33 real commands this suite knows nothing
-# about. Empty here means nothing is grandfathered, so every fixture verb
-# must declare its channel exactly as a real one must.
+# Empty grandfather ratchet too, so every fixture verb declares its channel.
 : > "$TMP/verb-kind.ratchet"
 
 cut() {
@@ -175,9 +168,8 @@ check "...and the tree is unchanged" \
       "$(diff -r "$OUT/alpha" "$OUT/alpha" >/dev/null && echo same || echo differs)" "same"
 
 # --- 3. RETIREMENT: a project that stops declaring leaves the build ------
-# Archiving a repository is how a project says "I am no longer a
-# participant" (vault:realisateur/VERB-DISTRIBUTION.md section 5), and to `gh repo list
-# --no-archived` that is exactly this: the name stops coming back.
+# Archiving is how a project says "no longer a participant", and to
+# `gh repo list --no-archived` that is just: the name stops coming back.
 printf 'alpha\nbeta\n' > "$TMP/repolist"
 printf '#project\tverb\twhy\ngamma\tga\tfixture: gamma retired\n' > "$TMP/retired-verbs.tsv"
 cut --assemble "$OUT" >/dev/null 2>"$TMP/e3"
@@ -522,6 +514,39 @@ check "...and the surviving verb is still assembled" \
       "$([ -f "$TMP/asm14g/omega/bin/ov1" ] && echo present || echo absent)" "present"
 check "...and the retired verb is gone from the manifest" \
       "$(grep -c "$(printf 'omega\tov2')" "$TMP/asm14g/manifest.tsv" 2>/dev/null)" "0"
+printf '#project\tverb\twhy\n' > "$TMP/retired-verbs.tsv"
+
+# 14h. SUBSTITUTION: one verb leaves, another arrives, the COUNT never moves
+# (#699 point 1). Pins that the name diff is REACHED, not short-circuited by a
+# count comparison that sees no shrink.
+mkrepo sigma sv1 sv2
+g -C "$FIX/sigma.git" rm -q bin/sv2 man/sv2.1
+cat > "$FIX/sigma.git/bin/sv3" <<'EOF'
+#!/usr/bin/env bash
+# KIND: verb
+. "$(dirname "$0")/../lib/verb.sh"
+printf 'sv3 -- fixture verb from sigma\n'
+EOF
+chmod +x "$FIX/sigma.git/bin/sv3"
+printf '.TH sv3 1\n' > "$FIX/sigma.git/man/sv3.1"
+g -C "$FIX/sigma.git" add -A
+g -C "$FIX/sigma.git" commit -m 'sigma: sv2 out, sv3 in -- same verb count'
+printf 'sigma\n' > "$TMP/repolist"
+printf 'sigma\tsv1\nsigma\tsv2\n' > "$TMP/published14h"
+
+FIXTURE_PUBLISHED="$TMP/published14h" \
+  cut --assemble "$TMP/asm14h" >/dev/null 2>"$TMP/e14h"
+check "an undeclared SUBSTITUTION is refused though the count is unchanged" "$?" "1"
+case "$(cat "$TMP/e14h")" in
+    *"sigma"*"sv2"*) ok "...and it names the verb that vanished under a steady count" ;;
+    *) bad "the refusal names the substituted-out verb" "got: $(cat "$TMP/e14h")" ;;
+esac
+
+# ...and once DECLARED it is accepted: acceptance must not depend on the count.
+printf '#project\tverb\twhy\nsigma\tsv2\tfixture: substituted out\n' > "$TMP/retired-verbs.tsv"
+FIXTURE_PUBLISHED="$TMP/published14h" \
+  cut --assemble "$TMP/asm14h2" >/dev/null 2>"$TMP/e14h2"
+check "a DECLARED substitution is accepted" "$?" "0"
 printf '#project\tverb\twhy\n' > "$TMP/retired-verbs.tsv"
 
 echo
