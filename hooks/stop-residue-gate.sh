@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -uo pipefail  # stop-residue-gate.sh: Stop guard one scope up from SubagentStop (#681 SS1), same CONTRACT as hooks/subagent-closeout.sh; #681's unfiled-finding half is completion_claims() + stated_defects(), refiled as #752
+set -uo pipefail  # stop-residue-gate.sh: Stop guard one scope up from SubagentStop (#681 SS1), same CONTRACT as hooks/subagent-closeout.sh; #681's unfiled-finding half is completion_claims() + stated_defects(), refiled as #752; SCOPED TO THIS SESSION'S OWN CHANGES (#773) as #764 scoped the twin -- same contract, different anchor, because a main session has no SubagentStart, so the baseline is taken at SessionStart and spans the session. NO BASELINE IS NOT "IT IS ALL YOURS": it warns, since losing a block beats destroying what another session is still writing
 
 log() { printf 'stop-residue-gate: %s\n' "$*" >&2; }
 
@@ -12,6 +12,41 @@ fi
 cwd="$(sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p;q' <<<"$payload")"
 [ -n "$cwd" ] || cwd="$PWD"
 [ -d "$cwd" ] || { log "cwd from payload is not a directory: $cwd"; exit 1; }
+
+BASELINE_DIR="${CLAUDE_JOB_DIR:+$CLAUDE_JOB_DIR/tmp}"  # what was already dirty when this SESSION started. Keyed by session and read only while fresh ($CLAUDE_JOB_DIR/tmp is LONG-LIVED ACROSS SESSIONS), in its OWN dir: the twin's baselines mark a different moment and must not be read as this one
+BASELINE_DIR="${BASELINE_DIR:-${TMPDIR:-/tmp}}/stop-residue-baselines"
+BASELINE_MAX_AGE_MIN="${STOP_RESIDUE_BASELINE_MAX_AGE_MIN:-1440}"
+
+json_field() { sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p;q" <<<"$2"; }
+
+porcelain_paths() {  # PATHS, not porcelain lines: " M f" then and "MM f" now is one foreign file
+  sed -e 's/^...//' | while IFS= read -r pp; do
+    case "$pp" in
+      *" -> "*) printf '%s\n%s\n' "${pp%% -> *}" "${pp#* -> }" ;;
+      *)        printf '%s\n' "$pp" ;;
+    esac
+  done
+}
+
+session_id="$(json_field session_id "$payload")"
+BASELINE_FILE="${session_id:+$BASELINE_DIR/${session_id//[^A-Za-z0-9._-]/_}}"
+
+if [ "${1:-}" = "--baseline" ]; then  # SessionStart. Records and ALWAYS exits 0 -- a hook that cannot mark the start must not stop a session from starting
+  [ -n "$BASELINE_FILE" ] || { log "SessionStart payload carries no session_id -- no baseline recorded"; exit 0; }
+  command -v git >/dev/null 2>&1 || { log "git not on PATH -- no baseline recorded"; exit 0; }
+  mkdir -p "$BASELINE_DIR" 2>/dev/null || { log "cannot write $BASELINE_DIR -- no baseline recorded"; exit 0; }
+  find "$BASELINE_DIR" -maxdepth 1 -type f -mmin +"$BASELINE_MAX_AGE_MIN" -delete 2>/dev/null
+  [ -e "$BASELINE_FILE" ] && exit 0  # FIRST CAPTURE WINS: resume and compact re-fire SessionStart, and a second mark would relabel this session's own work as pre-existing
+  : > "$BASELINE_FILE" || { log "cannot write $BASELINE_FILE -- no baseline recorded"; exit 0; }
+  if git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    {
+      printf 'HEAD\t%s\t%s\n' "$cwd" "$(git -C "$cwd" rev-parse HEAD 2>/dev/null || echo unknown)"
+      git -C "$cwd" status --porcelain 2>/dev/null | porcelain_paths |
+        while IFS= read -r bp; do printf 'DIRTY\t%s\t%s\n' "$cwd" "$bp"; done
+    } >> "$BASELINE_FILE"
+  fi
+  exit 0
+fi
 
 transcript="$(sed -n 's/.*"transcript_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p;q' <<<"$payload")"  # not agent_transcript_path -- that's SubagentStop's field
 
@@ -150,8 +185,21 @@ fi
 
 command -v git >/dev/null 2>&1 || { log "git not on PATH -- cannot check tree state"; exit 1; }
 
-discover_written_trees() { # a worktree-isolated turn can write outside cwd (#363's shape, one scope up)
-  local transcript="$1" exclude="$2"
+BASELINE=""
+if [ -n "$BASELINE_FILE" ] && [ -r "$BASELINE_FILE" ] \
+   && [ -z "$(find "$BASELINE_FILE" -mmin +"$BASELINE_MAX_AGE_MIN" 2>/dev/null)" ]; then
+  BASELINE="$BASELINE_FILE"
+fi
+baseline_has_tree() { # a tree the baseline actually probed
+  [ -n "$BASELINE" ] && grep -qF "$(printf 'HEAD\t%s\t' "$1")" "$BASELINE"
+}
+baseline_dirty() {   # the paths ALREADY dirty in <tree> when this session started
+  [ -n "$BASELINE" ] || return 0
+  grep -F "$(printf 'DIRTY\t%s\t' "$1")" "$BASELINE" 2>/dev/null | cut -f3-
+}
+
+discover_written_files() {  # #363: cwd misses a turn worktree-isolated elsewhere. The FILES are kept too -- in a tree no baseline saw, only a path this transcript shows being written is attributable to this session
+  local transcript="$1"
   [ -n "$transcript" ] && [ -r "$transcript" ] || return 0
   command -v jq >/dev/null 2>&1 || return 0
   jq -r '
@@ -160,13 +208,20 @@ discover_written_trees() { # a worktree-isolated turn can write outside cwd (#36
     select(.type == "tool_use") |
     select(.name == "Write" or .name == "Edit" or .name == "NotebookEdit") |
     .input.file_path // empty
-  ' "$transcript" 2>/dev/null |
-  while IFS= read -r fp; do
-    [ -n "$fp" ] || continue
-    d="$(dirname -- "$fp" 2>/dev/null)" || continue
-    root="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null)" || continue
-    [ -n "$root" ] && [ "$root" != "$exclude" ] && printf '%s\n' "$root"
-  done | sort -u
+  ' "$transcript" 2>/dev/null | sort -u
+}
+
+written_files=()
+while IFS= read -r fp; do
+  [ -n "$fp" ] && written_files+=("$fp")
+done < <(discover_written_files "$transcript")
+
+is_written() { # is_written <abs-path> -- did this session's transcript write it?
+  local q="$1" f
+  for f in ${written_files[@]+"${written_files[@]}"}; do
+    [ "$f" = "$q" ] && return 0
+  done
+  return 1
 }
 
 discover_opened_prs() {
@@ -176,9 +231,13 @@ discover_opened_prs() {
 }
 
 trees=("$cwd")
-while IFS= read -r extra; do
-  [ -n "$extra" ] && trees+=("$extra")
-done < <(discover_written_trees "$transcript" "$cwd")
+for fp in ${written_files[@]+"${written_files[@]}"}; do
+  d="$(dirname -- "$fp" 2>/dev/null)" || continue
+  root="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null)" || continue
+  [ -n "$root" ] || continue
+  for seen in "${trees[@]}"; do [ "$seen" = "$root" ] && continue 2; done
+  trees+=("$root")
+done
 
 any_repo=0
 for t in "${trees[@]}"; do
@@ -192,7 +251,7 @@ advice() {
   echo "uncommitted change to a live script is indistinguishable from an"
   echo "abandoned one. An unpushed commit is the same failure one step later."
   echo
-  echo "Before stopping, do ONE of these:"
+  echo "For the changes listed as YOURS, do ONE of these:"
   echo "  1. Commit the work you meant to keep, to a BRANCH (never main):"
   echo "       git add <specific paths>   # never 'git add -A'"
   echo "       git commit -F <msgfile>"
@@ -200,6 +259,11 @@ advice() {
   echo "       git push -u origin <branch>"
   echo "  3. Revert what you did not mean to keep:  git restore <paths>"
   echo "  4. If a file is deliberately untracked, add it to .gitignore and commit that."
+  echo
+  echo "NONE of those apply to a path this report did not list as YOURS. Those files"
+  echo "are not yours: leave them exactly as they are, say so in your reply, and stop."
+  echo "If no permitted commit is open to you, name the paths and stop there too --"
+  echo "destroying work to get past this hook is the one outcome it exists to prevent."
 }
 
 pr_report=""
@@ -242,8 +306,9 @@ if [ -n "$pr_report" ]; then
   exit 2
 fi
 
-dirty_report=""
-dirty_total=0
+own_report=""; foreign_report=""; unattr_report=""; own_total=0
+[ -n "$BASELINE" ] || log "NO BASELINE for this session -- changes this hook cannot attribute are reported, not charged to you."
+
 for t in "${trees[@]}"; do
   git -C "$t" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
   dirty="$(git -C "$t" status --porcelain 2>/dev/null)"
@@ -253,21 +318,68 @@ for t in "${trees[@]}"; do
     exit 1
   fi
   [ -z "$dirty" ] && continue
-  count="$(printf '%s\n' "$dirty" | grep -c .)"
-  dirty_total=$((dirty_total + count))
-  dirty_report+="  tree: $t ($count uncommitted change(s))"$'\n'
-  dirty_report+="$(printf '%s\n' "$dirty" | head -20)"
-  [ "$count" -gt 20 ] && dirty_report+=$'\n'"  ... and $((count - 20)) more"
-  dirty_report+=$'\n\n'
+
+  had_base=0; base=""
+  baseline_has_tree "$t" && { had_base=1; base="$(baseline_dirty "$t")"; }
+  own=""; foreign=""; unattr=""; own_count=0
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    path="$(printf '%s\n' "$line" | porcelain_paths | head -1)"
+    if [ "$had_base" -eq 1 ] && printf '%s\n' "$base" | grep -qxF "$path"; then
+      foreign+="    $line"$'\n'
+    elif [ "$had_base" -eq 1 ] || is_written "$t/$path"; then
+      own+="    $line"$'\n'; own_count=$((own_count + 1)); own_total=$((own_total + 1))
+    else
+      unattr+="    $line"$'\n'
+    fi
+  done <<<"$dirty"
+
+  [ -n "$own" ]     && own_report+="  tree: $t ($own_count uncommitted change(s))"$'\n'"$own"
+  [ -n "$foreign" ] && foreign_report+="  tree: $t"$'\n'"$foreign"
+  [ -n "$unattr" ]  && unattr_report+="  tree: $t"$'\n'"$unattr"
 done
 
-[ "$dirty_total" -eq 0 ] && exit 0
+if [ "$own_total" -gt 0 ]; then
+  {
+    echo "BLOCKED: you are leaving $own_total uncommitted change(s) of your own."
+    echo
+    echo "YOURS -- new since this session started:"
+    printf '%s' "$own_report"
+    if [ -n "$foreign_report" ]; then
+      echo
+      echo "NOT YOURS -- already there when this session started. Context only:"
+      printf '%s' "$foreign_report"
+      echo "  Leave these exactly as they are. They are not part of this gate."
+    fi
+    if [ -n "$unattr_report" ]; then
+      echo
+      echo "UNATTRIBUTED -- no baseline for this tree, so ownership is unknown:"
+      printf '%s' "$unattr_report"
+      echo "  Not attributed to you and not blocking. Do not revert or commit them."
+    fi
+    advice
+  } >&2
+  exit 2
+fi
 
-{
-  echo "BLOCKED: you are leaving $dirty_total uncommitted change(s)."
-  echo
-  printf '%s' "$dirty_report"
-  advice
-} >&2
-
-exit 2
+if [ -n "$foreign_report" ] || [ -n "$unattr_report" ]; then
+  {
+    echo "stop-residue-gate: nothing in these trees is attributable to this session --"
+    echo "not blocking. Reported so it is not mistaken for a clean checkout:"
+    if [ -n "$foreign_report" ]; then
+      echo
+      echo "NOT YOURS -- already there when this session started:"
+      printf '%s' "$foreign_report"
+    fi
+    if [ -n "$unattr_report" ]; then
+      echo
+      echo "UNATTRIBUTED -- no SessionStart baseline was recorded for this tree, so this"
+      echo "hook cannot tell your changes from a concurrent session's:"
+      printf '%s' "$unattr_report"
+    fi
+    echo
+    echo "Leave all of the above alone: none of it is yours to commit or revert."
+    echo "Mention in your reply that you stopped with it present."
+  } >&2
+fi
+exit 0
