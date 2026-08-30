@@ -105,7 +105,6 @@ repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].nam
 [ -n "$repos" ] || die "$OWNER has no readable repositories -- BLIND, not empty."
 
 # --- 1b. THE REGISTRY: which repos are agent PROJECTS ----------------------
-#
 # Distinct from the verb set, and the difference is the whole reason this
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
 registry=""
@@ -284,12 +283,15 @@ fi
 prev_names="$(printf '%s\n' "$prev_rows" | awk -F'\t' 'NF>=2{print $1"\t"$2}' | sort -u)"
 check_shrink() {  # <curr-names>: project\tverb pairs, so a retirement can be subtracted BY NAME; 6a0 can shrink verb_count again after the first call (realisateur#703/#696)
   local curr_names="$1" missing unexplained
-  [ "$prev_count" -gt "$verb_count" ] || return 0
+  # A SET QUESTION, NOT A COUNT ONE (#699 point 1): a `prev_count > verb_count`
+  # gate sat in front of the diff written to replace it, so a same-night
+  # lose-one-gain-one shipped silently. Gate on having a previous build.
+  [ -n "$prev_names" ] || return 0
   missing="$(comm -23 <(printf '%s\n' "$prev_names") <(printf '%s\n' "$curr_names" | sort -u))"
-  [ -n "$missing" ] || return 0   # count shrank but every prev name still present -- nothing to explain
+  [ -n "$missing" ] || return 0   # every previous name is still here -- nothing to explain, whatever the counts did
   unexplained="$(comm -23 <(printf '%s\n' "$missing") <(printf '%s\n' "$retired" | sort -u))"
   if [ -z "$unexplained" ]; then
-    say "  shrink of $((prev_count - verb_count)) verb(s) fully explained by bin/lib/retired-verbs.tsv:"
+    say "  loss of $(printf '%s\n' "$missing" | grep -c .) verb(s) fully explained by bin/lib/retired-verbs.tsv:"
     printf '%s\n' "$missing" | sed 's/^/    /' >&2
     return 0
   fi
@@ -481,9 +483,14 @@ if [ -n "$ASSEMBLE" ]; then
   done < "$manifest"
   if [ "$personal_out" -gt 0 ]; then
     cp "$kept" "$manifest"
-    cp "$manifest" "$ASSEMBLE/manifest.tsv"
     verb_count="$(grep -cv '^#' "$manifest" || true)"
     [ "$verb_count" -gt 0 ] || die 'every command in this build declared itself personal. That is a misread, not an ecosystem with no verbs -- refusing.'
+    # SECTION 5 WROTE THE HEADER BEFORE THIS DROP; $kept carries it back (#750).
+    projects="$(grep -v '^#' "$manifest" | cut -f1 | sort -u | grep -c .)"
+    awk -v v="$verb_count" -v p="$projects" '
+      !seen && sub(/^# [0-9]+ verb\(s\), [0-9]+ project\(s\)\./, "# " v " verb(s), " p " project(s).") { seen=1 }
+      { print }' "$manifest" > "$tmp/manifest.hdr" && mv "$tmp/manifest.hdr" "$manifest"
+    cp "$manifest" "$ASSEMBLE/manifest.tsv"
     say "  $personal_out personal tool(s) omitted; $verb_count verb(s) remain"
     check_shrink "$(grep -v '^#' "$manifest" | awk -F'\t' '{print $1"\t"$2}')"   # verb_count just moved -- the guard above graded a count that's now stale
   fi

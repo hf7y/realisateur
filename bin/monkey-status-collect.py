@@ -25,7 +25,7 @@ RUNS_KEPT = 5
 OUTSIDE_MAX = 20                     # paths shown before the tail is counted
 TICK_TAG = "realisateur:selfdev-release:TICK"
 RUNNER_TAG = "scheduler:scheduler-paced-runner:RUNNER"
-BOOTSTRAP_CLONES = {"realisateur", "scheduler"}  # land-selfdev.sh clones both into EVERY account unconditionally, so either is expected, not foreign
+BOOTSTRAP_CLONES = {"scheduler"}  # land-selfdev.sh clones scheduler into EVERY account, so it is expected. realisateur is NOT: #134 stopped minting it per account, so a realisateur clone is now residue and must read as foreign. Line 133 keeps `{user, *BOOTSTRAP_CLONES}`, so realisateur@monkey's own checkout stays expected.
 HOME_ROOT = os.environ.get("SELFDEV_HOME_ROOT", "/home")          # fixture seams:
 SUDOERS_D = os.environ.get("SELFDEV_SUDOERS_D", "/etc/sudoers.d")  # unset in production
 
@@ -44,6 +44,16 @@ def sh_rc(*cmd):
 
 def accounts():
     return sorted(p.pw_name for p in pwd.getpwall() if UID_LO <= p.pw_uid < UID_HI)
+
+
+# TRAP: this list is not a census of the host. Work runs outside the band --
+# two wrappers fired from /home/svc-vaporwave/bin/ on uid 1001 while
+# scheduler/examples/vkv-inventory-bug-sweep-loop.sh:8 recorded "none,
+# verified" (hf7y/scheduler#368). Published so a reader cannot infer coverage.
+def accounts_scope():
+    return (f"uid {UID_LO}-{UID_HI - 1} only. Accounts outside this band are NOT "
+            f"enumerated: this list is not a census of everything on the host that "
+            f"runs work. Service accounts (e.g. uid 1001) are invisible here.")
 
 
 def cron(user):
@@ -186,6 +196,7 @@ if __name__ == "__main__":            # importable per function; `python3 - <fil
             os.path.realpath("/usr/local/share/verb-builds/current"))
         if os.path.exists("/usr/local/share/verb-builds/current") else None,
         "accounts": [],
+        "accounts_scope": accounts_scope(),
     }
 
     for u in accounts():

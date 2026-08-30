@@ -11,9 +11,8 @@ MODE="${2:---check}"
 case "$PROJECT" in ""|-*) echo "usage: $0 <project> [--check|--apply]" >&2; exit 2 ;; esac
 case "$MODE" in --check|--apply) ;; *) echo "usage: $0 <project> [--check|--apply]" >&2; exit 2 ;; esac
 
-# The uid band vault:realisateur/MONKEY.md reserves for self-dev projects: clear of the human
-# 1000s and of the office's romulus=1001, so a future merge of conventions
-# cannot collide.
+# The uid band reserved for self-dev projects: clear of the human 1000s and of
+# the office's romulus=1001, so a future merge of conventions cannot collide.
 UID_MIN="${SELFDEV_UID_MIN:-3000}"
 UID_MAX="${SELFDEV_UID_MAX:-3099}"
 CRED_HOME="$HOME"

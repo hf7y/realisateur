@@ -173,6 +173,12 @@ jobs:
       - name: Ratchet -- fail only on a finding a file did not already have
         run: bash bin/shellcheck-lint.sh
 
+  comment-claims:
+    runs-on: ubuntu-latest   # its own job for the reason shellcheck has one: `suites` proves the guard BEHAVES against fixtures, this runs it against the REAL tree, and two claims deserve two red/green lines
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash bin/comment-claims.sh   # ratcheted, so it opens green over the floor in bin/comment-claims.ratchet and fails only on a claim that floor does not already hold
+
   # The `surface` job is gone with carry-drift.sh and directive-prose.sh
   # (#511, 2026-08-22). Neither was a required check, and both
   # belonged to the guard layer this repo just removed: six sampled guards

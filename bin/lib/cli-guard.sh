@@ -14,7 +14,6 @@
 # BEFORE doing any work. The guard validates and returns; it never consumes
 # arguments, so each script keeps parsing its own exactly as before.
 #
-# exit 0)". realisateur's own sensors scored 0 of 8 against it: eleven of the
 # EXIT CODES, uniform across every script that sources this:
 
 cli_die() {

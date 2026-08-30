@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# verbs-refresh.sh -- the clock mandark does not have: tell me my verbs are
-# stale, and pull the new ones when I say so.
+# verbs-refresh.sh -- tell me my verbs are stale, and pull the new ones when I
+# say so. NOT "the clock mandark lacks": #117 closed and installed one.
 #
 # KIND: personal
 #

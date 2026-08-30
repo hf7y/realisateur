@@ -2,9 +2,8 @@
 #
 # Read by shellcheck itself from the repository root, so `shellcheck <file>`
 # typed by hand, `bin/shellcheck-lint.sh`, and CI all get the same answer.
-# ONE source, not a flag list retyped into three callers -- the build-
-# discipline row about config read from one place is the whole reason this
-# file exists rather than an `-e` string inside the guard.
+# ONE source, not a flag list retyped into three callers: config read from one
+# place is why this file exists rather than an `-e` string inside the guard.
 #
 # EVERY DISABLE BELOW NAMES ITS EVIDENCE. A suppression without a reason is
 # indistinguishable from a suppression nobody re-examined, and this tree has

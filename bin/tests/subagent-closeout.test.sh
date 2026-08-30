@@ -31,9 +31,10 @@ transcript_writing() { # transcript_writing <path> <file...>
   done
 }
 
-payload() { # payload <cwd> [<transcript>]
-  local cwd="$1" transcript="${2:-}"
-  printf '{"cwd":"%s","agent_transcript_path":"%s","stop_hook_active":false}' "$cwd" "$transcript"
+payload() { # payload <cwd> [<transcript>] [<session_id>] [<agent_id>]
+  local cwd="$1" transcript="${2:-}" sid="${3:-}" aid="${4:-}"
+  printf '{"cwd":"%s","agent_transcript_path":"%s","session_id":"%s","agent_id":"%s","stop_hook_active":false}' \
+    "$cwd" "$transcript" "$sid" "$aid"
 }
 
 run() { payload "$1" "${2:-}" | "$SCRIPT" 2>&1; }
@@ -50,7 +51,18 @@ chmod +x "$T/bin/gh"
 # The env prefixes bind to the SCRIPT, not `payload`: it is across the pipe.
 runpr() { payload "$1" "${2:-}" | STUB_PR="$T/pr-state" PATH="$T/bin:$PATH" "$SCRIPT" 2>&1; }
 rcof()  { payload "$1" "${2:-}" | STUB_PR="$T/pr-state" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
-transcript_pr() { printf 'opened https://github.com/hf7y/widget/pull/7 today\n' > "$1"; }
+transcript_pr() {
+  printf '%s\n' \
+    '{"message":{"content":[{"type":"tool_use","id":"tu1","name":"Bash","input":{"command":"gh pr create --fill"}}]}}' \
+    '{"message":{"content":[{"type":"tool_result","tool_use_id":"tu1","content":"https://github.com/hf7y/widget/pull/7"}]}}' \
+    > "$1"
+}
+transcript_pr_quoted() {
+  printf '%s\n' \
+    '{"message":{"content":[{"type":"tool_use","id":"tu1","name":"Bash","input":{"command":"cat bin/tests/subagent-closeout.test.sh"}}]}}' \
+    '{"message":{"content":[{"type":"tool_result","tool_use_id":"tu1","content":"transcript_pr() { printf https://github.com/hf7y/widget/pull/7 ; }"}]}}' \
+    > "$1"
+}
 
 section "A. baseline behavior is unchanged"
 
@@ -58,11 +70,14 @@ newrepo "$T/clean"
 A1_OUT="$(run "$T/clean")"; A1_RC=$?
 rc "A1 clean cwd, no transcript -> exit 0" 0 "$A1_RC"
 
+# A2 CHANGED 2026-08-29: an unattributable change is not one to demand back.
 newrepo "$T/dirty"
 echo scratch > "$T/dirty/f.txt"
 A2_OUT="$(run "$T/dirty")"; A2_RC=$?
-rc  "A2 dirty cwd, no transcript -> BLOCKED (2)" 2 "$A2_RC"
-has "A2 names cwd as the offending tree" "$A2_OUT" "$T/dirty"
+rc  "A2 dirty cwd, no baseline, no transcript -> warns, does not block (0)" 0 "$A2_RC"
+has "A2 names cwd as the tree it cannot attribute" "$A2_OUT" "$T/dirty"
+has "A2 says the ambiguity out loud" "$A2_OUT" "UNATTRIBUTED"
+hasnt "A2 does not accuse" "$A2_OUT" "BLOCKED"
 
 A3_OUT="$(printf '{"cwd":"%s","stop_hook_active":true}' "$T/dirty" | "$SCRIPT" 2>&1)"; A3_RC=$?
 rc "A3 stop_hook_active loop guard still exits 0 on a dirty tree" 0 "$A3_RC"
@@ -132,6 +147,103 @@ rc "G7 an unreadable tracker reports but does not block" 0 "$RC"
 printf 'open\tfalse\tNO-DECISION: x' > "$T/pr-state"
 RC="$(payload "$G" "$TR" | STUB_PR="$T/pr-state" PATH="$T/bin:/usr/bin:/bin" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?")"
 rc "G8 it blocks even with no closeout-lint on PATH (the fallback path)" 2 "$RC"
+
+printf 'open\tfalse\tNO-DECISION: x' > "$T/pr-state"
+QTR="$T/g-quoted"; transcript_pr_quoted "$QTR"
+OUT="$(runpr "$G" "$QTR")"; RC="$(rcof "$G" "$QTR")"
+rc  "G9 a PR URL the agent only READ does not block" 0 "$RC"
+hasnt "G10 and is not reported at all" "$OUT" "pull/7"
+
+section "H. scoped to THIS agent's changes (the 2026-08-29 shared-checkout bug)"
+
+JOB="$T/job"; mkdir -p "$JOB/tmp"   # SubagentStart is the same script, --baseline
+mark()  { payload "$1" "" "$2" "${3:-}" | CLAUDE_JOB_DIR="$JOB" "$SCRIPT" --baseline >/dev/null 2>&1; printf '%s' "$?"; }
+runb()  { payload "$1" "${4:-}" "$2" "${3:-}" | CLAUDE_JOB_DIR="$JOB" "$SCRIPT" 2>&1; }
+rcb()   { payload "$1" "${4:-}" "$2" "${3:-}" | CLAUDE_JOB_DIR="$JOB" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
+
+newrepo "$T/own"
+RC="$(mark "$T/own" sess-a agent-a)"
+rc "H1a --baseline exits 0" 0 "$RC"
+echo mine > "$T/own/mine.txt"
+H1="$(runb "$T/own" sess-a agent-a)"; H1_RC="$(rcb "$T/own" sess-a agent-a)"
+rc  "H1 own change after the baseline -> BLOCKED (2)" 2 "$H1_RC"
+has "H1 names it as YOURS" "$H1" "YOURS"
+has "H1 names the file"    "$H1" "mine.txt"
+
+newrepo "$T/foreign"
+echo theirs > "$T/foreign/vmhost.sh"
+echo theirs > "$T/foreign/repose.sh"
+mark "$T/foreign" sess-b agent-b >/dev/null
+H2="$(runb "$T/foreign" sess-b agent-b)"; H2_RC="$(rcb "$T/foreign" sess-b agent-b)"
+rc    "H2 pre-existing foreign dirt alone -> does NOT block (0)" 0 "$H2_RC"
+has   "H2 reports it as context"           "$H2" "NOT YOURS"
+has   "H2 names the foreign file"          "$H2" "vmhost.sh"
+hasnt "H2 does not accuse"                 "$H2" "BLOCKED"
+hasnt "H2 never tells it to revert them"   "$H2" "git restore"
+hasnt "H2 never tells it to commit them"   "$H2" "git commit"
+
+newrepo "$T/both"
+echo theirs > "$T/both/theirs.txt"
+mark "$T/both" sess-c agent-c >/dev/null
+echo mine > "$T/both/mine.txt"
+H3="$(runb "$T/both" sess-c agent-c)"; H3_RC="$(rcb "$T/both" sess-c agent-c)"
+rc  "H3 own + foreign -> BLOCKED (2)" 2 "$H3_RC"
+has "H3 counts ONLY the agent's own change" "$H3" "leaving 1 uncommitted change(s) of your own"
+H3_YOURS="$(printf '%s\n' "$H3" | sed -n '/^YOURS/,/^$/p')"
+has   "H3 YOURS lists the agent's file"     "$H3_YOURS" "mine.txt"
+hasnt "H3 YOURS does not list the foreign file" "$H3_YOURS" "theirs.txt"
+has   "H3 the foreign file is context"      "$H3" "NOT YOURS"
+has   "H3 says to leave the foreign work alone" "$H3" "Leave these exactly as they are"
+
+newrepo "$T/nobase"
+echo whoever > "$T/nobase/x.txt"
+H4="$(runb "$T/nobase" sess-d agent-d)"; H4_RC="$(rcb "$T/nobase" sess-d agent-d)"
+rc    "H4 no baseline -> warns, does not block (0)" 0 "$H4_RC"
+has   "H4 names the ambiguity" "$H4" "UNATTRIBUTED"
+hasnt "H4 does not accuse"     "$H4" "YOURS -- new since"
+
+newrepo "$T/stale"
+mark "$T/stale" sess-e agent-e >/dev/null
+echo whoever > "$T/stale/x.txt"
+touch -d '2 days ago' "$JOB/tmp/subagent-closeout-baselines/sess-e.agent-e"
+H5_RC="$(rcb "$T/stale" sess-e agent-e)"
+rc "H5 a baseline older than the max age is treated as no baseline" 0 "$H5_RC"
+
+RC="$(mark "$T/dirty" sess-f agent-f)"
+rc "H6 --baseline on a dirty tree still exits 0" 0 "$RC"
+RC="$(mark "$T" sess-g agent-g)"
+rc "H7 --baseline outside a repo still exits 0" 0 "$RC"
+
+section "I. closeout-lint's findings are scoped the same way"
+# The lint path sees what git status cannot; #511 deleted it, so this stubs it.
+mkdir -p "$T/lintbin"
+cat > "$T/lintbin/closeout-lint" <<'EOF'
+#!/usr/bin/env bash
+case "$*" in *--help*) echo "usage: closeout-lint --strict --allow-blind --repo <path>"; exit 0 ;; esac
+cat "$STUB_LINT"; exit 1
+EOF
+chmod +x "$T/lintbin/closeout-lint"
+markl() { payload "$1" "" "$2" "$3" | CLAUDE_JOB_DIR="$JOB" STUB_LINT="$T/lint-state" PATH="$T/lintbin:$PATH" "$SCRIPT" --baseline >/dev/null 2>&1; }
+runl()  { payload "$1" "" "$2" "$3" | CLAUDE_JOB_DIR="$JOB" STUB_LINT="$T/lint-state" PATH="$T/lintbin:$PATH" "$SCRIPT" 2>&1; }
+rcl()   { payload "$1" "" "$2" "$3" | CLAUDE_JOB_DIR="$JOB" STUB_LINT="$T/lint-state" PATH="$T/lintbin:$PATH" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
+
+newrepo "$T/lintrepo"
+printf '  FLAG [host-only-branch] wip/theirs exists on this host only\n' > "$T/lint-state"
+markl "$T/lintrepo" sess-h agent-h
+I1_OUT="$(runl "$T/lintrepo" sess-h agent-h)"; I1_RC="$(rcl "$T/lintrepo" sess-h agent-h)"
+rc  "I1 a finding that was ALREADY there does not block" 0 "$I1_RC"
+has "I1 and is reported as context"                      "$I1_OUT" "NOT YOURS"
+
+printf '  FLAG [host-only-branch] wip/theirs exists on this host only\n  FLAG [unpushed] 2 commits ahead of origin/main\n' > "$T/lint-state"
+I2_OUT="$(runl "$T/lintrepo" sess-h agent-h)"; I2_RC="$(rcl "$T/lintrepo" sess-h agent-h)"
+rc    "I2 a NEW unpushed-commit finding still blocks" 2 "$I2_RC"
+has   "I2 names the new finding"                      "$I2_OUT" "unpushed"
+I2_YOURS="$(printf '%s\n' "$I2_OUT" | sed -n '/^YOURS/,/^$/p')"
+hasnt "I2 does not charge it with the pre-existing one" "$I2_YOURS" "host-only-branch"
+
+I3_RC="$(payload "$T/lintrepo" "" nosess "" | CLAUDE_JOB_DIR="$JOB" STUB_LINT="$T/lint-state" PATH="$T/lintbin:$PATH" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?")"
+rc "I3 lint findings with no baseline warn, they do not block" 0 "$I3_RC"
+
 
 summary
 [ "$fail" -eq 0 ] || exit 1

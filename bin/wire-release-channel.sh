@@ -97,7 +97,7 @@ checkout_is_current() {
 # Run a command AS an account with a LOGIN-shaped PATH. Ubuntu's .profile only
 # adds ~/.local/bin at login and `sudo -u x cmd` is not one -- that omission is
 # what made land-selfdev.sh report "FATAL: installe is not on PATH" from the
-# script that had just linked it (vault:realisateur/MONKEY.md 8.1).
+# script that had just linked it.
 run_as_acct() {
   sudo -u "$1" -H env -i \
     HOME="$2" USER="$1" LOGNAME="$1" \

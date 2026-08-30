@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
-# consigne.test.sh -- the two doors must be one implementation, and the second
-# half of a reaping pass must be countable.
-#
-# TRAPS (the rest of this header is in the vault):
-# THE END-TO-END RUN AGAINST THE REAL MECHANISM IS NOT HERE, AND SAYING WHY IS
-# PART OF THE TEST. It cannot be hermetic: it needs bibliothecaire installed.
-# It was run by hand on mandark against the real lib/consign-prose.sh and the
-# real `fonde` before this landed, and the verbatim output is in the pull
-# request that added this file. Case D is the piece of that which CAN be
-# hermetic -- that the resolver finds the mechanism at the place `fonde`
-# carries it, from a fixture shaped exactly like an installed verb build.
+# consigne.test.sh -- the two doors must be one implementation. The end-to-end
+# run is not here: it needs bibliothecaire installed, so it cannot be hermetic.
+# Case D is the piece that can be -- the resolver finding the mechanism.
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
@@ -403,6 +395,52 @@ if command -v flock >/dev/null 2>&1; then
 else
   echo "  (skipped: no flock on PATH)"
 fi
+
+# ===========================================================================
+echo
+echo "-- I. THE SPOOL: depositing into a vault this account cannot read (#742)"
+# ===========================================================================
+if [ "$(id -u)" -eq 0 ]; then
+  echo "  (skipped: running as root, which can read a 0700 directory)"
+else
+  VS="$TMP/vault-shut"; mkdir -p "$VS"; chmod 0700 "$VS"; chmod 0000 "$VS"
+  SPOOL="$TMP/spool"; mkdir -p "$SPOOL"
+  echo "hello" > "$TMP/DOC.md"
+
+  OUT="$(PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" \
+         BIBLIOTHECAIRE_VAULT="$VS" CONSIGNE_SPOOL="$SPOOL" \
+         "$CONSIGNE" "$TMP/DOC.md" 2>&1)"; rc=$?
+  check "an unreadable vault spools instead of blinding" "$rc" "0"
+  has   "and says SPOOLED, not DEPOSITED"      "$OUT" "SPOOLED"
+  has   "and says the OPPOSITE of the impl's safe-to-remove report" "$OUT" "NOTHING is safe to remove"
+  has   "and says the deposit has NOT happened yet"   "$OUT" "NOT yet deposited"
+
+  n="$(find "$SPOOL" -maxdepth 1 -type f -name 'req-*' | wc -l | tr -d ' ')"
+  check "one request landed in the spool" "$n" "1"
+  REQ="$(find "$SPOOL" -maxdepth 1 -type f -name 'req-*' | head -1)"
+  has "the request names the absolute source path" "$(cat "$REQ")" "$TMP/DOC.md"
+  has "the request names the depositing account"   "$(cat "$REQ")" "$(id -un)"
+  hasnt "the request carries no prose -- only a pointer" "$(cat "$REQ")" "hello"
+
+  if [ -f "$ARGV_LOG" ]; then
+    hasnt "consign-prose was not run against the closed vault" "$(cat "$ARGV_LOG")" "$VS"
+  fi
+
+  OUT="$(PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" \
+         BIBLIOTHECAIRE_VAULT="$VS" CONSIGNE_SPOOL="$TMP/no-such-spool" \
+         "$CONSIGNE" "$TMP/DOC.md" 2>&1)"; rc=$?
+  check "a closed vault with NO spool is BLIND, never a silent success" "$rc" "6"
+  has   "and names the provisioner as the remedy" "$OUT" "vault-group-provision"
+
+  OUT="$(PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" \
+         BIBLIOTHECAIRE_VAULT="$VS" CONSIGNE_SPOOL="$SPOOL" \
+         "$CONSIGNE" "$TMP/no-such-doc.md" 2>&1)"; rc=$?
+  check "a source that does not exist is caught HERE, not at 03:00 in the drainer" "$rc" "2"
+
+  chmod 0755 "$VS"
+fi
+
+has "the spool default is the FHS location beside the vault" "$SRC_TEXT" "CONSIGNE_SPOOL_DEFAULT=/srv/vault-spool"
 
 echo
 summary

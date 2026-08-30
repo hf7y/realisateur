@@ -26,6 +26,9 @@ case "$MODE" in --check|--land) ;; *) echo "usage: $0 [--check|--land]" >&2; exi
 # One name for "where projects live", shared with install-verbs.sh, verb-set.sh
 # and installe -- four tools that must not be able to disagree about this.
 PROJECTS="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}"
+# The host's own copy of the bootstrap and provisioning tools, spelled the same
+# way setup-selfdev-project.sh spells it. Nothing here runs out of a clone.
+LIBEXEC="${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}"
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
 GH_OWNER="${SELFDEV_GH_OWNER:-$GH_ESTATE_OWNER}"
 
@@ -162,9 +165,16 @@ clone_or_update() {
   fi
 }
 
-# The two that must exist before anything can be derived from them.
-clone_or_update realisateur "https://github.com/$GH_OWNER/realisateur.git"
-clone_or_update scheduler   "https://github.com/$GH_OWNER/scheduler.git"
+# SCHEDULER ONLY, and load-bearing per account: its schedule/<p>.conf files are
+# the registry the loop below derives every other repo from, and
+# _paced.<host>.conf dispatches out of the account's OWN checkout.
+#
+# REALISATEUR IS NOT CLONED HERE (#134, quoted in bin/lib/propagation-set.sh):
+# "Self-dev accounts do NOT pull fresh clones of realisateur ... everything
+# they use reaches them through the nightly verb build." What this script needs
+# it takes from $LIBEXEC below; the account that OWNS realisateur gets its
+# checkout from the derived loop, out of schedule/realisateur.conf's REPO_URL.
+clone_or_update scheduler "https://github.com/$GH_OWNER/scheduler.git"
 
 # EVERY OTHER REPO IS DERIVED, NOT TYPED. schedule/<p>.conf already declares
 # REPO_URL per project -- that IS the registry. A typed list here would be a
@@ -177,37 +187,22 @@ for p in ${SELFDEV_PROJECTS:-senechal ecosim}; do
   clone_or_update "$p" "$url"
 done
 
-# The chicken-and-egg, broken exactly the way install-verbs.sh already prints:
-# installe is itself a verb, and it is the tool that installs verbs. ONE
-# hand-made symlink, in one place, and every subsequent write goes through it.
+# THE CHICKEN-AND-EGG: installe is itself a verb, and it is the tool that
+# installs verbs. So no build present means one gets installed here, by the
+# script that OWNS the verb-build layout -- never by an `ln -sf` of our own,
+# which would make this a third reader of it (propagation.test.sh case 6b).
 #
-# NO WORKTREE HERE. `installe` installs from the pinned build manifest, not a
-# <project>-verbs worktree, and hf7y/realisateur#69 ended worktree creation
-# estate-wide.
-# bin/install-verb-build.sh's own header states the same supersession from the
-# other end: "A verb today is a symlink into a bashified WORKTREE of a full
-# dev clone ... A build depends on no dev checkout at all -- which is the
-# whole point."
+# TRAP: if that cannot happen -- no credential for the meta-repo, no network --
+#   the installer exits non-zero (3 is its BLIND) and this reports BAD rather
+#   than going on to install-verbs.sh with no installe to route through.
 #
-# AND IT NO LONGER HAND-BUILDS THE SYMLINK EITHER. The replacement is not
-# "ln -sf into the build directory" -- that would make this a third reader of
-# the verb-build layout, and bin/tests/propagation.test.sh case 6b asserts that
-# only the two scripts that OWN that layout resolve it, because "which build am
-# I on" answered independently in several places is the one-fact-two-readers
-# shape vault:realisateur/MONKEY.md found five times in one day. The layout's owner is
-# bin/install-verb-build.sh, and it already does exactly this job, atomically,
-# refusing a build it could not fully verify. So the bootstrap became a call to
-# it rather than a reimplementation of its last step.
-#
-# ON A GENUINELY BARE HOST this now FIXES the chicken-and-egg instead of
-# describing it: no build present means one gets installed here. If that
-# cannot happen -- no credential for the private meta-repo, no network -- the
-# installer exits non-zero (3 is its BLIND) and this reports BAD rather than
-# proceeding to install-verbs.sh with no installe to route through.
+# BOTH RUN FROM $LIBEXEC, never from a clone. wire-release-channel.sh --host
+# --apply puts them there, and setup-selfdev-project.sh already refuses to
+# reach this script until it has (it needs $LIBEXEC/selfdev-gh-app.sh at 4/8).
 if ! command -v installe >/dev/null 2>&1; then
-  if [ -x "$PROJECTS/realisateur/bin/install-verb-build.sh" ]; then
+  if [ -x "$LIBEXEC/install-verb-build.sh" ]; then
     act "installe: bootstrap by installing the pinned verb build"
-    if "$PROJECTS/realisateur/bin/install-verb-build.sh" --latest --apply --link; then
+    if "$LIBEXEC/install-verb-build.sh" --latest --apply --link; then
       command -v installe >/dev/null 2>&1 \
         && ok "verb build installed; installe on PATH" \
         || bad "the verb build installed but installe is still not on PATH"
@@ -215,19 +210,19 @@ if ! command -v installe >/dev/null 2>&1; then
       bad "could not install a verb build (see above) -- no verb can be installed on this host"
     fi
   else
-    bad "no $PROJECTS/realisateur/bin/install-verb-build.sh -- cannot obtain a verb build, so no verb can be installed"
+    bad "no $LIBEXEC/install-verb-build.sh -- cannot obtain a verb build, so no verb can be installed. Install the host tools first: sudo wire-release-channel.sh --host --apply"
   fi
 else ok "installe already on PATH"; fi
 
-# NO SHIM STEP. #264 got off shims (2026-08-18) and #511 deleted the installer;
-# this block outlived both and was the last thing in the estate still trying to
-# run it. User commands and hooks ride the verb build instead -- carried in
-# bin/lib/carries.tsv, installed by install-verb-build.sh below -- and the
-# settings.json half is selfdev-hooks-provision.sh, run by root as its own step.
-if [ -x "$PROJECTS/realisateur/bin/install-verbs.sh" ]; then
+# NO SHIM STEP (#264, #511). User commands and hooks ride the verb build --
+# carried in bin/lib/carries.tsv, installed by install-verb-build.sh above --
+# and the settings.json half is selfdev-hooks-provision.sh, root's own step.
+if [ -x "$LIBEXEC/install-verbs.sh" ]; then
   act "install-verbs.sh --apply (every write routed through installe)"
-  "$PROJECTS/realisateur/bin/install-verbs.sh" --apply \
+  "$LIBEXEC/install-verbs.sh" --apply \
     && ok "verb surface installed" || gap "install-verbs.sh reported gaps -- read them above"
+else
+  gap "no $LIBEXEC/install-verbs.sh -- the verb surface was not checked (sudo wire-release-channel.sh --host --apply)"
 fi
 
 # --- stop here ---------------------------------------------------------------

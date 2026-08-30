@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# zaxon.sh -- the ask_zach call in ONE place; monkey-watch.sh and
-# monkey-vdi-to-internal.sh each held a copy and had drifted. crt's `demande`
-# verb is the estate-wide door. NEVER FATAL: a recovery that aborts because it
-# could not announce itself is worse than a silent one.
+# zaxon.sh -- the ask_zach call in ONE place. crt's `demande` verb is the
+# estate-wide door. NEVER FATAL: a recovery that aborts because it could not
+# announce itself is worse than a silent one.
+# 140 CHARS, REFUSED NOT TRUNCATED -- and the rendered length counts the
+# `[<from_agent>] ` tag, so a long from_agent spends the budget (ZAXON_MAX=110).
 
 # Same ordering as zaxon_ask, for the same reason.
 zaxon_probe() {
@@ -20,9 +21,8 @@ zaxon_ask() {
   local msg="$1" from="${2:-agent}" url hdr sid body tid
   hdr="$(mktemp)"; body="$(mktemp)"
   # TAILNET FIRST: zaxon runs on dexter, so 127.0.0.1 answers only when the
-  # caller IS dexter. Listing loopback first reads as "loopback is the primary
-  # route", which is how "zaxon is unreachable from monkey" keeps being
-  # re-derived about a relay that answers.
+  # caller IS dexter. Loopback listed first reads as the primary route, which
+  # is how "zaxon is unreachable from monkey" keeps being re-derived.
   for url in ${ZAXON:-http://100.107.253.56:8643/mcp http://127.0.0.1:8643/mcp}; do
     : > "$hdr"
     curl -s -D "$hdr" -o /dev/null --connect-timeout 5 -m 20 -H 'Content-Type: application/json' \

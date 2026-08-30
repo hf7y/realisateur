@@ -3,7 +3,7 @@
 # run-suites.quarantine) still prints loud but does not fail the exit code.
 # Gives a suite gone red under time pressure a one-line lever instead of
 # dropping the whole `suites` required check, which is what #125 did (#316).
-# Caller globs, not this file -- suite-docs-lint.sh's "no suite named" check still holds.
+# Caller globs, not this file.
 #
 # usage:  run-suites.sh <suite-path>...
 # exit 0  ran; nothing failed, or every failure was quarantined

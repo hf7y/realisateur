@@ -7,16 +7,12 @@
 # ---------------
 # `installe` (senechal's verb) is the mechanism: it links one verb into
 # ~/.local/bin, records it in a manifest, refuses to clobber anything it does
-# not own, and can retire what it installed. It works, it is on PATH, and it
-# owns 23 bashified verbs today. This script does NOT replace it and never
-# creates a link itself -- every write goes through `installe`.
-# THE RULE THIS ENFORCES, from DEXTER-MIGRATION-NOTES-20260729.md:
+# not own, and can retire what it installed. This script does NOT replace it
+# and never creates a link itself -- every write goes through `installe`.
+# THE RULE THIS ENFORCES:
 #   check the DECLARED set, never the intersection, or absence reports clean.
-# scheduler/bin/deploy-drift-check.sh checks the intersection: it iterates its
-# own bin/ and `continue`s when the installed file is absent, so a link that
-# SHOULD exist but does not is never iterated over. With no overlap at all it
-# prints "nothing to check" and exits 0 -- an exit-0 no-op inside the guard
-# meant to catch deploy problems.
+# An intersection walk cannot see an ABSENT link -- it never iterates the file
+# that is not there -- so with no overlap at all it reports clean.
 
 set -uo pipefail
 
@@ -125,7 +121,7 @@ fi
 
 # ------------------------------------------------------------- registration --
 # THE CLASSIFICATION, RE-CHECKED. A verb is a UTILITY's finished form; a
-# product's finished form is an event outside the computer (vault:realisateur/WAITING-ROOM.md).
+# product's finished form is an event outside the computer.
 SCHEDULE_DIR="${SCHEDULE_DIR:-$PROJECTS/scheduler/schedule}"
 note "-- registration (the registry is what 'utility' means here) -----------"
 if [ ! -d "$SCHEDULE_DIR" ]; then

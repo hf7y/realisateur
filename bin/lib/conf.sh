@@ -2,13 +2,9 @@
 # conf.sh -- read a scheduler conf's PROJECT_REPO_PATH, EXPANDED.
 #
 # TRAPS (the rest of this header is in the vault):
-# THE FOUR THIS HEADER USED TO NAME AS STILL BROKEN are settled (#73), two of
-# them by DELETION: milestone-audit.sh and install-silence-audit.sh were
-# RETIRED in b3fef3d, closeout-lint.sh was fixed in place, session-marker.sh
-# converted here. The sweep found three MORE the list never named --
-# reach-lint.sh -- which is the
-# argument for a ratchet over a list, so bin/tests/conf.test.sh section C now
-# scans the tree for the shape and no prose here has to be kept accurate.
+# THE LIST THIS HEADER USED TO KEEP is gone (#73): a ratchet beats a list, so
+# bin/tests/conf.test.sh section C scans the tree for the unexpanded-$HOME
+# shape and no prose here has to be kept accurate.
 # Expansion is deliberately LIMITED to $HOME and ${HOME}. `eval` would expand
 # anything, and a conf is a file this repo does not own on a host it may not
 # own either; command substitution inside one must not become code this script

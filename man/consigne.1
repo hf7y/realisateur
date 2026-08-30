@@ -170,6 +170,53 @@ says so; it does not quietly deposit nothing.
 Seconds to wait for the vault's write lock before giving up. Default 30.
 Applies to a plain deposit and to
 .BR "consigne lock" .
+.TP
+.B CONSIGNE_SPOOL
+Where a deposit REQUEST goes when the vault is not readable from this account.
+Default
+.IR /srv/vault-spool .
+See
+.B "THE SPOOL"
+below.
+.SH "THE SPOOL"
+Zach, 2026-08-29 and again 2026-08-30: the vault is an archive, and agents do
+not read it. Where that decision has been applied
+.RI ( hf7y/realisateur #742),
+.I /srv/ecosystem1\-vault
+is
+.B 0700
+and no self-dev account can read it by any route.
+.PP
+Writing is unaffected, and this is how. The deposit itself reads the vault
+three ways \(em the not-a-repo refusal, the overwrite refusal and the read-back
+gate, all inside
+.IR lib/consign\-prose.sh .
+Git cannot write a tree it cannot read, so on such a host
+.B consigne
+does not deposit: it writes a REQUEST naming the absolute source paths into a
+spool that is writable and executable but
+.B not listable
+(mode 1730), and
+.I bin/vault\-spool\-drain.sh
+runs that same unmodified mechanism against the real vault, later, as a user
+that can read it. The spool holds no prose \(em only pointers.
+.PP
+It prints
+.B SPOOLED
+rather than
+.BR DEPOSITED ,
+and it does
+.B not
+print the impl's
+.RI \(lq "safe to remove from the source repository" \(rq
+line. Nothing is safe to remove until the drain reports a deposit; a caller
+that deleted a source on the strength of a queued request would have destroyed
+the only copy.
+.PP
+There is no flag and no flag day. The switch is the vault's own mode, measured
+at each invocation: while this account can read the vault,
+.B consigne
+deposits exactly as it always did.
 .SH "EXIT STATUS"
 Byte-identical to
 .BR fonde 's
@@ -177,7 +224,7 @@ own contract, because on the deposit path it is literally the same process's
 exit code, unwrapped.
 .TP
 .B 0
-kept \(em deposited, or status read cleanly.
+kept \(em deposited, or spooled for deposit, or status read cleanly.
 .TP
 .B 2
 usage \(em bad arguments, or a path that does not exist.
