@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -uo pipefail  # stop-residue-gate.sh: Stop guard one scope up from SubagentStop (#681 SS1), same CONTRACT as hooks/subagent-closeout.sh; #681's unfiled-finding half is deliberately not attempted
+set -uo pipefail  # stop-residue-gate.sh: Stop guard one scope up from SubagentStop (#681 SS1), same CONTRACT as hooks/subagent-closeout.sh; #681's unfiled-finding half is completion_claims(), refiled as #752
 
 log() { printf 'stop-residue-gate: %s\n' "$*" >&2; }
 
@@ -35,6 +35,18 @@ human_step_violations() { # <this-turn's assistant text> -> one line per HUMAN-S
   '
 }
 
+completion_claims() { # <this turn's assistant text> -> one tagged line per act the turn CLAIMS; P=done, F=promised (#752, #681 2.1)
+  awk '
+    { s = tolower($0); gsub(/\047/, "", s); sub(/^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+/, "", s)
+      if (s ~ /(^|[.!?] )i( ?ve| have)? (just |now )?(filed|committed|pushed|merged|landed|fixed|patched|deleted|removed)([ ,.]|$)/ ||
+          s ~ /(^|[.!?] )i( ?ve| have)? (just |now )?(opened|created|raised)[^.!?]*(issue|pull request|pr[ .,]|#[0-9])/ ||
+          s ~ /(^|[.!?] )(filed|landed) (it |this )?as #[0-9]/)
+        print "P" substr($0, 1, 140)
+      else if (s ~ /(^|[.!?] )i( ?ll| will) (also |then |next |now )?(file|open|commit|push|create|fix|land|delete|remove)([ ,.]|$)/)
+        print "F" substr($0, 1, 140) }
+  '
+}
+
 if [ -n "$transcript" ] && [ -r "$transcript" ] && command -v jq >/dev/null 2>&1; then
   turn_text="$(jq -rs '
     . as $all |
@@ -52,6 +64,41 @@ if [ -n "$transcript" ] && [ -r "$transcript" ] && command -v jq >/dev/null 2>&1
       echo
       echo "verified: is the load-bearing field -- state HOW you confirmed the target system will"
       echo "accept this, even if the honest answer is that you have not checked yet. Then check."
+    } >&2
+    exit 2
+  fi
+
+  turn_acts="$(jq -rs '
+    . as $all |
+    ([range(0; length) | select($all[.].type == "user" and ($all[.] | has("toolUseResult") | not))] | last) as $b |
+    if $b == null then empty else
+      $all[($b + 1):][] | select(.type == "assistant") | (.message.content // [])[] | select(.type == "tool_use") |
+      if .name == "Bash" then (.input.command // "") else .name end
+    end
+  ' "$transcript" 2>/dev/null)" || turn_acts=""
+  claim_report=""
+  if ! grep -qE '^(Write|Edit|NotebookEdit)$|git +commit|git +push|gh +(issue|pr) +(create|comment)|gh +api.*(issues|pulls)|notify-senechal' <<<"$turn_acts"; then
+    while IFS= read -r claim; do
+      case "$claim" in P*)  # a done-claim naming an artifact this transcript has already seen is a citation, not a fresh claim
+        cite="$(grep -oE '#[0-9]+|/(issues|pull)/[0-9]+' <<<"$claim" | grep -oE '[0-9]+' | sed -n 1p)"
+        if [ -n "$cite" ]; then  # gh issue create prints a URL, not #N, so the number is the identity
+          seen="$(grep -vF '"type":"assistant"' "$transcript" | grep -cE "[#/]$cite([^0-9]|\$)")"
+          [ "${seen:-0}" -gt 0 ] && continue
+        fi ;;
+      esac
+      claim_report+="  ${claim#?}"$'\n'
+    done < <(completion_claims <<<"$turn_text")
+  fi
+  if [ -n "$claim_report" ]; then
+    {
+      echo "BLOCKED: this turn states an act that its own tool calls do not show."
+      echo
+      printf '%s' "$claim_report"
+      echo
+      echo "Fix it in the turn you found it; file only what you cannot reach. Do the act"
+      echo "NOW -- Edit, git commit, gh issue create, gh pr create -- or cite the artifact"
+      echo "that already carries it (#N, or a URL this transcript has seen). A finding"
+      echo "stated in a reply and left there dies with the transcript."
     } >&2
     exit 2
   fi
