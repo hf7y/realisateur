@@ -14,6 +14,9 @@ if command -v man >/dev/null 2>&1; then
   has "A3 the fstab fix keeps its sed delimiters and ampersand" "$R" "sed -i 's|^/dev/disk/by-uuid|#&|; s|^/swapfile|#&|' /etc/fstab"
   has "A4 the rehearsal still drops tailscaled.state" "$R" '--exclude=./var/lib/tailscale/tailscaled.state'
   has "A5 --terminate is named, and --shutdown is named as the hazard" "$R" 'wsl --terminate'
+  has "A7 the rehearsal masks the runners before systemd can start them" "$R" "systemctl mask 'actions.runner.*' tailscaled cron"
+  has "A8 ...and says why: they would contend with the live fleet's agents" "$R" "SAME agents as the live monkey"
+  has "A9 --shutdown's blast radius names the human channel" "$R" "zaxon-relay-mcp.service"
 else
   ok "A1-A5 skipped: no man(1) on this runner"
 fi
