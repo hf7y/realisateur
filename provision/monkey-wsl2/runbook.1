@@ -73,6 +73,9 @@ D:  2.6T free  every large write goes here, never to C:
 monkey.vbox is on D: while monkey.vdi is on C: \- the VM is split across drives
 distros: docker\-desktop (DEFAULT), Ubuntu, hermes \- and hermes is NOT spare:
   it holds ask_zach, the WhatsApp watcher and whisper (senechal#557)
+ALL distros share ONE network namespace, net:[4026531833] \- measured, identical
+  inode from Ubuntu and hermes. So a distro's ports are the estate's ports.
+  taken: 2223 8643 8090 3000 8642 53. FREE: 22, which is what monkey binds.
   a bare `wsl \-d' with no name hits docker\-desktop, not yours
 Ubuntu and hermes BOTH report hostname `dexter'; /etc/wsl.conf is per\-distro
 monkey guest: systemd\-networkd and systemd\-resolved ACTIVE, / mounted by UUID,
@@ -122,14 +125,42 @@ ON dexter, Windows route. Imports land on D:, never C:
     D:\ewsl\-migration\emonkey\-rehearsal.tar
   wsl.exe \-d monkey\-rehearsal \-u root \-\- /bin/true
 .fi
+.SS The first boot is the safe window, and it is the only one
+monkey carries no /etc/wsl.conf \- it has never been a distro \- so the FIRST
+.B wsl \-d
+boots WITHOUT systemd, because systemd=true is off by default. Nothing of
+monkey's starts. That is the one window in which to disarm what must not run,
+and it closes the moment section 2 writes a wsl.conf.
 .PP
-Apply section 2's fixes inside it, then record what actually happened:
+.B MASK THE RUNNERS BEFORE ANYTHING ELSE, OR THE REHEARSAL ATTACKS THE FLEET.
+monkey has 12 enabled actions.runner units holding registered agent names
+(monkey\-senechal, agentId 21, and eleven more). Under systemd they would
+connect to GitHub as the SAME agents as the live monkey and contend for its
+jobs. The rehearsal is meant to cost nothing; this is how it would cost the
+fleet instead.
 .nf
 
+  wsl.exe \-d monkey\-rehearsal \-u root \-\- \e
+    systemctl mask 'actions.runner.*' tailscaled cron
+.fi
+.PP
+tailscaled and cron are masked for the same reason: the rehearsal must not
+reach the tailnet or fire monkey's crontabs. Only then apply section 2's fixes,
+restart, and record what actually happened:
+.nf
+
+  wsl.exe \-\-terminate monkey\-rehearsal
   wsl.exe \-d monkey\-rehearsal \-u root \-\- systemctl is\-system\-running
   wsl.exe \-d monkey\-rehearsal \-u root \-\- systemctl list\-units \-\-state=active
+  wsl.exe \-d monkey\-rehearsal \-u root \-\- systemctl is\-enabled tailscaled
   wsl.exe \-d monkey\-rehearsal \-u root \-\- tailscale \-\-version
 .fi
+.PP
+The tailscale question the rehearsal exists to answer is whether tailscaled can
+run inside a distro at all under networkingMode=mirrored \- not whether it can
+take monkey's identity. Test it with a FRESH auth key against a throwaway node
+name, never with monkey's state. dexter's own tailscaled runs on WINDOWS,
+OUTSIDE WSL, so it proves nothing about this.
 .PP
 Write the answers to rehearsal\-verdict.tsv, then tear it down:
 .nf
