@@ -16,7 +16,7 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$HERE/lib/vmhost.sh"   # for vmhost_pause_eval only -- #704's declared pause
+. "$HERE/lib/vmhost.sh"   # vmhost_pause_eval for #704's declared pause; vmhost_running_vms_cmd because the probe runs on the VM host, not here
 
 HOST="${DEXTER_HOST:-dexter}"
 JSON=0
@@ -67,7 +67,7 @@ probe="$(ssh -n -o ConnectTimeout=10 -o BatchMode=yes "$HOST" '
   sudo -n systemctl restart systemd-binfmt 2>/dev/null
   cd /mnt/c || exit 0
   echo "DISTROS=$(/mnt/c/Windows/System32/wsl.exe -l -q --running 2>/dev/null | tr -d "\0\r" | tr "\n" ",")"
-  echo "VMS=$("/mnt/c/Program Files/Oracle/VirtualBox/VBoxManage.exe" list runningvms 2>/dev/null | tr -d "\0" | sed "s/\" .*//;s/\"//" | tr "\n" ",")"
+  echo "VMS=$('"$(vmhost_running_vms_cmd)"' | tr "\n" ",")"
   echo "PAUSE_MONKEY=$(cat "$HOME/.local/state/vmhost-pause-monkey" 2>/dev/null | tr "\n" ";")"  # #704: joined with ";" to stay one line; vmhost_pause_dirs default path
   echo "WINBOOT=$(/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -Command "(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString(\"o\")" 2>/dev/null | tr -d "\0\r")"
 ' 2>/dev/null)" || { blind=1; }
