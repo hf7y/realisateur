@@ -46,17 +46,10 @@ def accounts():
     return sorted(p.pw_name for p in pwd.getpwall() if UID_LO <= p.pw_uid < UID_HI)
 
 
-# What this census does NOT cover, said in the document rather than left for a
-# reader to infer from an empty list. A survey scoped to the self-dev band and
-# reporting nothing outside it is "none where I looked", which exit-codes.sh
-# names as this estate's recorded pathology: "I could not look" reported as "I
-# looked and found nothing".
-#
-# It is not hypothetical. scheduler/examples/vkv-inventory-bug-sweep-loop.sh:8
-# recorded "There are none, verified 2026-08-10" for per-project wrapper
-# scripts. Two were running at that moment from /home/svc-vaporwave/bin/ on
-# uid 1001 -- outside this band, so invisible here and to any check that
-# enumerates accounts the way this does (hf7y/scheduler#368).
+# TRAP: this list is not a census of the host. Work runs outside the band --
+# two wrappers fired from /home/svc-vaporwave/bin/ on uid 1001 while
+# scheduler/examples/vkv-inventory-bug-sweep-loop.sh:8 recorded "none,
+# verified" (hf7y/scheduler#368). Published so a reader cannot infer coverage.
 def accounts_scope():
     return (f"uid {UID_LO}-{UID_HI - 1} only. Accounts outside this band are NOT "
             f"enumerated: this list is not a census of everything on the host that "
