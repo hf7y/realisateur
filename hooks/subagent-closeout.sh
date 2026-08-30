@@ -4,59 +4,40 @@
 # 76 uncommitted lines the next autocommit watcher was positioned to adopt
 # under a human's name). THE FLOOR gate 3.2. Owner: realisateur.
 #
-# CALLS `closeout-lint --strict --repo` rather than reimplementing a subset
-# inline: it also catches unpushed commits and host-only branches, which
-# `git status --porcelain` cannot see (the 2026-07-27 incident).
+# SCOPED TO THIS AGENT'S OWN CHANGES. In a shared checkout `git status` cannot
+# tell another session's in-progress files from this agent's. Unscoped, this
+# gate twice on 2026-08-29 charged an agent with 4 files (154 lines) a live
+# session was still writing, leaving it two exits: revert work it did not own,
+# or not exit. So the same script runs at SubagentStart (`--baseline`) to
+# record what was ALREADY dirty, and judges only the DELTA. Pre-existing dirt
+# is CONTEXT: never blocking, never attributed, never something this hook says
+# to revert or commit. NO BASELINE IS NOT "IT IS ALL YOURS": missing, stale or
+# unreadable warns instead -- losing a block beats losing someone else's work.
 #
-# SCOPED TO THIS AGENT'S OWN CHANGES. A shared checkout has other sessions in
-# it, and `git status` cannot tell this agent's work from a concurrent
-# session's in-progress files. Unscoped, this gate cornered an honest agent
-# twice on 2026-08-29: 4 files (154 lines) written by a live session read as
-# "your dirty tree", and the only exits on offer were reverting work it did
-# not own or not exiting at all. So the same script runs at SubagentStart
-# (`--baseline`) to record what was ALREADY dirty, and judges only the DELTA.
-# Pre-existing foreign dirt is CONTEXT: it never blocks, is never attributed,
-# and is never something this hook tells an agent to revert or commit.
-#
-# CONTRACT. Hook payload as JSON on stdin. Exit 0 lets the subagent stop.
-# Exit 2 BLOCKS the stop and feeds stderr back so it cleans up first.
-# `--baseline` (SubagentStart) records and always exits 0 -- a hook that
-# cannot mark the start must not stop a subagent from starting.
-#
-# NO BASELINE IS NOT "IT IS ALL YOURS". A missing, stale or unreadable
-# baseline degrades to a WARNING that names the ambiguity, never to a block
-# on work this hook cannot attribute: losing a block is recoverable, losing
-# another session's work is not.
-#
+# CONTRACT. Hook payload as JSON on stdin. Exit 0 lets the subagent stop, 2
+# BLOCKS it and feeds stderr back. `--baseline` records and always exits 0 --
+# a hook that cannot mark the start must not stop a subagent from starting.
 # FAILS LOUD, NOT OPEN: an unreadable payload or an unrecognized closeout-lint
-# exit code is exit 1 (visible, non-blocking), never a silent 0.
+# exit code is exit 1, never 0.
 #
-# --allow-blind: inside a linked worktree `git worktree list` reports the main
-# checkout, so BLIND is >= 1 BY CONSTRUCTION for any worktree-isolated session
-# and blocking on it would block every run. ecosim watches the BLIND
-# population instead -- normal in ones, alarming in tens.
-#
-# Degrades rather than hard-depending on closeout-lint --repo, because the
-# ~/.local/bin shim can lag main by a commit; the inline fallback keeps the
-# 2026-07-25 protection through that window, loudly.
+# `closeout-lint --strict --repo` is preferred where it exists: it also catches
+# unpushed commits and host-only branches, which `git status --porcelain`
+# cannot see (2026-07-27). --allow-blind: a linked worktree makes BLIND >= 1 BY
+# CONSTRUCTION, and ecosim watches that population instead.
 set -uo pipefail
 
 log() { printf 'subagent-closeout: %s\n' "$*" >&2; }
 
 payload="$(cat 2>/dev/null)" || { log "could not read hook payload from stdin"; exit 1; }
 
-# Loop guard: having blocked once this stop, do not block forever.
-#
-# Herestring, not a pipe. Under pipefail, `producer | grep -q` reads FALSE
-# precisely when it matched: grep -q closes the pipe on first match, the
-# producer takes SIGPIPE and returns 141, and pipefail promotes it. This bit
-# the capability probe below for real on 2026-08-02.
+# Loop guard: having blocked once this stop, do not block forever. Herestring,
+# not a pipe: under pipefail `producer | grep -q` reads FALSE precisely when it
+# matched (SIGPIPE, 141, promoted). It bit the capability probe on 2026-08-02.
 if grep -qE '"stop_hook_active"[[:space:]]*:[[:space:]]*true' <<<"$payload"; then
   exit 0
 fi
 
 # cwd is the SESSION's cwd, not necessarily the tree a subagent worked in.
-# Fall back to $PWD if the payload lacks it.
 cwd="$(sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p;q' <<<"$payload")"
 [ -n "$cwd" ] || cwd="$PWD"
 [ -d "$cwd" ] || { log "cwd from payload is not a directory: $cwd"; exit 1; }
@@ -68,8 +49,7 @@ command -v git >/dev/null 2>&1 || { log "git not on PATH -- cannot check tree st
 
 # --- the baseline: what was already dirty when this agent started -----------
 # $CLAUDE_JOB_DIR/tmp is LONG-LIVED ACROSS SESSIONS, so a baseline is keyed by
-# session (and agent, when the payload carries one) and read only while fresh.
-# A stale file is treated as no baseline at all, which warns rather than blocks.
+# session (and agent, when the payload has one) and read only while fresh.
 BASELINE_DIR="${CLAUDE_JOB_DIR:+$CLAUDE_JOB_DIR/tmp}"
 BASELINE_DIR="${BASELINE_DIR:-${TMPDIR:-/tmp}}/subagent-closeout-baselines"
 BASELINE_MAX_AGE_MIN="${SUBAGENT_BASELINE_MAX_AGE_MIN:-1440}"
@@ -78,9 +58,7 @@ json_field() { # json_field <name> <payload>
   sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p;q" <<<"$2"
 }
 
-# PATHS, not porcelain lines: a file already dirty at baseline as " M f" and
-# now "MM f" is the same foreign file, one status character apart. A rename
-# line carries two paths and both are spoken for.
+# PATHS, not porcelain lines: " M f" then and "MM f" now is one foreign file.
 porcelain_paths() {
   sed -e 's/^...//' | while IFS= read -r pp; do
     case "$pp" in
@@ -90,14 +68,9 @@ porcelain_paths() {
   done
 }
 
-# Resolved here, not at the lint branch below, because --baseline needs the
-# same probe: a finding closeout-lint already reported at the start of the run
-# is not this agent's either.
+# --baseline runs the same probe: a finding already there is not this agent's.
 LINT="$(command -v closeout-lint 2>/dev/null || true)"
-# Capture then match, rather than `"$LINT" --help | grep -q`. See the SIGPIPE
-# note on the loop guard above: that pipeline returned 141 under pipefail and
-# silently sent every invocation down the fallback path, which reported
-# "--repo is not installed" about a closeout-lint that had it.
+# Capture then match, not `--help | grep -q`: the SIGPIPE note above.
 lint_help=""
 [ -n "$LINT" ] && lint_help="$("$LINT" --help 2>/dev/null || true)"
 LINT_HAS_REPO=0
@@ -135,9 +108,8 @@ if [ "${1:-}" = "--baseline" ]; then
   exit 0
 fi
 
-# Newest fresh baseline for this session. Concurrent subagents share a
-# session_id when the payload carries no agent_id; the NEWEST names the most
-# pre-existing dirt, so of the candidates it is the one that accuses least.
+# Concurrent subagents share a session_id when the payload has no agent_id;
+# the newest baseline names the most pre-existing dirt, so it accuses least.
 BASELINE=""
 _sid="$(json_field session_id "$payload")"
 _aid="$(json_field agent_id "$payload")"
@@ -165,9 +137,8 @@ baseline_lint() {    # the findings closeout-lint ALREADY reported for <tree>
 }
 
 # #363: cwd misses a subagent that cloned or was worktree-isolated elsewhere.
-# The FILES are kept, not just their trees: in a tree the baseline never saw
-# (one this run created), a path the transcript shows this agent writing is
-# the one thing that can still be attributed to it.
+# The FILES are kept too: in a tree no baseline saw, only a path the
+# transcript shows this agent writing can be attributed to it.
 discover_written_files() {
   local transcript="$1"
   [ -n "$transcript" ] && [ -r "$transcript" ] || return 0
@@ -181,8 +152,7 @@ discover_written_files() {
   ' "$transcript" 2>/dev/null | sort -u
 }
 
-# A PR THIS RUN OPENED is the other half of "did the work land": the tree is
-# clean precisely because it was pushed to a branch nobody merged.
+# A PR THIS RUN OPENED is the other half of "did the work land".
 discover_opened_prs() {
   local transcript="$1"
   [ -n "$transcript" ] && [ -r "$transcript" ] || return 0
@@ -243,7 +213,6 @@ advice() {
   echo "Then report every file you touched, including the ones you reverted."
 }
 
-# The verdict, assembled the same way whichever probe produced the findings.
 own_report=""; foreign_report=""; unattr_report=""; own_total=0
 
 emit_verdict() { # emit_verdict <blocked-headline>
@@ -297,9 +266,8 @@ emit_verdict() { # emit_verdict <blocked-headline>
   exit 0
 }
 
-# A clean tree says the work was saved, not that it landed. Checked only
-# when the tracker can be read: a hook that cannot look must not become a
-# hook nobody can get past.
+# Checked only when the tracker can be read: a hook that cannot look must not
+# become impassable.
 pr_report=""
 if command -v gh >/dev/null 2>&1; then
   while IFS= read -r url; do
@@ -334,8 +302,6 @@ if [ -n "$pr_report" ]; then
 fi
 
 # --- preferred path: reuse the tool, do not reimplement it ------------------
-# $LINT / $LINT_HAS_REPO are resolved up with the baseline machinery, which
-# runs the same probe at SubagentStart.
 if [ "$LINT_HAS_REPO" -eq 1 ]; then
   for t in "${trees[@]}"; do
     git -C "$t" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
@@ -372,13 +338,9 @@ if [ "$LINT_HAS_REPO" -eq 1 ]; then
 fi
 
 # --- the inline dirty-tree check -------------------------------------------
-# NOT a degraded fallback waiting on an install. `closeout-lint` was deleted in
-# hf7y/realisateur#511 and the shim installer that placed it went with #264, so
-# there is no window and nothing to wait for. This branch is the only branch.
-#
-# The message here told every subagent to "run install-shims.sh once its --repo
-# support is on main" -- naming, on every single run, a script deleted three
-# days earlier. That is what hf7y/realisateur#572 was filed on.
+# NOT a fallback waiting on an install: #511 deleted `closeout-lint` and #264
+# its shim installer. #572 was filed on the message that used to tell every
+# run to reinstall that dead script.
 log "checking the working tree only."
 log "  UNPUSHED COMMITS AND HOST-ONLY BRANCHES ARE NOT CHECKED -- by subtraction, not by accident (#511)."
 [ -n "$BASELINE" ] || log "  NO BASELINE for this run -- changes this hook cannot attribute are reported, not charged to you."

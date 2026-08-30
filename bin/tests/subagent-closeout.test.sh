@@ -59,9 +59,7 @@ newrepo "$T/clean"
 A1_OUT="$(run "$T/clean")"; A1_RC=$?
 rc "A1 clean cwd, no transcript -> exit 0" 0 "$A1_RC"
 
-# A2 CHANGED with the 2026-08-29 scoping fix: with no baseline and no
-# transcript, nothing here is attributable to this run, and a hook that cannot
-# tell whose work it is must not demand it be cleaned up. It still SAYS so.
+# A2 CHANGED 2026-08-29: an unattributable change is not one to demand back.
 newrepo "$T/dirty"
 echo scratch > "$T/dirty/f.txt"
 A2_OUT="$(run "$T/dirty")"; A2_RC=$?
@@ -141,13 +139,11 @@ rc "G8 it blocks even with no closeout-lint on PATH (the fallback path)" 2 "$RC"
 
 section "H. scoped to THIS agent's changes (the 2026-08-29 shared-checkout bug)"
 
-JOB="$T/job"; mkdir -p "$JOB/tmp"
-# SubagentStart: same script, --baseline.
+JOB="$T/job"; mkdir -p "$JOB/tmp"   # SubagentStart is the same script, --baseline
 mark()  { payload "$1" "" "$2" "${3:-}" | CLAUDE_JOB_DIR="$JOB" "$SCRIPT" --baseline >/dev/null 2>&1; printf '%s' "$?"; }
 runb()  { payload "$1" "${4:-}" "$2" "${3:-}" | CLAUDE_JOB_DIR="$JOB" "$SCRIPT" 2>&1; }
 rcb()   { payload "$1" "${4:-}" "$2" "${3:-}" | CLAUDE_JOB_DIR="$JOB" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
 
-# (a) the agent's OWN dirty file still blocks -- the wanted half of the guard.
 newrepo "$T/own"
 RC="$(mark "$T/own" sess-a agent-a)"
 rc "H1a --baseline exits 0" 0 "$RC"
@@ -157,7 +153,6 @@ rc  "H1 own change after the baseline -> BLOCKED (2)" 2 "$H1_RC"
 has "H1 names it as YOURS" "$H1" "YOURS"
 has "H1 names the file"    "$H1" "mine.txt"
 
-# (b) a concurrent session's in-progress files, dirty BEFORE this run started.
 newrepo "$T/foreign"
 echo theirs > "$T/foreign/vmhost.sh"
 echo theirs > "$T/foreign/repose.sh"
@@ -170,7 +165,6 @@ hasnt "H2 does not accuse"                 "$H2" "BLOCKED"
 hasnt "H2 never tells it to revert them"   "$H2" "git restore"
 hasnt "H2 never tells it to commit them"   "$H2" "git commit"
 
-# (c) both: block on the agent's own, name only that one as its own.
 newrepo "$T/both"
 echo theirs > "$T/both/theirs.txt"
 mark "$T/both" sess-c agent-c >/dev/null
@@ -184,8 +178,6 @@ hasnt "H3 YOURS does not list the foreign file" "$H3_YOURS" "theirs.txt"
 has   "H3 the foreign file is context"      "$H3" "NOT YOURS"
 has   "H3 says to leave the foreign work alone" "$H3" "Leave these exactly as they are"
 
-# (d) no baseline: warn, do not block, do not accuse. A STALE baseline is no
-# baseline -- $CLAUDE_JOB_DIR/tmp outlives the session that wrote it.
 newrepo "$T/nobase"
 echo whoever > "$T/nobase/x.txt"
 H4="$(runb "$T/nobase" sess-d agent-d)"; H4_RC="$(rcb "$T/nobase" sess-d agent-d)"
@@ -200,15 +192,13 @@ touch -d '2 days ago' "$JOB/tmp/subagent-closeout-baselines/sess-e.agent-e"
 H5_RC="$(rcb "$T/stale" sess-e agent-e)"
 rc "H5 a baseline older than the max age is treated as no baseline" 0 "$H5_RC"
 
-# --baseline never blocks a subagent from STARTING, whatever it finds.
 RC="$(mark "$T/dirty" sess-f agent-f)"
 rc "H6 --baseline on a dirty tree still exits 0" 0 "$RC"
 RC="$(mark "$T" sess-g agent-g)"
 rc "H7 --baseline outside a repo still exits 0" 0 "$RC"
 
 section "I. closeout-lint's findings are scoped the same way"
-# The lint path sees what git status cannot (unpushed commits, host-only
-# branches). closeout-lint was deleted in #511, so this stubs it.
+# The lint path sees what git status cannot; #511 deleted it, so this stubs it.
 mkdir -p "$T/lintbin"
 cat > "$T/lintbin/closeout-lint" <<'EOF'
 #!/usr/bin/env bash
