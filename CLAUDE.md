@@ -1,11 +1,17 @@
 # CLAUDE.md
 
-## `vault:` in a citation is a remote, not a path
+## `vault:` is an ARCHIVE. Agents do not read it. (Zach, 2026-08-29)
 
-`vault:<project>/<file>` names a path inside the private
-**`hf7y/ecosystem1-vault`** remote. It is not on disk here — mandark holds no
-clone. Read one with `gh api repos/hf7y/ecosystem1-vault/contents/<path>`.
-Defined once in `PROSE-REAPING.md` §2; do not retype the resolution rule.
+`vault:<project>/<file>` names a path in the private **`hf7y/ecosystem1-vault`**
+remote. Recognise the notation; do not follow it. **The vault is where prose goes
+when it stops being true** — `consigne` deposits superseded text there
+(`basheur`, `retired-verbs-20260818`, `retired-claude-memory-20260829`, 26% of
+whose assessed files were FALSE). Reading it back is how a retired fact returns
+as documentation: on 2026-08-29 vault prose reached a subagent brief as "the
+registry says dexter is a laptop that sleeps" — it says `kind: windows-mini-pc`,
+`expect: always-on`. Establish facts from live code, config, or API; if you
+cannot, it is UNVERIFIED — say so and act on nothing. Writing (`consigne`) is
+unaffected. Deeper vault design: realisateur#762.
 
 ## Push permission (2026-08-14, reaped: main is a protected branch)
 
