@@ -284,12 +284,19 @@ fi
 prev_names="$(printf '%s\n' "$prev_rows" | awk -F'\t' 'NF>=2{print $1"\t"$2}' | sort -u)"
 check_shrink() {  # <curr-names>: project\tverb pairs, so a retirement can be subtracted BY NAME; 6a0 can shrink verb_count again after the first call (realisateur#703/#696)
   local curr_names="$1" missing unexplained
-  [ "$prev_count" -gt "$verb_count" ] || return 0
+  # DISAPPEARANCE IS A SET QUESTION, NOT A COUNT ONE (realisateur#699 point 1).
+  # This used to return early unless `prev_count > verb_count`, which put the
+  # name diff below behind the very comparison it was written to replace: lose
+  # one verb, gain another the same night, and the count never moves, so the
+  # diff never ran and the loss shipped silently. Substitution is the dangerous
+  # case precisely because it is invisible to counting. Gate on having a
+  # previous build to compare against, and let the diff decide.
+  [ -n "$prev_names" ] || return 0
   missing="$(comm -23 <(printf '%s\n' "$prev_names") <(printf '%s\n' "$curr_names" | sort -u))"
-  [ -n "$missing" ] || return 0   # count shrank but every prev name still present -- nothing to explain
+  [ -n "$missing" ] || return 0   # every previous name is still here -- nothing to explain, whatever the counts did
   unexplained="$(comm -23 <(printf '%s\n' "$missing") <(printf '%s\n' "$retired" | sort -u))"
   if [ -z "$unexplained" ]; then
-    say "  shrink of $((prev_count - verb_count)) verb(s) fully explained by bin/lib/retired-verbs.tsv:"
+    say "  loss of $(printf '%s\n' "$missing" | grep -c .) verb(s) fully explained by bin/lib/retired-verbs.tsv:"
     printf '%s\n' "$missing" | sed 's/^/    /' >&2
     return 0
   fi

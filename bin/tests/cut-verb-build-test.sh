@@ -518,5 +518,42 @@ check "...and the retired verb is gone from the manifest" \
       "$(grep -c "$(printf 'omega\tov2')" "$TMP/asm14g/manifest.tsv" 2>/dev/null)" "0"
 printf '#project\tverb\twhy\n' > "$TMP/retired-verbs.tsv"
 
+# 14h. SUBSTITUTION: one verb leaves, another arrives, the COUNT never moves.
+# This is realisateur#699's point 1 -- "a build that loses `discipline` and
+# gains any other verb the same night nets to 19 and passes silently". The
+# name diff below it is correct; what this pins is that the diff is actually
+# REACHED, rather than short-circuited by a count comparison that sees no
+# shrink. A steady count is not evidence that nothing vanished.
+mkrepo sigma sv1 sv2
+g -C "$FIX/sigma.git" rm -q bin/sv2 man/sv2.1
+cat > "$FIX/sigma.git/bin/sv3" <<'EOF'
+#!/usr/bin/env bash
+# KIND: verb
+. "$(dirname "$0")/../lib/verb.sh"
+printf 'sv3 -- fixture verb from sigma\n'
+EOF
+chmod +x "$FIX/sigma.git/bin/sv3"
+printf '.TH sv3 1\n' > "$FIX/sigma.git/man/sv3.1"
+g -C "$FIX/sigma.git" add -A
+g -C "$FIX/sigma.git" commit -m 'sigma: sv2 out, sv3 in -- same verb count'
+printf 'sigma\n' > "$TMP/repolist"
+printf 'sigma\tsv1\nsigma\tsv2\n' > "$TMP/published14h"
+
+FIXTURE_PUBLISHED="$TMP/published14h" \
+  cut --assemble "$TMP/asm14h" >/dev/null 2>"$TMP/e14h"
+check "an undeclared SUBSTITUTION is refused though the count is unchanged" "$?" "1"
+case "$(cat "$TMP/e14h")" in
+    *"sigma"*"sv2"*) ok "...and it names the verb that vanished under a steady count" ;;
+    *) bad "the refusal names the substituted-out verb" "got: $(cat "$TMP/e14h")" ;;
+esac
+
+# ...and the same substitution, once DECLARED, is accepted -- the acceptance
+# path must not depend on the count having dropped either.
+printf '#project\tverb\twhy\nsigma\tsv2\tfixture: substituted out\n' > "$TMP/retired-verbs.tsv"
+FIXTURE_PUBLISHED="$TMP/published14h" \
+  cut --assemble "$TMP/asm14h2" >/dev/null 2>"$TMP/e14h2"
+check "a DECLARED substitution is accepted" "$?" "0"
+printf '#project\tverb\twhy\n' > "$TMP/retired-verbs.tsv"
+
 echo
 summary
