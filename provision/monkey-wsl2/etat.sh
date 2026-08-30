@@ -36,7 +36,7 @@ else
   fi
 fi
 
-v=bin/lib/vmhost.sh
+v="$HERE/../../bin/lib/vmhost.sh"
 if [ -r "$v" ]; then
   miss=""
   for fn in vmhost_disk_raw vmhost_screenshot vmhost_logdir; do
