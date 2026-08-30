@@ -157,6 +157,7 @@ selfdev-app-key.sh
 selfdev-claude-token.sh
 selfdev-permissions-provision.sh
 selfdev-hooks-provision.sh
+unland-realisateur-clone.sh
 install-verbs.sh
 stamp-verb-build.sh
 vault-group-provision.sh
@@ -180,8 +181,7 @@ PROP_PAYLOAD_PENDING="
 PROP_LEAK_BOUND=7
 
 # --- LOCAL: never leaves this repo ------------------------------------------
-# publish-release-verdict.sh is LOCAL because it runs in the release pipeline
-# (GitHub Actions checks realisateur out to get it), not
+# publish-release-verdict.sh is LOCAL because it runs in the release pipeline.
 #
 # "NEVER LEAVES THIS REPO" IS NOT "NEVER RUNS ANYWHERE ELSE", and reading it
 # that way cost the estate its only outside observer. A LOCAL script reaches a
@@ -215,9 +215,6 @@ reprise.sh
 # reprise.sh is LOCAL for the same reason and one more: its subject is
 # bin/lib/handoffs.tsv, which is THIS repo's ledger of what it has given away.
 # On another account it would be a tool with nothing to read.
-# repo-settings-provision.sh is LOCAL: its subject is the FLEET (it walks the
-# whole registry), and a per-account copy would be many writers on one
-# setting. It also needs admin on someone else's repo, which self-dev
 
 # prop_host_tools -- what a provisioned host carries under
 # /usr/local/libexec/selfdev beyond the bootstrap: the verb a human types and

@@ -18,23 +18,61 @@
 #   BAD-DEFAULT         a DEFAULT-AFTER line that is not `<n>d: <action>`
 #   BAD-ANSWERED-BY     an ANSWERED-BY line that is not `<owner>/<repo>#<n>`
 #   NO-DEFAULT          a DECISION: body carrying no DEFAULT-AFTER at all
+#   NEGATED-CLOSE       a closing keyword + reference in a sentence DENYING it
 #
-# DEFAULT-AFTER -- MANDATORY ON A DECISION SINCE #680 (Zach, 2026-08-28).
+# DEFAULT-AFTER -- MANDATORY ON A DECISION SINCE #680 (Zach, 2026-08-28),
+# because 21 of 45 open `needs-human` blocked by omission. Past the window the
+# owning account applies it, says so, and leaves the issue open to be
+# reversed; `0d: block` keeps blocking forever legal once DECLARED. Only
+# gh-sign's SIGNING path reaches this, so it binds agents, not Zach.
 #
-#     DEFAULT-AFTER 14d: <the reversible thing to do if nobody answers>
-#     DEFAULT-AFTER  0d: block -- irreversible, no default
+# NO-OWNER: is not a destination -- #327 lost two that way. `defere` files one.
 #
-# Unanswered past the window the owning account applies it, says so, and
-# leaves the issue open to be reversed. Blocking forever stays legitimate; it
-# is now DECLARED, because 21 of 45 open `needs-human` blocked by omission.
-# Only gh-sign's SIGNING path reaches this, so it binds agents, not Zach. The
-# companion rule -- if the body argues for an option, that option IS the
-# default -- is NOT here: grammar cannot decide it.
-#
-# NO-OWNER: is not a destination -- #327 deferred two things to it and both
-# are lost. `defere` files one in a command; cite the number.
+# NEGATED-CLOSE -- the parser reads the KEYWORD, not the sentence. Under a
+# heading titled "What this is not", hf7y/scheduler#180 said it did NOT close
+# scheduler#79; GitHub shut the ROSTER consolidation anyway. A BARE reference
+# shuts nothing, so the remedy is to drop the verb -- which is why this is NOT
+# a ban (Zach 2026-08-04: batch agents shut shipped issues automatically).
 
 GRAMMAR_DECIDER_RE='@[A-Za-z0-9][-A-Za-z0-9_/]*'
+GRAMMAR_CLOSING_WORDS=' close closes closed closing fix fixes fixed fixing resolve resolves resolved resolving '
+
+grammar_negated_close() {  # <line> <heading-negates> -- print "<keyword> <ref>", 1 if clean
+  local text="$1" heading_negates="$2" out='' words=() i w ref prefix=''
+  local IFS=$' \t\n'
+
+  while [ -n "$text" ]; do   # a code span is a quotation, not a close
+    case "$text" in *'`'*) ;; *) out="$out$text"; break ;; esac
+    out="$out${text%%'`'*}"; text="${text#*'`'}"
+    case "$text" in
+      *'`'*) text="${text#*'`'}" ;;
+      *)     out="$out$text"; break ;;   # unterminated: it is literal text
+    esac
+  done
+
+  read -ra words <<<"$out"
+  for ((i = 0; i < ${#words[@]} - 1; i++)); do
+    w="${words[i],,}"; w="${w%:}"; w="${w%,}"
+    case "$GRAMMAR_CLOSING_WORDS" in *" $w "*) ;; *) prefix="$prefix$w "; continue ;; esac
+    ref="${words[i + 1]}"
+    case "$ref" in
+      '#'[0-9]*) ;;                                    # bare #79 -- with a verb
+      *[a-zA-Z0-9]/[a-zA-Z0-9]*'#'[0-9]*) ;;           # hf7y/scheduler#79
+      *://*/issues/[0-9]*|*://*/pull/[0-9]*) ;;        # the full URL
+      *) prefix="$prefix$w "; continue ;;
+    esac
+    if [ "$heading_negates" -eq 1 ]; then :
+    else case "$prefix" in   # `not ` covers "does not", "do not", "cannot"
+        *'not '*|*"doesn't "*|*"don't "*|*"won't "*|*'never '*|*'without '*|\
+        *'rather than '*|*'instead of '*|*'no longer '*) ;;
+        *) prefix="$prefix$w "; continue ;;
+      esac
+    fi
+    printf '%s %s\n' "$w" "$ref"
+    return 0
+  done
+  return 1
+}
 
 # grammar_default_after <body> -- print "<days><TAB><action>" and return 0 when
 # the body carries a well-formed DEFAULT-AFTER; return 1 when it carries none.
@@ -129,12 +167,11 @@ grammar_check() {
   local body="$1" line stripped n=0 lineno=0 first_seen=0
   local open=0 in_block=0 entries=0 entry='' fenced=0
   local sopen=0 in_ship=0 ships=0 ship='' indent=''
-  local has_default=0
+  local has_default=0 head_neg=0 nc=''
 
   _find() { printf '%s  %s\n' "$1" "$2"; n=$((n + 1)); }
 
-  # An entry is a bullet plus its continuation lines; judged when the next
-  # bullet or the closing marker arrives.
+  # A bullet plus its continuations, judged when the next bullet or / arrives.
   _judge_entry() {
     [ -n "$entry" ] || return 0
     entries=$((entries + 1))
@@ -152,9 +189,9 @@ grammar_check() {
     entry=''
   }
 
-  # A delivery claim names WHERE the change takes effect, so `delivery-audit`
-  # can go and look. Untyped prose cannot be checked, which is how "merged"
-  # became the finish line for changes that never landed anywhere.
+  # A claim names WHERE the change takes effect, so a check can go and look.
+  # Untyped prose cannot be, which is how "merged" became the finish line for
+  # changes that never landed anywhere.
   _judge_ship() {
     [ -n "$ship" ] || return 0
     ships=$((ships + 1))
@@ -172,6 +209,20 @@ grammar_check() {
     [ "$fenced" -eq 1 ] && continue
 
     stripped="${line#"${line%%[![:space:]]*}"}"
+
+    # A heading scopes the denial over every line under it, until the next one.
+    case "$stripped" in
+      '# '*|'## '*|'### '*|'#### '*|'##### '*|'###### '*)
+        case "${stripped,,}" in
+          *'is not'*|*'does not'*|*'not in scope'*|*'out of scope'*|*non-goal*|*'not doing'*)
+            head_neg=1 ;;
+          *) head_neg=0 ;;
+        esac ;;
+    esac
+    if nc="$(grammar_negated_close "$stripped" "$head_neg")"; then
+      _find NEGATED-CLOSE "line $lineno: \`$nc\` in a sentence that denies it -- GitHub closes the issue from the keyword alone. Use a bare \`#N\` to reference without closing, or move the closing keyword to its own line: ${stripped:0:70}"
+    fi
+
     # Indented four spaces, a marker is an EXAMPLE, not a second block.
     indent="${line%%[![:space:]]*}"
     if [ "${#indent}" -ge 4 ]; then
