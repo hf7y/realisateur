@@ -94,18 +94,27 @@ section "C. a PR this turn opened, still open, is not a finished run"
 G="$T/g"; newrepo "$G"
 TR="$T/g-transcript"; transcript_pr "$TR"
 
-printf 'open\tfalse\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+printf 'open\tfalse\tfalse\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
 OUT="$(runpr "$G" "$TR")"; RC="$(rcof "$G" "$TR")"
 rc  "C1 an open non-draft PR blocks the stop" 2 "$RC"
 has "C2 and names the PR" "$OUT" "pull/7"
 
-printf 'open\ttrue\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+printf 'open\ttrue\tfalse\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
 RC="$(rcof "$G" "$TR")"
 rc "C3 a DRAFT claims nothing, so it does not block" 0 "$RC"
 
-printf 'closed\tfalse\tNO-DECISION: x' > "$T/pr-state"
+printf 'closed\tfalse\tfalse\tNO-DECISION: x' > "$T/pr-state"
 RC="$(rcof "$G" "$TR")"
 rc "C4 a merged or closed PR does not block" 0 "$RC"
+
+printf 'open\tfalse\ttrue\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+OUT="$(runpr "$G" "$TR")"; RC="$(rcof "$G" "$TR")"
+rc  "C5 an open PR with AUTO-MERGE ARMED does not block" 0 "$RC"
+has "C6 and says so, rather than passing silently" "$OUT" "AUTO-MERGE ARMED"
+
+printf 'open\tfalse\tfalse\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+OUT="$(runpr "$G" "$TR")"
+has "C7 the refusal names arming auto-merge as the preferred exit" "$OUT" "--auto"
 
 echo
 section "D. a HUMAN-STEP block this turn asked a human to run, without verified: (#714 Rule 2)"
