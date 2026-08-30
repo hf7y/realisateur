@@ -52,6 +52,54 @@ WFSRC="$(cat "$WF" 2>/dev/null || true)"
 
 # ===========================================================================
 echo
+echo "-- B0. EVERY INLINE run: BLOCK IS VALID SHELL --------------------------"
+# ===========================================================================
+# A workflow step's `run:` body is shell source that nothing parses until the
+# runner executes it, so a syntax error ships green and only shows up as a
+# failed nightly. On 2026-08-30 run 33298077408 died with `line 25: unexpected
+# EOF while looking for matching '}'` -- the apostrophe in a `${VAR:-...today's
+# ...}` default opened a quote and swallowed the rest of the step. The step
+# never ran, no verdict was published, and the release channel went silent on
+# the first scheduled night after the line landed. Every assertion in this file
+# is a substring match, and not one of them could see it.
+harness_tmp
+WFSHELL="$T/wfshell"; mkdir -p "$WFSHELL"
+awk -v out="$WFSHELL" '
+  /^[[:space:]]*run: \|[[:space:]]*$/ {
+    match($0, /^ */); ind = RLENGTH
+    n++; f = sprintf("%s/blk%02d.sh", out, n); inblk = 1; next
+  }
+  inblk {
+    if ($0 ~ /^[[:space:]]*$/) { print "" > f; next }
+    match($0, /^ */)
+    if (RLENGTH <= ind) { inblk = 0; close(f); next }
+    print substr($0, ind + 3) > f
+  }
+' "$WF"
+nblk=0; nbad=0; firsterr=''
+for f in "$WFSHELL"/blk*.sh; do
+  [ -e "$f" ] || continue
+  nblk=$((nblk + 1))
+  bash -n "$f" 2>"$f.err" && continue
+  nbad=$((nbad + 1))
+  [ -n "$firsterr" ] || firsterr="$(head -1 "$f.err")"
+done
+# A zero-block extraction is BLIND, not clean: it would pass this section while
+# checking nothing at all, which is the exact failure the section exists for.
+if [ "$nblk" -eq 0 ]; then
+  bad "the run: block extractor found NO blocks -- this check measured nothing" \
+      "expected several run: | blocks in $WF"
+else
+  ok "$nblk inline run: block(s) extracted from the workflow"
+  if [ "$nbad" -eq 0 ]; then
+    ok "every inline run: block parses as bash"
+  else
+    bad "$nbad inline run: block(s) are not valid bash -- the step would die before its first command" "$firsterr"
+  fi
+fi
+
+# ===========================================================================
+echo
 echo "-- B. THE CUT IS AUTOMATIC (a schedule, not a human) -------------------"
 # ===========================================================================
 has "the workflow has a schedule: trigger" "$WFSRC" "schedule:"

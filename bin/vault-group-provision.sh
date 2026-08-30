@@ -96,7 +96,21 @@ if [ -d "$SPOOL" ]; then
   fi
 fi
 
-CRON_ROW="*/5 * * * * root [ -x $DRAIN ] && $DRAIN --apply >/dev/null 2>&1 # realisateur:vault-spool-drain:CADENCE"
+# NO `[ -x $DRAIN ] &&` GUARD, AND NO `2>&1`. That row was this estate's own
+# BLIND-vs-OK violation, written by this script: with the drain not installed
+# the test was simply false, so the row exited 0 in silence every five minutes
+# and "the drain is absent" was indistinguishable from "the spool was empty".
+# Measured on monkey 2026-08-30: /etc/cron.d/vault-spool-drain present since
+# 04:26, /usr/local/libexec/selfdev/vault-spool-drain.sh never installed, and
+# nothing anywhere said so.
+#
+# Cron is the reporting channel, so absence has to reach stderr: a missing
+# drain is `not found` from the shell, a broken one is its own diagnostic, and
+# cron MAILS either. The happy path stays quiet because the drain prints its
+# summary to stdout, which is still discarded -- so a */5 row that is working
+# generates nothing, and one that cannot work generates mail until a human
+# installs the drain. Loud on absence, quiet on success, no new mechanism.
+CRON_ROW="*/5 * * * * root $DRAIN --apply >/dev/null # realisateur:vault-spool-drain:CADENCE"
 if [ "$(cat "$CRON_D" 2>/dev/null)" = "$CRON_ROW" ]; then
   ok "$CRON_D drains the spool every 5 minutes"
 elif [ "$MODE" = --apply ]; then

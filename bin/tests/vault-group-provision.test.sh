@@ -69,6 +69,29 @@ OUT="$(HOME_ROOT="$T/home2" SUDO='' PATH="$T/fakebin:$PATH" \
        "$SCRIPT" --check --dir "$T/vaultdir" 2>&1)"
 has "F8 2700 is NOT shut -- a preserved setgid bit must not read as the target" "$OUT" "read door is open"
 
+section "G. the drain row it writes cannot fail silently"
+# The row this script installs is the estate's OWN cron row, and it used to
+# read `[ -x $DRAIN ] && $DRAIN --apply >/dev/null 2>&1`. With the drain not
+# installed the test was false, the row exited 0, and every five minutes it
+# said nothing -- "no drain" and "empty spool" produced identical silence.
+# These two cases pin the inversion: the guard-free row is the contract, and
+# the guarded row must be REJECTED rather than accepted as already correct.
+DBIN="$T/drain.sh"
+printf '%s\n' "*/5 * * * * root $DBIN --apply >/dev/null # realisateur:vault-spool-drain:CADENCE" > "$T/cron-guardfree"
+printf '%s\n' "*/5 * * * * root [ -x $DBIN ] && $DBIN --apply >/dev/null 2>&1 # realisateur:vault-spool-drain:CADENCE" > "$T/cron-guarded"
+
+OUT="$(HOME_ROOT="$T/home2" SUDO='' PATH="$T/fakebin:$PATH" \
+       VAULT_CRON_D="$T/cron-guardfree" VAULT_DRAIN_BIN="$DBIN" \
+       "$SCRIPT" --check --dir "$T/vaultdir" 2>&1)"
+has "G1 the row runs the drain unconditionally, and keeps stderr for cron to mail" \
+    "$OUT" "drains the spool every 5 minutes"
+
+OUT="$(HOME_ROOT="$T/home2" SUDO='' PATH="$T/fakebin:$PATH" \
+       VAULT_CRON_D="$T/cron-guarded" VAULT_DRAIN_BIN="$DBIN" \
+       "$SCRIPT" --check --dir "$T/vaultdir" 2>&1)"
+has "G2 the old [ -x DRAIN ] && DRAIN row is a finding, not an accepted row" \
+    "$OUT" "does not drain the spool"
+
 section "E. it is declared, so it reaches a host by a named channel"
 . "$ROOT/lib/propagation-set.sh"
 ch="$(prop_channel vault-group-provision.sh 2>/dev/null)" || ch=""
