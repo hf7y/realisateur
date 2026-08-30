@@ -1,39 +1,10 @@
 #!/usr/bin/env bash
-# vault-spool-drain.sh -- THE FAR SIDE OF THE CLOSED VAULT DOOR (#742).
+# vault-spool-drain.sh -- the privileged half of THE SPOOL in man/consigne.1,
+# which is the contract this implements (#742).
 #
-# Zach, 2026-08-29 and again 2026-08-30: "there should just not be reading at
-# all." The vault is an archive -- prose goes there when it stops being true --
-# so a citation is a retrieval of a premise that was already retired, and the
-# door closes. Writing is explicitly unaffected, and that is what this exists
-# to keep true.
-#
-# WHAT IT DOES. `consigne` on a host with a closed vault writes a REQUEST into
-# /srv/vault-spool naming the absolute source paths (never their content). This
-# runs as a user that CAN read the vault, hands those same paths to the same
-# unmodified bibliothecaire lib/consign-prose.sh, and commits what landed.
-#
-# consign-prose is NOT MODIFIED and is not reimplemented here. Its three reads
-# of the vault -- the not-a-repo refusal, the overwrite refusal, and the
-# read-back gate -- are the archive's integrity, not the leak. They run here,
-# on this side of the door, exactly as they always did.
-#
-# GIT'S OWNERSHIP CHECK IS THE TRAP. consign-prose derives provenance by
-# running `git -C <source dir> rev-parse`, and the source lives in a self-dev
-# account's home while this runs as root. Git refuses a repo it does not own
-# ("dubious ownership") and consign-prose reads that refusal as "not inside a
-# git repository", which is exit 6 BLIND -- a deposit that never happens, for
-# a reason that has nothing to do with the deposit. safe.directory is set for
-# this process only, via GIT_CONFIG_COUNT, not written into anyone's config.
-#
-# IT COMMITS AND DOES NOT PUSH. A deposit sitting uncommitted in a tree nobody
-# can list is invisible, which is worse than the mandark failure #212 records;
-# so the commit is not optional. The push needs a credential this has no
-# business holding, and is still the reaping pass's job (PROSE-REAPING.md 5.6).
-# An unpushed vault is REPORTED at the end of every drain, never assumed clean.
-#
-# A REQUEST IS NEVER DELETED UNTIL ITS DEPOSIT IS ACCOUNTED FOR. On success it
-# is removed; on failure it is renamed `.failed` and left, with the reason, so
-# the queue is a queue and not a leak.
+# TRAP: consign-prose runs `git -C <source dir>` on a repo root does not own, so
+# git refuses it and consign-prose reads that as "not a git repository" -- an
+# exit 6 naming the wrong cause. Hence safe.directory, per process, below.
 set -uo pipefail
 
 CLI_NAME='vault-spool-drain.sh'
@@ -74,9 +45,6 @@ die() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit "${2:-5}"; }
   exit 6
 }
 
-# The queue, counted before anything is decided. Only this process's own view:
-# the spool is deliberately unlistable to a depositor, so this listing is the
-# one place the queue is visible at all.
 mapfile -t REQS < <(find "$SPOOL" -maxdepth 1 -type f -name 'req-*' 2>/dev/null | sort)
 
 say "== vault-spool-drain ($MODE) -- $(hostname -s), spool $SPOOL, vault $VAULT =="
@@ -106,19 +74,12 @@ fi
 
 IMPL="${CONSIGNE_IMPL:-}"
 if [ -z "$IMPL" ]; then
-  # The same mechanism `consigne` forwards to, found the same way: through the
-  # installed `fonde`'s own tree. Not re-derived from the build layout, which
-  # bin/lib/propagation-set.sh reserves to the two scripts that own it.
   fonde_bin="$(command -v fonde 2>/dev/null)" || fonde_bin=''
   [ -n "$fonde_bin" ] && IMPL="$(cd "$(dirname "$(readlink -f "$fonde_bin")")/.." && pwd)/lib/consign-prose.sh"
 fi
 [ -n "$IMPL" ] && [ -r "$IMPL" ] \
   || die "cannot find lib/consign-prose.sh (looked through the installed \`fonde\`; set CONSIGNE_IMPL). Nothing was deposited." 5
 
-# Provenance comes from the SOURCE repo, which belongs to a self-dev account
-# and not to whoever is running this. Scoped to this process; nobody's gitconfig
-# is edited. See the header -- this is the difference between a deposit and a
-# BLIND that names the wrong cause.
 export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*'
 
 OK=0; FAILED=0
@@ -132,9 +93,6 @@ for r in "${REQS[@]}"; do
   fi
 
   say "  ..      $(basename "$r") ($acct): ${#paths[@]} path(s)"
-  # Serialized against every other writer of this vault on the identical lock
-  # `consigne` itself takes (#213) -- a reaping pass's `consigne lock -- git
-  # commit` and this drain must not interleave.
   if flock -w 60 "$VAULT/.consigne.lock" bash "$IMPL" "$VAULT" "${paths[@]}"; then
     rm -f -- "$r"
     OK=$((OK+1))
@@ -146,8 +104,6 @@ for r in "${REQS[@]}"; do
   fi
 done
 
-# The commit is not optional: see the header. One commit for the whole drain,
-# because the deposits in it are one queue and splitting them says nothing more.
 if [ "$OK" -gt 0 ]; then
   if [ -n "$(git -C "$VAULT" status --porcelain 2>/dev/null)" ]; then
     git -C "$VAULT" add -A \
@@ -160,8 +116,6 @@ if [ "$OK" -gt 0 ]; then
   fi
 fi
 
-# NEVER ASSUMED CLEAN (#212). An unpushed vault is one laptop away from being
-# the only copy, and that failure was silent for nine days once already.
 up="$(git -C "$VAULT" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null)"
 if [ -n "$up" ]; then
   ahead="$(git -C "$VAULT" rev-list --count "$up..HEAD" 2>/dev/null)"

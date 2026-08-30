@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# vault-spool-drain.test.sh -- witness for bin/vault-spool-drain.sh (#742).
-#
-# THE ONE PROPERTY THAT MATTERS: a request is never lost. A drain that removed
-# a request it had not deposited would turn `consigne`'s "SPOOLED" into a lie,
-# and the caller who then deleted the source would have destroyed the only
-# copy -- the exact failure senechal's tools/vault.sh header names as the one
-# bug it must not have.
+# vault-spool-drain.test.sh (#742). THE ONE PROPERTY: a request is never lost --
+# a drain that removed one it had not deposited turns SPOOLED into a lie.
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -42,9 +37,6 @@ has "D3 the count is named"   "$OUT" "1 request(s) queued"
 eq  "D4 --check removed nothing" "$(find "$T/spool" -type f | wc -l | tr -d ' ')" "1"
 
 section "E. --apply deposits through the real impl and clears the queue"
-# A stand-in for lib/consign-prose.sh that records its argv. The deposit
-# mechanism is bibliothecaire's and is deliberately NOT reimplemented here --
-# what this asserts is the handoff: same vault, same paths, unchanged.
 mkdir -p "$T/vault"; git -C "$T/vault" init -q 2>/dev/null
 printf 'x\n' > "$T/DOC.md"
 cat > "$T/impl.sh" <<'IMPL'

@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
-# consigne.test.sh -- the two doors must be one implementation, and the second
-# half of a reaping pass must be countable.
-#
-# TRAPS (the rest of this header is in the vault):
-# THE END-TO-END RUN AGAINST THE REAL MECHANISM IS NOT HERE, AND SAYING WHY IS
-# PART OF THE TEST. It cannot be hermetic: it needs bibliothecaire installed.
-# It was run by hand on mandark against the real lib/consign-prose.sh and the
-# real `fonde` before this landed, and the verbatim output is in the pull
-# request that added this file. Case D is the piece of that which CAN be
-# hermetic -- that the resolver finds the mechanism at the place `fonde`
-# carries it, from a fixture shaped exactly like an installed verb build.
+# consigne.test.sh -- the two doors must be one implementation. The end-to-end
+# run is not here: it needs bibliothecaire installed, so it cannot be hermetic.
+# Case D is the piece that can be -- the resolver finding the mechanism.
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
@@ -408,9 +400,6 @@ fi
 echo
 echo "-- I. THE SPOOL: depositing into a vault this account cannot read (#742)"
 # ===========================================================================
-# The switch is the vault's own mode, not a flag -- so these cases set the mode
-# and assert the behaviour flips with it, which is the property that makes the
-# chmod on monkey safe to do without a flag day.
 if [ "$(id -u)" -eq 0 ]; then
   echo "  (skipped: running as root, which can read a 0700 directory)"
 else
@@ -433,8 +422,6 @@ else
   has "the request names the depositing account"   "$(cat "$REQ")" "$(id -un)"
   hasnt "the request carries no prose -- only a pointer" "$(cat "$REQ")" "hello"
 
-  # The impl must NOT have been called: the whole point is that the deposit
-  # happens on the far side of the door, not here.
   if [ -f "$ARGV_LOG" ]; then
     hasnt "consign-prose was not run against the closed vault" "$(cat "$ARGV_LOG")" "$VS"
   fi

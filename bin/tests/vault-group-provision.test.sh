@@ -48,8 +48,6 @@ OUT="$(HOME_ROOT="$T/home2" SUDO='' PATH="$T/fakebin:$PATH" \
 has "F1 a missing spool is a finding -- deposits would have nowhere to go" "$OUT" "no-spool does not exist"
 has "F2 an undrained spool is a finding -- a queue nothing drains is a backlog" "$OUT" "does not drain the spool"
 
-# The interlock: `consigne` only spools when it finds the vault unreadable, so
-# an OLDER consigne on PATH must hold the mode OPEN rather than break deposits.
 OUT="$(HOME_ROOT="$T/home2" SUDO='' PATH="$T/fakebin:$PATH" \
        "$SCRIPT" --check --dir "$T/vaultdir" 2>&1)"
 has "F3 with no spool-capable consigne on PATH, tightening is REFUSED" "$OUT" "cannot spool"

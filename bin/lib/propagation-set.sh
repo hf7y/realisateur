@@ -227,10 +227,6 @@ reprise.sh
 prop_host_tools() {
   # The probes ausculte composes are LOCAL-class and ride here, or it is
   # BLIND about them on a host.
-  # vault-spool-drain.sh rides for a different reason and the same way: it is
-  # the privileged half of `consigne` on a host whose vault is closed (#742),
-  # and a spool nothing drains is a silent backlog. It needs the clock, so it
-  # needs to be on the host.
   printf 'dresse.sh\nausculte-cadence.sh\ndexter-liveness.sh\ndecision-rot.sh\nvault-spool-drain.sh\n'
   local s; for s in $PROP_PROVISION_SCRIPTS; do [ "$s" = dresse.sh ] || printf '%s\n' "$s"; done
 }

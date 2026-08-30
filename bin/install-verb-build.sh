@@ -10,8 +10,7 @@
 # express that: they half-succeed, and leave you running a verb set that
 # never existed as a whole and cannot be named in a bug report.
 # And it never reports "you are up to date" when it could not look. An
-# unreachable remote is BLIND, exit 6 -- the `garde` shape from
-# vault:realisateur/MONKEY.md §5, where skipping unreachable destinations made
+# unreachable remote is BLIND, exit 6: skipping unreachable destinations makes
 # "nothing pending" indistinguishable from "everything is proven".
 
 set -uo pipefail

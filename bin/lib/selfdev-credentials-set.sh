@@ -29,7 +29,7 @@ CRED_UID_MAX="${CRED_UID_MAX:-3099}"
 # --- the shared repos, read-only by baseline -----------------------------
 CRED_SHARED_REPOS="realisateur scheduler senechal"
 
-# --- the fleet-wide App, per vault:realisateur/MONKEY.md 11.1 -------------------------------
+# --- the fleet-wide App --------------------------------------------------
 # One App across all ten accounts, decided 2026-08-07. An account whose
 # gh-app.conf declares a DIFFERENT id or owner is not obviously wrong (the
 CRED_APP_GROUP="${CRED_APP_GROUP:-selfdev}"
@@ -54,8 +54,7 @@ cred_classify_token() {
 }
 
 # cred_own_repo <account> -- the repo this account should hold WRITE on.
-# Today every account's own repo is named identically to the account
-# (vault:realisateur/MONKEY.md 11.1: "every account had a matching hf7y/<name> repo; none was
+# Today every account's own repo is named identically to the account.
 cred_own_repo() {
   printf '%s' "$1"
 }

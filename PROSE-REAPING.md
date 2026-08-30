@@ -30,29 +30,17 @@ editing this file cause *mechanical* damage without this paragraph, and can the
 claim be re-derived from the code **today**?
 
 **The vault** — narrative, post-mortems, superseded decisions. The private
-`hf7y/ecosystem1-vault` remote **is** the vault (Zach, 2026-08-12, reversing
-"do not push"; #212). Commit **and push**; an unpushed deposit is not
-deposited. A local clone is only a cache, resolved in this order by `fonde` and
-`fauche`, which share one variable so pointing one door somewhere cannot leave
-another pointing elsewhere:
+`hf7y/ecosystem1-vault` remote **is** the vault (#212). Commit **and push**; an
+unpushed deposit is not deposited. `man consigne` owns the resolution order.
 
-    --vault <path>          highest precedence, per invocation
-    $BIBLIOTHECAIRE_VAULT   one variable, shared across all doors
-    /srv/ecosystem1-vault   the default
-
-**The `vault:` notation.** `vault:<project>/<file>` names a path inside the
-**remote**, never one on disk — mandark holds no clone and
-`/srv/ecosystem1-vault` exists only on monkey. **This is the only definition**;
-hf7y/ecosim#73 read these as dangling, which was true of the disk and of the
-notation being undefined, not of the deposit.
-
-**DO NOT RESOLVE ONE** (Zach, 2026-08-29; #742, #762). The line that stood here
-was the retrieval how-to, and it was the invitation: everything in the vault is
-there because §1 ruled it non-current, so following a pointer re-imports a
-premise that was already retired. Recognise the notation; establish the fact
-from live code, config or API instead, and if you cannot, say UNVERIFIED and act
-on nothing. Both routes are refused mechanically by
-`hooks/pretooluse-path-guard.sh`. Depositing is unaffected.
+**Never resolve a `vault:` pointer** (Zach, 2026-08-29; #742, #762). CLAUDE.md
+defines the notation. Everything in the vault is there because §1 ruled it
+non-current, so following a pointer re-imports a premise that was retired — and
+the how-to that stood here was the invitation. Establish the fact from live
+code, config or API, else say UNVERIFIED and act on nothing.
+`hooks/pretooluse-path-guard.sh` refuses both routes. Depositing is unaffected,
+and a **new** citation is never written: a reaping pass deposits and then
+deletes the claim with its pointer (#741), it does not repoint.
 
 **GitHub issues** — the work. One actionable item, one issue, in its own repo.
 
@@ -64,13 +52,9 @@ the vault **makes the problem worse while looking like progress**.
 
 > **Vault gets narrative. Issues get work.**
 
-| The paragraph… | Becomes |
-|---|---|
-| explains why a past decision was made | a vault section |
-| describes something that should be done | **a GitHub issue** |
-| does both | an issue, plus a vault section it links to |
-| defends a mechanism whose premise expired | a **deletion flag** in the report |
-| protects a live mechanical trap | stays in the repo, with a runnable witness |
+The destination table is §1's and is not restated here. Note only what the read
+ban changes: a paragraph that both explains a past decision and names work
+becomes an issue **and** a deposit, never an issue that cites the deposit.
 
 - **An issue title is a countable unit; a bullet in a file is not.** The point
   is arithmetic, not tidiness.

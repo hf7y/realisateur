@@ -21,7 +21,7 @@ MODE=--check
 GROUP="${VAULT_GROUP:-vault}"
 DIR="${VAULT_DIR:-/srv/ecosystem1-vault}"
 SPOOL="${CONSIGNE_SPOOL:-/srv/vault-spool}"
-DIR_MODE_OPEN='2775'   # group-writable while deposits still go direct
+DIR_MODE_OPEN='2775'  # while deposits still go direct
 DIR_MODE_SHUT='0700'  # the target: no self-dev account reads the vault (#742)
 CRON_D="${VAULT_CRON_D:-/etc/cron.d/vault-spool-drain}"
 DRAIN="${VAULT_DRAIN_BIN:-/usr/local/libexec/selfdev/vault-spool-drain.sh}"
@@ -75,12 +75,8 @@ if [ ! -d "$DIR" ]; then
     gap "$DIR does not exist"
   fi
 fi
-# ---- the spool: the door deposits go through once the vault is closed ------
-# hf7y/realisateur#742. 1730 is the whole point: write+execute lets a member of
-# $GROUP CREATE a request by name; the missing read bit means it cannot
-# enumerate anyone else's, and the sticky bit means it cannot delete one. A
-# depositor therefore needs no access to the vault at all -- see
-# bin/vault-spool-drain.sh for the far side.
+# The spool deposits go through once the vault is closed. 1730 (#742): create
+# by name, never enumerate, never delete another's.
 SPOOL_MODE=1730   # sticky + rwx-wx---: create by name, never enumerate, never delete another's
 if [ ! -d "$SPOOL" ]; then
   if [ "$MODE" = --apply ]; then
@@ -100,12 +96,6 @@ if [ -d "$SPOOL" ]; then
   fi
 fi
 
-# ---- the clock the spool needs ---------------------------------------------
-# A spool nothing drains is a silent backlog, which is worse than the direct
-# deposit it replaced. libexec host tools have no clock of their own in this
-# estate, so the drain gets one here, in /etc/cron.d where a root-owned,
-# idempotent, file-shaped row can be written without touching a crontab any
-# other mechanism owns.
 CRON_ROW="*/5 * * * * root [ -x $DRAIN ] && $DRAIN --apply >/dev/null 2>&1 # realisateur:vault-spool-drain:CADENCE"
 if [ "$(cat "$CRON_D" 2>/dev/null)" = "$CRON_ROW" ]; then
   ok "$CRON_D drains the spool every 5 minutes"
@@ -115,28 +105,16 @@ else
   gap "$CRON_D does not drain the spool -- requests would queue and never deposit"
 fi
 
-# ---- the vault directory, and the interlock that decides its mode -----------
-# THE TARGET IS 0700 (#742): no self-dev account reads the vault by any route.
-# The old target was 2775 -- group-readable to every depositor and, because of
-# the world bits nobody looked at, readable to every OTHER account on the host
-# as well.
-#
-# IT IS NOT TIGHTENED BLIND. `consigne` only spools when it finds the vault
-# unreadable; an OLDER installed `consigne` does not spool at all and exits 6
-# BLIND instead, so tightening ahead of the build that carries the spool breaks
-# every deposit on the host. That is the paired-commit failure this estate has
-# paid for four times, so it is an interlock and not a note: the installed
-# `consigne` is asked whether it can spool, and the mode is left alone if it
-# cannot.
+# The vault directory. TARGET 0700 (#742); the old 2775 was readable to EVERY
+# account on the host. An older `consigne` cannot spool, so it is ASKED first.
 consigne_spools() {
   local c; c="$(command -v consigne 2>/dev/null)" || return 1
   [ -n "$c" ] || return 1
   grep -q 'CONSIGNE_SPOOL' "$(readlink -f "$c")" 2>/dev/null
 }
 if [ -d "$DIR" ]; then
-  # %04a, not %a: a numeric chmod PRESERVES a directory's setgid bit, so the
-  # live 2775 vault lands at 2700 and a 3-digit comparison would read that as
-  # the target. Four digits, and the setgid bit is cleared explicitly below.
+  # %04a: a numeric chmod leaves a directory's setgid bit, so 2775 lands at
+  # 2700 and 3 digits read that as the target.
   m="$(stat -c '%04a' "$DIR" 2>/dev/null)"
   g="$(stat -c '%G' "$DIR" 2>/dev/null)"
   if [ "$m" = "$DIR_MODE_SHUT" ]; then
@@ -149,11 +127,7 @@ if [ -d "$DIR" ]; then
       chgrp "$GROUP" "$DIR" && chmod "$DIR_MODE_OPEN" "$DIR" && act "$DIR was '$m $g' -- held at $DIR_MODE_OPEN $GROUP until the spool-capable consigne lands"
     fi
   elif [ "$MODE" = --apply ]; then
-    # TWO chmods, and the second is not redundant: GNU chmod PRESERVES a
-    # directory's setgid bit through a numeric mode, leading zero or not. The
-    # live vault is 2775, so `chmod 0700` leaves it 2700 -- shut to the world
-    # but still carrying the group-inheritance the shared-write arrangement
-    # needed and this one does not. Verified on coreutils 9.4, not assumed.
+    # The second chmod is not redundant (coreutils 9.4).
     chmod "$DIR_MODE_SHUT" "$DIR" && chmod ug-s "$DIR" \
       && act "$DIR was '$m $g' -- set to $DIR_MODE_SHUT; the read door is now SHUT (#742)"
   else

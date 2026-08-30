@@ -3,8 +3,7 @@
 `build-verbs.yml` belongs at `hf7y/verbs/.github/workflows/build-verbs.yml`
 and is deployed there **by hand**; it is kept here because realisateur owns the
 build logic it calls. `tests.yml`'s `deploy-drift` job is the only thing that
-notices the two disagreeing, and it is advisory, never required. Design:
-`vault:realisateur/VERB-DISTRIBUTION.md`.
+notices the two disagreeing, and it is advisory, never required.
 
 ## The channel, hop by hop
 
