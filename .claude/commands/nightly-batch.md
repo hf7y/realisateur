@@ -26,8 +26,7 @@ previous nightly run left work in progress (check the last report under
 
 **Promotion signals are inference over prose, and the most convincing output
 is the most likely to be wrong** -- a 5-project "cluster" on 2026-07-26 turned
-out to be a shared boilerplate footer (worked example in
-`vault:realisateur/PRECIPITATION.md`). Judging one means opening its members
+out to be a shared boilerplate footer. Judging one means opening its members
 and reading them, which is an `/ideate` job with a human present, not a batch
 one. This pass MAY file a striking candidate as an issue for the next
 interactive pass. It must NOT stamp `(re-arrival: …)`/`[iface: …]`, reorder
@@ -110,7 +109,7 @@ For each unarchived artifact:
   `~/Documents/Projects/` before creating a new one -- an artifact might
   be an addition to something already scaffolded, not a brand-new project.
 - **If it's an addition to an existing project, apply park-by-default
-  triage** (see `vault:realisateur/STABILITY-MILESTONES.md`): is this idea
+  triage**: is this idea
   required to reach that project's *current* stability milestone (its open
   `milestone`-labelled issue)? If **yes**, build/queue it normally. If **no**,
   **park it**: `defere '<one line>' --project <name>`, and do NOT build it
@@ -121,8 +120,8 @@ For each unarchived artifact:
   init` it, write a minimal README describing the inferred idea and
   initial scaffolding (actual code/structure appropriate to what was
   inferred -- don't leave it as just a README). Its **stability
-  milestone** (canonical shape in `vault:realisateur/STABILITY-MILESTONES.md`) is the
-  inferred **v1 core** of the idea, filed as a `milestone` issue,
+  milestone** is the inferred **v1 core** of the idea, filed as a
+  `milestone` issue,
   `status: not-started`. That milestone is what every later idea against
   the project gets park-by-default-triaged against.
 - Write a baseline `.gitignore` before the first `git add`: `*.env`, `.env`,

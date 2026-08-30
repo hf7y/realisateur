@@ -35,7 +35,7 @@ echo
 echo "== 2. NOT ROOT IS A REFUSAL, NOT A PARTIAL RUN ==========================="
 # The whole job is writing into another account's 0700 home. Attempting it
 # unprivileged and reporting per-account failures would be nine confusing
-# "Permission denied" lines where one refusal belongs -- vault:realisateur/MONKEY.md 8.3's trap,
+# "Permission denied" lines where one refusal belongs -- the known trap,
 # where a missed dependency in a 0700 home presents as a permission error and
 # reads as a broken install.
 if [ "$(id -u)" -eq 0 ]; then
@@ -68,7 +68,7 @@ echo
 echo "== 4. ONE LIST, NOT TWO ================================================="
 # The bootstrap set is bin/lib/propagation-set.sh's, enforced by
 # propagation.test.sh. A second copy here would drift from the one under test:
-# the one-fact-two-readers shape vault:realisateur/MONKEY.md 10 found five times in one day.
+# the one-fact-two-readers shape, found five times in one day.
 has   "the bootstrap set is sourced from propagation-set.sh" "$SRC" 'lib/propagation-set.sh'
 has   "and consumed by name, not retyped" "$SRC" 'PROP_BOOTSTRAP_SCRIPTS'
 hasnt "no literal install-verb-build.sh list entry is typed here" "$SRC" '

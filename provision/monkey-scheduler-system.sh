@@ -7,7 +7,7 @@
 # scheduler tool, it doesn't take ownership."
 #
 # THE PROBLEM IT SOLVES. monkey gives every project its own unix user with a
-# 0700 home (vault:realisateur/MONKEY.md section 2), and each of those users carried its own
+# 0700 home, and each of those users carried its own
 # clone of scheduler. So "what will this host dispatch" could only be answered
 # by reading INTO another account's home -- which needs root, and which made a
 # read-only monitor depend on a privilege grant. `ecosim`'s rotation sensor hit

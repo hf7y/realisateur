@@ -94,6 +94,41 @@ rc "D3 blocks regardless of how deep under the other project the path is" 2 "$RC
 RC="$(rcof_d Write "/somewhere/else/entirely.sh")"
 rc "D4 a path outside SELFDEV_PROJECTS_ROOT entirely is not this check's business" 0 "$RC"
 
+section "F. the vault's read door (#742) -- both routes, and the deposit exemption"
+
+bashp() { printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$1" | PATH_GUARD_TABLE="$TABLE" "$SCRIPT" 2>&1; }
+bashrc() { printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$1" | PATH_GUARD_TABLE="$TABLE" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
+
+RC="$(rcof Read /srv/ecosystem1-vault/realisateur/MONKEY.md)"
+rc "F1 a Read of the filesystem vault is BLOCKED" 2 "$RC"
+OUT="$(run Read /srv/ecosystem1-vault/realisateur/MONKEY.md)"
+has "F1b and says why -- it is an archive" "$OUT" "ARCHIVE"
+has "F1c and names UNVERIFIED as the alternative to guessing" "$OUT" "UNVERIFIED"
+
+RC="$(rcof Grep /srv/ecosystem1-vault)"
+rc "F2 Grep over the vault is BLOCKED too -- a search is a read" 2 "$RC"
+
+RC="$(bashrc "gh api repos/hf7y/ecosystem1-vault/contents/realisateur/MONKEY.md")"
+rc "F3 the credential route is BLOCKED -- CLAUDE.md's old how-to" 2 "$RC"
+
+RC="$(bashrc "cat /srv/ecosystem1-vault/realisateur/MONKEY.md")"
+rc "F4 the filesystem route through Bash is BLOCKED" 2 "$RC"
+
+RC="$(bashrc "consigne PROSE-REAPING.md")"
+rc "F5 a deposit is not a read -- consigne passes" 0 "$RC"
+
+RC="$(bashrc "consigne --vault /srv/ecosystem1-vault PROSE.md")"
+rc "F6 and passes even when it names the vault explicitly (#762's open question)" 0 "$RC"
+
+RC="$(bashrc "sudo vault-group-provision.sh --apply")"
+rc "F7 the provisioner that owns the vault's mode is not a reader" 0 "$RC"
+
+RC="$(bashrc "ls /home/zach")"
+rc "F8 a Bash command with nothing to do with the vault passes" 0 "$RC"
+
+RC="$(rcof Write /srv/ecosystem1-vault/x.md)"
+rc "F9 a Write into the vault is not blocked by the READ guard -- writing is unaffected" 0 "$RC"
+
 section "E. no payload / no path"
 
 RC="$(printf '' | "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?")"

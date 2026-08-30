@@ -15,8 +15,6 @@
 # -- no git commit, no push, no gh. The caller reviews the diff and lands it as
 # that repo is landed today. A provisioning script that pushes to a repo
 # fourteen accounts pull from is a blast radius nobody asked for.
-#
-#   [rest: vault:realisateur/guard-archaeology-20260817.md]
 set -uo pipefail
 
 CLI_NAME='enrole-selfdev.sh'

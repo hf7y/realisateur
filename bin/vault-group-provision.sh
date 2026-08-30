@@ -2,11 +2,11 @@
 set -uo pipefail
 
 CLI_NAME='vault-group-provision.sh'
-CLI_SUMMARY='own the vault group, the 2775 setgid bit on the vault dir, and every self-dev account'"'"'s membership -- the arrangement bin/consigne'"'"'s deposit lock depends on (#597), made by hand on monkey and owned by nothing in this repo until now'
+CLI_SUMMARY='own the vault group, the deposit spool, the vault directory'"'"'s mode and every self-dev account'"'"'s membership -- the arrangement bin/consigne'"'"'s deposit depends on (#597), and the close of the vault'"'"'s read door (#742)'
 CLI_USAGE='  vault-group-provision.sh            --check (default): report, write nothing
-  vault-group-provision.sh --apply    create/fix the group, the dir mode, and membership
+  vault-group-provision.sh --apply    create/fix the group, the spool, the dir modes, and membership
   (idempotent -- an --apply on a host already at the target changes nothing and says so)'
-CLI_FLAGS='--check --apply --group --dir'
+CLI_FLAGS='--check --apply --group --dir --spool'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  the host is at the target (or --check found it so)
   1  findings: something is missing or wrong -- read the rows
@@ -20,6 +20,11 @@ cli_guard "$@"
 MODE=--check
 GROUP="${VAULT_GROUP:-vault}"
 DIR="${VAULT_DIR:-/srv/ecosystem1-vault}"
+SPOOL="${CONSIGNE_SPOOL:-/srv/vault-spool}"
+DIR_MODE_OPEN='2770'  # while deposits still go direct: group only, never world
+DIR_MODE_SHUT='0700'  # the target: no self-dev account reads the vault (#742)
+CRON_D="${VAULT_CRON_D:-/etc/cron.d/vault-spool-drain}"
+DRAIN="${VAULT_DRAIN_BIN:-/usr/local/libexec/selfdev/vault-spool-drain.sh}"
 HOME_ROOT="${HOME_ROOT:-/home}"
 SUDO="${SUDO-sudo}"
 while [ $# -gt 0 ]; do
@@ -27,6 +32,7 @@ while [ $# -gt 0 ]; do
     --check|--apply) MODE="$1" ;;
     --group) shift; GROUP="${1:-}" ;;
     --dir)   shift; DIR="${1:-}" ;;
+    --spool) shift; SPOOL="${1:-}" ;;
     *) cli_die "unexpected argument: $1" ;;
   esac
   shift
@@ -39,7 +45,7 @@ bad() { printf '  BAD     %s\n' "$*"; BAD=$((BAD+1)); }
 act() { printf '  DO      %s\n' "$*"; }
 die() { printf '\n%s: %s\n' "$CLI_NAME" "$*" >&2; exit "${2:-5}"; }
 
-echo "== vault-group-provision ($MODE) -- $(hostname -s), group $GROUP, dir $DIR =="
+echo "== vault-group-provision ($MODE) -- $(hostname -s), group $GROUP, dir $DIR, spool $SPOOL =="
 
 [ "$MODE" = --check ] || [ "$(id -u)" -eq 0 ] || die "$MODE needs root (sudo $CLI_NAME $MODE)" 5
 
@@ -64,19 +70,68 @@ fi
 
 if [ ! -d "$DIR" ]; then
   if [ "$MODE" = --apply ]; then
-    install -d -m 2775 -o root -g "$GROUP" "$DIR" && act "created $DIR (2775 root:$GROUP)"
+    install -d -m "$DIR_MODE_OPEN" -o root -g "$GROUP" "$DIR" && act "created $DIR ($DIR_MODE_OPEN root:$GROUP) -- tightened below once a spool-capable consigne is installed"
   else
     gap "$DIR does not exist"
   fi
 fi
-if [ -d "$DIR" ]; then
-  m="$(stat -c '%a %G' "$DIR" 2>/dev/null)"
-  if [ "$m" = "2775 $GROUP" ]; then
-    ok "$DIR is $m"
-  elif [ "$MODE" = --apply ]; then
-    chgrp "$GROUP" "$DIR" && chmod 2775 "$DIR" && act "$DIR was '$m' -- set to 2775 $GROUP"
+# The spool deposits go through once the vault is closed. 1730 (#742): create
+# by name, never enumerate, never delete another's.
+SPOOL_MODE=1730   # sticky + rwx-wx---: create by name, never enumerate, never delete another's
+if [ ! -d "$SPOOL" ]; then
+  if [ "$MODE" = --apply ]; then
+    install -d -m "$SPOOL_MODE" -o root -g "$GROUP" "$SPOOL" && act "created $SPOOL ($SPOOL_MODE root:$GROUP)"
   else
-    bad "$DIR is '$m', expected '2775 $GROUP'"
+    gap "$SPOOL does not exist -- there is nowhere for a deposit to go once the vault is closed"
+  fi
+fi
+if [ -d "$SPOOL" ]; then
+  sm="$(stat -c '%04a %G' "$SPOOL" 2>/dev/null)"
+  if [ "$sm" = "$SPOOL_MODE $GROUP" ]; then
+    ok "$SPOOL is $sm"
+  elif [ "$MODE" = --apply ]; then
+    chgrp "$GROUP" "$SPOOL" && chmod "$SPOOL_MODE" "$SPOOL" && act "$SPOOL was '$sm' -- set to $SPOOL_MODE $GROUP"
+  else
+    bad "$SPOOL is '$sm', expected '$SPOOL_MODE $GROUP'"
+  fi
+fi
+
+CRON_ROW="*/5 * * * * root [ -x $DRAIN ] && $DRAIN --apply >/dev/null 2>&1 # realisateur:vault-spool-drain:CADENCE"
+if [ "$(cat "$CRON_D" 2>/dev/null)" = "$CRON_ROW" ]; then
+  ok "$CRON_D drains the spool every 5 minutes"
+elif [ "$MODE" = --apply ]; then
+  printf '%s\n' "$CRON_ROW" > "$CRON_D" && chmod 644 "$CRON_D" && act "wrote $CRON_D"
+else
+  gap "$CRON_D does not drain the spool -- requests would queue and never deposit"
+fi
+
+# The vault directory. TARGET 0700 (#742); the old 2775 was readable to EVERY
+# account on the host. An older `consigne` cannot spool, so it is ASKED first.
+consigne_spools() {
+  local c; c="$(command -v consigne 2>/dev/null)" || return 1
+  [ -n "$c" ] || return 1
+  grep -q 'CONSIGNE_SPOOL' "$(readlink -f "$c")" 2>/dev/null
+}
+if [ -d "$DIR" ]; then
+  # %04a: a numeric chmod leaves a directory's setgid bit, so 2775 lands at
+  # 2700 and 3 digits read that as the target.
+  m="$(stat -c '%04a' "$DIR" 2>/dev/null)"
+  g="$(stat -c '%G' "$DIR" 2>/dev/null)"
+  if [ "$m" = "$DIR_MODE_SHUT" ]; then
+    ok "$DIR is $m -- the read door is shut (#742)"
+  elif ! consigne_spools; then
+    bad "$DIR is '$m $g' and the installed \`consigne\` cannot spool, so tightening it
+          would break every deposit on this host. Install the verb build carrying
+          #742's consigne first, then re-run --apply."
+    if [ "$m $g" != "$DIR_MODE_OPEN $GROUP" ] && [ "$MODE" = --apply ]; then
+      chgrp "$GROUP" "$DIR" && chmod "$DIR_MODE_OPEN" "$DIR" && act "$DIR was '$m $g' -- held at $DIR_MODE_OPEN $GROUP until the spool-capable consigne lands"
+    fi
+  elif [ "$MODE" = --apply ]; then
+    # The second chmod is not redundant (coreutils 9.4).
+    chmod "$DIR_MODE_SHUT" "$DIR" && chmod ug-s "$DIR" \
+      && act "$DIR was '$m $g' -- set to $DIR_MODE_SHUT; the read door is now SHUT (#742)"
+  else
+    bad "$DIR is '$m $g', expected '$DIR_MODE_SHUT' -- the read door is open"
   fi
 fi
 

@@ -62,8 +62,8 @@ done
 [ -z "$dupes" ] && ok "no script is declared in two channels" \
                 || bad "declared in more than one channel:$dupes"
 
-# Retirement must propagate to the roster. vault:realisateur/VERB-DISTRIBUTION.md 6 records the
-# identical bug inside cut-verb-build.sh: a project that CHANGED was handled,
+# Retirement must propagate to the roster. The identical bug lived inside
+# cut-verb-build.sh: a project that CHANGED was handled,
 # a project that LEFT was not, so every consumer kept installing a verb the
 # manifest no longer named. A roster naming a deleted file is that shape.
 ghosts=""
