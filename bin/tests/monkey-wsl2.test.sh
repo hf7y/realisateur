@@ -9,9 +9,7 @@ echo "monkey-wsl2.test.sh"
 section "A. the runbook survives roff -- a mangled command is worse than no runbook"
 if command -v man >/dev/null 2>&1; then
   R="$(MANWIDTH=200 man --nh --nj -l "$D/runbook.1" 2>/dev/null)"
-  # roff re-wraps prose, so a sentence-length assertion must match the flattened
-  # text. Command assertions stay against $R, where a broken line IS the bug.
-  RF="$(printf '%s' "$R" | tr '\n' ' ' | tr -s ' ')"
+  RF="$(printf '%s' "$R" | tr '\n' ' ' | tr -s ' ')"   # flattened: roff re-wraps prose, so sentence assertions match RF while command assertions match R, where a broken line IS the bug
   has "A1 the import command keeps its Windows path separators" "$R" 'wsl.exe --import monkey D:\wsl-migration\monkey'
   has "A2 the rollback keeps VBoxManage's quoted program path" "$R" "'C:\\Program Files\\Oracle\\VirtualBox\\VBoxManage.exe' startvm monkey"
   has "A3 the fstab fix keeps its sed delimiters and ampersand" "$R" "sed -i 's|^/dev/disk/by-uuid|#&|; s|^/swapfile|#&|' /etc/fstab"
