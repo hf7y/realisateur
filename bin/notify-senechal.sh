@@ -44,8 +44,7 @@ usage() {
   printf "exit codes:\n"
   printf "  0  the filing is confirmed present on senechal's remote\n"
   printf "  1  any failure, with a stated reason (no exit-0 no-op)\n"
-  printf "  2  usage error: no door named, or prose passed where fields belong\n\n"
-  printf "this tool makes no AI calls and cannot spend: --summon is rejected.\n"
+  printf "  2  usage error: no door named, or prose passed where fields belong\n"
 }
 
 command -v python3 >/dev/null 2>&1 || die "python3 is not on PATH -- cannot validate against senechal's door schema, and filing unvalidated is what this replaces"

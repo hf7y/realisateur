@@ -234,10 +234,6 @@ flags:
                 $BIBLIOTHECAIRE_VAULT, which beats /srv/ecosystem1-vault.
                 May appear anywhere before the `--` -- `--vault PATH lock --`
                 and `lock --vault PATH --` are the same invocation.
-  --summon      accepted and buys nothing. The deposit is mechanized and
-                reaches no agent, so this spends zero and says so -- exactly
-                as `fonde consign --summon` does, which is the remedy `fauche`
-                prints for unconsigned prose.
   -h, --help    this text
 
 exit:
@@ -544,21 +540,15 @@ if [ "${1:-}" = lock ]; then
   exit $?
 fi
 
-SUMMON=0
 ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help) usage; exit 0 ;;
-    --summon)  SUMMON=1 ;;
     # Highest-precedence form of the one config this tool has. Both spellings,
     # because `--vault=/x` silently becoming a positional path argument would
     # deposit the vault path itself as a document.
     --vault)   shift; [ $# -gt 0 ] || die "--vault needs a path"; VAULT="$1" ;;
     --vault=*) VAULT="${1#*=}"; [ -n "$VAULT" ] || die "--vault needs a path" ;;
-    # A near-miss on the only flag that has ever meant "may spend money" must
-    # fail rather than be swallowed as an unknown -- bin/lib/cli-guard.sh's
-    # rule, restated here because a verb-shaped front door does not source it.
-    -s|-S)     die "'$1' rejected as a near-miss on --summon (the cost flag is long-form only)." ;;
     --)        die "'--' is not accepted." ;;
     -*)        die "unknown flag: $1 (try --help)" ;;
     *)         ARGS+=("$1") ;;
@@ -571,8 +561,6 @@ if [ "${#ARGS[@]}" -eq 0 ]; then
 fi
 
 if [ "${ARGS[0]}" = status ]; then
-  [ "$SUMMON" -eq 0 ] \
-    || die "status never spends, so --summon requests nothing here."
   do_status "${ARGS[@]:1}"
   exit $?
 fi
@@ -624,14 +612,6 @@ if [ ! -r "$VAULT" ] || [ ! -x "$VAULT" ]; then
 fi
 
 IMPL="$(resolve_impl)" || exit $?
-
-# `--summon` is accepted, buys nothing, and SAYS so rather than passing in
-# silence -- the same sentence `fonde consign --summon` prints, for the same
-# reason. `fauche` names that command as the remedy for unconsigned prose, so
-# the flag must not have become a usage error the day the work it authorised
-# became free.
-[ "$SUMMON" -eq 1 ] && printf '%s: the deposit is mechanized; --summon buys nothing here and nothing was spent.\n' \
-  "$SELF_NAME" >&2
 
 # Foreground, output unswallowed. The impl prints each DEPOSITED path and
 # what is now safe to remove, and that report is the caller's whole basis for
