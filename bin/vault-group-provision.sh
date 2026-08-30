@@ -96,7 +96,10 @@ if [ -d "$SPOOL" ]; then
   fi
 fi
 
-CRON_ROW="*/5 * * * * root [ -x $DRAIN ] && $DRAIN --apply >/dev/null 2>&1 # realisateur:vault-spool-drain:CADENCE"
+# No `[ -x $DRAIN ] &&` guard and no `2>&1`: with the drain absent that test was
+# false, so the row exited 0 in silence and "no drain" read exactly like "empty
+# spool". Absence must reach stderr; the drain's summary still goes to stdout.
+CRON_ROW="*/5 * * * * root $DRAIN --apply >/dev/null # realisateur:vault-spool-drain:CADENCE"
 if [ "$(cat "$CRON_D" 2>/dev/null)" = "$CRON_ROW" ]; then
   ok "$CRON_D drains the spool every 5 minutes"
 elif [ "$MODE" = --apply ]; then

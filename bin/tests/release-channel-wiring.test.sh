@@ -3,8 +3,7 @@
 # TRAPS (the rest of this header is in the vault):
 # So this suite asserts the MECHANISM EXISTS. It goes red if someone:
 #   - deletes or unschedules the nightly workflow
-#   - removes the gate from it, or lets the gate's refusal be ignored
-#   - removes the publish step, or lets a BLOCKED night publish nothing
+#   - removes the publish step, or lets a night publish no verdict
 #   - drops the consumer-side liveness check out of the tick
 #   - lets the vendored workflow drift from the deployed one   (--live)
 #   - lets the published endpoint go stale or malformed        (--live)
@@ -52,6 +51,48 @@ WFSRC="$(cat "$WF" 2>/dev/null || true)"
 
 # ===========================================================================
 echo
+echo "-- B0. EVERY INLINE run: BLOCK IS VALID SHELL --------------------------"
+# ===========================================================================
+# A `run:` body is shell nothing parses until the runner executes it, so a syntax
+# error ships green: run 33298077408 died on `line 25: unexpected EOF`. Every
+# other assertion here is a substring match and none could see it.
+harness_tmp
+WFSHELL="$T/wfshell"; mkdir -p "$WFSHELL"
+awk -v out="$WFSHELL" '
+  /^[[:space:]]*run: \|[[:space:]]*$/ {
+    match($0, /^ */); ind = RLENGTH
+    n++; f = sprintf("%s/blk%02d.sh", out, n); inblk = 1; next
+  }
+  inblk {
+    if ($0 ~ /^[[:space:]]*$/) { print "" > f; next }
+    match($0, /^ */)
+    if (RLENGTH <= ind) { inblk = 0; close(f); next }
+    print substr($0, ind + 3) > f
+  }
+' "$WF"
+nblk=0; nbad=0; firsterr=''
+for f in "$WFSHELL"/blk*.sh; do
+  [ -e "$f" ] || continue
+  nblk=$((nblk + 1))
+  bash -n "$f" 2>"$f.err" && continue
+  nbad=$((nbad + 1))
+  [ -n "$firsterr" ] || firsterr="$(head -1 "$f.err")"
+done
+# A zero-block extraction is BLIND, not clean: it would check nothing at all.
+if [ "$nblk" -eq 0 ]; then
+  bad "the run: block extractor found NO blocks -- this check measured nothing" \
+      "expected several run: | blocks in $WF"
+else
+  ok "$nblk inline run: block(s) extracted from the workflow"
+  if [ "$nbad" -eq 0 ]; then
+    ok "every inline run: block parses as bash"
+  else
+    bad "$nbad inline run: block(s) are not valid bash -- the step would die before its first command" "$firsterr"
+  fi
+fi
+
+# ===========================================================================
+echo
 echo "-- B. THE CUT IS AUTOMATIC (a schedule, not a human) -------------------"
 # ===========================================================================
 has "the workflow has a schedule: trigger" "$WFSRC" "schedule:"
@@ -62,13 +103,9 @@ has "it can also be dispatched by hand for a recovery run" "$WFSRC" "workflow_di
 echo
 echo "-- C. NOTHING REFUSES THE CUT, AND THAT IS ASSERTED ---------------------"
 # ===========================================================================
-# The gate is DELETED (#598, #599, #600): it errored or blocked 39% of nights
-# while grading a minority of the manifest. This section used to assert it ran
-# before `git tag` and that its refusal was not swallowed. Those assertions
-# would now pass vacuously against a file that mentions no gate, which is the
-# worst outcome -- a green line about a thing that is not there. So the claim
-# is INVERTED: no gate may come back without this suite being rewritten to
-# describe it, and section D below is what still holds the channel honest.
+# The gate is DELETED (#598, #599, #600). Asserting it still ran would pass
+# vacuously against a file that mentions no gate, so the claim is INVERTED: no
+# gate may come back without this suite being rewritten to describe it.
 if printf '%s' "$WFSRC" | grep -qE 'release-gate\.sh|steps\.gate\.outputs'; then
   bad "the workflow calls a release gate again" \
     "it was removed for grading a minority of the manifest; if it is back, this suite must assert what it now covers"
