@@ -18,6 +18,7 @@ cli_guard "$@"
 
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 . "$HERE/lib/host-check.sh"
+. "$HERE/lib/propagation-set.sh"   # PROP_HOST_PIN -- the build layout has one home
 
 LEDGER="${UNARMED_LEDGER:-$HERE/lib/unarmed.tsv}"
 HOST="${UNARMED_HOST:-monkey}"
@@ -54,7 +55,12 @@ for c in $($SUDO sh -c "ls '"$SCHED"'/schedule/*.conf 2>/dev/null"); do
   $SUDO grep -q "@@FRAGMENT:" "$c" && f=$((f + 1))
   $SUDO grep -q "^USES_STANDING_RULES=1" "$c" && s=$((s + 1))
 done
-printf "SCHED_CONFS %s\nSCHED_FRAGMENT %s\nSCHED_STANDING %s\n" "$n" "$f" "$s"'
+printf "SCHED_CONFS %s\nSCHED_FRAGMENT %s\nSCHED_STANDING %s\n" "$n" "$f" "$s"
+printf "ROOT_LIVENESS %s\n" "$(( $(count dexter-liveness.sh) + $($SUDO grep -rl dexter-liveness /etc/cron.d 2>/dev/null | wc -l) ))"
+printf "VAULT_MODE %s\n" "$(stat -c %04a /srv/ecosystem1-vault 2>/dev/null)"
+printf "DRAIN_CRON %s\n" "$($SUDO cat /etc/cron.d/vault-spool-drain 2>/dev/null | grep -c vault-spool-drain.sh)"
+printf "DRAIN_BIN %s\n" "$($SUDO test -x /usr/local/libexec/selfdev/vault-spool-drain.sh && echo 1 || echo 0)"
+[ -d '"$PROP_HOST_PIN"' ] && printf "BUILD_LIBEXEC %s\n" "$(ls '"$PROP_HOST_PIN"'/*/libexec/ 2>/dev/null | grep -cE "^(unarmed|vault-spool-drain)\.sh$")"'
   if on_target_host "$HOST"; then
     FACTS="$(bash -c "$script" 2>/dev/null)"; rc=$?
   else
@@ -113,6 +119,48 @@ probe_unarmed_cadence() {
   local n; n="$(fact ROOT_UNARMED)"
   if [ "${n:-0}" -ge 1 ]; then echo "ARMED this probe runs on root's clock on $HOST"
   else echo "UNARMED this probe is on no clock, so nothing reads the floor it keeps"; fi
+}
+
+probe_vault_read_door() {
+  local m; m="$(fact VAULT_MODE)"
+  { host_readable && [ -n "$m" ]; } || { echo "BLIND could not stat /srv/ecosystem1-vault on $HOST"; return; }
+  if [ "$m" = 0700 ]; then
+    echo "ARMED /srv/ecosystem1-vault is 0700 on $HOST -- no self-dev account reads the vault (#742)"
+  else
+    echo "UNARMED /srv/ecosystem1-vault is $m on $HOST, not 0700, so every account in the vault group still reads it"
+  fi
+}
+
+probe_vault_drain() {
+  host_readable || { echo "BLIND cannot read $HOST"; return; }
+  local c b; c="$(fact DRAIN_CRON)"; b="$(fact DRAIN_BIN)"
+  if [ "${c:-0}" -ge 1 ] && [ "${b:-0}" = 1 ]; then
+    echo "ARMED $HOST drains /srv/vault-spool every 5 minutes and the drain that row names is installed"
+  elif [ "${c:-0}" -ge 1 ]; then
+    echo "UNARMED /etc/cron.d/vault-spool-drain fires every 5 minutes on $HOST and vault-spool-drain.sh is not installed under /usr/local/libexec/selfdev, so the row is a silent no-op"
+  else
+    echo "UNARMED nothing on $HOST drains /srv/vault-spool, so a deposit would queue and never land"
+  fi
+}
+
+probe_dexter_liveness() {
+  host_readable || { echo "BLIND cannot read $HOST's crontabs"; return; }
+  local n; n="$(fact ROOT_LIVENESS)"
+  if [ "${n:-0}" -ge 1 ]; then
+    echo "ARMED dexter-liveness.sh runs on a clock on $HOST, so a dexter outage is reported and not archaeologised"
+  else
+    echo "UNARMED dexter-liveness.sh is installed on $HOST and no crontab or /etc/cron.d row invokes it"
+  fi
+}
+
+probe_libexec_payload() {
+  local n; n="$(fact BUILD_LIBEXEC)"
+  { host_readable && [ -n "$n" ]; } || { echo "BLIND could not read the adopted verb build on $HOST"; return; }
+  if [ "$n" = 2 ]; then
+    echo "ARMED the build $HOST adopted carries both libexec/ host tools that bashified declares"
+  else
+    echo "UNARMED the build $HOST adopted carries $n of the 2 libexec/ host tools bashified declares, and no cut has shipped the rest"
+  fi
 }
 
 findings=0; blind=0
