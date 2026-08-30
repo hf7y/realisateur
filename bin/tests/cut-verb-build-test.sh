@@ -476,6 +476,12 @@ fi
     && ok "the sibling VERB is untouched -- one command omitted, not a project" \
     || bad "the sibling verb survived" "kappa/kv is missing too"
 
+H14D="$(sed -n 's/^# \([0-9]*\) verb(s), \([0-9]*\) project(s)\..*/\1 \2/p' "$TMP/asm14d/manifest.tsv" | head -1)"
+check "the header's verb count matches the data rows after a personal drop" \
+      "${H14D%% *}" "$(grep -cv '^#' "$TMP/asm14d/manifest.tsv")"
+check "...and its project count does too" \
+      "${H14D##* }" "$(awk -F'\t' '/^[^#]/{print $1}' "$TMP/asm14d/manifest.tsv" | sort -u | grep -c .)"
+
 printf 'kappa\tkv\nkappa\tkp\n' > "$TMP/published14e"  # 14e: a KIND:personal drop is a shrink too (realisateur#703)
 FIXTURE_PUBLISHED="$TMP/published14e" \
   cut --assemble "$TMP/asm14e" >/dev/null 2>"$TMP/e14e"
