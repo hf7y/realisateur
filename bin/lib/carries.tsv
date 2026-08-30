@@ -28,6 +28,7 @@ bin/lib/body-grammar.sh	bin/lib/body-grammar.sh
 bin/lib/host-check.sh	bin/lib/host-check.sh
 bin/lib/labels.tsv	bin/lib/labels.tsv
 bin/lib/path-guard.tsv	bin/lib/path-guard.tsv
+bin/lib/superseded.tsv	bin/lib/superseded.tsv
 bin/lib/propagation-set.sh	bin/lib/propagation-set.sh
 bin/lib/estate-set.sh	bin/lib/estate-set.sh
 bin/lib/zaxon.sh	bin/lib/zaxon.sh
@@ -60,3 +61,4 @@ hooks/session-marker.sh	hooks/session-marker.sh
 libexec/ausculte-cadence.sh	bin/ausculte-cadence.sh
 libexec/dexter-liveness.sh	bin/dexter-liveness.sh
 libexec/decision-rot.sh	bin/decision-rot.sh
+libexec/supersession.sh	bin/supersession.sh

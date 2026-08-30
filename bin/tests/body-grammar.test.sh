@@ -194,6 +194,15 @@ eq 'T3 a typed claim passes' "$(findings 'NO-DECISION: x
 <!-- DELIVERS -->
 - clock:root@monkey tag:realisateur:ausculte:CADENCE
 <!-- /DELIVERS -->')" 0
+eq 'T3b what a change TAKES OUT is a delivery too (#754)' "$(findings 'NO-DECISION: x
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- retires: path:hooks/old-guard.sh -> path:hooks/new-guard.sh -- bin/supersession.sh checks it went
+<!-- /DELIVERS -->')" 0
 eq 'T4 prose a check cannot look for is a finding' "$(codes 'NO-DECISION: x
 
 <!-- DEFERRED -->

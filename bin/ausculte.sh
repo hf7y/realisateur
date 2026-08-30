@@ -10,7 +10,7 @@ CLI_SUMMARY='is self-dev healthy enough to stop watching?'
 CLI_USAGE='  ausculte              every probe; the exit code is the answer
   ausculte --json       one object per probe
   ausculte <probe>      just one: channel hosts arming hygiene propagation
-                        rot fleet handoff'
+                        rot fleet handoff supersession'
 CLI_FLAGS='--json'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  every declared probe answered OK
@@ -339,6 +339,24 @@ if want rot; then
       *) record rot BLIND "$(printf '%s' "$out" | tail -1)" ;;
     esac
   else record rot BLIND 'decision-rot.sh not present'; fi
+fi
+
+if want supersession; then
+  # THE OTHER HALF OF "can I stop looking?" (#754). Every row above asks
+  # whether a live thing is serving. This one asks whether a transition
+  # FINISHED -- the retired end gone, the armed end there -- because a
+  # replacement that lands beside the thing it replaces, and a build whose
+  # switch is never flipped, are the same defect at opposite ends and neither
+  # one makes any other row here go red.
+  if sp="$(part supersession.sh)"; then
+    out="$(bash "$sp" 2>&1)"; rc=$?
+    case $rc in
+      0) record supersession OK "$(printf '%s\n' "$out" | awk '$1 == "TOTAL" { print $2 " declared transition(s), all finished" }')" ;;
+      1) record supersession DOWN "$(printf '%s\n' "$out" | awk '$1 == "TOTAL" { print $4 }') half-finished: $(printf '%s\n' "$out" | awk '/^ +(RESIDUE|UNARMED) / { sub(/^ +/, ""); print; exit }')" ;;
+      2) record supersession BLIND 'ausculte invoked supersession.sh wrongly -- fix ausculte' ;;
+      *) record supersession BLIND "$(printf '%s\n' "$out" | awk '/BLIND/ { sub(/^ +/, ""); print; exit }')" ;;
+    esac
+  else record supersession BLIND 'supersession.sh not present'; fi
 fi
 
 # The `delivery` probe went with delivery-audit.sh (#511): it read

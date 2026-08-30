@@ -200,6 +200,7 @@ monkey-status-collect.py
 repose.sh
 decision-rot.sh
 stale-paths.sh
+supersession.sh
 cut-verb-build.sh
 publish-release-verdict.sh
 selfdev-credentials.sh
@@ -223,7 +224,7 @@ reprise.sh
 prop_host_tools() {
   # The probes ausculte composes are LOCAL-class and ride here, or it is
   # BLIND about them on a host.
-  printf 'dresse.sh\nausculte-cadence.sh\ndexter-liveness.sh\ndecision-rot.sh\n'
+  printf 'dresse.sh\nausculte-cadence.sh\ndexter-liveness.sh\ndecision-rot.sh\nsupersession.sh\n'
   local s; for s in $PROP_PROVISION_SCRIPTS; do [ "$s" = dresse.sh ] || printf '%s\n' "$s"; done
 }
 

@@ -161,6 +161,11 @@ grammar_check() {
     case "$ship" in
       '- none'|'- none.'|'-none')                       ship=''; return 0 ;;
       *host:*|*path:*|*clock:*|*tag:*|*secret:*|*unit:*|*port:*|*repo:*) ship=''; return 0 ;;
+      # `retires: <ref> -> <ref>` is a delivery too: it says what this change
+      # takes OUT, which bin/supersession.sh then checks actually went. The
+      # cheap end of a transition ledger -- one bullet in a block that is
+      # already mandatory, so declaring costs nothing at the moment of building.
+      *retires:*) ship=''; return 0 ;;
     esac
     _find UNTYPED-DELIVERY "names no <kind>:<value> a check could look for: ${ship:0:60}"
     ship=''
