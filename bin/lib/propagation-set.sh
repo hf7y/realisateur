@@ -215,9 +215,7 @@ reprise.sh
 # carry.sh and reprise.sh are LOCAL: they write to a BRANCH of this repo, not a
 # host, so per-account copies would be many writers racing one force-with-lease.
 # reprise also reads bin/lib/handoffs.tsv, THIS repo's ledger, empty elsewhere.
-# registry-standup.sh is LOCAL: its subject is the FLEET, and it writes nothing.
-# unarmed.sh is LOCAL for the same reason, and rides prop_host_tools: a host
-# that cannot run it is BLIND about what it has built and never turned on.
+# registry-standup.sh, unarmed.sh: LOCAL. FLEET subjects, no writes; unarmed rides prop_host_tools.
 # publish-release-verdict.sh is LOCAL because it runs in the release pipeline.
 
 # prop_host_tools -- what a provisioned host carries under
