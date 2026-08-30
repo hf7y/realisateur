@@ -9,18 +9,22 @@ echo "monkey-wsl2.test.sh"
 section "A. the runbook survives roff -- a mangled command is worse than no runbook"
 if command -v man >/dev/null 2>&1; then
   R="$(MANWIDTH=200 man --nh --nj -l "$D/runbook.1" 2>/dev/null)"
+  RF="$(printf '%s' "$R" | tr '\n' ' ' | tr -s ' ')"   # flattened: roff re-wraps prose, so sentence assertions match RF while command assertions match R, where a broken line IS the bug
   has "A1 the import command keeps its Windows path separators" "$R" 'wsl.exe --import monkey D:\wsl-migration\monkey'
   has "A2 the rollback keeps VBoxManage's quoted program path" "$R" "'C:\\Program Files\\Oracle\\VirtualBox\\VBoxManage.exe' startvm monkey"
   has "A3 the fstab fix keeps its sed delimiters and ampersand" "$R" "sed -i 's|^/dev/disk/by-uuid|#&|; s|^/swapfile|#&|' /etc/fstab"
   has "A4 the rehearsal still drops monkey's tailscale identity" "$R" '--exclude=./var/lib/tailscale'
-  has "A11 ...and says the cutover KEEPS it, with what depends on it" "$R" "12 runner registrations"
-  has "A12 a green backend line is not mistaken for the verification" "$R" "A green backend line is NOT the verification"
+  has "A11 ...and says the cutover KEEPS it, with what depends on it" "$RF" "12 runner registrations"
+  has "A12 a green backend line is not mistaken for the verification" "$RF" "A green backend line is NOT the verification"
   has "A13 the shutdown window puts autoMemoryReclaim under [experimental]" "$R" "[experimental]"
-  has "A14 ...and restores the human channel rather than assuming it" "$R" "zaxon-relay-mcp whisper-server zaxon-relay-watcher hermes-gateway"
-  has "A15 ...and drives the window from the route that survives it" "$R" "Drive the whole window from port 22"
+  has "A14 ...and restores the human channel rather than assuming it" "$RF" "zaxon-relay-mcp whisper-server zaxon-relay-watcher hermes-gateway"
+  has "A15 ...and drives the window from the route that survives it" "$RF" "Drive the whole window from port 22"
+  has "A16 absence from the distro list is not failure, and the retry error is named" "$R" "Wsl/Service/RegisterDistro/0x8000000d"
+  has "A17 the import survives the shell that launched it" "$RF" "does not stop the import"
+  has "A18 ...so it is not wrapped in a short timeout" "$RF" "too short here by a factor of four"
   has "A5 --terminate is named, and --shutdown is named as the hazard" "$R" 'wsl --terminate'
   has "A7 the rehearsal masks the runners before systemd can start them" "$R" "systemctl mask 'actions.runner.*' tailscaled cron"
-  has "A8 ...and says why: they would contend with the live fleet's agents" "$R" "SAME agents as the live monkey"
+  has "A8 ...and says why: they would contend with the live fleet's agents" "$RF" "SAME agents as the live monkey"
   has "A9 --shutdown's blast radius names the human channel" "$R" "zaxon-relay-mcp.service"
   has "A10 it says a probe inside a distro cannot identify what it measured" "$R" "cannot tell you which distro it measured"
 else

@@ -209,6 +209,41 @@ ON dexter, Windows route. Imports land on D:, never C:
     D:\ewsl\-migration\emonkey\-rehearsal.tar
   wsl.exe \-d monkey\-rehearsal \-u root \-\- /bin/true
 .fi
+.SS How the import behaves while it runs, measured 2026\-08\-30
+Three things, and the third is a trap that invites exactly the wrong recovery.
+.PP
+.B It is slow, and it is slower than the tar.
+The 22.22G tar took about an hour; the import runs at roughly 0.3\-0.6 G/min, so
+budget an hour again. Do NOT wrap it in a short `timeout' \- a 15\-minute one
+was too short here by a factor of four.
+.PP
+.B It survives the shell that launched it.
+`wsl.exe' is a WINDOWS process reached through interop, not a child of your ssh
+session. Killing the ssh, or the local script driving it, does not stop the
+import: measured, the vhdx kept growing from 5.28G to 6.49G after its launching
+process was killed. That is usually what you want, but it means you cannot
+cancel an import by hanging up.
+.PP
+.B The distro does NOT appear in `wsl \-l \-q' until the import COMPLETES.
+So absence from the list means "not finished", NOT "not running", and a reader
+who reads it as failure and retries gets:
+.nf
+
+  An install, uninstall, or conversion is in progress for this distribution.
+  Error code: Wsl/Service/RegisterDistro/0x8000000d
+.fi
+.PP
+which is WSL correctly refusing a second import, not a new fault. Watch the
+vhdx SIZE to see progress, and the distro LIST to see completion:
+.nf
+
+  ls \-l /mnt/d/wsl\-migration/monkey\-rehearsal/ext4.vhdx   # progress
+  wsl.exe \-l \-q | grep \-x monkey\-rehearsal                # completion
+.fi
+.PP
+A stale ext4.vhdx from a killed import cannot be deleted from the WSL side
+(`Permission denied' on drvfs while Windows holds it); clear it from the
+Windows route, or leave the original import to finish.
 .SS The first boot is the safe window, and it is the only one
 monkey carries no /etc/wsl.conf \- it has never been a distro \- so the FIRST
 .B wsl \-d
