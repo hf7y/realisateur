@@ -152,11 +152,26 @@ discover_written_files() {
   ' "$transcript" 2>/dev/null | sort -u
 }
 
-# A PR THIS RUN OPENED is the other half of "did the work land".
+# A PR THIS RUN OPENED -- not one it merely READ (the 2026-08-29 fixture scrape).
 discover_opened_prs() {
-  local transcript="$1"
+  local transcript="$1" ids
   [ -n "$transcript" ] && [ -r "$transcript" ] || return 0
-  grep -oE 'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[0-9]+' "$transcript" 2>/dev/null | sort -u
+  command -v jq >/dev/null 2>&1 || return 0
+  ids="$(jq -r '
+    .message.content[]? |
+    select(.type == "tool_use" and .name == "Bash") |
+    select((.input.command // "") | test("gh[[:space:]].*(pr[[:space:]]+create|POST.*/pulls)")) |
+    .id // empty
+  ' "$transcript" 2>/dev/null | jq -Rsc 'split("\n") | map(select(. != ""))')"
+  [ -n "$ids" ] && [ "$ids" != "[]" ] || return 0
+  jq -r --argjson ids "$ids" '
+    .message.content[]? |
+    select(.type == "tool_result") |
+    select(.tool_use_id as $i | ($ids | index($i)) != null) |
+    [.content] | flatten | .[] |
+    if type == "string" then . else (.text // empty) end
+  ' "$transcript" 2>/dev/null |
+    grep -oE 'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[0-9]+' | sort -u
 }
 
 written_files=()
