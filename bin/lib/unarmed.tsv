@@ -1,0 +1,22 @@
+# unarmed.tsv -- THE FLOOR: every built mechanism known to be off. #754.
+#
+# A RATCHET, NOT A TO-DO LIST. bin/unarmed.sh is silent while this set merely
+# persists and red the moment it GROWS -- a probe_* predicate with no row here
+# is a mechanism someone shipped and deferred the arming of. Zach, 2026-08-30:
+# a row red for 19 days is wallpaper, and wallpaper on a panel teaches its
+# reader to skip the panel.
+#
+# Each UNARMED row declares its own window in `DEFAULT-AFTER <n>d` shape
+# (bin/lib/body-grammar.sh) and goes red only past it. A row with no window
+# blocks by omission, so an empty window is itself a finding.
+#
+# TRAP: ids are hyphen-only. The growth check maps probe_host_mode back to
+# host-mode by `_` -> `-`, so an underscore in an id makes its own row
+# unreachable and the mechanism reads as newly grown.
+#
+# id	since	window	floor	remedy
+host-mode	2026-08-11	30d	UNARMED	sudo crontab -e on monkey, add: */20 * * * * PACED_HOST_MODE=1 PACED_MAX_PER_TICK=1 /home/scheduler/Documents/Projects/scheduler/bin/usage-paced-runner.sh # scheduler:scheduler-paced-runner:RUNNER (host mode) -- then drop the per-account RUNNER rows (hf7y/scheduler#364)
+runner-cadence	2026-08-30	-	ARMED	sudo crontab -e on monkey, restore: 17 6 * * * /usr/local/libexec/senechal/selfdev-runner-provision.sh --check --quiet >/dev/null 2>&1 || /usr/local/libexec/senechal/selfdev-runner-provision.sh --apply # selfdev-runner:CADENCE
+standing-rules	2026-08-30	-	ARMED	set USES_STANDING_RULES=1 in every schedule/*.conf that lost it (hf7y/scheduler#362)
+fragment-adoption	2026-08-13	30d	UNARMED	convert the remaining schedule/*.conf prompt blocks to @@FRAGMENT:<name>@@ (hf7y/scheduler#363 converts eleven of them)
+unarmed-cadence	2026-08-30	14d	UNARMED	sudo crontab -e on monkey, add: 19 7 * * 1 /usr/local/libexec/selfdev/unarmed.sh --check # realisateur:unarmed:CADENCE -- once the verb build carries it
