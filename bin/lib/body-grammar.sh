@@ -74,6 +74,49 @@ grammar_negated_close() {  # <line> <heading-negates> -- print "<keyword> <ref>"
   return 1
 }
 
+# grammar_landing_ref <text> -- print the first thing <text> names that a check
+# could go and look at, 1 when it names none. gh-sign's `issue close` guard
+# asks it of a close comment: closing having landed nothing is this estate's
+# largest measured class (#752), and prose cannot be followed -- the same
+# argument UNTYPED-DELIVERY makes about DELIVERS. Four shapes, all already
+# written here daily: `#N`/`owner/repo#N`/an issue-pull-commit URL, a 7-40
+# char hex commit, a typed <kind>:<value>, a `code span` naming a path. The
+# span looks arbitrary and is not -- over 1,348 real closes, dropping it takes
+# the guard from 49 refusals to 91, and all 42 it acquits are honest (#778).
+grammar_landing_ref() {
+  local text="$1" words=() w seg rest
+  local IFS=$' \t\n'
+
+  # `-d ''` IS LOAD-BEARING: bare `read -ra` stops at the first newline, which
+  # is correct above only because grammar_check hands it one line at a time.
+  read -rd '' -a words <<<"$text" || :
+  for w in "${words[@]}"; do
+    w="${w//\`/}"; w="${w%[.,;:)]}"
+    case "$w" in
+      '#'[0-9]*|*[a-zA-Z0-9]/[a-zA-Z0-9]*'#'[0-9]*) printf '%s\n' "$w"; return 0 ;;
+      *://*/pull/[0-9]*|*://*/issues/[0-9]*|*://*/commit/*) printf '%s\n' "$w"; return 0 ;;
+      *host:*|*path:*|*clock:*|*tag:*|*secret:*|*unit:*|*port:*|*repo:*) printf '%s\n' "$w"; return 0 ;;
+    esac
+    case "$w" in                      # a commit: hex only, and never all digits
+      *[!0-9a-f]*) ;;
+      *[a-f]*) [ "${#w}" -ge 7 ] && [ "${#w}" -le 40 ] && { printf '%s\n' "$w"; return 0; } ;;
+    esac
+  done
+
+  rest="$text"                        # same walk as grammar_negated_close
+  while :; do
+    case "$rest" in *'`'*) ;; *) return 1 ;; esac
+    rest="${rest#*\`}"
+    case "$rest" in
+      *'`'*) seg="${rest%%\`*}"; rest="${rest#*\`}" ;;
+      *) return 1 ;;
+    esac
+    case "$seg" in
+      *[A-Za-z0-9_-][/.][A-Za-z0-9_-]*) printf '%s\n' "$seg"; return 0 ;;
+    esac
+  done
+}
+
 # grammar_default_after <body> -- print "<days><TAB><action>" and return 0 when
 # the body carries a well-formed DEFAULT-AFTER; return 1 when it carries none.
 # Pure bash: this runs wherever gh-sign runs, and sed/grep were not on that PATH.
