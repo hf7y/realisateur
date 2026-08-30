@@ -17,6 +17,7 @@ if command -v man >/dev/null 2>&1; then
   has "A7 the rehearsal masks the runners before systemd can start them" "$R" "systemctl mask 'actions.runner.*' tailscaled cron"
   has "A8 ...and says why: they would contend with the live fleet's agents" "$R" "SAME agents as the live monkey"
   has "A9 --shutdown's blast radius names the human channel" "$R" "zaxon-relay-mcp.service"
+  has "A10 it says a probe inside a distro cannot identify what it measured" "$R" "cannot tell you which distro it measured"
 else
   ok "A1-A5 skipped: no man(1) on this runner"
 fi
