@@ -12,7 +12,9 @@ if command -v man >/dev/null 2>&1; then
   has "A1 the import command keeps its Windows path separators" "$R" 'wsl.exe --import monkey D:\wsl-migration\monkey'
   has "A2 the rollback keeps VBoxManage's quoted program path" "$R" "'C:\\Program Files\\Oracle\\VirtualBox\\VBoxManage.exe' startvm monkey"
   has "A3 the fstab fix keeps its sed delimiters and ampersand" "$R" "sed -i 's|^/dev/disk/by-uuid|#&|; s|^/swapfile|#&|' /etc/fstab"
-  has "A4 the rehearsal still drops tailscaled.state" "$R" '--exclude=./var/lib/tailscale/tailscaled.state'
+  has "A4 the rehearsal still drops monkey's tailscale identity" "$R" '--exclude=./var/lib/tailscale'
+  has "A11 ...and says the cutover KEEPS it, with what depends on it" "$R" "12 runner registrations"
+  has "A12 a green backend line is not mistaken for the verification" "$R" "A green backend line is NOT the verification"
   has "A5 --terminate is named, and --shutdown is named as the hazard" "$R" 'wsl --terminate'
   has "A7 the rehearsal masks the runners before systemd can start them" "$R" "systemctl mask 'actions.runner.*' tailscaled cron"
   has "A8 ...and says why: they would contend with the live fleet's agents" "$R" "SAME agents as the live monkey"
