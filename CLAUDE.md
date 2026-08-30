@@ -1,22 +1,19 @@
 # CLAUDE.md
 
-## `vault:` in a citation is a remote, not a path
+## `vault:` is an ARCHIVE. Agents do not read it. (Zach, 2026-08-29, #762)
 
-`vault:<project>/<file>` names a path inside the private
-**`hf7y/ecosystem1-vault`** remote. It is not on disk here — mandark holds no
-clone. Read one with `gh api repos/hf7y/ecosystem1-vault/contents/<path>`.
-Defined once in `PROSE-REAPING.md` §2; do not retype the resolution rule.
+`vault:<project>/<file>` names a path in the private **`hf7y/ecosystem1-vault`**
+remote — where prose goes when it stops being true. Recognise the notation;
+never follow it. Reading a retired fact back is how it returns as documentation.
+Establish facts from live code, config or API, else UNVERIFIED — say so and act
+on nothing. Writing (`consigne`) is unaffected.
 
 ## Push permission (2026-08-14, reaped: main is a protected branch)
 
 `main` is protected on the remote (required status checks, `enforce_admins`
 on). A direct push to `main` is rejected for everyone, including admins and
 including this repo's own automation. Open a pull request; never commit to
-local `main`. The previous grant here said the opposite and cost the monkey
-self-dev account 5 failed runs and 15 stranded salvage branches.
-
-
-
+local `main`.
 
 ## Subagent rules (2026-07-25, from the propagation pass)
 
