@@ -25,7 +25,12 @@ def candidates:
   | gsub("```(?s:.*?)```"; " ")
   | gsub("(?i)\\b(?:" + $roster_pattern + ")\\b\\s*(`[^`]*`|[A-Za-z0-9_./-]+)"; " ")
   | splits("[\\s`()\\[\\]{}\"',;]+")
-  | sub("^[.:]+"; "") | sub("[.:,]+$"; "")
+  # A LEADING DOT IS PART OF A DOTFILE PATH, not prose punctuation. Stripping
+  # it unconditionally made `.github/workflows/tests.yml` -- a file this tree
+  # has -- read as the missing `github/workflows/tests.yml`. Found by pointing
+  # this filter at code comments, where dot-directories are common.
+  | (if test("^[.][A-Za-z0-9_]") then . else sub("^[.:]+"; "") end)
+  | sub("[.:,]+$"; "")
   | gsub(":[0-9]+(-[0-9]+)?$"; "")            # a cited line/range, not the path
   | select((startswith("/") or startswith("http://") or startswith("https://")
             or startswith($owner + "/") or startswith("vault:")) | not)
