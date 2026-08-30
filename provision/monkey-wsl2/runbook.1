@@ -81,6 +81,22 @@ Ubuntu and hermes BOTH report hostname `dexter'; /etc/wsl.conf is per\-distro
 monkey guest: systemd\-networkd and systemd\-resolved ACTIVE, / mounted by UUID,
   /swapfile in fstab \- all break or hang under wsl \-\-import
 .fi
+.SS Why a probe here cannot identify what it measured
+One namespace, and two distros answering to the same hostname, means
+.B a check run inside a distro cannot tell you which distro it measured.
+Three separate confusions on 2026\-08\-30 were this one fact:
+.nf
+
+  a port check from `Ubuntu' reports hermes's 8643 and 8090 as its own \-
+    which is why dexter\-liveness.sh calls hermes dead weight while
+    declaring the very ports hermes owns
+  `wsl.exe \-e true' warns about a wsl.conf key belonging to docker\-desktop,
+    because with no \-d it launches the DEFAULT distro, not yours
+  `ssh dexter' and `wsl \-d hermes' both answer the hostname `dexter'
+.fi
+.PP
+So: name the distro explicitly in every command, and treat any measurement that
+did not name one as unattributed rather than as belonging to the caller.
 .SH WHERE THE SEQUENCE HAS GOT TO
 .nf
 2026\-08\-30  seam merged (#745, #798); wsl arms for disk/screenshot/logdir added
