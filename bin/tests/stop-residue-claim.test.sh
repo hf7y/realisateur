@@ -87,6 +87,73 @@ rc "B4 a claim from a PRIOR turn does not block THIS turn" 0 "$(rcof "$R" "$T/b4
   asst_turn "install-shims.sh was deleted by #511, and the decision landed with it. The remedy parked rather than deleted."; } > "$T/b5.jsonl"
 rc "B5 third-person history using the same verbs -> exit 0" 0 "$(rcof "$R" "$T/b5.jsonl")"
 
+section "C. a defect stated with no artifact at all -- the unfiled finding (#752 option 2)"
+
+DEFECT="@bin/lib/propagation-set.sh@ is filed LOCAL today, so it does not exist on any account."
+BT=$'\x60'
+DEFECT="${DEFECT//@/$BT}"
+
+{ user_turn "have a look at the propagation set"
+  asst_turn "$DEFECT"; } > "$T/c1.jsonl"
+C1_OUT="$(run "$R" "$T/c1.jsonl")"
+rc  "C1 a stated defect with no artifact -> BLOCKED (2)" 2 "$(rcof "$R" "$T/c1.jsonl")"
+has "C1 quotes the sentence that carries the finding" "$C1_OUT" "does not exist on any account"
+has "C1 names the rule, not a policy file"            "$C1_OUT" "Fix it in the turn you found it"
+
+{ user_turn "have a look at the propagation set"
+  bash_act "gh issue create -R hf7y/realisateur -F /tmp/body"
+  tool_out "https://github.com/hf7y/realisateur/issues/901"
+  asst_turn "$DEFECT"; } > "$T/c2.jsonl"
+rc "C2 the same defect, filed in the same turn -> exit 0" 0 "$(rcof "$R" "$T/c2.jsonl")"
+
+{ user_turn "have a look at the propagation set"
+  edit_act "$R/bin/lib/propagation-set.sh"
+  asst_turn "$DEFECT"; } > "$T/c3.jsonl"
+rc "C3 the same defect, fixed in the same turn -> exit 0" 0 "$(rcof "$R" "$T/c3.jsonl")"
+
+{ user_turn "what does the carry ledger key on?"
+  asst_turn "${BT}bin/lib/carries.tsv${BT} names the file, never the branch (${BT}carry.sh:10${BT}), and ${BT}reprise.sh${BT} reads the same row."; } > "$T/c4.jsonl"
+rc "C4 a descriptive explanation with citations -> exit 0" 0 "$(rcof "$R" "$T/c4.jsonl")"
+
+{ user_turn "what did the issue say?"
+  asst_turn "The issue body said:
+
+> ${BT}bin/weight-audit.sh${BT} does not exist.
+
+That is the claim I am checking next."; } > "$T/c5.jsonl"
+rc "C5 a defect quoted in a blockquote is not this turn's assertion -> exit 0" 0 "$(rcof "$R" "$T/c5.jsonl")"
+
+{ user_turn "what did the header claim?"
+  asst_turn "Its header claims \"${BT}bin/weight-audit.sh${BT} does not exist\" and I have not checked that yet."; } > "$T/c6.jsonl"
+rc "C6 a defect inside an inline quotation -> exit 0" 0 "$(rcof "$R" "$T/c6.jsonl")"
+
+{ user_turn "show me the snippet"
+  asst_turn "The relevant line is:
+
+${BT}${BT}${BT}
+${BT}bin/weight-audit.sh${BT} does not exist
+${BT}${BT}${BT}
+
+which is what I am about to test."; } > "$T/c7.jsonl"
+rc "C7 a defect inside a fenced block -> exit 0" 0 "$(rcof "$R" "$T/c7.jsonl")"
+
+{ user_turn "anything broken?"
+  asst_turn "Nothing is broken: ${BT}bin/crt-stt-speakback.sh${BT} and the debug view are opt-in already."; } > "$T/c8.jsonl"
+rc "C8 a sentence whose subject is 'nothing' makes the opposite claim -> exit 0" 0 "$(rcof "$R" "$T/c8.jsonl")"
+
+{ user_turn "did we ever record that?"
+  tool_out "https://github.com/hf7y/realisateur/issues/233"
+  user_turn "so what is the state"
+  asst_turn "${BT}bin/hygiene-lint.sh${BT} never runs its per-project check; that is #233."; } > "$T/c9.jsonl"
+rc "C9 a defect citing an artifact this transcript has seen -> exit 0" 0 "$(rcof "$R" "$T/c9.jsonl")"
+
+{ user_turn "anything broken?"
+  asst_turn "The per-project check never runs and the whole thing is stale."; } > "$T/c10.jsonl"
+rc "C10 a defect that names no artifact -> exit 0 (it must name what it accuses)" 0 "$(rcof "$R" "$T/c10.jsonl")"
+
+printf 'not json at all\n{{{\n' > "$T/c11.jsonl"
+rc "C11 an unparseable transcript fails OPEN on the defect path too -> exit 0" 0 "$(rcof "$R" "$T/c11.jsonl")"
+
 NOJQ="$T/nojq"; mkdir -p "$NOJQ"
 for c in bash cat dirname git grep sed awk; do ln -s "$(command -v "$c")" "$NOJQ/$c"; done
 rc "B6 no jq on PATH -- the claim check is skipped, not an error" 0 \

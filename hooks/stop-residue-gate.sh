@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -uo pipefail  # stop-residue-gate.sh: Stop guard one scope up from SubagentStop (#681 SS1), same CONTRACT as hooks/subagent-closeout.sh; #681's unfiled-finding half is completion_claims(), refiled as #752
+set -uo pipefail  # stop-residue-gate.sh: Stop guard one scope up from SubagentStop (#681 SS1), same CONTRACT as hooks/subagent-closeout.sh; #681's unfiled-finding half is completion_claims() + stated_defects(), refiled as #752
 
 log() { printf 'stop-residue-gate: %s\n' "$*" >&2; }
 
@@ -47,6 +47,38 @@ completion_claims() { # <this turn's assistant text> -> one tagged line per act 
   '
 }
 
+stated_defects() { # <this turn's assistant text> -> one line per sentence asserting a NAMED artifact is broken (#752 option 2, #681 2.1)
+  awk '
+    /^[[:space:]]*```/ { fence = !fence; next }                       # a fenced block is quoted material, not an assertion
+    fence { next }
+    /^[[:space:]]*>/ { next }                                        # so is a blockquote
+    /^[[:space:]]*[-*][[:space:]]*\[[ xX]\]/ { next }                 # a checklist line reports work done, it does not assert a defect
+    { line = $0; gsub(/\*?"[^"]*"\*?/, " ", line)                    # an inline quotation is someone else s words
+      n = split(line, sent, /[.!?] +/)
+      for (i = 1; i <= n; i++) {
+        s = tolower(sent[i]); gsub(/\047/, "", s)
+        if (s !~ /`[a-z0-9_./-]+\.(sh|py|tsv|conf|yml|yaml|json|jq|awk|md)(:[0-9]+)?`/) continue   # must name the artifact it accuses
+        if (s ~ /(nothing|no one|nobody) (is|was|are|were)/) continue                              # "nothing is broken" is the opposite claim
+        if (s ~ /(is|are|was|were|remains|remain|stays|stay) (still )?(wrong|false|stale|dead|broken|inert|a no-?op|a noop|vacuous|out of date|not true|never true)/ ||
+            s ~ /never (fires|fired|runs|ran|looks|looked|checks|checked|reads|read|evaluates|evaluated|executed)/ ||
+            s ~ /(does|do) not exist|no longer exists/ ||
+            s ~ /nothing (reads|calls|checks|enforces|evaluates|holds|watches)/)
+          { print substr(sent[i], 1, 140); next }
+      }
+    }
+  '
+}
+
+ACT_RE='^(Write|Edit|NotebookEdit)$|git +commit|git +push|gh +(issue|pr) +(create|comment)|gh +api.*(issues|pulls)|notify-senechal'
+
+cited_already() { # <flagged text> <transcript> -- true when it names an artifact this transcript has already seen
+  local cite seen                                    # gh issue create prints a URL, not #N, so the number is the identity
+  cite="$(grep -oE '#[0-9]+|/(issues|pull)/[0-9]+' <<<"$1" | grep -oE '[0-9]+' | sed -n 1p)"
+  [ -n "$cite" ] || return 1
+  seen="$(grep -vF '"type":"assistant"' "$2" | grep -cE "[#/]$cite([^0-9]|\$)")"
+  [ "${seen:-0}" -gt 0 ]
+}
+
 if [ -n "$transcript" ] && [ -r "$transcript" ] && command -v jq >/dev/null 2>&1; then
   turn_text="$(jq -rs '
     . as $all |
@@ -77,17 +109,16 @@ if [ -n "$transcript" ] && [ -r "$transcript" ] && command -v jq >/dev/null 2>&1
     end
   ' "$transcript" 2>/dev/null)" || turn_acts=""
   claim_report=""
-  if ! grep -qE '^(Write|Edit|NotebookEdit)$|git +commit|git +push|gh +(issue|pr) +(create|comment)|gh +api.*(issues|pulls)|notify-senechal' <<<"$turn_acts"; then
+  defect_report=""
+  if ! grep -qE "$ACT_RE" <<<"$turn_acts"; then
     while IFS= read -r claim; do
-      case "$claim" in P*)  # a done-claim naming an artifact this transcript has already seen is a citation, not a fresh claim
-        cite="$(grep -oE '#[0-9]+|/(issues|pull)/[0-9]+' <<<"$claim" | grep -oE '[0-9]+' | sed -n 1p)"
-        if [ -n "$cite" ]; then  # gh issue create prints a URL, not #N, so the number is the identity
-          seen="$(grep -vF '"type":"assistant"' "$transcript" | grep -cE "[#/]$cite([^0-9]|\$)")"
-          [ "${seen:-0}" -gt 0 ] && continue
-        fi ;;
-      esac
+      case "$claim" in P*) cited_already "$claim" "$transcript" && continue ;; esac  # a done-claim naming an artifact this transcript has already seen is a citation, not a fresh claim
       claim_report+="  ${claim#?}"$'\n'
     done < <(completion_claims <<<"$turn_text")
+    while IFS= read -r found; do
+      cited_already "$found" "$transcript" && continue
+      defect_report+="  $found"$'\n'
+    done < <(stated_defects <<<"$turn_text")
   fi
   if [ -n "$claim_report" ]; then
     {
@@ -99,6 +130,19 @@ if [ -n "$transcript" ] && [ -r "$transcript" ] && command -v jq >/dev/null 2>&1
       echo "NOW -- Edit, git commit, gh issue create, gh pr create -- or cite the artifact"
       echo "that already carries it (#N, or a URL this transcript has seen). A finding"
       echo "stated in a reply and left there dies with the transcript."
+    } >&2
+    exit 2
+  fi
+  if [ -n "$defect_report" ]; then
+    {
+      echo "BLOCKED: this turn states that something is broken and files nothing."
+      echo
+      printf '%s' "$defect_report"
+      echo
+      echo "Fix it in the turn you found it; file only what you cannot reach. Do the act"
+      echo "NOW -- Edit, git commit, gh issue create -- or cite the artifact that already"
+      echo "carries it (#N, or a URL this transcript has seen). This is the residue #681"
+      echo "measured: a defect named in prose, with no owner, dies with the transcript."
     } >&2
     exit 2
   fi
