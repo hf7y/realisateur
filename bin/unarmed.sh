@@ -60,6 +60,9 @@ printf "ROOT_LIVENESS %s\n" "$(( $(count dexter-liveness.sh) + $($SUDO grep -rl 
 printf "VAULT_MODE %s\n" "$(stat -c %04a /srv/ecosystem1-vault 2>/dev/null)"
 printf "DRAIN_CRON %s\n" "$($SUDO cat /etc/cron.d/vault-spool-drain 2>/dev/null | grep -c vault-spool-drain.sh)"
 printf "DRAIN_BIN %s\n" "$($SUDO test -x /usr/local/libexec/selfdev/vault-spool-drain.sh && echo 1 || echo 0)"
+FD=https://raw.githubusercontent.com/hf7y/front-door/main
+printf "FD_ANCHOR %s\n" "$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$FD/.agent-project" 2>/dev/null)"
+printf "FD_PROSE %s\n" "$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$FD/.github/workflows/prose.yml" 2>/dev/null)"
 [ -d '"$PROP_HOST_PIN"' ] && printf "BUILD_LIBEXEC %s\n" "$(ls '"$PROP_HOST_PIN"'/*/libexec/ 2>/dev/null | grep -cE "^(unarmed|vault-spool-drain)\.sh$")"'
   if on_target_host "$HOST"; then
     FACTS="$(bash -c "$script" 2>/dev/null)"; rc=$?
@@ -161,6 +164,16 @@ probe_libexec_payload() {
   else
     echo "UNARMED the build $HOST adopted carries $n of the 2 libexec/ host tools bashified declares, and no cut has shipped the rest"
   fi
+}
+
+probe_front_door_guard() {
+  local a p; a="$(fact FD_ANCHOR)"; p="$(fact FD_PROSE)"
+  { host_readable && [ "$a" = 200 ]; } || { echo "BLIND could not read hf7y/front-door's default branch, so whether it is still a declared project is unknown"; return; }
+  case "$p" in
+    200) echo "ARMED hf7y/front-door carries .github/workflows/prose.yml, so its pull requests reach the shared guard" ;;
+    404) echo "UNARMED hf7y/front-door ships ratify.yml and ritual.yml and no prose.yml, so no pull request there reaches the shared prose guard" ;;
+    *)   echo "BLIND reading hf7y/front-door's prose.yml gave HTTP '$p'" ;;
+  esac
 }
 
 findings=0; blind=0

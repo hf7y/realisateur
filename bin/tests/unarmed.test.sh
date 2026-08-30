@@ -30,6 +30,8 @@ VAULT_MODE 0700
 DRAIN_CRON 1
 DRAIN_BIN 1
 BUILD_LIBEXEC 2
+FD_ANCHOR 200
+FD_PROSE 200
 EOF
 }
 unarmed() {
@@ -48,6 +50,8 @@ VAULT_MODE 2770
 DRAIN_CRON 1
 DRAIN_BIN 0
 BUILD_LIBEXEC 0
+FD_ANCHOR 200
+FD_PROSE 404
 EOF
 }
 run() {  # run <ledger> <today> -- OUT/RC
@@ -142,6 +146,8 @@ VAULT_MODE 2770
 DRAIN_CRON 1
 DRAIN_BIN 0
 BUILD_LIBEXEC 0
+FD_ANCHOR 200
+FD_PROSE 404
 EOF
 mkledger "$T/L4" "$(printf 'fragment-adoption\t2026-08-13\t30d\tUNARMED\tconvert the confs')"
 run "$T/L4" 2026-08-30
@@ -163,6 +169,31 @@ has "G3 and that this is not clean" "$OUT" "NOT a clean result"
 run "$T/does-not-exist" 2026-08-30
 rc  "G4 an unreadable floor exits 6" 6 $RC
 has "G5 and says nothing was compared" "$OUT" "nothing was compared"
+
+section "H. the front-door probe reads three values, not two"
+fdfacts() { armed "$T/facts"; sed -i "s/^FD_ANCHOR .*/FD_ANCHOR $1/; s/^FD_PROSE .*/FD_PROSE $2/" "$T/facts"; }
+mkledger "$T/L7" "$(printf 'front-door-guard\t2026-08-17\t7d\tUNARMED\tadd the workflow to front-door')"
+
+fdfacts 200 404
+run "$T/L7" 2026-08-30
+has "H1 no prose.yml on front-door is UNARMED, and past its own window" "$OUT" "EXPIRED   front-door-guard"
+has "H2 and it names the act that clears it" "$OUT" "DO  add the workflow to front-door"
+rc  "H3 and it is a finding" 1 $RC
+
+fdfacts 200 200
+run "$T/L7" 2026-08-30
+has "H4 a prose.yml on front-door reads ARMED" "$OUT" "LOWER     front-door-guard"
+hasnt "H5 and an armed row is not red" "$OUT" "EXPIRED   front-door-guard"
+
+fdfacts 404 404
+run "$T/L7" 2026-08-30
+has "H6 a front-door it cannot read at all is BLIND, never UNARMED" "$OUT" "BLIND     front-door-guard"
+rc  "H7 and BLIND exits 6, never 0" 6 $RC
+
+fdfacts 200 500
+run "$T/L7" 2026-08-30
+has "H8 an HTTP error reading prose.yml is BLIND, never ARMED" "$OUT" "BLIND     front-door-guard"
+rc  "H9 and it exits 6" 6 $RC
 
 section "I. the shipped floor is well-formed"
 LEDGER="$ROOT/lib/unarmed.tsv"
