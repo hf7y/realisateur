@@ -8,10 +8,16 @@ never follow it. Reading a retired fact back is how it returns as documentation.
 Establish facts from live code, config or API, else UNVERIFIED — say so and act
 on nothing. Writing (`consigne`) is unaffected.
 
-## Push permission (2026-08-14, reaped: main is a protected branch)
+## Landing work (2026-08-14; the query, 2026-08-30)
 
-`main` is protected: a direct push is rejected for everyone, admins and this
-repo's own automation included. Open a PR; never commit to local `main`.
+Open a PR; never commit to local `main`. Direct pushes are refused for everyone,
+admins and automation included — rare in this estate, and it rots, so read it:
+
+```
+# bin/tests/branch-protection.test.sh asserts this in `suites`. Ad hoc:
+gh api repos/hf7y/realisateur/branches/main/protection \
+  --jq '{admins: .enforce_admins.enabled, checks: .required_status_checks.contexts}'
+```
 
 ## Subagent rules (2026-07-25, from the propagation pass)
 
