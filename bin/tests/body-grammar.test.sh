@@ -404,4 +404,21 @@ has 'N9 composed: NEGATED-CLOSE is reported too'   "$(codes "$_compose")" NEGATE
 has 'N10 composed: so is UNSHIPPED'                "$(codes "$_compose")" UNSHIPPED
 eq  'N11 composed: four findings, not one'         "$(findings "$_compose")" 4
 
+section 'L. grammar_landing_ref -- what a close names that a check could follow'
+
+_lr() { grammar_landing_ref "$1" || printf 'NONE'; }
+
+eq 'L1 a bare #N'            "$(_lr 'closed by #761')"                       '#761'
+eq 'L2 owner/repo#N'         "$(_lr 'landed in hf7y/scheduler#118 today')"   'hf7y/scheduler#118'
+eq 'L3 a pull URL'           "$(_lr 'see https://github.com/hf7y/x/pull/12')" 'https://github.com/hf7y/x/pull/12'
+eq 'L4 a commit'             "$(_lr 'merged as 5f1ae62, branch deleted')"    '5f1ae62'
+eq 'L5 a typed DELIVERS claim' "$(_lr 'landed as path:/usr/local/bin/gh on monkey')" 'path:/usr/local/bin/gh'
+eq 'L6 a code span naming a file' "$(_lr 'Already done -- `bin/lib/carries.tsv` carries it.')" 'bin/lib/carries.tsv'
+eq 'L7 prose names nothing'  "$(_lr 'Closing: this is a map, not work.')"    'NONE'
+eq 'L8 an all-digit token is a date or a size, not a commit' \
+  "$(_lr 'the 20260830 run reclaimed 254000000 bytes')"                      'NONE'
+eq 'L9 a statement below line 1 is still read' \
+  "$(_lr "$(printf 'Closing.\n\nThe work landed in #118.\n')")"             '#118'
+eq 'L10 an empty close names nothing' "$(_lr '')"                            'NONE'
+
 summary
