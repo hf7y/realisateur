@@ -283,13 +283,9 @@ fi
 prev_names="$(printf '%s\n' "$prev_rows" | awk -F'\t' 'NF>=2{print $1"\t"$2}' | sort -u)"
 check_shrink() {  # <curr-names>: project\tverb pairs, so a retirement can be subtracted BY NAME; 6a0 can shrink verb_count again after the first call (realisateur#703/#696)
   local curr_names="$1" missing unexplained
-  # DISAPPEARANCE IS A SET QUESTION, NOT A COUNT ONE (realisateur#699 point 1).
-  # This used to return early unless `prev_count > verb_count`, which put the
-  # name diff below behind the very comparison it was written to replace: lose
-  # one verb, gain another the same night, and the count never moves, so the
-  # diff never ran and the loss shipped silently. Substitution is the dangerous
-  # case precisely because it is invisible to counting. Gate on having a
-  # previous build to compare against, and let the diff decide.
+  # A SET QUESTION, NOT A COUNT ONE (#699 point 1): a `prev_count > verb_count`
+  # gate sat in front of the diff written to replace it, so a same-night
+  # lose-one-gain-one shipped silently. Gate on having a previous build.
   [ -n "$prev_names" ] || return 0
   missing="$(comm -23 <(printf '%s\n' "$prev_names") <(printf '%s\n' "$curr_names" | sort -u))"
   [ -n "$missing" ] || return 0   # every previous name is still here -- nothing to explain, whatever the counts did

@@ -524,12 +524,9 @@ check "...and the retired verb is gone from the manifest" \
       "$(grep -c "$(printf 'omega\tov2')" "$TMP/asm14g/manifest.tsv" 2>/dev/null)" "0"
 printf '#project\tverb\twhy\n' > "$TMP/retired-verbs.tsv"
 
-# 14h. SUBSTITUTION: one verb leaves, another arrives, the COUNT never moves.
-# This is realisateur#699's point 1 -- "a build that loses `discipline` and
-# gains any other verb the same night nets to 19 and passes silently". The
-# name diff below it is correct; what this pins is that the diff is actually
-# REACHED, rather than short-circuited by a count comparison that sees no
-# shrink. A steady count is not evidence that nothing vanished.
+# 14h. SUBSTITUTION: one verb leaves, another arrives, the COUNT never moves
+# (#699 point 1). Pins that the name diff is REACHED, not short-circuited by a
+# count comparison that sees no shrink.
 mkrepo sigma sv1 sv2
 g -C "$FIX/sigma.git" rm -q bin/sv2 man/sv2.1
 cat > "$FIX/sigma.git/bin/sv3" <<'EOF'
@@ -553,8 +550,7 @@ case "$(cat "$TMP/e14h")" in
     *) bad "the refusal names the substituted-out verb" "got: $(cat "$TMP/e14h")" ;;
 esac
 
-# ...and the same substitution, once DECLARED, is accepted -- the acceptance
-# path must not depend on the count having dropped either.
+# ...and once DECLARED it is accepted: acceptance must not depend on the count.
 printf '#project\tverb\twhy\nsigma\tsv2\tfixture: substituted out\n' > "$TMP/retired-verbs.tsv"
 FIXTURE_PUBLISHED="$TMP/published14h" \
   cut --assemble "$TMP/asm14h2" >/dev/null 2>"$TMP/e14h2"
