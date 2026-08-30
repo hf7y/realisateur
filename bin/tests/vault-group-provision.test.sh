@@ -70,12 +70,8 @@ OUT="$(HOME_ROOT="$T/home2" SUDO='' PATH="$T/fakebin:$PATH" \
 has "F8 2700 is NOT shut -- a preserved setgid bit must not read as the target" "$OUT" "read door is open"
 
 section "G. the drain row it writes cannot fail silently"
-# The row this script installs is the estate's OWN cron row, and it used to
-# read `[ -x $DRAIN ] && $DRAIN --apply >/dev/null 2>&1`. With the drain not
-# installed the test was false, the row exited 0, and every five minutes it
-# said nothing -- "no drain" and "empty spool" produced identical silence.
-# These two cases pin the inversion: the guard-free row is the contract, and
-# the guarded row must be REJECTED rather than accepted as already correct.
+# The guard-free row is the contract: the old `[ -x $DRAIN ] &&` form exited 0 in
+# silence with no drain installed, so it must read as a FINDING, not an ok row.
 DBIN="$T/drain.sh"
 printf '%s\n' "*/5 * * * * root $DBIN --apply >/dev/null # realisateur:vault-spool-drain:CADENCE" > "$T/cron-guardfree"
 printf '%s\n' "*/5 * * * * root [ -x $DBIN ] && $DBIN --apply >/dev/null 2>&1 # realisateur:vault-spool-drain:CADENCE" > "$T/cron-guarded"
