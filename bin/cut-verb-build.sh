@@ -13,16 +13,16 @@ CLI_SUMMARY='pin every declared verb to one dated build manifest, read live from
 CLI_USAGE='  cut-verb-build.sh                    derive and print the manifest to stdout
   cut-verb-build.sh --write            also store it under the build root
   cut-verb-build.sh --assemble <dir>   lay every verb out under <dir> (what CI commits)
-  cut-verb-build.sh --allow-shrink     accept a build with fewer verbs than the last
   cut-verb-build.sh --allow-half-declared
                                        accept a project that declares half a verb
   cut-verb-build.sh --dry-run          derive and check the manifest SHAPE only; never a build'
-CLI_FLAGS='--write --assemble --allow-shrink --allow-half-declared --dry-run --owner --build-root'
+CLI_FLAGS='--write --assemble --allow-half-declared --dry-run --owner --build-root'
 CLI_POSITIONAL=any   # flag VALUES (--build <id>) read as positionals to cli-guard;
                      # the arg loop below rejects anything genuinely unknown.
 CLI_EXITS='  0  a complete manifest was derived
-  1  refused: BLIND (cannot read GitHub), empty, shrinking, a name declared
-     twice, or a HALF-declared verb (bin/<n> with no man/<n>.1, or the inverse)
+  1  refused: BLIND (cannot read GitHub), empty, an UNDECLARED verb
+     disappearance, a name declared twice, or a HALF-declared verb
+     (bin/<n> with no man/<n>.1, or the inverse)
   2  usage error'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
@@ -32,7 +32,6 @@ OWNER="${VERB_BUILD_OWNER:-$GH_ESTATE_OWNER}"
 VERB_META_REPO="${VERB_META_REPO:-verbs}"   # holds the published manifest the guard compares against
 BUILD_ROOT="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"
 WRITE=0
-ALLOW_SHRINK=0
 ALLOW_HALF=0
 ASSEMBLE=''
 DRY_RUN=0
@@ -41,7 +40,6 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --write)        WRITE=1 ;;
     --assemble)     ASSEMBLE="${2:?--assemble needs a directory}"; shift ;;
-    --allow-shrink) ALLOW_SHRINK=1 ;;
     --allow-half-declared) ALLOW_HALF=1 ;;
     --dry-run)      DRY_RUN=1 ;;
     --owner)        OWNER="${2:?--owner needs a value}"; shift ;;
@@ -295,13 +293,11 @@ check_shrink() {  # <curr-names>: project\tverb pairs, so a retirement can be su
     printf '%s\n' "$missing" | sed 's/^/    /' >&2
     return 0
   fi
-  if [ "$ALLOW_SHRINK" -eq 0 ]; then
-    say "  previous build: $prev_count verb(s)  <- $prev_where"
-    say "  this build:     $verb_count verb(s)"
-    say "  missing and NOT in bin/lib/retired-verbs.tsv:"
-    printf '%s\n' "$unexplained" | sed 's/^/    /' >&2
-    die 'this build is SMALLER than the current one, and not every loss is declared. A verb that vanished because an API call flaked looks exactly like one that was retired. Re-run, pass --allow-shrink if the loss is real, or add a bin/lib/retired-verbs.tsv row if it is a declared retirement.'
-  fi
+  say "  previous build: $prev_count verb(s)  <- $prev_where"
+  say "  this build:     $verb_count verb(s)"
+  say "  missing and NOT in bin/lib/retired-verbs.tsv:"
+  printf '%s\n' "$unexplained" | sed 's/^/    /' >&2
+  die 'a verb in the previous build is MISSING from this one and its loss is not declared. A verb that vanished because an API call flaked looks exactly like one that was retired. Re-run if it was a flake, or add a bin/lib/retired-verbs.tsv row if it is a declared retirement.'
 }
 check_shrink "$(awk -F'\t' '{print $1"\t"$2}' "$rows")"
 
