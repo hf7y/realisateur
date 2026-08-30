@@ -68,8 +68,8 @@ rc  "an unknown long flag still exits 2" 2 "$R"
 has "and still names itself" "$O" "unknown flag: --nope"
 run bash "$T/any.sh" -x  >/dev/null; rc "an unknown short flag still exits 2" 2 $?
 run bash "$T/any.sh" --  >/dev/null; rc "'--' is still refused"              2 $?
-run bash "$T/any.sh" -s  >/dev/null; rc "the --summon near-miss still exits 2" 2 $?
-run bash "$T/any.sh" --summon >/dev/null; rc "--summon is still refused"     2 $?
+run bash "$T/any.sh" -s  >/dev/null; rc "-s is an unknown short flag, exit 2" 2 $?
+run bash "$T/any.sh" --summon >/dev/null; rc "--summon is an unknown flag now, exit 2" 2 $?
 O="$(run bash "$T/any.sh" --help)"; R=$?
 rc  "--help still exits 0" 0 "$R"
 has "--help still prints the flag list" "$O" "--build-id"
@@ -115,7 +115,7 @@ O="$(run bash "$T/none.sh" hello)"; R=$?
 rc  "an unexpected positional exits 2 where none are accepted" 2 "$R"
 has "and says the tool takes no positional arguments" "$O" "no positional arguments"
 O="$(run bash "$T/any.sh" --help)"
-has "--help states the tool cannot spend" "$O" "cannot spend"
+has "--help states the usage exit without a retired cost flag" "$O" "unknown flag or unexpected argument"
 
 echo
 summary
