@@ -58,9 +58,7 @@ vmhost_state() {  # <vm> -> running | poweroff | paused | unknown
       ;;
     wsl)
       _vmhost_require_wsl || return 2
-      # A stopped distro holds no RAM, so `--running` answers the only question
-      # this vocabulary asks. It is also dexter-liveness.sh's existing probe.
-      if _wsl -l -q --running | grep -qx "$vm"; then printf 'running\n'; else printf 'poweroff\n'; fi
+      if _wsl -l -q --running | grep -qx "$vm"; then printf 'running\n'; else printf 'poweroff\n'; fi  # a stopped distro holds no RAM, so --running answers the only question this vocabulary asks; it is also dexter-liveness.sh's existing probe
       ;;
     *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
   esac
@@ -117,10 +115,7 @@ vmhost_save() {  # <vm> -- suspend to disk and free the host's RAM. savestate, n
       ;;
     wsl)
       _vmhost_require_wsl || return 2
-      # --terminate, NEVER --shutdown: --shutdown stops EVERY distro, including
-      # dexter's own Ubuntu, which is the route in. Terminating one distro is
-      # what returns its RAM to the host.
-      _wsl --terminate "$vm" >/dev/null
+      _wsl --terminate "$vm" >/dev/null  # --terminate, NEVER --shutdown: --shutdown stops EVERY distro, including dexter's own Ubuntu, which is the route in. Terminating one distro is what returns its RAM to the host
       ;;
     *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
   esac
