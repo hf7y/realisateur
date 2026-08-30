@@ -66,11 +66,6 @@ down=0; blind=0; rows=()
 # not it, and it names who. dexter is watched from dexter by monkey-watch.sh,
 # which publishes where monkey cannot suppress it -- that is the answer, and it
 # is a better one than a guest reaching across the boundary to ask.
-#
-# Ashby S.8/7, the argument this file keeps making: a transducer with fewer
-# output values than its input has distinct states loses distinctions. Three
-# words for four states is exactly that, and the lost distinction here is the
-# one between a broken estate and a correctly contained one.
 record() {
   rows+=("$1|$2|$3")
   case "$2" in DOWN) down=1 ;; BLIND) blind=1 ;; esac
@@ -341,8 +336,6 @@ if want rot; then
   else record rot BLIND 'decision-rot.sh not present'; fi
 fi
 
-# The `delivery` probe went with delivery-audit.sh (#511): it read
-# 2 MET and 262 BLIND across 292 PRs. Reinstating delivery proof is v2.
 
 if want fleet; then
   # LOCALHOST IS NOT AN SSH TARGET -- the same fix the propagation row above
@@ -431,10 +424,6 @@ if want fleet; then
   esac
 fi
 
-# The `silence` probe is gone with silence-audit.sh (#511,
-# 2026-08-22). Its [unwired] test counted a script NAMED IN A DOC as wired, so
-# ausculte-cadence.sh -- installed, on a 4-hourly clock, and a no-op the whole
-# time -- passed it. A guard satisfied by documentation measures documentation.
 
 [ ${#rows[@]} -gt 0 ] || { printf '%s: no such probe: %s\n' "$CLI_NAME" "${ONLY[*]}" >&2; exit 2; }
 
