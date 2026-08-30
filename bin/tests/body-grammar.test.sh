@@ -258,6 +258,16 @@ out="$(run_shim issue create --title T --body-file "$T/good.md")"
 if [ -f "$T/reached" ]; then ok 'S5 a well-formed body reaches gh'
 else bad 'S5 a well-formed body reaches gh' "gh was never called: $out"; fi
 
+# The library FINDS it; the shim is what stops the write. gh-sign.sh needed no
+# change to gain this code -- it refuses on any finding grammar_check reports.
+printf 'NO-DECISION: agent work\n\nThis does not close #79.\n\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n' > "$T/negated.md"
+rm -f "$T/reached"
+out="$(run_shim pr create --title T --body-file "$T/negated.md")"; got=$?
+rc  'S5a a PR body denying a close it would perform is REFUSED (7)' 7 "$got"
+has 'S5b it names NEGATED-CLOSE' "$out" NEGATED-CLOSE
+if [ -f "$T/reached" ]; then bad 'S5c the PR was never created' "gh ran: $(cat "$T/reached")"
+else ok 'S5c the PR was never created'; fi
+
 # Comments are deliberately exempt: a thread reply is not where a ledger
 # belongs, and refusing one loses the reply. It still gets signed.
 rm -f "$T/reached"
@@ -353,5 +363,63 @@ eq "the reader returns the ref" "$got" "hf7y/wtul#34"
 grammar_answered_by "$(_ab 'nothing here')" >/dev/null 2>&1 \
   && bad "absent pointer returns 1" "it returned 0" \
   || ok "an absent pointer returns 1, so the caller can tell 'no pointer' from 'not read'"
+
+# --- NEGATED-CLOSE: the sentence denies the close, GitHub does it anyway -----
+# hf7y/scheduler#180 auto-closed scheduler#79 -- the ROSTER consolidation --
+# from a sentence under a heading titled "What this is not". It stayed closed,
+# the work stayed undone, and #282 had to be filed 10 days later to say so.
+section "NEGATED-CLOSE"
+
+_nc() { printf 'NO-DECISION: agent work\n%s\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n' "$1"; }
+
+# The real sentence, verbatim from the merged PR body.
+has 'N1 the sentence that cost scheduler#79 is refused' \
+  "$(codes "$(_nc '## What this is not
+
+This does not retire `RUNNER_CRON` or close #79/#81'"'"'s `onekey`/`perproject` probes — `bin/roster-target.sh` is unchanged at 4/6 by this commit.')")" NEGATED-CLOSE
+
+# THE STANDING DECISION, Zach 2026-08-04: "batch agents should close shipped
+# issues automatically. this can't be a regular clean up by hand." If this
+# fixture ever goes missing the guard can silently become a ban, which
+# reverses it. It is the reason NEGATED-CLOSE is not "no closing keywords".
+eq 'N2 a plain `Closes #123` still closes -- the standing decision is intact' \
+  "$(findings "$(_nc 'Closes #123')")" 0
+
+# A bare reference closes nothing, so denying next to one is correct writing,
+# and it is the remedy the finding names.
+eq 'N3 a bare #79 inside a denial is the fix, not the defect' \
+  "$(findings "$(_nc 'This does not retire RUNNER_CRON or touch #79 at all.')")" 0
+
+eq 'N4 a fenced example is quoted code, not a close' \
+  "$(findings "$(_nc '```
+This PR does not close #79.
+```')")" 0
+
+# grammar_declaration'"'"'s problem: a body quoting the rule must not refuse itself.
+eq 'N5 an inline code span is a quotation, so this rule can be written down' \
+  "$(findings "$(_nc 'Never write `close #79` in a denial; write the bare number.')")" 0
+
+has 'N6 the enclosing heading negates on its own -- no marker on the line' \
+  "$(codes "$(_nc '## Non-goals
+
+Closes #79 -- listed here so the reader knows it is untouched.')")" NEGATED-CLOSE
+
+eq 'N7 the next heading ends the denial: a close under it still closes' \
+  "$(findings "$(_nc '## Non-goals
+
+nothing here
+
+## What ships
+
+Closes #123')")" 0
+
+# COMPOSITION: the grammar reports every finding, not the first. A body can be
+# malformed AND auto-close what it says it does not, and a guard that stopped
+# at one would hide whichever it saw second.
+_compose="$(printf 'a body that declares nothing\n\nThis does not close hf7y/scheduler#79.\n')"
+has 'N8 composed: UNDECLARED is still reported'    "$(codes "$_compose")" UNDECLARED
+has 'N9 composed: NEGATED-CLOSE is reported too'   "$(codes "$_compose")" NEGATED-CLOSE
+has 'N10 composed: so is UNSHIPPED'                "$(codes "$_compose")" UNSHIPPED
+eq  'N11 composed: four findings, not one'         "$(findings "$_compose")" 4
 
 summary
