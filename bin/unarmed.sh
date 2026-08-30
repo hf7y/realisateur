@@ -1,17 +1,7 @@
 #!/usr/bin/env bash
 # unarmed.sh -- has the set of built-but-unarmed mechanisms GROWN? (#754)
-#
-# RUNNER: no -- DEBT, not liveness. Deliberately NOT an `ausculte` row: that
-# verb answers "can I stop looking right now", and debt on a liveness panel is
-# what makes the panel ignorable.
 # GUARD-TEST: bin/tests/unarmed.test.sh, offline behind UNARMED_SSH
-# FLOOR: bin/lib/unarmed.tsv
-#
-# #754: a build lands in a merge -- durable, versioned, verifiable. An arming
-# lands in an issue -- prose, closeable, forgettable. PACED_HOST_MODE was built
-# 2026-08-11 and armed on nothing 19 days later because the two issues holding
-# its cutover were closed twelve seconds apart on a misreading.
-#
+# FLOOR: bin/lib/unarmed.tsv -- the rules for adding a row live at the row.
 set -uo pipefail
 
 CLI_NAME='unarmed.sh'
@@ -37,10 +27,7 @@ while [ $# -gt 0 ]; do
   case "$1" in --check) ;; *) cli_die "unexpected argument: $1" ;; esac; shift
 done
 
-# ---------------------------------------------------------------------------
-# ONE READING, not six. Six round trips to a host that wedges every 15-25
-# minutes under load can disagree with each other about the same crontab.
-# ---------------------------------------------------------------------------
+# ONE READING: six round trips to a host that wedges can disagree about one crontab.
 FACTS=''
 collect() {
   local script rc
@@ -80,11 +67,6 @@ collect
 fact() { printf '%s\n' "$FACTS" | awk -v k="$1" '$1 == k { print $2; found = 1 } END { exit !found }'; }
 host_readable() { [ -n "$FACTS" ] && [ "$(fact SUDO)" = ok ]; }
 
-# ---------------------------------------------------------------------------
-# THE PREDICATES. One probe_<id> per floor row; each prints ARMED, UNARMED or
-# BLIND and a detail. Adding a row is this function plus one line in
-# bin/lib/unarmed.tsv.
-# ---------------------------------------------------------------------------
 probe_host_mode() {
   host_readable || { echo "BLIND cannot read $HOST's crontabs"; return; }
   local r a; r="$(fact ROOT_PACED)"; a="$(fact ACCT_PACED)"
@@ -132,7 +114,6 @@ probe_unarmed_cadence() {
   else echo "UNARMED this probe is on no clock, so nothing reads the floor it keeps"; fi
 }
 
-# ---------------------------------------------------------------------------
 findings=0; blind=0
 row() { printf '  %-9s %-18s %s\n' "$1" "$2" "$3"; }
 act() { printf '            DO  %s\n' "$1"; }
@@ -158,8 +139,7 @@ while IFS=$'\t' read -r id since window floor remedy || [ -n "$id" ]; do
   if [ "$state" = BLIND ]; then row BLIND "$id" "$detail"; blind=1; continue; fi
 
   if [ "$floor" = ARMED ] && [ "$state" = UNARMED ]; then
-    # A ROW THAT WENT GREEN STAYS CHECKABLE. No window: the floor recorded
-    # this armed, so it was turned OFF, and that is an event, not a backlog.
+    # No window: the floor recorded this ARMED, so it was turned OFF.
     row REGRESSED "$id" "$detail"; act "$remedy"; findings=1; continue
   fi
   if [ "$state" = ARMED ]; then
@@ -190,9 +170,7 @@ done < "$LEDGER"
   exit 6
 }
 
-# THE RATCHET. A predicate with no floor row is a mechanism shipped with its
-# arming deferred -- the whole class #754 names -- and it is the only thing
-# here that is loud on day one.
+# THE RATCHET: a predicate with no floor row is an arming someone deferred.
 for fn in $(declare -F | awk '{ print $3 }' | grep '^probe_'); do
   id="${fn#probe_}"; id="${id//_/-}"
   case " $ids " in *" $id "*) continue ;; esac

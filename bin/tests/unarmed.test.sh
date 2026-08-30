@@ -8,15 +8,13 @@ SCRIPT="$ROOT/unarmed.sh"
 harness_tmp
 echo "unarmed.test.sh"
 
-# A FAKE ssh, so every predicate is exercised with no host in the loop. It
-# prints the fact block the real collector would; $T/facts is what it says.
+# A FAKE ssh: $T/facts is whatever the host is pretending to say.
 cat > "$T/ssh" <<'EOF'
 #!/usr/bin/env bash
 cat "$FACTS_FILE"
 EOF
 chmod +x "$T/ssh"
 
-# armed <file> -- a host where every mechanism is on.
 armed() {
   cat > "$1" <<'EOF'
 SUDO ok
@@ -48,9 +46,9 @@ run() {  # run <ledger> <today> -- OUT/RC
          UNARMED_SSH="$T/ssh" FACTS_FILE="$T/facts" "$SCRIPT" --check 2>&1)"; RC=$?
 }
 
-# mkledger <file> <tsv-row>... -- the rows under test, plus a wide-windowed
-# filler for every OTHER predicate. Without the fillers the growth check --
-# correctly -- fires on all five, and every other verdict is drowned by it.
+# mkledger <file> <row>... -- the rows under test plus a wide-windowed filler
+# for every OTHER predicate; without them the growth check correctly fires on
+# all of those and drowns the verdict actually under test.
 mkledger() {
   local f="$1" r id fn given=' '; shift
   : > "$f"
@@ -77,7 +75,6 @@ has "B1 an armed row reads OK" "$OUT" "OK        host-mode"
 rc  "B2 and the probe exits 0" 0 $RC
 has "B3 and says the floor holds" "$OUT" "The floor holds"
 
-# The point of a probe over a to-do list: turn it off again and it goes red.
 unarmed "$T/facts"
 run "$T/L" 2026-08-30
 has "B4 disarming a row recorded ARMED is a REGRESSION" "$OUT" "REGRESSED host-mode"
@@ -100,8 +97,6 @@ has "C7 and says which window it outlived" "$OUT" "past its own 30d window"
 rc  "C8 and the probe exits 1" 1 $RC
 
 section "D. the ratchet: red when the set GROWS, never when it merely persists"
-# The same ledger with unarmed-cadence's row removed: a predicate measuring a
-# mechanism the floor does not declare is someone shipping a new one.
 grep -v '^unarmed-cadence	' "$T/L" > "$T/Lgrew"
 run "$T/Lgrew" 2026-08-30
 has "D1 a predicate with no floor row is GREW" "$OUT" "GREW      unarmed-cadence"
@@ -123,7 +118,6 @@ has "F1 a host that cannot be read is BLIND, not armed" "$OUT" "BLIND     host-m
 rc  "F2 and the probe exits 6" 6 $RC
 has "F3 and refuses to call it clean" "$OUT" 'NOT "nothing new"'
 
-# The unenumerable subject: sudo works, the conf tree does not.
 cat > "$T/facts" <<'EOF'
 SUDO ok
 ROOT_PACED 0
