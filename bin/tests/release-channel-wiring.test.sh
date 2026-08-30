@@ -123,6 +123,10 @@ has "...and it says why, distinctly from nothing having moved" \
     "$WFSRC" "waiting on the cut interval"
 has "a first-ever build (no prior tag) is never blocked on an interval that has nothing to measure from" \
     "$WFSRC" "no previous build tag"
+has "a human can force one cut without editing this file or the interval (#793)" \
+    "$WFSRC" "force_cut:"
+has "...and ONLY a dispatch can: the scheduled path cannot reach that expression, so the 30-day cadence stands (#793)" \
+    "$WFSRC" "CUT_INTERVAL_DAYS: \${{ github.event_name == 'workflow_dispatch' && inputs.force_cut"
 
 # ===========================================================================
 echo
