@@ -123,8 +123,7 @@ printf '#project\tname\twhy\n' > "$TMP/not-a-verb.tsv"
 
 printf '#project\tverb\twhy\n' > "$TMP/retired-verbs.tsv"  # empty: nothing declared retired, same fixture-not-production posture
 
-# Empty grandfather ratchet too: verb-kind-lint.ratchet's 33 real commands
-# are none of this suite's business, so every fixture verb declares its channel.
+# Empty grandfather ratchet too, so every fixture verb declares its channel.
 : > "$TMP/verb-kind.ratchet"
 
 cut() {
