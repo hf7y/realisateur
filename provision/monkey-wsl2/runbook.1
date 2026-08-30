@@ -488,6 +488,89 @@ This is real output, from `\-\-target wsl:Ubuntu' against monkey's baseline:
 .PP
 Note that `backend' FLIPs and the wedge counters read OK even here. A green
 backend line is NOT the verification \- the MUST\-HOLD block is.
+.SH DONE 2026\-08\-30: THE HUMAN CHANNEL MOVED TO CONTAINERS
+This was a precondition nobody had written down. `wsl \-\-shutdown' used to cost
+Zach's notification channel, which is why senechal#561's fix sat unapplied.
+.PP
+.B What was actually wrong.
+The container stack was the intended design and it had been DOWN for 13 hours:
+`zaxon\-gateway' exited 75 with `failed to bind host port 127.0.0.1:8090/tcp:
+address already in use'. Because all distros share one netns, hermes's NATIVE
+whisper\-server (:8090) and zaxon\-relay\-mcp (:8643) occupied the exact ports
+the container anchor needed. Retiring hermes was not cleanup \- it was the fix.
+.PP
+.B The state was split\-brain, not stale.
+Both stacks had been running and writing to separate directories since
+2026\-08\-29 19:37. Resolved by asking which side was LIVE, not which mtime was
+newer: the container side's last write was 08\-29 23:23; hermes wrote
+continuously for the ~12h after. So hermes's lineage won wholesale \- with ONE
+exception:
+.nf
+
+  hermes wins   state.db tickets.db kanban.db response_store.db
+                whatsapp/session/ (2635 files) channel_directory cron logs
+  container wins  .env  -- hermes's has 20 keys to the container's 19, and the
+                  extra is HERMES_LOCAL_STT_COMMAND, which points at a NATIVE
+                  whisper binary that does not exist inside a container
+.fi
+.PP
+Backups on D:, kept: `hermes\-20260830.tar' (3.38G, full distro export),
+`srv\-zaxon\-data\-before.tgz', `hermes\-final.tgz', `env\-container\-keep',
+`wslconfig.bak\-20260830\-preexperimental'.
+.PP
+.B Verified after, and again after two wsl \-\-shutdown cycles:
+MCP answers `"serverInfo":{"name":"zaxon"}', whisper `/health' ok, gateway
+heartbeat advancing, FilmB 200/200. Everything came back UNATTENDED \-
+docker.service is enabled and every container is `restart: always'. hermes did
+not return: its four units are disabled AND masked, 0 .wants remaining.
+.PP
+.B autoMemoryReclaim is now in force
+\- moved to [experimental] (senechal#561) and confirmed the only way that
+mistake permits: by the ABSENCE of the `Unknown key' line on a real VM start.
+.SH POST\-MIGRATION QUEUE
+Parked deliberately until the cutover lands. Each carries the evidence it rests
+on so the next agent does not re\-derive it.
+.PP
+.B 1. Uninstall Docker Desktop.
+Installed, STOPPED, `AutoStart: false', zero processes, and no consumer found:
+no ~/.docker on Ubuntu, no DOCKER_HOST anywhere, context `default',
+/usr/bin/docker is the docker.io deb not a DD shim. ~13.6 GB, ALL on C: \- the
+drive with ~52 GB free that also holds monkey's 39.5 GB rollback VDI.
+FilmB, the only thing anyone wanted from it, was NEVER inside it: bind\-mounted
+from C:\eUsers\eZach\eDocuments\eFilmB\eFilmBdb, so the 11 GB docker_data.vhdx
+holds only re\-pullable images and build cache. Now migrated to /srv/filmb on
+the native engine and verified \- 104/104 media URLs md5\-identical, DB
+writable, integrity_check ok after SIGKILL.
+Uninstalling also unregisters the `docker\-desktop' distro, removing its invalid
+`automount.crossDistro' key and the trap where a bare `wsl \-d' starts it.
+.B Set the default explicitly afterwards:
+.nf
+
+  wsl.exe \-\-set\-default Ubuntu
+.fi
+.PP
+.B 2. wsl \-\-unregister hermes.
+Export already taken. Its units are disabled and masked, its state migrated,
+nothing on any host references it, and nothing starts it \- its 6d uptime was a
+manual start, which is the unsupervised\-service failure dexter\-liveness.sh
+exists for. Note `wsl \-\-export' STOPS the distro, and after it interop from
+inside a distro breaks with `Exec format error'; drive it from port 22.
+.PP
+.B 3. etalon#22 \- the prose guard prices fenced comments and roff.
+It closes two loopholes THIS FILE used: shell comments inside ``` fences in .md
+were free, and roff was not priced at all. It recommends NOT exempting man/*
+from the census, which correctly re\-prices this runbook. Draft, so its
+DEFAULT\-AFTER clock is not running; mark it ready to queue the man/ question.
+.PP
+.B 4. dcp\-gate\-site standup.
+Blocked on a runner that DOES NOT EXIST: `monkey\-dcp\-gate\-site' is registered
+at GitHub but monkey carries 12 runner directories and none is this one. A
+ghost registration, not a runner that fell over. Standing it up means
+provisioning a 13th runner, which the migration re\-registers and which
+realisateur#672 (decided) deletes in favour of one org\-level pool. The
+`.agent\-project' marker landed separately (dcp\-gate\-site#97) because it needs
+no runner and is the root cause: without it `registry\-standup.sh' does not list
+the repo AT ALL, so no guard ever looked.
 .SH RETIRING THIS
 When etat.sh reports the cutover DONE and a week has passed with long_readout
 at 0, delete this directory, the saved VM, and D:\ewsl\-migration. Fold the
