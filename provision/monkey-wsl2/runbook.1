@@ -1,0 +1,282 @@
+.TH MONKEY-WSL2 1 "2026-08-30" "realisateur" "migration runbook"
+.SH NAME
+monkey-wsl2 \- move monkey from a VirtualBox guest to a WSL2 distro on dexter
+.SH SYNOPSIS
+.nf
+./etat.sh                                   where this actually is, probed live
+./constate.sh > before.tsv                  the baseline witness
+./constate.sh --target wsl:monkey --diff before.tsv    the verdict, after
+.fi
+.SH DESCRIPTION
+Executable form of the decision in hf7y/senechal#438: monkey stops being a
+VirtualBox guest and becomes a WSL2 distro on dexter, and VirtualBox leaves
+entirely. dexter's Hyper-V holds AMD-V, so VirtualBox falls back to NEM and
+monkey is descheduled for seconds at a time; 14.5h wedged in 42h. One
+hypervisor means no contention.
+.PP
+Run
+.B ./etat.sh
+first. It re-derives every step from hosts and repos rather than reading a box
+a human ticked.
+.PP
+.B THE ORDER BELOW IS PROVISIONAL.
+The rehearsal exists to change it. A step that diverges is a FINDING, not a
+failure: record what was discovered here, amend the order, and re-run.
+.SH ROUTES, AND WHICH SURVIVE WHAT
+.nf
+ssh monkey     the guest itself, tailnet 100.121.83.23
+ssh dexter     port 2223 = dexter's WSL2 sshd, in the distro named `Ubuntu'
+ssh \-p 22 \-i ~/.ssh/id_dexter_win zach@dexter.tail893f2c.ts.net
+               Windows sshd, PowerShell 5.1, High Mandatory Level Administrator
+.fi
+.PP
+.B wsl \-\-shutdown
+and
+.B wsl \-\-import
+kill the 2223 route mid\-procedure. Only the Windows route survives them, so it
+drives every step that restarts WSL.
+.B wsl \-\-terminate <one>
+is safe.
+.PP
+.B \-\-shutdown IS NOT. ITS BLAST RADIUS IS THE ESTATE'S CHANNEL TO ZACH.
+It stops EVERY distro. Measured on hermes 2026\-08\-30 (hf7y/senechal#557):
+.nf
+
+  zaxon\-relay\-mcp.service      ask_zach / check_zach_reply
+  zaxon\-relay\-watcher.service  the WhatsApp reply watcher
+  whisper\-server.service       STT, port 8090
+  hermes\-gateway.service       messaging platform integration
+.fi
+.PP
+plus dexter's own sshd on 2223 and the monkey\-watch.sh crontab living in it. So
+.B \-\-shutdown
+takes Zach's own notification channel dark at the same moment it removes the
+route you would use to put it back. Never run it from the 2223 route, and
+prefer terminating one distro by name.
+.PP
+.B hermes IS NOT UNUSED.
+senechal#438's revision quotes "hermes is unused, shared kernel is fine" \- that
+is a premise, not a measurement, and #557 disproved it. Anything treating
+hermes as disposable needs re\-deriving. The distros share one WSL2 network
+namespace, so a port check run from `Ubuntu' actually measures hermes and
+cannot say so: distro identity is not observable from inside a distro here.
+.PP
+dexter reaches monkey directly, so 27G never crosses mandark. Run ON dexter:
+.nf
+
+  ssh \-n \-i ~/.ssh/id_dexter_monkey zach@100.121.83.23 'hostname'
+.fi
+.SH FACTS THAT CHANGE THE COMMANDS
+.nf
+C:  53G free   monkey.vdi is 39.5G and lives HERE \- rollback depends on it
+D:  2.6T free  every large write goes here, never to C:
+monkey.vbox is on D: while monkey.vdi is on C: \- the VM is split across drives
+distros: docker\-desktop (DEFAULT), Ubuntu, hermes \- and hermes is NOT spare:
+  it holds ask_zach, the WhatsApp watcher and whisper (senechal#557)
+  a bare `wsl \-d' with no name hits docker\-desktop, not yours
+Ubuntu and hermes BOTH report hostname `dexter'; /etc/wsl.conf is per\-distro
+monkey guest: systemd\-networkd and systemd\-resolved ACTIVE, / mounted by UUID,
+  /swapfile in fstab \- all break or hang under wsl \-\-import
+.fi
+.SH WHERE THE SEQUENCE HAS GOT TO
+.nf
+2026\-08\-30  seam merged (#745, #798); wsl arms for disk/screenshot/logdir added
+2026\-08\-30  before.tsv captured: backend=oracle, 12/12 runners, node
+            nyzii8E1C221CNTRL, long_readout=4, soft_lockup=1
+            NOT yet run: rehearsal, cutover
+.fi
+.SH 0. BASELINE, BEFORE ANYTHING TOUCHES MONKEY
+.nf
+
+  ./constate.sh > before.tsv && cat before.tsv
+.fi
+.SH 1. REHEARSAL \- A THROWAWAY COPY; MONKEY KEEPS RUNNING
+Answers by measurement what no issue currently knows: whether systemd comes up,
+whether the 12 runner units start, and whether tailscaled works inside a distro
+under networkingMode=mirrored. Nothing here touches monkey. About 27G, 5 min.
+.PP
+ON dexter (route: ssh dexter):
+.nf
+
+  # the distros share ONE netns, so check for a collision BEFORE importing:
+  # monkey listens on nothing hermes uses today, but 8643 and 8090 are taken.
+  wsl.exe \-d hermes \-u root \-\- ss \-ltn | awk 'NR>1{print $4}' | sort \-u
+
+  mkdir \-p /mnt/d/wsl\-migration
+  ssh \-n \-i ~/.ssh/id_dexter_monkey zach@100.121.83.23 \e
+\&    'sudo tar \-c \-\-numeric\-owner \-\-xattrs \-\-acls \-C / \e
+\&       \-\-exclude=./proc \-\-exclude=./sys \-\-exclude=./dev \-\-exclude=./run \e
+\&       \-\-exclude=./tmp \-\-exclude=./mnt \-\-exclude=./media \e
+\&       \-\-exclude=./lost+found \-\-exclude=./swapfile \e
+\&       \-\-exclude=./var/lib/tailscale/tailscaled.state .' \e
+    > /mnt/d/wsl\-migration/monkey\-rehearsal.tar
+.fi
+.PP
+tailscaled.state is dropped ON PURPOSE here: the rehearsal takes a FRESH
+identity so monkey's own node is never at risk. The cutover keeps it.
+.PP
+ON dexter, Windows route. Imports land on D:, never C:
+.nf
+
+  wsl.exe \-\-import monkey\-rehearsal D:\ewsl\-migration\emonkey\-rehearsal \e
+    D:\ewsl\-migration\emonkey\-rehearsal.tar
+  wsl.exe \-d monkey\-rehearsal \-u root \-\- /bin/true
+.fi
+.PP
+Apply section 2's fixes inside it, then record what actually happened:
+.nf
+
+  wsl.exe \-d monkey\-rehearsal \-u root \-\- systemctl is\-system\-running
+  wsl.exe \-d monkey\-rehearsal \-u root \-\- systemctl list\-units \-\-state=active
+  wsl.exe \-d monkey\-rehearsal \-u root \-\- tailscale \-\-version
+.fi
+.PP
+Write the answers to rehearsal\-verdict.tsv, then tear it down:
+.nf
+
+  wsl.exe \-\-unregister monkey\-rehearsal
+  rm \-f /mnt/d/wsl\-migration/monkey\-rehearsal.tar
+.fi
+.SH 2. GUEST PREP \- WHAT MAKES AN IMPORTED ROOT ACTUALLY BOOT
+Apply INSIDE the imported distro, never on the live guest, so a failed import
+costs nothing.
+.nf
+
+  # / is mounted by UUID and no such device exists in WSL2; /swapfile likewise
+  sed \-i 's|^/dev/disk/by\-uuid|#&|; s|^/swapfile|#&|' /etc/fstab
+
+  # WSL2 writes /etc/resolv.conf and owns the interface; these fight it for DNS
+  systemctl mask systemd\-networkd systemd\-resolved multipathd lvm2\-monitor \e
+    ModemManager
+
+  cat > /etc/wsl.conf <<'EOF'
+  [boot]
+  systemd=true
+  [user]
+  default=zach
+  [network]
+  hostname=monkey
+  EOF
+.fi
+.PP
+hostname=monkey matters: Ubuntu and hermes BOTH answer `dexter', and a third
+distro answering `dexter' makes every host\-keyed probe ambiguous.
+.SH 3. CUTOVER
+Only after the rehearsal has a recorded verdict.
+.nf
+
+  ssh monkey 'sudo systemctl stop "actions.runner.*"'   # quiesce, do NOT deregister
+  ./constate.sh > before\-cutover.tsv
+.fi
+.PP
+ON dexter. The same tar as section 1 but KEEPING tailscaled.state \- that state
+is what makes `Host monkey' and 12 runner registrations keep resolving.
+.nf
+
+  ssh \-n \-i ~/.ssh/id_dexter_monkey zach@100.121.83.23 \e
+\&    'sudo tar \-c \-\-numeric\-owner \-\-xattrs \-\-acls \-C / \e
+\&       \-\-exclude=./proc \-\-exclude=./sys \-\-exclude=./dev \-\-exclude=./run \e
+\&       \-\-exclude=./tmp \-\-exclude=./mnt \-\-exclude=./media \e
+\&       \-\-exclude=./lost+found \-\-exclude=./swapfile .' \e
+    > /mnt/d/wsl\-migration/monkey.tar
+.fi
+.PP
+Windows route. The VM is SAVED, never deleted \- that is the rollback.
+.nf
+
+  & 'C:\eProgram Files\eOracle\eVirtualBox\eVBoxManage.exe' controlvm monkey savestate
+  wsl.exe \-\-import monkey D:\ewsl\-migration\emonkey D:\ewsl\-migration\emonkey.tar
+  wsl.exe \-d monkey \-u root \-\- /bin/true
+.fi
+.PP
+Apply section 2 inside it, then verify BEFORE trusting it:
+.nf
+
+  ./constate.sh \-\-target wsl:monkey \-\-diff before.tsv
+.fi
+.PP
+Every MUST\-HOLD field must hold and backend must FLIP oracle \-> wsl. A MOVED
+machine_id or an ABSENT ts_nodeid means STOP and roll back.
+.SH ROLLBACK
+Reversible at every step because the VDI is never touched.
+.nf
+
+  wsl.exe \-\-terminate monkey
+  wsl.exe \-\-unregister monkey
+  & 'C:\eProgram Files\eOracle\eVirtualBox\eVBoxManage.exe' startvm monkey \-\-type headless
+  ./constate.sh \-\-diff before.tsv
+.fi
+.PP
+Expect backend back to oracle and every field held.
+.SH THE TWO GATES ONLY ZACH CAN PASS
+Neither blocks the rehearsal. The second blocks only runner re\-registration,
+and selfdev\-runner\-provision.sh retries daily, so it is recoverable after the
+fact rather than a stop.
+.nf
+
+HUMAN\-STEP
+  what:     approve the forced verb\-build cut so fixed host tools reach dexter
+  where:    github.com/hf7y/verbs \-> Actions \-> build\-verbs \-> the waiting run
+  verified: gh api repos/hf7y/verbs/environments shows release with
+            required_reviewers [hf7y] and can_admins_bypass false, so a
+            workflow_dispatch run starts and then waits rather than failing
+  undo:     cancel the queued run; the 30\-day cadence is unchanged either way
+
+HUMAN\-STEP
+  what:     grant the GitHub App Administration: read & write (senechal#551)
+  where:    github.com/settings/installations \-> installation 152065281
+  verified: the nightly registration\-token POST returns Not Found today, and
+            no REST endpoint exists to grant this \- checked against the
+            installation's current permission set
+  undo:     revoke the same permission in the same UI
+.fi
+.SH WHAT A GOOD RUN PRODUCES
+.nf
+
+  HOLD  machine_id 25cb8cab...     FLIP backend oracle \-> wsl
+  HOLD  ts_nodeid nyzii8E1C221CNTRL
+  OK    runners_active 12 (was 12)
+  OK    long_readout 0 (was 4)
+.fi
+.PP
+A Long readout count that does NOT fall to 0 means monkey is still being
+descheduled, and the migration did not buy what it was for.
+.SH RETIRING THIS
+When etat.sh reports the cutover DONE and a week has passed with long_readout
+at 0, delete this directory, the saved VM, and D:\ewsl\-migration. Fold the
+durable facts into bin/lib/vmhost.sh comments; leave nothing here to rot.
+.SH IMPLEMENTATION NOTES
+constate.sh and etat.sh carry no comments on purpose: their reasoning is here,
+in one document, rather than scattered across two scripts.
+.PP
+.B constate.sh
+runs on mandark and reaches in. It is NOT a verb and is installed on no host,
+so it needs no build tag to reach the thing it measures \- which matters,
+because the verb build cuts only every 30 days. Its probe is one heredoc run
+wherever \-\-target says. Every field exists because something downstream breaks
+when it moves:
+.nf
+
+  MUST\-HOLD    machine_id hostname accounts crontabs etc_selfdev verbs_on_path
+               and ts_ip / ts_nodeid \- what `Host monkey' and 12 runner
+               registrations resolve through. ABSENT is expected on the
+               rehearsal distro, which takes a fresh key on purpose; a SILENT
+               change on the real cutover is the failure this exists to catch.
+  MUST\-CHANGE  backend, oracle \-> wsl. The one field whose job is to flip.
+  GRADED       runners_active may not fall; long_readout and soft_lockup may
+               not rise.
+.fi
+.PP
+A witness that cannot see exits 6 (BLIND) rather than reporting a clean, empty
+pass \- "I could not look" reported as healthy is how ten days pass.
+.PP
+.B etat.sh
+re\-derives the sprint's position from hosts and repos on every run; it reads no
+box a human ticked. It always exits 0, so it can never redden CI or block a
+turn. It checks the four vmhost wsl arms whose absence renders the published
+status page permanently red, and it measures C: free against monkey.vdi \-
+because rollback lives or dies on C: keeping that file.
+.SH SEE ALSO
+.BR constate.sh (1),
+.BR etat.sh (1),
+hf7y/senechal#438, hf7y/senechal#553, hf7y/realisateur#745

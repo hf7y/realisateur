@@ -2,6 +2,8 @@
 VMHOST_VBOX="${VMHOST_VBOX:-/mnt/c/Program Files/Oracle/VirtualBox/VBoxManage.exe}"  # vmhost.sh: backend-neutral VM-host vocabulary (#563) -- VMHOST_BACKEND=hyperv swaps the driver, not every call site
 VMHOST_WSL="${VMHOST_WSL:-/mnt/c/Windows/System32/wsl.exe}"  # the wsl backend's driver: monkey is decided to become a WSL2 distro on dexter, so the vocabulary has to survive VirtualBox being deleted
 
+VMHOST_REG="${VMHOST_REG:-/mnt/c/Windows/System32/reg.exe}"  # the wsl backend keeps a distro's disk location in the registry, not in any wsl.exe subcommand
+
 _VMHOST_WSL_DISTROS=""
 _vmhost_wsl_has() {  # <name> -- is there a WSL distro by that name? one launch per process, then cached
   [ -x "$VMHOST_WSL" ] || return 1
@@ -47,6 +49,16 @@ vmhost_require() {  # [vm] -- 0 if the active backend can be driven, else 2 and 
 
 _vbm() { "$VMHOST_VBOX" "$@" < /dev/null 2>&1 | tr -d '\0\r'; }
 _wsl() { "$VMHOST_WSL" "$@" < /dev/null 2>&1 | tr -d '\0\r'; }
+_reg() { "$VMHOST_REG" "$@" < /dev/null 2>/dev/null | tr -d '\0\r'; }
+
+_vmhost_wsl_basepath() {  # <distro> -> where the distro's ext4.vhdx lives, in Windows coordinates
+  _reg query 'HKCU\Software\Microsoft\Windows\CurrentVersion\Lxss' /s | awk -v want="$1" '
+    /^HKEY_/               { base=""; name=""; next }
+    $1=="BasePath"         { $1=""; $2=""; sub(/^[ \t]+/,""); base=$0 }
+    $1=="DistributionName" { $1=""; $2=""; sub(/^[ \t]+/,""); name=$0 }
+    name==want && base!="" { print base; exit }
+  '
+}
 
 vmhost_state() {  # <vm> -> running | poweroff | paused | unknown
   local vm="$1" s
@@ -71,21 +83,20 @@ vmhost_disk_raw() {  # <vm> -> the backend's own disk descriptor, published as-i
       _vmhost_require_vbox || return 2
       _vbm showvminfo "$vm" --machinereadable | grep '^"SATA-0-0"=' | cut -d'"' -f4
       ;;
+    wsl)
+      _vmhost_require_wsl || return 2
+      _vmhost_wsl_basepath "$vm"
+      ;;
     *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
   esac
 }
 
 vmhost_classify_disk() {  # <raw> -> internal | EXTERNAL-USB | unknown -- pure, no host round-trip
-  local d="$1"
-  case "$(vmhost_backend)" in
-    virtualbox)
-      case "$d" in
-        C:*) printf 'internal\n' ;;
-        D:*) printf 'EXTERNAL-USB\n' ;;
-        *)   printf 'unknown\n' ;;
-      esac
-      ;;
-    *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
+  local d="${1#\\\\?\\}"   # the drive letter IS the classification, so asking which backend produced it bought nothing -- and cost: asked with no vm name it classed every WSL disk virtualbox. A wsl BasePath may arrive as \\?\C:\... ; VirtualBox never does
+  case "$d" in
+    [Cc]:*) printf 'internal\n' ;;
+    [Dd]:*) printf 'EXTERNAL-USB\n' ;;
+    *)      printf 'unknown\n' ;;
   esac
 }
 
@@ -101,6 +112,9 @@ vmhost_screenshot() {  # <vm> <path> -- capture the VM console to <path> as a PN
     virtualbox)
       _vmhost_require_vbox || return 2
       _vbm controlvm "$vm" screenshotpng "$path" >/dev/null
+      ;;
+    wsl)
+      return 4   # GAP, not a driver error: a distro has no framebuffer. Silent, because monkey-watch asks every 10 minutes and stderr here lands in cron mail
       ;;
     *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
   esac
@@ -213,6 +227,9 @@ vmhost_logdir() {  # <vm> -> the VM's log directory, as a path THIS host can rea
       d="$(_vbm showvminfo "$vm" --machinereadable | grep '^LogFldr=' | cut -d'"' -f2)"
       [ -n "$d" ] || return 0
       printf '%s\n' "$d" | sed 's|\\|/|g; s|^\([A-Za-z]\):|/mnt/\L\1|'
+      ;;
+    wsl)
+      return 0   # a distro has no VMM and so no VMM log; empty is the honest answer, and it is what the virtualbox arm already returns when LogFldr is empty
       ;;
     *) printf 'vmhost: backend "%s" has no driver\n' "$(vmhost_backend)" >&2; return 2 ;;
   esac
