@@ -416,4 +416,26 @@ out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=mandark bash "$TMP/bin/ausc
 case "$out" in *NOT-MINE*) bad "off-guest hosts still probes dexter" "it went NOT-MINE on mandark" ;;
   *) ok "off the guest the row still probes dexter -- the boundary is monkey's, not everyone's" ;; esac
 
+rm -f "$TMP/bin/dexter-liveness.sh"  # without it, hosts reads the published verdict (#735) instead of going BLIND
+fresh_vu="$(date -u -d '+1 hour' +%Y-%m-%dT%H:%M:%SZ)"
+status "{\"accounts\":[],\"watcher\":{\"verdict\":\"OK\",\"why\":\"running, sshd answering\",\"valid_until\":\"$fresh_vu\"}}"
+out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=mandark SELFDEV_LIBEXEC="$TMP/no-libexec" bash "$TMP/bin/ausculte.sh" hosts 2>&1)"; rc=$?
+check "a fresh published OK verdict makes hosts OK (0), not BLIND" "$rc" "0"
+has "and it credits monkey-watch, not a local probe" "$out" "monkey-watch"
+
+status "{\"accounts\":[],\"watcher\":{\"verdict\":\"DOWN\",\"why\":\"VM running but sshd is silent\",\"valid_until\":\"$fresh_vu\"}}"
+out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=mandark SELFDEV_LIBEXEC="$TMP/no-libexec" bash "$TMP/bin/ausculte.sh" hosts 2>&1)"; rc=$?
+check "a published DOWN verdict makes hosts DOWN (5) -- the outage ausculte used to miss entirely" "$rc" "5"
+has "and it carries the watcher's own reason" "$out" "sshd is silent"
+
+status "{\"accounts\":[],\"watcher\":{\"verdict\":\"OK\",\"valid_until\":\"$expired\"}}"
+out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=mandark SELFDEV_LIBEXEC="$TMP/no-libexec" bash "$TMP/bin/ausculte.sh" hosts 2>&1)"; rc=$?
+check "a hosts verdict past its own valid_until is BLIND (6), not a stale OK" "$rc" "6"
+has "and it names the expiry, same as arming" "$out" "expired at"
+
+printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"
+out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=mandark SELFDEV_LIBEXEC="$TMP/no-libexec" bash "$TMP/bin/ausculte.sh" hosts 2>&1)"; rc=$?
+check "no dexter-liveness.sh and no readable status document is BLIND (6)" "$rc" "6"
+has "and it says both things are missing" "$out" "dexter-liveness.sh not present"
+
 summary
