@@ -205,6 +205,17 @@ EOF
 [ -z "$unlisted" ] && ok "every lib/ a carried script sources is itself a bin/lib/* row in carries.tsv" \
                    || bad "carried, sources a lib NOT in carries.tsv's bin/lib/* rows:$unlisted"
 
+echo
+echo "-- 1d. A LIB ALREADY ON bashified IS IN THE TABLE ----------------------"
+if [ -n "$V_REF" ]; then
+  frozen=""
+  for l in $(git -C "$REPO" ls-tree --name-only "$V_REF" bin/lib/ 2>/dev/null); do
+    case $'\n'"$carried_libs"$'\n' in *$'\n'"${l#bin/}"$'\n'*) ;; *) frozen="$frozen ${l#bin/lib/}" ;; esac
+  done
+  [ -z "$frozen" ] && ok "every bin/lib file already on bashified is a carries.tsv row, so carry.sh still refreshes it" \
+                   || bad "on bashified but NOT in carries.tsv -- frozen there, a fix on main reaches it on no path:$frozen"
+fi
+
 # ===========================================================================
 echo
 echo "-- 2. main IS NOT A DEPLOY REF, AND THE LEAK MAY NOT GROW --------------"
