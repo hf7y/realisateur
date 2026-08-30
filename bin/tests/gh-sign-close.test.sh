@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-#
-# Contract test for gh-sign.sh's `issue close` guard: closing an issue as
-# COMPLETED having landed nothing, and saying nothing about it, is refused --
-# and every honest close still goes through, including when GitHub does not
-# answer. hf7y/realisateur#752, hf7y/realisateur#294.
+# Contract test for gh-sign.sh's `issue close` guard (#752, #294, #778): a
+# COMPLETED close that landed nothing and says nothing is refused, and every
+# honest close goes through -- including when GitHub does not answer.
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -13,9 +11,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GS="$HERE/../gh-sign.sh"
 BASH_BIN="$(command -v bash)"
 
-# --- the fake gh -----------------------------------------------------------
-# Answers the two reads the guard makes and logs everything else. FAKE_LANDED,
-# FAKE_VIEW_RC and FAKE_API_RC are the three states the guard must survive.
+# A fake gh: answers the guard's two reads, logs the rest. FAKE_LANDED,
+# FAKE_VIEW_RC and FAKE_API_RC are the states the guard must survive.
 mkdir -p "$T/stub"
 cat > "$T/stub/gh" <<'STUB'
 #!/usr/bin/env bash
@@ -89,9 +86,8 @@ rc "B9 a close typed in the DELIVERS vocabulary -- passes" 0 "$?"
 run issue close 7 --repo hf7y/widget --comment 'Already done -- `bin/lib/carries.tsv` carries it.'
 rc "B10 a close naming a file -- passes" 0 "$?"
 
-# The shim's body parser reads only the two-word spelling, so without its own
-# arm here the equals form arrives as an EMPTY comment and an honest close is
-# refused for a formatting choice.
+# Without its own arm the equals form arrives as an EMPTY comment, and an
+# honest close is refused over a formatting choice.
 run issue close 7 --repo hf7y/widget --comment=closed-by-hf7y/scheduler#118
 rc "B10b --comment=<text>, the other spelling, is read too" 0 "$?"
 

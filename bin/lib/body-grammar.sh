@@ -20,9 +20,6 @@
 #   NO-DEFAULT          a DECISION: body carrying no DEFAULT-AFTER at all
 #   NEGATED-CLOSE       a closing keyword + reference in a sentence DENYING it
 #
-# grammar_landing_ref is not one of those codes: it grades a CLOSE, not a body.
-# gh-sign's `issue close` guard asks it whether the closer named anything.
-#
 # DEFAULT-AFTER -- MANDATORY ON A DECISION SINCE #680 (Zach, 2026-08-28),
 # because 21 of 45 open `needs-human` blocked by omission. Past the window the
 # owning account applies it, says so, and leaves the issue open to be
@@ -78,34 +75,20 @@ grammar_negated_close() {  # <line> <heading-negates> -- print "<keyword> <ref>"
 }
 
 # grammar_landing_ref <text> -- print the first thing <text> names that a check
-# could go and look at, and return 0; return 1 when it names none.
-#
-# CLOSED HAVING LANDED NOTHING is this estate's largest measured failure class:
-# 317 of 936 agent-filed closed issues, 33.9%, and machine-filed 172 of 246
-# (hf7y/realisateur#752, measured over 138,400 lines of its own prose). The
-# remedy is not to ban the close -- most closes owe no diff -- it is that a
-# close SAY what it did, in a form something can follow. Prose cannot be
-# followed, which is the same argument UNTYPED-DELIVERY already makes about
-# DELIVERS, so the shapes accepted here are the ones this estate already writes:
-#
-#   #N / owner/repo#N / an issue, pull or commit URL    GitHub resolves it
-#   a 7-40 char hex token                               a commit
-#   <kind>:<value>                                      the DELIVERS vocabulary
-#   a `code span` holding a path or a filename          the older idiom for it
-#
-# The code span is the one that looks arbitrary and is not. Replayed over 1,348
-# real closes in 20 hf7y repos, dropping it takes the guard from 49 refusals to
-# 91: the 42 it acquits are `notify-senechal` door rows a machine absorbed and
-# acknowledged (18), and "already done, see `bin/x`" closes (24). Refusing
-# those is the toll booth, not the guard.
+# could go and look at, 1 when it names none. gh-sign's `issue close` guard
+# asks it of a close comment: closing having landed nothing is this estate's
+# largest measured class (#752), and prose cannot be followed -- the same
+# argument UNTYPED-DELIVERY makes about DELIVERS. Four shapes, all already
+# written here daily: `#N`/`owner/repo#N`/an issue-pull-commit URL, a 7-40
+# char hex commit, a typed <kind>:<value>, a `code span` naming a path. The
+# span looks arbitrary and is not -- over 1,348 real closes, dropping it takes
+# the guard from 49 refusals to 91, and all 42 it acquits are honest (#778).
 grammar_landing_ref() {
   local text="$1" words=() w seg rest
   local IFS=$' \t\n'
 
-  # `-d ''` IS LOAD-BEARING: without it `read` stops at the first newline and a
-  # statement two lines down goes unread. grammar_negated_close's bare `read -ra`
-  # is correct only because grammar_check hands it one line at a time; a close
-  # comment arrives whole.
+  # `-d ''` IS LOAD-BEARING: bare `read -ra` stops at the first newline, which
+  # is correct above only because grammar_check hands it one line at a time.
   read -rd '' -a words <<<"$text" || :
   for w in "${words[@]}"; do
     w="${w//\`/}"; w="${w%[.,;:)]}"
@@ -120,7 +103,7 @@ grammar_landing_ref() {
     esac
   done
 
-  rest="$text"                        # same code-span walk as grammar_negated_close
+  rest="$text"                        # same walk as grammar_negated_close
   while :; do
     case "$rest" in *'`'*) ;; *) return 1 ;; esac
     rest="${rest#*\`}"
