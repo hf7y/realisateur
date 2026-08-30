@@ -179,8 +179,9 @@ check "...and the tree is unchanged" \
 # participant" (vault:realisateur/VERB-DISTRIBUTION.md section 5), and to `gh repo list
 # --no-archived` that is exactly this: the name stops coming back.
 printf 'alpha\nbeta\n' > "$TMP/repolist"
-cut --assemble "$OUT" --allow-shrink >/dev/null 2>"$TMP/e3"
-check "a cut after a project retires exits 0" "$?" "0"
+printf '#project\tverb\twhy\ngamma\tga\tfixture: gamma retired\n' > "$TMP/retired-verbs.tsv"
+cut --assemble "$OUT" >/dev/null 2>"$TMP/e3"
+check "a cut after a DECLARED project retirement exits 0" "$?" "0"
 check "...the retired project is GONE from the assembled tree" \
       "$([ -d "$OUT/gamma" ] && echo present || echo absent)" "absent"
 check "...and gone from the manifest" \
@@ -194,6 +195,7 @@ esac
 
 # --- 4. the shrink refusal must fire in CI ------------------------------
 # A fresh runner has neither local reference point -- that is how #399 passed.
+printf '#project\tverb\twhy\n' > "$TMP/retired-verbs.tsv"
 printf 'alpha\n' > "$TMP/repolist"
 printf 'alpha\taa\nalpha\tab\nbeta\tba\n' > "$TMP/published"
 FIXTURE_PUBLISHED="$TMP/published" \
@@ -221,10 +223,12 @@ case "$(cat "$TMP/e4")" in
     *) bad "the shrink message names its source" "got: $(head -3 "$TMP/e4")" ;;
 esac
 
-cut --assemble "$OUT" --allow-shrink >/dev/null 2>&1
-check "--allow-shrink accepts the same build" "$?" "0"
+printf '#project\tverb\twhy\nbeta\tba\tfixture: beta retired\n' > "$TMP/retired-verbs.tsv"
+cut --assemble "$OUT" >/dev/null 2>&1
+check "a retired-verbs.tsv row accepts the same build" "$?" "0"
 check "...and the departed project is pruned" \
       "$([ -d "$OUT/beta" ] && echo present || echo absent)" "absent"
+printf '#project\tverb\twhy\n' > "$TMP/retired-verbs.tsv"
 
 # --- 5. a bashified branch that MOVED -----------------------------------
 # The manifest pins a sha; the tree must be assembled from THAT sha. A cut
@@ -374,8 +378,8 @@ esac
 check "...and the project's real verb is still derived" "$(body "$TMP/m11")" "1"
 
 # --- 12. --allow-half-declared cuts, and still tells the consumer -------
-# The same shape as --allow-shrink: the operator who has already filed the
-# defect can cut tonight's build. What it must NOT buy is silence.
+# The same shape as a declared retirement: the operator who has already filed
+# the defect can cut tonight's build. What it must NOT buy is silence.
 printf '#project\tname\twhy\n' > "$TMP/not-a-verb.tsv"
 cut --allow-half-declared >"$TMP/m12" 2>"$TMP/e12"
 check "--allow-half-declared cuts despite the half-declarations" "$?" "0"
@@ -477,13 +481,14 @@ FIXTURE_PUBLISHED="$TMP/published14e" \
   cut --assemble "$TMP/asm14e" >/dev/null 2>"$TMP/e14e"
 check "a personal-tool reclassification alone is refused as a shrink" "$?" "1"
 case "$(cat "$TMP/e14e")" in
-    *SMALLER*) ok "...and the refusal gives the shrink reason" ;;
-    *) bad "the refusal names the shrink" "got: $(cat "$TMP/e14e")" ;;
+    *"kappa"*"kp"*) ok "...and the refusal NAMES the command that vanished" ;;
+    *) bad "the refusal names the missing command" "got: $(cat "$TMP/e14e")" ;;
 esac
 
+printf '#project\tverb\twhy\nkappa\tkp\tfixture: reclassified personal\n' > "$TMP/retired-verbs.tsv"
 FIXTURE_PUBLISHED="$TMP/published14e" \
-  cut --assemble "$TMP/asm14e" --allow-shrink >/dev/null 2>"$TMP/e14e2"
-check "--allow-shrink accepts a personal-tool-caused shrink" "$?" "0"
+  cut --assemble "$TMP/asm14e" >/dev/null 2>"$TMP/e14e2"
+check "a retired-verbs.tsv row accepts a personal-tool-caused shrink" "$?" "0"
 
 mkrepo omega ov1 ov2   # 14f/g: a declared retirement (realisateur#696), matched by NAME not just count (realisateur#699 point 1)
 g -C "$FIX/omega.git" rm -q bin/ov2 man/ov2.1
@@ -502,7 +507,7 @@ esac
 printf '#project\tverb\twhy\nomega\tov2\ttest retirement\n' > "$TMP/retired-verbs.tsv"
 FIXTURE_PUBLISHED="$TMP/published14f" \
   cut --assemble "$TMP/asm14g" >/dev/null 2>"$TMP/e14g"
-check "a DECLARED retirement is accepted with no --allow-shrink" "$?" "0"
+check "a DECLARED retirement is accepted with no flag at all" "$?" "0"
 case "$(cat "$TMP/e14g")" in
     *"fully explained"*) ok "...and it says the shrink was explained by the declaration" ;;
     *) bad "the accept names the explanation" "got: $(cat "$TMP/e14g")" ;;
