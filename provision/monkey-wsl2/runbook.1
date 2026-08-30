@@ -66,6 +66,65 @@ dexter reaches monkey directly, so 27G never crosses mandark. Run ON dexter:
 
   ssh \-n \-i ~/.ssh/id_dexter_monkey zach@100.121.83.23 'hostname'
 .fi
+.SH THE SCHEDULED SHUTDOWN WINDOW
+Two pending changes need `wsl \-\-shutdown', and \-\-shutdown now costs the human
+channel (see ROUTES). So they are one scheduled window, not two config edits
+that each "take effect on the next restart" \- which is how a comment ends up
+asserting something the line under it does not do.
+.PP
+.B Drive the whole window from port 22.
+The 2223 route is inside a distro and stops when the distro does.
+.PP
+.B 1. autoMemoryReclaim is in the wrong section and WSL rejects it
+(hf7y/senechal#561). Measured: `wsl: Unknown key ''wsl2.autoMemoryReclaim'' in
+C:\eUsers\eZach\e.wslconfig:11'. It is under [wsl2]; it belongs under
+[experimental]. `memory' and `processors' ARE in force; only the reclaim is not.
+Replace the whole file, comment included \- the existing comment claims the
+reclaim takes effect on the next shutdown, which is false as written and must
+not survive the move:
+.nf
+
+  [general]
+  instanceIdleTimeout=\-1
+
+  [wsl2]
+  networkingMode=mirrored
+  vmIdleTimeout=\-1
+  memory=8GB
+  processors=8
+
+  # senechal#528/#561: autoMemoryReclaim is an [experimental] key. Under
+  # [wsl2] WSL rejected it by name and the reclaim never ran.
+  [experimental]
+  autoMemoryReclaim=gradual
+.fi
+.PP
+.B 2. Then, and only from port 22:
+.nf
+
+  wsl.exe \-\-shutdown
+  wsl.exe \-d Ubuntu \-e true      # starts the VM: this is when .wslconfig is re-read
+.fi
+.PP
+.B 3. Verify, because silence is the failure mode here.
+The unknown-key warning is printed when the VM STARTS, not per command \- which
+is why this sat unnoticed while every ordinary `wsl.exe' call came back clean.
+A clean start line is the pass:
+.nf
+
+  wsl.exe \-\-import <anything>    # or any command that starts the VM
+    -> no "Unknown key" line means the section move took
+.fi
+.PP
+.B 4. Bring the human channel back and CHECK it, do not assume it.
+\-\-shutdown stopped hermes:
+.nf
+
+  wsl.exe \-d hermes \-u root \-\- systemctl is\-active \e
+    zaxon\-relay\-mcp whisper\-server zaxon\-relay\-watcher hermes\-gateway
+.fi
+.PP
+Four `active' lines, or Zach has no notification channel and does not know it.
 .SH FACTS THAT CHANGE THE COMMANDS
 .nf
 C:  53G free   monkey.vdi is 39.5G and lives HERE \- rollback depends on it
