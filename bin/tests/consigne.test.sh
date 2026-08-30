@@ -41,11 +41,13 @@ check "an unknown flag exits 2" "$rc" "2"
 has   "...and names what it rejected" "$OUT" "--not-a-real-flag"
 
 OUT="$(PATH="$BASE_PATH" "$CONSIGNE" -s foo 2>&1)"; rc=$?
-check "a near-miss on the cost flag exits 2 rather than being ignored" "$rc" "2"
-has   "...and says it is a near-miss on --summon" "$OUT" "near-miss"
+check "-s exits 2 rather than being ignored" "$rc" "2"
+has   "...and names the flag it rejected" "$OUT" "-s"
 
-OUT="$(PATH="$BASE_PATH" "$CONSIGNE" status --summon 2>&1)"; rc=$?
-check "--summon on status is a usage error: status never spends" "$rc" "2"
+# The retirement, held: --summon was a flag this verb accepted and it is gone.
+# Asserted rather than merely deleted, so re-adding it fails a test.
+OUT="$(PATH="$BASE_PATH" "$CONSIGNE" --summon DOC.md 2>&1)"; rc=$?
+check "--summon is a retired flag: unknown, exit 2" "$rc" "2"
 
 # ===========================================================================
 echo
@@ -84,16 +86,6 @@ PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" BIBLIOTHECAIRE_VAULT="$VAULTD
   "$CONSIGNE" "a file with spaces.md" >/dev/null 2>&1
 check "a path with spaces stays one argument" \
       "$(sed -n '2p' "$ARGV_LOG")" "a file with spaces.md"
-
-# --summon: accepted, buys nothing, says so, and still deposits. `fauche`
-# prints `fonde consign --summon <file>` as its remedy for unconsigned prose.
-: > "$ARGV_LOG"
-OUT="$(PATH="$BASE_PATH" CONSIGNE_IMPL="$TMP/rec-impl.sh" BIBLIOTHECAIRE_VAULT="$VAULTDIR" \
-       "$CONSIGNE" --summon DOC.md 2>&1)"; rc=$?
-check "--summon is accepted and still deposits" "$rc" "0"
-has   "--summon says plainly that nothing was spent" "$OUT" "nothing was spent"
-check "--summon is not forwarded to the mechanism as a path" \
-      "$(sed -n '2p' "$ARGV_LOG")" "DOC.md"
 
 # ===========================================================================
 echo

@@ -39,8 +39,7 @@ cli_help() {
   else
     printf '  0  ran to completion (findings, if any, are printed -- not encoded here)\n'
   fi
-  printf '  2  usage error: unknown flag, unexpected argument, or cost-flag near-miss\n'
-  printf '\nthis tool makes no AI calls and cannot spend: --summon is rejected.\n'
+  printf '  2  usage error: unknown flag or unexpected argument\n'
   exit 0
 }
 
@@ -51,17 +50,6 @@ cli_guard() {
     case "$arg" in
       --help|-h)
         cli_help
-        ;;
-      --summon)
-        # The cost boundary. These are zero-AI-cost sensors, so the honest
-        # answer is a refusal rather than silence -- the contract accepts
-        # either, and rejects only saying nothing.
-        cli_die "--summon rejected: this tool makes no AI calls and cannot spend."
-        ;;
-      -s|-S)
-        # No-bundling rule: a near-miss on the only flag that spends real
-        # money must fail, never be quietly ignored as an unknown.
-        cli_die "'$arg' rejected as a near-miss on --summon (the cost flag is long-form only)."
         ;;
       --)
         # Not accepted by any of these scripts; treating it as a silent
