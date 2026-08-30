@@ -259,13 +259,30 @@ jobs. The rehearsal is meant to cost nothing; this is how it would cost the
 fleet instead.
 .nf
 
-  wsl.exe \-d monkey\-rehearsal \-u root \-\- \e
-    systemctl mask 'actions.runner.*' tailscaled cron
+.B systemctl mask DOES NOT WORK ON THE RUNNER UNITS.
+Measured 2026\-08\-30: they are regular files in /etc/systemd/system, which mask
+refuses to overwrite \- `mask' reported success and left all 12 .wants symlinks
+in place, so all 12 would still have started. Disable them and delete the
+symlinks, then CHECK the count is zero:
+.nf
+
+  systemctl list\-unit\-files \-\-no\-legend | grep '^actions\\.runner\\.' \e
+    | awk '{print $1}' | while read \-r u; do systemctl disable "$u"; done
+  rm \-f /etc/systemd/system/multi\-user.target.wants/actions.runner.*
+  ls /etc/systemd/system/multi\-user.target.wants/ | grep \-c '^actions\\.runner\\.'
+    -> must print 0 BEFORE systemd is ever started
+
+  systemctl mask tailscaled cron ufw ssh tpm\-udev.path tpm\-udev.service
 .fi
 .PP
-tailscaled and cron are masked for the same reason: the rehearsal must not
-reach the tailnet or fire monkey's crontabs. Only then apply section 2's fixes,
-restart, and record what actually happened:
+tailscaled and cron: the rehearsal must not reach the tailnet or fire monkey's
+crontabs. ufw and ssh are the SHARED NETNS: ufw would install iptables rules
+into the namespace hermes and Ubuntu live in, and ssh would bind :22 beside the
+Windows sshd that is your control plane. tpm\-udev is the only thing that fails
+on its own here \- WSL2 has no TPM device \- and masking it is what turns
+systemd's state from `degraded' into `running'.
+.PP
+Only then apply section 2's fixes, restart, and record what actually happened:
 .nf
 
   wsl.exe \-\-terminate monkey\-rehearsal
@@ -280,13 +297,51 @@ run inside a distro at all under networkingMode=mirrored \- not whether it can
 take monkey's identity. Test it with a FRESH auth key against a throwaway node
 name, never with monkey's state. dexter's own tailscaled runs on WINDOWS,
 OUTSIDE WSL, so it proves nothing about this.
+.B The 2026\-08\-30 rehearsal answered half of it.
+Run with \-\-tun=userspace\-networking (no kernel interface, no routes, so the
+shared netns is untouched), tailscaled STARTED inside the distro and reached
+`BackendState=NeedsLogin' \- a healthy daemon with no credentials. It created 0
+kernel interfaces, so hermes was unaffected. /dev/net/tun is also present and
+the binary is 1.102.1.
+.PP
+.B What is still open is the LOGIN half:
+whether a logged-in tailscaled inside a distro coexists with dexter's Windows
+tailscaled under mirrored networking. That needs a fresh auth key, which the
+rehearsal deliberately did not mint. It is the last unmeasured thing in the plan.
+.SS A rehearsal legitimately exits 5, and here is which fields say so
+constate.sh grades against monkey's baseline, so the deliberate differences
+show as failures. Expect exactly these, and nothing else:
+.nf
+
+  MOVED  hostname      monkey -> monkey\-rehearsal   (you named it that)
+  ABSENT ts_ip, ts_nodeid                           (you excluded the state)
+  LOST   runners_enabled, runners_active            (you disarmed them)
+.fi
+.PP
+Everything else must HOLD, and on the 2026\-08\-30 run it did: machine_id
+identical, accounts 18, crontabs 19, verbs 19, /etc/selfdev 4. On the real
+cutover those three groups hold too and the exit is 0.
 .PP
 Write the answers to rehearsal\-verdict.tsv, then tear it down:
 .nf
 
-  wsl.exe \-\-unregister monkey\-rehearsal
+  wsl.exe \-\-unregister monkey\-rehearsal      # from PORT 22, see below
   rm \-f /mnt/d/wsl\-migration/monkey\-rehearsal.tar
 .fi
+.PP
+.B Tear down from the Windows route, not from a distro.
+Measured 2026\-08\-30: immediately after `wsl \-\-terminate', further wsl.exe calls
+from inside Ubuntu failed with `cannot execute binary file: Exec format error'.
+That is WSL's interop binfmt handler, not a broken wsl.exe, and it strands a
+23G distro registered if it is the only route you have. Port 22 does not use
+binfmt and was unaffected. Repair the distro-side handler with:
+.nf
+
+  sudo systemctl restart systemd\-binfmt
+.fi
+.PP
+which is the same fixup dexter\-liveness.sh already runs before its interop
+block. Unregister reclaims the vhdx: D: went straight back to 2.6T free.
 .SH 2. GUEST PREP \- WHAT MAKES AN IMPORTED ROOT ACTUALLY BOOT
 Apply INSIDE the imported distro, never on the live guest, so a failed import
 costs nothing.

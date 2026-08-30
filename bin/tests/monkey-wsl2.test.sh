@@ -23,7 +23,11 @@ if command -v man >/dev/null 2>&1; then
   has "A17 the import survives the shell that launched it" "$RF" "does not stop the import"
   has "A18 ...so it is not wrapped in a short timeout" "$RF" "too short here by a factor of four"
   has "A5 --terminate is named, and --shutdown is named as the hazard" "$R" 'wsl --terminate'
-  has "A7 the rehearsal masks the runners before systemd can start them" "$R" "systemctl mask 'actions.runner.*' tailscaled cron"
+  has "A7 the runners are DISABLED -- the rehearsal proved mask does not hold them" "$RF" "systemctl mask DOES NOT WORK ON THE RUNNER UNITS"
+  has "A19 ...and the .wants count is checked before systemd ever starts" "$RF" "must print 0 BEFORE systemd is ever started"
+  has "A20 ufw and ssh are disarmed because the netns is shared" "$RF" "ufw would install iptables rules"
+  has "A21 a rehearsal's expected rc=5 fields are named, not read as faults" "$RF" "A rehearsal legitimately exits 5"
+  has "A22 interop can break after --terminate, and the repair is named" "$RF" "systemd-binfmt"
   has "A8 ...and says why: they would contend with the live fleet's agents" "$RF" "SAME agents as the live monkey"
   has "A9 --shutdown's blast radius names the human channel" "$R" "zaxon-relay-mcp.service"
   has "A10 it says a probe inside a distro cannot identify what it measured" "$R" "cannot tell you which distro it measured"
@@ -71,7 +75,19 @@ has "D1 it says the order is provisional, where a reader sees it" "$(grep -A2 "B
 has "D2 ...and that DIVERGED is a finding, not a failure" "$(cat "$D/etat.sh")" "never a failure"
 has "D3 it names the one gate only a human can pass" "$(cat "$D/etat.sh")" "can_admins_bypass"
 
-section "E. the baseline is committed, so 'before' is not a memory"
+section "E. the rehearsal verdict is committed, so its results are not a memory"
+V="$D/rehearsal-verdict.tsv"
+if [ -r "$V" ]; then ok "E3 the rehearsal verdict is in the tree"; else bad "E3 the rehearsal verdict is in the tree" "missing"; fi
+vf() { awk -F'\t' -v k="$1" '$1==k{print $2; exit}' "$V" 2>/dev/null; }
+eq "E4 the first boot really had no systemd -- the disarm window is real" "$(vf first_boot_pid1)" "init"
+eq "E5 systemd came up once wsl.conf existed" "$(vf systemd_pid1_after_wslconf)" "systemd"
+eq "E6 machine_id survived the tar: the distro IS monkey" "$(vf machine_id)" "HELD"
+eq "E7 no runner reached GitHub as the live fleet" "$(vf runners_active)" "0"
+eq "E8 tailscaled was proven to start, not assumed" "$(vf tailscaled_starts)" "YES"
+eq "E9 ...and the login half is recorded as open, not quietly as passed" "$(vf tailscale_login_under_mirrored)" "UNTESTED"
+eq "E10 the backend discriminator flipped" "$(vf detect_virt)" "wsl"
+
+section "F. the baseline is committed, so 'before' is not a memory"
 if [ -r "$D/before.tsv" ]; then ok "E1 before.tsv is in the tree"; else bad "E1 before.tsv is in the tree" "missing"; fi
 eq "E2 it was taken before the migration, on the VirtualBox backend" \
   "$(awk -F'\t' '$1=="backend"{print $2}' "$D/before.tsv" 2>/dev/null)" "oracle"
