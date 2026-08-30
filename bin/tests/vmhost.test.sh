@@ -27,8 +27,8 @@ VMHOST_VBOX="$FAKE"
 section "A. backend detection"
 unset VMHOST_BACKEND
 eq "A1 an executable VBoxManage at \$VMHOST_VBOX detects as virtualbox" "$(vmhost_backend)" "virtualbox"
-eq "A2 no VBoxManage and no override detects as unknown" \
-  "$(VMHOST_VBOX="$T/nowhere" vmhost_backend)" "unknown"
+eq "A2 no driver at all and no override detects as unknown" \
+  "$(VMHOST_VBOX="$T/nowhere" VMHOST_WSL="$T/nowhere" vmhost_backend)" "unknown"
 eq "A3 \$VMHOST_BACKEND overrides detection" "$(VMHOST_BACKEND=hyperv vmhost_backend)" "hyperv"
 
 section "B. vmhost_require -- the fail-loud precondition monkey-watch.sh calls"
@@ -107,6 +107,66 @@ eq "J8b the second vm's own declaration is intact" \
   "$(vmhost_pause_status gardien 2026-08-29T10:00:00Z)" "PAUSED 2026-08-29T18:00:00Z"
 vmhost_pause_clear gardien
 unset VMHOST_PAUSE_DIR
+
+section "K. the wsl backend -- monkey becomes a distro on dexter and VirtualBox goes away (#704 follow-on)"
+WSL="$T/wsl.exe"; WCALLS="$T/wcalls"; WLIST="$T/wlist"; WRUN="$T/wrun"
+cat > "$WSL" <<STUB
+#!/usr/bin/env bash
+case "\$1" in
+  -l) if [ "\$3" = --running ]; then cat "$WRUN"; else cat "$WLIST"; fi ;;
+  --terminate) printf 'terminate %s\n' "\$2" >> "$WCALLS" ;;
+  --shutdown)  printf 'SHUTDOWN-ALL\n' >> "$WCALLS" ;;
+  -d) printf -- '-d %s %s %s\n' "\$2" "\$3" "\$4" >> "$WCALLS" ;;
+esac
+STUB
+chmod +x "$WSL"
+printf 'Ubuntu\nmonkey\n' > "$WLIST"
+printf 'Ubuntu\nmonkey\n' > "$WRUN"
+export VMHOST_WSL="$WSL"
+
+_VMHOST_WSL_DISTROS=""
+eq "K1 no VBoxManage but a wsl.exe detects as wsl" \
+  "$(VMHOST_VBOX="$T/nowhere" vmhost_backend)" "wsl"
+_VMHOST_WSL_DISTROS=""
+eq "K2 both drivers present: a distro by that name wins -- the migration window, not a hardcoded backend" \
+  "$(vmhost_backend monkey)" "wsl"
+_VMHOST_WSL_DISTROS=""
+eq "K3 both present but no distro by that name stays virtualbox" \
+  "$(vmhost_backend gardien)" "virtualbox"
+_VMHOST_WSL_DISTROS=""
+eq "K4 with no vm named at all, detection cannot ask, and keeps the driver it has" \
+  "$(vmhost_backend)" "virtualbox"
+
+VMHOST_VBOX="$T/nowhere"          # from here on: the post-migration host, VirtualBox deleted
+_VMHOST_WSL_DISTROS=""
+vmhost_require monkey; rc "K5 vmhost_require succeeds on a wsl-only host" 0 $?
+VMHOST_WSL="$T/nowhere" vmhost_require monkey 2>/dev/null; rc "K6 ...and fails 2 with no driver at all" 2 $?
+out="$(VMHOST_WSL="$T/nowhere" vmhost_require monkey 2>&1)"
+has "K6b the no-driver refusal names both drivers it looked for" "$out" "wsl.exe"
+has "K6c ...including VBoxManage, so the off-host message stays true either way" "$out" "VBoxManage"
+
+eq "K7 a running distro reads running" "$(vmhost_state monkey)" "running"
+printf 'Ubuntu\n' > "$WRUN"
+eq "K8 a distro that is not running reads poweroff -- it holds no RAM" "$(vmhost_state monkey)" "poweroff"
+printf 'Ubuntu\nmonkey\n' > "$WRUN"
+
+rm -f "$WCALLS"
+vmhost_save monkey
+eq "K9 freeing RAM is --terminate <distro>" "$(cat "$WCALLS")" "terminate monkey"
+hasnt "K10 and NEVER --shutdown, which kills dexter's own Ubuntu -- the route in" "$(cat "$WCALLS")" "SHUTDOWN-ALL"
+
+rm -f "$WCALLS"
+vmhost_start monkey
+eq "K11 resuming runs a command in the distro, which boots it" "$(cat "$WCALLS")" "-d monkey --exec /bin/true"
+
+section "L. vmhost_save_cmd -- the dry run prints the actuator, it does not paraphrase it"
+eq "L1 wsl" "$(vmhost_save_cmd monkey)" "$WSL --terminate monkey"
+VMHOST_VBOX="$FAKE"
+_VMHOST_WSL_DISTROS=""
+eq "L2 virtualbox names savestate, not pause -- pause holds the RAM" \
+  "$(VMHOST_WSL="$T/nowhere" vmhost_save_cmd monkey)" "$FAKE controlvm monkey savestate"
+VMHOST_BACKEND=hyperv vmhost_save_cmd monkey 2>/dev/null; rc "L3 an unsupported backend fails loud rather than printing a wrong command" 2 $?
+unset VMHOST_WSL
 
 section "F. an unsupported backend fails loud on every verb, not just detection"
 VMHOST_BACKEND=hyperv vmhost_state monkey 2>/dev/null; rc "F1 vmhost_state" 2 $?
