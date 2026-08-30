@@ -8,6 +8,6 @@
 # that stacked. So the off-host callers are WRITTEN DOWN, and cron-lock.test.sh
 # holds both halves: every row here takes the lock, and every script that does
 # declare a CRON_TAG has a row.
-monkey-watch.sh	dexter	*/10 * * * *	dexter crontab, hand-installed; declares no CRON_TAG
+monkey-watch.sh	dexter	*/10 * * * *	dexter crontab; its own --install-cadence
 selfdev-release-tick.sh	monkey, dexter	41 5 * * *	its own --install-cadence
 ausculte-cadence.sh	monkey	37 */4 * * *	its own --install-cadence

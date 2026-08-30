@@ -13,9 +13,8 @@
 # crontab and ledger; a missing ledger on an ARMED account is a finding, not a
 # blank. None of that is derivable from dexter.
 #
-# Deleted by #511 and restored the same day, because a reachability scan
-# cannot see an off-host caller. bin/tests/monkey-watch.test.sh is what
-# enforces that now, and bin/lib/cron-invoked.tsv is where the callers live.
+# Deleted by #511 and restored the same day: a reachability scan cannot see an
+# off-host caller. bin/lib/cron-invoked.tsv is where the callers live.
 
 set -uo pipefail
 
@@ -44,14 +43,33 @@ APPLY=0
 [ "${1:-}" = "--apply" ] && APPLY=1
 
 die() { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 2; }
+
+# The outer `flock` is NOT `cron_lock` below in a second spelling: it wraps the
+# `git pull`, which runs before this file is read (#511, senechal#550).
+CRON_TAG='# realisateur:monkey-watch:WATCH'
+CRON_SPEC="${MONKEY_WATCH_CRON_SPEC:-*/10 * * * *}"
+if [ "${1:-}" = "--install-cadence" ]; then
+  repo="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+  case "$repo" in "$HOME"/*) repo="\$HOME${repo#"$HOME"}" ;; esac
+  line="$CRON_SPEC PATH=/usr/local/bin:/usr/bin:/bin flock -n \$HOME/.local/state/monkey-watch.lock -c \"cd $repo && git pull -q --ff-only >/dev/null 2>&1; $repo/bin/monkey-watch.sh --apply\" >> \$HOME/.local/state/monkey-watch.log 2>&1 $CRON_TAG"
+  if [ "${2:-}" != "--apply" ]; then
+    echo "  would   install into $(id -un)'s crontab: $line"; exit 0
+  fi
+  ( crontab -l 2>/dev/null | grep -v 'realisateur:monkey-watch:WATCH'; printf '%s\n' "$line" ) | crontab -
+  if crontab -l 2>/dev/null | grep -q 'realisateur:monkey-watch:WATCH'; then
+    echo "  OK      cadence in $(id -un)'s crontab (re-read, not asserted): $line"; exit 0
+  fi
+  echo "  BAD     the cadence is NOT in the crontab -- nothing will watch monkey" >&2
+  exit 1
+fi
+
 vmhost_require || die "VBoxManage not at $VMHOST_VBOX -- this must run on the VM host (dexter)."
 [ -f "$COLLECTOR" ] || die "collector not found at $COLLECTOR.
   This script runs from a realisateur checkout so the collector that runs is
   the one in the tree. Clone it rather than copying the collector next to me."
 
-# ONE AT A TIME (#629): the cron tick is every 10 minutes and a stalled run
-# outlives it, so without this the runs stack for as long as monkey is
-# unreachable -- seven of them on 2026-08-25.
+# ONE AT A TIME (#629): the tick is every 10 minutes and a stalled run outlives
+# it -- seven stacked on 2026-08-25 without this.
 # shellcheck source=lib/cron-lock.sh
 . "$HERE/bin/lib/cron-lock.sh"
 cron_lock monkey-watch
