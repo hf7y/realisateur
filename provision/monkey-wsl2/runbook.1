@@ -251,6 +251,32 @@ open a connection to. Anyone extending this witness should add a liveness
 field that fails when the node is down, and it must be a SEPARATE field: a
 held ts_nodeid and a dead node are different facts and collapsing them is
 what let this look finished.
+.SS And monkey's root is now on an EXTERNAL USB DISK
+Not a classification quirk \- measured on the Windows side 2026\-08\-30:
+.nf
+
+  D:  DiskNumber 1  BusType USB   WD Elements 2621          3726 GB
+  C:  DiskNumber 0  BusType NVMe  KINGSTON OM8PGP4512Q-A0    477 GB
+.fi
+.PP
+This file says "Imports land on D:, never C:" and "every large write goes here",
+and it says that to protect C: SPACE \- 53G free, holding the 37G rollback VDI.
+It never weighed the other half: monkey.vdi lived on C:, internal NVMe, and the
+23.32G ext4.vhdx now lives on removable media on a USB bus. That is a
+durability and latency change nobody chose; it fell out of a space rule.
+.PP
+.B monkey\-watch reports it correctly and always did.
+`vmhost_classify_disk' maps the drive LETTER (C: internal, D: EXTERNAL\-USB)
+rather than probing the bus, so its EXTERNAL\-USB was an assumption \- but the
+assumption is TRUE here, confirmed by `Get\-Disk'. The seam itself is working:
+backend reads `wsl', disk_raw reads `D:\ewsl\-migration\emonkey'.
+.PP
+.B Moving it back is not free.
+C: has 52G free while still holding the 37G rollback VDI. Landing the 23.32G
+vhdx there leaves ~28G on a 477G system disk, about 6%. It fits, but it is
+tight until the rollback VDI is released \- which cannot happen until the
+cutover is ACCEPTED. So the order is: decide, then accept, then move; not
+move, then decide.
 .SH THE DECISION THIS LEAVES, WHICH IS ZACH'S
 The estate is intact and safe as it stands: dexter's 2223 route works, the
 container channel is up, 12 runners are online, and the VirtualBox guest is
