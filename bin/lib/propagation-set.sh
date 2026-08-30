@@ -181,8 +181,6 @@ PROP_PAYLOAD_PENDING="
 PROP_LEAK_BOUND=7
 
 # --- LOCAL: never leaves this repo ------------------------------------------
-# publish-release-verdict.sh is LOCAL because it runs in the release pipeline.
-#
 # "NEVER LEAVES THIS REPO" IS NOT "NEVER RUNS ANYWHERE ELSE", and reading it
 # that way cost the estate its only outside observer. A LOCAL script reaches a
 # machine by a THIRD path, neither verb build nor libexec: a plain checkout the
@@ -212,12 +210,11 @@ run-suites.sh
 carry.sh
 reprise.sh
 "
-# carry.sh is LOCAL: it writes to a BRANCH of this repo, not to a host. A
-# per-account copy would be many writers racing one force-with-lease.
-# reprise.sh is LOCAL for the same reason and one more: its subject is
-# bin/lib/handoffs.tsv, which is THIS repo's ledger of what it has given away.
-# On another account it would be a tool with nothing to read.
+# carry.sh and reprise.sh are LOCAL: they write to a BRANCH of this repo, not a
+# host, so per-account copies would be many writers racing one force-with-lease.
+# reprise also reads bin/lib/handoffs.tsv, THIS repo's ledger, empty elsewhere.
 # registry-standup.sh is LOCAL: its subject is the FLEET, and it writes nothing.
+# publish-release-verdict.sh is LOCAL because it runs in the release pipeline.
 
 # prop_host_tools -- what a provisioned host carries under
 # /usr/local/libexec/selfdev beyond the bootstrap: the verb a human types and
