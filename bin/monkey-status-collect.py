@@ -26,10 +26,8 @@ OUTSIDE_MAX = 20                     # paths shown before the tail is counted
 TICK_TAG = "realisateur:selfdev-release:TICK"
 RUNNER_TAG = "scheduler:scheduler-paced-runner:RUNNER"
 BOOTSTRAP_CLONES = {"scheduler"}  # land-selfdev.sh clones scheduler into EVERY account, so it is expected. realisateur is NOT: #134 stopped minting it per account, so a realisateur clone is now residue and must read as foreign. Line 133 keeps `{user, *BOOTSTRAP_CLONES}`, so realisateur@monkey's own checkout stays expected.
-# scheduler#364 made schedule/ROSTER the ONLY arming surface. Read it from
-# GitHub, unauthenticated: hf7y/scheduler is PUBLIC, so this needs no credential
-# on monkey and root has none. A local clone is not used -- dose-project.sh
-# measured one 5 days stale, and converging to stale truth is the bug.
+# scheduler#364: ROSTER is the arming surface. Public repo, so no credential;
+# not a clone, which dose-project.sh measured 5 days stale.
 ROSTER_URL = os.environ.get(
     "SELFDEV_ROSTER_URL",
     "https://raw.githubusercontent.com/hf7y/scheduler/main/schedule/ROSTER")
@@ -120,9 +118,8 @@ def dispatch_line(cron_lines):
 
 
 def roster_states(host):
-    """{account: "live"|"parked"} for this host, or None if the ARMING
-    AUTHORITY could not be read. None is not an empty dict: "I could not look"
-    must never render as "nothing is armed"."""
+    """{account: "live"|"parked"} for this host, None if unreadable -- and None
+    is not {}: "could not look" must not render as "nothing is armed"."""
     try:
         raw = urllib.request.urlopen(ROSTER_URL, timeout=10).read().decode()
     except Exception:
@@ -142,16 +139,9 @@ def roster_states(host):
 
 
 def armed(cron_lines, states, account):
-    """Will this account actually dispatch? BOTH halves, never one.
-
-    A cron line alone is what this field used to report, and on 2026-08-31 that
-    read `armed: True` for 18 accounts whose ROSTER rows were all `parked` --
-    the fleet had been dark 39h and the page said the opposite. Since #364 the
-    crontab is the EXECUTION surface and ROSTER is the ARMING one; a line whose
-    row is parked dispatches nothing and logs that it refused.
-
-    None when the authority is unreadable -- see the header: a field this
-    script cannot read is null, never a guess."""
+    """Will this account dispatch? BOTH halves: the crontab is the EXECUTION
+    surface, ROSTER the ARMING one, and a parked row dispatches nothing. None
+    when the authority is unreadable -- null, never a guess."""
     if not dispatch_line(cron_lines):
         return False
     if states is None:

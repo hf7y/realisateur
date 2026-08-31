@@ -128,12 +128,8 @@ out="$(probe dispatch_line '[]')"
 eq "an empty crontab is not one" "$out" "false"
 
 section "E. armed: BOTH halves -- the line AND schedule/ROSTER (scheduler#364)"
-# THE BUG THIS SECTION EXISTS FOR, measured live 2026-08-31: all 18 ROSTER rows
-# read `parked` and every crontab still carried its dispatch line, so the old
-# one-half `armed` published True for all 18 and hf7y.com/monkey headlined
-# "18 ARMED" while the fleet had dispatched nothing for 39 hours.
 out="$(probe armed "$RUN" '{"acct":"parked"}' acct)"
-eq "a dispatch line whose ROSTER row is PARKED is not armed" "$out" "false"
+eq "PARKED row + dispatch line is NOT armed -- 18 of these read armed 2026-08-31, fleet dark 39h" "$out" "false"
 
 out="$(probe armed "$RUN" '{"acct":"live"}' acct)"
 eq "a dispatch line whose ROSTER row is LIVE is armed" "$out" "true"
@@ -144,10 +140,8 @@ eq "a live ROSTER row with no dispatch line is not armed" "$out" "false"
 out="$(probe armed "$RUN" '{}' acct)"
 eq "a roster that names no row for this account is not armed" "$out" "false"
 
-# "I could not look" must never render as "nothing is armed" -- the same lie the
-# 2026-08-23 page note is about, in the other direction.
 out="$(probe armed "$RUN" 'null' acct)"
-eq "an UNREADABLE roster is null, not false" "$out" "null"
+eq "an UNREADABLE roster is null, not false -- could-not-look is not not-armed" "$out" "null"
 
 out="$(probe armed '[]' 'null' acct)"
 eq "...but with no dispatch line the answer is knowable: false" "$out" "false"
