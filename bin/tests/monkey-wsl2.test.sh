@@ -49,10 +49,25 @@ printf 'PATH stub\n' > /dev/null
 mkdir -p "$T/bin"
 cat > "$T/bin/ssh" <<'STUB'
 #!/bin/sh
+case "$1" in -G) printf 'hostname stub-dexter\nport 2224\n'; exit 0 ;; esac
 cat "$STUB_REPLY" 2>/dev/null
 STUB
-chmod +x "$T/bin/ssh"
+# ssh_hostkey is measured CALLER-side, so the route's own tools are stubbed too --
+# otherwise the fingerprint is whatever the machine running the suite can reach.
+cat > "$T/bin/ssh-keyscan" <<'STUB'
+#!/bin/sh
+[ -n "${STUB_HOSTKEY:-}" ] || exit 0
+printf '%s\n' "$STUB_HOSTKEY"
+STUB
+cat > "$T/bin/ssh-keygen" <<'STUB'
+#!/bin/sh
+read -r line || exit 1
+[ -n "$line" ] || exit 1
+printf '256 %s stub (ED25519)\n' "$line"
+STUB
+chmod +x "$T/bin/ssh" "$T/bin/ssh-keyscan" "$T/bin/ssh-keygen"
 export STUB_REPLY="$T/reply"
+export STUB_HOSTKEY="SHA256:FP1"
 : > "$STUB_REPLY"
 PATH="$T/bin:$PATH" "$D/constate.sh" >/dev/null 2>&1; rc "B1 an unreadable host is BLIND (6), never a clean 0" 6 $?
 printf 'machine_id\tabc\nbackend\toracle\n' > "$STUB_REPLY"
@@ -62,18 +77,20 @@ has "B3 ...and the snapshot is passed through as key<TAB>value" "$out" "machine_
 "$D/constate.sh" --diff "$T/no-such-file" >/dev/null 2>&1; rc "B5 an unreadable --diff baseline is a usage error (2)" 2 $?
 
 section "C. constate.sh --diff -- identity must hold, and backend must flip"
-printf 'machine_id\tabc\nhostname\tmonkey\nbackend\toracle\nts_nodeid\tNODE1\nrunners_active\t12\nlong_readout\t4\n' > "$T/before.tsv"
-printf 'machine_id\tabc\nhostname\tmonkey\nbackend\twsl\nts_nodeid\tNODE1\nrunners_active\t12\nlong_readout\t0\n' > "$STUB_REPLY"
+printf 'machine_id\tabc\nhostname\tmonkey\nbackend\toracle\nssh_hostkey\tSHA256:FP1\nrunners_active\t12\nlong_readout\t4\n' > "$T/before.tsv"
+printf 'machine_id\tabc\nhostname\tmonkey\nbackend\twsl\nrunners_active\t12\nlong_readout\t0\n' > "$STUB_REPLY"
 g="$(PATH="$T/bin:$PATH" "$D/constate.sh" --diff "$T/before.tsv" 2>/dev/null)"; rc "C1 a clean migration exits 0" 0 $?
 has "C2 the backend flip is reported as a FLIP, not a failure" "$g" "FLIP"
 has "C3 identity that held is reported HOLD" "$g" "HOLD"
-printf 'machine_id\tCHANGED\nhostname\tmonkey\nbackend\twsl\nts_nodeid\tNODE1\nrunners_active\t12\nlong_readout\t0\n' > "$STUB_REPLY"
+printf 'machine_id\tCHANGED\nhostname\tmonkey\nbackend\twsl\nrunners_active\t12\nlong_readout\t0\n' > "$STUB_REPLY"
 g="$(PATH="$T/bin:$PATH" "$D/constate.sh" --diff "$T/before.tsv" 2>/dev/null)"; rc "C4 a moved machine_id fails (5) -- it is not the same host" 5 $?
 has "C5 ...and says which field moved" "$g" "MOVED  machine_id"
-printf 'machine_id\tabc\nhostname\tmonkey\nbackend\twsl\nts_nodeid\t\nrunners_active\t12\nlong_readout\t0\n' > "$STUB_REPLY"
-g="$(PATH="$T/bin:$PATH" "$D/constate.sh" --diff "$T/before.tsv" 2>/dev/null)"; rc "C6 a lost tailscale identity fails (5)" 5 $?
-has "C7 ...and is ABSENT, distinct from moved" "$g" "ABSENT"
-printf 'machine_id\tabc\nhostname\tmonkey\nbackend\toracle\nts_nodeid\tNODE1\nrunners_active\t12\nlong_readout\t9\n' > "$STUB_REPLY"
+printf 'machine_id\tabc\nhostname\tmonkey\nbackend\twsl\nrunners_active\t12\nlong_readout\t0\n' > "$STUB_REPLY"
+g="$(PATH="$T/bin:$PATH" STUB_HOSTKEY="SHA256:SOMEONE-ELSE" "$D/constate.sh" --diff "$T/before.tsv" 2>/dev/null)"; rc "C6 a route that lands on a DIFFERENT host fails (5)" 5 $?
+has "C6b ...and says the name now answers elsewhere" "$g" "MOVED  ssh_hostkey"
+g="$(PATH="$T/bin:$PATH" STUB_HOSTKEY="" "$D/constate.sh" --diff "$T/before.tsv" 2>/dev/null)"; rc "C7 a route never opened fails (5) -- silence is not a pass" 5 $?
+has "C7b ...and is ABSENT, distinct from moved" "$g" "ABSENT"
+printf 'machine_id\tabc\nhostname\tmonkey\nbackend\toracle\nrunners_active\t12\nlong_readout\t9\n' > "$STUB_REPLY"
 g="$(PATH="$T/bin:$PATH" "$D/constate.sh" --diff "$T/before.tsv" 2>/dev/null)"; rc "C8 a RISING wedge counter fails (5)" 5 $?
 has "C9 ...and names the pathology rather than printing a number alone" "$g" "ROSE"
 

@@ -190,11 +190,7 @@ DIVERGED, recorded 2026\-08\-30 09:50Z by etat.sh:
   Consequence for whoever runs the cutover: monkey is degrading now, and the
   window is not open-ended. Reported on senechal#530 and #553.
 .fi
-.SH THE CUTOVER RAN 2026\-08\-30. IT PASSES, AND MONKEY IS UNREACHABLE.
-Both halves are true, and the second is not visible in the verdict. Read this
-before trusting a green `constate.sh'.
-.PP
-.B What the migration bought, measured:
+.SH THE CUTOVER RAN 2026\-08\-30, AND WHAT IT BOUGHT
 .nf
 
   FLIP  backend         oracle -> wsl
@@ -205,54 +201,20 @@ before trusting a green `constate.sh'.
   mem_total_mb 5925 -> 7941
 .fi
 .PP
-.B What it cost: `ssh monkey' does not work, and cannot, as a WSL2 distro
-sharing dexter's namespace. Three measurements, each one closing a door:
-.nf
-
-  1. monkey's sshd CANNOT BIND :22. ssh.socket failed and systemd came up
-     `degraded'. Windows sshd already holds :22 and it is the control plane,
-     so it cannot be moved. Section 2 does not disarm ssh -- the rehearsal
-     did, and the cutover has no equivalent, which is why this surfaced only
-     here.
-
-  2. A KERNEL\-TUN tailscaled BREAKS dexter's own tailnet. Its
-     `ts\-input' chain lands in the SHARED netns and carries
-       \-A ts\-input \-s 100.64.0.0/10 ! \-i tailscale0 \-j DROP
-     which drops tailnet traffic arriving on eth0 -- dexter's own mirrored
-     address. `ssh dexter' (2223) went dead the moment monkey booted with
-     systemd. PROVEN BY EXPERIMENT: `tailscale down' on monkey restored 2223
-     instantly. `\-\-netfilter\-mode=off' removes the chain but does NOT fix it;
-     the tailscale0 interface itself is the conflict.
-
-  3. USERSPACE networking keeps the namespace clean but points the name at
-     the WRONG HOST. With `\-\-tun=userspace\-networking' the rehearsal's
-     0\-kernel\-interfaces result holds, 2223 survives, monkey reaches out
-     (`tailscale ping dexter' -> pong), and both nodes coexist in `tailscale
-     status'. But monkey's own sshd is still not listening, so 100.121.83.23:22
-     is answered by DEXTER'S WINDOWS SSHD. Measured: ssh\-keyscan returns
-     BYTE\-IDENTICAL rsa/ecdsa/ed25519 keys for 100.121.83.23 and
-     100.107.253.56. `ssh monkey \\'sudo ...\\'' would run on dexter.
-.fi
+It cost `ssh monkey', which RESOLVED below fixes with a port. Two findings from
+that week are durable and outlive the fix:
 .PP
-.B That third one is why monkey is currently OFF the tailnet.
-`tailscale down' makes `ssh monkey' fail with a timeout, which is safe. Leaving
-it up makes the name silently resolve to another host, which is not. A wrong
-target must refuse, never answer.
-.SS The witness passes all of this, and that is its own finding
-`constate.sh \-\-target wsl:monkey \-\-diff before.tsv' exits 0 and prints
-.B HOLD ts_ip
-and
-.B HOLD ts_nodeid
-for a monkey that is not on the tailnet at all -- tailscale was DOWN when it
-was graded. The witness reads `tailscaled.state' on disk, which the tar
-faithfully carried, and never asks whether anything can reach the node.
+.B A KERNEL\-TUN tailscaled BREAKS dexter's own tailnet.
+Its `ts\-input' chain lands in the SHARED netns carrying
+`\-s 100.64.0.0/10 ! \-i tailscale0 \-j DROP', which drops tailnet traffic
+arriving on dexter's own mirrored eth0. 2223 went dead the moment monkey booted
+with systemd; `tailscale down' on monkey restored it instantly.
+`\-\-netfilter\-mode=off' is NOT enough \- the tailscale0 interface is the
+conflict. monkey is logged out now, so this only matters if anyone re\-enables it.
 .PP
-So the MUST\-HOLD block certifies identity FILES, not REACHABILITY, and the
-runbook's own "WHAT A GOOD RUN PRODUCES" reads green on a monkey nothing can
-open a connection to. Anyone extending this witness should add a liveness
-field that fails when the node is down, and it must be a SEPARATE field: a
-held ts_nodeid and a dead node are different facts and collapsing them is
-what let this look finished.
+.B The witness certified identity FILES, not REACHABILITY.
+It exited 0 printing HOLD ts_ip for a node that was DOWN when graded, reading
+`tailscaled.state' off disk. Closed 2026\-08\-31 by `ssh_hostkey'.
 .SS And monkey's root went back onto the drive that caused realisateur#274
 Not a classification quirk \- measured on the Windows side 2026\-08\-30:
 .nf
@@ -318,40 +280,13 @@ vhdx there leaves ~28G on a 477G system disk, about 6%. It fits, but it is
 tight until the rollback VDI is released \- which cannot happen until the
 cutover is ACCEPTED. So the order is: decide, then accept, then move; not
 move, then decide.
-.SH THE DECISION THIS LEAVES, WHICH IS ZACH'S
-The estate is intact and safe as it stands: dexter's 2223 route works, the
-container channel is up, 12 runners are online, and the VirtualBox guest is
-SAVED so rollback is one command. Three ways forward:
-.nf
-
-  A. ROLL BACK. `ssh monkey' and the tailnet identity return exactly as
-     before, and so does the wedge -- which was accelerating (soft_lockup
-     1 -> 4 in one day, gaps 4h18/5h40/1h56). ROLLBACK section, unchanged.
-
-  B. STAY, and reach monkey through dexter. Runners need no inbound path and
-     are already online; they connect OUT to GitHub. Everything that says
-     `Host monkey' must instead go through `wsl \-d monkey' on dexter, which
-     is an estate\-wide ssh\-config change, not a local one.
-
-  C. STAY, and use TAILSCALE SSH. tailscaled terminates ssh itself in
-     userspace mode, so it needs no :22 in the shared namespace and leaves
-     the netns clean. This is the only option that restores the literal
-     `ssh monkey'. It moves authentication from authorized_keys to tailnet
-     ACLs, which is a real security change and needs Zach's decision plus
-     ACL work. UNTESTED -- do not assume it works until it is measured.
-.fi
-
-.SH RESOLVED 2026\-08\-31: THE A/B/C SET MISSED THE OBVIOUS OPTION
+.SH RESOLVED 2026\-08\-31: IT WAS A PORT, NOT A ROUTE
 None of A, B or C was needed. monkey's sshd failed for ONE reason: it wanted
 :22, which Windows sshd holds in the shared namespace. Every other distro there
-already answers on a nonstandard port \- 2223 IS dexter's Ubuntu \- so monkey
-takes 2224. `ssh monkey' resolves again, `authorized_keys' still decides access,
-no tailnet ACLs, and monkey stays OFF the tailnet.
-.PP
-.B Measured before it was adopted.
-A throwaway sshd on 2224 bound immediately, and from mandark
-`ssh \-p 2224 \-i ~/.ssh/id_monkey zach@dexter.tail893f2c.ts.net' returned
-monkey / zach / 19 accounts. The host keys prove the PORT selects the host:
+answers on a nonstandard port \- 2223 IS dexter's Ubuntu \- so monkey takes 2224.
+`ssh monkey' resolves again, `authorized_keys' still decides access, no tailnet
+ACLs, and monkey stays OFF the tailnet. The host keys prove the PORT selects the
+host, which is the hazard that started this:
 .nf
 
   :2224  SHA256:kpgptBBMjKCzuaqVYyjRl+ibslHivDtMrixmJjgLmgc  root@monkey
@@ -360,60 +295,31 @@ monkey / zach / 19 accounts. The host keys prove the PORT selects the host:
 .PP
 The byte\-identical\-keys result was never a property of the tailnet. It is what
 you get when NOTHING on monkey listens and the address falls through to whatever
-else is in the namespace. Made permanent in
-`/etc/systemd/system/ssh.socket.d/override.conf' \- Ubuntu 24.04 socket\-activates
-sshd, and ssh.socket was the unit that had FAILED, so this also took
-`is\-system\-running' from degraded to running. List BOTH families: a bare
-`ListenStream=2224' bound only [::]:2224 and the route was refused.
-.PP
-monkey then left the tailnet \- `tailscale logout', tailscaled disabled. Its
-identity was doing no work except making the witness pass.
+else is in the namespace. Made permanent in `ssh.socket.d/override.conf' \- which
+also took `is\-system\-running' from degraded to running, ssh.socket being the
+unit that had FAILED. List BOTH families: a bare `ListenStream=2224' bound only
+[::]:2224 and the route was refused. monkey then left the tailnet; its identity
+was doing no work except making the witness pass.
 .SS The witness now checks reachability, not identity files
-ts_ip and ts_nodeid are gone. In their place is `ssh_hostkey', measured from
-OUTSIDE against whatever `ssh \-G' says the route is, graded MUST\-HOLD. It
-asserts the failure that actually happened \- the name landing on dexter \- and
-unlike a field read from `tailscaled.state' it cannot pass for a host nothing
-can reach. A `wsl:' target cannot open the name, so it reads ABSENT and exits 5
-BY DESIGN: that is the rescue route, not the verdict. `accepted.tsv' is the new
-baseline; `before\-cutover.tsv' stays as history and now grades NOBASE.
-.SH THE ROLLBACK IS SPLIT ACROSS BOTH DRIVES
-Half of this was known: the 2026\-08\-29 wedge recorded that the vdi and the
-LOGS live on different drives. What is new here is that the CONFIG and the SAVED
-STATE are on D: too \- so the resume, not just the log hunt, depends on the USB
-drive.
-.nf
-
-  attached disk  C:\eVirtualBox VMs\emonkey\emonkey.vdi  37.02G  UUID 9af3bdcc
-  config         D:\eVirtualBox VMs\emonkey\emonkey.vbox
-  saved state    D:\eVirtualBox VMs\emonkey\eSnapshots\e2026\-08\-30T18\-36\-12\-022648800Z.sav
-  ORPHAN         D:\eVirtualBox VMs\emonkey\emonkey.vdi  15.35G  UUID 2c1e36c6
-.fi
+ts_ip and ts_nodeid are gone. `ssh_hostkey' replaces them, measured from OUTSIDE
+and graded MUST\-HOLD: it asserts the failure that happened \- the name landing on
+dexter \- and cannot pass for a host nothing can reach. A `wsl:' target reads
+ABSENT and exits 5 BY DESIGN; that is the rescue route, not the verdict.
+`accepted.tsv' is the baseline now.
+.SH ROLLBACK NEEDS BOTH DRIVES, AND THE DISK MOVE IS DEFERRED
+etat.sh measures the 37.02G vdi on C: and reports rollback intact. That is half
+the answer: the CONFIG and SAVED STATE are on D:, so the resume depends on the
+USB drive. There are also TWO files named monkey.vdi \- the 15.35G D: copy is
+registered and attached to nothing, residue from the #275 move.
 .PP
-etat.sh measures the C: file and reports rollback intact. That is half the
-answer: starting the VM reads its CONFIG and SAVED STATE from D:, the WD
-Elements drive. The disk is safe on internal NVMe; the RESUME is not. And there
-are TWO files named monkey.vdi \- the 15.35G D: copy is in the media registry
-attached to nothing, residue from the #275 move. Nothing may touch
-D:\eVirtualBox VMs\emonkey\e until rollback is released.
-.SH THE DISK MOVE IS BLOCKED ON wsl \-\-shutdown
-ext4.vhdx is still 23.73G on D:. Two attempts, the second after a 30s settle:
-.nf
-
-  wsl \-\-terminate monkey; wsl \-\-manage monkey \-\-move C:\eWSL\emonkey
-    -> Wsl/Service/MoveDistro/ERROR_SHARING_VIOLATION, both times
-.fi
-.PP
-Terminating the DISTRO does not detach its disk. The WSL utility VM holds every
-registered vhdx while ANY distro runs, and Ubuntu always runs. So the move needs
-`wsl \-\-shutdown', which ROUTES says never to run casually because it stops
-Ubuntu: 2223, the monkey\-watch crontab, and the container stack that is now
-Zach's notification channel. Recovery is proven and port 22 survives it, so this
-is a SCHEDULED WINDOW, not a step to take mid\-task.
-.PP
-Docker Desktop is gone \- distro unregistered, uninstaller exit 0 \- but its data
-was NOT reclaimed: `C:\eProgram Files\eDocker' 2.74G and `%LOCALAPPDATA%\eDocker'
-10.64G, the latter being docker_data.vhdx, cold since Jul 22 and now orphaned.
-C: is unchanged at 50.4G free until those go.
+monkey's ext4.vhdx is still 23.73G on D:. `wsl \-\-manage \-\-move' returns
+ERROR_SHARING_VIOLATION, twice, the second time after a 30s settle: terminating
+a DISTRO does not detach its disk, because the utility VM holds every registered
+vhdx while ANY distro runs. It needs `wsl \-\-shutdown', which stops Ubuntu and
+therefore Zach's channel. DEFERRED to the retirement window rather than spending
+an outage now \- C: is 51G free today and ~90G once the vdi goes, monkey is
+bounced there anyway, and the drive is quiet: 5 Event ID 11 in 30 days, zero
+since the import. NO DATA MOVED in either attempt.
 .SH 0. BASELINE, BEFORE ANYTHING TOUCHES MONKEY
 .nf
 
@@ -800,8 +706,14 @@ no runner and is the root cause: without it `registry\-standup.sh' does not list
 the repo AT ALL, so no guard ever looked.
 .SH RETIRING THIS
 When etat.sh reports the cutover DONE and a week has passed with long_readout
-at 0, delete this directory, the saved VM, and D:\ewsl\-migration. Fold the
+at 0 \- so 2026\-09\-06 at the earliest \- delete this directory, the saved VM,
+VirtualBox itself with nomac and crt\-vm, and D:\ewsl\-migration. Fold the
 durable facts into bin/lib/vmhost.sh comments; leave nothing here to rot.
+.PP
+.B That window also carries the deferred disk move,
+because it is the one moment C: has room and monkey is stopped anyway: shut WSL
+down from port 22, move, start Ubuntu first and monkey second, restart the
+runner units. Quiesce the runners before it \- stop, never deregister.
 .SH IMPLEMENTATION NOTES
 constate.sh and etat.sh carry no comments on purpose: their reasoning is here,
 in one document, rather than scattered across two scripts.
