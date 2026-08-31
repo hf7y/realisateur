@@ -39,27 +39,10 @@ drives every step that restarts WSL.
 is safe.
 .PP
 .B \-\-shutdown IS NOT. ITS BLAST RADIUS IS THE ESTATE'S CHANNEL TO ZACH.
-It stops EVERY distro. Measured on hermes 2026\-08\-30 (hf7y/senechal#557):
-.nf
-
-  zaxon\-relay\-mcp.service      ask_zach / check_zach_reply
-  zaxon\-relay\-watcher.service  the WhatsApp reply watcher
-  whisper\-server.service       STT, port 8090
-  hermes\-gateway.service       messaging platform integration
-.fi
-.PP
-plus dexter's own sshd on 2223 and the monkey\-watch.sh crontab living in it. So
-.B \-\-shutdown
-takes Zach's own notification channel dark at the same moment it removes the
-route you would use to put it back. Never run it from the 2223 route, and
+It stops EVERY distro, and Ubuntu carries the container stack that IS the
+channel, dexter's sshd on 2223, and the monkey\-watch crontab. So it goes dark
+at the same moment the route to put it back does. Never run it from 2223;
 prefer terminating one distro by name.
-.PP
-.B hermes IS NOT UNUSED.
-senechal#438's revision quotes "hermes is unused, shared kernel is fine" \- that
-is a premise, not a measurement, and #557 disproved it. Anything treating
-hermes as disposable needs re\-deriving. The distros share one WSL2 network
-namespace, so a port check run from `Ubuntu' actually measures hermes and
-cannot say so: distro identity is not observable from inside a distro here.
 .PP
 dexter reaches monkey directly, so 27G never crosses mandark. Run ON dexter:
 .nf

@@ -37,7 +37,7 @@ if command -v man >/dev/null 2>&1; then
   has "A28 the channel cutover records WHY hermes blocked the containers" "$RF" "address already in use"
   has "A29 ...and which side won the split-brain merge, with the one exception" "$RF" "HERMES_LOCAL_STT_COMMAND"
   has "A8 ...and says why: they would contend with the live fleet's agents" "$RF" "SAME agents as the live monkey"
-  has "A9 --shutdown's blast radius names the human channel" "$R" "zaxon-relay-mcp.service"
+  has "A9 --shutdown's blast radius names the human channel, by its CURRENT carrier" "$RF" "container stack that IS the channel"
   has "A10 it says a probe inside a distro cannot identify what it measured" "$R" "cannot tell you which distro it measured"
 else
   ok "A1-A5 skipped: no man(1) on this runner"
