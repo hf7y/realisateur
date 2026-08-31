@@ -27,8 +27,11 @@ m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)                    # __name__ != "__main__": no sweep
 if sys.argv[2] == "containment":
     print(json.dumps(m.containment("acct", 4242)))
+elif sys.argv[2] == "dispatch_line":
+    print(json.dumps(m.dispatch_line(json.loads(sys.argv[3]))))
 elif sys.argv[2] == "armed":
-    print(json.dumps(m.armed(json.loads(sys.argv[3]))))
+    states = json.loads(sys.argv[4])
+    print(json.dumps(m.armed(json.loads(sys.argv[3]), states, sys.argv[5])))
 else:
     print(json.dumps(m.release_tick("acct", json.loads(sys.argv[3]))))
 PY
@@ -110,17 +113,43 @@ eq "an empty crontab reads null too" "$out" "null"
 out="$(probe release_tick '["47 5 * * * tick.sh --apply # realisateur:selfdev-release:TICK"]')"
 has "an account that still HAS a tick still publishes its last line" "$out" "pin=2026-08-12T183347Z"
 
-section "D. armed: the cron tag, not a word anywhere in the crontab"
-out="$(probe armed '["*/5 * * * * PACED_MAX_PER_TICK=16 /home/zach/.local/bin/usage-paced-runner.sh # scheduler:scheduler-paced-runner:RUNNER (usage-paced dispatch)"]')"
-eq "a line carrying the RUNNER tag reads armed" "$out" "true"
+section "D. dispatch_line: the cron tag, not a word anywhere in the crontab"
+RUN='["*/5 * * * * PACED_MAX_PER_TICK=16 /home/zach/.local/bin/usage-paced-runner.sh # scheduler:scheduler-paced-runner:RUNNER (usage-paced dispatch)"]'
+out="$(probe dispatch_line "$RUN")"
+eq "a line carrying the RUNNER tag IS a dispatch line" "$out" "true"
 
-out="$(probe armed '["*/15 * * * * /home/zach/.local/bin/sync-crontab.sh # scheduler:sync-crontab:SYNC"]')"
-eq "a sync-only line that merely mentions scheduler does NOT read armed" "$out" "false"
+out="$(probe dispatch_line '["*/15 * * * * /home/zach/.local/bin/sync-crontab.sh # scheduler:sync-crontab:SYNC"]')"
+eq "a sync-only line that merely mentions scheduler is NOT one" "$out" "false"
 
-out="$(probe armed '["17 * * * * /usr/local/bin/some-runner-script.sh"]')"
-eq "a line that happens to contain the word runner does NOT read armed" "$out" "false"
+out="$(probe dispatch_line '["17 * * * * /usr/local/bin/some-runner-script.sh"]')"
+eq "a line that happens to contain the word runner is NOT one" "$out" "false"
 
-out="$(probe armed '[]')"
-eq "an empty crontab does not read armed" "$out" "false"
+out="$(probe dispatch_line '[]')"
+eq "an empty crontab is not one" "$out" "false"
+
+section "E. armed: BOTH halves -- the line AND schedule/ROSTER (scheduler#364)"
+# THE BUG THIS SECTION EXISTS FOR, measured live 2026-08-31: all 18 ROSTER rows
+# read `parked` and every crontab still carried its dispatch line, so the old
+# one-half `armed` published True for all 18 and hf7y.com/monkey headlined
+# "18 ARMED" while the fleet had dispatched nothing for 39 hours.
+out="$(probe armed "$RUN" '{"acct":"parked"}' acct)"
+eq "a dispatch line whose ROSTER row is PARKED is not armed" "$out" "false"
+
+out="$(probe armed "$RUN" '{"acct":"live"}' acct)"
+eq "a dispatch line whose ROSTER row is LIVE is armed" "$out" "true"
+
+out="$(probe armed '[]' '{"acct":"live"}' acct)"
+eq "a live ROSTER row with no dispatch line is not armed" "$out" "false"
+
+out="$(probe armed "$RUN" '{}' acct)"
+eq "a roster that names no row for this account is not armed" "$out" "false"
+
+# "I could not look" must never render as "nothing is armed" -- the same lie the
+# 2026-08-23 page note is about, in the other direction.
+out="$(probe armed "$RUN" 'null' acct)"
+eq "an UNREADABLE roster is null, not false" "$out" "null"
+
+out="$(probe armed '[]' 'null' acct)"
+eq "...but with no dispatch line the answer is knowable: false" "$out" "false"
 
 summary

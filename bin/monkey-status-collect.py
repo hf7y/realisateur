@@ -16,7 +16,7 @@ Every field is a probe of live state at generation time. A field this
 script cannot read is null, never a guess: a missing ledger means the
 account has never run, which is a finding, not a blank.
 """
-import json, os, pwd, subprocess, time
+import json, os, pwd, subprocess, time, urllib.request
 
 UID_LO, UID_HI = 3000, 3100          # the self-dev band (provision-selfdev-user.sh)
 CADENCE_H = 24                       # this page is republished daily
@@ -26,6 +26,13 @@ OUTSIDE_MAX = 20                     # paths shown before the tail is counted
 TICK_TAG = "realisateur:selfdev-release:TICK"
 RUNNER_TAG = "scheduler:scheduler-paced-runner:RUNNER"
 BOOTSTRAP_CLONES = {"scheduler"}  # land-selfdev.sh clones scheduler into EVERY account, so it is expected. realisateur is NOT: #134 stopped minting it per account, so a realisateur clone is now residue and must read as foreign. Line 133 keeps `{user, *BOOTSTRAP_CLONES}`, so realisateur@monkey's own checkout stays expected.
+# scheduler#364 made schedule/ROSTER the ONLY arming surface. Read it from
+# GitHub, unauthenticated: hf7y/scheduler is PUBLIC, so this needs no credential
+# on monkey and root has none. A local clone is not used -- dose-project.sh
+# measured one 5 days stale, and converging to stale truth is the bug.
+ROSTER_URL = os.environ.get(
+    "SELFDEV_ROSTER_URL",
+    "https://raw.githubusercontent.com/hf7y/scheduler/main/schedule/ROSTER")
 HOME_ROOT = os.environ.get("SELFDEV_HOME_ROOT", "/home")          # fixture seams:
 SUDOERS_D = os.environ.get("SELFDEV_SUDOERS_D", "/etc/sudoers.d")  # unset in production
 
@@ -101,8 +108,8 @@ def release_tick(user, cron_lines):
     return lines[-1] if lines else None
 
 
-def armed(cron_lines):
-    """Whether the account has a live scheduler-paced-runner dispatch line.
+def dispatch_line(cron_lines):
+    """Whether the account has a scheduler-paced-runner dispatch line.
 
     TRAP: a substring test over "runner" or "scheduler" also matches a line
     that only runs sync-crontab.sh out of the scheduler clone -- that syncs
@@ -110,6 +117,46 @@ def armed(cron_lines):
     dispatcher where there is none. Match the cron tag the line is actually
     written with instead."""
     return any(RUNNER_TAG in l for l in cron_lines)
+
+
+def roster_states(host):
+    """{account: "live"|"parked"} for this host, or None if the ARMING
+    AUTHORITY could not be read. None is not an empty dict: "I could not look"
+    must never render as "nothing is armed"."""
+    try:
+        raw = urllib.request.urlopen(ROSTER_URL, timeout=10).read().decode()
+    except Exception:
+        return None
+    out = {}
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        f = [c.strip() for c in line.split("|")]
+        if len(f) < 4:
+            continue
+        acct, _, h = f[1].partition("@")
+        if h == host:
+            out[acct] = f[3]
+    return out or None
+
+
+def armed(cron_lines, states, account):
+    """Will this account actually dispatch? BOTH halves, never one.
+
+    A cron line alone is what this field used to report, and on 2026-08-31 that
+    read `armed: True` for 18 accounts whose ROSTER rows were all `parked` --
+    the fleet had been dark 39h and the page said the opposite. Since #364 the
+    crontab is the EXECUTION surface and ROSTER is the ARMING one; a line whose
+    row is parked dispatches nothing and logs that it refused.
+
+    None when the authority is unreadable -- see the header: a field this
+    script cannot read is null, never a guess."""
+    if not dispatch_line(cron_lines):
+        return False
+    if states is None:
+        return None
+    return states.get(account) == "live"
 
 
 def containment(user, uid):
@@ -199,13 +246,17 @@ if __name__ == "__main__":            # importable per function; `python3 - <fil
         "accounts_scope": accounts_scope(),
     }
 
+    states = roster_states(os.uname().nodename)
+    out["roster_read"] = states is not None
     for u in accounts():
         c = cron(u)
         runs = last_runs(u)
         out["accounts"].append({
             "account": u,
             "uid": pwd.getpwnam(u).pw_uid,
-            "armed": armed(c),
+            "armed": armed(c, states, u),
+            "dispatch_line": dispatch_line(c),
+            "roster_state": (states or {}).get(u) if states is not None else None,
             "cron": c,
             "release_tick": release_tick(u, c),
             "runs": runs,
