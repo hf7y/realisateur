@@ -117,17 +117,12 @@ A clean start line is the pass:
 .fi
 .PP
 .B 4. Bring the human channel back and CHECK it, do not assume it.
-\-\-shutdown stopped hermes:
-.nf
-
-  wsl.exe \-d hermes \-u root \-\- systemctl is\-active \e
-    zaxon\-relay\-mcp whisper\-server zaxon\-relay\-watcher hermes\-gateway
-.fi
-.PP
-Four `active' lines, or Zach has no notification channel and does not know it.
+It is the CONTAINER stack on Ubuntu now \- see THE HUMAN CHANNEL MOVED TO
+CONTAINERS. hermes is retired and its four units are MASKED, so querying them
+reports a dark channel that is in fact up.
 .SH FACTS THAT CHANGE THE COMMANDS
 .nf
-C:  53G free   monkey.vdi is 39.5G and lives HERE \- rollback depends on it,
+C:  51G free   monkey.vdi is 37.0G and lives HERE \- rollback depends on it,
                and it is the INTERNAL NVMe: the guest's disk belongs here
 D:  2.6T free  BULK SCRATCH ONLY \- tarballs and exports. It is the WD Elements
                USB drive from realisateur#274. NEVER put a guest disk here.
