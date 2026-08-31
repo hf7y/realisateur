@@ -385,11 +385,10 @@ hasnt "so the ssh fallback was never taken" "$out" "could not read the accounts"
 
 echo
 echo "-- NOT-MINE: the containment boundary is not a failure -----------------"
-# monkey is a VirtualBox GUEST on dexter. A guest holding shell on its own
-# hypervisor is backwards, so root@monkey has an empty authorized_keys and no
-# key at all -- and with only OK/DOWN/BLIND the `hosts` row could report that
-# correct arrangement ONLY as BLIND: an alarm that can never clear, which
-# trains its reader to ignore the row and then the verb. Ashby S.8/7, the
+# monkey is a WSL2 DISTRO on dexter. Holding shell on its own host is backwards,
+# so root@monkey has an empty authorized_keys and no key -- and with only
+# OK/DOWN/BLIND the `hosts` row could report that correct arrangement ONLY as
+# BLIND: an alarm that can never clear, so its reader learns to ignore. Ashby S.8/7, the
 # argument this file keeps making: a transducer with fewer output values than
 # its input has distinct states loses distinctions.
 stub decision-rot.sh 0

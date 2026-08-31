@@ -21,8 +21,7 @@ set -uo pipefail
 CLI_NAME='monkey-watch'
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VM="${VM:-monkey}"
-# monkey is a distro sharing dexter's netns and is OFF the tailnet, so the PORT
-# selects it -- 2223 is Ubuntu's own sshd in this same namespace, not monkey's.
+# OFF the tailnet: the PORT selects monkey -- 2223 is Ubuntu's own sshd here.
 MONKEY_HOST="${MONKEY_HOST:-127.0.0.1}"
 MONKEY_PORT="${MONKEY_PORT:-2224}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_dexter_monkey}"
