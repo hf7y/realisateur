@@ -76,8 +76,6 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
   // 2026-08-23: this page used to compute its headline from accounts[], so an
   // unreachable monkey -- empty accounts[], verdict DOWN -- rendered a GREEN
   // "0 ARMED". The publisher was honest and the page hid the outage anyway.
-  // ===true / ===null on purpose: null means the authority could not be READ,
-  // and rendering that as "not armed" is the note above, pointed the other way.
   const armed   = A.filter(a=>a.armed===true);
   const parked  = A.filter(a=>a.armed===false && a.dispatch_line);
   const armDark = A.filter(a=>a.armed===null);

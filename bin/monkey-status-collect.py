@@ -26,8 +26,7 @@ OUTSIDE_MAX = 20                     # paths shown before the tail is counted
 TICK_TAG = "realisateur:selfdev-release:TICK"
 RUNNER_TAG = "scheduler:scheduler-paced-runner:RUNNER"
 BOOTSTRAP_CLONES = {"scheduler"}  # land-selfdev.sh clones scheduler into EVERY account, so it is expected. realisateur is NOT: #134 stopped minting it per account, so a realisateur clone is now residue and must read as foreign. Line 133 keeps `{user, *BOOTSTRAP_CLONES}`, so realisateur@monkey's own checkout stays expected.
-# scheduler#364: ROSTER is the arming surface. Public repo, so no credential;
-# not a clone, which dose-project.sh measured 5 days stale.
+# scheduler#364: the arming surface. Public, so unauthenticated; not a clone.
 ROSTER_URL = os.environ.get(
     "SELFDEV_ROSTER_URL",
     "https://raw.githubusercontent.com/hf7y/scheduler/main/schedule/ROSTER")
@@ -118,8 +117,7 @@ def dispatch_line(cron_lines):
 
 
 def roster_states(host):
-    """{account: "live"|"parked"} for this host, None if unreadable -- and None
-    is not {}: "could not look" must not render as "nothing is armed"."""
+    """{account: "live"|"parked"} for this host; None if unreadable, never {}."""
     try:
         raw = urllib.request.urlopen(ROSTER_URL, timeout=10).read().decode()
     except Exception:
@@ -139,9 +137,7 @@ def roster_states(host):
 
 
 def armed(cron_lines, states, account):
-    """Will this account dispatch? BOTH halves: the crontab is the EXECUTION
-    surface, ROSTER the ARMING one, and a parked row dispatches nothing. None
-    when the authority is unreadable -- null, never a guess."""
+    """Both halves: crontab EXECUTES, ROSTER ARMS. None when ROSTER is unread."""
     if not dispatch_line(cron_lines):
         return False
     if states is None:
