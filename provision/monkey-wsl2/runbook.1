@@ -377,7 +377,10 @@ can reach. A `wsl:' target cannot open the name, so it reads ABSENT and exits 5
 BY DESIGN: that is the rescue route, not the verdict. `accepted.tsv' is the new
 baseline; `before\-cutover.tsv' stays as history and now grades NOBASE.
 .SH THE ROLLBACK IS SPLIT ACROSS BOTH DRIVES
-Recorded 2026\-08\-31. Not previously written down anywhere.
+Half of this was known: the 2026\-08\-29 wedge recorded that the vdi and the
+LOGS live on different drives. What is new here is that the CONFIG and the SAVED
+STATE are on D: too \- so the resume, not just the log hunt, depends on the USB
+drive.
 .nf
 
   attached disk  C:\eVirtualBox VMs\emonkey\emonkey.vdi  37.02G  UUID 9af3bdcc
