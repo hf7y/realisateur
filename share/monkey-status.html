@@ -76,7 +76,9 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
   // 2026-08-23: this page used to compute its headline from accounts[], so an
   // unreachable monkey -- empty accounts[], verdict DOWN -- rendered a GREEN
   // "0 ARMED". The publisher was honest and the page hid the outage anyway.
-  const armed = A.filter(a=>a.armed);
+  const armed   = A.filter(a=>a.armed===true);
+  const parked  = A.filter(a=>a.armed===false && a.dispatch_line);
+  const armDark = A.filter(a=>a.armed===null);
   const dark  = armed.filter(a=>!a.last_run);
   const blind = A.filter(a=>a.containment===null);
   const reach = A.filter(a=>a.containment && (a.containment.foreign_clones.length
@@ -101,6 +103,14 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
             That is not a quiet estate &mdash; it is a collector that found no uid in
             the self-dev band, which has never been true.`; }
   else if (reach.length)             { cls="bad";  head=`${reach.length} ACCOUNT${reach.length>1?"S":""} NOT CONTAINED`; }
+  else if (armDark.length)           { cls="blind"; head=`${armDark.length} UNVERIFIED ARMING`;
+    note = `schedule/ROSTER could not be read, so whether these accounts dispatch is
+            UNKNOWN &mdash; not "no". The crontab line is present either way.`; }
+  else if (!armed.length && parked.length) { cls="warn"; head=`ALL ${parked.length} PARKED`;
+    note = `Every account carries its dispatch line and every schedule/ROSTER row reads
+            <code>parked</code>, so nothing is dispatching. That is a deliberate state,
+            not a fault &mdash; but it is one a human chose and may have stopped
+            watching for. Arming is <code>dose &lt;project&gt; --arm</code>.`; }
   else if (dark.length)              { cls="warn"; head=`${armed.length} ARMED, ${dark.length} NEVER RAN`; }
   else if (blind.length || creds.length) { cls="warn"; head=`${armed.length} ARMED, ${blind.length+creds.length} UNVERIFIED`; }
   else                               { cls="ok";   head=`${armed.length} ARMED`; }
@@ -170,7 +180,8 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
       return `<span class="${VC[x.verdict_computed]||"mut"}">${t}</span>`;}).join("");
     return `<tr>
       <td><code>${H(a.account)}</code><div class="why">uid ${H(a.uid)}</div></td>
-      <td class="${a.armed?"ok":"mut"}">${a.armed?"armed":"&mdash;"}</td>
+      <td class="${a.armed===true?"ok":a.armed===null?"blind":"mut"}">${
+        a.armed===true?"armed":a.armed===null?"unverified":a.dispatch_line?"parked":"&mdash;"}</td>
       <td>${H(ago(r.started_at))}${r.elapsed_s!=null?`<div class="why">${H(r.elapsed_s)}s, rc ${H(r.rc)}</div>`:""}</td>
       <td class="${VC[v]||""}">${v?H(v):"&mdash;"}
         ${disagree?`<div class="why">claimed ${H(c)}</div>`:""}
