@@ -52,8 +52,7 @@ cat > "$T/bin/ssh" <<'STUB'
 case "$1" in -G) printf 'hostname stub-dexter\nport 2224\n'; exit 0 ;; esac
 cat "$STUB_REPLY" 2>/dev/null
 STUB
-# ssh_hostkey is measured CALLER-side, so the route's own tools are stubbed too --
-# otherwise the fingerprint is whatever the machine running the suite can reach.
+# ssh_hostkey is measured CALLER-side, so stub the route's own tools too.
 cat > "$T/bin/ssh-keyscan" <<'STUB'
 #!/bin/sh
 [ -n "${STUB_HOSTKEY:-}" ] || exit 0

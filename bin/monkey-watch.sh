@@ -21,11 +21,8 @@ set -uo pipefail
 CLI_NAME='monkey-watch'
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VM="${VM:-monkey}"
-# monkey is a WSL2 DISTRO now, not a tailnet node: it was logged out on
-# 2026-08-31 because its old name answered with DEXTER's sshd. This watcher runs
-# on dexter's Ubuntu, and the distros share ONE network namespace, so monkey's
-# sshd on 2224 is reachable at loopback and needs no tailnet at all. The PORT is
-# what selects monkey -- 2223 is Ubuntu's own sshd, in this same namespace.
+# monkey is a distro sharing dexter's netns and is OFF the tailnet, so the PORT
+# selects it -- 2223 is Ubuntu's own sshd in this same namespace, not monkey's.
 MONKEY_HOST="${MONKEY_HOST:-127.0.0.1}"
 MONKEY_PORT="${MONKEY_PORT:-2224}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_dexter_monkey}"
