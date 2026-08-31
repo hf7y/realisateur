@@ -21,7 +21,13 @@ set -uo pipefail
 CLI_NAME='monkey-watch'
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VM="${VM:-monkey}"
-MONKEY_IP="${MONKEY_IP:-100.121.83.23}"
+# monkey is a WSL2 DISTRO now, not a tailnet node: it was logged out on
+# 2026-08-31 because its old name answered with DEXTER's sshd. This watcher runs
+# on dexter's Ubuntu, and the distros share ONE network namespace, so monkey's
+# sshd on 2224 is reachable at loopback and needs no tailnet at all. The PORT is
+# what selects monkey -- 2223 is Ubuntu's own sshd, in this same namespace.
+MONKEY_HOST="${MONKEY_HOST:-127.0.0.1}"
+MONKEY_PORT="${MONKEY_PORT:-2224}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_dexter_monkey}"
 COLLECTOR="${COLLECTOR:-$HERE/bin/monkey-status-collect.py}"
 PAGE_SRC="${PAGE_SRC:-$HERE/share/monkey-status.html}"
@@ -114,7 +120,7 @@ fi
 # THE SSH BANNER IS THE PROBE, NOT A TCP CONNECT. A read-only root accepts TCP
 # and then resets at key exchange, so a port check reports green on precisely
 # the failure this watcher exists to catch.
-BANNER="$(timeout 8 bash -c "exec 3<>/dev/tcp/$MONKEY_IP/22 && head -c 12 <&3" 2>/dev/null || true)"
+BANNER="$(timeout 8 bash -c "exec 3<>/dev/tcp/$MONKEY_HOST/$MONKEY_PORT && head -c 12 <&3" 2>/dev/null || true)"
 case "$BANNER" in
   SSH-2.0*) SSHD="answering" ;;
   '')       SSHD="silent" ;;
@@ -134,10 +140,10 @@ esac
 # hang instead. Its header already tells this story about REFUSING to publish;
 # this is the same failure by a slower route.
 SSH_DEADLINE="${SSH_DEADLINE:-180}"
-mssh()   { timeout "$SSH_DEADLINE" ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=20 \
-               -o StrictHostKeyChecking=accept-new "$MONKEY_IP" "$@" 2>/dev/null; }
-mssh_n() { timeout "$SSH_DEADLINE" ssh -n -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=20 \
-               -o StrictHostKeyChecking=accept-new "$MONKEY_IP" "$@" 2>/dev/null; }
+mssh()   { timeout "$SSH_DEADLINE" ssh -i "$SSH_KEY" -p "$MONKEY_PORT" -o BatchMode=yes -o ConnectTimeout=20 \
+               -o StrictHostKeyChecking=accept-new "$MONKEY_HOST" "$@" 2>/dev/null; }
+mssh_n() { timeout "$SSH_DEADLINE" ssh -n -i "$SSH_KEY" -p "$MONKEY_PORT" -o BatchMode=yes -o ConnectTimeout=20 \
+               -o StrictHostKeyChecking=accept-new "$MONKEY_HOST" "$@" 2>/dev/null; }
 
 GUEST_JSON=""; GUEST_ERR=""; ROOTMOUNT=""; UPTIME=""
 if [ "$SSHD" = "answering" ]; then

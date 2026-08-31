@@ -341,6 +341,76 @@ SAVED so rollback is one command. Three ways forward:
      ACL work. UNTESTED -- do not assume it works until it is measured.
 .fi
 
+.SH RESOLVED 2026\-08\-31: THE A/B/C SET MISSED THE OBVIOUS OPTION
+None of A, B or C was needed. monkey's sshd failed for ONE reason: it wanted
+:22, which Windows sshd holds in the shared namespace. Every other distro there
+already answers on a nonstandard port \- 2223 IS dexter's Ubuntu \- so monkey
+takes 2224. `ssh monkey' resolves again, `authorized_keys' still decides access,
+no tailnet ACLs, and monkey stays OFF the tailnet.
+.PP
+.B Measured before it was adopted.
+A throwaway sshd on 2224 bound immediately, and from mandark
+`ssh \-p 2224 \-i ~/.ssh/id_monkey zach@dexter.tail893f2c.ts.net' returned
+monkey / zach / 19 accounts. The host keys prove the PORT selects the host:
+.nf
+
+  :2224  SHA256:kpgptBBMjKCzuaqVYyjRl+ibslHivDtMrixmJjgLmgc  root@monkey
+  :2223  SHA256:ucszAvXSAnURsOFPN3iv64yaHzzApz/p3f2OdoVkef8  dexter's Ubuntu
+.fi
+.PP
+The byte\-identical\-keys result was never a property of the tailnet. It is what
+you get when NOTHING on monkey listens and the address falls through to whatever
+else is in the namespace. Made permanent in
+`/etc/systemd/system/ssh.socket.d/override.conf' \- Ubuntu 24.04 socket\-activates
+sshd, and ssh.socket was the unit that had FAILED, so this also took
+`is\-system\-running' from degraded to running. List BOTH families: a bare
+`ListenStream=2224' bound only [::]:2224 and the route was refused.
+.PP
+monkey then left the tailnet \- `tailscale logout', tailscaled disabled. Its
+identity was doing no work except making the witness pass.
+.SS The witness now checks reachability, not identity files
+ts_ip and ts_nodeid are gone. In their place is `ssh_hostkey', measured from
+OUTSIDE against whatever `ssh \-G' says the route is, graded MUST\-HOLD. It
+asserts the failure that actually happened \- the name landing on dexter \- and
+unlike a field read from `tailscaled.state' it cannot pass for a host nothing
+can reach. A `wsl:' target cannot open the name, so it reads ABSENT and exits 5
+BY DESIGN: that is the rescue route, not the verdict. `accepted.tsv' is the new
+baseline; `before\-cutover.tsv' stays as history and now grades NOBASE.
+.SH THE ROLLBACK IS SPLIT ACROSS BOTH DRIVES
+Recorded 2026\-08\-31. Not previously written down anywhere.
+.nf
+
+  attached disk  C:\eVirtualBox VMs\emonkey\emonkey.vdi  37.02G  UUID 9af3bdcc
+  config         D:\eVirtualBox VMs\emonkey\emonkey.vbox
+  saved state    D:\eVirtualBox VMs\emonkey\eSnapshots\e2026\-08\-30T18\-36\-12\-022648800Z.sav
+  ORPHAN         D:\eVirtualBox VMs\emonkey\emonkey.vdi  15.35G  UUID 2c1e36c6
+.fi
+.PP
+etat.sh measures the C: file and reports rollback intact. That is half the
+answer: starting the VM reads its CONFIG and SAVED STATE from D:, the WD
+Elements drive. The disk is safe on internal NVMe; the RESUME is not. And there
+are TWO files named monkey.vdi \- the 15.35G D: copy is in the media registry
+attached to nothing, residue from the #275 move. Nothing may touch
+D:\eVirtualBox VMs\emonkey\e until rollback is released.
+.SH THE DISK MOVE IS BLOCKED ON wsl \-\-shutdown
+ext4.vhdx is still 23.73G on D:. Two attempts, the second after a 30s settle:
+.nf
+
+  wsl \-\-terminate monkey; wsl \-\-manage monkey \-\-move C:\eWSL\emonkey
+    -> Wsl/Service/MoveDistro/ERROR_SHARING_VIOLATION, both times
+.fi
+.PP
+Terminating the DISTRO does not detach its disk. The WSL utility VM holds every
+registered vhdx while ANY distro runs, and Ubuntu always runs. So the move needs
+`wsl \-\-shutdown', which ROUTES says never to run casually because it stops
+Ubuntu: 2223, the monkey\-watch crontab, and the container stack that is now
+Zach's notification channel. Recovery is proven and port 22 survives it, so this
+is a SCHEDULED WINDOW, not a step to take mid\-task.
+.PP
+Docker Desktop is gone \- distro unregistered, uninstaller exit 0 \- but its data
+was NOT reclaimed: `C:\eProgram Files\eDocker' 2.74G and `%LOCALAPPDATA%\eDocker'
+10.64G, the latter being docker_data.vhdx, cold since Jul 22 and now orphaned.
+C: is unchanged at 50.4G free until those go.
 .SH 0. BASELINE, BEFORE ANYTHING TOUCHES MONKEY
 .nf
 
