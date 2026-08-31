@@ -9,8 +9,10 @@ host, so it needs no build tag to reach the thing it measures.
 
 usage: constate.sh [--target ssh:<host> | wsl:<distro>] [--diff <before.tsv>]
 
-  --target ssh:monkey   reach monkey over the tailnet          (default, pre-migration)
-  --target wsl:monkey   reach monkey as a WSL2 distro on dexter (post-migration)
+  --target ssh:monkey   reach monkey by name, dexter:2224       (default)
+  --target wsl:monkey   reach monkey as a distro, via dexter's port 22 (rescue route;
+                        it cannot open the name, so ssh_hostkey reads ABSENT and it
+                        legitimately exits 5)
   --diff <file>         grade this snapshot against an earlier one
 
 exit: 0 held  2 usage  5 a MUST-HOLD field moved  6 BLIND, could not read the host
@@ -34,8 +36,6 @@ p() { printf '%s\t%s\n' "$1" "${2:-}"; }
 p backend         "$(systemd-detect-virt 2>/dev/null)"
 p hostname        "$(hostnamectl --static 2>/dev/null)"
 p machine_id      "$(cat /etc/machine-id 2>/dev/null)"
-p ts_ip           "$(tailscale ip -4 2>/dev/null | head -1)"
-p ts_nodeid       "$(tailscale status --json 2>/dev/null | grep -m1 '"ID":' | tr -d ' ",' | cut -d: -f2)"
 p runners_enabled "$(systemctl list-unit-files --state=enabled 2>/dev/null | grep -c '^actions\.runner')"
 p runners_active  "$(systemctl list-units --state=active 2>/dev/null | grep -c 'actions\.runner')"
 p accounts        "$(getent passwd | awk -F: '$3>=3000 && $3<4000' | wc -l)"
@@ -61,6 +61,14 @@ if [ -z "${SNAP:-}" ] || ! printf '%s' "$SNAP" | grep -q '^machine_id'; then
   printf 'constate: BLIND -- no readable snapshot from %s\n' "$TARGET" >&2
   exit 6
 fi
+case "$TARGET" in
+  ssh:*)
+    _h="$(ssh -G "${TARGET#ssh:}" 2>/dev/null | awk '/^hostname /{print $2; exit}')"
+    _p="$(ssh -G "${TARGET#ssh:}" 2>/dev/null | awk '/^port /{print $2; exit}')"
+    _fp="$(ssh-keyscan -p "${_p:-22}" -t ed25519 "$_h" 2>/dev/null | ssh-keygen -lf - 2>/dev/null | awk '{print $2; exit}')"
+    SNAP="$SNAP
+$(printf 'ssh_hostkey\t%s' "$_fp")" ;;
+esac
 printf '%s\n' "$SNAP"
 
 [ -n "$BEFORE" ] || exit 0
@@ -76,15 +84,15 @@ for k in $MUST_HOLD; do
   else printf 'MOVED  %-16s %s -> %s\n' "$k" "$a" "$b"; rc=5; fi
 done
 
-for k in ts_ip ts_nodeid; do
-  a="$(get "$k" "$OLD")"; b="$(get "$k" "$SNAP")"
-  if [ "$a" = "$b" ]; then printf 'HOLD   %-16s %s\n' "$k" "$b"
-  elif [ -z "$b" ]; then printf 'ABSENT %-16s was %s -- no tailscale identity on this target\n' "$k" "$a"; rc=5
-  else printf 'MOVED  %-16s %s -> %s\n' "$k" "$a" "$b"; rc=5; fi
-done
+a="$(get ssh_hostkey "$OLD")"; b="$(get ssh_hostkey "$SNAP")"
+if [ -z "$a" ]; then printf 'NOBASE %-16s %s -- the baseline predates this field; re-baseline before trusting a pass\n' ssh_hostkey "$b"; rc=5
+elif [ "$a" = "$b" ]; then printf 'HOLD   %-16s %s\n' ssh_hostkey "$b"
+elif [ -z "$b" ]; then printf 'ABSENT %-16s was %s -- the route was never opened, so nothing here proves it reaches monkey\n' ssh_hostkey "$a"; rc=5
+else printf 'MOVED  %-16s %s -> %s -- THE NAME NOW ANSWERS ON A DIFFERENT HOST\n' ssh_hostkey "$a" "$b"; rc=5; fi
 
 a="$(get backend "$OLD")"; b="$(get backend "$SNAP")"
-if [ "$a" = "$b" ]; then printf 'SAME   %-16s %s -- the migration has not happened on this target\n' backend "$b"
+if [ "$a" = "$b" ] && [ "$b" = wsl ]; then printf 'HOLD   %-16s %s\n' backend "$b"
+elif [ "$a" = "$b" ]; then printf 'SAME   %-16s %s -- the migration has not happened on this target\n' backend "$b"
 else printf 'FLIP   %-16s %s -> %s\n' backend "$a" "$b"; fi
 
 for k in runners_enabled runners_active; do

@@ -39,27 +39,10 @@ drives every step that restarts WSL.
 is safe.
 .PP
 .B \-\-shutdown IS NOT. ITS BLAST RADIUS IS THE ESTATE'S CHANNEL TO ZACH.
-It stops EVERY distro. Measured on hermes 2026\-08\-30 (hf7y/senechal#557):
-.nf
-
-  zaxon\-relay\-mcp.service      ask_zach / check_zach_reply
-  zaxon\-relay\-watcher.service  the WhatsApp reply watcher
-  whisper\-server.service       STT, port 8090
-  hermes\-gateway.service       messaging platform integration
-.fi
-.PP
-plus dexter's own sshd on 2223 and the monkey\-watch.sh crontab living in it. So
-.B \-\-shutdown
-takes Zach's own notification channel dark at the same moment it removes the
-route you would use to put it back. Never run it from the 2223 route, and
+It stops EVERY distro, and Ubuntu carries the container stack that IS the
+channel, dexter's sshd on 2223, and the monkey\-watch crontab. So it goes dark
+at the same moment the route to put it back does. Never run it from 2223;
 prefer terminating one distro by name.
-.PP
-.B hermes IS NOT UNUSED.
-senechal#438's revision quotes "hermes is unused, shared kernel is fine" \- that
-is a premise, not a measurement, and #557 disproved it. Anything treating
-hermes as disposable needs re\-deriving. The distros share one WSL2 network
-namespace, so a port check run from `Ubuntu' actually measures hermes and
-cannot say so: distro identity is not observable from inside a distro here.
 .PP
 dexter reaches monkey directly, so 27G never crosses mandark. Run ON dexter:
 .nf
@@ -117,18 +100,15 @@ A clean start line is the pass:
 .fi
 .PP
 .B 4. Bring the human channel back and CHECK it, do not assume it.
-\-\-shutdown stopped hermes:
-.nf
-
-  wsl.exe \-d hermes \-u root \-\- systemctl is\-active \e
-    zaxon\-relay\-mcp whisper\-server zaxon\-relay\-watcher hermes\-gateway
-.fi
-.PP
-Four `active' lines, or Zach has no notification channel and does not know it.
+It is the CONTAINER stack on Ubuntu now \- see THE HUMAN CHANNEL MOVED TO
+CONTAINERS. hermes is retired and its four units are MASKED, so querying them
+reports a dark channel that is in fact up.
 .SH FACTS THAT CHANGE THE COMMANDS
 .nf
-C:  53G free   monkey.vdi is 39.5G and lives HERE \- rollback depends on it
-D:  2.6T free  every large write goes here, never to C:
+C:  51G free   monkey.vdi is 37.0G and lives HERE \- rollback depends on it,
+               and it is the INTERNAL NVMe: the guest's disk belongs here
+D:  2.6T free  BULK SCRATCH ONLY \- tarballs and exports. It is the WD Elements
+               USB drive from realisateur#274. NEVER put a guest disk here.
 monkey.vbox is on D: while monkey.vdi is on C: \- the VM is split across drives
 distros: docker\-desktop (DEFAULT), Ubuntu, hermes \- and hermes is NOT spare:
   it holds ask_zach, the WhatsApp watcher and whisper (senechal#557)
@@ -188,6 +168,130 @@ DIVERGED, recorded 2026\-08\-30 09:50Z by etat.sh:
   Consequence for whoever runs the cutover: monkey is degrading now, and the
   window is not open-ended. Reported on senechal#530 and #553.
 .fi
+.SH THE CUTOVER RAN 2026\-08\-30, AND WHAT IT BOUGHT
+.nf
+
+  FLIP  backend         oracle -> wsl
+  OK    long_readout    0 (was 4)      <- the wedge is GONE
+  OK    soft_lockup     0 (was 1)
+  OK    runners_active  12 (was 12), and online at GitHub
+  HOLD  machine_id, hostname, accounts, crontabs, etc_selfdev, verbs_on_path
+  mem_total_mb 5925 -> 7941
+.fi
+.PP
+It cost `ssh monkey', which RESOLVED below fixes with a port. Two findings from
+that week are durable and outlive the fix:
+.PP
+.B A KERNEL\-TUN tailscaled BREAKS dexter's own tailnet.
+Its `ts\-input' chain lands in the SHARED netns carrying
+`\-s 100.64.0.0/10 ! \-i tailscale0 \-j DROP', which drops tailnet traffic
+arriving on dexter's own mirrored eth0. 2223 went dead the moment monkey booted
+with systemd; `tailscale down' on monkey restored it instantly.
+`\-\-netfilter\-mode=off' is NOT enough \- the tailscale0 interface is the
+conflict. monkey is logged out now, so this only matters if anyone re\-enables it.
+.PP
+.B The witness certified identity FILES, not REACHABILITY.
+It exited 0 printing HOLD ts_ip for a node that was DOWN when graded, reading
+`tailscaled.state' off disk. Closed 2026\-08\-31 by `ssh_hostkey'.
+.SS And monkey's root went back onto the drive that caused realisateur#274
+Not a classification quirk \- measured on the Windows side 2026\-08\-30:
+.nf
+
+  D:  DiskNumber 1  BusType USB   WD Elements 2621          3726 GB
+  C:  DiskNumber 0  BusType NVMe  KINGSTON OM8PGP4512Q-A0    477 GB
+.fi
+.PP
+This is not a tradeoff nobody weighed. It is a DOCUMENTED FIX, REVERTED.
+.PP
+realisateur#274/#275, 2026\-08\-14: monkey.vdi was on D:, THIS drive, which
+logged 1580 `disk' Event ID 11 controller errors between 08\-07 and 08\-14 \- one
+every 5\-10 minutes for a week. One landed on an NTFS transaction\-log flush,
+VirtualBox lost its handle, root remounted read\-only, and sshd then RESET EVERY
+CONNECTION AT KEY EXCHANGE because it could not write. All 14 accounts were
+unreachable for hours and nothing reported it. `bin/monkey\-vdi\-to\-internal.sh'
+exists to undo exactly this, and its stated invariant is that it NEVER WRITES
+TO D:.
+.PP
+`bin/monkey\-watch.sh' says so at the point of measurement:
+.nf
+
+  # If this ever reads EXTERNAL-USB again, someone reverted the fix and the
+  # page should say so rather than waiting to be asked.
+.fi
+.PP
+It read EXTERNAL\-USB because this runbook told the operator to put it there.
+The instruction "Imports land on D:, never C:" was written to protect C: SPACE
+and directly contradicts #275's invariant; the two were never reconciled. That
+line is corrected above \- the tar is bulk scratch and belongs on D:, the guest
+disk does not.
+.PP
+.B How bad is it RIGHT NOW: not an emergency, and still wrong.
+Measured 2026\-08\-30 on the Windows event log:
+.nf
+
+  Event ID 11 on \eDevice\eHarddisk1\eDR2: 5 in the LAST 30 DAYS
+    (the outage week ran ~1580 in seven days)
+  newest 2026\-08\-28 04:47; ZERO since the import began 13:36 today
+  ReadErrorsTotal 0, Temperature 42, PowerOnHours 5094
+.fi
+.PP
+So the drive is emitting the same error class at about one per six days rather
+than 225 per day. It is not failing now. It IS the drive that failed, and #274
+escalated from occasional to catastrophic, so this is a placement to correct
+deliberately rather than an alarm to answer tonight.
+.PP
+.B monkey\-watch reported it correctly and immediately.
+`vmhost_classify_disk' maps the drive LETTER (C: internal, D: EXTERNAL\-USB)
+rather than probing the bus, so its EXTERNAL\-USB was an assumption \- but the
+assumption is TRUE here, confirmed by `Get\-Disk'. The seam itself is working:
+backend reads `wsl', disk_raw reads `D:\ewsl\-migration\emonkey'.
+.PP
+.B Moving it back is not free.
+C: has 52G free while still holding the 37G rollback VDI. Landing the 23.32G
+vhdx there leaves ~28G on a 477G system disk, about 6%. It fits, but it is
+tight until the rollback VDI is released \- which cannot happen until the
+cutover is ACCEPTED. So the order is: decide, then accept, then move; not
+move, then decide.
+.SH RESOLVED 2026\-08\-31: IT WAS A PORT, NOT A ROUTE
+None of A, B or C was needed. monkey's sshd failed for ONE reason: it wanted
+:22, which Windows sshd holds in the shared namespace. Every other distro there
+answers on a nonstandard port \- 2223 IS dexter's Ubuntu \- so monkey takes 2224.
+`ssh monkey' resolves again, `authorized_keys' still decides access, no tailnet
+ACLs, and monkey stays OFF the tailnet. The host keys prove the PORT selects the
+host, which is the hazard that started this:
+.nf
+
+  :2224  SHA256:kpgptBBMjKCzuaqVYyjRl+ibslHivDtMrixmJjgLmgc  root@monkey
+  :2223  SHA256:ucszAvXSAnURsOFPN3iv64yaHzzApz/p3f2OdoVkef8  dexter's Ubuntu
+.fi
+.PP
+The byte\-identical\-keys result was never a property of the tailnet. It is what
+you get when NOTHING on monkey listens and the address falls through to whatever
+else is in the namespace. Made permanent in `ssh.socket.d/override.conf' \- which
+also took `is\-system\-running' from degraded to running, ssh.socket being the
+unit that had FAILED. List BOTH families: a bare `ListenStream=2224' bound only
+[::]:2224 and the route was refused. monkey then left the tailnet; its identity
+was doing no work except making the witness pass.
+.SS The witness now checks reachability, not identity files
+ts_ip and ts_nodeid are gone. `ssh_hostkey' replaces them, measured from OUTSIDE
+and graded MUST\-HOLD: it asserts the failure that happened \- the name landing on
+dexter \- and cannot pass for a host nothing can reach. A `wsl:' target reads
+ABSENT and exits 5 BY DESIGN; that is the rescue route, not the verdict.
+`accepted.tsv' is the baseline now.
+.SH ROLLBACK NEEDS BOTH DRIVES, AND THE DISK MOVE IS DEFERRED
+etat.sh measures the 37.02G vdi on C: and reports rollback intact. That is half
+the answer: the CONFIG and SAVED STATE are on D:, so the resume depends on the
+USB drive. There are also TWO files named monkey.vdi \- the 15.35G D: copy is
+registered and attached to nothing, residue from the #275 move.
+.PP
+monkey's ext4.vhdx is still 23.73G on D:. `wsl \-\-manage \-\-move' returns
+ERROR_SHARING_VIOLATION, twice, the second time after a 30s settle: terminating
+a DISTRO does not detach its disk, because the utility VM holds every registered
+vhdx while ANY distro runs. It needs `wsl \-\-shutdown', which stops Ubuntu and
+therefore Zach's channel. DEFERRED to the retirement window rather than spending
+an outage now \- C: is 51G free today and ~90G once the vdi goes, monkey is
+bounced there anyway, and the drive is quiet: 5 Event ID 11 in 30 days, zero
+since the import. NO DATA MOVED in either attempt.
 .SH 0. BASELINE, BEFORE ANYTHING TOUCHES MONKEY
 .nf
 
@@ -227,7 +331,8 @@ nothing, because the rehearsal wants no tailscale state at all.
 100.121.83.23. Everything that reaches monkey by name \- `Host monkey' in every
 agent's ssh config, and 12 runner registrations \- resolves through it.
 .PP
-ON dexter, Windows route. Imports land on D:, never C:
+ON dexter, Windows route. The TAR lands on D: because it is bulk scratch.
+.B The IMPORT MUST NOT: see #274 below \- a guest disk on D: is the outage.
 .nf
 
   wsl.exe \-\-import monkey\-rehearsal D:\ewsl\-migration\emonkey\-rehearsal \e
@@ -573,8 +678,14 @@ no runner and is the root cause: without it `registry\-standup.sh' does not list
 the repo AT ALL, so no guard ever looked.
 .SH RETIRING THIS
 When etat.sh reports the cutover DONE and a week has passed with long_readout
-at 0, delete this directory, the saved VM, and D:\ewsl\-migration. Fold the
+at 0 \- so 2026\-09\-06 at the earliest \- delete this directory, the saved VM,
+VirtualBox itself with nomac and crt\-vm, and D:\ewsl\-migration. Fold the
 durable facts into bin/lib/vmhost.sh comments; leave nothing here to rot.
+.PP
+.B That window also carries the deferred disk move,
+because it is the one moment C: has room and monkey is stopped anyway: shut WSL
+down from port 22, move, start Ubuntu first and monkey second, restart the
+runner units. Quiesce the runners before it \- stop, never deregister.
 .SH IMPLEMENTATION NOTES
 constate.sh and etat.sh carry no comments on purpose: their reasoning is here,
 in one document, rather than scattered across two scripts.
