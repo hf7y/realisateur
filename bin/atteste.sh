@@ -15,7 +15,9 @@ CLI_SUMMARY='does what this issue, PR or body claims to DELIVER actually exist?'
 CLI_USAGE='  atteste.sh <owner/repo#n|url>...  grade the DELIVERS entries of each
                                    against GitHub: a merged PR at its merge
                                    commit, an open PR at its head, an issue at
-                                   the default branch
+                                   the default branch. A PR is also graded
+                                   against the DELIVERS of every issue it
+                                   closes -- its own block can be a subset.
   atteste.sh --body <file>         grade a body against THIS working tree
                                    before you file it ("-" reads stdin)'
 CLI_FLAGS='--body'
@@ -31,6 +33,8 @@ cli_guard "$@"
 
 GH="${ATTESTE_GH:-gh}"
 KINDS='host path clock tag secret unit port repo'
+
+CLOSING_Q='query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){closingIssuesReferences(first:20){nodes{number repository{nameWithOwner}}}}}}'  # GraphQL-only: REST has no equivalent field
 
 # `on <word>` is a HOST only when the word is a name: "on this repo's default
 # branch" is 13 of 240 path: entries.
@@ -235,6 +239,29 @@ else
       while IFS= read -r e; do [ -n "$e" ] && grade "$e" "$o/$r" "$ref" gh; done <<<"$entries"
     else
       dark "$o/$r#$n carries no DELIVERS block, so it claims nothing a check could follow"
+    fi
+
+    if [ "$ispr" != - ]; then  # #872: a PR's block can be a SUBSET of what it closes (scheduler#454/#456 graded clean, 2 of 3 unreached) -- grade the closed issues' claims too, at the same ref
+      closing="$("$GH" api graphql -f query="$CLOSING_Q" -F owner="$o" -F repo="$r" -F number="$n" \
+        --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[] | .repository.nameWithOwner + "#" + (.number|tostring)' 2>/dev/null)"
+      while IFS= read -r cs; do
+        [ -n "$cs" ] || continue
+        case "$cs" in
+          */*'#'[0-9]*) cn="${cs##*#}"; crest="${cs%%#*}"; cr="${crest##*/}"; co="${crest%/*}" ;;
+          *) dark "$cs -- closingIssuesReferences returned something unparseable"; continue ;;
+        esac
+        if cbody="$("$GH" api "repos/$co/$cr/issues/$cn" --jq .body 2>/dev/null)"; then
+          iref="$ref"; [ "$co/$cr" = "$o/$r" ] || iref=''  # a ref belongs to one repo, same as any cross-repo path:
+          printf -- '-- closes %s/%s#%s\n' "$co" "$cr" "$cn"
+          if centries="$(grammar_delivers "$cbody")"; then
+            while IFS= read -r ce; do [ -n "$ce" ] && grade "$ce" "$co/$cr" "$iref" gh; done <<<"$centries"
+          else
+            dark "$co/$cr#$cn (closed by this PR) carries no DELIVERS block"
+          fi
+        else
+          dark "$co/$cr#$cn (closed by this PR) could not be read from GitHub, so its claims were NOT checked"
+        fi
+      done <<<"$closing"
     fi
   done
 fi
