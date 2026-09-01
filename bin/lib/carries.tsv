@@ -30,6 +30,7 @@ bin/lib/host-check.sh	bin/lib/host-check.sh
 bin/lib/labels.tsv	bin/lib/labels.tsv
 bin/lib/path-guard.tsv	bin/lib/path-guard.tsv
 bin/lib/propagation-set.sh	bin/lib/propagation-set.sh
+bin/lib/roster-set.sh	bin/lib/roster-set.sh
 bin/lib/estate-set.sh	bin/lib/estate-set.sh
 bin/lib/zaxon.sh	bin/lib/zaxon.sh
 commands/cloture.md	.claude/commands/cloture.md
