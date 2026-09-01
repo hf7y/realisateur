@@ -22,6 +22,7 @@ ROOT_PROVISION 1
 ROOT_REGISTRY 1
 ROOT_UNARMED 1
 ACCT_PACED 0
+ACCT_RUNNER 0
 SCHED_CONFS 18
 SCHED_FRAGMENT 18
 SCHED_STANDING 18
@@ -43,6 +44,7 @@ ROOT_PROVISION 0
 ROOT_REGISTRY 0
 ROOT_UNARMED 0
 ACCT_PACED 0
+ACCT_RUNNER 18
 SCHED_CONFS 18
 SCHED_FRAGMENT 2
 SCHED_STANDING 18
@@ -140,6 +142,7 @@ ROOT_PROVISION 0
 ROOT_REGISTRY 0
 ROOT_UNARMED 0
 ACCT_PACED 0
+ACCT_RUNNER 18
 SCHED_CONFS 0
 SCHED_FRAGMENT 0
 SCHED_STANDING 0
@@ -245,6 +248,35 @@ has "K3 a present build pin still yields its fact -- the guard was not deleted" 
 runreal "$T/ssh-dead" "$T/pin"
 has "K4 a transport that fails blinds every row, which is a different event" "$OUT" "BLIND     host-mode"
 rc  "K5 and that exits 6" 6 $RC
+
+section "L. one dispatcher is two facts: the root row present AND the account rows gone"
+hostfacts() {  # hostfacts <ROOT_PACED> <ACCT_RUNNER>
+  armed "$T/facts"
+  sed -i "s/^ROOT_PACED .*/ROOT_PACED $1/; s/^ACCT_RUNNER .*/ACCT_RUNNER $2/" "$T/facts"
+}
+mkledger "$T/L9" "$(printf 'host-mode\t2026-08-11\t30d\tUNARMED\tarm the root row')"
+
+hostfacts 1 18
+run "$T/L9" 2026-09-30
+has "L1 a root row over 18 account rows is armed TWICE, never ARMED" "$OUT" "armed TWICE"
+has "L2 and it stays a finding" "$OUT" "EXPIRED   host-mode"
+rc  "L3 and exits 1" 1 $RC
+
+hostfacts 1 0
+run "$T/L9" 2026-09-30
+has "L4 the root row with the account rows gone is ARMED" "$OUT" "LOWER     host-mode"
+hasnt "L5 and is not red" "$OUT" "EXPIRED   host-mode"
+
+hostfacts 0 18
+run "$T/L9" 2026-09-30
+has "L6 today's shape names the account rows that actually dispatch" "$OUT" "18 account row(s) still carry the per-account dispatcher"
+rc  "L7 and exits 1 past its own window" 1 $RC
+
+hostfacts 0 18
+grep -v '^ACCT_RUNNER ' "$T/facts" > "$T/facts.x" && mv "$T/facts.x" "$T/facts"
+run "$T/L9" 2026-09-30
+has "L8 an unread account-row count is BLIND, never a count of zero" "$OUT" "BLIND     host-mode"
+rc  "L9 and exits 6" 6 $RC
 
 echo
 summary

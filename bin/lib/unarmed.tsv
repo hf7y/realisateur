@@ -15,7 +15,7 @@
 # unreachable and the mechanism reads as newly grown.
 #
 # id	since	window	floor	remedy
-host-mode	2026-08-11	30d	UNARMED	sudo crontab -e on monkey, add: */20 * * * * PACED_HOST_MODE=1 PACED_MAX_PER_TICK=1 /home/scheduler/Documents/Projects/scheduler/bin/usage-paced-runner.sh # scheduler:scheduler-paced-runner:RUNNER (host mode) -- then drop the per-account RUNNER rows (hf7y/scheduler#364)
+host-mode	2026-08-11	30d	UNARMED	sudo -n /home/scheduler/Documents/Projects/scheduler/bin/usage-paced-runner.sh --check on monkey FIRST -- it measures the identity the cron row will actually run as (hf7y/scheduler#419) -- then sudo crontab -e on monkey, add: */20 * * * * PACED_HOST_MODE=1 PACED_MAX_PER_TICK=1 /home/scheduler/Documents/Projects/scheduler/bin/usage-paced-runner.sh # scheduler:scheduler-paced-runner:RUNNER (host mode), and drop each account's RUNNER row in the same act that migrates that account, row by row and never the fleet at once (hf7y/scheduler#350 under #359 invariant 3); deleting schedule/_paced*.conf is hf7y/scheduler#364 and is the LAST step, not this one
 runner-cadence	2026-08-30	-	ARMED	sudo crontab -e on monkey, restore: 17 6 * * * /usr/local/libexec/senechal/selfdev-runner-provision.sh --check --quiet >/dev/null 2>&1 || /usr/local/libexec/senechal/selfdev-runner-provision.sh --apply # selfdev-runner:CADENCE
 standing-rules	2026-08-30	-	ARMED	set USES_STANDING_RULES=1 in every schedule/*.conf that lost it (hf7y/scheduler#362)
 fragment-adoption	2026-08-13	30d	UNARMED	convert the remaining schedule/*.conf prompt blocks to @@FRAGMENT:<name>@@ (hf7y/scheduler#363 converts eleven of them)
