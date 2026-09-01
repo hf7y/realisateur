@@ -146,4 +146,102 @@ eq "an UNREADABLE roster is null, not false -- could-not-look is not not-armed" 
 out="$(probe armed '[]' 'null' acct)"
 eq "...but with no dispatch line the answer is knowable: false" "$out" "false"
 
+section "F. identity_drift: an account that did not commit as itself (#841)"
+# The commits in #841 were never PUSHED -- they sat in per-account checkouts
+# for two days. Nothing server-side could see them, so this fixture is a real
+# git tree, not a stubbed one.
+IH="$T/homes/ident"
+mkdir -p "$IH/Documents/Projects"
+printf '[user]\n\temail = ident@selfdev.invalid\n' > "$IH/.gitconfig"
+UP="$T/upstream.git"; git init -q --bare "$UP"
+
+mkclone() { # mkclone <name>; leaves a clone with an origin and one pushed commit
+  local d="$IH/Documents/Projects/$1"
+  git clone -q "$UP" "$d" 2>/dev/null || { git init -q "$d"; git -C "$d" remote add origin "$UP"; }
+  git -C "$d" -c user.email=ident@selfdev.invalid -c user.name=ident \
+    commit -q --allow-empty -m base
+  git -C "$d" push -q origin HEAD:refs/heads/main 2>/dev/null
+  git -C "$d" fetch -q origin 2>/dev/null
+}
+
+cat > "$T/probe3.py" <<'PY3'
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("collect", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+print(json.dumps(m.identity_drift("ident")))
+PY3
+iprobe() { SELFDEV_HOME_ROOT="$T/homes" PYTHONDONTWRITEBYTECODE=1 \
+  python3 "$T/probe3.py" "$COLLECTOR"; }
+
+out="$(iprobe)"
+eq "an account whose clones all commit as itself has nothing to report" \
+  "$(printf '%s' "$out" | jq '.clones | length')" "0"
+eq "...and it is a MEASUREMENT, not a null" \
+  "$(printf '%s' "$out" | jq -r 'type')" "object"
+
+mkclone clean
+out="$(iprobe)"
+eq "a clone whose only commit is pushed and its own is clean" \
+  "$(printf '%s' "$out" | jq '.clones | length')" "0"
+
+# THE #841 SHAPE: `-c user.email=` leaves NOTHING on disk. Only the commit records it.
+mkclone forged
+git -C "$IH/Documents/Projects/forged" -c user.name="t" -c user.email="dangerpine@gmail.com" \
+  commit -q --no-verify --allow-empty -m "remove the .idea residue already deleted upstream"
+out="$(iprobe)"
+eq "an unpushed commit typed in under a human's identity is caught" \
+  "$(printf '%s' "$out" | jq '[.clones[] | select(.path | endswith("/forged"))] | length')" "1"
+eq "and it is counted, not merely noticed" \
+  "$(printf '%s' "$out" | jq '.clones[] | select(.path | endswith("/forged")) | .count')" "1"
+has "the offending identity is named, so the finding is actionable" "$out" "dangerpine@gmail.com"
+eq "nothing on disk explains it -- local_identity is null, which is the point" \
+  "$(printf '%s' "$out" | jq -r '.clones[] | select(.path | endswith("/forged")) | .local_identity')" "null"
+
+# FALSE POSITIVE: work the account FETCHED is authored by someone else and is
+# reachable from a remote. Grading the author would flag every one of these.
+mkclone fetched
+FD="$IH/Documents/Projects/fetched"
+git -C "$FD" -c user.name=zach -c user.email=dangerpine@gmail.com \
+  commit -q --allow-empty -m "a human's commit, pushed"
+git -C "$FD" push -q origin HEAD:refs/heads/human
+git -C "$FD" fetch -q origin
+out="$(iprobe)"
+eq "a foreign-committed commit that IS on a remote ref is not a finding" \
+  "$(printf '%s' "$out" | jq '[.clones[] | select(.path | endswith("/fetched"))] | length')" "0"
+
+# The persistent cause: a repo-LOCAL user.email. One finding for the override,
+# and its commits are NOT re-reported against it -- 364 in realisateur@monkey.
+mkclone overridden
+OD="$IH/Documents/Projects/overridden"
+git -C "$OD" config user.email hf7y@example.invalid
+for i in 1 2 3; do git -C "$OD" commit -q --allow-empty -m "local $i"; done
+out="$(iprobe)"
+eq "a clone configured to commit as someone else is one finding" \
+  "$(printf '%s' "$out" | jq '.clones[] | select(.path | endswith("/overridden")) | .local_identity')" \
+  '"hf7y@example.invalid"'
+eq "...and its own commits are not counted a second time against it" \
+  "$(printf '%s' "$out" | jq '.clones[] | select(.path | endswith("/overridden")) | .count')" "0"
+
+section "G. identity_drift: could-not-look is not clean"
+mkdir -p "$T/homes/noident/Documents/Projects"
+cat > "$T/probe4.py" <<'PY4'
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("collect", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+print(json.dumps(m.identity_drift(sys.argv[2])))
+PY4
+out="$(SELFDEV_HOME_ROOT="$T/homes" PYTHONDONTWRITEBYTECODE=1 python3 "$T/probe4.py" "$COLLECTOR" noident)"
+eq "an account with no readable identity of its own is BLIND, not clean" "$out" "null"
+
+# A history git cannot read must not read as "this account committed nothing".
+cat > "$T/stub/git" <<'STUB'
+#!/usr/bin/env bash
+for a in "$@"; do [ "$a" = log ] && exit 128; done
+exec /usr/bin/git "$@"
+STUB
+chmod +x "$T/stub/git"
+out="$(PATH="$T/stub:$PATH" SELFDEV_HOME_ROOT="$T/homes" PYTHONDONTWRITEBYTECODE=1 \
+  python3 "$T/probe4.py" "$COLLECTOR" ident)"
+eq "a git log that refuses (dubious ownership prints NOTHING) is null, not zero" "$out" "null"
+
 summary

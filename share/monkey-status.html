@@ -85,6 +85,10 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
                  || a.containment.outside_home.length || a.containment.sudoers.length));
   const creds = A.filter(a=>a.credentials && Object.entries(a.credentials).some(
                  ([,m])=>m===null || (m && +m.slice(-1)!==0)));
+  // realisateur#841: an account committing under someone else's identity. Its
+  // commits were never pushed, so this page is the only thing that can see them.
+  const ident  = A.filter(a=>a.identity && a.identity.clones.length);
+  const idDark = A.filter(a=>a.identity===null);
 
   let head, cls, note="";
   if (unwatched) {
@@ -103,6 +107,7 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
             That is not a quiet estate &mdash; it is a collector that found no uid in
             the self-dev band, which has never been true.`; }
   else if (reach.length)             { cls="bad";  head=`${reach.length} ACCOUNT${reach.length>1?"S":""} NOT CONTAINED`; }
+  else if (ident.length)             { cls="bad";  head=`${ident.length} ACCOUNT${ident.length>1?"S":""} NOT COMMITTING AS ITSELF`; }
   else if (armDark.length)           { cls="blind"; head=`${armDark.length} UNVERIFIED ARMING`;
     note = `schedule/ROSTER could not be read, so whether these accounts dispatch is
             UNKNOWN &mdash; not "no". The crontab line is present either way.`; }
@@ -112,7 +117,8 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
             not a fault &mdash; but it is one a human chose and may have stopped
             watching for. Arming is <code>dose &lt;project&gt; --arm</code>.`; }
   else if (dark.length)              { cls="warn"; head=`${armed.length} ARMED, ${dark.length} NEVER RAN`; }
-  else if (blind.length || creds.length) { cls="warn"; head=`${armed.length} ARMED, ${blind.length+creds.length} UNVERIFIED`; }
+  else if (blind.length || creds.length || idDark.length) { cls="warn";
+    head=`${armed.length} ARMED, ${blind.length+creds.length+idDark.length} UNVERIFIED`; }
   else                               { cls="ok";   head=`${armed.length} ARMED`; }
 
   // ---- 3. what only the VM host can see -----------------------------------
@@ -154,6 +160,18 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
     c.outside_home.length && bits.push(`owns outside its home: ${c.outside_home.map(f=>`<code>${H(f)}</code>`).join(", ")}`);
     items.push(`${el("bad",`<code>${H(a.account)}</code> is not contained`)} &mdash; ${bits.join("; ")}`);
   });
+  ident.forEach(a=>items.push(
+    `${el("bad",`<code>${H(a.account)}</code> does not commit as itself`)} &mdash; its own identity is
+     <code>${H(a.identity.declared)}</code>. ${a.identity.clones.map(c=>{
+       const why=[];
+       c.local_identity && why.push(`the clone's own <code>user.email=${H(c.local_identity)}</code>`);
+       c.count && why.push(`${c.count} unpushed commit${c.count>1?"s":""} matching NEITHER identity, so
+         nothing on disk records where they came from: ${c.commits.map(x=>`<code>${H(x)}</code>`).join(", ")}`);
+       return `<code>${H(c.path)}</code> &mdash; ${why.join("; ")}`;}).join(". ")}.
+     realisateur#841: these are local, so no CI check and no branch protection can see them.`));
+  idDark.forEach(a=>items.push(
+    `${el("blind",`<code>${H(a.account)}</code> commit identity BLIND`)} &mdash; the account declares no
+     readable identity of its own, or a clone's history could not be read. Not clean.`));
   blind.forEach(a=>items.push(
     `${el("blind",`<code>${H(a.account)}</code> containment BLIND`)} &mdash; the probe could not
      read the tree. An unreadable account is not a clean one.`));

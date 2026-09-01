@@ -23,6 +23,7 @@ CADENCE_H = 24                       # this page is republished daily
 GRACE_H = 4
 RUNS_KEPT = 5
 OUTSIDE_MAX = 20                     # paths shown before the tail is counted
+IDENT_MAX = 5                        # offending commits listed per clone
 TICK_TAG = "realisateur:selfdev-release:TICK"
 RUNNER_TAG = "scheduler:scheduler-paced-runner:RUNNER"
 BOOTSTRAP_CLONES = {"scheduler"}  # land-selfdev.sh clones scheduler into EVERY account, so it is expected. realisateur is NOT: #134 stopped minting it per account, so a realisateur clone is now residue and must read as foreign. containment() keeps `{user, *BOOTSTRAP_CLONES}`, so realisateur@monkey's own checkout stays expected.
@@ -187,6 +188,69 @@ def containment(user, uid):
     return out
 
 
+def identity_drift(user):
+    """Clones where this account did not commit as itself.
+
+    The account's identity is the GLOBAL one selfdev-gh-app.sh --wire writes
+    into ~/.gitconfig -- "which agent did this" has an answer only while that
+    holds. Two things wear it off, both live on monkey: a repo-LOCAL user.email
+    inside the clone, and `git -c user.email=` on the command line
+    (realisateur#841). The second leaves nothing on disk; only the commits
+    record it. #841's four were never pushed, so no CI check and no branch
+    protection could ever have seen them. This is the probe that can.
+
+    ANOMALOUS is either half: a clone configured to commit as someone other
+    than the account, or a commit reachable from a local branch and from NO
+    remote ref whose committer is neither. Committer, not author: an account
+    that cherry-picks or rebases upstream work legitimately carries a foreign
+    AUTHOR, and grading the author would flag every rebase.
+
+    TRAP: a clone's own local identity is the yardstick for its commits, or
+    every commit the override produced is reported a second time -- 381 of them
+    in realisateur@monkey alone, burying the handful that have no on-disk cause.
+    The override is ONE finding; a commit matching neither identity is another.
+
+    None is BLIND, never clean: no readable identity, or a history that could
+    not be read.
+
+    TRAP: git run as root over another account's checkout refuses on dubious
+    ownership and prints NOTHING, so every account reads as holding no commits
+    -- the silent zero. safe.directory=* is what makes it able to look, and the
+    return code is what separates "none" from "could not look".
+    """
+    home = f"{HOME_ROOT}/{user}"
+    rc, mail = sh_rc("git", "config", "--file", f"{home}/.gitconfig",
+                     "--get", "user.email")
+    mail = mail.strip()
+    if rc != 0 or not mail:
+        return None
+    out = {"declared": mail, "clones": []}
+    projects = f"{home}/Documents/Projects"
+    for name in sorted(os.listdir(projects)) if os.path.isdir(projects) else []:
+        d = os.path.join(projects, name)
+        if not os.path.exists(os.path.join(d, ".git")):
+            continue                          # not a checkout, not a finding
+        local = sh("git", "-c", "safe.directory=*", "-C", d,
+                   "config", "--local", "--get", "user.email").strip()
+        rc, log = sh_rc("git", "-c", "safe.directory=*", "-C", d, "log",
+                        "--branches", "--not", "--remotes",
+                        "--format=%h\x1f%cn\x1f%ce\x1f%cI")
+        if rc != 0:
+            return None                       # could not read: BLIND, not clean
+        known = {mail, local} - {""}
+        bad = [f.split("\x1f") for f in log.splitlines() if f.strip()]
+        bad = [f for f in bad if len(f) == 4 and f[2] not in known]
+        if not bad and (not local or local == mail):
+            continue
+        out["clones"].append({
+            "path": d,
+            "local_identity": local if local and local != mail else None,
+            "count": len(bad),
+            "commits": [f"{h} {n} <{e}> {t}" for h, n, e, t in bad[:IDENT_MAX]],
+        })
+    return out
+
+
 def credentials(user):
     """The permission mode of each credential this account reads, or null
     where it is absent. An absent credential and a world-readable one are
@@ -209,7 +273,7 @@ def credentials(user):
 if __name__ == "__main__":            # importable per function; `python3 - <file` still enters
     now = time.time()
     out = {
-        "schema": 2,
+        "schema": 3,
         "host": os.uname().nodename,
         "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
         "valid_until": time.strftime("%Y-%m-%dT%H:%M:%SZ",
@@ -245,6 +309,7 @@ if __name__ == "__main__":            # importable per function; `python3 - <fil
             "runs": runs,
             "last_run": runs[0] if runs else None,
             "containment": containment(u, pwd.getpwnam(u).pw_uid),
+            "identity": identity_drift(u),
             "credentials": credentials(u),
         })
 
