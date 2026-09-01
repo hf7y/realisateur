@@ -189,34 +189,20 @@ def containment(user, uid):
 
 
 def identity_drift(user):
-    """Clones where this account did not commit as itself.
+    """Clones where this account did not commit as itself (realisateur#841).
 
-    The account's identity is the GLOBAL one selfdev-gh-app.sh --wire writes
-    into ~/.gitconfig -- "which agent did this" has an answer only while that
-    holds. Two things wear it off, both live on monkey: a repo-LOCAL user.email
-    inside the clone, and `git -c user.email=` on the command line
-    (realisateur#841). The second leaves nothing on disk; only the commits
-    record it. #841's four were never pushed, so no CI check and no branch
-    protection could ever have seen them. This is the probe that can.
-
-    ANOMALOUS is either half: a clone configured to commit as someone other
-    than the account, or a commit reachable from a local branch and from NO
-    remote ref whose committer is neither. Committer, not author: an account
-    that cherry-picks or rebases upstream work legitimately carries a foreign
-    AUTHOR, and grading the author would flag every rebase.
-
-    TRAP: a clone's own local identity is the yardstick for its commits, or
-    every commit the override produced is reported a second time -- 381 of them
-    in realisateur@monkey alone, burying the handful that have no on-disk cause.
-    The override is ONE finding; a commit matching neither identity is another.
-
-    None is BLIND, never clean: no readable identity, or a history that could
-    not be read.
-
-    TRAP: git run as root over another account's checkout refuses on dubious
-    ownership and prints NOTHING, so every account reads as holding no commits
-    -- the silent zero. safe.directory=* is what makes it able to look, and the
-    return code is what separates "none" from "could not look".
+    Its identity is the GLOBAL one selfdev-gh-app.sh --wire writes. Two things
+    wear it off: a repo-LOCAL user.email, and `git -c user.email=`, which
+    leaves nothing on disk. #841's four were never pushed, so no CI check could
+    have seen them. ANOMALOUS is either -- or a commit reachable from a local
+    branch and from NO remote ref whose COMMITTER is neither. Committer, not
+    author: cherry-picked work carries a foreign author, and grading that flags
+    every rebase. TRAP: a clone's LOCAL identity is the yardstick for ITS
+    commits, or the override is reported twice, once as config and again as all
+    364 commits it made. None is BLIND, never clean -- TRAP: git as root over
+    another account's checkout refuses on dubious ownership and prints NOTHING,
+    so safe.directory=* is what lets it look and rc is what separates "none"
+    from "could not look".
     """
     home = f"{HOME_ROOT}/{user}"
     rc, mail = sh_rc("git", "config", "--file", f"{home}/.gitconfig",

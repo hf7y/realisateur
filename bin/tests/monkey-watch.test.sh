@@ -124,8 +124,6 @@ if command -v node >/dev/null 2>&1; then
   case "$got" in *UNWATCHED*) ok "a watcher past its own valid_until reads UNWATCHED, not OK" ;;
     *) bad "a stale watcher reads UNWATCHED" "got [$got] -- a dead dexter would show its last verdict as current" ;; esac
 
-  # realisateur#841. Those commits were LOCAL -- no CI check and no branch
-  # protection could ever see them, so this page is the only place they surface.
   W_OK="\"watcher\":{$FRESH,\"verdict\":\"OK\",\"why\":\"fine\",\"vm_state\":\"running\",\"sshd\":\"answering\",\"disk_home\":\"internal\"}"
   A_OK='"armed":true,"dispatch_line":true,"last_run":{},"containment":{"foreign_clones":[],"outside_home":[],"sudoers":[]},"credentials":{"k":"0640"}'
   FORGED="{\"accounts\":[{\"account\":\"chezz\",$A_OK,\"identity\":{\"declared\":\"chezz@selfdev.invalid\",\"clones\":[{\"path\":\"/home/chezz/Documents/Projects/chezz\",\"local_identity\":null,\"count\":2,\"commits\":[\"ca6fb2c hf7y <dangerpine@gmail.com> 2026-07-30\"]}]}}],$W_OK}"

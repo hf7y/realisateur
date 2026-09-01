@@ -147,9 +147,7 @@ out="$(probe armed '[]' 'null' acct)"
 eq "...but with no dispatch line the answer is knowable: false" "$out" "false"
 
 section "F. identity_drift: an account that did not commit as itself (#841)"
-# The commits in #841 were never PUSHED -- they sat in per-account checkouts
-# for two days. Nothing server-side could see them, so this fixture is a real
-# git tree, not a stubbed one.
+# #841's commits were never PUSHED, so the fixture is a real git tree.
 IH="$T/homes/ident"
 mkdir -p "$IH/Documents/Projects"
 printf '[user]\n\temail = ident@selfdev.invalid\n' > "$IH/.gitconfig"
@@ -184,7 +182,6 @@ out="$(iprobe)"
 eq "a clone whose only commit is pushed and its own is clean" \
   "$(printf '%s' "$out" | jq '.clones | length')" "0"
 
-# THE #841 SHAPE: `-c user.email=` leaves NOTHING on disk. Only the commit records it.
 mkclone forged
 git -C "$IH/Documents/Projects/forged" -c user.name="t" -c user.email="dangerpine@gmail.com" \
   commit -q --no-verify --allow-empty -m "remove the .idea residue already deleted upstream"
@@ -197,8 +194,6 @@ has "the offending identity is named, so the finding is actionable" "$out" "dang
 eq "nothing on disk explains it -- local_identity is null, which is the point" \
   "$(printf '%s' "$out" | jq -r '.clones[] | select(.path | endswith("/forged")) | .local_identity')" "null"
 
-# FALSE POSITIVE: work the account FETCHED is authored by someone else and is
-# reachable from a remote. Grading the author would flag every one of these.
 mkclone fetched
 FD="$IH/Documents/Projects/fetched"
 git -C "$FD" -c user.name=zach -c user.email=dangerpine@gmail.com \
@@ -209,8 +204,6 @@ out="$(iprobe)"
 eq "a foreign-committed commit that IS on a remote ref is not a finding" \
   "$(printf '%s' "$out" | jq '[.clones[] | select(.path | endswith("/fetched"))] | length')" "0"
 
-# The persistent cause: a repo-LOCAL user.email. One finding for the override,
-# and its commits are NOT re-reported against it -- 364 in realisateur@monkey.
 mkclone overridden
 OD="$IH/Documents/Projects/overridden"
 git -C "$OD" config user.email hf7y@example.invalid
@@ -233,7 +226,6 @@ PY4
 out="$(SELFDEV_HOME_ROOT="$T/homes" PYTHONDONTWRITEBYTECODE=1 python3 "$T/probe4.py" "$COLLECTOR" noident)"
 eq "an account with no readable identity of its own is BLIND, not clean" "$out" "null"
 
-# A history git cannot read must not read as "this account committed nothing".
 cat > "$T/stub/git" <<'STUB'
 #!/usr/bin/env bash
 for a in "$@"; do [ "$a" = log ] && exit 128; done
