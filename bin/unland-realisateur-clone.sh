@@ -49,7 +49,7 @@ accounts() {  # the uid band IS the roster, same predicate bin/monkey-status-col
 # TRAP: as root, git refuses another account's repo (safe.directory) and then
 #   fails exactly as it does on a corrupt tree -- without the -c below every
 #   clone reads "not a readable git tree" and this removes nothing.
-residue() {  # a bootstrap copy can hold work that exists nowhere else: `scheduler -i realisateur` drops .idea files into whatever account it runs under (hf7y/scheduler bin/scheduler:1226)
+residue() {  # a bootstrap copy can hold work that exists nowhere else -- `scheduler -i realisateur` wrote .idea files into whatever account it ran under until hf7y/scheduler retired that path on 2026-08-29, and on 2026-08-30 a cleanup sweep held all three surviving clones back with local commits of its own
   local d="$1" out
   out="$(git -c safe.directory='*' -C "$d" status --porcelain 2>/dev/null)" \
     || { printf 'not a readable git tree'; return 0; }
@@ -97,10 +97,13 @@ printf '%s (%s): %d ok, %d to remove, %d kept back\n' "$CLI_NAME" "$MODE" "$PASS
 cat <<WITNESS
 
 == WITNESS -- run this on $(hostname -s) after --apply and paste the output ==
-  ls -d $HOME_ROOT/*/Documents/Projects/$PROJECT 2>/dev/null; \\
-    echo "clones left: \$(ls -d $HOME_ROOT/*/Documents/Projects/$PROJECT 2>/dev/null | grep -c .) (expect 1 -- $PROJECT's own)"
+  sudo find $HOME_ROOT -maxdepth 4 -type d -path '*/Documents/Projects/$PROJECT'
+  echo "clones left: \$(sudo find $HOME_ROOT -maxdepth 4 -type d -path '*/Documents/Projects/$PROJECT' | grep -c .) (expect 1 -- $PROJECT's own)"
   command -v ausculte; ausculte --help >/dev/null 2>&1; echo "ausculte rc=\$?"
-The second line is the half that matters: it proves the removal took the
+Root, and find rather than a glob: $PROJECT's own home is 0700, so a glob the
+invoking shell expands cannot see the one clone that is supposed to SURVIVE,
+and the witness reads "clones left: 0" on a correct run (2026-08-31).
+The last line is the half that matters: it proves the removal took the
 clones and not the tooling, which reaches these accounts as verbs.
 WITNESS
 
