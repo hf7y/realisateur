@@ -263,7 +263,6 @@ case "$out" in *"no zaxon relay answered"*) ok "...and it names why" ;;
   *) bad "channel DOWN detail" "got: $out" ;; esac
 
 stub decision-rot.sh 0
-stub dexter-liveness.sh 0
 out="$(run)"; rc=$?
 check "a DOWN human channel is never folded into OK, even with everything else clean" "$rc" "5"
 first="$(printf '%s\n' "$out" | awk 'NF{print $2; exit}')"
@@ -413,9 +412,8 @@ case "$out" in *dexter*) ok "...and names WHICH host, not just that one was skip
 # Off the guest, nothing changes: mandark still asks dexter directly.
 out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=mandark bash "$TMP/bin/ausculte.sh" hosts 2>&1)"
 case "$out" in *NOT-MINE*) bad "off-guest hosts still probes dexter" "it went NOT-MINE on mandark" ;;
-  *) ok "off the guest the row still probes dexter -- the boundary is monkey's, not everyone's" ;; esac
+  *) ok "off the guest the row still answers about dexter -- the boundary is monkey's, not everyone's" ;; esac
 
-rm -f "$TMP/bin/dexter-liveness.sh"  # without it, hosts reads the published verdict (#735) instead of going BLIND
 fresh_vu="$(date -u -d '+1 hour' +%Y-%m-%dT%H:%M:%SZ)"
 status "{\"accounts\":[],\"watcher\":{\"verdict\":\"OK\",\"why\":\"running, sshd answering\",\"valid_until\":\"$fresh_vu\"}}"
 out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=mandark SELFDEV_LIBEXEC="$TMP/no-libexec" bash "$TMP/bin/ausculte.sh" hosts 2>&1)"; rc=$?
@@ -434,7 +432,7 @@ has "and it names the expiry, same as arming" "$out" "expired at"
 
 printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"
 out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=mandark SELFDEV_LIBEXEC="$TMP/no-libexec" bash "$TMP/bin/ausculte.sh" hosts 2>&1)"; rc=$?
-check "no dexter-liveness.sh and no readable status document is BLIND (6)" "$rc" "6"
-has "and it says both things are missing" "$out" "dexter-liveness.sh not present"
+check "no readable status document is BLIND (6)" "$rc" "6"
+has "and it says nothing else measures dexter" "$out" "nothing else measures dexter"
 
 summary
