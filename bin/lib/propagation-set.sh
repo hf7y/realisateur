@@ -157,7 +157,7 @@ selfdev-app-key.sh
 selfdev-claude-token.sh
 selfdev-permissions-provision.sh
 selfdev-hooks-provision.sh
-unland-realisateur-clone.sh
+unland-foreign-clone.sh
 install-verbs.sh
 stamp-verb-build.sh
 vault-group-provision.sh
