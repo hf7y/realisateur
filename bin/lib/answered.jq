@@ -53,17 +53,11 @@ def labelled: ((.labels // []) | any(.name == "answered"));
 # predicate cannot. Checked before the comment branch, same precedence
 # `answered` already has, so it wins over "there is a reply" rather than
 # losing to it.
-#
-# IT MUST NAME WHAT REMAINS. The label alone is a silence with a colour on it:
-# the verdict it produces is `unanswered`, so `decision-rot` -- which counts
-# ANSWERED-and-still-open -- cannot see the issue at all, and the owner is
-# never told which half of his reply fell short. hf7y/baudin#29 sat 13 days
-# that way: two same-day owner comments were read as contradictory, the label
-# went on, the agent said in writing "leaving the `DECISION:` line alone", and
-# a reply that HAD settled the question it was asked left every survey. The
-# body's `UNSETTLED: <what is still open>` line is the witness. Without it the
-# override does not fire and the reply counts, because an agent that cannot
-# say what remains unsettled has not established that anything does.
+# IT MUST NAME WHAT REMAINS, as `UNSETTLED: <what is still open>` in the body;
+# without that line the override does not fire and the reply counts. It is the
+# only override an AGENT applies to a HUMAN, its verdict is `unanswered`, and
+# decision-rot counts ANSWERED -- so a bare label deletes the answer from every
+# survey. baudin#29 sat 13 days that way, re-asking a question already answered.
 def unsettled_labelled:
   ((.labels // []) | any(.name == "unsettled"))
   and ((.body // "") | test("(?im)^[ \\t]*UNSETTLED:[ \\t]*\\S"));

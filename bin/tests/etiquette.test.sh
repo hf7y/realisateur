@@ -133,10 +133,7 @@ has   "A'''2 the unlabelled one is still MISSING needs-human"         "$out" "MI
 has   "A'''3 ...and --apply adds it back, reply notwithstanding"      "$(cat "$T/edits")" "issue edit 13"
 eq    "A'''4 the already-labelled one gets no edit"                   "$(grep -c 'edit 12' "$T/edits")" "0"
 
-# hf7y/baudin#29: the label alone suppressed a real answer for 13 days, and the
-# verdict it produces -- `unanswered` -- is invisible to decision-rot. A label
-# that names no residual does not fire, so the reply counts and the issue
-# rejoins the ANSWERED count where a human can see it.
+# baudin#29: a label naming no residual does not fire, so the reply counts.
 has   "A'''5 unsettled naming no residual does NOT suppress the reply" "$out" "ANSWERED    #14"
 has   "A'''6 ...so needs-human comes off it"                           "$(cat "$T/edits")" "issue edit 14"
 
