@@ -24,6 +24,11 @@ if [ "$1" = "label" ] && [ "$2" = "list" ]; then
   [ -n "${GH_LABEL_FAIL:-}" ] && { echo "$GH_LABEL_FAIL" >&2; exit 1; }
   cat "${LABELS_FIXTURE:-/dev/null}"; exit 0
 fi
+# $SEEN records the sweep's reach; $GH_FAIL_REPO makes one tracker unreadable.
+repo=''; prev=''
+for a in "$@"; do [ "$prev" = "--repo" ] && { repo="$a"; break; }; prev="$a"; done
+[ -n "${SEEN:-}" ] && printf '%s\n' "$repo" >> "$SEEN"
+[ -n "${GH_FAIL_REPO:-}" ] && [ "$repo" = "$GH_FAIL_REPO" ] && { echo "HTTP 404" >&2; exit 1; }
 if [ -n "${GH_FAIL:-}" ]; then echo "$GH_FAIL" >&2; exit 1; fi
 # Bulk `gh issue list`: attach `comments` per issue from $ANSWERED_FIXTURE
 # (`<number>` or `<number><TAB><createdAt>`, one per line), owner-authored.
@@ -229,6 +234,30 @@ printf 'needs-a-person\tOnly a human.\ndeferred\tParked.\ninvented-here\tfixture
 : > "$T/edits"; out="$(run --apply 2>&1)"
 hasnt "J1 a label absent from the grammar is never deleted" "$(cat "$T/edits")" "label delete"
 hasnt "J2 ...and is not reported as a finding either"       "$out" "somebodys-own-label"
+
+section "K. --all sweeps every rostered repo, not just the dispatching one"
+printf '# fixture grammar\nneeds-human\tB60205\tderived:decision\tOnly a human can move this.\n' > "$T/grammar.tsv"
+printf 'needs-human\tOnly a human can move this.\n' > "$T/labels.txt"
+cat > "$T/f.json" <<'EOF'
+[{"number":1,"title":"declares","body":"DECISION: @zach -- pick one","labels":[]}]
+EOF
+run_all() { EDITS="$T/edits" FIXTURE="$T/f.json" LABELS_FIXTURE="$T/labels.txt" \
+            SEEN="$T/seen" ANSWERED_FIXTURE=/dev/null \
+            ETIQUETTE_GRAMMAR="$T/grammar.tsv" bash "$SCRIPT" --all "$@"; }
+
+rc "K1 --all and a named repo is a usage error, not a silent sweep of one" 2 \
+   "$(run_all o/r >/dev/null 2>&1; echo $?)"
+
+. "$(cd "$(dirname "$0")/.." && pwd)/lib/roster-set.sh"
+: > "$T/edits"; : > "$T/seen"; run_all --apply >/dev/null 2>&1
+want=''; for _p in "${ROSTER[@]}"; do want="$want$ROSTER_OWNER/$_p"$'\n'; done
+eq "K2 --all grades exactly the repos lib/roster-set.sh names" \
+   "$(sort -u < "$T/seen")" "$(printf '%s' "$want" | sort -u)"
+has "K3 ...including one nothing ever dispatches to, which is the whole point" \
+    "$(cat "$T/edits")" "--repo $ROSTER_OWNER/verbs --add-label needs-human"
+
+rc "K4 one unreadable tracker is BLIND (6) for the whole sweep, never clean" 6 \
+   "$(GH_FAIL_REPO="$ROSTER_OWNER/${ROSTER[0]}" run_all >/dev/null 2>&1; echo $?)"
 
 echo
 summary
