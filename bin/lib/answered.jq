@@ -1,13 +1,10 @@
 # answered.jq -- has a human answered this issue? THE one text (#568).
-#
-# Prepended to a caller's filter:
 #   jq --arg owner hf7y --arg era 2026-08-14 "$(cat answered.jq)"'.[] | verdict'
 #
 # INPUT, per issue: what `gh issue list/view --json ...,labels,comments`
 # produce. Two callers, two feeding styles, one text -- it lived THREE times
 # and the copies disagreed on the era cutoff, the `answered` label, what
 # `stamped` means, and whether the author mattered.
-#
 # THREE VERDICTS, AND THE THIRD IS THE POINT:
 #   answered     a human did, or the `answered` label says one did elsewhere
 #   uncounted    a comment COULD be a human's and cannot be counted
@@ -60,8 +57,10 @@ def unsettled_labelled: ((.labels // []) | any(.name == "unsettled"));
 
 # ANSWERED-BY <owner>/<repo>#<n> (#568), extraction only -- see body-grammar.sh.
 def answered_by:
-  (.body // "") as $b
-  | ($b | [scan("(?im)^\\s*ANSWERED-BY\\s+(\\S+/\\S+#[0-9]+)")]) as $m
+  ( [ (.body // "") ]
+    + ( [ .comments[]? ] | sort_by(.createdAt) | map(.body // "") )
+    | join("\n") ) as $all
+  | ($all | [scan("(?im)^\\s*ANSWERED-BY\\s+(\\S+/\\S+#[0-9]+)")]) as $m
   | if ($m | length) > 0 then $m[-1][0] else null end;
 
 def verdict:
