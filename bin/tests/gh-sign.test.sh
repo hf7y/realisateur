@@ -23,6 +23,12 @@ cat > "$TMP/stub/gh" <<'STUB'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$GH_LOG"
 : > "$GH_LAST_BODY"
+for a in "$@"; do
+  case "$a" in
+    */comments) [ -n "${GH_COMMENTS_JSON:-}" ] && { printf '%s' "$GH_COMMENTS_JSON"; exit 0; } ;;
+  esac
+done
+[ -n "${GH_ISSUE_JSON:-}" ] && { printf '%s' "$GH_ISSUE_JSON"; exit 0; }
 prev=''
 for a in "$@"; do
   case "$prev" in --comment|--body) printf '%s' "$a" > "$GH_LAST_BODY" ;; esac
@@ -426,6 +432,29 @@ case "$(cat "$TMP/gh.log")" in
   '') ok "...and nothing reached gh -- a refusal creates nothing" ;;
   *) bad "the refusal reached gh" "got: $(cat "$TMP/gh.log")" ;;
 esac
+
+ISSUE='{"number":432,"body":"TWO CALLS ARE OPEN","comments":3}'
+NOCOM='{"number":432,"body":"TWO CALLS ARE OPEN","comments":0}'
+rd(){ PATH="$TMP/stub:$PATH" GH_SIGN_REAL_GH="$TMP/stub/gh" CLAUDECODE=1 \
+      GH_LOG="$TMP/gh.log" GH_LAST_BODY="$TMP/body" bash "$GS" "$@"; }
+
+out="$(GH_ISSUE_JSON="$ISSUE" rd api repos/hf7y/scheduler/issues/432 2>"$TMP/e")"
+contains "an issue with comments says so, on stderr" "$(cat "$TMP/e")" "has 3 comment(s), NOT shown"
+contains "stdout still carries the body verbatim" "$out" '"body":"TWO CALLS ARE OPEN"'
+case "$out" in *gh-sign:*) bad "the note leaked into stdout" "$out" ;; *) ok "the note never reaches stdout, so parsers are unaffected" ;; esac
+
+out="$(GH_ISSUE_JSON="$NOCOM" rd api repos/hf7y/scheduler/issues/432 2>"$TMP/e")"
+case "$(cat "$TMP/e")" in *"NOT shown"*) bad "warned with no comments" "a note on every read is not read" ;; *) ok "an issue with NO comments is silent" ;; esac
+
+out="$(GH_ISSUE_JSON="$ISSUE" rd api repos/hf7y/scheduler/issues/432 --jq .number 2>"$TMP/e")"
+contains "--jq still gets the note" "$(cat "$TMP/e")" "has 3 comment(s), NOT shown"
+check "and --jq output is exactly what gh would have printed" "$out" "432"
+out="$(GH_ISSUE_JSON="$ISSUE" rd api repos/hf7y/scheduler/issues/432 --jq=.number 2>"$TMP/e")"
+check "the --jq=expr spelling works too" "$out" "432"
+
+out="$(GH_COMMENTS_JSON='[{"body":"an answer"}]' rd api repos/hf7y/scheduler/issues/432/comments 2>"$TMP/e")"
+case "$(cat "$TMP/e")" in *"NOT shown"*) bad "warned while reading the comments" "$out" ;; *) ok "reading the comments themselves does not warn" ;; esac
+contains "and returns them" "$out" "an answer"
 
 echo
 summary
