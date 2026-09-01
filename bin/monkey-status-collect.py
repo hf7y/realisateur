@@ -188,11 +188,8 @@ def containment(user, uid):
 
 
 def identity_drift(user):
-    """Clones where this account did not commit as itself (realisateur#841).
-    A repo-LOCAL user.email that is not the account's own, or an unpushed
-    commit whose COMMITTER is neither. None is BLIND, never clean. Sections F
-    and G of bin/tests/monkey-status-collect.test.sh hold why each is right.
-    """
+    """Not committing as itself (realisateur#841): a local user.email that is
+    not the account's, or an unpushed commit whose COMMITTER is neither."""
     home = f"{HOME_ROOT}/{user}"
     rc, mail = sh_rc("git", "config", "--file", f"{home}/.gitconfig",
                      "--get", "user.email")
