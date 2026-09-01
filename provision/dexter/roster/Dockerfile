@@ -1,8 +1,5 @@
-# roster -- the arming authority, as a container. Shaped after hf7y/crt's
-# provision/dexter/zaxon/Dockerfile: the image is RUNTIME, the mount is STATE.
-#
-# Nothing is pip-installed. This is the process that has to come back up when
-# everything else is broken, so its dependency list is "python".
+# roster -- the arming authority. After hf7y/crt's provision/dexter/zaxon:
+# the image is RUNTIME, the mount is STATE, and nothing is pip-installed.
 FROM python:3.11-slim
 
 RUN useradd -m -u 1000 -s /bin/bash roster && mkdir -p /data && chown roster:roster /data

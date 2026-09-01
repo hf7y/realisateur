@@ -28,10 +28,8 @@ if [ -n "${GH_FAIL:-}" ]; then echo "$GH_FAIL" >&2; exit 1; fi
 cat "$FIXTURE"
 EOF
 chmod +x "$T/bin/gh"
-# The fake roster service. lib/arming.sh reads it over curl now, not out of a
-# repo (hf7y/scheduler#429); $ROSTER_FAIL makes the door refuse to answer,
-# which is BLIND -- E1 and I13 are the assertions that it stays BLIND rather
-# than becoming "nothing is armed".
+# The fake roster service (hf7y/scheduler#429). $ROSTER_FAIL makes it refuse,
+# which is BLIND -- E1 and I13 pin that it stays BLIND, not "nothing is armed".
 cat > "$T/bin/curl" <<'EOF'
 #!/usr/bin/env bash
 if [ -n "${ROSTER_FAIL:-}" ]; then echo "$ROSTER_FAIL" >&2; exit 7; fi

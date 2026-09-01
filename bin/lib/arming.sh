@@ -3,11 +3,7 @@
 # Authority: the roster service on dexter, which only a human writes to. The
 # read-only rule here is enforced by decision-rot.test.sh I14, not by prose.
 # NOT lib/roster-set.sh, which is the SWEEP set. BLIND classifies NOTHING.
-#
-# IT USED TO READ A FILE OUT OF A REPO -- `gh api .../contents/schedule/ROSTER`,
-# which resolves to whatever `main` happens to say. That file is now the
-# DECLARATION (project | account@host | rate) and carries no state at all
-# (hf7y/scheduler#429), so reading it would answer this question with silence.
+# It read schedule/ROSTER out of a repo until hf7y/scheduler#429.
 
 [ -n "${ARMING_LIB:-}" ] && return 0
 ARMING_LIB=1
@@ -22,8 +18,7 @@ arming_load() {
   [ "$ARMING_BLIND" = 0 ] && return 0
   local raw
   command -v curl >/dev/null && command -v jq >/dev/null || return 6
-  # NO FALLBACK TO A CHECKOUT, deliberately: unreachable is BLIND, and BLIND
-  # classifies nothing. A stale roster read as live is the worse answer.
+  # NO FALLBACK: unreachable is BLIND, and BLIND classifies nothing.
   raw="$(curl -fsS --max-time 10 "$ARMING_ROSTER_URL" 2>/dev/null)" || return 6
   ARMING_ROSTER="$(printf '%s' "$raw" | jq -r '.rows[] | "\(.project)\t\(.state)"' 2>/dev/null)"
   [ -n "$ARMING_ROSTER" ] || return 6

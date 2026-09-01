@@ -1,17 +1,7 @@
 #!/usr/bin/env bash
-# roster-service.test.sh -- ARMING WORKS WHILE `suites` IS RED.
-#
-# That is the whole reason the arming authority left the repo, and it is the
-# assertion that stops this regressing. It is proved the strong way: the
-# service is exercised with `gh` removed from PATH and every GitHub credential
-# unset, so there is no green build to wait for because there is no build.
-#
-# THE BUG. hf7y/scheduler:schedule/ROSTER lived on a branch-protected `main`
-# (enforce_admins: true, required check `suites`), so `dose --arm/--park` could
-# only open a PR with auto-merge. On 2026-08-30 a fleet-wide park opened twenty
-# PRs and EIGHT never merged -- #382 #384 #386 #387 #389 #391 #399 #400 #404 --
-# each having printed "armed: PR #N will merge itself once 'suites' is green"
-# and exited 0. hf7y/scheduler#429.
+# roster-service.test.sh -- ARMING WORKS WHILE `suites` IS RED, proved with
+# `gh` off PATH so there is no build to wait for. hf7y/scheduler#429: a park of
+# 20 PRs on 2026-08-30 left EIGHT unmerged, each having exited 0.
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
@@ -23,11 +13,7 @@ URL="http://127.0.0.1:$PORT"
 cleanup() { [ -n "${PID:-}" ] && kill "$PID" 2>/dev/null; rm -rf "$T"; }
 trap cleanup EXIT
 
-# The declaration, in schedule/ROSTER's own shape -- AND WITH NO TRAILING
-# NEWLINE, which is hf7y/scheduler#430: the live file ends on the `d` of
-# `parked` and the dispatcher's `while IFS= read -r line` dropped its last row
-# (dcp-gate-site) every 20 minutes. A parser that has to be got right ten times
-# in three languages is the thing this service deletes.
+# NO TRAILING NEWLINE, which is hf7y/scheduler#430.
 printf '%s' '# project | account@host | rate
 alpha   | alpha@testhost   | 20m
 crt     | crt@testhost     | 6h
@@ -51,8 +37,6 @@ eq "A4 a new declaration is BORN PARKED -- ingest never arms anything" \
    "$(jq -r .live <<<"$H")" "0"
 
 section "B. arming needs no build, no PR, and no GitHub at all"
-# `env -i` with a PATH holding no `gh`: if this arms, no required check can
-# possibly be gating it.
 GHLESS="$T/nogh"; mkdir -p "$GHLESS"
 for b in curl jq; do ln -sf "$(command -v "$b")" "$GHLESS/$b"; done
 arm() { env -i PATH="$GHLESS" curl -fsS -X POST "$URL/roster/$1" \
@@ -84,9 +68,6 @@ eq "D2 an undeclared project is 404 -- the service does not invent rows" \
 eq "D3 crt was not armed by any of that" \
    "$(curl -fsS "$URL/roster/crt" | jq -r .state)" "parked"
 
-# NEVER OPEN BY DEFAULT: a container started without data/.env refuses writes
-# rather than accepting them, so a lost token file cannot silently unlock the
-# estate's arming control.
 env -i PATH=/usr/bin:/bin ROSTER_DB="$T/notok.db" ROSTER_PORT="$((PORT + 1))" \
     ROSTER_DECLARATION_URL="file://$T/ROSTER" python3 "$SRV" > "$T/notok.log" 2>&1 &
 NOTOK=$!
@@ -97,8 +78,6 @@ eq "D4 with no ROSTER_WRITE_TOKEN every write is 503, not accepted" \
 kill "$NOTOK" 2>/dev/null
 
 section "E. a reader that cannot reach the service is BLIND, never stale"
-# The whole failure this replaces was a reader answering from a file that was
-# no longer the authority. Unreachable must not become an answer.
 OUT="$(ARMING_ROSTER_URL="http://127.0.0.1:$((PORT + 2))/roster" bash -c \
   ". '$HERE/bin/lib/arming.sh'; arming_load; printf '%s|%s' \"\$?\" \"\$(arming_state alpha)\"")"
 eq "E1 arming_load returns 6 and arming_state answers with nothing" "$OUT" "6|"
@@ -107,9 +86,7 @@ OUT="$(ARMING_ROSTER_URL="$URL/roster" bash -c \
 eq "E2 ...and reaches the real thing when it is up" "$OUT" "parked"
 
 section "F. one address, and the python reader agrees with the bash one"
-# monkey-status-collect.py is piped to `sudo -n python3 -` over ssh with no
-# environment, so it cannot source estate-set.sh and carries the literal. Two
-# homes for one fact drift silently; this is what stops them.
+# The collector is piped over ssh with no environment and carries the literal.
 LIT="$(grep -oE 'http://[0-9.]+:[0-9]+' "$HERE/bin/monkey-status-collect.py" | head -1)"
 eq "F1 the collector's literal is GH_ESTATE_ROSTER_URL" \
    "$LIT" "$(bash -c ". '$HERE/bin/lib/estate-set.sh'; printf '%s' \"\$GH_ESTATE_ROSTER_URL\"")"
