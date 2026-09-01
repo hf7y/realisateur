@@ -22,10 +22,10 @@ CLI_EXITS='  0  every step ran (or, under --check, could)
   1  at least one step refused
   2  usage error
   6  BLIND -- the propagation set could not be read, so the plan is unverifiable'
-. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 HOST="$(hostname -s 2>/dev/null || echo unknown)"
 UID_MIN="${SELFDEV_UID_MIN:-3000}"
 UID_MAX="${SELFDEV_UID_MAX:-3099}"

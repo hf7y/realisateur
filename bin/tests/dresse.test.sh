@@ -126,4 +126,14 @@ out="$(bash "$D" --host --check 2>&1)"; rcv=$?
 rc "G1 exit 6" 6 "$rcv"
 has "G2 says BLIND" "$out" "BLIND"
 
+section "H. reached THROUGH a symlink, the way it is on PATH"
+write_set "provision-selfdev-user.sh"
+stub provision-selfdev-user.sh 0
+mkdir -p "$T/pathdir"; ln -sf "$D" "$T/pathdir/dresse"
+out="$(bash "$T/pathdir/dresse" --host --check 2>&1)"; rcv=$?
+hasnt "H1 the symlink finds lib/, not \$(dirname \$0)/lib" "$out" "cli-guard.sh: No such file"
+hasnt "H2 ...so cli_guard is defined"                       "$out" "cli_guard: command not found"
+has   "H3 ...and the plan is actually printed"              "$out" "dresse (--check)"
+[ "$rcv" -ne 6 ] && ok "H4 ...and the exit is not BLIND" || bad "H4" "exit 6 through the symlink"
+
 summary
