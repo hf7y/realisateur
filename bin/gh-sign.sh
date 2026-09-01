@@ -1,17 +1,14 @@
 #!/usr/bin/env bash
 # gh-sign.sh -- sign every agent-written GitHub comment/issue AUTOMATICALLY,
-# by standing in front of `gh` on PATH.
-#
-# KIND: verb
-#
+# by standing in front of `gh` on PATH. KIND: verb
 # TRAPS (the rest of this header is in the vault):
 # It appends `<!-- agent: <account>@<host> <ISO8601> -->` to the bodies of
-# `issue comment|create|close`, `pr comment|create` and `api` comment writes.
+# `issue comment|create|close`, `pr comment|create` and `api` comment writes,
+# and on an issue READ it names the comments it did not show (#836).
 # Both fields are read from the running process, so there is no argument to
 # forget -- it replaced a wrapper that had to be called and mostly was not
 # (#327). Past STALE_DAYS it stamps `STALE <n>d`, where decision-rot.sh reads
 # it, and it does NOT refuse: see FAIL OPEN.
-#
 # usage: `usage()` below. `gh --help` reaches it only where there is no real gh.
 
 set -uo pipefail
@@ -284,6 +281,46 @@ if [ "${1:-}" = api ]; then
   done
   [ "$api_comment" -eq 1 ] && signable=1
 fi
+# Only when comments EXIST (a note on every read is not read); the count is
+# already in the reply, so no extra request.
+if [ "${1:-}" = api ] && ! human_at_keyboard; then
+  _issue_read=0 _path=""
+  for _a in "$@"; do
+    case "$_a" in
+      */issues/[0-9]*) case "$_a" in *comments*|*/timeline*) ;; *) _issue_read=1; _path="$_a" ;; esac ;;
+    esac
+  done
+  if [ "$_issue_read" -eq 1 ]; then
+    # RAW, ALWAYS: --jq would filter `comments` out before it can be counted.
+    _jq="" _args=() _skip=0
+    for _a in "$@"; do
+      if [ "$_skip" -eq 1 ]; then _jq="$_a"; _skip=0; continue; fi
+      case "$_a" in
+        --jq) _skip=1 ;;
+        --jq=*) _jq="${_a#--jq=}" ;;
+        *) _args+=("$_a") ;;
+      esac
+    done
+    _out="$("$GH" "${_args[@]}")"; _rc=$?
+    if [ "$_rc" -eq 0 ] && [ -n "$_jq" ] && command -v jq >/dev/null 2>&1; then
+      printf '%s' "$_out" | jq -r "$_jq"
+    else
+      printf '%s' "$_out"
+      [ -n "$_out" ] && printf '\n'
+    fi
+    if [ "$_rc" -eq 0 ]; then
+      _n="$(printf '%s' "$_out" | python3 -c 'import json,sys
+try: d=json.load(sys.stdin); print(d.get("comments") or 0)
+except Exception: print(0)' 2>/dev/null || echo 0)"
+      if [ "${_n:-0}" -gt 0 ] 2>/dev/null; then
+        printf 'gh-sign: %s has %s comment(s), NOT shown above. A body is a claim about the past; the answer is usually in the comments:\n  gh api %s/comments --jq %s\n' \
+          "${_path##*/repos/}" "$_n" "$_path" "'.[]|\"[\\(.created_at[:16])] \\(.user.login): \\(.body)\"'" >&2
+      fi
+    fi
+    exit "$_rc"
+  fi
+fi
+
 # A human's write passes through whole, unsigned AND ungraded: the grammar is
 # a contract between agents, not a rule about how its author may talk.
 if [ "$signable" -ne 1 ] || human_at_keyboard; then exec "$GH" "$@"; fi
