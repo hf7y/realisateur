@@ -13,8 +13,8 @@
 # crontab and ledger; a missing ledger on an ARMED account is a finding, not a
 # blank. None of that is derivable from dexter.
 #
-# Deleted by #511 and restored the same day: a reachability scan cannot see an
-# off-host caller. bin/lib/cron-invoked.tsv is where the callers live.
+# Deleted by #511: a reachability scan cannot see an off-host caller, and
+# bin/lib/cron-invoked.tsv is where they are written down instead.
 
 set -uo pipefail
 
@@ -71,9 +71,8 @@ fi
 
 vmhost_require || die "VBoxManage not at $VMHOST_VBOX -- this must run on the VM host (dexter)."
 [ -f "$COLLECTOR" ] || die "collector not found at $COLLECTOR.
-  This script runs from a repo-shaped tree -- a checkout, or the same layout
-  inside a verb build -- so the collector that runs is the one beside me.
-  Carry it (bin/lib/carries.tsv) rather than copying it next to me."
+  This runs from a repo-shaped tree -- a checkout, or the same layout in a
+  verb build -- so carry it (bin/lib/carries.tsv), never copy it next to me."
 
 # ONE AT A TIME (#629): the tick is every 10 minutes and a stalled run outlives
 # it -- seven stacked on 2026-08-25 without this.
