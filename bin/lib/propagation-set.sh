@@ -194,6 +194,7 @@ PROP_LOCAL_SCRIPTS="
 ausculte-cadence.sh
 dexter-liveness.sh
 monkey-watch.sh
+monkey-watch-win.sh
 monkey-status-collect.py
 repose.sh
 decision-rot.sh
