@@ -2,12 +2,12 @@
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SCRIPT="$ROOT/unland-realisateur-clone.sh"
+SCRIPT="$ROOT/unland-foreign-clone.sh"
 [ -x "$SCRIPT" ] || { echo "FAIL: $SCRIPT not executable"; exit 1; }
 
 harness_tmp
 
-echo "unland-realisateur-clone.test.sh"
+echo "unland-foreign-clone.test.sh"
 
 mkpasswd() {  # two self-dev accounts in the band, the owning account, and two out-of-band names that must never be touched
   cat > "$T/passwd" <<'EOF'
@@ -15,6 +15,7 @@ root:x:0:0::/root:/bin/bash
 zach:x:1000:1000::/home/zach:/bin/bash
 ecosim:x:3011:3011::/home/ecosim:/bin/bash
 realisateur:x:3010:3010::/home/realisateur:/bin/bash
+senechal:x:3014:3014::/home/senechal:/bin/bash
 wtul:x:3006:3006::/home/wtul:/bin/bash
 nobody:x:65534:65534::/nonexistent:/usr/sbin/nologin
 EOF
@@ -30,7 +31,7 @@ mkclone() {  # a committed, pushed clone -- the state a bootstrap copy is in
   git -C "$d" push -q origin main 2>/dev/null
   git -C "$d" branch -q --set-upstream-to=origin/main main 2>/dev/null
 }
-run() { SELFDEV_PASSWD="$T/passwd" SELFDEV_HOME_ROOT="$T/home" "$SCRIPT" "$@" 2>&1; }
+run() { SELFDEV_PASSWD="$T/passwd" SELFDEV_HOME_ROOT="$T/home" "$SCRIPT" realisateur "$@" 2>&1; }
 
 section "A. the argument contract"
 "$SCRIPT" --not-a-real-flag >/dev/null 2>&1; eq "A1 unknown flag exits 2" "$?" "2"
@@ -39,10 +40,13 @@ OUT="$("$SCRIPT" --help 2>&1)"
 has "A3 --help documents the BLIND exit" "$OUT" "BLIND"
 has "A4 --help documents the refused-without-root exit" "$OUT" "refused"
 has "A5 --help says --check is the default and removes nothing" "$OUT" "--check (default)"
+"$SCRIPT" --check >/dev/null 2>&1;           eq "A6 no project exits 2 -- it removes nothing by default" "$?" "2"
+"$SCRIPT" .. --check >/dev/null 2>&1;        eq "A7 a project that is not a plain name exits 2 -- it becomes a path component of an rm -rf" "$?" "2"
+"$SCRIPT" senechal realisateur >/dev/null 2>&1; eq "A8 two projects exit 2 rather than silently sweeping one" "$?" "2"
 
 section "B. an empty uid band is BLIND, not a silent pass"
 : > "$T/empty-passwd"
-OUT="$(SELFDEV_PASSWD="$T/empty-passwd" SELFDEV_HOME_ROOT="$T/home" "$SCRIPT" --check 2>&1)"; RC=$?
+OUT="$(SELFDEV_PASSWD="$T/empty-passwd" SELFDEV_HOME_ROOT="$T/home" "$SCRIPT" realisateur --check 2>&1)"; RC=$?
 eq  "B1 no account in the band exits 6" "$RC" "6"
 has "B2 and says BLIND" "$OUT" "BLIND"
 has "B3 and says nothing was measured" "$OUT" "nothing was measured"
@@ -89,7 +93,7 @@ fi
 section "H. --apply really removes them -- the destructive path, exercised"
 # fakeroot is enough -- id -u is the only root fact the script reads, and an untested rm -rf is the one path that must not ship on inspection alone.
 if command -v fakeroot >/dev/null 2>&1; then
-  OUT="$(SELFDEV_PASSWD="$T/passwd" SELFDEV_HOME_ROOT="$T/home" fakeroot "$SCRIPT" --apply 2>&1)"; RC=$?
+  OUT="$(SELFDEV_PASSWD="$T/passwd" SELFDEV_HOME_ROOT="$T/home" fakeroot "$SCRIPT" realisateur --apply 2>&1)"; RC=$?
   eq "H1 a clean sweep exits 0" "$RC" "0"
   [ -d "$T/home/ecosim/Documents/Projects/realisateur" ] \
     && bad "H2 ecosim's clone is gone" || ok "H2 ecosim's clone is gone"
@@ -105,6 +109,17 @@ else
   ok "H1 skipped: no fakeroot, so the removal path cannot be driven here"
 fi
 
+section "I. the project is an ARGUMENT: the same tool takes senechal's copies (hf7y/scheduler#307)"
+mkclone "$T/home/wtul/Documents/Projects/senechal"
+mkclone "$T/home/ecosim/Documents/Projects/senechal"
+mkclone "$T/home/senechal/Documents/Projects/senechal"
+OUT_S="$(SELFDEV_PASSWD="$T/passwd" SELFDEV_HOME_ROOT="$T/home" "$SCRIPT" senechal --check 2>&1)"
+has  "I1 wtul's senechal clone is named"   "$OUT_S" "would remove $T/home/wtul/Documents/Projects/senechal"
+has  "I2 ecosim's senechal clone is named" "$OUT_S" "would remove $T/home/ecosim/Documents/Projects/senechal"
+has  "I3 the account that OWNS senechal keeps its checkout" "$OUT_S" "senechal: KEPT -- this account owns senechal"
+hasnt "I4 and is never a removal target" "$OUT_S" "would remove $T/home/senechal/"
+hasnt "I5 a realisateur clone is not swept by a senechal run" "$OUT_S" "Projects/realisateur"
+
 section "J. the witness proves BOTH halves"
 OUT="$(run --check)"
 has "J1 it counts the clones left" "$OUT" "clones left:"
@@ -113,9 +128,9 @@ has "J3 it lists as root, so the 0700 home of the clone that must SURVIVE is not
 
 section "K. it is declared, so it reaches a host by a named channel"
 . "$ROOT/lib/propagation-set.sh"
-ch="$(prop_channel unland-realisateur-clone.sh 2>/dev/null)" || ch=""
+ch="$(prop_channel unland-foreign-clone.sh 2>/dev/null)" || ch=""
 eq "K1 prop_channel says provision -- an operator runs this once, on nobody's clock" "$ch" "provision"
-printf '%s\n' "$(prop_host_tools)" | grep -qx unland-realisateur-clone.sh \
+printf '%s\n' "$(prop_host_tools)" | grep -qx unland-foreign-clone.sh \
   && ok "K2 it rides to the host libexec, the only copy monkey will have once the clones are gone" \
   || bad "K2 it rides to the host libexec" "absent from prop_host_tools"
 

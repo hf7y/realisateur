@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-CLI_NAME='unland-realisateur-clone.sh'
-CLI_SUMMARY='remove the per-account realisateur clone bin/land-selfdev.sh used to mint into every self-dev account (#755 deleted the factory; the copies it already made are still on disk), keeping the checkout of the account that OWNS realisateur'
-CLI_USAGE='  unland-realisateur-clone.sh            --check (default): list what would go, remove nothing
-  unland-realisateur-clone.sh --apply    remove them, then print the witness to paste back'
+CLI_NAME='unland-foreign-clone.sh'
+CLI_SUMMARY='remove the clone of <project> that bin/land-selfdev.sh minted into self-dev accounts that do not own it, keeping the checkout of the one that does'
+CLI_USAGE='  unland-foreign-clone.sh <project>            --check (default): list what would go, remove nothing
+  unland-foreign-clone.sh <project> --apply    remove them, then print the witness to paste back'
 CLI_FLAGS='--check --apply'
-CLI_POSITIONAL=none
+CLI_POSITIONAL='<project>'
 CLI_EXITS='  0  nothing left to remove
   1  findings: clones are present (--check), or one was kept back (--apply)
   5  refused: --apply without root
@@ -17,15 +17,17 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cli_guard "$@"
 
 MODE=--check
+PROJECT=
 while [ $# -gt 0 ]; do
   case "$1" in
     --check|--apply) MODE="$1" ;;
+    [a-z][a-z0-9-]*) [ -n "$PROJECT" ] && cli_die "one project at a time: already given '$PROJECT'"; PROJECT="$1" ;;
     *) cli_die "unexpected argument: $1" ;;
   esac
   shift
-done
+done  # $PROJECT is MATCHED, not merely non-empty: it becomes a path component of the rm -rf below, and `..` would name every account's whole Documents/Projects
+[ -n "$PROJECT" ] || cli_die "which project's foreign clones? (e.g. senechal)"
 
-PROJECT=realisateur
 UID_LO=3000; UID_HI=3100                                          # the self-dev band, same as bin/monkey-status-collect.py
 HOME_ROOT="${SELFDEV_HOME_ROOT:-/home}"                           # fixture seams:
 PASSWD_SRC="${SELFDEV_PASSWD:-}"                                  # unset in production
@@ -37,9 +39,9 @@ bad() { printf '  BAD     %s\n' "$*"; BAD=$((BAD+1)); }
 act() { printf '  DO      %s\n' "$*"; }
 die() { printf '\n%s: %s\n' "$CLI_NAME" "$*" >&2; exit "${2:-5}"; }
 
-echo "== unland-realisateur-clone ($MODE) -- $(hostname -s), uid $UID_LO-$((UID_HI-1)) under $HOME_ROOT =="
+echo "== unland-foreign-clone $PROJECT ($MODE) -- $(hostname -s), uid $UID_LO-$((UID_HI-1)) under $HOME_ROOT =="
 
-[ "$MODE" = --check ] || [ "$(id -u)" -eq 0 ] || die "$MODE needs root (sudo $CLI_NAME $MODE)" 5
+[ "$MODE" = --check ] || [ "$(id -u)" -eq 0 ] || die "$MODE needs root (sudo $CLI_NAME $PROJECT $MODE)" 5
 
 accounts() {  # the uid band IS the roster, same predicate bin/monkey-status-collect.py uses -- never a typed list
   { [ -n "$PASSWD_SRC" ] && cat "$PASSWD_SRC" || getent passwd; } 2>/dev/null \
@@ -71,7 +73,7 @@ for a in $roster; do
 
   d="$HOME_ROOT/$a/Documents/Projects/$PROJECT"
 
-  if [ "$a" = "$PROJECT" ]; then  # THE OWNING ACCOUNT, and the account name equalling the directory name is the only thing that tells its dev checkout (schedule/realisateur.conf's PROJECT_REPO_PATH) from a copy land-selfdev.sh minted
+  if [ "$a" = "$PROJECT" ]; then  # THE OWNING ACCOUNT, and the account name equalling the directory name is the only thing that tells its dev checkout (schedule/<project>.conf's PROJECT_REPO_PATH) from a copy land-selfdev.sh minted
     ok "$a: KEPT -- this account owns $PROJECT, so $d is its own dev checkout"
     continue
   fi
@@ -109,7 +111,7 @@ WITNESS
 
 if [ "$MODE" = --check ]; then
   [ "$GAPS" -eq 0 ] && [ "$BAD" -eq 0 ] && exit 0
-  echo "Next: sudo $CLI_NAME --apply"
+  echo "Next: sudo $CLI_NAME $PROJECT --apply"
   exit 1
 fi
 [ "$BAD" -eq 0 ] && exit 0

@@ -98,7 +98,7 @@ run_as() {
   sudo -u "$PROJECT" -H env -i \
     HOME="$HOME_DIR" USER="$PROJECT" LOGNAME="$PROJECT" \
     PATH="$HOME_DIR/.local/bin:/usr/local/bin:/usr/bin:/bin" \
-    SELFDEV_PROJECTS="senechal $PROJECT" \
+    SELFDEV_PROJECTS="$PROJECT" \
     bash -lc "cd '$HOME_DIR' || exit 1; $1"
 }
 

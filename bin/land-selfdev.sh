@@ -176,10 +176,10 @@ clone_or_update() {
 # checkout from the derived loop, out of schedule/realisateur.conf's REPO_URL.
 clone_or_update scheduler "https://github.com/$GH_OWNER/scheduler.git"
 
-# EVERY OTHER REPO IS DERIVED, NOT TYPED. schedule/<p>.conf already declares
-# REPO_URL per project -- that IS the registry. A typed list here would be a
-# second source that drifts from it, which is the failure realisateur's own
-for p in ${SELFDEV_PROJECTS:-senechal ecosim}; do
+# DERIVED, NOT TYPED: schedule/<p>.conf declares REPO_URL and that IS the registry.
+# THE DEFAULT WAS THE FACTORY -- `senechal ecosim`, with setup-selfdev-project.sh passing
+# `senechal $PROJECT` over it: every account landed a repo it does not own (scheduler#307).
+for p in ${SELFDEV_PROJECTS:-$(id -un)}; do
   conf="$PROJECTS/scheduler/schedule/$p.conf"
   if [ ! -f "$conf" ]; then bad "$p: no schedule/$p.conf -- not a registered project"; continue; fi
   url="$(grep -hE '^REPO_URL=' "$conf" | head -1 | cut -d'"' -f2)"
