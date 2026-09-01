@@ -46,14 +46,30 @@ APPLY=0
 
 die() { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 2; }
 
-# The outer `flock` is NOT `cron_lock` below in a second spelling: it wraps the
-# `git pull`, which runs before this file is read (#511, senechal#550).
+# THE CADENCE NAMES THE HOST PIN, NOT THIS FILE'S OWN LOCATION (#834). Until
+# 2026-09-01 the row was `cd $HOME/realisateur && git pull -q --ff-only
+# >/dev/null 2>&1; ...` -- the only `git pull` on any host in the estate, and
+# the only unpinned thing in it: whatever landed on main ten minutes ago, with
+# a failed pull indistinguishable from a clean one. Now this file travels in
+# the verb build (bin/lib/carries.tsv) and the row runs it from the host pin,
+# so adopting or rolling back a build moves the watcher with everything else
+# instead of racing it.
+#
+# PROP_HOST_PIN, never $BASH_SOURCE: `readlink -f` on a copy under the pin
+# resolves THROUGH the symlink to a dated build, which would freeze the
+# crontab on one build forever. And never the layout retyped, which is the
+# one thing bin/lib/propagation-set.sh exists to prevent.
+#
+# The outer `flock` went with the pull it wrapped -- it was never `cron_lock`
+# below in a second spelling (#511, senechal#550), and with nothing running
+# before this file is read, cron_lock is the whole of the mutual exclusion.
 CRON_TAG='# realisateur:monkey-watch:WATCH'
 CRON_SPEC="${MONKEY_WATCH_CRON_SPEC:-*/10 * * * *}"
 if [ "${1:-}" = "--install-cadence" ]; then
-  repo="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
-  case "$repo" in "$HOME"/*) repo="\$HOME${repo#"$HOME"}" ;; esac
-  line="$CRON_SPEC PATH=/usr/local/bin:/usr/bin:/bin flock -n \$HOME/.local/state/monkey-watch.lock -c \"cd $repo && git pull -q --ff-only >/dev/null 2>&1; $repo/bin/monkey-watch.sh --apply\" >> \$HOME/.local/state/monkey-watch.log 2>&1 $CRON_TAG"
+  # shellcheck source=lib/propagation-set.sh
+  . "$HERE/bin/lib/propagation-set.sh"
+  self="$PROP_HOST_PIN/realisateur/bin/monkey-watch.sh"
+  line="$CRON_SPEC PATH=/usr/local/bin:/usr/bin:/bin $self --apply >> \$HOME/.local/state/monkey-watch.log 2>&1 $CRON_TAG"
   if [ "${2:-}" != "--apply" ]; then
     echo "  would   install into $(id -un)'s crontab: $line"; exit 0
   fi
@@ -67,8 +83,9 @@ fi
 
 vmhost_require || die "VBoxManage not at $VMHOST_VBOX -- this must run on the VM host (dexter)."
 [ -f "$COLLECTOR" ] || die "collector not found at $COLLECTOR.
-  This script runs from a realisateur checkout so the collector that runs is
-  the one in the tree. Clone it rather than copying the collector next to me."
+  This script runs from a repo-shaped tree -- a checkout, or the same layout
+  inside a verb build -- so the collector that runs is the one beside me.
+  Carry it (bin/lib/carries.tsv) rather than copying it next to me."
 
 # ONE AT A TIME (#629): the tick is every 10 minutes and a stalled run outlives
 # it -- seven stacked on 2026-08-25 without this.

@@ -68,3 +68,29 @@ libexec/unarmed.sh	bin/unarmed.sh
 # a host tool that only a human refreshes is a host tool that goes stale, and
 # here staleness means deposits queue forever in a spool nobody can list.
 libexec/vault-spool-drain.sh	bin/vault-spool-drain.sh
+
+# THE OUTSIDE OBSERVER, and why it is NOT a libexec/ row (#834). Every row
+# above under libexec/ is FLAT by two independent mechanisms: install-verb-
+# build.sh --link copies libexec/* into $LIBEXEC_DEST by basename, and
+# selfdev-release-tick.sh's sync_host_tools installs each row to
+# $HOST_LIBEXEC/$(basename). monkey-watch.sh cannot survive that -- it is
+# REPO-SHAPED, resolving HERE to the repo root and reading eight files across
+# bin/, bin/lib/ and share/. Flattened it would source lib/zaxon.sh from a
+# directory that does not exist and die two steps later on an unbound
+# variable, which is #826 verbatim.
+#
+# So it rides the build TREE at its own paths instead: cut-verb-build.sh
+# copies the whole bashified tree, so these rows put the observer and its
+# entire closure under verb-builds/current/realisateur/ with HERE resolving
+# exactly as it does in a checkout -- no code change, and the pin gives it the
+# rollback and hold-still property the `git pull -q --ff-only` in dexter's
+# crontab never had. Same posture as scheduler's dose-project.sh: on
+# bashified to be BESIDE the door, never on PATH. Both executables have a
+# bin/lib/not-a-verb.tsv row, or the cut refuses them as half-declared.
+bin/monkey-watch.sh	bin/monkey-watch.sh
+bin/monkey-status-collect.py	bin/monkey-status-collect.py
+share/monkey-status.html	share/monkey-status.html
+bin/lib/monkey-watch-alert.sh	bin/lib/monkey-watch-alert.sh
+bin/lib/monkey-watch-merge.py	bin/lib/monkey-watch-merge.py
+bin/lib/vmhost.sh	bin/lib/vmhost.sh
+bin/lib/cron-lock.sh	bin/lib/cron-lock.sh
