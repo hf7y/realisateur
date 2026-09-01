@@ -189,13 +189,9 @@ def containment(user, uid):
 
 def identity_drift(user):
     """Clones where this account did not commit as itself (realisateur#841).
-
-    ANOMALOUS: a repo-LOCAL user.email that is not the account's own, or an
-    unpushed commit whose COMMITTER is neither -- committer, not author, or
-    every rebase of upstream work is a finding. A clone's local identity is the
-    yardstick for ITS commits, or the override is counted again as all 364 it
-    made. None is BLIND: safe.directory=* is what lets root look into another
-    account's checkout at all, and rc is what separates none from could-not.
+    A repo-LOCAL user.email that is not the account's own, or an unpushed
+    commit whose COMMITTER is neither. None is BLIND, never clean. Sections F
+    and G of bin/tests/monkey-status-collect.test.sh hold why each is right.
     """
     home = f"{HOME_ROOT}/{user}"
     rc, mail = sh_rc("git", "config", "--file", f"{home}/.gitconfig",
