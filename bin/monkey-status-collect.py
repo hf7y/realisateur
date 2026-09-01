@@ -7,9 +7,8 @@ its scheduler run ledger, and its release-tick status file. Writes nothing,
 dispatches nothing. Prints one JSON document on stdout -- the payload published
 to https://hf7y.com/monkey/status.json by bin/monkey-watch.sh, which feeds this
 file to monkey's python3 over stdin so the version that runs is the version in
-the checkout. It runs FROM DEXTER on purpose, and an empty accounts[] IS the
-report -- a publisher that refuses when its ssh fails shows the last healthy
-world instead of the outage (#274).
+the checkout. It runs FROM DEXTER on purpose: an empty accounts[] IS the
+report, where a publisher refusing on ssh failure hides the outage (#274).
 
 Every field is a probe of live state at generation time. A field this
 script cannot read is null, never a guess: a missing ledger means the
@@ -201,7 +200,7 @@ def identity_drift(user):
     for name in sorted(os.listdir(projects)) if os.path.isdir(projects) else []:
         d = os.path.join(projects, name)
         if not os.path.exists(os.path.join(d, ".git")):
-            continue                          # not a checkout, not a finding
+            continue
         local = sh("git", "-c", "safe.directory=*", "-C", d,
                    "config", "--local", "--get", "user.email").strip()
         rc, log = sh_rc("git", "-c", "safe.directory=*", "-C", d, "log",
