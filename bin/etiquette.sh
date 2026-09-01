@@ -3,7 +3,8 @@
 # and the reconciler that makes a repo match it.
 #
 # KIND: verb
-# RUNNER: no -- a SURVEY, run in a triage pass or ahead of /ideate and /cloture
+# RUNNER: .github/workflows/etiquette.yml (`--all --apply`, daily). Also run by
+#   hand in a triage pass or ahead of /ideate and /cloture.
 # GUARD-TEST: bin/tests/etiquette.test.sh
 # GATE: none -- reads live issue trackers; writes only with --apply
 # THE TEXT LIVES IN bin/lib/labels.tsv, NOT HERE (#397): a grammar copied into
@@ -20,13 +21,15 @@ CLI_SUMMARY='the estate label grammar, and whether a repo follows it'
 CLI_USAGE='  etiquette                        print the grammar every repo follows
   etiquette --path                 print the file the grammar is read from
   etiquette <owner>/<repo>         report how that repo departs from it
-  etiquette <owner>/<repo> --apply provision the labels and reconcile the derived one'
-CLI_FLAGS='--apply --path'
+  etiquette <owner>/<repo> --apply provision the labels and reconcile the derived one
+  etiquette --all [--apply]        the same, over every repo in bin/lib/roster-set.sh'
+CLI_FLAGS='--all --apply --path'
 CLI_POSITIONAL='[<owner>/<repo>]'
 CLI_EXITS='  0  the repo carries the declared labels and every derived one matches its body
   1  findings: a declared label is missing, a derived one disagrees, or a body declares nothing
   2  usage error
-  6  BLIND -- the grammar or the issue list could not be read. Never 0.'
+  6  BLIND -- the grammar or the issue list could not be read. Never 0.
+  (--all reports the WORST of the repos it swept: 6 outranks 1 outranks 0.)'
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/body-grammar.sh"
@@ -35,8 +38,10 @@ cli_guard "$@"
 APPLY=0
 REPO=''
 PATH_ONLY=0
+ALL=0
 while [ $# -gt 0 ]; do
   case "$1" in
+    --all)   ALL=1 ;;
     --apply) APPLY=1 ;;
     --path)  PATH_ONLY=1 ;;
     -*) printf '%s: unknown argument: %s\n' "$CLI_NAME" "$1" >&2; exit 2 ;;
@@ -45,6 +50,8 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+[ "$ALL" = 1 ] && [ -n "$REPO" ] && {
+  printf '%s: --all sweeps every rostered repo; do not also name one\n' "$CLI_NAME" >&2; exit 2; }
 
 # Self-locating THROUGH THE SYMLINK: without readlink -f the grammar is sought
 # beside the NAME it was called by, not beside the real file.
@@ -70,6 +77,38 @@ mapfile -t GRAMMAR < <(grep -v '^#' "$GRAMMAR_FILE" | grep -v '^[[:space:]]*$')
 }
 
 g_field() { printf '%s' "$1" | cut -f"$2"; }
+
+# --- --all: the ONE trigger, over EVERY repo ----------------------------
+# The derivation is this file and nothing else; scheduler's
+# reconcile_own_labels() already shells out to it. What was missing was a
+# caller that is not the per-account dispatch -- that one grades the
+# DISPATCHING repo only, so a repo whose schedule/ROSTER row is `parked` (all
+# 18 of them on 2026-08-31) could not acquire the label at all. Same set
+# decision-rot.sh sweeps: bin/lib/roster-set.sh.
+#
+# RE-INVOKED PER REPO rather than looped inline, so every `exit 6` below stays
+# a verdict about ONE tracker instead of ending the sweep at the first
+# unreadable one.
+if [ "$ALL" = 1 ]; then
+  # shellcheck source=bin/lib/roster-set.sh
+  . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/roster-set.sh"
+  if [ "${ROSTER_SET_LIB:-}" != 1 ] || [ "${#ROSTER[@]}" -eq 0 ]; then
+    printf '%s: BLIND -- lib/roster-set.sh did not load, so this swept NO repositories. Zero findings here is the absence of a reading.\n' \
+      "$CLI_NAME" >&2
+    exit 6
+  fi
+  SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+  worst=0
+  for p in "${ROSTER[@]}"; do
+    if [ "$APPLY" = 1 ]; then bash "$SELF" "$ROSTER_OWNER/$p" --apply
+    else                     bash "$SELF" "$ROSTER_OWNER/$p"; fi
+    # BLIND outranks findings outranks clean: one tracker nobody could read
+    # must never let the sweep report the estate compliant.
+    case $? in 6) worst=6 ;; 2) exit 2 ;; 1) [ "$worst" = 0 ] && worst=1 ;; esac
+  done
+  say "etiquette --all: swept ${#ROSTER[@]} repo(s)."
+  exit "$worst"
+fi
 
 if [ -z "$REPO" ]; then
   say "etiquette -- the estate's issue-label grammar"
