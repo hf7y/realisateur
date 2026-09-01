@@ -53,7 +53,20 @@ def labelled: ((.labels // []) | any(.name == "answered"));
 # predicate cannot. Checked before the comment branch, same precedence
 # `answered` already has, so it wins over "there is a reply" rather than
 # losing to it.
-def unsettled_labelled: ((.labels // []) | any(.name == "unsettled"));
+#
+# IT MUST NAME WHAT REMAINS. The label alone is a silence with a colour on it:
+# the verdict it produces is `unanswered`, so `decision-rot` -- which counts
+# ANSWERED-and-still-open -- cannot see the issue at all, and the owner is
+# never told which half of his reply fell short. hf7y/baudin#29 sat 13 days
+# that way: two same-day owner comments were read as contradictory, the label
+# went on, the agent said in writing "leaving the `DECISION:` line alone", and
+# a reply that HAD settled the question it was asked left every survey. The
+# body's `UNSETTLED: <what is still open>` line is the witness. Without it the
+# override does not fire and the reply counts, because an agent that cannot
+# say what remains unsettled has not established that anything does.
+def unsettled_labelled:
+  ((.labels // []) | any(.name == "unsettled"))
+  and ((.body // "") | test("(?im)^[ \\t]*UNSETTLED:[ \\t]*\\S"));
 
 # ANSWERED-BY <owner>/<repo>#<n> (#568), extraction only -- see body-grammar.sh.
 def answered_by:
@@ -68,7 +81,7 @@ def verdict:
   | ($i | candidates | latest) as $a
   | if ($i | unsettled_labelled) then
       { verdict: "unanswered", at: null,
-        why: "the `unsettled` label -- the owner replied and it did not settle the question" }
+        why: "the `unsettled` label and the `UNSETTLED:` residual it names -- the owner replied and it did not settle that" }
     elif $a != null and ($a.createdAt[0:10] >= $era) then
       { verdict: "answered",   at: $a.createdAt,
         why: "an unstamped or relayed comment" }
