@@ -1,0 +1,40 @@
+# Publish the roster image so dexter needs no repo to come back up. Shaped
+# after hf7y/crt's zaxon-image.yml; the package is PUBLIC, so no credential
+# sits on the recovery path -- safe, the image is runtime only and the state
+# is a bind mount.
+name: roster-image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'provision/dexter/roster/**'
+      - '.github/workflows/roster-image.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: provision/dexter/roster
+          push: true
+          tags: |
+            ghcr.io/hf7y/roster:latest
+            ghcr.io/hf7y/roster:${{ github.sha }}
