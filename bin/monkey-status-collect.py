@@ -2,15 +2,14 @@
 """Collect self-dev status for every account on the self-dev host.
 
 RUN ON monkey, AS ROOT:  sudo -n python3 monkey-status-collect.py
-Read-only: reads /etc/passwd, each account's crontab, its scheduler run
-ledger, and its release-tick status file. Writes nothing, dispatches
-nothing. Prints one JSON document on stdout -- the payload published to
-https://hf7y.com/monkey/status.json by bin/monkey-watch.sh, which feeds this
+Read-only: reads /etc/passwd, each account's crontab, git config and git log,
+its scheduler run ledger, and its release-tick status file. Writes nothing,
+dispatches nothing. Prints one JSON document on stdout -- the payload published
+to https://hf7y.com/monkey/status.json by bin/monkey-watch.sh, which feeds this
 file to monkey's python3 over stdin so the version that runs is the version in
-the checkout. It runs FROM DEXTER on purpose: publish-monkey-status.sh did the
-same job from mandark and refused to publish when its ssh collection failed, so
-the page showed the last healthy world through the 2026-08-14 outage (#274).
-That script was deleted 2026-08-22; an empty accounts[] IS the report.
+the checkout. It runs FROM DEXTER on purpose, and an empty accounts[] IS the
+report -- a publisher that refuses when its ssh fails shows the last healthy
+world instead of the outage (#274).
 
 Every field is a probe of live state at generation time. A field this
 script cannot read is null, never a guess: a missing ledger means the
@@ -191,18 +190,12 @@ def containment(user, uid):
 def identity_drift(user):
     """Clones where this account did not commit as itself (realisateur#841).
 
-    Its identity is the GLOBAL one selfdev-gh-app.sh --wire writes. Two things
-    wear it off: a repo-LOCAL user.email, and `git -c user.email=`, which
-    leaves nothing on disk. #841's four were never pushed, so no CI check could
-    have seen them. ANOMALOUS is either -- or a commit reachable from a local
-    branch and from NO remote ref whose COMMITTER is neither. Committer, not
-    author: cherry-picked work carries a foreign author, and grading that flags
-    every rebase. TRAP: a clone's LOCAL identity is the yardstick for ITS
-    commits, or the override is reported twice, once as config and again as all
-    364 commits it made. None is BLIND, never clean -- TRAP: git as root over
-    another account's checkout refuses on dubious ownership and prints NOTHING,
-    so safe.directory=* is what lets it look and rc is what separates "none"
-    from "could not look".
+    ANOMALOUS: a repo-LOCAL user.email that is not the account's own, or an
+    unpushed commit whose COMMITTER is neither -- committer, not author, or
+    every rebase of upstream work is a finding. A clone's local identity is the
+    yardstick for ITS commits, or the override is counted again as all 364 it
+    made. None is BLIND: safe.directory=* is what lets root look into another
+    account's checkout at all, and rc is what separates none from could-not.
     """
     home = f"{HOME_ROOT}/{user}"
     rc, mail = sh_rc("git", "config", "--file", f"{home}/.gitconfig",

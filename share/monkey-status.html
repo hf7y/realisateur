@@ -85,7 +85,6 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
                  || a.containment.outside_home.length || a.containment.sudoers.length));
   const creds = A.filter(a=>a.credentials && Object.entries(a.credentials).some(
                  ([,m])=>m===null || (m && +m.slice(-1)!==0)));
-  // realisateur#841: unpushed, so this page is the only thing that can see it.
   const ident  = A.filter(a=>a.identity && a.identity.clones.length);
   const idDark = A.filter(a=>a.identity===null);
 

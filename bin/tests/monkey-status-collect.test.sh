@@ -147,7 +147,6 @@ out="$(probe armed '[]' 'null' acct)"
 eq "...but with no dispatch line the answer is knowable: false" "$out" "false"
 
 section "F. identity_drift: an account that did not commit as itself (#841)"
-# #841's commits were never PUSHED, so the fixture is a real git tree.
 IH="$T/homes/ident"
 mkdir -p "$IH/Documents/Projects"
 printf '[user]\n\temail = ident@selfdev.invalid\n' > "$IH/.gitconfig"
