@@ -34,8 +34,7 @@ cli_guard "$@"
 GH="${ATTESTE_GH:-gh}"
 KINDS='host path clock tag secret unit port repo'
 
-# closingIssuesReferences is GraphQL-only -- REST has no equivalent field.
-CLOSING_Q='query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){closingIssuesReferences(first:20){nodes{number repository{nameWithOwner}}}}}}'
+CLOSING_Q='query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){closingIssuesReferences(first:20){nodes{number repository{nameWithOwner}}}}}}'  # GraphQL-only: REST has no equivalent field
 
 # `on <word>` is a HOST only when the word is a name: "on this repo's default
 # branch" is 13 of 240 path: entries.
@@ -242,10 +241,7 @@ else
       dark "$o/$r#$n carries no DELIVERS block, so it claims nothing a check could follow"
     fi
 
-    # A PR's own block is a SUBSET of what it closes (#872, scheduler#454/#456:
-    # 2 of 3 DELIVERS unreached, graded clean because nothing looked at the
-    # issue). Grade the closed issues' claims too, at the same ref.
-    if [ "$ispr" != - ]; then
+    if [ "$ispr" != - ]; then  # #872: a PR's block can be a SUBSET of what it closes (scheduler#454/#456 graded clean, 2 of 3 unreached) -- grade the closed issues' claims too, at the same ref
       closing="$("$GH" api graphql -f query="$CLOSING_Q" -F owner="$o" -F repo="$r" -F number="$n" \
         --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[] | .repository.nameWithOwner + "#" + (.number|tostring)' 2>/dev/null)"
       while IFS= read -r cs; do
@@ -255,8 +251,7 @@ else
           *) dark "$cs -- closingIssuesReferences returned something unparseable"; continue ;;
         esac
         if cbody="$("$GH" api "repos/$co/$cr/issues/$cn" --jq .body 2>/dev/null)"; then
-          # A REF BELONGS TO ONE REPO, same as any cross-repo path: entry.
-          iref="$ref"; [ "$co/$cr" = "$o/$r" ] || iref=''
+          iref="$ref"; [ "$co/$cr" = "$o/$r" ] || iref=''  # a ref belongs to one repo, same as any cross-repo path:
           printf -- '-- closes %s/%s#%s\n' "$co" "$cr" "$cn"
           if centries="$(grammar_delivers "$cbody")"; then
             while IFS= read -r ce; do [ -n "$ce" ] && grade "$ce" "$co/$cr" "$iref" gh; done <<<"$centries"
