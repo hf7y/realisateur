@@ -24,21 +24,26 @@ T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/bin"
 cat > "$T/bin/gh" <<'EOF'
 #!/usr/bin/env bash
-if [ "$1" = api ]; then
-  if [ -n "${ROSTER_FAIL:-}" ]; then echo "$ROSTER_FAIL" >&2; exit 1; fi
-  cat "$ROSTER_FIXTURE"; exit 0
-fi
 if [ -n "${GH_FAIL:-}" ]; then echo "$GH_FAIL" >&2; exit 1; fi
 cat "$FIXTURE"
 EOF
 chmod +x "$T/bin/gh"
+# The fake roster service (hf7y/scheduler#429). $ROSTER_FAIL makes it refuse,
+# which is BLIND -- E1 and I13 pin that it stays BLIND, not "nothing is armed".
+cat > "$T/bin/curl" <<'EOF'
+#!/usr/bin/env bash
+if [ -n "${ROSTER_FAIL:-}" ]; then echo "$ROSTER_FAIL" >&2; exit 7; fi
+cat "$ROSTER_FIXTURE"
+EOF
+chmod +x "$T/bin/curl"
 export PATH="$T/bin:$PATH"
 export DECISION_ROT_OWNER=owner
 
 cat > "$T/roster.default" <<'EOF'
-# project | account@host | rate | state
-r        | r@monkey        | 20m | live
-parked   | parked@monkey   | 6h  | parked
+{"rows": [
+  {"project":"r",      "account":"r",      "host":"monkey","rate":"20m","state":"live"},
+  {"project":"parked", "account":"parked", "host":"monkey","rate":"6h", "state":"parked"}
+]}
 EOF
 export ROSTER_FIXTURE="$T/roster.default"
 
@@ -273,7 +278,7 @@ OUT="$(run "$T/i.json" o/nowhere)"; RC=$?
 rc  "I7 a repo with NO roster row is not rot either" 0 "$RC"
 has "I8 ...and is named absent, not parked" "$OUT" "(absent)"
 
-OUT="$(ROSTER_FAIL='gh: Not Found' run "$T/i.json" o/r 2>&1)"; RC=$?
+OUT="$(ROSTER_FAIL='curl: (7) connection refused' run "$T/i.json" o/r 2>&1)"; RC=$?
 rc  "I9 an unreadable roster is BLIND (6), never clean and never rot" 6 "$RC"
 has "I10 ...and says it classified none of them" "$OUT" "Classifying none"
 

@@ -79,8 +79,8 @@ DECISION_ROT_JQ="$(cat "$ANSWERED_JQ_FILE")"
 # shellcheck source=bin/lib/arming.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/arming.sh"
 if ! arming_load; then
-  printf '%s: BLIND -- could not read %s:%s, so no repo can be told from a parked one. Classifying none of them.\n' \
-    "$CLI_NAME" "$ARMING_ROSTER_REPO" "$ARMING_ROSTER_PATH" >&2
+  printf '%s: BLIND -- could not read %s, so no repo can be told from a parked one. Classifying none of them.\n' \
+    "$CLI_NAME" "$ARMING_ROSTER_URL" >&2
   exit 6
 fi
 
