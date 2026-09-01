@@ -37,10 +37,10 @@ section "C. the callers resolve through it"
 src() { bash -c "${2:+export $2; }. '$HERE/bin/lib/$3' >/dev/null 2>&1; printf '%s' \"\$$1\""; }
 eq "C1 answered.sh"        "$(src ANSWERED_OWNER     '' answered.sh)"        "hf7y"
 eq "C2 roster-set.sh"      "$(src ROSTER_OWNER       '' roster-set.sh)"      "hf7y"
-eq "C3 arming.sh"          "$(src ARMING_ROSTER_REPO '' arming.sh)"          "hf7y/scheduler"
+eq "C3 arming.sh"          "$(src ARMING_ROSTER_URL  '' arming.sh)"          "http://100.107.253.56:8646/roster"
 eq "C4 propagation-set.sh" "$(src PROP_RELEASE_REPO  '' propagation-set.sh)" "hf7y/verbs"
-eq "C5 a new owner reaches a caller" \
-   "$(src ARMING_ROSTER_REPO GH_ESTATE_OWNER=neworg arming.sh)" "neworg/scheduler"
+eq "C5 a new address reaches the caller" \
+   "$(src ARMING_ROSTER_URL GH_ESTATE_ROSTER_URL=http://h:1 arming.sh)" "http://h:1/roster"
 eq "C6 a new owner reaches the release channel" \
    "$(src PROP_RELEASE_REMOTE GH_ESTATE_OWNER=neworg propagation-set.sh)" "https://github.com/neworg/verbs.git"
 

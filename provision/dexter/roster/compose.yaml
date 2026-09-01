@@ -1,0 +1,31 @@
+# roster on dexter, at /srv/roster/. Deploy: see README.
+services:
+  roster:
+    # PULLED, NOT BUILT: a dexter that lost its checkout recovers from this file.
+    image: ghcr.io/hf7y/roster:latest
+    container_name: roster
+    restart: always
+    volumes:
+      # SERVICE STATE, never overwritten from a repo. roster.db holds the live
+      # arming state and the append-only arming log -- the two things the repo
+      # deliberately no longer carries.
+      - ./data:/data
+    env_file:
+      # ROSTER_WRITE_TOKEN. Absent -> every write is refused, never open.
+      - ./data/.env
+    # BOUND, NOT AUTHENTICATED at the network layer -- the token is the auth.
+    # 100.107.253.56 is dexter's tailnet address AND, because every WSL2 distro
+    # on dexter shares one network namespace, it is monkey's own eth0 too:
+    # `ip -4 -o addr` on monkey reports it (measured 2026-09-01). So these two
+    # lines reach mandark over the tailnet and monkey on its own interface,
+    # and 0.0.0.0 is never bound -- this distro also carries 192.168.0.22, and
+    # publishing there would hand the house LAN the estate's arming control.
+    ports:
+      - "127.0.0.1:8646:8646"
+      - "100.107.253.56:8646:8646"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if __import__('json').load(urllib.request.urlopen('http://127.0.0.1:8646/healthz',timeout=5))['ok'] else 1)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

@@ -26,9 +26,13 @@ OUTSIDE_MAX = 20                     # paths shown before the tail is counted
 TICK_TAG = "realisateur:selfdev-release:TICK"
 RUNNER_TAG = "scheduler:scheduler-paced-runner:RUNNER"
 BOOTSTRAP_CLONES = {"scheduler"}  # land-selfdev.sh clones scheduler into EVERY account, so it is expected. realisateur is NOT: #134 stopped minting it per account, so a realisateur clone is now residue and must read as foreign. containment() keeps `{user, *BOOTSTRAP_CLONES}`, so realisateur@monkey's own checkout stays expected.
-ROSTER_URL = os.environ.get(
-    "SELFDEV_ROSTER_URL",
-    "https://raw.githubusercontent.com/hf7y/scheduler/main/schedule/ROSTER")
+# THE ARMING AUTHORITY, and no longer a file in a repo (hf7y/scheduler#429).
+# This used to fetch schedule/ROSTER over HTTP from a git host and hand-split
+# it on `|` -- a second source for a fact, and the third of ten such parsers.
+# The literal matches GH_ESTATE_ROSTER_URL in bin/lib/estate-set.sh; it cannot
+# read that file because it is piped to `sudo -n python3 -` over ssh with no
+# environment, so bin/tests/roster-service.test.sh asserts the two agree.
+ROSTER_URL = os.environ.get("SELFDEV_ROSTER_URL", "http://100.107.253.56:8646/roster")
 HOME_ROOT = os.environ.get("SELFDEV_HOME_ROOT", "/home")          # fixture seams:
 SUDOERS_D = os.environ.get("SELFDEV_SUDOERS_D", "/etc/sudoers.d")  # unset in production
 
@@ -116,22 +120,15 @@ def dispatch_line(cron_lines):
 
 
 def roster_states(host):
+    """account -> live|parked, from the service. None means COULD NOT LOOK, and
+    armed() below turns that into null rather than false -- there is no
+    fall-back to a checkout, because a stale roster read as live is the worse
+    answer than an admitted blindness."""
     try:
-        raw = urllib.request.urlopen(ROSTER_URL, timeout=10).read().decode()
+        d = json.loads(urllib.request.urlopen(ROSTER_URL, timeout=10).read().decode())
     except Exception:
         return None
-    out = {}
-    for line in raw.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        f = [c.strip() for c in line.split("|")]
-        if len(f) < 4:
-            continue
-        acct, _, h = f[1].partition("@")
-        if h == host:
-            out[acct] = f[3]
-    return out or None
+    return {r["account"]: r["state"] for r in d["rows"] if r["host"] == host} or None
 
 
 def armed(cron_lines, states, account):
