@@ -46,23 +46,14 @@ APPLY=0
 
 die() { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 2; }
 
-# THE CADENCE NAMES THE HOST PIN, NOT THIS FILE'S OWN LOCATION (#834). Until
-# 2026-09-01 the row was `cd $HOME/realisateur && git pull -q --ff-only
-# >/dev/null 2>&1; ...` -- the only `git pull` on any host in the estate, and
-# the only unpinned thing in it: whatever landed on main ten minutes ago, with
-# a failed pull indistinguishable from a clean one. Now this file travels in
-# the verb build (bin/lib/carries.tsv) and the row runs it from the host pin,
-# so adopting or rolling back a build moves the watcher with everything else
-# instead of racing it.
-#
-# PROP_HOST_PIN, never $BASH_SOURCE: `readlink -f` on a copy under the pin
-# resolves THROUGH the symlink to a dated build, which would freeze the
-# crontab on one build forever. And never the layout retyped, which is the
-# one thing bin/lib/propagation-set.sh exists to prevent.
-#
+# THE CADENCE NAMES THE HOST PIN, NOT THIS FILE'S LOCATION (#834). It was
+# `cd $HOME/realisateur && git pull -q --ff-only >/dev/null 2>&1; ...` -- the
+# estate's only `git pull` and its only unpinned thing, a failed pull
+# indistinguishable from a clean one. PROP_HOST_PIN, never $BASH_SOURCE:
+# `readlink -f` on a copy under the pin resolves THROUGH the symlink to a
+# dated build and would freeze the crontab on that one build forever.
 # The outer `flock` went with the pull it wrapped -- it was never `cron_lock`
-# below in a second spelling (#511, senechal#550), and with nothing running
-# before this file is read, cron_lock is the whole of the mutual exclusion.
+# below in a second spelling (#511, senechal#550).
 CRON_TAG='# realisateur:monkey-watch:WATCH'
 CRON_SPEC="${MONKEY_WATCH_CRON_SPEC:-*/10 * * * *}"
 if [ "${1:-}" = "--install-cadence" ]; then
