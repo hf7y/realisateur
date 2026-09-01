@@ -1,4 +1,5 @@
-# roster on dexter, at /srv/roster/. Deploy: see README.
+# roster -- the estate's arming authority, at /srv/roster/ on dexter.
+# hf7y/scheduler#429, #432. Deploy: sudo docker compose pull && up -d.
 services:
   roster:
     # PULLED, NOT BUILT: a dexter that lost its checkout recovers from this file.
@@ -6,20 +7,15 @@ services:
     container_name: roster
     restart: always
     volumes:
-      # SERVICE STATE, never overwritten from a repo. roster.db holds the live
-      # arming state and the append-only arming log -- the two things the repo
-      # deliberately no longer carries.
+      # SERVICE STATE (the roster and its arming log), never overwritten from a repo.
       - ./data:/data
     env_file:
       # ROSTER_WRITE_TOKEN. Absent -> every write is refused, never open.
       - ./data/.env
-    # BOUND, NOT AUTHENTICATED at the network layer -- the token is the auth.
-    # 100.107.253.56 is dexter's tailnet address AND, because every WSL2 distro
-    # on dexter shares one network namespace, it is monkey's own eth0 too:
-    # `ip -4 -o addr` on monkey reports it (measured 2026-09-01). So these two
-    # lines reach mandark over the tailnet and monkey on its own interface,
-    # and 0.0.0.0 is never bound -- this distro also carries 192.168.0.22, and
-    # publishing there would hand the house LAN the estate's arming control.
+    # 100.107.253.56 is dexter's tailnet address AND monkey's own eth0 -- every
+    # WSL2 distro on dexter shares one namespace (measured 2026-09-01). So these
+    # two lines reach mandark and monkey without binding 0.0.0.0, which would
+    # hand 192.168.0.22 and the house LAN the estate's arming control (crt#402).
     ports:
       - "127.0.0.1:8646:8646"
       - "100.107.253.56:8646:8646"

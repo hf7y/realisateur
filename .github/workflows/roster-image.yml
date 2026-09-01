@@ -1,7 +1,5 @@
-# Publish the roster image so dexter needs no repo to come back up. Shaped
-# after hf7y/crt's zaxon-image.yml; the package is PUBLIC, so no credential
-# sits on the recovery path -- safe, the image is runtime only and the state
-# is a bind mount.
+# Publish the roster image so dexter needs no repo to come back up. After
+# hf7y/crt's zaxon-image.yml; PUBLIC, so no credential is on the recovery path.
 name: roster-image
 
 on:

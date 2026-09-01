@@ -1,34 +1,10 @@
 #!/usr/bin/env python3
-"""roster_server.py -- the estate's arming authority, served.
+"""roster_server.py -- the estate's arming authority. hf7y/scheduler#429, #432.
 
-WHY A SERVICE AND NOT A FILE IN A REPO. schedule/ROSTER lived on a
-branch-protected main (enforce_admins: true), so `dose --arm/--park` could
-only open a PR with auto-merge, and arming was gated on `suites` going green.
-On 2026-08-30 a fleet-wide park opened twenty PRs and EIGHT of them never
-merged (#382 #384 #386 #387 #389 #391 #399 #400 #404): `dose --park` printed
-"armed: PR #N will merge itself once 'suites' is green", exited 0, and the
-project stayed live. Parking is what you want during an incident -- exactly
-when CI is least likely to be green.
-
-THE DEV/PROD SPLIT. The repo keeps the DECLARATION -- project | account@host |
-rate -- reviewed, diffed, versioned, slow. This keeps the STATE, live|parked,
-and nothing else does. That is scheduler#79's one-field rule applied one level
-up: the two halves cannot disagree, because their field sets are DISJOINT.
-Declaration flows repo -> here and never touches `state`; `state` never flows
-back. A project this process has never heard of is born `parked`; a project
-the repo stops declaring is kept and flagged `declared: false`, never deleted
--- deleting a row would silently un-arm it.
-
-Reads never touch GitHub. Writes are one call and return only once committed.
-
-WRITE AUTH IS THE uid 3000-3099 REFUSAL, MOVED SOMEWHERE IT HOLDS. That
-refusal lives in `dose`, on the caller's side, where a self-dev agent can walk
-around it with one curl. ROSTER_WRITE_TOKEN is read from a file the self-dev
-band cannot open (/etc/scheduler/roster-write.token, 0640 root:root), so the
-same rule now binds at the port. Unset -> every write is refused. Never open.
-
-Stdlib only, on purpose: this is the one process that has to come back up when
-everything else is broken.
+The repo declares (project | account@host | rate); this holds the STATE and
+nothing else does, so the two cannot disagree -- their fields are disjoint.
+Writes are one call, need no CI, and return only once committed. Stdlib only:
+this is the process that must come back up when everything else is broken.
 """
 import hmac
 import json
@@ -92,9 +68,7 @@ def conn():
 
 
 def parse_declaration(text):
-    """schedule/ROSTER's four columns. Tolerates a missing trailing newline by
-    construction -- splitlines() does not drop a final unterminated line, which
-    is the whole of scheduler#430's damage in the bash reader it replaces."""
+    """splitlines() keeps a final unterminated line -- scheduler#430."""
     out = []
     for line in text.splitlines():
         line = line.strip()
@@ -109,14 +83,13 @@ def parse_declaration(text):
 
 
 def ingest_once():
-    """Declaration only. NEVER writes `state`: that is this service's field and
-    the repo has no opinion about it."""
+    """Declaration only. NEVER writes `state`."""
     c = conn()
     try:
         text = urllib.request.urlopen(DECLARATION_URL, timeout=15).read().decode()
         declared = parse_declaration(text)
         if not declared:
-            raise ValueError("declaration parsed to zero rows -- refusing to orphan everything")
+            raise ValueError("zero rows parsed -- refusing to orphan everything")
         with _lock, c:
             names = {d[0] for d in declared}
             for project, acct, host, rate in declared:
@@ -124,7 +97,7 @@ def ingest_once():
                     c.execute("UPDATE rows SET account=?, host=?, rate=?, declared=1 "
                               "WHERE project=?", (acct, host, rate, project))
                 else:
-                    # BORN PARKED. A new declaration must never arm anything.
+                    # BORN PARKED: a new declaration never arms anything.
                     c.execute("INSERT INTO rows (project,account,host,rate,state,declared,"
                               "updated_at,updated_by) VALUES (?,?,?,?,'parked',1,?,'ingest')",
                               (project, acct, host, rate, now()))
@@ -194,9 +167,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path.startswith("/roster/"):
                 r = c.execute("SELECT * FROM rows WHERE project=?",
                               (u.path[len("/roster/"):],)).fetchone()
-                # 404 IS AN ANSWER: "no such row", distinct from a connect
-                # failure, which is BLIND. Collapsing those two is this
-                # estate's signature failure (lib/dose-common.sh says so).
+                # 404 IS AN ANSWER ("no such row"), never a connect failure.
                 return self.send(200, row_json(r)) if r else self.send(404, {"error": "no such row"})
             if u.path == "/log":
                 sql = "SELECT * FROM armings"
@@ -236,8 +207,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not r:
                     return self.send(404, {"error": "no such row -- declare it in "
                                                     "schedule/ROSTER first"})
-                # The write and its audit line are ONE transaction: an arming
-                # nobody can attribute is worse than one that did not happen.
+                # ONE transaction with its audit line.
                 c.execute("INSERT INTO armings (ts,project,from_state,to_state,by,remote) "
                           "VALUES (?,?,?,?,?,?)",
                           (now(), project, r["state"], state, by, self.address_string()))
@@ -251,10 +221,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     conn().close()
-    # SYNCHRONOUS FIRST INGEST: a container that has just started must not
-    # answer /roster with an empty set. A failure here is swallowed and
-    # recorded in `ingest.error`, so an unreachable declaration delays the
-    # port by the fetch timeout and never prevents it opening.
+    # SYNCHRONOUS: a just-started container must not answer /roster empty.
     ingest_once()
     threading.Thread(target=ingest_loop, daemon=True).start()
     print(f"{now()} roster serving on 0.0.0.0:{PORT} db={DB_PATH} "
