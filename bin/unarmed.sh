@@ -56,7 +56,6 @@ for c in $($SUDO sh -c "ls '"$SCHED"'/schedule/*.conf 2>/dev/null"); do
   $SUDO grep -q "^USES_STANDING_RULES=1" "$c" && s=$((s + 1))
 done
 printf "SCHED_CONFS %s\nSCHED_FRAGMENT %s\nSCHED_STANDING %s\n" "$n" "$f" "$s"
-printf "ROOT_LIVENESS %s\n" "$(( $(count dexter-liveness.sh) + $($SUDO grep -rl dexter-liveness /etc/cron.d 2>/dev/null | wc -l) ))"
 printf "VAULT_MODE %s\n" "$(stat -c %04a /srv/ecosystem1-vault 2>/dev/null)"
 printf "DRAIN_CRON %s\n" "$($SUDO cat /etc/cron.d/vault-spool-drain 2>/dev/null | grep -c vault-spool-drain.sh)"
 printf "DRAIN_BIN %s\n" "$($SUDO test -x /usr/local/libexec/selfdev/vault-spool-drain.sh && echo 1 || echo 0)"
@@ -146,16 +145,6 @@ probe_vault_drain() {
     echo "UNARMED /etc/cron.d/vault-spool-drain fires every 5 minutes on $HOST and vault-spool-drain.sh is not installed under /usr/local/libexec/selfdev, so the row is a silent no-op"
   else
     echo "UNARMED nothing on $HOST drains /srv/vault-spool, so a deposit would queue and never land"
-  fi
-}
-
-probe_dexter_liveness() {
-  host_readable || { echo "BLIND cannot read $HOST's crontabs"; return; }
-  local n; n="$(fact ROOT_LIVENESS)"
-  if [ "${n:-0}" -ge 1 ]; then
-    echo "ARMED dexter-liveness.sh runs on a clock on $HOST, so a dexter outage is reported and not archaeologised"
-  else
-    echo "UNARMED dexter-liveness.sh is installed on $HOST and no crontab or /etc/cron.d row invokes it"
   fi
 }
 

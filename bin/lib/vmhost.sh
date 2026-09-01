@@ -196,7 +196,7 @@ vmhost_pause_clear() {  # <vm> -- remove the declaration outright: the pause cyc
   rm -f "$(vmhost_pause_file "$1")"
 }
 
-vmhost_pause_eval() {  # <until> <resumed_at> <now-iso8601> -- split out of vmhost_pause_status so dexter-liveness.sh's ssh-fetched fields and monkey-watch.sh's file-read fields share one comparison
+vmhost_pause_eval() {  # <until> <resumed_at> <now-iso8601> -- split out of vmhost_pause_status so ssh-fetched fields and monkey-watch.sh's file-read fields share one comparison
   local until="$1" resumed_at="$2" now="$3" now_s until_s
   [ -n "$until" ] || { printf 'NONE\n'; return 0; }
   if [ -n "$resumed_at" ]; then printf 'RESUMING %s\n' "$resumed_at"; return 0; fi

@@ -60,7 +60,6 @@ hooks/session-marker.sh	hooks/session-marker.sh
 # overwriting themselves mid-run. The install below is atomic anyway, but the
 # smallest correct set is the one that was actually going stale.
 libexec/ausculte-cadence.sh	bin/ausculte-cadence.sh
-libexec/dexter-liveness.sh	bin/dexter-liveness.sh
 libexec/decision-rot.sh	bin/decision-rot.sh
 libexec/unarmed.sh	bin/unarmed.sh
 # vault-spool-drain.sh is not a probe: it is the privileged half of `consigne`
