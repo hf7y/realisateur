@@ -182,12 +182,11 @@ PROP_LEAK_BOUND=7
 
 # --- LOCAL: never leaves this repo ------------------------------------------
 # "NEVER LEAVES THIS REPO" IS NOT "NEVER RUNS ANYWHERE ELSE", and reading it
-# that way cost the estate its only outside observer: #511's reachability scan
-# read .github/workflows/ and this repo's bin/, saw no caller for
-# monkey-watch.sh, and deleted it -- the caller was a crontab line on dexter
-# (bin/lib/cron-invoked.tsv). It stays LOCAL, nothing installs it on PATH, but
-# since #834 it travels IN THE BUILD at its own repo-shaped paths and dexter
-# runs it from the host pin rather than from a clone it pulled itself.
+# that way cost the estate its only outside observer: #511's scan read
+# .github/ and this bin/, saw no caller for monkey-watch.sh and deleted it --
+# the caller was a crontab line on dexter (bin/lib/cron-invoked.tsv). Still
+# LOCAL, never on PATH, but since #834 it travels IN THE BUILD at its own
+# repo-shaped paths and dexter runs it from the pin, not from a clone.
 # Before cutting anything in this list, ask what invokes it FROM SOMEWHERE ELSE.
 PROP_LOCAL_SCRIPTS="
 ausculte-cadence.sh

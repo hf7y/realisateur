@@ -69,13 +69,10 @@ libexec/unarmed.sh	bin/unarmed.sh
 # here staleness means deposits queue forever in a spool nobody can list.
 libexec/vault-spool-drain.sh	bin/vault-spool-drain.sh
 
-# THE OUTSIDE OBSERVER, and NOT a libexec/ row (#834). libexec/ is FLAT twice
-# over -- install-verb-build.sh --link and sync_host_tools both install by
-# basename -- and monkey-watch.sh is REPO-SHAPED: HERE is the repo root and it
-# reads eight files across bin/, bin/lib/ and share/. Flattened it sources
-# lib/zaxon.sh from a directory that does not exist, which is #826 verbatim.
-# So it rides the build TREE at its own paths, where HERE resolves as in a
-# checkout. Both executables need a not-a-verb.tsv row or the cut refuses them.
+# THE OUTSIDE OBSERVER, and NOT a libexec/ row (#834): libexec/ is FLAT twice
+# over (--link and sync_host_tools both install by basename) and this one is
+# REPO-SHAPED -- HERE is the repo root, eight files across three directories,
+# so flattened it sources lib/zaxon.sh from nowhere, which is #826 verbatim.
 bin/monkey-watch.sh	bin/monkey-watch.sh
 bin/monkey-status-collect.py	bin/monkey-status-collect.py
 share/monkey-status.html	share/monkey-status.html
