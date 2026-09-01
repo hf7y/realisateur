@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # unarmed.sh -- has the set of built-but-unarmed mechanisms GROWN? (#754)
-# RUNNER: no -- DEBT, not liveness, so it wants a weekly clock, not ausculte's.
+# RUNNER: bin/lib/cron-invoked.tsv -- weekly, root@monkey; DEBT, not liveness
 # GUARD-TEST: bin/tests/unarmed.test.sh -- offline behind UNARMED_SSH
 # GATE: none -- it reads a remote host's crontabs, never this tree
 set -uo pipefail
@@ -28,6 +28,9 @@ NOW="$(date -u -d "${UNARMED_TODAY:-now}" +%s 2>/dev/null)" || NOW="$(date -u +%
 while [ $# -gt 0 ]; do
   case "$1" in --check) ;; *) cli_die "unexpected argument: $1" ;; esac; shift
 done
+
+. "$HERE/lib/cron-lock.sh"
+cron_lock unarmed
 
 # ONE READING: six round trips to a host that wedges can disagree about one crontab.
 FACTS=''

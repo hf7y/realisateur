@@ -11,3 +11,4 @@
 monkey-watch.sh	dexter	*/10 * * * *	dexter crontab; its own --install-cadence
 selfdev-release-tick.sh	monkey, dexter	41 5 * * *	its own --install-cadence
 ausculte-cadence.sh	monkey	37 */4 * * *	its own --install-cadence
+unarmed.sh	monkey	19 7 * * 1	monkey root crontab, by hand -- tag realisateur:unarmed:CADENCE, no --install-cadence
