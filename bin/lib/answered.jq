@@ -59,9 +59,23 @@ def labelled: ((.labels // []) | any(.name == "answered"));
 def unsettled_labelled: ((.labels // []) | any(.name == "unsettled"));
 
 # ANSWERED-BY <owner>/<repo>#<n> (#568), extraction only -- see body-grammar.sh.
+# READS THE COMMENTS TOO, not just the body (2026-09-01). It was body-only,
+# and hf7y/senechal#527 filed its ANSWERED-BY in a COMMENT -- so the hop in
+# answered.sh's issue_answered() never fired and a settled question kept being
+# asked. That is the same shape as wtul#37 blocking nine days after being
+# settled on wtul#34, which is the failure #568 built ANSWERED-BY to end.
+#
+# Body first, then comments oldest-to-newest, and the LAST match wins: a newer
+# pointer supersedes an older one, and a pointer added in a comment supersedes
+# the body's. Accepted from any author, unlike `candidates` above -- this names
+# an issue a reader can go and check, so it is a citation, not an assertion
+# that someone answered. The `answered` label is typed by anyone for the same
+# reason.
 def answered_by:
-  (.body // "") as $b
-  | ($b | [scan("(?im)^\\s*ANSWERED-BY\\s+(\\S+/\\S+#[0-9]+)")]) as $m
+  ( [ (.body // "") ]
+    + ( [ .comments[]? ] | sort_by(.createdAt) | map(.body // "") )
+    | join("\n") ) as $all
+  | ($all | [scan("(?im)^\\s*ANSWERED-BY\\s+(\\S+/\\S+#[0-9]+)")]) as $m
   | if ($m | length) > 0 then $m[-1][0] else null end;
 
 def verdict:
