@@ -2,11 +2,11 @@
 # carry-drift.test.sh -- every file bin/lib/carries.tsv says `bashified`
 # carries from `main` is still byte-identical to its source.
 #
-# HERMETIC. Reads this checkout's own git refs only -- no ssh, no sudo, no
-# read of any live host. `origin/bashified` must be resolvable; tests.yml
-# fetches it before this suite runs, and a fetch is attempted here too so a
-# local run (or a shallower CI checkout) is BLIND, not silently green,
-# instead of failing to find any carried pair.
+# HERMETIC. Reads this checkout's own git refs only -- no sudo, no read of
+# any live host, and the one `git fetch` below cannot prompt or block on an
+# ssh credential. `origin/bashified` must be resolvable; tests.yml fetches
+# it before this suite runs, and a fetch is attempted here too so a local
+# run (or a shallower CI checkout) is BLIND, not silently green.
 #
 # THE MAIN SIDE IS origin/main. It was HEAD until 2026-08-23; see the block
 # above the REF_MAIN resolution below for what that cost and why it moved.
@@ -32,7 +32,8 @@ depth=""
 [ "$(git -C "$REPO" rev-parse --is-shallow-repository 2>/dev/null)" = true ] && depth=--depth=1
 
 REF_BASH=""
-git -C "$REPO" fetch -q $depth origin bashified:refs/remotes/origin/bashified 2>/dev/null || true
+GIT_TERMINAL_PROMPT=0 SSH_ASKPASS_REQUIRE=never GIT_ASKPASS=/bin/true \
+  git -C "$REPO" fetch -q $depth origin bashified:refs/remotes/origin/bashified 2>/dev/null || true
 if git -C "$REPO" rev-parse --verify -q "origin/bashified^{commit}" >/dev/null 2>&1; then
   REF_BASH="origin/bashified"
 elif git -C "$REPO" rev-parse --verify -q "bashified^{commit}" >/dev/null 2>&1; then
@@ -67,7 +68,8 @@ fi
 # never shipped, and the honest answer -- not yet -- was a red required check.
 # Found by checking #571's log instead of assuming the first fix covered it.
 REF_MAIN=""
-git -C "$REPO" fetch -q $depth origin main:refs/remotes/origin/main 2>/dev/null || true
+GIT_TERMINAL_PROMPT=0 SSH_ASKPASS_REQUIRE=never GIT_ASKPASS=/bin/true \
+  git -C "$REPO" fetch -q $depth origin main:refs/remotes/origin/main 2>/dev/null || true
 if git -C "$REPO" rev-parse --verify -q "origin/main^{commit}" >/dev/null 2>&1; then
   REF_MAIN="origin/main"
 elif git -C "$REPO" rev-parse --verify -q "main^{commit}" >/dev/null 2>&1; then
