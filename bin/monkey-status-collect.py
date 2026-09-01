@@ -2,15 +2,13 @@
 """Collect self-dev status for every account on the self-dev host.
 
 RUN ON monkey, AS ROOT:  sudo -n python3 monkey-status-collect.py
-Read-only: reads /etc/passwd, each account's crontab, its scheduler run
-ledger, and its release-tick status file. Writes nothing, dispatches
-nothing. Prints one JSON document on stdout -- the payload published to
-https://hf7y.com/monkey/status.json by bin/monkey-watch.sh, which feeds this
+Read-only: reads /etc/passwd, each account's crontab, git config and git log,
+its scheduler run ledger, and its release-tick status file. Writes nothing,
+dispatches nothing. Prints one JSON document on stdout -- the payload published
+to https://hf7y.com/monkey/status.json by bin/monkey-watch.sh, which feeds this
 file to monkey's python3 over stdin so the version that runs is the version in
-the checkout. It runs FROM DEXTER on purpose: publish-monkey-status.sh did the
-same job from mandark and refused to publish when its ssh collection failed, so
-the page showed the last healthy world through the 2026-08-14 outage (#274).
-That script was deleted 2026-08-22; an empty accounts[] IS the report.
+the checkout. It runs FROM DEXTER on purpose: an empty accounts[] IS the
+report, where a publisher refusing on ssh failure hides the outage (#274).
 
 Every field is a probe of live state at generation time. A field this
 script cannot read is null, never a guess: a missing ledger means the
@@ -23,6 +21,7 @@ CADENCE_H = 24                       # this page is republished daily
 GRACE_H = 4
 RUNS_KEPT = 5
 OUTSIDE_MAX = 20                     # paths shown before the tail is counted
+IDENT_MAX = 5                        # offending commits listed per clone
 TICK_TAG = "realisateur:selfdev-release:TICK"
 RUNNER_TAG = "scheduler:scheduler-paced-runner:RUNNER"
 BOOTSTRAP_CLONES = {"scheduler"}  # land-selfdev.sh clones scheduler into EVERY account, so it is expected. realisateur is NOT: #134 stopped minting it per account, so a realisateur clone is now residue and must read as foreign. containment() keeps `{user, *BOOTSTRAP_CLONES}`, so realisateur@monkey's own checkout stays expected.
@@ -187,6 +186,42 @@ def containment(user, uid):
     return out
 
 
+def identity_drift(user):
+    """Not committing as itself (realisateur#841): a local user.email that is
+    not the account's, or an unpushed commit whose COMMITTER is neither."""
+    home = f"{HOME_ROOT}/{user}"
+    rc, mail = sh_rc("git", "config", "--file", f"{home}/.gitconfig",
+                     "--get", "user.email")
+    mail = mail.strip()
+    if rc != 0 or not mail:
+        return None
+    out = {"declared": mail, "clones": []}
+    projects = f"{home}/Documents/Projects"
+    for name in sorted(os.listdir(projects)) if os.path.isdir(projects) else []:
+        d = os.path.join(projects, name)
+        if not os.path.exists(os.path.join(d, ".git")):
+            continue
+        local = sh("git", "-c", "safe.directory=*", "-C", d,
+                   "config", "--local", "--get", "user.email").strip()
+        rc, log = sh_rc("git", "-c", "safe.directory=*", "-C", d, "log",
+                        "--branches", "--not", "--remotes",
+                        "--format=%h\x1f%cn\x1f%ce\x1f%cI")
+        if rc != 0:
+            return None                       # could not read: BLIND, not clean
+        known = {mail, local} - {""}
+        bad = [f.split("\x1f") for f in log.splitlines() if f.strip()]
+        bad = [f for f in bad if len(f) == 4 and f[2] not in known]
+        if not bad and (not local or local == mail):
+            continue
+        out["clones"].append({
+            "path": d,
+            "local_identity": local if local and local != mail else None,
+            "count": len(bad),
+            "commits": [f"{h} {n} <{e}> {t}" for h, n, e, t in bad[:IDENT_MAX]],
+        })
+    return out
+
+
 def credentials(user):
     """The permission mode of each credential this account reads, or null
     where it is absent. An absent credential and a world-readable one are
@@ -209,7 +244,7 @@ def credentials(user):
 if __name__ == "__main__":            # importable per function; `python3 - <file` still enters
     now = time.time()
     out = {
-        "schema": 2,
+        "schema": 3,
         "host": os.uname().nodename,
         "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
         "valid_until": time.strftime("%Y-%m-%dT%H:%M:%SZ",
@@ -245,6 +280,7 @@ if __name__ == "__main__":            # importable per function; `python3 - <fil
             "runs": runs,
             "last_run": runs[0] if runs else None,
             "containment": containment(u, pwd.getpwnam(u).pw_uid),
+            "identity": identity_drift(u),
             "credentials": credentials(u),
         })
 
