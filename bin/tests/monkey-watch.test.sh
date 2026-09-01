@@ -124,6 +124,20 @@ if command -v node >/dev/null 2>&1; then
   case "$got" in *UNWATCHED*) ok "a watcher past its own valid_until reads UNWATCHED, not OK" ;;
     *) bad "a stale watcher reads UNWATCHED" "got [$got] -- a dead dexter would show its last verdict as current" ;; esac
 
+  W_OK="\"watcher\":{$FRESH,\"verdict\":\"OK\",\"why\":\"fine\",\"vm_state\":\"running\",\"sshd\":\"answering\",\"disk_home\":\"internal\"}"
+  A_OK='"armed":true,"dispatch_line":true,"last_run":{},"containment":{"foreign_clones":[],"outside_home":[],"sudoers":[]},"credentials":{"k":"0640"}'
+  FORGED="{\"accounts\":[{\"account\":\"chezz\",$A_OK,\"identity\":{\"declared\":\"chezz@selfdev.invalid\",\"clones\":[{\"path\":\"/home/chezz/Documents/Projects/chezz\",\"local_identity\":null,\"count\":2,\"commits\":[\"ca6fb2c hf7y <dangerpine@gmail.com> 2026-07-30\"]}]}}],$W_OK}"
+  got="$(render "$FORGED")"
+  case "$got" in bad\ *NOT\ COMMITTING\ AS\ ITSELF*) ok "#841 an account committing under a human's identity headlines RED" ;;
+    *) bad "a forged-identity account headlines" "got [$got] -- the collector reported it and the page ate it" ;; esac
+  got="$(itemsrender "$FORGED")"
+  has "and the finding names the offending identity" "$got" "dangerpine@gmail.com"
+
+  IDBLIND="{\"accounts\":[{\"account\":\"chezz\",$A_OK,\"identity\":null}],$W_OK}"
+  got="$(render "$IDBLIND")"
+  case "$got" in *UNVERIFIED*) ok "an identity the probe could not read is UNVERIFIED, never a green ARMED" ;;
+    *) bad "identity BLIND is not counted as clean" "got [$got]" ;; esac
+
   got="$(render '{"accounts":[],"generated":"2999-01-01T00:00:00Z"}')"
   case "$got" in *UNWATCHED*) ok "a document with no watcher block cannot report health" ;;
     *) bad "a watcher-less document reads UNWATCHED" "got [$got]" ;; esac
