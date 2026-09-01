@@ -53,7 +53,13 @@ def labelled: ((.labels // []) | any(.name == "answered"));
 # predicate cannot. Checked before the comment branch, same precedence
 # `answered` already has, so it wins over "there is a reply" rather than
 # losing to it.
-def unsettled_labelled: ((.labels // []) | any(.name == "unsettled"));
+# IT MUST NAME WHAT REMAINS, as `UNSETTLED: <what is still open>` in the body;
+# without it the override does not fire and the reply counts. Its verdict is
+# `unanswered`, which decision-rot cannot count, so a bare label deleted
+# baudin#29 from every survey for 13 days and re-asked an answered question.
+def unsettled_labelled:
+  ((.labels // []) | any(.name == "unsettled"))
+  and ((.body // "") | test("(?im)^[ \\t]*UNSETTLED:[ \\t]*\\S"));
 
 # ANSWERED-BY <owner>/<repo>#<n> (#568), extraction only -- see body-grammar.sh.
 def answered_by:
@@ -68,7 +74,7 @@ def verdict:
   | ($i | candidates | latest) as $a
   | if ($i | unsettled_labelled) then
       { verdict: "unanswered", at: null,
-        why: "the `unsettled` label -- the owner replied and it did not settle the question" }
+        why: "the `unsettled` label and the `UNSETTLED:` residual it names -- the owner replied and it did not settle that" }
     elif $a != null and ($a.createdAt[0:10] >= $era) then
       { verdict: "answered",   at: $a.createdAt,
         why: "an unstamped or relayed comment" }
