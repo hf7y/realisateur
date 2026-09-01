@@ -54,10 +54,9 @@ def labelled: ((.labels // []) | any(.name == "answered"));
 # `answered` already has, so it wins over "there is a reply" rather than
 # losing to it.
 # IT MUST NAME WHAT REMAINS, as `UNSETTLED: <what is still open>` in the body;
-# without that line the override does not fire and the reply counts. It is the
-# only override an AGENT applies to a HUMAN, its verdict is `unanswered`, and
-# decision-rot counts ANSWERED -- so a bare label deletes the answer from every
-# survey. baudin#29 sat 13 days that way, re-asking a question already answered.
+# without it the override does not fire and the reply counts. Its verdict is
+# `unanswered`, which decision-rot cannot count, so a bare label deleted
+# baudin#29 from every survey for 13 days and re-asked an answered question.
 def unsettled_labelled:
   ((.labels // []) | any(.name == "unsettled"))
   and ((.body // "") | test("(?im)^[ \\t]*UNSETTLED:[ \\t]*\\S"));
