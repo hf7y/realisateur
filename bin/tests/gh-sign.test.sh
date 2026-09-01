@@ -22,6 +22,7 @@ mkdir -p "$TMP/stub"
 cat > "$TMP/stub/gh" <<'STUB'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$GH_LOG"
+printf '%s\n' "${GH_TOKEN:-}" >> "${GH_TOKEN_LOG:-/dev/null}"
 : > "$GH_LAST_BODY"
 for a in "$@"; do
   case "$a" in
@@ -455,6 +456,36 @@ check "the --jq=expr spelling works too" "$out" "432"
 out="$(GH_COMMENTS_JSON='[{"body":"an answer"}]' rd api repos/hf7y/scheduler/issues/432/comments 2>"$TMP/e")"
 case "$(cat "$TMP/e")" in *"NOT shown"*) bad "warned while reading the comments" "$out" ;; *) ok "reading the comments themselves does not warn" ;; esac
 contains "and returns them" "$out" "an answer"
+
+mint_ok="$TMP/app-ok.sh";  printf '#!/usr/bin/env bash\n[ "$1" = --token ] && echo ghs_faketoken\n' > "$mint_ok"
+mint_bad="$TMP/app-bad.sh"; printf '#!/usr/bin/env bash\nexit 5\n' > "$mint_bad"
+chmod +x "$mint_ok" "$mint_bad"
+asbot() { : > "$TMP/tok.log"; GH_TOKEN_LOG="$TMP/tok.log" GH_SIGN_APP_TOKEN_CMD="$1" run "${@:2}" >/dev/null 2>&1; tail -1 "$TMP/tok.log"; }
+
+reset; check "an agent comment carries the App token, not the shared one" \
+  "$(asbot "$mint_ok" issue comment 7 --repo hf7y/widget --body hi)" "ghs_faketoken"
+reset; check "a pr comment too" \
+  "$(asbot "$mint_ok" pr comment 7 --repo hf7y/widget --body hi)" "ghs_faketoken"
+reset; check "and the same write by \`gh api\`, which is how one read as Zach's on 2026-08-21" \
+  "$(asbot "$mint_ok" api repos/hf7y/widget/issues/7/comments -f body=hi)" "ghs_faketoken"
+
+reset; check "pr create is NOT rerouted" \
+  "$(asbot "$mint_ok" pr create --repo hf7y/widget --title t --body 'DECISION: @hf7y -- x
+
+DEFAULT-AFTER 7d: y
+
+<!-- DEFERRED -->
+- none
+<!-- /DEFERRED -->
+
+<!-- DELIVERS -->
+- path:x
+<!-- /DELIVERS -->')" ""
+
+reset; check "a mint that fails leaves the write alone" \
+  "$(asbot "$mint_bad" issue comment 7 --repo hf7y/widget --body hi)" ""
+reset; check "so does an App command that is not there at all" \
+  "$(asbot "$TMP/nope.sh" issue comment 7 --repo hf7y/widget --body hi)" ""
 
 echo
 summary

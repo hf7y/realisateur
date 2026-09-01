@@ -29,6 +29,8 @@ MARKER='<!-- agent:'
 # 30 days (realisateur#603). A LITERAL, not a read of status.json: a network
 # read in front of every `gh` call is a new failure mode. The env is the seam.
 STALE_DAYS="${GH_SIGN_STALE_DAYS:-45}"
+
+APP_TOKEN_CMD="${GH_SIGN_APP_TOKEN_CMD:-/usr/local/libexec/selfdev/selfdev-gh-app.sh}"
 BUILD_ROOTS="${GH_SIGN_BUILD_ROOTS:-/usr/local/share/verb-builds ${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"
 
 # BUILT-INS ONLY (`-ef`, `printf %(...)T`): this runs in front of every gh call
@@ -270,8 +272,7 @@ case "${1:-} ${2:-}" in
   'issue comment'|'issue create'|'issue close'|'pr comment'|'pr create') signable=1 ;;
 esac
 
-# `gh api` IS THE SAME WRITE BY ANOTHER ROUTE: a comment posted that way came
-# out UNSTAMPED and decision-rot read it as Zach's (2026-08-21).
+# `gh api` IS THE SAME WRITE BY ANOTHER ROUTE, unstamped and read as Zach's (2026-08-21).
 api_comment=0
 if [ "${1:-}" = api ]; then
   for _a in "$@"; do
@@ -324,6 +325,17 @@ fi
 # A human's write passes through whole, unsigned AND ungraded: the grammar is
 # a contract between agents, not a rule about how its author may talk.
 if [ "$signable" -ne 1 ] || human_at_keyboard; then exec "$GH" "$@"; fi
+
+# WHO WROTE THIS, ANSWERED BY GITHUB (#860): the stamp below is the discriminator and FAILS OPEN; `<slug>[bot]` is a login the owner filter already excludes. COMMENTS ONLY -- see the suite.
+case "${1:-} ${2:-}" in
+  'issue comment'|'pr comment') _as_bot=1 ;;
+  *) [ "$api_comment" -eq 1 ] && _as_bot=1 || _as_bot=0 ;;
+esac
+if [ "$_as_bot" -eq 1 ] && [ -x "$APP_TOKEN_CMD" ]; then
+  if _tok="$("$APP_TOKEN_CMD" --token 2>/dev/null)" && [ -n "$_tok" ]; then
+    export GH_TOKEN="$_tok"
+  fi
+fi
 
 # Announced HERE, not on every call: four lines in front of every `gh pr view`
 # is how a warning stops being read.
