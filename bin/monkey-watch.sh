@@ -46,11 +46,9 @@ APPLY=0
 
 die() { printf '%s: FAIL: %s\n' "$CLI_NAME" "$*" >&2; exit 2; }
 
-# THE CADENCE NAMES THE HOST PIN, NOT THIS FILE'S LOCATION (#834). PROP_HOST_PIN,
-# never $BASH_SOURCE: `readlink -f` on a copy under the pin resolves THROUGH the
-# symlink to a dated build and would freeze the crontab on that build forever.
-# The `git pull` it replaces took the outer `flock` with it -- that wrapped the
-# pull and was never `cron_lock` below in a second spelling (#511, senechal#550).
+# THE CADENCE NAMES THE HOST PIN (#834), never $BASH_SOURCE: `readlink -f` on a
+# copy under the pin resolves THROUGH it to a dated build and freezes the row on
+# that build. The outer `flock` went with the `git pull` it wrapped (senechal#550).
 CRON_TAG='# realisateur:monkey-watch:WATCH'
 CRON_SPEC="${MONKEY_WATCH_CRON_SPEC:-*/10 * * * *}"
 if [ "${1:-}" = "--install-cadence" ]; then
