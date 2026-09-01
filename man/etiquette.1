@@ -38,7 +38,12 @@ Line 1 of the issue body declares
 .BR DECISION: .
 Never typed by hand \(em
 .B --apply
-writes it, and editing line 1 is how you change it. This is the same
+writes it, reading
+.B bin/lib/body-grammar.sh
+for the declaration and
+.B bin/lib/answered.sh
+for whether anyone has answered, and editing line 1 is how you change it.
+Typed by hand it was wrong three times out of three. This is the same
 declaration
 .BR gh-sign (1)
 enforces when the issue is created, so the label is a view of the body rather

@@ -3,17 +3,10 @@
 # and the reconciler that makes a repo match it.
 #
 # KIND: verb
-# RUNNER: .github/workflows/etiquette.yml (`--all --apply`, daily). Also run by
-#   hand in a triage pass or ahead of /ideate and /cloture.
+# RUNNER: .github/workflows/etiquette.yml (`--all --apply`, daily)
 # GUARD-TEST: bin/tests/etiquette.test.sh
 # GATE: none -- reads live issue trackers; writes only with --apply
-# THE TEXT LIVES IN bin/lib/labels.tsv, NOT HERE (#397): a grammar copied into
-# 24 repos is 24 grammars. `needs-human` is DERIVED -- grammar_declaration()
-# reads line 1, issue_answered_json() reads the comments. Typed, it was wrong 3 of 3.
-#
 # TRAP: line 1 declaring NEITHER is UNDECLARED, never "no decision".
-# TRAP: a label absent from labels.tsv is left alone -- a floor, not a
-#   whitelist; deleting one erases a repo's own taxonomy.
 set -uo pipefail
 
 CLI_NAME='etiquette'
@@ -63,8 +56,6 @@ row() { printf '  %-11s %-6s %s\n' "$1" "#$2" "${3:-}"; }
 
 [ "$PATH_ONLY" = 1 ] && { printf '%s\n' "$GRAMMAR_FILE"; exit 0; }
 
-# A GRAMMAR THAT IS NOT THERE IS BLIND, NOT AN EMPTY ONE: reporting a repo
-# compliant with rules that failed to load is the exit-0 no-op.
 [ -r "$GRAMMAR_FILE" ] || {
   printf '%s: BLIND -- no label grammar at %s\n' "$CLI_NAME" "$GRAMMAR_FILE" >&2
   printf '%s: that is "I could not read the rules", not "there are no rules".\n' "$CLI_NAME" >&2
@@ -78,19 +69,8 @@ mapfile -t GRAMMAR < <(grep -v '^#' "$GRAMMAR_FILE" | grep -v '^[[:space:]]*$')
 
 g_field() { printf '%s' "$1" | cut -f"$2"; }
 
-# --- --all: the ONE trigger, over EVERY repo ----------------------------
-# The derivation is this file and nothing else; scheduler's
-# reconcile_own_labels() already shells out to it. What was missing was a
-# caller that is not the per-account dispatch -- that one grades the
-# DISPATCHING repo only, so a repo whose schedule/ROSTER row is `parked` (all
-# 18 of them on 2026-08-31) could not acquire the label at all. Same set
-# decision-rot.sh sweeps: bin/lib/roster-set.sh.
-#
-# RE-INVOKED PER REPO rather than looped inline, so every `exit 6` below stays
-# a verdict about ONE tracker instead of ending the sweep at the first
-# unreadable one.
+# --all -- etiquette(1). PER REPO, not looped inline: `exit 6` ends a repo, not the sweep.
 if [ "$ALL" = 1 ]; then
-  # shellcheck source=bin/lib/roster-set.sh
   . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/roster-set.sh"
   if [ "${ROSTER_SET_LIB:-}" != 1 ] || [ "${#ROSTER[@]}" -eq 0 ]; then
     printf '%s: BLIND -- lib/roster-set.sh did not load, so this swept NO repositories. Zero findings here is the absence of a reading.\n' \
@@ -102,8 +82,7 @@ if [ "$ALL" = 1 ]; then
   for p in "${ROSTER[@]}"; do
     if [ "$APPLY" = 1 ]; then bash "$SELF" "$ROSTER_OWNER/$p" --apply
     else                     bash "$SELF" "$ROSTER_OWNER/$p"; fi
-    # BLIND outranks findings outranks clean: one tracker nobody could read
-    # must never let the sweep report the estate compliant.
+    # BLIND outranks findings outranks clean.
     case $? in 6) worst=6 ;; 2) exit 2 ;; 1) [ "$worst" = 0 ] && worst=1 ;; esac
   done
   say "etiquette --all: swept ${#ROSTER[@]} repo(s)."

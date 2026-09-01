@@ -1,16 +1,6 @@
-# etiquette.yml -- the ONE trigger that derives `needs-human`, estate-wide.
-#
-# The label is a VIEW of line 1 of the body, derived by bin/etiquette.sh and
-# nowhere else. Until this file, the only automatic caller was scheduler's
-# per-account dispatch, which grades the DISPATCHING repo only -- so on
-# 2026-08-31, with all 18 schedule/ROSTER rows `parked`, nothing derived the
-# label anywhere and ten open issues across four repos declared `DECISION:`
-# and carried none. They were invisible to `--label needs-human` and to the
-# tempo brake that subtracts it.
-#
-# HERE AND NOT A CRONTAB: this fires whether or not an account is armed and
-# whether or not monkey or dexter is up, which is exactly the coupling that
-# failed. realisateur is public, so the minutes are free.
+# etiquette.yml -- the ONE trigger that derives `needs-human`, over EVERY repo
+# in bin/lib/roster-set.sh. Why here and not scheduler's dispatch, and why this
+# fails on exit 6 only: etiquette(1), `--all`.
 
 name: etiquette
 
@@ -31,15 +21,9 @@ jobs:
 
       - name: Reconcile the derived label in every rostered repo
         env:
-          # GITHUB_TOKEN is scoped to THIS repo and the sweep reads 26
-          # trackers, so the cross-repo secret is read first when it exists
-          # (#312/#313). Without it the rest read as unreadable and the run
-          # exits 6 -- loudly BLIND, never a clean estate.
+          # GITHUB_TOKEN is scoped to THIS repo and the sweep reads 26 (#313).
           GH_TOKEN: ${{ secrets.ECOSYSTEM_ISSUES_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           rc=0
           bash bin/etiquette.sh --all --apply || rc=$?
-          # 1 is ORDINARY after --apply: an UNDECLARED body is a finding no
-          # label can fix, and a run that is red every day is one nobody
-          # reads. 6 is "could not look", which is what this exists to catch.
           if [ "$rc" = 6 ]; then exit 1; fi

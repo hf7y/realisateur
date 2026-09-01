@@ -24,8 +24,7 @@ if [ "$1" = "label" ] && [ "$2" = "list" ]; then
   [ -n "${GH_LABEL_FAIL:-}" ] && { echo "$GH_LABEL_FAIL" >&2; exit 1; }
   cat "${LABELS_FIXTURE:-/dev/null}"; exit 0
 fi
-# Which tracker was this? $SEEN records the sweep's reach; $GH_FAIL_REPO makes
-# exactly one of them unreadable.
+# $SEEN records the sweep's reach; $GH_FAIL_REPO makes one tracker unreadable.
 repo=''; prev=''
 for a in "$@"; do [ "$prev" = "--repo" ] && { repo="$a"; break; }; prev="$a"; done
 [ -n "${SEEN:-}" ] && printf '%s\n' "$repo" >> "$SEEN"
@@ -236,9 +235,6 @@ printf 'needs-a-person\tOnly a human.\ndeferred\tParked.\ninvented-here\tfixture
 hasnt "J1 a label absent from the grammar is never deleted" "$(cat "$T/edits")" "label delete"
 hasnt "J2 ...and is not reported as a finding either"       "$out" "somebodys-own-label"
 
-# --- K. one trigger, every repo (2026-08-31) --------------------------------
-# The label was derived only where something dispatched, and nothing was
-# dispatching. `--all` is the caller that does not depend on an armed account.
 section "K. --all sweeps every rostered repo, not just the dispatching one"
 printf '# fixture grammar\nneeds-human\tB60205\tderived:decision\tOnly a human can move this.\n' > "$T/grammar.tsv"
 printf 'needs-human\tOnly a human can move this.\n' > "$T/labels.txt"
@@ -252,7 +248,6 @@ run_all() { EDITS="$T/edits" FIXTURE="$T/f.json" LABELS_FIXTURE="$T/labels.txt" 
 rc "K1 --all and a named repo is a usage error, not a silent sweep of one" 2 \
    "$(run_all o/r >/dev/null 2>&1; echo $?)"
 
-# shellcheck source=bin/lib/roster-set.sh
 . "$(cd "$(dirname "$0")/.." && pwd)/lib/roster-set.sh"
 : > "$T/edits"; : > "$T/seen"; run_all --apply >/dev/null 2>&1
 want=''; for _p in "${ROSTER[@]}"; do want="$want$ROSTER_OWNER/$_p"$'\n'; done
