@@ -100,6 +100,19 @@ eq "realisateur IS foreign now that #134 stopped minting it per account" \
 eq "scheduler is never reported foreign" \
   "$(printf '%s' "$out" | jq '[.foreign_clones[] | select(.path | endswith("/Documents/Projects/scheduler"))] | length')" "0"
 
+mkdir -p "$T/homes/acct2/Documents/Projects/scheduler/schedule" \
+         "$T/homes/acct2/Documents/Projects/renamed"
+mkrepo "$T/homes/acct2/Documents/Projects/renamed" "https://github.com/hf7y/renamed-1234.git"
+printf 'REPO_URL="https://github.com/hf7y/renamed-1234.git"\n' \
+  > "$T/homes/acct2/Documents/Projects/scheduler/schedule/renamed.conf"
+out="$(PATH="$T/stub:$PATH" SELFDEV_HOME_ROOT="$T/homes" SELFDEV_SUDOERS_D="$T/sudoers.d" \
+  PYTHONDONTWRITEBYTECODE=1 FIND_RC=0 FIND_OUT="" \
+  python3 "$T/probe2.py" "$COLLECTOR")"
+eq "a clone whose conf DECLARES its differently-named repo is not foreign" \
+  "$(printf '%s' "$out" | jq '[.foreign_clones[] | select(.path | endswith("/Documents/Projects/renamed"))] | length')" "0"
+eq "and the genuinely stray clone is still reported" \
+  "$(printf '%s' "$out" | jq '[.foreign_clones[] | select(.path | endswith("/Documents/Projects/stray"))] | length')" "1"
+
 section "C. release_tick: a retired clock is an absence, not a reading"
 [ -s "$STATUS" ] && ok "the fixture account HAS a status file to be tempted by" \
   || bad "fixture status file" "missing, so the case below proves nothing"
