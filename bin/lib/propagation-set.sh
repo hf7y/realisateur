@@ -182,13 +182,10 @@ PROP_LEAK_BOUND=7
 
 # --- LOCAL: never leaves this repo ------------------------------------------
 # "NEVER LEAVES THIS REPO" IS NOT "NEVER RUNS ANYWHERE ELSE", and reading it
-# that way cost the estate its only outside observer. A LOCAL script reaches a
-# machine by a THIRD path, neither verb build nor libexec: a plain checkout the
-# host pulls itself. dexter's crontab does exactly that every ten minutes --
-#   cd $HOME/realisateur && git pull --ff-only && bin/monkey-watch.sh --apply
-# -- so monkey-watch.sh is LOCAL by channel and load-bearing by function.
-# #511's reachability scan read .github/workflows/ and this repo's bin/, saw no
-# caller, and deleted it; the caller was a crontab line on another machine.
+# that way cost the estate its only outside observer: #511's scan saw no caller
+# for monkey-watch.sh and deleted it -- its caller is a crontab line on dexter
+# (bin/lib/cron-invoked.tsv). Still LOCAL and never on PATH, but since #834 it
+# travels IN THE BUILD and dexter runs it from the pin, not from a clone.
 # Before cutting anything in this list, ask what invokes it FROM SOMEWHERE ELSE.
 PROP_LOCAL_SCRIPTS="
 ausculte-cadence.sh
