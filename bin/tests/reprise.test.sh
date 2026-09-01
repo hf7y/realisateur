@@ -19,6 +19,14 @@ T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/bin"
 cat > "$T/bin/gh" <<'STUB'
 #!/usr/bin/env bash
+if [ "$1 $2" = "pr create" ]; then
+  prev=''
+  for a in "$@"; do
+    [ "$prev" = --body ] && [ -n "${GH_PR_CREATE_BODY:-}" ] && printf '%s' "$a" > "$GH_PR_CREATE_BODY"
+    prev="$a"
+  done
+  exit 0
+fi
 case "$*" in
   *"/pulls/"*)     printf '%s\n' "${STUB_MERGED:-false}" ;;
   *"/contents/"*)  [ "${STUB_PRESENT:-no}" = yes ] || exit 1; printf 'abc123\n' ;;
@@ -73,5 +81,23 @@ printf '# fixture\nbin/moved.sh\thf7y/receiver\t42\n' > "$TABLE"
 OUT="$(run true yes)"
 has "it refuses the malformed row"          "$OUT" "names no destination"
 eq  "and exits 1"                           "$(rcof true yes)" "1"
+
+section "F. --apply's own PR body satisfies the ledger grammar it will be graded against"
+git -C "$FIX" init -q -b main  # a body missing DELIVERS is what gh-sign refuses -- the collection commit landed with no PR ever opened for it, silently
+git -C "$FIX" config user.email t@test.invalid
+git -C "$FIX" config user.name test
+printf 'live\n' > "$FIX/bin/moved.sh"
+printf '# fixture\nbin/moved.sh\thf7y/receiver\t42\tbin/moved.sh\n' > "$TABLE"
+git -C "$FIX" add -A && git -C "$FIX" commit -q -m fixture
+git init -q --bare "$T/origin.git"
+git -C "$FIX" remote add origin "$T/origin.git"
+git -C "$FIX" push -q -u origin main
+git -C "$FIX" fetch -q origin
+BODYFILE="$T/pr-body"; rm -f "$BODYFILE"
+STUB_MERGED=true STUB_PRESENT=yes GH_PR_CREATE_BODY="$BODYFILE" bash "$REPRISE" --apply >/dev/null 2>&1
+[ -f "$BODYFILE" ] && ok "F1 --apply calls gh pr create" || bad "F1 --apply calls gh pr create" "no body was captured"
+BODY="$(cat "$BODYFILE" 2>/dev/null)"
+has "F2 the body carries a DEFERRED block"  "$BODY" "<!-- DEFERRED -->"
+has "F3 the body carries a DELIVERS block"  "$BODY" "<!-- DELIVERS -->"
 
 summary
