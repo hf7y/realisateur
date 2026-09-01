@@ -8,19 +8,6 @@
 # local run (or a shallower CI checkout) is BLIND, not silently green,
 # instead of failing to find any carried pair.
 #
-# WHY THIS EXISTS. realisateur#511 deleted bin/carry-drift.sh (230 lines, six
-# sampled guards found to produce zero findings) and moved the CARRIES table
-# it held into bin/lib/carries.tsv -- but carried nothing forward that
-# actually compared the two sides. #516: two carries the same day were done
-# by hand, and this run found a THIRD, worse case while building this
-# witness -- bin/lib/body-grammar.sh on bashified carried a change from
-# realisateur#510 before that PR ever merged, and #510's premise (extending
-# the delivery-audit.sh it depended on) was deleted by #511 twenty-five
-# minutes later. bashified was accepting a claim kind main never shipped a
-# verifier for. Modeled on scheduler's tests/carry-drift-witness.sh -- one
-# assertion per carried file, no CLI, no ratchet -- not a resurrection of the
-# deleted script.
-#
 # THE MAIN SIDE IS origin/main. It was HEAD until 2026-08-23; see the block
 # above the REF_MAIN resolution below for what that cost and why it moved.
 #

@@ -27,27 +27,14 @@ TESTS="$REPO/bin/tests"
 # --- the ratchets -----------------------------------------------------------
 # Measured 2026-08-07 AFTER the retirement pass in this branch. Each may be
 # lowered. Raising one is the change this file exists to make visible.
-# 5 -> 6 on 2026-08-18 (#301): bin/org-migration-audit.sh. Deliberately
-# operator-only, not a gap to close -- it is decision support for a one-time
-# human call ("is an org migration worth the cost"), and an automatic runner
-# would mean something auto-decided that. claim-drift.sh and the four beside
-# it are operator-run for the same reason: a person reads the output.
 GUARD_OPERATOR_BOUND="${GUARD_OPERATOR_BOUND:-7}"   # no automatic runner; 6->7 #437
 GUARD_UNTESTED_BOUND="${GUARD_UNTESTED_BOUND:-4}"   # no dedicated suite
-# 7 -> 9 on 2026-08-15 (#294, #304): bin/directive-prose.sh and
-# bin/rot-ratchet.sh. Both are `GATE: none` for reasons already accepted here
-# -- a diff gate cannot form a merge-base in a fixture repo (markdown-cost.sh),
-# and an estate survey needs the live issue trackers (thermostat-wiring.sh).
 GUARD_UNGATED_BOUND="${GUARD_UNGATED_BOUND:-11}"    # not safely executable here; 10->11 #437
 
-# UNDECLARED IS ZERO, and it earned the right to be. It was briefly 1, for
-# bin/closeout-lint.sh, which was being rewritten concurrently on
-# hf7y/realisateur#99 -- counting it was the honest move while another branch
 GUARD_UNDECLARED_BOUND="${GUARD_UNDECLARED_BOUND:-0}"
 
-# How far into a file a declaration may be. Same reasoning as
-# suite-docs-lint.sh: it is a HEADER contract; a reader must meet it before
-# the code.
+# How far into a file a declaration may be: it is a HEADER contract, and a
+# reader must meet it before the code.
 HEAD_LINES=90
 
 hdr() { head -n "$HEAD_LINES" "$1" | sed -n "s/^#[[:space:]]*$2:[[:space:]]*//p" | head -1; }
@@ -94,7 +81,6 @@ else
 fi
 
 # A0 -- the rename dodge, closed BEHAVIOURALLY rather than by prose.
-# The first draft of this check read the header for words like "refuses" and
 for f in "$BIN"/*.sh; do
   [ -e "$f" ] || continue
   n="$(basename "$f")"
@@ -196,8 +182,8 @@ chmod +x "$WORK/stub/gh" "$WORK/stub/ssh"
 ) >/dev/null 2>&1
 
 # Sets the GLOBALS `OUT` and `RC`. Deliberately not `out=$(run_sandboxed ...)`:
-# command substitution runs the function in a SUBSHELL, so an rc assigned
-# inside it never reaches the caller. The first draft of this file did exactly
+# command substitution runs it in a SUBSHELL, so an rc assigned inside it never
+# reaches the caller.
 run_sandboxed() {
   local s="$1"; shift
   OUT="$(cd "$WORK/tree" && env -i \
