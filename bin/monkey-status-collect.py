@@ -141,6 +141,19 @@ def armed(cron_lines, states, account):
     return states.get(account) == "live"
 
 
+def declared_repo_url(home, project):
+    conf = f"{home}/Documents/Projects/scheduler/schedule/{project}.conf"
+    try:
+        with open(conf) as fh:
+            for line in fh:
+                line = line.strip()
+                if line.startswith("REPO_URL="):
+                    return line.split("=", 1)[1].strip().strip('"').strip("'")
+    except OSError:
+        return None
+    return None
+
+
 def containment(user, uid):
     """What this account reaches outside its own home. Three lists, and a
     null when the probe itself could not run -- an unreadable tree is not an
@@ -160,8 +173,9 @@ def containment(user, uid):
         url = sh("git", "-c", "safe.directory=*", "-C", d,
                  "config", "--get", "remote.origin.url").strip()
         expected = {user, *BOOTSTRAP_CLONES}
-        if url and not any(url.rstrip("/").endswith(f"/{e}") or url.endswith(f"/{e}.git")
-                            for e in expected):
+        named = any(url.rstrip("/").endswith(f"/{e}") or url.endswith(f"/{e}.git")
+                    for e in expected)
+        if url and not named and url != declared_repo_url(home, name):
             out["foreign_clones"].append({"path": d, "origin": url})
 
     # TRAP: find exits non-zero on an unreadable tree and sh() read that as
