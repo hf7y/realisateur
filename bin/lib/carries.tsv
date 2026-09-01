@@ -18,6 +18,10 @@ bin/check-project-busy	bin/check-project-busy.sh
 bin/defere	bin/defere.sh
 bin/etiquette	bin/etiquette.sh
 bin/notify-senechal	bin/notify-senechal.sh
+# consigne itself was hand-added to bashified on 2026-08-17 (#329) but never
+# carried, so every fix since -- including the spool door, #742 -- reaches no
+# account (realisateur#857 gap 1). This row makes carry.sh --apply the path.
+bin/consigne	bin/consigne
 bin/lib/answered.sh	bin/lib/answered.sh
 # answered.sh is a FEEDER; the predicate it feeds is answered.jq. Carried
 # without it, issue_answered() finds no predicate and returns BLIND for every
