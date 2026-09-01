@@ -32,7 +32,7 @@ ROSTER_PROJECTS=(
 ROSTER_ECOSYSTEM=(
   verbs front-door basheur
   dcp-gate-site musc-2300 scriba-senatus french-textbook
-  etalon vitae space-canon
+  etalon vitae space-canon maitre
 )
 
 ROSTER=("${ROSTER_PROJECTS[@]}" "${ROSTER_ECOSYSTEM[@]}")
