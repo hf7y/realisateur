@@ -4,10 +4,8 @@
 # GUARD-TEST: bin/tests/atteste.test.sh -- offline behind --body and ATTESTE_GH
 # GATE: none -- it reads the GitHub API, which this suite's sandbox denies.
 #
-# Every other guard here checks a claim's FORM: `--comment "landed as
-# path:/usr/local/bin/x on monkey"` satisfies gh-sign's close_check without
-# anything looking at monkey. An entry this cannot check is BLIND, never a
-# pass. #803 carries the measurements behind every rule below.
+# Every other guard here checks a claim's FORM; this one goes and looks. An
+# entry it cannot check is BLIND, never a pass. #803 has the measurements.
 set -uo pipefail
 
 CLI_NAME='atteste.sh'
