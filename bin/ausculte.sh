@@ -10,7 +10,7 @@ CLI_SUMMARY='is self-dev healthy enough to stop watching?'
 CLI_USAGE='  ausculte              every probe; the exit code is the answer
   ausculte --json       one object per probe
   ausculte <probe>      just one: channel hosts arming hygiene propagation
-                        rot fleet handoff'
+                        rot landing fleet handoff'
 CLI_FLAGS='--json'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  every declared probe answered OK
@@ -208,17 +208,16 @@ if want propagation; then
   else
     cut_at="$(printf '%s' "$v" | jq -r '.last_cut.at // empty' 2>/dev/null)"
     streak="$(printf '%s' "$v" | jq -r '.blocked_streak // 0' 2>/dev/null)"
-    # TWO NUMBERS, NOT ONE (realisateur#603). They answer different questions
-    # and under a monthly cut they differ by 29 days:
+    # TWO NUMBERS, NOT ONE (realisateur#603). Under a monthly cut they differ
+    # by 29 days:
     #   max_h      the ADOPTION window -- how long a host may lag a cut it has
-    #              been told about. Keyed to the emitter's cadence, which stays
-    #              nightly, so this is unchanged at 28h.
-    #   cut_max_h  the BUILD-AGE floor -- how old the newest build may be
-    #              before the cutter is presumed dead. Keyed to the cut
-    #              interval the channel publishes, plus one adoption window.
+    #              been told about. Keyed to the emitter's nightly cadence, so
+    #              this is unchanged at 28h.
+    #   cut_max_h  the BUILD-AGE floor -- how old the newest build may be before
+    #              the cutter is presumed dead. Keyed to the published cut
+    #              interval, plus one adoption window.
     # Conflating them graded a healthy 20-day-old monthly build as DOWN on 29
-    # nights in 30, and -- because line :183 below returns first -- meant the
-    # adoption branch at the bottom of this block could never be reached.
+    # nights in 30, and hid the adoption branch below behind line :183's return.
     max_h=$(( $(printf '%s' "$v" | jq -r '.cadence_hours // 24') + $(printf '%s' "$v" | jq -r '.grace_hours // 4') ))
     # A document that declares no interval is a NIGHTLY one: defaulting to 0
     # makes cut_max_h == max_h, i.e. exactly the pre-#603 grade. A schema-2
@@ -330,6 +329,21 @@ if want rot; then
   else record rot BLIND 'decision-rot.sh not present'; fi
 fi
 
+if want landing; then
+  if ld="$(part landing-drift.sh)"; then
+    out="$(bash "$ld" --all 2>&1)"; rc=$?
+    case $rc in
+      0) record landing OK 'every repo can land what it opens' ;;
+      1) worst="$(printf '%s\n' "$out" \
+                   | awk '$5 == "stranded" || $5 ~ /^stranded/ { if ($2 + 0 > n) { n = $2; r = $1; d = $3 } }
+                          END { if (r != "") printf "%s has %s green and unlanded, oldest %s", r, n, d }')"
+         record landing DOWN "${worst:-$(printf '%s\n' "$out" | grep -E '[0-9]+ finding' | tail -1)}" ;;
+      2) record landing BLIND 'ausculte invoked landing-drift.sh wrongly -- fix ausculte' ;;
+      *) record landing BLIND "$(printf '%s' "$out" | tail -1)" ;;
+    esac
+  else record landing BLIND 'landing-drift.sh not present'; fi
+fi
+
 
 if want fleet; then
   # LOCALHOST IS NOT AN SSH TARGET -- the same fix the propagation row above
@@ -376,26 +390,20 @@ if want fleet; then
         record fleet BLIND 'no account has a paced-runner ledger -- cannot tell whether any of them worked'
       else
         # DONE and COOLDOWN are both fine -- COOLDOWN is the pacer holding a
-        # finished account back on purpose.
-        #
-        # AND SO IS NOT-DONE WITH A REASON, which this row called DOWN until
-        # 2026-08-22. NOT-DONE is what the runner records for an agent verdict
-        # of CONTINUE -- schedule/_verdict-semantics.md: "there is ACTIONABLE
-        # work left". It is the HEALTHY STEADY STATE of an account with a
-        # backlog. Measured that day: 9 of 14 accounts read NOT-DONE and SIX of
-        # them had shipped a merged PR in that very run (ecosim #105,
-        # scheduler #269, senechal #389, groc-mangr #49, realisateur #334,
-        # bibliothecaire #57). The row said DOWN while the fleet worked.
-        #
-        # A monitor that reports DOWN in the normal case is one a human must
-        # check by hand every time, which is the whole thing ausculte exists to
-        # stop. So the finding is SILENCE, not incompleteness:
+        # finished account back on purpose. SO IS NOT-DONE WITH A REASON, which
+        # this row called DOWN until 2026-08-22: it is what the runner records
+        # for an agent verdict of CONTINUE (schedule/_verdict-semantics.md,
+        # "there is ACTIONABLE work left"), the healthy steady state of an
+        # account with a backlog. Measured that day, 9 of 14 accounts read
+        # NOT-DONE and six had shipped a merged PR in that very run. A monitor
+        # that reports DOWN in the normal case is one a human checks by hand
+        # every time. So the finding is SILENCE, not incompleteness:
         #
         #   blank reason      the account stopped and said nothing (scheduler#261)
         #   no-verdict:       the runner ran it and no verdict was written
         #
-        # Both mean the sensor got nothing. An account that explained itself is
-        # answering; whether its answer is good news is its own tracker's
+        # Both mean the sensor got nothing; an account that explained itself is
+        # answering, and whether its answer is good news is its tracker's
         # question, not this probe's.
         mute="$(printf '%s\n' "$led" | grep -v '^FLEET-LEDGERS' \
                  | awk -F'\t' '$7 == "NOT-DONE" {
