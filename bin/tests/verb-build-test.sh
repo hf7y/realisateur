@@ -52,9 +52,14 @@ mk_build() {
     g -C "$META" tag "build/$id"
 }
 
+# Only `approved/<id>` is adoptable, written by a reviewer-gated dispatch.
+approve() { g -C "$META" tag "approved/$1"; }
+
 mkdir -p "$META"; g init "$META"
 mk_build "2026-08-04T0130Z" "vim-arcade:entraine senechal:installe"
+approve "2026-08-04T0130Z"
 mk_build "2026-08-05T0130Z" "vim-arcade:entraine senechal:installe scheduler:arme"
+approve "2026-08-05T0130Z"
 
 CMD_DEST="$TMP/claude/commands"
 HOOK_DEST="$TMP/claude/hooks"
@@ -252,6 +257,41 @@ check "...and the destination carries the new content" \
 # No temp files left behind: the install writes .<name>.new.$$ beside the target.
 check "...and no .new temp file is left in the directory" \
       "$(find "$SELFDEV_LIBEXEC" -name '.*.new.*' | wc -l)" "0"
+
+# --- N. a cut is not a release. Own fixture: the cases above deliberately
+# leave broken builds in the shared one.
+echo
+GMETA="$TMP/meta-gate"; GROOT="$TMP/builds-gate"; mkdir -p "$GMETA"
+g init "$GMETA"
+gmk() { META="$GMETA" mk_build "$1" "vim-arcade:entraine senechal:installe"; }
+grun() { VERB_BUILD_ROOT="$GROOT" INSTALLE_BIN="$BIN" CMD_DEST="$CMD_DEST" \
+         HOOK_DEST="$HOOK_DEST" SELFDEV_LIBEXEC="$SELFDEV_LIBEXEC" \
+         bash "$INSTALL" --remote "file://$GMETA" "$@"; }
+
+gmk "2026-09-01T0130Z"; g -C "$GMETA" tag "approved/2026-09-01T0130Z"
+grun --latest --apply >/dev/null 2>&1
+check "an approved build installs" "$(readlink "$GROOT/current")" "2026-09-01T0130Z"
+
+gmk "2026-09-02T0130Z"          # cut, not approved
+grun --check >/dev/null 2>&1
+check "an UNAPPROVED cut does not read as a newer build" "$?" "0"
+grun --latest --apply >/dev/null 2>&1
+check "...and --latest --apply leaves the pin alone" \
+      "$(readlink "$GROOT/current")" "2026-09-01T0130Z"
+
+g -C "$GMETA" tag "approved/2026-09-02T0130Z"
+grun --check >/dev/null 2>&1
+check "approving it makes it available" "$?" "1"
+grun --latest --apply >/dev/null 2>&1
+check "...and only then is it adopted" \
+      "$(readlink "$GROOT/current")" "2026-09-02T0130Z"
+
+for t in $(git -C "$GMETA" tag --list 'approved/*'); do g -C "$GMETA" tag -d "$t"; done
+out="$(VERB_BUILD_ROOT="$TMP/b2" INSTALLE_BIN="$BIN" bash "$INSTALL" \
+       --remote "file://$GMETA" --latest --apply 2>&1)"; rc=$?
+check "builds but no approval is BLIND, not silent" "$rc" "6"
+case "$out" in *"NONE is approved"*) ok "...and it names how to approve one" ;;
+                *) bad "...and it names how to approve one" "got: $out" ;; esac
 
 echo
 summary
