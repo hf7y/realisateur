@@ -77,8 +77,7 @@ grade() {
   local IFS=$' \t\n'
   read -ra words <<<"$entry"
 
-  # A DELIVERED RETIREMENT IS PROVED BY ABSENCE (#872, #878). Not `.`: stripping
-  # it splits retired.md into the word RETIRED and retires every such claim.
+  # ABSENCE PROVES A RETIREMENT (#872, #878). Not `.`: it splits retired.md.
   gonew=" ${entry^^} "; gonew="${gonew//[,;:()\`]/ }"
   case "$gonew" in *' DELETED '*|*' GONE '*|*' RETIRED '*) gone=1 ;; esac
 
