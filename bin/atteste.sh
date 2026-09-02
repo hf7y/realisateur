@@ -73,12 +73,14 @@ dark() { blind=$((blind + 1));         say BLIND "$1"; }
 # mode: gh = look in <default-repo> at <ref>; tree = look in $ROOT on disk.
 grade() {
   local entry="$1" drepo="$2" ref="$3" mode="$4"
-  local words=() w i k v e_path='' e_repo='' e_other='' host='' found=0 gone=0
+  local words=() w i k v e_path='' e_repo='' e_other='' host='' found=0 gone=0 gonew
   local IFS=$' \t\n'
   read -ra words <<<"$entry"
 
-  # A RETIREMENT IS A DELIVERY AND THE ABSENCE IS THE PROOF (#872, #878).
-  case " ${entry^^} " in *' DELETED '*|*' GONE '*|*' RETIRED '*) gone=1 ;; esac
+  # A DELIVERED RETIREMENT IS PROVED BY ABSENCE (#872, #878). Not `.`: stripping
+  # it splits retired.md into the word RETIRED and retires every such claim.
+  gonew=" ${entry^^} "; gonew="${gonew//[,;:()\`]/ }"
+  case "$gonew" in *' DELETED '*|*' GONE '*|*' RETIRED '*) gone=1 ;; esac
 
   case "${entry,,}" in none|none.|'none '*) return 0 ;; esac
   claimed=$((claimed + 1))
