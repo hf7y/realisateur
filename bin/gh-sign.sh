@@ -2,9 +2,8 @@
 # gh-sign.sh -- sign every agent-written GitHub comment/issue AUTOMATICALLY,
 # by standing in front of `gh` on PATH.
 # KIND: verb
-# ^ ITS OWN LINE, load-bearing: verb-kind-lint.sh reads `^#[[:space:]]*KIND:`,
-# so the same words trailing the sentence above declared nothing and froze the
-# estate's verb distribution from 2026-09-01 to 2026-09-02.
+# ^ OWN LINE: verb-kind-lint reads `^#[[:space:]]*KIND:`; trailing a sentence it
+# declared nothing and froze the fleet's verbs for a day (#918).
 # TRAPS (the rest of this header is in the vault):
 # It appends `<!-- agent: <account>@<host> <ISO8601> -->` to the bodies of
 # `issue comment|create|close`, `pr comment|create` and `api` comment writes,
