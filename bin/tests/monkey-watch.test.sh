@@ -138,6 +138,19 @@ if command -v node >/dev/null 2>&1; then
   case "$got" in *UNVERIFIED*) ok "an identity the probe could not read is UNVERIFIED, never a green ARMED" ;;
     *) bad "identity BLIND is not counted as clean" "got [$got]" ;; esac
 
+  REACH='"armed":true,"dispatch_line":true,"last_run":{},"containment":{"foreign_clones":[],"outside_home":["/srv/ecosystem1-vault/x"],"sudoers":[]},"credentials":{"k":"0640"}'
+  REACH_ONLY="{\"accounts\":[{\"account\":\"bibliothecaire\",$REACH}],$W_OK}"
+  got="$(render "$REACH_ONLY")"
+  case "$got" in bad\ *NOT\ CONTAINED*) ok "#825 a containment breach still headlines when nothing else is wrong" ;;
+    *) bad "a lone containment breach headlines NOT CONTAINED" "got [$got]" ;; esac
+
+  REACH_AND_PARKED="{\"accounts\":[{\"account\":\"bibliothecaire\",\"armed\":false,\"dispatch_line\":true,\"last_run\":{},\"containment\":{\"foreign_clones\":[],\"outside_home\":[\"/srv/ecosystem1-vault/x\"],\"sudoers\":[]},\"credentials\":{\"k\":\"0640\"}}],$W_OK}"
+  got="$(render "$REACH_AND_PARKED")"
+  case "$got" in warn\ ALL*PARKED*) ok "#825 containment is demoted below an arming headline, not hiding it" ;;
+    *) bad "containment demoted below arming" "got [$got] -- ALL 1 PARKED should win, not NOT CONTAINED" ;; esac
+  got="$(itemsrender "$REACH_AND_PARKED")"
+  has "#825 the containment finding still lands in findings after losing the headline" "$got" "is not contained"
+
   got="$(render '{"accounts":[],"generated":"2999-01-01T00:00:00Z"}')"
   case "$got" in *UNWATCHED*) ok "a document with no watcher block cannot report health" ;;
     *) bad "a watcher-less document reads UNWATCHED" "got [$got]" ;; esac
