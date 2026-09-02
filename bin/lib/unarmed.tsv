@@ -10,18 +10,27 @@
 # (bin/lib/body-grammar.sh) and goes red only past it. A row with no window
 # blocks by omission, so an empty window is itself a finding.
 #
+# `since` is the date THIS ROW WAS FILED -- when the floor started watching
+# it -- never the date the underlying mechanism was built or the gap noticed.
+# #837: four rows were dated earlier than that, which spent 13-19 days of a
+# 7-30d silence budget before the row could be read by anyone, and one
+# (host-mode) came within 9 days of EXPIRING on the day it was first
+# surfaced. `since` only ever answers "how long has the floor been silent
+# about this" -- a build date, if worth keeping, belongs in the issue this
+# row cites, not here.
+#
 # TRAP: ids are hyphen-only. The growth check maps probe_host_mode back to
 # host-mode by `_` -> `-`, so an underscore in an id makes its own row
 # unreachable and the mechanism reads as newly grown.
 #
 # id	since	window	floor	remedy
-host-mode	2026-08-11	30d	UNARMED	sudo -n /home/scheduler/Documents/Projects/scheduler/bin/usage-paced-runner.sh --check on monkey FIRST -- it measures the identity the cron row will actually run as (hf7y/scheduler#419) -- then sudo crontab -e on monkey, add: */20 * * * * PACED_HOST_MODE=1 PACED_MAX_PER_TICK=1 /home/scheduler/Documents/Projects/scheduler/bin/usage-paced-runner.sh # scheduler:scheduler-paced-runner:RUNNER (host mode), and drop each account's RUNNER row in the same act that migrates that account, row by row and never the fleet at once (hf7y/scheduler#350 under #359 invariant 3); deleting schedule/_paced*.conf is hf7y/scheduler#364 and is the LAST step, not this one
+host-mode	2026-08-30	30d	UNARMED	sudo -n /home/scheduler/Documents/Projects/scheduler/bin/usage-paced-runner.sh --check on monkey FIRST -- it measures the identity the cron row will actually run as (hf7y/scheduler#419) -- then sudo crontab -e on monkey, add: */20 * * * * PACED_HOST_MODE=1 PACED_MAX_PER_TICK=1 /home/scheduler/Documents/Projects/scheduler/bin/usage-paced-runner.sh # scheduler:scheduler-paced-runner:RUNNER (host mode), and drop each account's RUNNER row in the same act that migrates that account, row by row and never the fleet at once (hf7y/scheduler#350 under #359 invariant 3); deleting schedule/_paced*.conf is hf7y/scheduler#364 and is the LAST step, not this one
 runner-cadence	2026-08-30	-	ARMED	sudo crontab -e on monkey, restore: 17 6 * * * /usr/local/libexec/senechal/selfdev-runner-provision.sh --check --quiet >/dev/null 2>&1 || /usr/local/libexec/senechal/selfdev-runner-provision.sh --apply # selfdev-runner:CADENCE
 standing-rules	2026-08-30	-	ARMED	set USES_STANDING_RULES=1 in every schedule/*.conf that lost it (hf7y/scheduler#362)
-fragment-adoption	2026-08-13	30d	UNARMED	convert the remaining schedule/*.conf prompt blocks to @@FRAGMENT:<name>@@ (hf7y/scheduler#363 converts eleven of them)
+fragment-adoption	2026-08-30	30d	UNARMED	convert the remaining schedule/*.conf prompt blocks to @@FRAGMENT:<name>@@ (hf7y/scheduler#363 converts eleven of them)
 unarmed-cadence	2026-08-31	-	ARMED	sudo crontab -e on monkey, restore: 19 7 * * 1 /usr/local/libexec/selfdev/unarmed.sh --check # realisateur:unarmed:CADENCE -- the binary rides prop_host_tools, not the build, so sudo bin/wire-release-channel.sh --host --apply is what puts it back
-vault-read-door	2026-08-29	14d	UNARMED	install a spool-capable consigne on monkey -- the build must carry #742's consigne first -- then sudo /usr/local/libexec/selfdev/vault-group-provision.sh --apply; it holds /srv/ecosystem1-vault at 2770 zach:vault on purpose until then (hf7y/realisateur#742)
+vault-read-door	2026-08-30	14d	UNARMED	install a spool-capable consigne on monkey -- the build must carry #742's consigne first -- then sudo /usr/local/libexec/selfdev/vault-group-provision.sh --apply; it holds /srv/ecosystem1-vault at 2770 zach:vault on purpose until then (hf7y/realisateur#742)
 vault-drain	2026-08-31	-	ARMED	restore the drain on monkey: sudo bin/wire-release-channel.sh --host --apply installs it with the rest of prop_host_tools -- the installed cron row guards on [ -x ], so its absence costs nothing and says nothing (hf7y/realisateur#794)
 libexec-payload	2026-08-31	-	ARMED	the 2026-09-01T030800Z cut carries both libexec/ rows and monkey has adopted it; if a later cut drops them, dispatch build-verbs with force_cut=true on hf7y/verbs and let selfdev-release-tick.sh adopt the new tag (hf7y/realisateur#793)
-front-door-guard	2026-08-17	7d	UNARMED	add .github/workflows/prose.yml to hf7y/front-door calling hf7y/etalon/.github/workflows/guard.yml@main with state_prose: true -- it is public, so the guard's ubuntu-latest default needs no runner (hf7y/front-door#16)
+front-door-guard	2026-08-30	7d	UNARMED	add .github/workflows/prose.yml to hf7y/front-door calling hf7y/etalon/.github/workflows/guard.yml@main with state_prose: true -- it is public, so the guard's ubuntu-latest default needs no runner (hf7y/front-door#16)
 apms-guard	2026-08-30	7d	UNARMED	add .github/workflows/prose.yml to hf7y/apms-2173 calling hf7y/etalon/.github/workflows/guard.yml@main with state_prose: true and runs_on: '["self-hosted", "linux"]' -- it is PRIVATE, so senechal/bin/selfdev-runner-provision.sh must grant it a self-hosted runner first (12 exist on monkey and apms-2173 is not among them) -- the probe reads it through the host App token, never raw.githubusercontent, which 404s the same for absent and for unauthorised
