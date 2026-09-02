@@ -12,11 +12,11 @@ SWEEP_SET_LIB=1
 SWEEP_OWNER="${SWEEP_OWNER:-$GH_ESTATE_OWNER}"
 
 # SWEPT, NOT ARMED. Membership says which repos to READ; liveness is
-# lib/arming.sh's authority, read at run time. NOT `apms`: a live ROSTER row
-# whose repo does not exist, and a 404 here makes the whole sweep BLIND.
+# lib/arming.sh's authority, read at run time. `apms` here is `apms-2173`,
+# its real repo name: $OWNER/$p below is a GitHub path, not a ROSTER key (#905).
 SWEEP_PROJECTS=(
-  abletim baudin bibliothecaire chezz crt dcp-gate-site ecosim gardien
-  groc-mangr nine-speakers realisateur scheduler secretaire senechal
+  abletim apms-2173 baudin bibliothecaire chezz crt dcp-gate-site ecosim
+  gardien groc-mangr nine-speakers realisateur scheduler secretaire senechal
   sequestria vim-arcade wtul
 )
 
