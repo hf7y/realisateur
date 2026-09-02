@@ -160,6 +160,7 @@ selfdev-hooks-provision.sh
 unland-foreign-clone.sh
 install-verbs.sh
 stamp-verb-build.sh
+guard-readonly-clone.sh
 vault-group-provision.sh
 "
 
