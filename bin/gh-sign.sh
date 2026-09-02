@@ -4,13 +4,12 @@
 # KIND: verb
 # TRAPS (the rest of this header is in the vault):
 # It appends `<!-- agent: <account>@<host> <ISO8601> -->` to the bodies of
-# `issue comment|create|close`, `pr comment|create` and `api` comment writes,
-# and on an issue READ it names the comments it did not show (#836). Both
-# fields are read from the running process, so there is no argument to forget
-# -- it replaced a wrapper that had to be called and mostly was not (#327).
-# Past STALE_DAYS it stamps `STALE <n>d`, where decision-rot.sh reads it, and
-# it does NOT refuse: see FAIL OPEN.
-# usage: `usage()` below. `gh --help` reaches it only where there is no real gh.
+# `issue comment|create|close`, `pr comment|create` and `api` comment writes, and
+# on an issue READ names the comments it did not show (#836). Both fields come
+# from the running process, so there is no argument to forget -- it replaced a
+# wrapper that had to be called and mostly was not (#327). Past STALE_DAYS it
+# stamps `STALE <n>d` where decision-rot.sh reads it, and does NOT refuse: see
+# FAIL OPEN. usage: `usage()` below; `gh --help` reaches it only with no real gh.
 
 set -uo pipefail
 
