@@ -222,32 +222,32 @@ bash "$SCRIPT" >/dev/null 2>&1;                   rc "G2 no argument exits 2" 2 
 bash "$SCRIPT" --help >/dev/null 2>&1;            rc "G3 --help exits 0" 0 "$?"
 has "G4 --help states the rot exit code" "$(bash "$SCRIPT" --help 2>&1)" "1  rot found"
 
-# --- the roster covers every repo with a backlog (2026-08-22) ---------------
+# --- the sweep set covers every repo with a backlog (2026-08-22) -----------
 # 200 open issues estate-wide; 64 sat in ELEVEN repos NO SENSOR LOOKED AT.
-# decision-rot walks ROSTER, so a repo absent from it can hold an answered and
+# decision-rot walks SWEEP, so a repo absent from it can hold an answered and
 # abandoned decision forever while `ausculte rot` reads OK -- the estate's own
 # disease, in the file whose header already named it: "uid 3000-3099 misses the
 # ecosystem repos that carry decisions and never dispatch."
-section "H. roster coverage"
+section "H. sweep coverage"
 . "$(cd "$(dirname "$0")/.." && pwd)/lib/roster-set.sh"
 _missing=""
 for _p in dcp-gate-site musc-2300 scriba-senatus french-textbook abletim \
           etalon vitae space-canon verbs front-door basheur; do
-  case " ${ROSTER[*]} " in *" $_p "*) ;; *) _missing="$_missing $_p" ;; esac
+  case " ${SWEEP[*]} " in *" $_p "*) ;; *) _missing="$_missing $_p" ;; esac
 done
 [ -z "$_missing" ] \
   && ok "H1 every repo that carries a backlog is swept, armed or not" \
-  || bad "H1 every repo with a backlog is in ROSTER" "unswept:$_missing"
+  || bad "H1 every repo with a backlog is in SWEEP" "unswept:$_missing"
 
 # WIRED IS NOT ARMED, and the two arrays are what keep them apart. A repo that
 # drifts from ECOSYSTEM into PROJECTS starts spending quota every night.
 _armed=""
-for _p in musc-2300 space-canon; do  # dcp-gate-site excluded since #905: onboarded live with an account 2026-08-28, so ROSTER_PROJECTS is where it belongs now
-  case " ${ROSTER_PROJECTS[*]} " in *" $_p "*) _armed="$_armed $_p" ;; esac
+for _p in musc-2300 space-canon; do  # dcp-gate-site excluded since #905: onboarded live with an account 2026-08-28, so SWEEP_PROJECTS is where it belongs now
+  case " ${SWEEP_PROJECTS[*]} " in *" $_p "*) _armed="$_armed $_p" ;; esac
 done
 [ -z "$_armed" ] \
   && ok "H2 the newly swept repos are NOT in the dispatching set" \
-  || bad "H2 swept is not armed" "in ROSTER_PROJECTS, and so spending quota:$_armed"
+  || bad "H2 swept is not armed" "in SWEEP_PROJECTS, and so spending quota:$_armed"
 
 # --- I. a parked repo is not rotting (Zach, 2026-08-26) ---------------------
 section "I. rot is only rot where something dispatches"

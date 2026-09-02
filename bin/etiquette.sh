@@ -44,7 +44,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 [ "$ALL" = 1 ] && [ -n "$REPO" ] && {
-  printf '%s: --all sweeps every rostered repo; do not also name one\n' "$CLI_NAME" >&2; exit 2; }
+  printf '%s: --all sweeps every repo in the sweep set; do not also name one\n' "$CLI_NAME" >&2; exit 2; }
 
 # Self-locating THROUGH THE SYMLINK: without readlink -f the grammar is sought
 # beside the NAME it was called by, not beside the real file.
@@ -72,20 +72,20 @@ g_field() { printf '%s' "$1" | cut -f"$2"; }
 # --all -- etiquette(1). PER REPO, not looped inline: `exit 6` ends a repo, not the sweep.
 if [ "$ALL" = 1 ]; then
   . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/roster-set.sh"
-  if [ "${ROSTER_SET_LIB:-}" != 1 ] || [ "${#ROSTER[@]}" -eq 0 ]; then
+  if [ "${SWEEP_SET_LIB:-}" != 1 ] || [ "${#SWEEP[@]}" -eq 0 ]; then
     printf '%s: BLIND -- lib/roster-set.sh did not load, so this swept NO repositories. Zero findings here is the absence of a reading.\n' \
       "$CLI_NAME" >&2
     exit 6
   fi
   SELF="$(readlink -f "${BASH_SOURCE[0]}")"
   worst=0
-  for p in "${ROSTER[@]}"; do
-    if [ "$APPLY" = 1 ]; then bash "$SELF" "$ROSTER_OWNER/$p" --apply
-    else                     bash "$SELF" "$ROSTER_OWNER/$p"; fi
+  for p in "${SWEEP[@]}"; do
+    if [ "$APPLY" = 1 ]; then bash "$SELF" "$SWEEP_OWNER/$p" --apply
+    else                     bash "$SELF" "$SWEEP_OWNER/$p"; fi
     # BLIND outranks findings outranks clean.
     case $? in 6) worst=6 ;; 2) exit 2 ;; 1) [ "$worst" = 0 ] && worst=1 ;; esac
   done
-  say "etiquette --all: swept ${#ROSTER[@]} repo(s)."
+  say "etiquette --all: swept ${#SWEEP[@]} repo(s)."
   exit "$worst"
 fi
 

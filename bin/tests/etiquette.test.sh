@@ -254,14 +254,14 @@ rc "K1 --all and a named repo is a usage error, not a silent sweep of one" 2 \
 
 . "$(cd "$(dirname "$0")/.." && pwd)/lib/roster-set.sh"
 : > "$T/edits"; : > "$T/seen"; run_all --apply >/dev/null 2>&1
-want=''; for _p in "${ROSTER[@]}"; do want="$want$ROSTER_OWNER/$_p"$'\n'; done
+want=''; for _p in "${SWEEP[@]}"; do want="$want$SWEEP_OWNER/$_p"$'\n'; done
 eq "K2 --all grades exactly the repos lib/roster-set.sh names" \
    "$(sort -u < "$T/seen")" "$(printf '%s' "$want" | sort -u)"
 has "K3 ...including one nothing ever dispatches to, which is the whole point" \
-    "$(cat "$T/edits")" "--repo $ROSTER_OWNER/verbs --add-label needs-human"
+    "$(cat "$T/edits")" "--repo $SWEEP_OWNER/verbs --add-label needs-human"
 
 rc "K4 one unreadable tracker is BLIND (6) for the whole sweep, never clean" 6 \
-   "$(GH_FAIL_REPO="$ROSTER_OWNER/${ROSTER[0]}" run_all >/dev/null 2>&1; echo $?)"
+   "$(GH_FAIL_REPO="$SWEEP_OWNER/${SWEEP[0]}" run_all >/dev/null 2>&1; echo $?)"
 
 JQF="$(cd "$(dirname "$0")/.." && pwd)/lib/answered.jq"
 [ -r "$JQF" ] || { echo "FAIL: $JQF not readable"; exit 1; }

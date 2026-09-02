@@ -35,9 +35,9 @@ for p in "$HERE/lib/comment-claims.jq" "$HERE/lib/stale-paths.jq"; do
 done
 
 . "$HERE/lib/roster-set.sh"
-[ "${ROSTER_SET_LIB:-}" = 1 ] && [ "${#ROSTER[@]}" -gt 0 ] \
+[ "${SWEEP_SET_LIB:-}" = 1 ] && [ "${#SWEEP[@]}" -gt 0 ] \
   || blind "lib/roster-set.sh did not load, so cross-repo citations would be read as local ones."
-ROSTER_PATTERN="$(IFS='|'; echo "${ROSTER[*]}")"
+SWEEP_PATTERN="$(IFS='|'; echo "${SWEEP[*]}")"
 OWNER="${GH_ESTATE_OWNER:-hf7y}"
 
 cd "$ROOT" || blind "cannot cd to $ROOT."
@@ -87,7 +87,7 @@ N_LINES="$(printf '%s' "$RECORDS" | jq 'length' 2>/dev/null)" || N_LINES=0
 
 FOUND="$(
   printf '%s' "$RECORDS" \
-  | jq -r -L "$HERE/lib" --arg owner "$OWNER" --arg roster_pattern "$ROSTER_PATTERN" \
+  | jq -r -L "$HERE/lib" --arg owner "$OWNER" --arg sweep_pattern "$SWEEP_PATTERN" \
         --argjson tree "$TREE" '
       include "comment-claims";
       annotate

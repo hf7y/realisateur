@@ -3,7 +3,7 @@ set -uo pipefail  # stale-paths.sh -- a SURVEY (#700), GUARD-TEST bin/tests/stal
 
 CLI_NAME='stale-paths.sh'
 CLI_SUMMARY='does an open issue cite a path the repo tree no longer has?'
-CLI_USAGE='  stale-paths.sh --all              sweep every roster repo
+CLI_USAGE='  stale-paths.sh --all              sweep every project in the sweep set
   stale-paths.sh <owner>/<repo>     sweep one repo
   stale-paths.sh --all --json       machine-readable NDJSON + summary line'
 CLI_FLAGS='--all --json'
@@ -18,13 +18,13 @@ OWNER="${STALE_PATHS_OWNER:-hf7y}"
 HERE="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 . "$HERE/lib/roster-set.sh"
-if [ "${ROSTER_SET_LIB:-}" != 1 ] || [ "${#ROSTER[@]}" -eq 0 ]; then
+if [ "${SWEEP_SET_LIB:-}" != 1 ] || [ "${#SWEEP[@]}" -eq 0 ]; then
   printf '%s: BLIND -- lib/roster-set.sh did not load, so this swept NO repositories.\n' \
     "$CLI_NAME" >&2
   exit 6
 fi
 
-ROSTER_PATTERN="$(IFS='|'; echo "${ROSTER[*]}")"  # for "named in prose, not $owner/repo-qualified" (measured live against hf7y/musc-2300)
+SWEEP_PATTERN="$(IFS='|'; echo "${SWEEP[*]}")"  # for "named in prose, not $owner/repo-qualified" (measured live against hf7y/musc-2300)
 
 STALE_PATHS_JQ_FILE="${STALE_PATHS_JQ_FILE:-$HERE/lib/stale-paths.jq}"
 [ -r "$STALE_PATHS_JQ_FILE" ] || {
@@ -45,7 +45,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -z "$MODE" ] && { echo "$CLI_NAME: pass --all or an <owner>/<repo>" >&2; exit 2; }
-[ "$MODE" = all ] && for p in "${ROSTER[@]}"; do REPOS+=("$OWNER/$p"); done
+[ "$MODE" = all ] && for p in "${SWEEP[@]}"; do REPOS+=("$OWNER/$p"); done
 
 command -v gh >/dev/null || { echo "$CLI_NAME: gh not on PATH" >&2; exit 6; }
 command -v jq >/dev/null || { echo "$CLI_NAME: jq not on PATH" >&2; exit 6; }
@@ -81,7 +81,7 @@ for repo in "${REPOS[@]}"; do
   fi
   tree="$(printf '%s' "$tree_json" | jq -c '[.tree[]?.path]')"
 
-  found=$(printf '%s' "$issues" | jq -r --arg owner "$OWNER" --arg roster_pattern "$ROSTER_PATTERN" --argjson tree "$tree" \
+  found=$(printf '%s' "$issues" | jq -r --arg owner "$OWNER" --arg sweep_pattern "$SWEEP_PATTERN" --argjson tree "$tree" \
     "$STALE_PATHS_JQ"'.[] | missing($tree) | select(.missing | length > 0)
      | [.number, (.missing | length), (.title | gsub("\\s+"; " "))] | @tsv')
   [ -n "$found" ] && while IFS=$'\t' read -r num cnt title; do
@@ -90,7 +90,7 @@ for repo in "${REPOS[@]}"; do
     ROWS+="${repo#*/}"$'\t'"$num"$'\t'"$cnt"$'\t'"$title"$'\n'
   done <<< "$found"
 
-  paths=$(printf '%s' "$issues" | jq -r --arg owner "$OWNER" --arg roster_pattern "$ROSTER_PATTERN" --argjson tree "$tree" \
+  paths=$(printf '%s' "$issues" | jq -r --arg owner "$OWNER" --arg sweep_pattern "$SWEEP_PATTERN" --argjson tree "$tree" \
     "$STALE_PATHS_JQ"'.[] | missing($tree) | select(.missing | length > 0)
      | .number as $n | .missing[] | [$n, .] | @tsv')
   [ -n "$paths" ] && while IFS=$'\t' read -r num path; do
