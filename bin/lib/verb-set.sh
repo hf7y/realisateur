@@ -32,13 +32,33 @@ _verb_set_ref() {
   return 1
 }
 
-# verb_set_verbs_of <repo> <ref> -- the declared verbs of one project.
+# verb_set_is_exempt <project> <name> -- true if bin/lib/not-a-verb.tsv names
+# this pair. Man-page-optional means every executable mechanically qualifies;
+# this is how a project still says "not a door" for one that shouldn't ship.
+_verb_set_not_a_verb_file() { printf '%s' "${VERB_NOT_A_VERB_FILE:-$(dirname "${BASH_SOURCE[0]}")/not-a-verb.tsv}"; }
+verb_set_is_exempt() {
+  local f p="$1" n="$2"
+  f="$(_verb_set_not_a_verb_file)"
+  [ -f "$f" ] || return 1
+  awk -F'\t' -v p="$p" -v n="$n" \
+    '!/^[[:space:]]*#/ && $1 == p && $2 == n { found = 1; exit } END { exit !found }' "$f"
+}
+
+# verb_set_verbs_of <repo> <ref> -- the declared verbs of one project. An
+# executable bin/<n> declares a verb; a man/<n>.1 beside it is carried when
+# present and is never a precondition (#891). Filtered through the SAME
+# opt-out every caller must see -- a caller reading this directly instead of
+# verb_set_declared must not have to re-apply the exemption itself.
 verb_set_verbs_of() {
-  git -C "$1" ls-tree -r "$2" -- bin/ man/ 2>/dev/null | awk '
-    $1 == "100755" && $2 == "blob" && $4 ~ /^bin\/[^\/]+$/ { n = substr($4, 5); exec_[n] = 1 }
-    $4 ~ /^man\/[^\/]+\.1$/ { n = $4; sub(/^man\//, "", n); sub(/\.1$/, "", n); page[n] = 1 }
-    END { for (n in exec_) if (n in page) print n }
-  ' | sort
+  local repo="$1" ref="$2" project v
+  project="$(basename "$repo")"
+  git -C "$repo" ls-tree -r "$ref" -- bin/ 2>/dev/null | awk '
+    $1 == "100755" && $2 == "blob" && $4 ~ /^bin\/[^\/]+$/ { print substr($4, 5) }
+  ' | sort | while IFS= read -r v; do
+    [ -n "$v" ] || continue
+    verb_set_is_exempt "$project" "$v" && continue
+    printf '%s\n' "$v"
+  done
 }
 
 # verb_set_ref_of <repo> -- print the bashified ref this repo declares from.

@@ -2,10 +2,11 @@
 # cut-verb-build.sh -- pin the ecosystem's whole verb surface to one dated,
 # immutable BUILD, read live from GitHub with no clone on this host.
 #
-# A verb is a project's `bashified` branch carrying an executable bin/<name>
-# AND a matching man/<name>.1 (bin/lib/verb-set.sh's rule); opt out by name in
-# bin/lib/not-a-verb.tsv. Every refusal below says so when it fires: an absent
-# verb and a retired one are indistinguishable in a manifest.
+# A verb is a project's `bashified` branch carrying an executable bin/<name>;
+# a man/<name>.1 beside it is carried when present and is never required
+# (bin/lib/verb-set.sh's rule, #891). opt out by name in bin/lib/not-a-verb.tsv.
+# Every refusal below says so when it fires: an absent verb and a retired one
+# are indistinguishable in a manifest.
 set -uo pipefail
 
 CLI_NAME='cut-verb-build.sh'
@@ -14,15 +15,15 @@ CLI_USAGE='  cut-verb-build.sh                    derive and print the manifest 
   cut-verb-build.sh --write            also store it under the build root
   cut-verb-build.sh --assemble <dir>   lay every verb out under <dir> (what CI commits)
   cut-verb-build.sh --allow-half-declared
-                                       accept a project that declares half a verb
+                                       accept a project carrying an orphaned man page
   cut-verb-build.sh --dry-run          derive and check the manifest SHAPE only; never a build'
 CLI_FLAGS='--write --assemble --allow-half-declared --dry-run --owner --build-root'
 CLI_POSITIONAL=any   # flag VALUES (--build <id>) read as positionals to cli-guard;
                      # the arg loop below rejects anything genuinely unknown.
 CLI_EXITS='  0  a complete manifest was derived
   1  refused: BLIND (cannot read GitHub), empty, an UNDECLARED verb
-     disappearance, a name declared twice, or a HALF-declared verb
-     (bin/<n> with no man/<n>.1, or the inverse)
+     disappearance, a name declared twice, or an orphaned man page
+     (man/<n>.1 with no executable bin/<n>)
   2  usage error'
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
@@ -179,33 +180,46 @@ for repo in $repos; do
     continue
   fi
 
-  # The declaration rule, applied to the fetched tree. Same two conditions
-  # as verb-set.sh: executable bin/<n> AND man/<n>.1. bibliothecaire's
-  # One script is executable, has no page, and correctly is not a verb --
-  # which is why it has a row in lib/not-a-verb.tsv and not a man page.
+  # The declaration rule, applied to the fetched tree: an executable bin/<n>
+  # is a verb, man page or not. bibliothecaire's page92.py is executable, has
+  # no page, and is STILL a verb by this rule -- it stays out of the build
+  # only because lib/not-a-verb.tsv names it, not because it lacks a page.
+  # An orphaned man/<n>.1 with no executable beside it is the one shape this
+  # still refuses on: stale documentation for a script that moved or is gone.
   decl="$(printf '%s\n' "$tree" | awk '
       $1 == "100755" && $2 ~ /^bin\/[^\/]+$/ { n = substr($2, 5); exec_[n] = 1 }
       $2 ~ /^man\/[^\/]+\.1$/ { n = $2; sub(/^man\//, "", n); sub(/\.1$/, "", n); page[n] = 1 }
       END {
-        for (n in exec_) if (n in page)     print "VERB\t" n
-        for (n in exec_) if (!(n in page))  print "HALF\t" n "\texecutable bin/" n " with no man/" n ".1"
-        for (n in page)  if (!(n in exec_)) print "HALF\t" n "\tman/" n ".1 with no executable bin/" n
+        for (n in exec_) print "VERB\t" n
+        for (n in page) if (!(n in exec_)) print "ORPHAN\t" n "\tman/" n ".1 with no executable bin/" n
       }
     ' | sort)"
-  verbs="$(printf '%s\n' "$decl" | awk -F'\t' '$1 == "VERB" { print $2 }')"
 
-  # Recorded BEFORE the `continue` below: a project whose every executable is
-  # half-declared derives no verbs, and skipping it there is how ecosim's whole
-  # bin/ went unmentioned. A here-string, not a pipe: half_bad must survive.
+  # Both directions go through the SAME opt-out file: a VERB exempted by name
+  # is left out on purpose (bin/lib/not-a-verb.tsv's judgement call); an
+  # ORPHAN exempted by name is a man page kept around deliberately. Neither
+  # exemption blocks the build; an unexempted ORPHAN does.
+  verbs=''
   while IFS=$'\t' read -r tag name why; do
-    [ "$tag" = HALF ] || continue
-    if reason="$(exempt_reason "$repo" "$name")"; then
-      printf 'NOT-A-VERB\t%s\t%s\t%s\n' "$repo" "$name" "$reason" >> "$halves"
-    else
-      say "  HALF-DECLARED  $repo/$name: $why -- NOT declared, omitted from this build"
-      printf 'HALF-DECLARED\t%s\t%s\t%s\n' "$repo" "$name" "$why" >> "$halves"
-      half_bad=$((half_bad + 1))
-    fi
+    [ -n "$tag" ] || continue
+    case "$tag" in
+      VERB)
+        if reason="$(exempt_reason "$repo" "$name")"; then
+          printf 'NOT-A-VERB\t%s\t%s\t%s\n' "$repo" "$name" "$reason" >> "$halves"
+        else
+          verbs="$verbs$name"$'\n'
+        fi
+        ;;
+      ORPHAN)
+        if reason="$(exempt_reason "$repo" "$name")"; then
+          printf 'NOT-A-VERB\t%s\t%s\t%s\n' "$repo" "$name" "$reason" >> "$halves"
+        else
+          say "  HALF-DECLARED  $repo/$name: $why -- NOT declared, omitted from this build"
+          printf 'HALF-DECLARED\t%s\t%s\t%s\n' "$repo" "$name" "$why" >> "$halves"
+          half_bad=$((half_bad + 1))
+        fi
+        ;;
+    esac
   done <<< "$decl"
 
   [ -n "$verbs" ] || continue
@@ -224,10 +238,10 @@ done
 # is refused, and so is one short by a KNOWN amount it never mentioned.
 exempt_count="$(grep -c '^NOT-A-VERB' "$halves" || true)"
 [ "$exempt_count" -eq 0 ] || \
-  say "  $exempt_count executable(s) recorded as not-a-verb in $NOT_A_VERB -- each is named in the manifest"
+  say "  $exempt_count name(s) recorded as not-a-verb in $NOT_A_VERB -- each is named in the manifest"
 if [ "$half_bad" -gt 0 ]; then
   if [ "$ALLOW_HALF" -eq 0 ]; then
-    die "$half_bad HALF-declared name(s), listed above. A project declares a verb only with BOTH an executable bin/<name> and a matching man/<name>.1; half of that is silently omitted, and the symptom surfaces later and somewhere else as a wrapper failing on a path that was never going to exist (realisateur#66). Fix the declaration in the project, or -- if it is genuinely not a verb -- give it a row in $NOT_A_VERB. --allow-half-declared cuts anyway and records the finding in the manifest."
+    die "$half_bad orphaned man page(s), listed above. A man/<name>.1 with no executable bin/<name> beside it is stale documentation for a script that moved or was deleted (realisateur#66 is the symptom this used to surface as, once as the inverse case). Delete the page, restore the script, or -- if it is deliberately kept -- give it a row in $NOT_A_VERB. --allow-half-declared cuts anyway and records the finding in the manifest."
   fi
   say "  --allow-half-declared: cutting with $half_bad half-declaration(s) UNFIXED. They are omitted from this build and named in its manifest."
 fi

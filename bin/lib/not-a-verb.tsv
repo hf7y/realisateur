@@ -1,33 +1,34 @@
 #project	name	why it is not a verb
 #
-# THE OPT-OUT for bin/cut-verb-build.sh's half-declaration refusal. Read by
-# that script and by nothing else. Every row is a WRITTEN JUDGEMENT that an
-# executable on a `bashified` branch was never meant to be a verb, so its
-# missing man page is not a defect and must stop being reported as one.
+# THE OPT-OUT for lib/verb-set.sh and bin/cut-verb-build.sh. Read by both and
+# by nothing else. Every row is a WRITTEN JUDGEMENT that an executable on a
+# `bashified` branch was never meant to be a verb, despite qualifying.
 #
-# THE RULE IT EXEMPTS FROM
+# THE RULE IT EXEMPTS FROM, SINCE #891
 #   a project declares a verb  <=>  its `bashified` branch carries an
-#   executable `bin/<name>` AND a matching `man/<name>.1`   (lib/verb-set.sh)
+#   executable `bin/<name>`. A `man/<name>.1` beside it is carried when
+#   present and is never a precondition (lib/verb-set.sh).
 #
-# Half of that is a HALF-DECLARATION, and until 2026-08-11 it was discarded in
-# silence: the intersection was printed and the difference thrown away, so a
-# verb that was half-declared was omitted from every build with no count, no
-# name and no line in the manifest. `ecosim-sensor` sat in that hole for its
-# whole existence and surfaced instead as `ecosim-sensor-tick` reporting
-# WRAPPER_NO_SENSOR, which read as a stale build and cost the misdiagnosis in
-# realisateur#66. cut-verb-build.sh now REFUSES on a half-declaration. This
-# file is how a project says "that one is not a verb" once, instead of being
-# nagged about it every night.
+# Before #891 the rule was a conjunction with `man/<name>.1`, and a HALF of
+# it -- an executable with no page -- was silently discarded rather than
+# reported: `ecosim-sensor` sat in that hole for its whole existence and
+# surfaced instead as `ecosim-sensor-tick` reporting WRAPPER_NO_SENSOR, which
+# read as a stale build and cost the misdiagnosis in realisateur#66.
+# cut-verb-build.sh REFUSES on that shape still, but only in the direction
+# that remains a defect: a man page with no executable beside it (a script
+# that moved or was deleted, its doc left behind). An executable with no page
+# is no longer a defect; it is a verb, and this file is now the ONLY way to
+# keep one off PATH -- not a way to silence a refusal that no longer fires.
 #
 # THE TEST, Zach 2026-08-11, when this file blocked every nightly build:
 #
 #     "would another agent or Zach ever call one of those?"
 #
 # That is the question, and it is not the one the mechanical rule asks. The
-# rule asks whether `bin/<name>` and `man/<name>.1` both exist -- a fact about
-# the tree. This asks whether the name is a FRONT DOOR: something a person or
-# another project types. Everything else is an internal that happens to be
-# executable, and an internal does not stop being one by acquiring a man page.
+# rule asks whether `bin/<name>` exists -- a fact about the tree. This asks
+# whether the name is a FRONT DOOR: something a person or another project
+# types. Everything else is an internal that happens to be executable, and an
+# internal does not stop being one by qualifying mechanically.
 #
 # Applied, the test is usually obvious and usually already answered by the
 # project's own shape: ecosim declares `sonde`, so `sonde` is the door and its
@@ -38,10 +39,10 @@
 # WHAT A ROW IS, AND IS NOT
 #   IS      an executable that does a job of its own -- an installer, a cron
 #           wrapper, a scraper, an archiver -- and would gain nothing from a
-#           man page or a slot on PATH.
-#   IS NOT  a verb whose man page has not been written yet. That is the defect
-#           this guard exists to surface, and a row here would bury it again
-#           permanently. Write the page; do not write a row.
+#           slot on PATH.
+#   IS NOT  a genuine front door that merely has no page written yet. Ship it
+#           as a verb with no page, or write the page -- a row here would
+#           bury a real door permanently instead of documenting it.
 #
 # The distinguishing question, and it is not a matter of taste: would anyone
 # ever type this name at a shell expecting the ecosystem's verb contract --
@@ -60,21 +61,13 @@
 # longer there. Remove it when that happens: an exemption outliving its reason
 # is how a temporary judgement becomes a permanent blind spot.
 #
-# NOT EXEMPTED, on purpose, and the build refuses until they are resolved:
-#   ecosim  bin/ecosim-sensor   the original defect (realisateur#85, ecosim#34)
-#   ecosim  bin/ecosim-sweep    same shape, same branch
-# Both are commands with `--help`, an exit-code contract and a stated CLI --
-# i.e. verbs missing their page. ecosim writes the two pages, or ecosim adds
-# two rows here saying they are not verbs. Either is a decision; silence was
-# not.
-#
-bibliothecaire	page92.py	a bounded public-domain scraper and gallery builder; its own docstring is its interface, and lib/verb-set.sh + cut-verb-build.sh both already cite it as the canonical "executable, no page, correctly not a verb"
+bibliothecaire	page92.py	a bounded public-domain scraper and gallery builder; its own docstring is its interface, and cut-verb-build.sh cites it as the canonical "executable, no page, exempted here rather than shipped" example (#891)
 vim-arcade	sync-engine.sh	says so in its own header: "NOT A VERB. It has no man/sync-engine.sh.1 and never will, so the declaration rule correctly does not count it"
 ecosim	ecosim-sensor-tick.sh	cron wrapper for the sensor suite it serves; moved out of realisateur's own bin/ into ecosim's (#49), so the ownership the row's name implies now matches where the file lives. It exists so a bare cron line cannot get 2>&1 ordering wrong
 ecosim	silence-audit.sh	the ecosystem's null-discriminator lint, run by realisateur's own copy of it; "offline-first (zero AI), writes nothing, exits 0 unless --strict"
 ecosim	migration-watch.py	a one-purpose instrument for the mandark -> dexter migration: "OBSERVER ONLY ... writes nothing outside this repo, and cannot halt, gate or block a move"
 gardien	ecosystem-archive.sh	archives the mandark agent-ecosystem set onto one removable exFAT drive; a hand-run operation with a restore-and-diff witness, not a name anyone types expecting a verb
-scheduler	dose-project.sh	the implementation `bin/dose` execs for its project form, not a name anyone types: `dose ecosim`, never `dose-project.sh ecosim`. It travels on bashified only so the build carries it BESIDE bin/dose, which is what lets $SELF find it with no scheduler checkout and no exposure to hf7y/scheduler#99 -- see the dispatch comment in bin/dose. A man page would put it on PATH as a verb, which is precisely what it must not be.
+scheduler	dose-project.sh	the implementation `bin/dose` execs for its project form, not a name anyone types: `dose ecosim`, never `dose-project.sh ecosim`. It travels on bashified only so the build carries it BESIDE bin/dose, which is what lets $SELF find it with no scheduler checkout and no exposure to hf7y/scheduler#99 -- see the dispatch comment in bin/dose. This row is what keeps it off PATH now that an executable alone would otherwise qualify it (#891).
 ecosim	ecosim-sensor	an instrument behind ecosim's actual verb `sonde`, not a door of its own -- Zach, 2026-08-11: "ecosim-sensor and ecosim-sweep are not verbs. ecosim's verb is sonde." It is machine-facing by construction: data on stdout, status-first lines so `grep '^BLIND'` works, stable fields so `awk` works, and Monitoring Plugins exit codes in which `--help` EXITS 3, not 0. A verb whose --help exits 3 fails the verb contract outright, which is mechanical confirmation of the judgement rather than a second opinion about it.
 ecosim	ecosim-sweep	the unattended one-pass driver over those instruments, run by a clock and read by a log, never typed -- same Zach ruling of 2026-08-11. Its contract is an aggregated severity (0 clean / 1 warn / 2 crit / 3 blind, BLIND beating CRIT), which is a thing a cron line consumes, not a thing a person asks for. `sonde` remains ecosim's one door.
 scheduler	freeze-check.sh	the migration abort handle `dose freeze-check` execs, carried onto bashified by hf7y/scheduler#123 so the dispatch path needs no checkout. Nobody types `freeze-check.sh`; they type `dose freeze-check`. It travels in the build to be BESIDE bin/dose, not to be on PATH.
