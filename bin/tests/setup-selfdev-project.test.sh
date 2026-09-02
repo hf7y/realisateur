@@ -42,12 +42,6 @@ cat > "$BIN/wire-selfdev-git.sh" <<'STUB'
 # Staged into $HOME_DIR/.selfdev-setup/ by the script under test, so its own
 # directory is where the harness leaves its control files. It cannot read an
 # env var: run_as invokes it through `env -i`.
-#
-# THE FIRST TWO LINES ARE COPIED FROM THE REAL SCRIPT, not decoration. Both
-# staged scripts source lib/estate-set.sh relative to themselves and then read
-# a variable it sets under `set -u`. A stub that skipped this could not tell a
-# stage that carries the lib from one that does not -- which is how #674's
-# staging gap reached a live standup with the suite green (2026-09-02).
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
 : "$GH_ESTATE_OWNER"
