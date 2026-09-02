@@ -31,7 +31,8 @@ mkclone() {  # a committed, pushed clone -- the state a bootstrap copy is in
   git -C "$d" push -q origin main 2>/dev/null
   git -C "$d" branch -q --set-upstream-to=origin/main main 2>/dev/null
 }
-run() { SELFDEV_PASSWD="$T/passwd" SELFDEV_HOME_ROOT="$T/home" "$SCRIPT" realisateur "$@" 2>&1; }
+NO_GH="$T/no-such-gh"   # a path that never exists: `command -v` fails clean, so every section below except M runs with the deploy-key check silently absent, same as a host with no gh
+run() { SELFDEV_PASSWD="$T/passwd" SELFDEV_HOME_ROOT="$T/home" UNLAND_GH="$NO_GH" "$SCRIPT" realisateur "$@" 2>&1; }
 
 section "A. the argument contract"
 "$SCRIPT" --not-a-real-flag >/dev/null 2>&1; eq "A1 unknown flag exits 2" "$?" "2"
@@ -93,7 +94,7 @@ fi
 section "H. --apply really removes them -- the destructive path, exercised"
 # fakeroot is enough -- id -u is the only root fact the script reads, and an untested rm -rf is the one path that must not ship on inspection alone.
 if command -v fakeroot >/dev/null 2>&1; then
-  OUT="$(SELFDEV_PASSWD="$T/passwd" SELFDEV_HOME_ROOT="$T/home" fakeroot "$SCRIPT" realisateur --apply 2>&1)"; RC=$?
+  OUT="$(SELFDEV_PASSWD="$T/passwd" SELFDEV_HOME_ROOT="$T/home" UNLAND_GH="$NO_GH" fakeroot "$SCRIPT" realisateur --apply 2>&1)"; RC=$?
   eq "H1 a clean sweep exits 0" "$RC" "0"
   [ -d "$T/home/ecosim/Documents/Projects/realisateur" ] \
     && bad "H2 ecosim's clone is gone" || ok "H2 ecosim's clone is gone"
@@ -113,7 +114,7 @@ section "I. the project is an ARGUMENT: the same tool takes senechal's copies (h
 mkclone "$T/home/wtul/Documents/Projects/senechal"
 mkclone "$T/home/ecosim/Documents/Projects/senechal"
 mkclone "$T/home/senechal/Documents/Projects/senechal"
-OUT_S="$(SELFDEV_PASSWD="$T/passwd" SELFDEV_HOME_ROOT="$T/home" "$SCRIPT" senechal --check 2>&1)"
+OUT_S="$(SELFDEV_PASSWD="$T/passwd" SELFDEV_HOME_ROOT="$T/home" UNLAND_GH="$NO_GH" "$SCRIPT" senechal --check 2>&1)"
 has  "I1 wtul's senechal clone is named"   "$OUT_S" "would remove $T/home/wtul/Documents/Projects/senechal"
 has  "I2 ecosim's senechal clone is named" "$OUT_S" "would remove $T/home/ecosim/Documents/Projects/senechal"
 has  "I3 the account that OWNS senechal keeps its checkout" "$OUT_S" "senechal: KEPT -- this account owns senechal"
@@ -133,6 +134,52 @@ eq "K1 prop_channel says provision -- an operator runs this once, on nobody's cl
 printf '%s\n' "$(prop_host_tools)" | grep -qx unland-foreign-clone.sh \
   && ok "K2 it rides to the host libexec, the only copy monkey will have once the clones are gone" \
   || bad "K2 it rides to the host libexec" "absent from prop_host_tools"
+
+section "L. a foreign clone's deploy key is revoked alongside it, or on its own if the clone is already gone (#852)"
+cat > "$T/passwdL" <<'EOF'
+root:x:0:0::/root:/bin/bash
+realisateur:x:3010:3010::/home/realisateur:/bin/bash
+ecosim:x:3011:3011::/home/ecosim:/bin/bash
+ghost:x:3012:3012::/home/ghost:/bin/bash
+wtul:x:3013:3013::/home/wtul:/bin/bash
+EOF
+mkclone "$T/homeL/ecosim/Documents/Projects/realisateur"
+mkclone "$T/homeL/realisateur/Documents/Projects/realisateur"
+cat > "$T/gh-stub" <<'EOF'  # ghost gets no clone below, only a deploy key -- the orphan #852 describes; wtul gets neither
+#!/usr/bin/env bash
+case "$*" in
+  "repo deploy-key list --repo hf7y/realisateur --json id,title --jq"*)
+    printf '111\tmonkey-ecosim-realisateur\n222\tmonkey-ghost-realisateur\n' ;;
+  "repo deploy-key delete 111 --repo hf7y/realisateur") exit 0 ;;  # ecosim's: succeeds
+  "repo deploy-key delete 222 --repo hf7y/realisateur") exit 1 ;;  # ghost's: GitHub refuses, e.g. a stale token
+  *) exit 1 ;;
+esac
+EOF
+chmod +x "$T/gh-stub"
+runL() {  # runL <mode> -- OUT/RC, against $T/homeL and the stub above
+  SELFDEV_PASSWD="$T/passwdL" SELFDEV_HOME_ROOT="$T/homeL" SELFDEV_HOSTNAME=monkey \
+    UNLAND_GH="$T/gh-stub" "$SCRIPT" realisateur "$1" 2>&1
+}
+
+OUT="$(runL --check)"; RC=$?
+has "L1 ecosim's clone is still named" "$OUT" "would remove $T/homeL/ecosim/Documents/Projects/realisateur"
+has "L2 and ecosim's deploy key is named alongside it" "$OUT" "would revoke deploy key 'monkey-ecosim-realisateur' (id 111) on hf7y/realisateur"
+has "L3 ghost has no clone but its orphaned key is still a finding" "$OUT" "would revoke deploy key 'monkey-ghost-realisateur' (id 222) on hf7y/realisateur"
+hasnt "L4 ghost is not reported as having a clone" "$OUT" "would remove $T/homeL/ghost/"
+has "L5 wtul has neither a clone nor a key, and reads OK" "$OUT" "wtul: no clone"
+eq "L6 findings exit 1" "$RC" "1"
+
+if command -v fakeroot >/dev/null 2>&1; then
+  OUT="$(SELFDEV_PASSWD="$T/passwdL" SELFDEV_HOME_ROOT="$T/homeL" SELFDEV_HOSTNAME=monkey \
+          UNLAND_GH="$T/gh-stub" fakeroot "$SCRIPT" realisateur --apply 2>&1)"; RC=$?
+  [ -d "$T/homeL/ecosim/Documents/Projects/realisateur" ] \
+    && bad "L7 ecosim's clone is gone" || ok "L7 ecosim's clone is gone"
+  has "L8 and ecosim's deploy key was revoked" "$OUT" "revoked deploy key 'monkey-ecosim-realisateur' (id 111) on hf7y/realisateur"
+  has "L9 ghost's orphaned key was attempted and GitHub's refusal is reported, not swallowed" "$OUT" "could not revoke deploy key 'monkey-ghost-realisateur' (id 222) on hf7y/realisateur"
+  eq "L10 a key GitHub refused to revoke is a finding" "$RC" "1"
+else
+  ok "L7 skipped: no fakeroot, so the apply path cannot be driven here"
+fi
 
 echo
 summary

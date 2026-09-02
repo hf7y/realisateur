@@ -2,13 +2,14 @@
 set -uo pipefail
 
 CLI_NAME='unland-foreign-clone.sh'
-CLI_SUMMARY='remove the clone of <project> that bin/land-selfdev.sh minted into self-dev accounts that do not own it, keeping the checkout of the one that does'
+CLI_SUMMARY='remove the clone of <project> that bin/land-selfdev.sh minted into self-dev accounts that do not own it, keeping the checkout of the one that does, and revoke the deploy key that clone was reading with (#852)'
 CLI_USAGE='  unland-foreign-clone.sh <project>            --check (default): list what would go, remove nothing
   unland-foreign-clone.sh <project> --apply    remove them, then print the witness to paste back'
 CLI_FLAGS='--check --apply'
 CLI_POSITIONAL='<project>'
 CLI_EXITS='  0  nothing left to remove
-  1  findings: clones are present (--check), or one was kept back (--apply)
+  1  findings: clones or keys are present (--check), or one was kept back or
+     could not be revoked (--apply)
   5  refused: --apply without root
   6  BLIND: the self-dev uid band matched no account at all -- nothing was
      looked at, and a 0-account pass is NOT a clean result'
@@ -31,6 +32,10 @@ done  # $PROJECT is MATCHED, not merely non-empty: it becomes a path component o
 UID_LO=3000; UID_HI=3100                                          # the self-dev band, same as bin/monkey-status-collect.py
 HOME_ROOT="${SELFDEV_HOME_ROOT:-/home}"                           # fixture seams:
 PASSWD_SRC="${SELFDEV_PASSWD:-}"                                  # unset in production
+HOST_S="${SELFDEV_HOSTNAME:-$(hostname -s 2>/dev/null || echo unknown)}"
+. "$HERE/lib/estate-set.sh"
+KEY_OWNER="${SELFDEV_GH_OWNER:-$GH_ESTATE_OWNER}"
+GH="${UNLAND_GH:-gh}"
 
 PASS=0; GAPS=0; BAD=0
 ok()  { printf '  OK      %s\n' "$*"; PASS=$((PASS+1)); }
@@ -40,6 +45,16 @@ act() { printf '  DO      %s\n' "$*"; }
 die() { printf '\n%s: %s\n' "$CLI_NAME" "$*" >&2; exit "${2:-5}"; }
 
 echo "== unland-foreign-clone $PROJECT ($MODE) -- $(hostname -s), uid $UID_LO-$((UID_HI-1)) under $HOME_ROOT =="
+
+KEYS=""   # a clone's credential outlives the clone unless something also revokes it (#852); listed ONCE here, not per account -- 30+ accounts is 30+ API calls otherwise, and a failed list stays silent so a key check that cannot run never blocks the clone removal that is this tool's primary contract
+if command -v "$GH" >/dev/null 2>&1; then
+  KEYS="$("$GH" repo deploy-key list --repo "$KEY_OWNER/$PROJECT" --json id,title \
+           --jq '.[] | (.id|tostring) + "\t" + .title' 2>/dev/null)" || KEYS=""  # wire-selfdev-git.sh titles a deploy key "<host>-<account>-<project>", read-only, one per foreign clone it grants
+fi
+deploy_key_id() {  # <title> -> the key id on stdout, 1 if no key has that title
+  [ -n "$KEYS" ] || return 1
+  printf '%s\n' "$KEYS" | awk -F'\t' -v t="$1" '$2==t {print $1; found=1} END{exit !found}'
+}
 
 [ "$MODE" = --check ] || [ "$(id -u)" -eq 0 ] || die "$MODE needs root (sudo $CLI_NAME $PROJECT $MODE)" 5
 
@@ -72,24 +87,43 @@ for a in $roster; do
   case "$a" in ''|*/*|.|..) bad "refusing an implausible account name: '$a'"; continue ;; esac  # it becomes a path component below; a roster that can hold anything else is a delete-anything primitive
 
   d="$HOME_ROOT/$a/Documents/Projects/$PROJECT"
+  title="$HOST_S-$a-$PROJECT"
+  kid="$(deploy_key_id "$title")" || kid=""
 
   if [ "$a" = "$PROJECT" ]; then  # THE OWNING ACCOUNT, and the account name equalling the directory name is the only thing that tells its dev checkout (schedule/<project>.conf's PROJECT_REPO_PATH) from a copy land-selfdev.sh minted
     ok "$a: KEPT -- this account owns $PROJECT, so $d is its own dev checkout"
     continue
   fi
 
-  [ -d "$d" ] || { ok "$a: no clone at $d"; continue; }
+  has_clone=1; [ -d "$d" ] || has_clone=0
 
-  r="$(residue "$d")"
-  if [ -n "$r" ]; then
-    bad "$a: KEPT -- $d has $r; salvage it, then re-run"
+  if [ "$has_clone" -eq 1 ]; then
+    r="$(residue "$d")"
+    if [ -n "$r" ]; then
+      bad "$a: KEPT -- $d has $r; salvage it, then re-run"
+      continue
+    fi
+  fi
+
+  if [ "$has_clone" -eq 0 ] && [ -z "$kid" ]; then  # a bare key outliving its clone is still a finding (#852), not an "ok"
+    ok "$a: no clone at $d, no deploy key '$title'"
     continue
   fi
 
   if [ "$MODE" = --apply ]; then
-    if rm -rf "$d"; then act "$a: removed $d"; else bad "$a: could not remove $d"; fi
+    if [ "$has_clone" -eq 1 ]; then
+      if rm -rf "$d"; then act "$a: removed $d"; else bad "$a: could not remove $d"; fi
+    fi
+    if [ -n "$kid" ]; then
+      if "$GH" repo deploy-key delete "$kid" --repo "$KEY_OWNER/$PROJECT" >/dev/null 2>&1; then
+        act "$a: revoked deploy key '$title' (id $kid) on $KEY_OWNER/$PROJECT"
+      else
+        bad "$a: could not revoke deploy key '$title' (id $kid) on $KEY_OWNER/$PROJECT"
+      fi
+    fi
   else
-    gap "$a: would remove $d"
+    [ "$has_clone" -eq 1 ] && gap "$a: would remove $d"
+    [ -n "$kid" ] && gap "$a: would revoke deploy key '$title' (id $kid) on $KEY_OWNER/$PROJECT"
   fi
 done
 
