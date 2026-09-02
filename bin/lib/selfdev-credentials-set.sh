@@ -25,18 +25,6 @@ CRED_UID_MAX="${CRED_UID_MAX:-3099}"
 # --- the shared repos, read-only by baseline -----------------------------
 CRED_SHARED_REPOS="realisateur scheduler senechal"
 
-# cred_wire_scope <acct> -- comma-separated --repos list: the account's own repo
-# plus CRED_SHARED_REPOS, senechal among them being PRIVATE (#671).
-cred_wire_scope() {
-  local acct="$1" r out="$1"
-  [ -n "$acct" ] || return 1
-  for r in $CRED_SHARED_REPOS; do
-    [ "$r" = "$acct" ] && continue      # never name the own repo twice
-    out="$out,$r"
-  done
-  printf '%s\n' "$out"
-}
-
 # --- the fleet-wide App --------------------------------------------------
 # One App across every self-dev account, decided 2026-08-07. An account whose
 # gh-app.conf declares a DIFFERENT id or owner is not obviously wrong (the

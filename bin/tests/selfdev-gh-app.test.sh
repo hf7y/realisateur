@@ -353,14 +353,14 @@ has "M3 ...and the unscoped posture is stated, not silent" "$outM3" "UNSCOPED"
 echo
 echo "-- M: the two callers that must supply the list --------------------------"
 BINDIR="$(cd "$(dirname "$0")/.." && pwd)"
-. "$BINDIR/lib/selfdev-credentials-set.sh"
-eq  "M4 cred_wire_scope names the account's own repo first" "$(cred_wire_scope wtul | cut -d, -f1)" "wtul"
-has "M4 ...and carries the PRIVATE shared repo, or git loses it" "$(cred_wire_scope wtul)" "senechal"
-no  "M4 ...and never names the own repo twice" "$(cred_wire_scope senechal | tr ',' '\n' | sort | uniq -d)" "senechal"
-has "M5 the provisioning caller passes a scope" "$(cat "$BINDIR/setup-selfdev-project.sh")" 'cred_wire_scope "$PROJECT"'
-has "M6 the re-wire caller passes one too, or --apply silently unscopes the fleet" \
-    "$(cat "$BINDIR/selfdev-credentials.sh")" 'cred_wire_scope "$acct"'
-
+# OWN repo and nothing else: realisateur reaches an account through the verb
+# build (#134) and each clones only its own REPO_URL (scheduler#307).
+has "M4 the provisioning caller scopes to the project itself" \
+    "$(cat "$BINDIR/setup-selfdev-project.sh")" "--wire --repos '\$PROJECT'"
+has "M5 the re-wire caller does too, or --apply silently unscopes the fleet" \
+    "$(cat "$BINDIR/selfdev-credentials.sh")" '--wire --repos $(cred_own_repo "$acct")'
+no  "M6 no second list of repos was invented beside cred_own_repo" \
+    "$(cat "$BINDIR/lib/selfdev-credentials-set.sh")" "cred_wire_scope"
 echo
 summary
 [ "$fail" -eq 0 ] || exit 1

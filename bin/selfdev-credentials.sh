@@ -442,7 +442,7 @@ cmd_apply() {
   else
     act "selfdev-gh-app.sh --wire as $acct (helper=$wire_own, $leftover leftover rewrite(s))"
     if "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \
-         "sudo -n -u '$acct' bash -lc '${CRED_APP_WIRE:-/usr/local/libexec/selfdev/selfdev-gh-app.sh} --wire --repos $(cred_wire_scope "$acct")'"; then
+         "sudo -n -u '$acct' bash -lc '${CRED_APP_WIRE:-/usr/local/libexec/selfdev/selfdev-gh-app.sh} --wire --repos $(cred_own_repo "$acct")'"; then
       echo "  OK    $acct wired to the App"
       changed=1
     else
