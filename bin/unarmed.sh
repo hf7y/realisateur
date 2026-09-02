@@ -231,7 +231,7 @@ while IFS=$'\t' read -r id since window floor remedy || [ -n "$id" ]; do
     row BLIND "$id" "since='$since' window='$window' is not a date this could age"
     blind=1
   elif [ "$NOW" -gt "$due" ]; then
-    row EXPIRED "$id" "$detail -- built $since, past its own ${window} window"
+    row EXPIRED "$id" "$detail -- filed $since, past its own ${window} window"
     act "$remedy"; findings=1
   else
     row HELD "$id" "$detail -- ${window} from $since, $(( (due - NOW) / 86400 ))d left"
