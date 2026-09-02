@@ -282,13 +282,32 @@ case "$MODE" in
 
   --wire)
     self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
-    want_helper="!'$self' --credential"
+    # THE HELPER CARRIES ITS OWN SCOPE (#671). git re-invokes this script on
+    # every 401, so whatever --repos is baked in here is the scope of every
+    # token this account ever mints. Composed WITHOUT --repos it mints an
+    # installation-wide token -- measured 2026-08-27 as 53 repos with
+    # contents:write, from any account. Callers pass cred_wire_scope <acct>.
+    #
+    # NOT DEFAULTED HERE ON PURPOSE: this script does not know which repos an
+    # account works on, and inventing a default would either break git for the
+    # accounts it guessed short or quietly restore the unscoped token for the
+    # ones it guessed wide. An omitted --repos keeps the old behaviour and says
+    # so in the OK line, so an unscoped account is visible rather than assumed.
+    if [ -n "$REPOS" ]; then
+      want_helper="!'$self' --repos '$REPOS' --credential"
+    else
+      want_helper="!'$self' --credential"
+    fi
     git config --global --unset-all credential."https://github.com".helper 2>/dev/null
     git config --global --add credential."https://github.com".helper "$want_helper"
     git config --global credential."https://github.com".useHttpPath false
     got_helper="$(git config --global --get-all credential."https://github.com".helper)"
     if [ "$got_helper" = "$want_helper" ]; then
-      ok "git credential helper -> $self --credential"
+      if [ -n "$REPOS" ]; then
+        ok "git credential helper -> $self --credential (scoped to: $REPOS)"
+      else
+        ok "git credential helper -> $self --credential (UNSCOPED -- mints a token for every repo the App is installed on; pass --repos to narrow it, #671)"
+      fi
     else
       bad "git config accepted the helper write but re-reading gives '$got_helper'"
     fi

@@ -326,6 +326,52 @@ has "K3 an App bot slug is named as the fleet-identity bug" "$outK3" "fleet-iden
 eq  "K3 ...and it is corrected to the account"              "$(gcfg user.name)" "$ACCT"
 eq  "K3 ...with the bot value preserved"                    "$(gcfg selfdev.previousUserName)" "unattended-monkey[bot]"
 
+# --- M: the wired helper carries its own repo scope (#671) --------------------
+# THE POSTURE THIS CASE EXISTS FOR, measured on monkey 2026-08-27: --wire
+# composed the helper with no --repos, an empty repository list asks GitHub for
+# the whole installation, and every self-dev account therefore held a
+# contents:write credential for all 53 repos in it. --repos was built and had
+# zero callers. These cases fail if that regresses in either half -- the
+# composing, or the two callers that supply the list.
+echo
+echo "-- M: --wire bakes --repos into the helper -------------------------------"
+
+MHOME="$T/scope-home"; mkdir -p "$MHOME"
+MGC="$MHOME/.gitconfig"
+mwire() { env HOME="$MHOME" XDG_CACHE_HOME="$T/cache" GIT_CONFIG_GLOBAL="$MGC" \
+              SELFDEV_APP_CONF="$T/none.conf" SELFDEV_GH_API="http://127.0.0.1:1" \
+              "$SCRIPT" --wire "$@" 2>&1; }
+mhelper() { git config --file "$MGC" --get credential."https://github.com".helper 2>/dev/null || true; }
+
+outM1="$(mwire --repos wtul,senechal)"
+has "M1 the helper git will call carries the scope" "$(mhelper)" "--repos 'wtul,senechal'"
+has "M1 ...and still ends in the mode git appends its operation to" "$(mhelper)" "--credential"
+has "M1 ...and --wire says which repos it scoped to" "$outM1" "scoped to: wtul,senechal"
+
+# The composed line has to survive the parser it will be handed back to:
+# git invokes it as `<self> --repos <list> --credential get`.
+outM2="$(run "$SCRIPT" --repos wtul,senechal --credential get </dev/null 2>&1)"; rcM2=$?
+no  "M2 a scoped helper is not rejected by its own parser" "$outM2" "only accepted after --credential"
+eq  "M2 ...and does not exit on a usage error"             "$([ "$rcM2" -eq 2 ] && echo usage || echo ok)" "ok"
+
+# An omitted --repos must stay unscoped AND say so -- silence here would read
+# as "scoped" to the next person measuring the fleet.
+: > "$MGC"
+outM3="$(mwire)"
+no  "M3 no --repos means no scope is invented" "$(mhelper)" "--repos"
+has "M3 ...and the unscoped posture is stated, not silent" "$outM3" "UNSCOPED"
+
+echo
+echo "-- M: the two callers that must supply the list --------------------------"
+BINDIR="$(cd "$(dirname "$0")/.." && pwd)"
+. "$BINDIR/lib/selfdev-credentials-set.sh"
+eq  "M4 cred_wire_scope names the account's own repo first" "$(cred_wire_scope wtul | cut -d, -f1)" "wtul"
+has "M4 ...and carries the PRIVATE shared repo, or git loses it" "$(cred_wire_scope wtul)" "senechal"
+no  "M4 ...and never names the own repo twice" "$(cred_wire_scope senechal | tr ',' '\n' | sort | uniq -d)" "senechal"
+has "M5 the provisioning caller passes a scope" "$(cat "$BINDIR/setup-selfdev-project.sh")" 'cred_wire_scope "$PROJECT"'
+has "M6 the re-wire caller passes one too, or --apply silently unscopes the fleet" \
+    "$(cat "$BINDIR/selfdev-credentials.sh")" 'cred_wire_scope "$acct"'
+
 echo
 summary
 [ "$fail" -eq 0 ] || exit 1

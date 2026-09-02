@@ -25,6 +25,31 @@ CRED_UID_MAX="${CRED_UID_MAX:-3099}"
 # --- the shared repos, read-only by baseline -----------------------------
 CRED_SHARED_REPOS="realisateur scheduler senechal"
 
+# cred_wire_scope <acct> -- the repository list an account's git credential
+# helper may mint a token for: its OWN repo plus the shared three. Printed
+# comma-separated, the spelling selfdev-gh-app.sh --repos takes.
+#
+# WHY THIS EXISTS (#671). --wire used to compose the helper with no --repos at
+# all, and an empty repository list asks GitHub for the WHOLE installation's
+# scope -- measured 2026-08-27 as 53 repos, private ones and the vault
+# included, from any account. The narrowing was built and had zero callers.
+#
+# WHY THE SHARED THREE ARE IN IT AND NOT JUST THE OWN REPO: senechal is
+# PRIVATE, so an account scoped to its own repo alone loses git access to it.
+# realisateur and scheduler are public and need no credential today; they are
+# listed because CRED_SHARED_REPOS is the estate's declaration of what an
+# account works on, and a scope derived from a different list would drift from
+# it silently the day one of them goes private.
+cred_wire_scope() {
+  local acct="$1" r out="$1"
+  [ -n "$acct" ] || return 1
+  for r in $CRED_SHARED_REPOS; do
+    [ "$r" = "$acct" ] && continue      # never name the own repo twice
+    out="$out,$r"
+  done
+  printf '%s\n' "$out"
+}
+
 # --- the fleet-wide App --------------------------------------------------
 # One App across every self-dev account, decided 2026-08-07. An account whose
 # gh-app.conf declares a DIFFERENT id or owner is not obviously wrong (the

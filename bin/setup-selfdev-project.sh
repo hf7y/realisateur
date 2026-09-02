@@ -141,6 +141,8 @@ are idempotent."
 say "4/8 the GitHub App credential (host-wide key, then this account's git helper)"
 if [ -x "$HERE/selfdev-app-key.sh" ]; then
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
+# cred_wire_scope: the repo list this project's git credential may mint for (#671)
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/selfdev-credentials-set.sh"
   appkey_out="$("$HERE/selfdev-app-key.sh" --apply --owner "${SELFDEV_GH_OWNER:-$GH_ESTATE_OWNER}" 2>&1)"; appkey_rc=$?  # rc from the command, not a pipeline (see 3/4's pipefail note)
   printf '%s\n' "$appkey_out" | sed 's/^/  /'
   [ "$appkey_rc" -eq 0 ] && echo "  OK      $PROJECT can read the host-wide App key" \
@@ -156,7 +158,7 @@ GH_APP="${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/selfdev-gh-app.sh"
 [ -x "$GH_APP" ] || die "$GH_APP is not installed, so $PROJECT gets no git credential
 helper and cannot clone over https. Install the host tools first:
     sudo $HERE/wire-release-channel.sh --host --apply"
-run_as "'$GH_APP' --wire" 2>&1 | sed 's/^/  /'
+run_as "'$GH_APP' --wire --repos $(cred_wire_scope "$PROJECT")" 2>&1 | sed 's/^/  /'
 [ "${PIPESTATUS[0]}" -eq 0 ] || die "selfdev-gh-app.sh --wire failed for $PROJECT -- no git
 credential helper, so the clone in 5/8 cannot authenticate. Read the rows above."
 
