@@ -196,14 +196,7 @@ case "${1:-}" in
     [ -r "$_ps" ] || { printf 'gh-sign: BLIND -- no propagation-set.sh at %s, so nothing can say where a file lands.\n' "$_ps" >&2; exit 6; }
     # shellcheck source=lib/propagation-set.sh
     . "$_ps"
-    _host="${GH_SIGN_HOST:-monkey}"
-    # A LOCAL-CLASS FILE CAN STILL LAND ON A HOST. prop_host_tools() rides
-    # ausculte's probes to /usr/local/libexec/selfdev BY NAME while prop_channel
-    # calls them `local` -- deliberately. Reading only the class answered
-    # `- none` for three files that deploy: ausculte-cadence.sh,
-    # decision-rot.sh, vault-spool-drain.sh. Space-delimited so a name matches
-    # whole, same idiom as $_seen below.
-    _ht=' '
+    _ht=' '  # LOCAL-class files that still ride to a host by name (prop_host_tools); space-delimited so a name matches whole, same idiom as $_seen below
     while IFS= read -r _t; do [ -n "$_t" ] && _ht="$_ht$_t "; done <<EOF
 $(prop_host_tools 2>/dev/null)
 EOF
@@ -216,17 +209,10 @@ EOF
       _seen="$_seen $_b"
       _ch="$(prop_channel "$_b" 2>/dev/null)" || continue
       case "$_ch" in
-        payload)    # The verb name is NOT the basename: gh-sign.sh installs as `gh`.
-                    # bin/lib/carries.tsv is the one table that maps carried
-                    # path to source, so it answers this instead of a guess.
-                    _v="$(awk -F'\t' -v s="bin/$_b" '$2==s{n=$1; sub(/^bin\//,"",n); print n; exit}' \
-                          "${GH_SIGN_LIB:-${SELF%/*}/lib}/carries.tsv" 2>/dev/null)"
-                    [ -n "$_v" ] || _v="${_b%.sh}"
-                    printf -- '- path:/usr/local/bin/%s on %s\n' "$_v" "$_host"; _n=$((_n+1)) ;;
-        bootstrap|provision)
-                    printf -- '- path:/usr/local/libexec/selfdev/%s on %s\n' "$_b" "$_host"; _n=$((_n+1)) ;;
+        payload|bootstrap|provision)
+                    printf -- '- path:%s\n' "$_f"; _n=$((_n+1)) ;;  # realisateur#851: the repo path IS the checkable claim -- atteste resolves it in-tree at the merge commit, never BLIND on a host it cannot reach
         local)      case "$_ht" in
-                      *" $_b "*) printf -- '- path:/usr/local/libexec/selfdev/%s on %s\n' "$_b" "$_host"; _n=$((_n+1)) ;;
+                      *" $_b "*) printf -- '- path:%s\n' "$_f"; _n=$((_n+1)) ;;
                     esac ;;
       esac
     done <<EOF
