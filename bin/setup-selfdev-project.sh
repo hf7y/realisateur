@@ -62,7 +62,8 @@ if [ "$MODE" = --check ]; then
   echo "    7. selfdev-permissions-provision.sh --apply: the permissions block"
   echo "    8. selfdev-hooks-provision.sh --apply: the SubagentStop closeout hook"
   echo
-  echo "  it will NOT arm dispatch: that is a 0->1 in schedule/_paced.$HOST.conf."
+  echo "  it will NOT arm dispatch: that is a human editing the state column for"
+  echo "  $PROJECT in scheduler's schedule/ROSTER (the sole arming authority, #364)."
   echo "Next: sudo bash $0 $PROJECT --apply"
   exit 0
 fi

@@ -108,22 +108,12 @@ For each unarchived artifact:
 - Check whether a project for this idea already exists under
   `~/Documents/Projects/` before creating a new one -- an artifact might
   be an addition to something already scaffolded, not a brand-new project.
-- **If it's an addition to an existing project, apply park-by-default
-  triage**: is this idea
-  required to reach that project's *current* stability milestone (its open
-  `milestone`-labelled issue)? If **yes**, build/queue it normally. If **no**,
-  **park it**: `defere '<one line>' --project <name>`, and do NOT build it
-  tonight. Building past the milestone unprompted is the failure mode this
-  convention exists to prevent. A brand-new project is exempt: the inbox idea
-  *is* its v1.
+  If it is, build/queue it against that project normally rather than
+  scaffolding a new one.
 - For a genuinely new idea: create `~/Documents/Projects/<name>/`, `git
   init` it, write a minimal README describing the inferred idea and
   initial scaffolding (actual code/structure appropriate to what was
-  inferred -- don't leave it as just a README). Its **stability
-  milestone** is the inferred **v1 core** of the idea, filed as a
-  `milestone` issue,
-  `status: not-started`. That milestone is what every later idea against
-  the project gets park-by-default-triaged against.
+  inferred -- don't leave it as just a README).
 - Write a baseline `.gitignore` before the first `git add`: `*.env`, `.env`,
   `secrets/`, `*secret*`, `*cred*`, `*.pem`, `*.key`, `id_rsa*`, `*.img`,
   `*.img.xz`, `*.iso`, `*.efi`, `*.dmg`, `*.log`, `__pycache__/`, `*.pyc`,

@@ -272,6 +272,62 @@ has "J5 a repo this token cannot READ is BLIND, not an absent file" "$OUT" "coul
 hasnt "J6 and never reports a gap inside a repo it cannot see" "$OUT" "GAP  "
 rc  "J7 and exits 6" 6 $RC
 
+section "L. a PR's own block is a subset of what it closes (#872)"
+mkdir -p "$T/fix2/at-mergesha1/bin" "$T/fix2/other-default"
+: > "$T/fix2/at-mergesha1/bin/sync-crontab.sh"      # delivered by the PR AND claimed by the issue
+: > "$T/fix2/other-default/deposited.md"            # claimed by a closed issue in ANOTHER repo
+cat > "$T/gh3" <<'EOF'
+#!/usr/bin/env bash
+case "$2" in
+  graphql)                          cat "$FIX/closing" 2>/dev/null || printf '' ;;
+  repos/hf7y/scheduler/issues/456)  cat "$FIX/pr-issue" ;;
+  repos/hf7y/scheduler/pulls/456/files*) cat "$FIX/files" 2>/dev/null || : ;;
+  repos/hf7y/scheduler/pulls/456)   cat "$FIX/pull" ;;
+  repos/hf7y/scheduler/issues/454)  cat "$FIX/issue454" ;;
+  repos/hf7y/other/issues/10)       cat "$FIX/issue10" ;;
+  repos/*/issues/*)                 exit 1 ;;
+  repos/hf7y/other/contents/*)
+    p="${2#*/contents/}"; p="${p%%\?*}"
+    case "$2" in *'?ref='*) echo "gh: Not Found (HTTP 404)" >&2; exit 1 ;; esac
+    if [ -e "$FIX/other-default/$p" ]; then exit 0; fi
+    echo "gh: Not Found (HTTP 404)" >&2; exit 1 ;;
+  repos/hf7y/scheduler/contents/*)
+    p="${2#*/contents/}"; ref="${p#*\?ref=}"; p="${p%%\?*}"
+    case "$2" in *'?ref='*) ;; *) ref=default ;; esac
+    if [ -e "$FIX/at-$ref/$p" ]; then exit 0; fi
+    echo "gh: Not Found (HTTP 404)" >&2; exit 1 ;;
+  repos/*/*) exit 0 ;;
+esac
+EOF
+chmod +x "$T/gh3"
+
+printf 'https://api/pulls/456\n' > "$T/fix2/pr-issue"
+body 'path:bin/sync-crontab.sh -- the doubling case refuses or prints ERROR' >> "$T/fix2/pr-issue"
+printf 'merged\nmergesha1\nheadsha2\n' > "$T/fix2/pull"
+printf 'hf7y/scheduler#454\n' > "$T/fix2/closing"
+body 'path:bin/sync-crontab.sh -- the doubling case refuses or prints ERROR' \
+     'path:bin/tests/sync-crontab.test.sh -- a witness for the doubling case' > "$T/fix2/issue454"
+OUT="$(ATTESTE_GH="$T/gh3" FIX="$T/fix2" "$SCRIPT" hf7y/scheduler#456 2>&1)"; RC=$?
+has "L1 the PR's own claim is graded and satisfied" "$OUT" "SATISFIED path:bin/sync-crontab.sh"
+has "L2 the closed issue is named" "$OUT" "closes hf7y/scheduler#454"
+has "L3 an issue entry the PR never reached is a GAP" "$OUT" "GAP       path:bin/tests/sync-crontab.test.sh"
+rc  "L4 so a PR that restates a subset of its issue no longer grades clean" 4 $RC
+
+printf 'hf7y/scheduler#454\nhf7y/other#10\n' > "$T/fix2/closing"
+body 'path:deposited.md -- landed in another repo entirely' > "$T/fix2/issue10"
+OUT="$(ATTESTE_GH="$T/gh3" FIX="$T/fix2" "$SCRIPT" hf7y/scheduler#456 2>&1)"; RC=$?
+has "L5 a cross-repo closed issue is named too" "$OUT" "closes hf7y/other#10"
+has "L6 and graded at ITS default branch, not the PR's merge sha" "$OUT" "SATISFIED path:deposited.md"
+
+printf 'hf7y/scheduler#999\n' > "$T/fix2/closing"
+OUT="$(ATTESTE_GH="$T/gh3" FIX="$T/fix2" "$SCRIPT" hf7y/scheduler#456 2>&1)"; RC=$?
+has "L7 a closed issue that cannot be fetched is BLIND, not skipped silently" "$OUT" "hf7y/scheduler#999 (closed by this PR) could not be read"
+
+printf -- '-\n' > "$T/fix/issue"; body 'path:onmain.md' >> "$T/fix/issue"
+OUT="$(ATTESTE_GH="$T/gh" FIX="$T/fix" "$SCRIPT" hf7y/realisateur#790 2>&1)"; RC=$?
+has "L8 an ISSUE subject (not a PR) is unaffected -- no closingIssuesReferences lookup" "$OUT" "issue, graded at the default branch"
+hasnt "L9 and never prints a 'closes' line for a non-PR subject" "$OUT" "closes "
+
 section "I. one parser, and a named channel to a host"
 . "$ROOT/lib/body-grammar.sh"
 grep -q 'grammar_delivers' "$SCRIPT" \

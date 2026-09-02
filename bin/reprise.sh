@@ -107,4 +107,4 @@ git add "$TABLE"
 git commit -q -F "$HERE/.reprise-msg" && rm -f "$HERE/.reprise-msg"
 git push -q -u origin "$BRANCH" || blind "could not push $BRANCH"
 gh pr create --title "reprise: collect ${#collect[@]} file(s) their owner has received" \
-  --body "$(printf 'NO-DECISION: mechanical collection; every path was witnessed at its destination\n\nOpened by `reprise --apply` from bin/lib/handoffs.tsv. See the commit body.\n\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n')"
+  --body "$(printf 'NO-DECISION: mechanical collection; every path was witnessed at its destination\n\nOpened by `reprise --apply` from bin/lib/handoffs.tsv. See the commit body.\n\n<!-- DEFERRED -->\n- none\n<!-- /DEFERRED -->\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->\n')"
