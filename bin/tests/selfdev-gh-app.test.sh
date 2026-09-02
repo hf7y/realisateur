@@ -327,6 +327,41 @@ eq  "K3 ...and it is corrected to the account"              "$(gcfg user.name)" 
 eq  "K3 ...with the bot value preserved"                    "$(gcfg selfdev.previousUserName)" "unattended-monkey[bot]"
 
 echo
+echo "-- M: --wire bakes --repos into the helper -------------------------------"
+
+MHOME="$T/scope-home"; mkdir -p "$MHOME"
+MGC="$MHOME/.gitconfig"
+mwire() { env HOME="$MHOME" XDG_CACHE_HOME="$T/cache" GIT_CONFIG_GLOBAL="$MGC" \
+              SELFDEV_APP_CONF="$T/none.conf" SELFDEV_GH_API="http://127.0.0.1:1" \
+              "$SCRIPT" --wire "$@" 2>&1; }
+mhelper() { git config --file "$MGC" --get credential."https://github.com".helper 2>/dev/null || true; }
+
+outM1="$(mwire --repos wtul,senechal)"
+has "M1 the helper git will call carries the scope" "$(mhelper)" "--repos 'wtul,senechal'"
+has "M1 ...and still ends in the mode git appends its operation to" "$(mhelper)" "--credential"
+has "M1 ...and --wire says which repos it scoped to" "$outM1" "scoped to: wtul,senechal"
+
+outM2="$(run "$SCRIPT" --repos wtul,senechal --credential get </dev/null 2>&1)"; rcM2=$?
+no  "M2 a scoped helper is not rejected by its own parser" "$outM2" "only accepted after --credential"
+eq  "M2 ...and does not exit on a usage error"             "$([ "$rcM2" -eq 2 ] && echo usage || echo ok)" "ok"
+
+: > "$MGC"
+outM3="$(mwire)"
+no  "M3 no --repos means no scope is invented" "$(mhelper)" "--repos"
+has "M3 ...and the unscoped posture is stated, not silent" "$outM3" "UNSCOPED"
+
+echo
+echo "-- M: the two callers that must supply the list --------------------------"
+BINDIR="$(cd "$(dirname "$0")/.." && pwd)"
+# OWN repo and nothing else: realisateur reaches an account through the verb
+# build (#134) and each clones only its own REPO_URL (scheduler#307).
+has "M4 the provisioning caller scopes to the project itself" \
+    "$(cat "$BINDIR/setup-selfdev-project.sh")" "--wire --repos '\$PROJECT'"
+has "M5 the re-wire caller does too, or --apply silently unscopes the fleet" \
+    "$(cat "$BINDIR/selfdev-credentials.sh")" '--wire --repos $(cred_own_repo "$acct")'
+no  "M6 no second list of repos was invented beside cred_own_repo" \
+    "$(cat "$BINDIR/lib/selfdev-credentials-set.sh")" "cred_wire_scope"
+echo
 summary
 [ "$fail" -eq 0 ] || exit 1
 exit 0

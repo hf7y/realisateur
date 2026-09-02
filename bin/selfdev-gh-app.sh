@@ -259,11 +259,9 @@ case "$MODE" in
     while IFS= read -r line; do [ -z "$line" ] && break; done
     case "$GIT_OP" in
       store|erase)
-        # NO-OPS BY DESIGN, and they must exit 0. There is nothing to store --
-        # that is the point of a one-hour token minted on demand -- and
-        # nothing to erase. Git ignores a helper's output for these two
-        # operations but DOES notice a non-zero exit, so answering them
-        # loudly would put a spurious failure in front of every push.
+        # NO-OPS BY DESIGN, and they must exit 0: nothing to store (the token is
+        # minted on demand) or erase, and git ignores a helper's output here but
+        # DOES notice a non-zero exit -- which would fail every push.
         exit 0 ;;
       get|'')
         # `''` is the hand-run form (`selfdev-gh-app.sh --credential`), kept
@@ -282,13 +280,23 @@ case "$MODE" in
 
   --wire)
     self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
-    want_helper="!'$self' --credential"
+    # This --repos is the scope of every token the account mints; omitted, that
+    # is the whole installation -- 53 repos, 2026-08-27. Never defaulted (#671).
+    if [ -n "$REPOS" ]; then
+      want_helper="!'$self' --repos '$REPOS' --credential"
+    else
+      want_helper="!'$self' --credential"
+    fi
     git config --global --unset-all credential."https://github.com".helper 2>/dev/null
     git config --global --add credential."https://github.com".helper "$want_helper"
     git config --global credential."https://github.com".useHttpPath false
     got_helper="$(git config --global --get-all credential."https://github.com".helper)"
     if [ "$got_helper" = "$want_helper" ]; then
-      ok "git credential helper -> $self --credential"
+      if [ -n "$REPOS" ]; then
+        ok "git credential helper -> $self --credential (scoped to: $REPOS)"
+      else
+        ok "git credential helper -> $self --credential (UNSCOPED -- mints a token for every repo the App is installed on; pass --repos to narrow it, #671)"
+      fi
     else
       bad "git config accepted the helper write but re-reading gives '$got_helper'"
     fi
@@ -300,13 +308,11 @@ case "$MODE" in
       have_name="$(git config --global --get user.name  || true)"
       have_mail="$(git config --global --get user.email || true)"
 
-      # DO NOT CLOBBER SILENTLY. This already cost real information: the
-      # value --wire overwrote on ecosim@monkey was never captured and cannot
-      # be restored, because the previous version read nothing before writing.
-      # So the old value is READ, REPORTED, and PRESERVED in git's own config
-      # under a selfdev.* key before anything is written -- and the backup is
-      # written only ONCE, so re-running --wire can never overwrite the
-      # original with a value --wire itself set.
+      # DO NOT CLOBBER SILENTLY: the value --wire overwrote on ecosim@monkey
+      # is unrecoverable, because the old version wrote without reading. The
+      # previous value is now read, reported and preserved under selfdev.*
+      # BEFORE any write, and written ONCE so a re-run cannot overwrite the
+      # original with --wire's own value.
       if [ -n "$have_name$have_mail" ] && \
          { [ "$have_name" != "$want_name" ] || [ "$have_mail" != "$want_mail" ]; }; then
         if [ -z "$(git config --global --get selfdev.previousUserName || true)" ] && \

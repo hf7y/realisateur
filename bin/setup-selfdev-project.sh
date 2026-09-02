@@ -156,7 +156,7 @@ GH_APP="${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/selfdev-gh-app.sh"
 [ -x "$GH_APP" ] || die "$GH_APP is not installed, so $PROJECT gets no git credential
 helper and cannot clone over https. Install the host tools first:
     sudo $HERE/wire-release-channel.sh --host --apply"
-run_as "'$GH_APP' --wire" 2>&1 | sed 's/^/  /'
+run_as "'$GH_APP' --wire --repos '$PROJECT'" 2>&1 | sed 's/^/  /'
 [ "${PIPESTATUS[0]}" -eq 0 ] || die "selfdev-gh-app.sh --wire failed for $PROJECT -- no git
 credential helper, so the clone in 5/8 cannot authenticate. Read the rows above."
 
