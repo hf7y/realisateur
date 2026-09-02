@@ -212,10 +212,14 @@ payload="$(GUEST_JSON="$GUEST_JSON" NOW="$NOW" VMSTATE="$VMSTATE" DISK="$DISK" \
   python3 "$HERE/bin/lib/monkey-watch-merge.py")"
 [ -n "$payload" ] || die "payload builder produced nothing -- publishing nothing."
 
-printf '%s\n' "$payload"
-printf '%s: %s -- %s\n' "$CLI_NAME" "$VERDICT" "$WHY"
-
-[ "$APPLY" = 1 ] || { printf '%s: NOT published (need --apply)\n' "$CLI_NAME"; exit 0; }
+if [ "$APPLY" = 1 ]; then  # realisateur#850: the unrotated cron log grew 14.2 MB/day on this dump -- status.json (:267) is the payload's real channel, stdout is a human's
+  printf '%s: %s -- %s\n' "$CLI_NAME" "$VERDICT" "$WHY"
+else
+  printf '%s\n' "$payload"
+  printf '%s: %s -- %s\n' "$CLI_NAME" "$VERDICT" "$WHY"
+  printf '%s: NOT published (need --apply)\n' "$CLI_NAME"
+  exit 0
+fi
 
 mkdir -p "$(dirname "$STATE_FILE")"
 LAST="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
