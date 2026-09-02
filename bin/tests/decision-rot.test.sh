@@ -242,7 +242,7 @@ done
 # WIRED IS NOT ARMED, and the two arrays are what keep them apart. A repo that
 # drifts from ECOSYSTEM into PROJECTS starts spending quota every night.
 _armed=""
-for _p in dcp-gate-site musc-2300 space-canon; do
+for _p in musc-2300 space-canon; do  # dcp-gate-site excluded since #905: onboarded live with an account 2026-08-28, so ROSTER_PROJECTS is where it belongs now
   case " ${ROSTER_PROJECTS[*]} " in *" $_p "*) _armed="$_armed $_p" ;; esac
 done
 [ -z "$_armed" ] \

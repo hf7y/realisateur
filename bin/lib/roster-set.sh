@@ -15,9 +15,9 @@ ROSTER_OWNER="${ROSTER_OWNER:-$GH_ESTATE_OWNER}"
 # lib/arming.sh's authority, read at run time. NOT `apms`: a live ROSTER row
 # whose repo does not exist, and a 404 here makes the whole sweep BLIND.
 ROSTER_PROJECTS=(
-  abletim baudin bibliothecaire chezz crt ecosim gardien groc-mangr
-  nine-speakers realisateur scheduler secretaire senechal sequestria
-  vim-arcade wtul
+  abletim baudin bibliothecaire chezz crt dcp-gate-site ecosim gardien
+  groc-mangr nine-speakers realisateur scheduler secretaire senechal
+  sequestria vim-arcade wtul
 )
 
 # ECOSYSTEM: carries decisions, never dispatches. WIRED, NOT ARMED -- swept by
@@ -29,9 +29,9 @@ ROSTER_PROJECTS=(
 #
 # ARMING IS A SEPARATE ACT and deliberately not done here: being swept costs
 # one API read per run, being armed costs quota every night.
-ROSTER_ECOSYSTEM=(
+ROSTER_ECOSYSTEM=(  # dcp-gate-site moved to ROSTER_PROJECTS 2026-09-02 (#905): onboarded live with an account 2026-08-28, so it now dispatches
   verbs front-door basheur
-  dcp-gate-site musc-2300 scriba-senatus french-textbook
+  musc-2300 scriba-senatus french-textbook
   etalon vitae space-canon maitre
 )
 
