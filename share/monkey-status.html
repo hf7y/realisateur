@@ -132,6 +132,10 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
              w.clock_drift_hours==null ? "mut"
               : w.clock_drift_hours>=24 ? "bad"
               : w.clock_drift_hours>=6  ? "warn" : "ok")}
+      ${fact("clocksource stalls",
+             (w.clocksource && w.clocksource.long_readout_count!=null)
+               ? w.clocksource.long_readout_count : "unreadable",
+             (w.clocksource && w.clocksource.long_readout_count!=null) ? "" : "mut")}
       ${fact("verb build",d.verb_build||"none",d.verb_build?"":"mut")}
     </div>` : "";
 

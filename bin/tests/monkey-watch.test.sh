@@ -280,6 +280,41 @@ else
 fi
 
 
+section "K. the clocksource early warning is guest-side, present under both backends (#805)"
+has "K1 read from the guest's own kernel log, not a hypervisor artifact" \
+  "$(code "$W")" 'Long readout interval'
+lr_ssh_ln="$(grep -n 'LONG_READOUT="\$(mssh_n' "$W" | head -1 | cut -d: -f1)"
+sshd_if_ln="$(grep -n 'if \[ "\$SSHD" = "answering" \]; then' "$W" | head -1 | cut -d: -f1)"
+sshd_else_ln="$(grep -n '^else$' "$W" | head -1 | cut -d: -f1)"
+if [ -n "$lr_ssh_ln" ] && [ -n "$sshd_if_ln" ] && [ -n "$sshd_else_ln" ] \
+   && [ "$lr_ssh_ln" -gt "$sshd_if_ln" ] && [ "$lr_ssh_ln" -lt "$sshd_else_ln" ]; then
+  ok "K2 read only when sshd is answering -- unlike the host-side VMM-log drift probe"
+else
+  bad "K2 read only when sshd is answering" "expected the mssh_n call between the SSHD-answering if and its else"
+fi
+has "K3 the count reaches the payload builder" "$(code "$W")" 'LONG_READOUT="$LONG_READOUT"'
+has "K4 merge publishes it" "$(code "$REPO/bin/lib/monkey-watch-merge.py")" 'clocksource'
+has "K5 an unreadable/unreachable count is null, not zero" \
+  "$(code "$REPO/bin/lib/monkey-watch-merge.py")" '"LONG_READOUT", "").strip().isdigit() else None'
+
+lr_of() {  # <raw mssh_n output> -> the script's own sanitizing pipeline
+  local LONG_READOUT="$1"
+  case "$LONG_READOUT" in *[!0-9]*|'') LONG_READOUT="" ;; esac
+  printf '%s' "$LONG_READOUT"
+}
+eq "K6 a real count passes through" "$(lr_of '4')" "4"
+eq "K7 a legitimate zero count is not conflated with absent" "$(lr_of '0')" "0"
+eq "K8 a stalled/failed ssh (empty) stays empty" "$(lr_of '')" ""
+eq "K9 stray stderr text is never mistaken for a count" \
+  "$(lr_of 'ssh: connect to host monkey port 2224: Connection refused')" ""
+
+has "K10 graded on a RISE against the last applied tick, never an absolute threshold" \
+  "$(code "$W")" '"$LONG_READOUT" -gt "$CS_LAST"'
+has "K11 the baseline lives beside the verdict state, per-metric not shared" \
+  "$(code "$W")" 'CS_STATE="$STATE_FILE.clocksource"'
+has "K12 no count at all neither alerts nor advances the baseline" \
+  "$(code "$W")" 'if [ -n "$LONG_READOUT" ]; then'
+
 mw_page() { ZM="${3:-120}" bash -c '
   u="https://hf7y.com/monkey/"; h="monkey: $1"; r=$(( ZM - ${#h} - ${#u} - 2 ))
   [ "$r" -lt 0 ] && r=0; w="$2"; [ "${#w}" -gt "$r" ] && w="${w:0:$r}"
