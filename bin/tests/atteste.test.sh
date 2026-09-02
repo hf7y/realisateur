@@ -344,7 +344,7 @@ grammar_delivers 'NO-DECISION: nothing here' >/dev/null \
 
 . "$ROOT/lib/propagation-set.sh"
 ch="$(prop_channel atteste.sh 2>/dev/null)" || ch=""
-eq "I5 prop_channel classifies atteste.sh" "$ch" "local"
+eq "I5 prop_channel classifies atteste.sh" "$ch" "payload"
 
 echo
 
