@@ -33,10 +33,10 @@ OWNER="${DECISION_ROT_OWNER:-$GH_ESTATE_OWNER}"
 # shellcheck source=bin/lib/roster-set.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/roster-set.sh"
 
-# A MISSING ROSTER IS BLIND, NOT AN EMPTY ESTATE. `.` on an absent file does
+# A MISSING SWEEP SET IS BLIND, NOT AN EMPTY ESTATE. `.` on an absent file does
 # not abort under `set -uo pipefail`, so the walk iterates zero repos and exits
-# 0 -- live 2026-08-22 over 48 rotting decisions. ROSTER_SET_LIB is the sentinel.
-if [ "${ROSTER_SET_LIB:-}" != 1 ] || [ "${#ROSTER[@]}" -eq 0 ]; then
+# 0 -- live 2026-08-22 over 48 rotting decisions. SWEEP_SET_LIB is the sentinel.
+if [ "${SWEEP_SET_LIB:-}" != 1 ] || [ "${#SWEEP[@]}" -eq 0 ]; then
   printf '%s: BLIND -- lib/roster-set.sh did not load, so this audited NO repositories. A count of zero here is the absence of a reading, not the absence of rot.\n' \
     "$CLI_NAME" >&2
   exit 6
@@ -58,7 +58,7 @@ if [ -z "$MODE" ]; then
   exit 2
 fi
 if [ "$MODE" = all ]; then
-  for p in "${ROSTER[@]}"; do REPOS+=("$OWNER/$p"); done
+  for p in "${SWEEP[@]}"; do REPOS+=("$OWNER/$p"); done
 fi
 
 command -v gh >/dev/null || { echo "decision-rot.sh: gh not on PATH" >&2; exit 6; }

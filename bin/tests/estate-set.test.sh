@@ -36,7 +36,7 @@ fi
 section "C. the callers resolve through it"
 src() { bash -c "${2:+export $2; }. '$HERE/bin/lib/$3' >/dev/null 2>&1; printf '%s' \"\$$1\""; }
 eq "C1 answered.sh"        "$(src ANSWERED_OWNER     '' answered.sh)"        "hf7y"
-eq "C2 roster-set.sh"      "$(src ROSTER_OWNER       '' roster-set.sh)"      "hf7y"
+eq "C2 roster-set.sh"      "$(src SWEEP_OWNER        '' roster-set.sh)"       "hf7y"
 eq "C3 arming.sh"          "$(src ARMING_ROSTER_REPO '' arming.sh)"          "hf7y/scheduler"
 eq "C4 propagation-set.sh" "$(src PROP_RELEASE_REPO  '' propagation-set.sh)" "hf7y/verbs"
 eq "C5 a new owner reaches a caller" \

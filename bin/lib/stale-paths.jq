@@ -9,7 +9,7 @@
 #      against ANOTHER tree -- out of scope here, not stale.
 #   3. so is "see realisateur `bin/lib/body-grammar.sh`" -- named IN PROSE
 #      rather than `$owner/repo`-qualified. Measured live against
-#      hf7y/musc-2300: every roster project name said before a path is this
+#      hf7y/musc-2300: every swept project name said before a path is this
 #      shape, never a same-repo citation, so the whole named-then-path span
 #      is dropped rather than trying to keep the path and lose the name.
 #   4. `Runner.call`, `m.group`, `course.types.get` -- a method or attribute
@@ -23,7 +23,7 @@ def ext_pattern:
 def candidates:
   (.body // "")
   | gsub("```(?s:.*?)```"; " ")
-  | gsub("(?i)\\b(?:" + $roster_pattern + ")\\b\\s*(`[^`]*`|[A-Za-z0-9_./-]+)"; " ")
+  | gsub("(?i)\\b(?:" + $sweep_pattern + ")\\b\\s*(`[^`]*`|[A-Za-z0-9_./-]+)"; " ")
   | splits("[\\s`()\\[\\]{}\"',;]+")
   # A LEADING DOT IS PART OF A DOTFILE PATH, not prose punctuation. Stripping
   # it unconditionally made `.github/workflows/tests.yml` -- a file this tree
