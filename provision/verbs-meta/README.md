@@ -12,11 +12,12 @@ THE LEVER. A merged fix reaches a running account this way and no other:
 ```
 <project>/main                the source
   -> <project>/bashified      a project DECLARES a verb by carrying an
-                              executable bin/<n> AND a matching man/<n>.1
-                              there (bin/lib/verb-set.sh). realisateur's own
-                              carry is bin/carry.sh, from bin/lib/carries.tsv
+                              executable bin/<n> there; a man/<n>.1 beside it
+                              is carried when present, never required (#891,
+                              bin/lib/verb-set.sh). realisateur's own carry is
+                              bin/carry.sh, from bin/lib/carries.tsv
   -> bin/cut-verb-build.sh    reads every hf7y bashified branch, applies that
-                              rule, and REFUSES a half-declaration --
+                              rule, and REFUSES an orphaned man page --
                               bin/lib/not-a-verb.tsv is the written opt-out
   -> build-verbs.yml          on hf7y/verbs, nightly `30 1 * * *`: assembles
                               every night, cuts every CUT_INTERVAL_DAYS (30)

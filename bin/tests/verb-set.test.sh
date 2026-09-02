@@ -38,10 +38,14 @@ export SCHEDULE_DIR="$WORK/schedule"
 mkdir -p "$INSTALLE_PROJECTS" "$INSTALLE_BIN" "$SCHEDULE_DIR"
 register() { printf 'PROJECT="%s"\n' "$1" > "$SCHEDULE_DIR/$1.conf"; }
 
+# Hermetic, not the shipped lib/not-a-verb.tsv (same reasoning as cut-verb-build-test.sh's fixture file).
+export VERB_NOT_A_VERB_FILE="$WORK/not-a-verb.tsv"
+printf '#project\tname\twhy\n' > "$VERB_NOT_A_VERB_FILE"
+
 G() { git -c user.email=t@t -c user.name=t -C "$1" "${@:2}"; }
 
 # A project whose bashified branch declares <verbs>, plus one executable with
-# NO man page (which must therefore not count as a verb).
+# NO man page (still a verb, #891), named after the project to avoid a collision.
 make_project() {
   local name="$1"; shift
   local d="$INSTALLE_PROJECTS/$name" v
@@ -53,7 +57,7 @@ make_project() {
     printf '#!/bin/sh\necho %s\n' "$v" > "$d/bin/$v"; chmod 755 "$d/bin/$v"
     printf '.TH %s 1\n' "$v" > "$d/man/$v.1"
   done
-  printf '#!/bin/sh\necho nope\n' > "$d/bin/noman"; chmod 755 "$d/bin/noman"
+  printf '#!/bin/sh\necho nope\n' > "$d/bin/$name-noman"; chmod 755 "$d/bin/$name-noman"
   G "$d" add -A; G "$d" commit -qm verbs
   G "$d" checkout -q main
 }
@@ -73,9 +77,15 @@ decl="$(verb_set_declared)"
 has "A1 alpha declares aaa"                "$decl" 'alpha	aaa'
 has "A2 alpha declares bbb"                "$decl" 'alpha	bbb'
 has "A3 beta declares aaa"                 "$decl" 'beta	aaa'
-hasnt "A4 an executable with no man page is not a verb" "$decl" 'noman'
+has "A4 an executable with no man page IS still a verb (#891)" "$decl" 'alpha	alpha-noman'
 hasnt "A5 a project with no bashified branch declares nothing" "$decl" 'gamma'
-check "A6 three declarations in total" "$(printf '%s\n' "$decl" | grep -c .)" "3"
+check "A6 five declarations in total" "$(printf '%s\n' "$decl" | grep -c .)" "5"
+
+printf 'alpha\talpha-noman\tfixture: not a door\n' > "$VERB_NOT_A_VERB_FILE"
+decl_exempt="$(verb_set_declared)"
+hasnt "A7 a name in lib/not-a-verb.tsv is not declared" "$decl_exempt" 'alpha-noman'
+has   "A8 ...and an unexempted name in the same project still is" "$decl_exempt" 'alpha	bbb'
+printf '#project\tname\twhy\n' > "$VERB_NOT_A_VERB_FILE"   # restore for the sections below
 
 printf -- '-- B. claimants (the check `command -v` was standing in for)\n'
 check "B1 aaa is claimed by both projects" "$(verb_set_claimants aaa | sort | tr '\n' ' ')" "alpha beta "
