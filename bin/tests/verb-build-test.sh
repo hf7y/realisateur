@@ -258,8 +258,7 @@ check "...and the destination carries the new content" \
 check "...and no .new temp file is left in the directory" \
       "$(find "$SELFDEV_LIBEXEC" -name '.*.new.*' | wc -l)" "0"
 
-# --- N. a cut is not a release. Own fixture: the cases above deliberately
-# leave broken builds in the shared one.
+# --- N. a cut is not a release. Own fixture: the shared one holds broken builds.
 echo
 GMETA="$TMP/meta-gate"; GROOT="$TMP/builds-gate"; mkdir -p "$GMETA"
 g init "$GMETA"

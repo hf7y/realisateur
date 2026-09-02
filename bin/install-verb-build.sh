@@ -4,11 +4,10 @@
 # merge the next ones.
 #
 # TRAPS (the rest of this header is in the vault):
-# WHY `current` IS A SYMLINK: adopting or rolling back repoints ONE link, so
-# the verb set changes all at once or not at all. N `git pull`s half-succeed
-# and leave a set that never existed as a whole and cannot be named in a bug
-# report. And an unreachable remote is BLIND (exit 6), never "up to date" --
-# skipping it would make "nothing pending" mean "everything is proven".
+# WHY `current` IS A SYMLINK: adopting or rolling back repoints ONE link, so the
+# verb set changes all at once or not at all. N `git pull`s half-succeed and
+# leave a set that never existed as a whole. And an unreachable remote is BLIND
+# (exit 6), never "up to date": that would make "nothing pending" read as proof.
 
 set -uo pipefail
 
@@ -111,8 +110,8 @@ else
 fi
 
 # NEWEST APPROVED, not newest: the cron is ungated, so `build/*` appears nightly
-# with nobody asked. Only `approved/<id>` -- written by the reviewer-gated
-# promote-verb-build.yml -- is adopted. Ids sort chronologically.
+# with nobody asked. Only `approved/<id>`, from the reviewer-gated
+# promote-verb-build.yml, is adopted. Ids sort chronologically.
 approved_ids="$(git -C "$REPO" tag --list 'approved/*' --sort=-refname 2>/dev/null | sed 's|^approved/||')"
 latest_tag=''
 for _id in $approved_ids; do
