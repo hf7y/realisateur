@@ -18,9 +18,7 @@ CLI_USAGE='  atteste.sh <owner/repo#n|url>...  grade the DELIVERS entries of eac
                                    the default branch
   atteste.sh --body <file>         grade a body against THIS working tree
                                    before you file it ("-" reads stdin)
-
-  An entry whose text carries DELETED, GONE or RETIRED is graded the other way
-  round: still being there is the GAP, and absence is the proof.'
+  DELETED, GONE or RETIRED in an entry inverts it: being there is the GAP.'
 CLI_FLAGS='--body'
 CLI_POSITIONAL=subject
 CLI_EXITS='  0  every entry that could be checked was SATISFIED, and at least one was
@@ -81,10 +79,7 @@ grade() {
   local IFS=$' \t\n'
   read -ra words <<<"$entry"
 
-  # A RETIREMENT IS A DELIVERY AND THE ABSENCE IS THE PROOF. Without this, the
-  # only claim a retirement can make is `repo:x`, which grades BLIND forever --
-  # which is how hf7y/quatre-vingt-douze was instructed dead five times over
-  # five weeks and outlived every one of them. Marked GONE, existing is the GAP.
+  # A RETIREMENT IS A DELIVERY AND THE ABSENCE IS THE PROOF (#872, #878).
   case " ${entry^^} " in *' DELETED '*|*' GONE '*|*' RETIRED '*) gone=1 ;; esac
 
   case "${entry,,}" in none|none.|'none '*) return 0 ;; esac
