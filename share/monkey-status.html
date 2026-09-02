@@ -104,7 +104,6 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
     note = `monkey answered and the collector returned an empty account list.
             That is not a quiet estate &mdash; it is a collector that found no uid in
             the self-dev band, which has never been true.`; }
-  else if (reach.length)             { cls="bad";  head=`${reach.length} ACCOUNT${reach.length>1?"S":""} NOT CONTAINED`; }
   else if (ident.length)             { cls="bad";  head=`${ident.length} ACCOUNT${ident.length>1?"S":""} NOT COMMITTING AS ITSELF`; }
   else if (armDark.length)           { cls="blind"; head=`${armDark.length} UNVERIFIED ARMING`;
     note = `schedule/ROSTER could not be read, so whether these accounts dispatch is
@@ -117,6 +116,7 @@ fetch("status.json?t="+Date.now()).then(r=>r.json()).then(d=>{
   else if (dark.length)              { cls="warn"; head=`${armed.length} ARMED, ${dark.length} NEVER RAN`; }
   else if (blind.length || creds.length || idDark.length) { cls="warn";
     head=`${armed.length} ARMED, ${blind.length+creds.length+idDark.length} UNVERIFIED`; }
+  else if (reach.length)             { cls="bad";  head=`${reach.length} ACCOUNT${reach.length>1?"S":""} NOT CONTAINED`; } // realisateur#825: demoted below arming -- a containment breach is not an outage
   else                               { cls="ok";   head=`${armed.length} ARMED`; }
 
   // ---- 3. what only the VM host can see -----------------------------------
