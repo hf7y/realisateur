@@ -4,14 +4,10 @@
 # merge the next ones.
 #
 # TRAPS (the rest of this header is in the vault):
-# WHY `current` IS A SYMLINK AND THE ~/.local/bin LINKS ARE WRITTEN ONCE
-# Adopting a build, or rolling back, repoints ONE symlink -- so the verb
-# set changes all at once or not at all. N independent `git pull`s cannot
-# express that: they half-succeed, and leave you running a verb set that
-# never existed as a whole and cannot be named in a bug report.
-# And it never reports "you are up to date" when it could not look. An
-# unreachable remote is BLIND, exit 6: skipping unreachable destinations makes
-# "nothing pending" indistinguishable from "everything is proven".
+# WHY `current` IS A SYMLINK: adopting or rolling back repoints ONE link, so the
+# verb set changes all at once or not at all. N `git pull`s half-succeed and
+# leave a set that never existed as a whole. And an unreachable remote is BLIND
+# (exit 6), never "up to date": that would make "nothing pending" read as proof.
 
 set -uo pipefail
 
@@ -113,11 +109,22 @@ else
   timeout "$NET_TIMEOUT" git -C "$REPO" fetch -q --tags origin 2>/dev/null || true
 fi
 
-# Newest by tag name. Build ids are UTC timestamps, so lexical sort is
-# chronological -- which is why cut-verb-build.sh stamps them that way
-# rather than as a bare date that two builds in one day would collide on.
-latest_tag="$(git -C "$REPO" tag --list 'build/*' --sort=-refname 2>/dev/null | head -1)"
-[ -n "$latest_tag" ] || blind "the meta-repo has no build/* tags -- nothing has been built yet, or the fetch was partial"
+# NEWEST APPROVED, not newest: the cron is ungated, so `build/*` appears nightly
+# with nobody asked. Only `approved/<id>`, from the reviewer-gated
+# promote-verb-build.yml, is adopted. Ids sort chronologically.
+approved_ids="$(git -C "$REPO" tag --list 'approved/*' --sort=-refname 2>/dev/null | sed 's|^approved/||')"
+latest_tag=''
+for _id in $approved_ids; do
+  if git -C "$REPO" rev-parse -q --verify "refs/tags/build/$_id" >/dev/null 2>&1; then
+    latest_tag="build/$_id"; break
+  fi
+done
+if [ -z "$latest_tag" ]; then
+  if [ -n "$(git -C "$REPO" tag --list 'build/*' 2>/dev/null | head -1)" ]; then
+    blind "builds exist but NONE is approved -- a cut is not a release. Approve one by running promote-verb-build.yml in the meta-repo; until then a host holds the build it has."
+  fi
+  blind "the meta-repo has no build/* tags -- nothing has been built yet, or the fetch was partial"
+fi
 latest_id="${latest_tag#build/}"
 
 if [ "$CHECK" -eq 1 ]; then
@@ -242,20 +249,15 @@ if [ "$LINK" -eq 1 ]; then
     say "COUNT MISMATCH: manifest promises $total verb(s), but $ours link(s) in $BIN point into this build root"
   fi
 
-  # --- the non-verb payload: user-level slash commands and hooks ---------
-  # A slash command is a FILE Claude Code reads, so it can never be a verb --
-  # the last clone-dependent thing (#389). COPIED, not symlinked: a dangling
-  # link into a rolled-back build reads as a CORRUPT command file, not an
-  # absent one.
+  # A slash command is a FILE Claude Code reads, so it can never be a verb
+  # (#389). COPIED, not symlinked: a dangling link into a rolled-back build
+  # reads as a CORRUPT command file, not an absent one.
   #
-  # libexec JOINED THIS LOOP for realisateur#517. Host tools reached the
-  # machine ONLY when a human ran wire-release-channel.sh --host --apply, so a
-  # fix to one of ausculte's own probes sat on main indefinitely -- which is
-  # how a decision-rot that could not load its roster walked zero repositories,
-  # exited 0, and rendered as `rot OK` over 48 rotting decisions (#512). The
-  # clock already existed; only the payload was missing. bin/lib/carries.tsv
-  # carries the three probes onto bashified, cut-verb-build.sh copies the whole
-  # tree into the build, and this installs them.
+  # libexec JOINED THIS LOOP for #517: host tools reached a machine only when a
+  # human ran wire-release-channel.sh --host --apply, so a fix to one of
+  # ausculte's probes sat on main indefinitely -- a decision-rot that could not
+  # load its roster walked zero repos, exited 0, and rendered `rot OK` over 48
+  # rotting decisions (#512). carries.tsv carries them; this installs them.
   installed=0
   for src_dir in commands hooks libexec; do
     from="$BUILD_ROOT/current/realisateur/$src_dir"
