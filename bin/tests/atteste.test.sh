@@ -347,4 +347,54 @@ ch="$(prop_channel atteste.sh 2>/dev/null)" || ch=""
 eq "I5 prop_channel classifies atteste.sh" "$ch" "local"
 
 echo
+
+section "L. a retirement is a delivery, and the absence is the proof"
+runbody 'path:bin/gone.sh -- DELETED'
+has "L1 a path claimed GONE and absent is SATISFIED" "$OUT" "SATISFIED path:bin/gone.sh"
+rc  "L2 and the run exits 0" 0 $RC
+
+runbody 'path:bin/real.sh -- RETIRED'
+has "L3 a path claimed GONE that is still there is a GAP" "$OUT" "GAP       path:bin/real.sh"
+rc  "L4 and exits 4" 4 $RC
+
+runbody 'path:bin/real.sh -- the thing'
+has "L5 an unmarked entry still grades the ordinary way" "$OUT" "SATISFIED path:bin/real.sh"
+
+runbody 'path:bin/undeleted.sh -- the deleted-events handler'
+has "L6 DELETED inside a longer word does not flip the sense" "$OUT" "GAP       path:bin/undeleted.sh"
+
+runbody 'path:bin/real.sh -- DELETED, bar the part needing root'
+has "L7 a marker followed by punctuation still flips" "$OUT" "GAP       path:bin/real.sh"
+runbody 'path:bin/real.sh -- (GONE).'
+has "L8 and so does one wrapped in brackets" "$OUT" "GAP       path:bin/real.sh"
+
+cat > "$T/gh3" <<'GHEOF'
+#!/usr/bin/env bash
+case "$2" in
+  */issues/*) cat "$FIX/issue" ;;
+  */pulls/*)  cat "$FIX/pull" ;;
+  repos/hf7y/still-here) exit 0 ;;
+  repos/hf7y/really-gone) echo "gh: Not Found (HTTP 404)" >&2; exit 1 ;;
+  repos/*/*) exit 0 ;;
+esac
+GHEOF
+chmod +x "$T/gh3"
+printf 'https://api/pulls/1\n' > "$T/fix/issue"
+body 'repo:hf7y/really-gone -- DELETED' >> "$T/fix/issue"
+printf 'merged\nmergesha1\nheadsha2\n' > "$T/fix/pull"
+OUT="$(ATTESTE_GH="$T/gh3" FIX="$T/fix" "$SCRIPT" hf7y/realisateur#900 2>&1)"; RC=$?
+has "L9 repo: alone is checkable once the claim is that it is GONE" "$OUT" "SATISFIED repo:hf7y/really-gone"
+rc  "L10 and exits 0" 0 $RC
+
+printf 'https://api/pulls/1\n' > "$T/fix/issue"
+body 'repo:hf7y/still-here -- DELETED' >> "$T/fix/issue"
+OUT="$(ATTESTE_GH="$T/gh3" FIX="$T/fix" "$SCRIPT" hf7y/realisateur#900 2>&1)"; RC=$?
+has "L11 a repo claimed DELETED that still answers is a GAP" "$OUT" "GAP       repo:hf7y/still-here"
+rc  "L12 and exits 4" 4 $RC
+
+printf 'https://api/pulls/1\n' > "$T/fix/issue"
+body 'repo:hf7y/still-here -- the wing lives here now' >> "$T/fix/issue"
+OUT="$(ATTESTE_GH="$T/gh3" FIX="$T/fix" "$SCRIPT" hf7y/realisateur#900 2>&1)"; RC=$?
+has "L13 an unmarked repo: is still BLIND -- existing proves no delivery" "$OUT" "BLIND     repo:hf7y/still-here alone"
+
 summary
