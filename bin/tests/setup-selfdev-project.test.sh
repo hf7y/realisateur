@@ -42,6 +42,15 @@ cat > "$BIN/wire-selfdev-git.sh" <<'STUB'
 # Staged into $HOME_DIR/.selfdev-setup/ by the script under test, so its own
 # directory is where the harness leaves its control files. It cannot read an
 # env var: run_as invokes it through `env -i`.
+#
+# THE FIRST TWO LINES ARE COPIED FROM THE REAL SCRIPT, not decoration. Both
+# staged scripts source lib/estate-set.sh relative to themselves and then read
+# a variable it sets under `set -u`. A stub that skipped this could not tell a
+# stage that carries the lib from one that does not -- which is how #674's
+# staging gap reached a live standup with the suite green (2026-09-02).
+set -uo pipefail
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
+: "$GH_ESTATE_OWNER"
 repo="$1"; d="$(cd "$(dirname "$0")/.." && pwd)"
 printf '%s\n' "$repo" >> "$d/wire-calls"
 printf '%s\n' "$PWD" >> "$d/wire-cwd"
@@ -55,6 +64,9 @@ STUB
 
 cat > "$BIN/land-selfdev.sh" <<'STUB'
 #!/usr/bin/env bash
+set -uo pipefail
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
+: "$GH_ESTATE_OWNER"
 d="$(cd "$(dirname "$0")/.." && pwd)"
 : > "$d/LANDED"
 echo "land stub: $*"
@@ -157,6 +169,9 @@ check "...all four repos were wired" "$(sort -u "$PHOME/wire-calls" | tr '\n' ' 
 check "...landing ran" "$([ -f "$PHOME/LANDED" ] && echo ran || echo skipped)" "ran"
 check "...and the release bootstrap ran" \
       "$([ -f "$TMP/RELEASE-BOOTSTRAPPED" ] && echo ran || echo skipped)" "ran"
+
+check "...the stage carries the lib both staged scripts source" \
+      "$([ -f "$PHOME/.selfdev-setup/lib/estate-set.sh" ] && echo staged || echo missing)" "staged"
 
 check "...the git credential helper was wired" \
       "$([ -f "$TMP/WIRED" ] && echo wired || echo skipped)" "wired"

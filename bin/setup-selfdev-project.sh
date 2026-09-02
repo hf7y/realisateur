@@ -106,9 +106,22 @@ run_as() {
 # STAGE, don't reach across accounts: $HERE is typically another project's
 # realisateur clone, and every project home is 0700 (see run_as).
 STAGE="$HOME_DIR/.selfdev-setup"
-install -d -m 700 -o "$PROJECT" -g "$PROJECT" "$STAGE"
+install -d -m 700 -o "$PROJECT" -g "$PROJECT" "$STAGE" "$STAGE/lib"
 install -m 700 -o "$PROJECT" -g "$PROJECT" \
   "$HERE/wire-selfdev-git.sh" "$HERE/land-selfdev.sh" "$STAGE/"
+# AND THE LIB THEY SOURCE. Both staged scripts do `. $(dirname $0)/lib/<x>.sh`,
+# so staging the scripts alone gives the account two files that abort on their
+# first line -- "estate-set.sh: No such file or directory", then
+# "GH_ESTATE_OWNER: unbound variable", then a wiring failure for every repo.
+# DERIVED, never listed: a second list of what the stage holds drifts from what
+# the scripts source, which is the failure this is fixing (#674 added
+# lib/estate-set.sh to both scripts and left this copy behind).
+stage_libs="$(sed -n 's|^\. .*/lib/\([a-z0-9-]*\.sh\)".*|\1|p' \
+  "$HERE/wire-selfdev-git.sh" "$HERE/land-selfdev.sh" | sort -u)"
+for l in $stage_libs; do
+  [ -f "$HERE/lib/$l" ] || die "$HERE/lib/$l is sourced by a staged script and is not here"
+  install -m 700 -o "$PROJECT" -g "$PROJECT" "$HERE/lib/$l" "$STAGE/lib/"
+done
 
 say "3/8 git credentials, per repo"
 # THE PIPE USED TO EAT THE ANSWER. wire-selfdev-git.sh already fails loud on
