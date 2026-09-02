@@ -17,7 +17,10 @@ CLI_USAGE='  atteste.sh <owner/repo#n|url>...  grade the DELIVERS entries of eac
                                    commit, an open PR at its head, an issue at
                                    the default branch
   atteste.sh --body <file>         grade a body against THIS working tree
-                                   before you file it ("-" reads stdin)'
+                                   before you file it ("-" reads stdin)
+
+  An entry whose text carries DELETED, GONE or RETIRED is graded the other way
+  round: still being there is the GAP, and absence is the proof.'
 CLI_FLAGS='--body'
 CLI_POSITIONAL=subject
 CLI_EXITS='  0  every entry that could be checked was SATISFIED, and at least one was
@@ -74,9 +77,15 @@ dark() { blind=$((blind + 1));         say BLIND "$1"; }
 # mode: gh = look in <default-repo> at <ref>; tree = look in $ROOT on disk.
 grade() {
   local entry="$1" drepo="$2" ref="$3" mode="$4"
-  local words=() w i k v e_path='' e_repo='' e_other='' host='' found=0
+  local words=() w i k v e_path='' e_repo='' e_other='' host='' found=0 gone=0
   local IFS=$' \t\n'
   read -ra words <<<"$entry"
+
+  # A RETIREMENT IS A DELIVERY AND THE ABSENCE IS THE PROOF. Without this, the
+  # only claim a retirement can make is `repo:x`, which grades BLIND forever --
+  # which is how hf7y/quatre-vingt-douze was instructed dead five times over
+  # five weeks and outlived every one of them. Marked GONE, existing is the GAP.
+  case " ${entry^^} " in *' DELETED '*|*' GONE '*|*' RETIRED '*) gone=1 ;; esac
 
   case "${entry,,}" in none|none.|'none '*) return 0 ;; esac
   claimed=$((claimed + 1))
@@ -108,6 +117,13 @@ grade() {
   if [ -z "$e_path" ]; then
     if [ -n "$e_other" ]; then
       dark "${e_other} needs the host it names, and ${e_other%%:*}: is under 1% of all entries measured -- no predicate was written for it"
+    elif [ "$gone" -eq 1 ] && [ -n "$e_repo" ]; then
+      case "$e_repo" in
+        */*) if "$GH" api "repos/$e_repo" >/dev/null 2>&1
+             then gap "repo:$e_repo is claimed GONE and the API still answers for it"
+             else sat "repo:$e_repo does not answer -- gone, as claimed"; fi ;;
+        *)   dark "repo:$e_repo is not an owner/repo, so nothing was asked" ;;
+      esac
     else
       dark "repo:${e_repo:-?} alone -- a repo that already exists proves no delivery. Name the path, unit or clock inside it."
     fi
@@ -120,7 +136,10 @@ grade() {
       if [ -z "$host" ]; then
         dark "path:$e_path names an absolute path and no host, so no machine was asked"
       elif on_target_host "$host"; then
-        if [ -e "${e_path/#\~/$HOME}" ]; then sat "path:$e_path exists on $host"
+        if [ -e "${e_path/#\~/$HOME}" ]; then
+          if [ "$gone" -eq 1 ]; then gap "path:$e_path is claimed GONE and still exists on $host"
+          else sat "path:$e_path exists on $host"; fi
+        elif [ "$gone" -eq 1 ]; then sat "path:$e_path is gone from $host, as claimed"
         else gap "path:$e_path is absent on $host, and this run IS $host"; fi
       else
         dark "path:$e_path on $host -- this run is not $host, so nothing looked"
@@ -137,7 +156,10 @@ grade() {
   esac
 
   if [ "$mode" = tree ]; then
-    if [ -e "$ROOT/$e_path" ]; then sat "path:$e_path is in this tree"
+    if [ -e "$ROOT/$e_path" ]; then
+      if [ "$gone" -eq 1 ]; then gap "path:$e_path is claimed GONE and is still in this tree"
+      else sat "path:$e_path is in this tree"; fi
+    elif [ "$gone" -eq 1 ]; then sat "path:$e_path is gone from this tree, as claimed"
     else gap "path:$e_path is NOT in this tree ($ROOT)"; fi
     return 0
   fi
@@ -149,9 +171,12 @@ grade() {
   [ "$repo" = "$drepo" ] || ref=''
   repo_path "$repo" "$ref" "$e_path"
   case $? in
-    0) sat "path:$e_path is in $repo at ${ref:--default-}" ;;
-    1) # A RETIREMENT IS A DELIVERY AND `path:` CANNOT SAY WHICH: all 5 gaps
-       # over 110 PRs were paths the PR DELETED. Ask the diff before a gap.
+    0) if [ "$gone" -eq 1 ]
+       then gap "path:$e_path is claimed GONE and is still in $repo at ${ref:--default-}"
+       else sat "path:$e_path is in $repo at ${ref:--default-}"; fi ;;
+    1) [ "$gone" -eq 1 ] && { sat "path:$e_path is gone from $repo, as claimed"; return 0; }
+       # `path:` ALONE CANNOT SAY WHICH: all 5 gaps over 110 PRs were paths the
+       # PR DELETED and did not say so. Ask the diff before a gap.
        case "$PRFILES" in
          *"removed	$e_path"$'\n'*)
            sat "path:$e_path was RETIRED by this change and is gone from $repo"; return 0 ;;

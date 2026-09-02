@@ -291,4 +291,49 @@ ch="$(prop_channel atteste.sh 2>/dev/null)" || ch=""
 eq "I5 prop_channel classifies atteste.sh" "$ch" "local"
 
 echo
+
+section "K. a retirement is a delivery, and the absence is the proof"
+runbody 'path:bin/gone.sh -- DELETED'
+has "K1 a path claimed GONE and absent is SATISFIED" "$OUT" "SATISFIED path:bin/gone.sh"
+rc  "K2 and the run exits 0" 0 $RC
+
+runbody 'path:bin/real.sh -- RETIRED'
+has "K3 a path claimed GONE that is still there is a GAP" "$OUT" "GAP       path:bin/real.sh"
+rc  "K4 and exits 4" 4 $RC
+
+runbody 'path:bin/real.sh -- the thing'
+has "K5 an unmarked entry still grades the ordinary way" "$OUT" "SATISFIED path:bin/real.sh"
+
+runbody 'path:bin/undeleted.sh -- the deleted-events handler'
+has "K6 DELETED inside a longer word does not flip the sense" "$OUT" "GAP       path:bin/undeleted.sh"
+
+cat > "$T/gh3" <<'GHEOF'
+#!/usr/bin/env bash
+case "$2" in
+  */issues/*) cat "$FIX/issue" ;;
+  */pulls/*)  cat "$FIX/pull" ;;
+  repos/hf7y/still-here) exit 0 ;;
+  repos/hf7y/really-gone) echo "gh: Not Found (HTTP 404)" >&2; exit 1 ;;
+  repos/*/*) exit 0 ;;
+esac
+GHEOF
+chmod +x "$T/gh3"
+printf 'https://api/pulls/1\n' > "$T/fix/issue"
+body 'repo:hf7y/really-gone -- DELETED' >> "$T/fix/issue"
+printf 'merged\nmergesha1\nheadsha2\n' > "$T/fix/pull"
+OUT="$(ATTESTE_GH="$T/gh3" FIX="$T/fix" "$SCRIPT" hf7y/realisateur#900 2>&1)"; RC=$?
+has "K7 repo: alone is checkable once the claim is that it is GONE" "$OUT" "SATISFIED repo:hf7y/really-gone"
+rc  "K8 and exits 0" 0 $RC
+
+printf 'https://api/pulls/1\n' > "$T/fix/issue"
+body 'repo:hf7y/still-here -- DELETED' >> "$T/fix/issue"
+OUT="$(ATTESTE_GH="$T/gh3" FIX="$T/fix" "$SCRIPT" hf7y/realisateur#900 2>&1)"; RC=$?
+has "K9 a repo claimed DELETED that still answers is a GAP" "$OUT" "GAP       repo:hf7y/still-here"
+rc  "K10 and exits 4" 4 $RC
+
+printf 'https://api/pulls/1\n' > "$T/fix/issue"
+body 'repo:hf7y/still-here -- the wing lives here now' >> "$T/fix/issue"
+OUT="$(ATTESTE_GH="$T/gh3" FIX="$T/fix" "$SCRIPT" hf7y/realisateur#900 2>&1)"; RC=$?
+has "K11 an unmarked repo: is still BLIND -- existing proves no delivery" "$OUT" "BLIND     repo:hf7y/still-here alone"
+
 summary
