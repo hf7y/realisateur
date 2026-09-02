@@ -362,10 +362,10 @@ deliv() { # <path-that-changed> -- graded against the commit before it alone
   git -C "$R" -c user.email=t@t -c user.name=t commit -q -m "change $1" >/dev/null 2>&1
   ( cd "$R" && GH_SIGN_BASE="$base" "$BASH_BIN" "$GS" --delivers 2>&1 )
 }
-contains "a LOCAL-class probe names its libexec path, not '- none'" \
-  "$(deliv bin/ausculte-cadence.sh)" "- path:/usr/local/libexec/selfdev/ausculte-cadence.sh on monkey"
-contains "a payload script names its VERB, not its basename" \
-  "$(deliv bin/gh-sign.sh)" "- path:/usr/local/bin/gh on monkey"
+contains "a LOCAL-class probe names its own repo path, not '- none'" \
+  "$(deliv bin/ausculte-cadence.sh)" "- path:bin/ausculte-cadence.sh"
+contains "a payload script names its own repo path -- realisateur#851: checkable in-tree, no host needed" \
+  "$(deliv bin/gh-sign.sh)" "- path:bin/gh-sign.sh"
 contains "a file that leaves the repo nowhere still says '- none'" \
   "$(deliv README.md)" "- none"
 
