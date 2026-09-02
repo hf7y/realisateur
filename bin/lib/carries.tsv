@@ -14,6 +14,7 @@
 
 bin/gh	bin/gh-sign.sh
 bin/ausculte	bin/ausculte.sh
+bin/atteste	bin/atteste.sh
 bin/check-project-busy	bin/check-project-busy.sh
 bin/defere	bin/defere.sh
 bin/etiquette	bin/etiquette.sh
