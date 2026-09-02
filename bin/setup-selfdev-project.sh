@@ -31,6 +31,7 @@ case "$PROJECT" in ""|-*) echo "usage: $0 <project> [--check|--apply] [--no-key]
 [ "$(id -u)" -eq 0 ] || { echo "$0: run as root (sudo bash $0 $PROJECT $MODE)" >&2; exit 2; }
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
 HOST="$(hostname -s 2>/dev/null || echo unknown)"
 # Whose key, and whose repo checkout, we are working from. Under sudo this is
 # the human; run as root proper it is root, and then --no-key is the only
@@ -106,9 +107,15 @@ run_as() {
 # STAGE, don't reach across accounts: $HERE is typically another project's
 # realisateur clone, and every project home is 0700 (see run_as).
 STAGE="$HOME_DIR/.selfdev-setup"
-install -d -m 700 -o "$PROJECT" -g "$PROJECT" "$STAGE"
+install -d -m 700 -o "$PROJECT" -g "$PROJECT" "$STAGE" "$STAGE/lib"
 install -m 700 -o "$PROJECT" -g "$PROJECT" \
   "$HERE/wire-selfdev-git.sh" "$HERE/land-selfdev.sh" "$STAGE/"
+stage_libs="$(sed -n 's|^\. .*/lib/\([a-z0-9-]*\.sh\)".*|\1|p' \
+  "$HERE/wire-selfdev-git.sh" "$HERE/land-selfdev.sh" | sort -u)"   # and the lib they source (#674): DERIVED, because a second list of it drifts
+for l in $stage_libs; do
+  [ -f "$HERE/lib/$l" ] || die "$HERE/lib/$l is sourced by a staged script and is not here"
+  install -m 700 -o "$PROJECT" -g "$PROJECT" "$HERE/lib/$l" "$STAGE/lib/"
+done
 
 say "3/8 git credentials, per repo"
 # THE PIPE USED TO EAT THE ANSWER. wire-selfdev-git.sh already fails loud on
@@ -140,7 +147,6 @@ are idempotent."
 # deploy keys do not serve. --apply makes the key readable, --wire makes git use it.
 say "4/8 the GitHub App credential (host-wide key, then this account's git helper)"
 if [ -x "$HERE/selfdev-app-key.sh" ]; then
-. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
   appkey_out="$("$HERE/selfdev-app-key.sh" --apply --owner "${SELFDEV_GH_OWNER:-$GH_ESTATE_OWNER}" 2>&1)"; appkey_rc=$?  # rc from the command, not a pipeline (see 3/4's pipefail note)
   printf '%s\n' "$appkey_out" | sed 's/^/  /'
   [ "$appkey_rc" -eq 0 ] && echo "  OK      $PROJECT can read the host-wide App key" \
