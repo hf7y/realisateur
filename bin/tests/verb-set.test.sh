@@ -38,17 +38,14 @@ export SCHEDULE_DIR="$WORK/schedule"
 mkdir -p "$INSTALLE_PROJECTS" "$INSTALLE_BIN" "$SCHEDULE_DIR"
 register() { printf 'PROJECT="%s"\n' "$1" > "$SCHEDULE_DIR/$1.conf"; }
 
-# Hermetic, not the shipped lib/not-a-verb.tsv: a suite that read the real
-# exemptions would pass or fail on THEIR edits, the same reasoning
-# cut-verb-build-test.sh gives for its own fixture file.
+# Hermetic, not the shipped lib/not-a-verb.tsv (same reasoning as cut-verb-build-test.sh's fixture file).
 export VERB_NOT_A_VERB_FILE="$WORK/not-a-verb.tsv"
 printf '#project\tname\twhy\n' > "$VERB_NOT_A_VERB_FILE"
 
 G() { git -c user.email=t@t -c user.name=t -C "$1" "${@:2}"; }
 
 # A project whose bashified branch declares <verbs>, plus one executable with
-# NO man page (which must therefore STILL count as a verb, #891) named after
-# the project so two fixture projects never accidentally collide on it.
+# NO man page (still a verb, #891), named after the project to avoid a collision.
 make_project() {
   local name="$1"; shift
   local d="$INSTALLE_PROJECTS/$name" v

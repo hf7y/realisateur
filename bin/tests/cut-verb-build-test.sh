@@ -320,11 +320,9 @@ cut >/dev/null 2>&1
 check "no readable repositories is BLIND, not a zero-verb build" "$?" "1"
 
 # --- 10. man-page-optional (#891): an executable alone IS a verb ---------
-# The defect this used to exist for: `ecosim-sensor` was an executable with
-# no page on a bashified branch, so it fell out of the END loop, then
-# surfaced later as a wrapper failing on a path that was never going to
-# exist. #891 removed the page requirement rather than fixing the silence a
-# second way -- so this case no longer refuses; it derives a verb.
+# The defect this used to exist for: `ecosim-sensor`, an executable with no
+# page, fell out of the derivation and surfaced later as a wrapper failing on
+# a path that was never going to exist. This case no longer refuses.
 mkrepo epsilon ea
 add_half_exec epsilon ee
 printf 'epsilon\n' > "$TMP/repolist"
@@ -336,9 +334,7 @@ case "$(grep -v '^#' "$TMP/m10")" in
     *) bad "the page-optional verb reached the manifest" "got: $(grep -v '^#' "$TMP/m10")" ;;
 esac
 
-# The inverse remains a real defect: a man page with no executable beside it
-# is stale documentation for a script that moved or was deleted, and still
-# refuses -- the one shape the man-page-optional rule does not excuse.
+# The inverse remains a real defect and still refuses: stale docs, not a door.
 add_half_page epsilon pp
 cut >"$TMP/m10b" 2>"$TMP/e10b"
 check "a man page with no executable still refuses" "$?" "1"
@@ -355,10 +351,8 @@ check "...and no manifest was emitted at all" \
       "$([ -s "$TMP/m10b" ] && echo "wrote $(wc -l < "$TMP/m10b") line(s)" || echo empty)" "empty"
 
 # --- 11. the opt-out, and the decision travelling in the manifest -------
-# Neither direction gets a free pass just by satisfying the mechanical rule:
-# a row in lib/not-a-verb.tsv is how a project excludes a plain executable
-# from being a door (ee) or keeps an orphaned page around on purpose (pp),
-# each ONCE rather than being nagged about it every night. Not a silence:
+# Neither tag gets a free pass: a row excludes ee from being a door or keeps
+# pp around on purpose, each ONCE rather than nagged about nightly. Not a silence:
 printf 'epsilon\tee\tfixture installer, not a verb\nepsilon\tpp\tfixture stray page\n' \
     > "$TMP/not-a-verb.tsv"
 cut >"$TMP/m11" 2>"$TMP/e11"
@@ -376,7 +370,6 @@ check "...and the project's real verb is still derived" "$(body "$TMP/m11")" "1"
 # --- 12. --allow-half-declared cuts, and still tells the consumer -------
 # The same shape as a declared retirement: the operator who has already filed
 # the defect can cut tonight's build. What it must NOT buy is silence.
-# `ee` needs no override at all now -- only the orphaned page (`pp`) does.
 printf '#project\tname\twhy\n' > "$TMP/not-a-verb.tsv"
 cut --allow-half-declared >"$TMP/m12" 2>"$TMP/e12"
 check "--allow-half-declared cuts despite the orphaned page" "$?" "0"

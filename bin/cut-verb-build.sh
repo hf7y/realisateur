@@ -2,9 +2,8 @@
 # cut-verb-build.sh -- pin the ecosystem's whole verb surface to one dated,
 # immutable BUILD, read live from GitHub with no clone on this host.
 #
-# A verb is a project's `bashified` branch carrying an executable bin/<name>;
-# a man/<name>.1 beside it is carried when present and is never required
-# (bin/lib/verb-set.sh's rule, #891). opt out by name in bin/lib/not-a-verb.tsv.
+# A verb is a project's `bashified` branch carrying an executable bin/<name>,
+# man/<name>.1 optional (#891); opt out by name in bin/lib/not-a-verb.tsv.
 # Every refusal below says so when it fires: an absent verb and a retired one
 # are indistinguishable in a manifest.
 set -uo pipefail
@@ -180,12 +179,8 @@ for repo in $repos; do
     continue
   fi
 
-  # The declaration rule, applied to the fetched tree: an executable bin/<n>
-  # is a verb, man page or not. bibliothecaire's page92.py is executable, has
-  # no page, and is STILL a verb by this rule -- it stays out of the build
-  # only because lib/not-a-verb.tsv names it, not because it lacks a page.
-  # An orphaned man/<n>.1 with no executable beside it is the one shape this
-  # still refuses on: stale documentation for a script that moved or is gone.
+  # An executable bin/<n> is a verb, man page or not (#891). An orphaned
+  # man/<n>.1 with no executable beside it still refuses: stale docs, not a door.
   decl="$(printf '%s\n' "$tree" | awk '
       $1 == "100755" && $2 ~ /^bin\/[^\/]+$/ { n = substr($2, 5); exec_[n] = 1 }
       $2 ~ /^man\/[^\/]+\.1$/ { n = $2; sub(/^man\//, "", n); sub(/\.1$/, "", n); page[n] = 1 }
@@ -195,10 +190,7 @@ for repo in $repos; do
       }
     ' | sort)"
 
-  # Both directions go through the SAME opt-out file: a VERB exempted by name
-  # is left out on purpose (bin/lib/not-a-verb.tsv's judgement call); an
-  # ORPHAN exempted by name is a man page kept around deliberately. Neither
-  # exemption blocks the build; an unexempted ORPHAN does.
+  # Both tags go through the SAME opt-out file; only an unexempted ORPHAN blocks.
   verbs=''
   while IFS=$'\t' read -r tag name why; do
     [ -n "$tag" ] || continue
@@ -241,7 +233,7 @@ exempt_count="$(grep -c '^NOT-A-VERB' "$halves" || true)"
   say "  $exempt_count name(s) recorded as not-a-verb in $NOT_A_VERB -- each is named in the manifest"
 if [ "$half_bad" -gt 0 ]; then
   if [ "$ALLOW_HALF" -eq 0 ]; then
-    die "$half_bad orphaned man page(s), listed above. A man/<name>.1 with no executable bin/<name> beside it is stale documentation for a script that moved or was deleted (realisateur#66 is the symptom this used to surface as, once as the inverse case). Delete the page, restore the script, or -- if it is deliberately kept -- give it a row in $NOT_A_VERB. --allow-half-declared cuts anyway and records the finding in the manifest."
+    die "$half_bad orphaned man page(s), listed above: man/<name>.1 with no executable bin/<name> beside it, stale docs for a script that moved or was deleted. Delete the page, restore the script, or give it a row in $NOT_A_VERB. --allow-half-declared cuts anyway and records the finding in the manifest."
   fi
   say "  --allow-half-declared: cutting with $half_bad half-declaration(s) UNFIXED. They are omitted from this build and named in its manifest."
 fi
