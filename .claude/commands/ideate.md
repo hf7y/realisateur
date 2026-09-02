@@ -31,8 +31,7 @@ With no argument, run the full sweep.
 **Read each project's open ISSUES, not its files.** `BLOCKERS.md`,
 `.scheduler/FOCUS.md` and `.scheduler/QUESTIONS.md` were retired ecosystem-wide
 by `hf7y/scheduler#66` on 2026-08-07. Do not read them, do not write them, do
-not scaffold them. A project's stability milestone is its open
-`milestone`-labelled issue. (This command told agents to read and cross-write
+not scaffold them. (This command told agents to read and cross-write
 those files until 2026-08-17; that instruction was the cause named in #187.)
 
 Don't trust a prior session's claims about status — start from what the survey
