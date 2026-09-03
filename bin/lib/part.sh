@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# lib/part.sh -- find a script this one calls, across the three layouts it can
-# run from: beside this file in a checkout, installed under libexec, or on PATH
-# as a verb. Two copies of this existed (ausculte's `part`, unarmed's
-# `sibling`) and disagreed: one tested -x and also tried the verb symlink
-# beside the caller, the other tested -r. This is the -x one.
-#
-# TRAP: needs $HERE set by the caller to its own resolved directory.
+# lib/part.sh -- where is the script I am about to call: beside me, under
+# libexec, or on PATH as a verb. TRAP: needs $HERE set by the caller.
 
 [ -n "${PART_LIB:-}" ] && return 0
 PART_LIB=1
