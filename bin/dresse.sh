@@ -67,8 +67,8 @@ HOST_STEPS="
 selfdev-app-key.sh|--check|--apply|the GitHub App key, host-wide, group-readable by the uid band
 selfdev-claude-token.sh|--check|--check|the shared OAuth token (--install takes a file a human supplies)
 wire-release-channel.sh|--host --check|--host --apply|the verb-build channel: bootstrap, pin, links, root's clock
-selfdev-permissions-provision.sh||--apply|the .claude permissions block on every account
-selfdev-hooks-provision.sh||--apply|the SubagentStop hook on every account
+selfdev-permissions-provision.sh|--strict|--apply|the .claude permissions block on every account
+selfdev-hooks-provision.sh|--strict|--apply|the SubagentStop hook on every account
 "
 ACCT_NEW_STEP="setup-selfdev-project.sh"
 ACCT_STEPS="
