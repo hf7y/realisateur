@@ -1,0 +1,34 @@
+# automerge.yml -- ARM auto-merge on a non-draft PR; branch protection decides. realisateur#931
+name: automerge
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest   # public repo: free minutes, and not queued behind monkey
+    steps:
+      - name: enable auto-merge
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_ID: ${{ github.event.pull_request.node_id }}
+        run: |
+          set -euo pipefail
+          body=$(jq -nc --arg pr "$PR_ID" '{query:"mutation($pr:ID!){enablePullRequestAutoMerge(input:{pullRequestId:$pr,mergeMethod:SQUASH}){clientMutationId}}",variables:{pr:$pr}}')
+          for attempt in $(seq 1 40); do   # 10 min: the mutation errors `unstable status` while checks run, and groc-mangr#109 gave up at 6x20s while `suites` (~2m20s) was still going
+            resp=$(curl -fsS -X POST https://api.github.com/graphql \
+                     -H "Authorization: bearer $TOKEN" -d "$body")
+            if jq -e 'has("errors") | not' >/dev/null <<<"$resp"; then
+              echo "armed on attempt $attempt"; exit 0
+            fi
+            printf '%s\n' "$resp"
+            sleep 15
+          done
+          echo "not armed after 40 attempts -- retry with: gh pr merge --auto --squash" >&2
+          exit 1
