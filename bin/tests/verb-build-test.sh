@@ -127,6 +127,7 @@ printf 'scheduler\tarme\t0000000000000000000000000000000000000000\thttps://examp
 g -C "$META" add -A
 g -C "$META" commit -m "broken build"
 g -C "$META" tag "build/2026-08-06T0130Z"
+approve "2026-08-06T0130Z"   # fixtures below install by --build; that used to skip the gate
 
 run --build 2026-08-06T0130Z --apply >/dev/null 2>&1
 check "a build missing a promised verb is refused (exit 1)" "$?" "1"
@@ -161,6 +162,7 @@ check "...and after a rollback the SAME link resolves to the older build" \
 # about a build whose verb SET changed, which is the question an operator
 # actually asks of a nightly channel: "a verb was added last night -- do the
 mk_build "2026-08-08T0130Z" "vim-arcade:entraine senechal:installe scheduler:arme bibliothecaire:consulte"
+approve "2026-08-08T0130Z"
 run --build 2026-08-08T0130Z --apply --link >/dev/null 2>&1
 check "a verb ADDED by the nightly build is linked with no hand step" \
       "$(readlink "$BIN/consulte")" "$ROOT/current/bibliothecaire/bin/consulte"
@@ -173,6 +175,7 @@ check "...while the verbs already there still resolve through current" \
 # have its link removed, not left dangling -- PATH search skips a dangling
 # link, so leaving it there is a silent failure (realisateur#223).
 mk_build "2026-08-09T0130Z" "vim-arcade:entraine senechal:installe scheduler:arme"
+approve "2026-08-09T0130Z"
 run --build 2026-08-09T0130Z --apply --link >/dev/null 2>&1
 if [ ! -L "$BIN/consulte" ] && [ ! -e "$BIN/consulte" ]; then
     ok "a verb DROPPED from the build has its link removed, not left dangling"
@@ -202,6 +205,7 @@ mkdir -p "$META/realisateur/commands" "$META/realisateur/hooks"
 printf 'slash body\n' > "$META/realisateur/commands/cloture.md"
 printf '#!/bin/sh\n' > "$META/realisateur/hooks/subagent-closeout.sh"
 g -C "$META" add -A; g -C "$META" commit -m "payload"; g -C "$META" tag -f "build/2026-08-10T0130Z"
+approve "2026-08-10T0130Z"
 run --build 2026-08-10T0130Z --apply --link >/dev/null 2>&1
 check "a slash command in the build is installed into CMD_DEST" \
       "$(cat "$CMD_DEST/cloture.md" 2>/dev/null)" "slash body"
@@ -228,6 +232,7 @@ mkdir -p "$META/realisateur/libexec"
 printf '#!/bin/sh\ntouch "$1"\nwhile [ ! -f "$2" ]; do sleep 0.05; done\necho OLD\n' \
   > "$META/realisateur/libexec/probe.sh"
 g -C "$META" add -A; g -C "$META" commit -m "libexec"; g -C "$META" tag -f "build/2026-08-11T0130Z"
+approve "2026-08-11T0130Z"
 run --build 2026-08-11T0130Z --apply --link >/dev/null 2>&1
 check "a host tool in the build is installed executable into SELFDEV_LIBEXEC" \
       "$([ -x "$SELFDEV_LIBEXEC/probe.sh" ] && echo yes)" "yes"
@@ -245,6 +250,7 @@ check "a host tool in the build is installed executable into SELFDEV_LIBEXEC" \
 ino_before="$(stat -c %i "$SELFDEV_LIBEXEC/probe.sh")"
 printf '#!/bin/sh\necho NEW\n' > "$META/realisateur/libexec/probe.sh"
 g -C "$META" add -A; g -C "$META" commit -m "libexec v2"; g -C "$META" tag -f "build/2026-08-12T0130Z"
+approve "2026-08-12T0130Z"
 run --build 2026-08-12T0130Z --apply --link >/dev/null 2>&1
 ino_after="$(stat -c %i "$SELFDEV_LIBEXEC/probe.sh")"
 if [ "$ino_before" != "$ino_after" ]; then
@@ -284,6 +290,17 @@ check "approving it makes it available" "$?" "1"
 grun --latest --apply >/dev/null 2>&1
 check "...and only then is it adopted" \
       "$(readlink "$GROOT/current")" "2026-09-02T0130Z"
+
+gmk "2026-09-03T0130Z"          # cut, never approved -- --build used to take it (#962)
+out="$(grun --build 2026-09-03T0130Z --apply 2>&1)"; rc=$?
+check "--build refuses an UNAPPROVED id" "$rc" "1"
+case "$out" in *"NOT approved"*) ok "...and says a cut is not a release" ;;
+                *) bad "...and says a cut is not a release" "got: $out" ;; esac
+check "...and the pin did not move" "$(readlink "$GROOT/current")" "2026-09-02T0130Z"
+
+grun --build 2026-09-01T0130Z --apply >/dev/null 2>&1
+check "--build holds a host on an OLDER approved id" \
+      "$(readlink "$GROOT/current")" "2026-09-01T0130Z"
 
 for t in $(git -C "$GMETA" tag --list 'approved/*'); do g -C "$GMETA" tag -d "$t"; done
 out="$(VERB_BUILD_ROOT="$TMP/b2" INSTALLE_BIN="$BIN" bash "$INSTALL" \
