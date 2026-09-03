@@ -4,9 +4,8 @@
 # IT NAMES NO SUITE AND NO COUNT, because the step below GLOBS: a list
 # maintained by hand is the same defect as a count maintained by hand.
 #
-# THE BAR, unchanged. Editing a test so a new workflow can open green is what
-# BUILD-DISCIPLINE.md exists to prevent. Fixing a harness that tests the wrong
-# thing is not that, and neither is fixing shipped code.
+# THE BAR, unchanged: editing a test so a new workflow opens green is the thing
+# not to do. Fixing a wrong harness is not that, nor is fixing shipped code.
 
 name: tests
 
