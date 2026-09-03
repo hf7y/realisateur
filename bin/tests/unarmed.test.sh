@@ -14,6 +14,13 @@ cat "$FACTS_FILE"
 EOF
 chmod +x "$T/ssh"
 
+# No credential, on purpose: the repo probes must read BLIND, not reach GitHub.
+cat > "$T/gh-none" <<'EOF'
+#!/usr/bin/env bash
+exit 1
+EOF
+chmod +x "$T/gh-none"
+
 armed() {
   cat > "$1" <<'EOF'
 SUDO ok
@@ -30,9 +37,11 @@ VAULT_MODE 0700
 DRAIN_CRON 1
 DRAIN_BIN 1
 BUILD_LIBEXEC 2
-FD_ANCHOR 200
-FD_PROSE 200
-APMS_PROSE 200
+HC_USR_LIBEXEC 0
+HC_ACCTS 18
+HC_ACCT_LIBEXEC 0
+HC_VERBS 36
+HC_BIN_STRAY 0
 EOF
 }
 unarmed() {
@@ -51,14 +60,17 @@ VAULT_MODE 2770
 DRAIN_CRON 1
 DRAIN_BIN 0
 BUILD_LIBEXEC 0
-FD_ANCHOR 200
-FD_PROSE 404
-APMS_PROSE 404
+HC_USR_LIBEXEC 1
+HC_ACCTS 18
+HC_ACCT_LIBEXEC 16
+HC_VERBS 36
+HC_BIN_STRAY 19
 EOF
 }
 run() {  # run <ledger> <today> -- OUT/RC
   OUT="$(UNARMED_LEDGER="$1" UNARMED_TODAY="$2" UNARMED_HOST=fixture-host \
-         UNARMED_SSH="$T/ssh" FACTS_FILE="$T/facts" "$SCRIPT" --check 2>&1)"; RC=$?
+         UNARMED_SSH="$T/ssh" UNARMED_GH="$T/gh-none" \
+         FACTS_FILE="$T/facts" "$SCRIPT" --check 2>&1)"; RC=$?
 }
 
 # mkledger <file> <row>... -- the rows under test plus a wide-windowed filler
@@ -87,8 +99,9 @@ armed "$T/facts"
 mkledger "$T/L" "$(printf 'host-mode\t2026-08-11\t30d\tARMED\tthe crontab line')"
 run "$T/L" 2026-08-30
 has "B1 an armed row reads OK" "$OUT" "OK        host-mode"
-rc  "B2 and the probe exits 0" 0 $RC
-has "B3 and says the floor holds" "$OUT" "The floor holds"
+# Not exit 0: three rows read GitHub with no credential, so the floor is BLIND.
+rc  "B2 and the floor is BLIND, not red" 6 $RC
+has "B3 and BLIND is reported as itself, never as the floor holding" "$OUT" "BLIND -- a predicate could not run"
 
 unarmed "$T/facts"
 run "$T/L" 2026-08-30
@@ -102,7 +115,8 @@ mkledger "$T/L" "$(printf 'host-mode\t2026-08-11\t30d\tUNARMED\tsudo crontab -e 
 run "$T/L" 2026-08-30
 has "C1 inside the window the row is HELD, not red" "$OUT" "HELD      host-mode"
 has "C2 and it says how long is left" "$OUT" "11d left"
-rc  "C3 and the probe exits 0 -- a persisting backlog is not an alarm" 0 $RC
+rc  "C3 and it is not a finding -- a persisting backlog is not an alarm" 6 $RC
+hasnt "C3b and no FINDINGS banner is printed for a held row" "$OUT" "FINDINGS --"
 hasnt "C4 nothing is DONE to a held row" "$OUT" "DO  sudo crontab -e"
 
 run "$T/L" 2026-09-30
@@ -148,9 +162,11 @@ VAULT_MODE 2770
 DRAIN_CRON 1
 DRAIN_BIN 0
 BUILD_LIBEXEC 0
-FD_ANCHOR 200
-FD_PROSE 404
-APMS_PROSE 404
+HC_USR_LIBEXEC 1
+HC_ACCTS 18
+HC_ACCT_LIBEXEC 16
+HC_VERBS 36
+HC_BIN_STRAY 19
 EOF
 mkledger "$T/L4" "$(printf 'fragment-adoption\t2026-08-13\t30d\tUNARMED\tconvert the confs')"
 run "$T/L4" 2026-08-30
@@ -173,30 +189,15 @@ run "$T/does-not-exist" 2026-08-30
 rc  "G4 an unreadable floor exits 6" 6 $RC
 has "G5 and says nothing was compared" "$OUT" "nothing was compared"
 
-section "H. the front-door probe reads three values, not two"
-fdfacts() { armed "$T/facts"; sed -i "s/^FD_ANCHOR .*/FD_ANCHOR $1/; s/^FD_PROSE .*/FD_PROSE $2/" "$T/facts"; }
-mkledger "$T/L7" "$(printf 'front-door-guard\t2026-08-17\t7d\tUNARMED\tadd the workflow to front-door')"
-
-fdfacts 200 404
+section "H. a floor row whose predicate was RETIRED blinds its own row, never grades clean"
+# The two per-repo rows retired into repo-guard; a ledger still naming one
+# must not read clean because nothing measures it.
+mkledger "$T/L7" "$(printf 'front-door-guard\t2026-08-17\t7d\tUNARMED\tretired into repo-guard')"
+armed "$T/facts"
 run "$T/L7" 2026-08-30
-has "H1 no prose.yml on front-door is UNARMED, and past its own window" "$OUT" "EXPIRED   front-door-guard"
-has "H2 and it names the act that clears it" "$OUT" "DO  add the workflow to front-door"
-rc  "H3 and it is a finding" 1 $RC
-
-fdfacts 200 200
-run "$T/L7" 2026-08-30
-has "H4 a prose.yml on front-door reads ARMED" "$OUT" "LOWER     front-door-guard"
-hasnt "H5 and an armed row is not red" "$OUT" "EXPIRED   front-door-guard"
-
-fdfacts 404 404
-run "$T/L7" 2026-08-30
-has "H6 a front-door it cannot read at all is BLIND, never UNARMED" "$OUT" "BLIND     front-door-guard"
-rc  "H7 and BLIND exits 6, never 0" 6 $RC
-
-fdfacts 200 500
-run "$T/L7" 2026-08-30
-has "H8 an HTTP error reading prose.yml is BLIND, never ARMED" "$OUT" "BLIND     front-door-guard"
-rc  "H9 and it exits 6" 6 $RC
+has "H1 a row with no predicate reads BLIND" "$OUT" "BLIND     front-door-guard"
+has "H2 and it names the predicate it wanted" "$OUT" "probe_front_door_guard"
+rc  "H3 and BLIND exits 6, never 0" 6 $RC
 
 section "I. the shipped floor is well-formed"
 LEDGER="$ROOT/lib/unarmed.tsv"
@@ -232,7 +233,8 @@ mkledger "$T/L8"
 runreal() {  # runreal <ssh> <build-root> -- RUNS the generated script offline, moving only the pin it reads last. A-J feed collect() a CANNED answer, so none of them can see its exit status.
   OUT="$(UNARMED_LEDGER="$T/L8" UNARMED_TODAY=2026-08-30 UNARMED_HOST=fixture-host \
          UNARMED_SCHED_ROOT="$T/no-sched" VERB_HOST_BUILD_ROOT="$2" \
-         PATH="$T/stub:$PATH" UNARMED_SSH="$1" "$SCRIPT" --check 2>&1)"; RC=$?
+         PATH="$T/stub:$PATH" UNARMED_SSH="$1" UNARMED_GH="$T/gh-none" \
+         "$SCRIPT" --check 2>&1)"; RC=$?
 }
 
 runreal "$T/ssh-run" "$T/no-such-root"
@@ -276,4 +278,33 @@ has "L8 an unread account-row count is BLIND, never a count of zero" "$OUT" "BLI
 rc  "L9 and exits 6" 6 $RC
 
 echo
+section "M. the frame: repo standing, and the host invariant (#800, #896)"
+armed "$T/facts"
+mkledger "$T/M" \
+  "$(printf 'host-contraband\t2026-08-11\t3650d\tUNARMED\tthe #886 series')" \
+  "$(printf 'repo-frame\t2026-08-11\t3650d\tUNARMED\tland the marker')"
+run "$T/M" 2026-08-30
+has "M1 a host carrying nothing outside the pin reads armed, so the floor can be lowered" "$OUT" "LOWER     host-contraband"
+hasnt "M2 and it is not called contraband" "$OUT" "UNARMED host-contraband"
+
+unarmed "$T/facts"
+run "$T/M" 2026-08-30
+has "M3 /usr/local/libexec existing is contraband" "$OUT" "/usr/local/libexec exists"
+has "M4 per-account libexec copies are counted, not summarised away" "$OUT" "16 of 18 account(s) carry ~/.local/libexec"
+has "M5 an estate name not resolving into the pin is named" "$OUT" "19 of 36 estate name(s)"
+rc  "M6 and a row inside its window is still not an alarm" 6 $RC
+hasnt "M6b and no FINDINGS banner is printed" "$OUT" "FINDINGS --"
+
+# BLIND, never clean: an unmeasured estate must not read as a conforming one.
+for id in repo-frame repo-guard repo-gates; do
+  has "M7/$id reads BLIND without a credential" "$OUT" "BLIND     $id"
+done
+hasnt "M8 and BLIND does not read as the floor holding" "$OUT" "The floor holds"
+rc  "M9 BLIND exits 6, never 0" 6 $RC
+
+# The unresolved-pin regression, pinned.
+armed "$T/facts"
+run "$T/M" 2026-08-30
+hasnt "M10 a fully-linked host reports no stray estate names" "$OUT" "of 36 estate name(s)"
+
 summary

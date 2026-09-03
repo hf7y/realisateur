@@ -12,7 +12,6 @@
 # bin/install-verbs.sh reads, instead of retyping the registry join, and reports
 # BLIND rather than "no registered project" when the registry is absent.
 #
-# usage: ./bin/tests/verb-set.test.sh
 
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

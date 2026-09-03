@@ -1,16 +1,6 @@
 #!/usr/bin/env bash
 #
-# Cases:
-#   A --check runs every host step and writes nothing
-#   B a step that exits nonzero under --check is a GAP, not a refusal
-#   C exit 6 from a step is BLIND -- never folded into GAP, never "ok"
-#   D --apply as non-root refuses (exit 2); no step runs
-#   E a provision-class script no step reaches is PRINTED as uncovered
-#   F a step whose script is not provision-class is a BAD plan (exit 1)
-#   G no propagation set -> BLIND, exit 6
-#   I --on ships a TREE, not a file, and names the machine it changed
 #
-# Usage: bin/tests/dresse.test.sh   (exit 0 = all pass)
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh

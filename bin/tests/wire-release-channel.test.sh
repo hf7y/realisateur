@@ -4,7 +4,6 @@
 # channel: that it refuses clearly, that it cannot silently arm anything, and
 # that it never carries its own copy of the bootstrap list.
 #
-# Usage: bin/tests/wire-release-channel.test.sh   (exit 0 = all pass)
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

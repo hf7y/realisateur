@@ -14,7 +14,6 @@
 # is the joint: FOOTER_RE below is a COPY of senechal's, and case 6 asserts
 # the copy still matches the original whenever a senechal checkout is present.
 #
-# Usage: bin/tests/notify-senechal-footer.test.sh   (exit 0 = all pass)
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

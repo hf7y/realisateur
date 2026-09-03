@@ -2,24 +2,11 @@
 #
 # verbs-refresh.test.sh -- witness for bin/verbs-refresh.sh.
 #
-# Cases:
-#   A current, fresh, links fine       -> exit 0, and --quiet says NOTHING
-#   B a newer build exists             -> NEWER, exit 1
-#   C current but ancient              -> STALE, exit 1 (up-to-date is not
-#     the same claim as fresh: if nothing newer exists either, the cutter has
-#     stopped, and --check alone would say "up to date" forever)
-#   D a dangling verb link             -> named, exit 1
-#   E an off-channel verb link         -> named, exit 1, never clobbered
-#   F no build root / no pin           -> BLIND (6), never 0
-#   G the channel is unreachable       -> BLIND (6), never "up to date"
-#   H --apply delegates, and does not move `current` itself
-#   I --quiet prescribes a command that can actually fix the named finding
 #
 # ON H, because it is the design constraint: a second implementation of the
 # atomic switch would be a second answer to "which build am I on". The case
 # asserts mechanically that the switch came from the delegate, not from here.
 #
-# Usage: bin/tests/verbs-refresh.test.sh   (exit 0 = all pass)
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

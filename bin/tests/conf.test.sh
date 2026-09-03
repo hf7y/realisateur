@@ -17,7 +17,6 @@
 # Hermetic: builds its own scheduler root and its own target repos in a temp
 # dir, overrides HOME and SCHED_ROOT, and never touches the live ecosystem.
 #
-# usage: ./bin/tests/conf.test.sh
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

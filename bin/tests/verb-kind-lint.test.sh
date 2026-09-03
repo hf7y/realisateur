@@ -8,7 +8,6 @@
 # "undeclared" would test the arithmetic and skip the only part that has
 # ever been wrong here: which bytes on disk count as a declaration.
 #
-# usage: ./bin/tests/verb-kind-lint.test.sh
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

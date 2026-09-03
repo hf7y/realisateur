@@ -7,7 +7,6 @@
 # redirected. A suite that needed the real estate to be healthy could not tell
 # its own passing from the estate's.
 #
-# Usage: bin/tests/propagation.test.sh   (exit 0 = all pass)
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh

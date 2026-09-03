@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 #
-# Usage: bin/tests/subagent-closeout.test.sh   (exit 0 = all pass)
 # Witness for hooks/subagent-closeout.sh, including #363's tree discovery.
 
 set -uo pipefail

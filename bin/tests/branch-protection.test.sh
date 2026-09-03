@@ -11,11 +11,16 @@ set -uo pipefail
 REPO="${BRANCH_PROTECTION_REPO:-hf7y/realisateur}"
 BRANCH="${BRANCH_PROTECTION_BRANCH:-main}"
 
-# THE CONTRACT, in one place. deploy-drift and comment-claims run on every PR
-# and are deliberately NOT required -- deploy-drift reads another repository, so
-# a third party could otherwise wedge every PR here.
-REQUIRED=("prose / prose" "shellcheck" "suites")
-ADVISORY=("comment-claims" "deploy-drift")
+# THE CONTRACT, in one place. MOVED 2026-09-03 (Zach): deploy-drift and
+# comment-claims are now REQUIRED. The old reading called them advisory because
+# "a third party could wedge every PR here" -- but deploy-drift's subject is
+# hf7y/verbs, which is this estate's own repo, not a third party, and its red
+# means the deployed workflow diverged from the source (#645, which cost a
+# night of silent no-op cuts). Zach: "whatever breaks, we should fix it anyway."
+# So a red one blocks a merge until the drift is fixed, which is the work
+# either way.
+REQUIRED=("prose / prose" "shellcheck" "suites" "comment-claims" "deploy-drift")
+ADVISORY=()
 
 section "A. the required check set on $REPO@$BRANCH"
 

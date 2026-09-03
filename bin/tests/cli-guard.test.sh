@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #   exit 2
 #
-# Usage: bin/tests/cli-guard.test.sh   (exit 0 = all pass)
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh

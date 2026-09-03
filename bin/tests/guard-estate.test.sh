@@ -14,7 +14,6 @@
 # that may shrink and must never grow. A ratchet, not an exemption: the next
 # guard that wants to be hand-run has to retire one that already is.
 #
-# usage: ./bin/tests/guard-estate.test.sh
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh

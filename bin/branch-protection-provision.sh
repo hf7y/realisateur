@@ -27,6 +27,8 @@ cli_guard "$@"
 
 OWNER="$GH_ESTATE_OWNER"
 GH_BIN="${GH_BIN:-gh}"
+# AFTER GH_BIN: the lib captures REGISTRY_GH from it at source time.
+. "$HERE/lib/registry-set.sh"
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
 WITNESS_PRS="${BPP_WITNESS_PRS:-5}"
 
@@ -47,13 +49,7 @@ say()   { printf '  %-7s %s\n' "$1" "$2"; }
 
 api_get() { "$GH_BIN" api "$1" 2>/dev/null; }
 
-registry() {   # the marker query bin/cut-verb-build.sh:110-124 already runs
-  local q
-  q='query($owner:String!){ user(login:$owner){ repositories(first:100, isFork:false, ownerAffiliations:OWNER){
-        nodes{ name isArchived marker: object(expression:"HEAD:'"$REGISTRY_MARKER"'"){ __typename } } } } }'
-  "$GH_BIN" api graphql -F owner="$OWNER" -f query="$q" \
-    --jq '.data.user.repositories.nodes[] | select(.marker != null and .isArchived == false) | .name' 2>/dev/null
-}
+registry() { registry_repos; }   # lib/registry-set.sh -- the marker query has one home
 
 wf_parse() {   # triggers, PR branch filter and jobs of one workflow; a file it cannot parse yields no jobs, which the caller reports BLIND
   awk '
@@ -246,14 +242,31 @@ scan() {
 }
 
 apply() {   # ADD ONLY, read-modify-write: enforce_admins is a separate decision (#168 scoped it to realisateur and scheduler) and this script never makes it
+  # PUT REPLACES THE WHOLE OBJECT: a field not carried forward is dropped. Both
+  # of these were literal `null`, so adding a context erased any review
+  # requirement -- including the Code Owner guard on the #922 grant. They are
+  # RESHAPED too: the GET returns user objects, the PUT wants bare logins.
   local slug="$1" branch="$2"; shift 2
   local cur payload now
   cur="$(api_get "repos/$slug/branches/$branch/protection")" || cur='{}'
   payload="$(printf '%s\n' "$@" | jq -R . | jq -sc --argjson cur "$cur" '
     { required_status_checks: { strict: ($cur.required_status_checks.strict // false), contexts: (.|unique) },
       enforce_admins: ($cur.enforce_admins.enabled // false),
-      required_pull_request_reviews: null,
-      restrictions: null,
+      required_pull_request_reviews:
+        (if ($cur.required_pull_request_reviews // null) == null then null
+         else ($cur.required_pull_request_reviews
+               | { dismiss_stale_reviews:           (.dismiss_stale_reviews // false),
+                   require_code_owner_reviews:      (.require_code_owner_reviews // false),
+                   required_approving_review_count: (.required_approving_review_count // 0),
+                   require_last_push_approval:      (.require_last_push_approval // false) })
+         end),
+      restrictions:
+        (if ($cur.restrictions // null) == null then null
+         else ($cur.restrictions
+               | { users: [ .users[]?.login // empty ],
+                   teams: [ .teams[]?.slug  // empty ],
+                   apps:  [ .apps[]?.slug   // empty ] })
+         end),
       allow_force_pushes: ($cur.allow_force_pushes.enabled // false),
       allow_deletions: ($cur.allow_deletions.enabled // false) }')"
   if ! printf '%s' "$payload" | "$GH_BIN" api -X PUT "repos/$slug/branches/$branch/protection" --input - >/dev/null 2>&1; then

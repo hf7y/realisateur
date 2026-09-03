@@ -4,7 +4,6 @@
 # script has no channel to a person left to reach. G and H are what keep it
 # that way; they are the point of this file now, not an afterthought in it.
 #
-# Usage: bin/tests/ausculte-cadence.test.sh   (exit 0 = all pass)
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh

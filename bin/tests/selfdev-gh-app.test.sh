@@ -10,7 +10,6 @@
 # every case either stops before the first curl or points $SELFDEV_GH_API at a
 # port nothing is listening on.
 #
-# Usage: bin/tests/selfdev-gh-app.test.sh   (exit 0 = all pass)
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
@@ -183,7 +182,6 @@ no  "I writes no per-account key directory" "$(ls -A "$T/home/.config/selfdev" 2
 # THE BUG THIS CASE EXISTS FOR, reproduced 2026-08-07:
 #
 #   $ bin/selfdev-gh-app.sh --credential get </dev/null
-#   usage: bin/selfdev-gh-app.sh [--check|--token|...]
 #   exit 2
 #
 # `git config credential.helper "!<cmd>"` makes git run `<cmd> <operation>`,
