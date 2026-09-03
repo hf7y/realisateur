@@ -37,6 +37,9 @@ REGISTRY_SELECT='.data.user.repositories.nodes[] | select(.marker != null and .i
 
 # registry_query [extra-node-fields] -- the marker query. Pass GraphQL field
 # selections to splice into each node (registry-standup.sh wants workflow trees).
+# The optional argument IS used, by a caller in another file, so the "never
+# passed" reading is local-only.
+# shellcheck disable=SC2120
 registry_query() {
   printf 'query($owner:String!){ user(login:$owner){ repositories(first:100, isFork:false, ownerAffiliations:OWNER){ nodes{ name isArchived isPrivate marker: object(expression:"HEAD:%s"){ __typename } %s } } } }' \
     "$REGISTRY_MARKER" "${1:-}"
