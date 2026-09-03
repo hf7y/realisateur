@@ -127,9 +127,6 @@ has "I: force-push is denied"      "$WANT" "git push --force"
 has "I: pushing main is denied"    "$WANT" "git push origin main"
 has "I: --admin merging is denied" "$WANT" "gh pr merge --admin"
 has "I: the App key is unreadable" "$WANT" "/etc/selfdev/app.pem"
-# Every file the Claude OAuth token lives in, not just the one it was found in
-# (#923: it reached a transcript from settings.json, and the .bak-* copies and
-# the host-wide file hold the same value).
 for f in /etc/selfdev/claude-token \
          '/home/*/.claude/settings.json' \
          '/home/*/.claude/settings.json.bak-*' \
