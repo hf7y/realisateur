@@ -41,6 +41,9 @@ has "B9 copying monkey's or zach's is named as merging the quotas" "$RF" "merges
   has "B9f svc-vaporwave's over-scoped GitHub PAT is not inherited by the new accounts" "$RF" "senechal#279"
 has "B10 ausculte is named as NOT generic, so symmetry has a stated cost" "$RF" "ausculte' is NOT generic"
 has "B11 tier 2 names the owner the estate does not know" "$RF" "media-arts-collective"
+  has "B11b Tyler is named as NOT a gate, so the 08-04 brief is not re-applied to a host that is gone" "$RF" "Tyler is not a gate on this"
+  has "B11c ...and the reason the old answer was wrong is stated, not just the new one" "$RF" "HIS OFFICE HOST"
+  has "B11d what is owed is the App install and #916, not a multi-owner rewrite" "$RF" "same defect one step further on"
 has "B12 the build is named as NOT a prerequisite" "$RF" "verb build is NOT a prerequisite"
 
 section "C. constate.sh -- a witness that cannot see says so"

@@ -119,12 +119,35 @@ Tier 1, `hf7y'\-owned and unblocked: `dog', `vibe\-kiosk', `inv\-redirects',
 `vkv23'. Run `setup\-selfdev\-project.sh' per account ON the host until
 realisateur#895's second half lands.
 .PP
-.B Tier 2 is gated and is not a step here.
+.B Tier 2 is gated, and NOT on the thing the 2026\-08\-04 brief said.
 `wavebucks' (which is where `aedile' actually lives), `inventory\-app',
-`nomac.org' and `CodeDumpster' belong to `media\-arts\-collective'. realisateur
-references that owner NOWHERE: GH_ESTATE_OWNER is a scalar `hf7y' in
-bin/lib/estate\-set.sh and every consumer inherits it. Standing one up needs
-Tyler, a second App installation, and a multi\-owner estate \- not a flag.
+`nomac.org' and `CodeDumpster' belong to `media\-arts\-collective'.
+.PP
+That brief required TYLER'S BUY\-IN, and it was right to: it proposed adding a
+project user to `nomac', HIS OFFICE HOST, sharing its 4G/2vCPU and 103G disk
+beside `romulus'. That host does not exist \- realisateur#941 deleted it. What
+is left is a GitHub ORG, and Zach is an `admin' of it (measured 2026\-09\-03;
+admins are adamdavies1915, bobtheavenger42, hf7y).
+.B So Tyler is not a gate on this, and carrying that requirement forward was
+.B an error: the question moved hosts and narrowed, and the old answer was
+.B repeated instead of re\-derived.
+.PP
+What IS still owed, measured rather than asserted:
+.nf
+1  a second App installation, on media\-arts\-collective. Zach can do it \-
+   he is an org admin. Not a code change.
+2  cred_own_repo() in bin/lib/selfdev\-credentials\-set.sh is `printf %s "$1"' \-
+   identity, with no owner in it at all. That is ALREADY realisateur#916,
+   filed because `apms' is not `apms\-2173'. A repo in a second org is the
+   same defect one step further on, not a new one.
+.fi
+.PP
+.B It is NOT "make the estate multi\-owner".
+GH_ESTATE_OWNER is one overridable variable (bin/lib/estate\-set.sh), and the
+only `hf7y' strings left outside it are prose \- a usage line, an exit\-ladder
+citation, and an etalon workflow ref. bin/lib/registry\-set.sh records that the
+roster half already resolves a project through its conf REPO_URL, which is the
+seam to use.
 .SH 5. THE CREDENTIAL, LAST AND BY HAND
 The second identity ALREADY EXISTS and does not need buying: it is the
 .B nomac OAuth,
