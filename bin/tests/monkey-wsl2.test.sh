@@ -97,6 +97,12 @@ section "D. etat.sh -- a report, never a gate"
 has "D1 it says the order is provisional, where a reader sees it" "$(grep -A2 "BANNER" "$D/etat.sh")" "PROVISIONAL"
 has "D2 ...and that DIVERGED is a finding, not a failure" "$(cat "$D/etat.sh")" "never a failure"
 has "D3 it names the one gate only a human can pass" "$(cat "$D/etat.sh")" "can_admins_bypass"
+# #935: step 3 read DONE from the repo root and DIVERGED from the runbook
+# directory the SYNOPSIS tells you to use, on the same file. The bug class is
+# invisible to a test that always runs from one place, so assert the CLASS.
+bare="$(grep -nE '^[[:space:]]*[A-Za-z_]+=("|'"'"')?(bin|provision|share|test|\./)' "$D/etat.sh")"
+if [ -z "$bare" ]; then ok "D4 no path in etat.sh resolves against the caller's cwd"
+else bad "D4 no path in etat.sh resolves against the caller's cwd" "$bare"; fi
 
 section "E. the rehearsal verdict is committed, so its results are not a memory"
 V="$D/rehearsal-verdict.tsv"
