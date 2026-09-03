@@ -124,12 +124,39 @@ references that owner NOWHERE: GH_ESTATE_OWNER is a scalar `hf7y' in
 bin/lib/estate\-set.sh and every consumer inherits it. Standing one up needs
 Tyler, a second App installation, and a multi\-owner estate \- not a flag.
 .SH 5. THE CREDENTIAL, LAST AND BY HAND
-A SECOND, SEPARATE Anthropic identity (Zach, 2026\-09\-02). The interactive login
-happens AS the account, ON vaporwave.
-.B It is not copied
-from /etc/selfdev/claude\-token on monkey, from zach, or into any group\-readable
-path: copying any of those silently merges the second quota back into the first,
-which is the one thing the second identity is being bought to avoid.
+The second identity ALREADY EXISTS and does not need buying: it is the
+.B nomac OAuth,
+held by `svc\-vaporwave' on mandark (Zach, 2026\-09\-03). It is independent of
+the `nomac' VM, which no longer exists \- realisateur#941 deleted it with the
+rest of VirtualBox. Nothing about that deletion touches the Anthropic account.
+.PP
+.B WHICH COPY IS THE RIGHT COPY, because the rule cuts both ways.
+Bringing svc\-vaporwave's OWN credential across is the whole point: that IS the
+second quota. Bringing monkey's or zach's across silently merges the second
+quota back into the first, which is the one thing this is being bought to
+avoid. So:
+.nf
+
+  from svc\-vaporwave, or a fresh login AS the account   CORRECT
+  from /etc/selfdev/claude\-token on monkey              WRONG, merges the quotas
+  from zach, or into any group\-readable path            WRONG
+.fi
+.PP
+.B AN AGENT DOES NOT FETCH IT.
+`/home/svc\-vaporwave' is 0700 and its contents are unreadable to anyone but
+root and that account, which is correct and is not an obstacle to work around.
+CLAUDE.md: an agent that needs a credential stops and asks, and never goes
+looking. Zach either moves the file or logs in again as the account on
+vaporwave; `dresse' only ever \-\-checks it, and
+.B selfdev\-claude\-token.sh \-\-install
+takes a file a human supplies.
+.PP
+.B AND REVOKE THE PAT THAT COMES WITH THE NAME.
+senechal#279 recorded that svc\-vaporwave's GitHub PAT is over\-scoped
+(`admin:org'), expires 2027\-07\-20, and is registered nowhere. It is a GitHub
+credential, not this one, and it must not be inherited by the accounts standing
+up here \- they push as the App. `selfdev\-credentials.sh \-\-audit' walks the
+self\-dev band only, so nothing has been watching it.
 .SH 6. ARMING, WHICH IS A SEPARATE ACT
 `schedule/ROSTER' in hf7y/scheduler gains `<project> | <account>@vaporwave' rows.
 Only a human edits the `state' column; that edit IS the arming. Leave them
