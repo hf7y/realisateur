@@ -7,6 +7,12 @@ dresse \- stand a self-dev host, or one account on it, up
 [--check|--apply]
 .br
 .B dresse
+--host
+--on
+.I host
+[--check|--apply]
+.br
+.B dresse
 --all
 [--check|--apply]
 .br
@@ -28,6 +34,35 @@ is the default and writes nothing. Because it writes nothing it runs as any
 user, and says which rows will refuse for want of root.
 .B --apply
 must be root.
+.SH --on: DRIVING ANOTHER HOST
+.B --on
+.I host
+runs the host-wide plan against
+.I host
+over ssh instead of against this machine. It exists so a host can be stood up
+holding the pinned verb build and nothing else: a step and the
+.B lib/
+it sources are shipped to a
+.BR "mktemp -d" ,
+run there, and removed. Nothing is installed and nothing survives the call, so
+this is not a second
+.B /root/realisateur-refresh
+(hf7y/realisateur#886, #839).
+.PP
+It drives the
+.B --host
+plan only. An account is the other half of hf7y/realisateur#895 and is
+refused rather than half-served, because a tool that changed one machine for
+the host steps and another for the account steps would not be telling the
+caller which machine it changed.
+.PP
+Root is needed where the change lands.
+.B --apply --on
+does not require root locally; it requires passwordless
+.B sudo -n
+for the calling user on
+.IR host ,
+and a step that cannot get it reports BAD rather than waiting on a prompt.
 .SH THE PLAN
 The steps are checked against
 .BR bin/lib/propagation-set.sh :
