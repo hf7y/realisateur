@@ -105,18 +105,24 @@ CONTAINERS. hermes is retired and its four units are MASKED, so querying them
 reports a dark channel that is in fact up.
 .SH FACTS THAT CHANGE THE COMMANDS
 .nf
-C:  51G free   monkey.vdi is 37.0G and lives HERE \- rollback depends on it,
+C:  28G free   MEASURED 2026\-09\-02, was 51G: monkey's OWN ext4.vhdx landed
+               here too (39.92G, C:\eWSL\emonkey) \- see the ROLLBACK section.
+               monkey.vdi is 37.0G and lives HERE \- rollback depends on it,
                and it is the INTERNAL NVMe: the guest's disk belongs here
 D:  2.6T free  BULK SCRATCH ONLY \- tarballs and exports. It is the WD Elements
                USB drive from realisateur#274. NEVER put a guest disk here.
 monkey.vbox is on D: while monkey.vdi is on C: \- the VM is split across drives
-distros: docker\-desktop (DEFAULT), Ubuntu, hermes \- hermes is RETIRED and
-  Stopped: ask_zach, the WhatsApp watcher and whisper are the zaxon\-* containers
-  (THE HUMAN CHANNEL MOVED TO CONTAINERS, below; supersedes senechal#557)
+distros, MEASURED 2026\-09\-02: Ubuntu (DEFAULT) and monkey. ONLY THOSE TWO.
+  docker\-desktop and hermes are GONE \- POST\-MIGRATION QUEUE items 1 and 2
+  below, done. ask_zach, the WhatsApp watcher and whisper are the zaxon\-*
+  containers (THE HUMAN CHANNEL MOVED TO CONTAINERS; supersedes senechal#557)
 ALL distros share ONE network namespace, net:[4026531833] \- measured, identical
   inode from Ubuntu and hermes. So a distro's ports are the estate's ports.
-  taken: 2223 8643 8090 3000 8642 53. FREE: 22, which is what monkey binds.
-  a bare `wsl \-d' with no name hits docker\-desktop, not yours
+  taken, MEASURED 2026\-09\-02: 53 2223 2224 8000 8080 8090 8643. 3000 and 8642
+  are no longer held; 8000 and 8080 now are. 22 is NOT free \- Windows sshd
+  holds it, which is why monkey binds 2224 (see RESOLVED, below).
+  a bare `wsl \-d' now hits Ubuntu \- THE HUMAN CHANNEL. Worse than the
+  docker\-desktop it used to hit. Name the distro in every command.
 Ubuntu and hermes BOTH report hostname `dexter'; /etc/wsl.conf is per\-distro
 monkey guest: systemd\-networkd and systemd\-resolved ACTIVE, / mounted by UUID,
   /swapfile in fstab \- all break or hang under wsl \-\-import
@@ -279,20 +285,26 @@ and graded MUST\-HOLD: it asserts the failure that happened \- the name landing 
 dexter \- and cannot pass for a host nothing can reach. A `wsl:' target reads
 ABSENT and exits 5 BY DESIGN; that is the rescue route, not the verdict.
 `accepted.tsv' is the baseline now.
-.SH ROLLBACK NEEDS BOTH DRIVES, AND THE DISK MOVE IS DEFERRED
+.SH ROLLBACK NEEDS BOTH DRIVES; THE DISK MOVE HAS SINCE HAPPENED
 etat.sh measures the 37.02G vdi on C: and reports rollback intact. That is half
 the answer: the CONFIG and SAVED STATE are on D:, so the resume depends on the
 USB drive. There are also TWO files named monkey.vdi \- the 15.35G D: copy is
 registered and attached to nothing, residue from the #275 move.
 .PP
-monkey's ext4.vhdx is still 23.73G on D:. `wsl \-\-manage \-\-move' returns
-ERROR_SHARING_VIOLATION, twice, the second time after a 30s settle: terminating
-a DISTRO does not detach its disk, because the utility VM holds every registered
-vhdx while ANY distro runs. It needs `wsl \-\-shutdown', which stops Ubuntu and
-therefore Zach's channel. DEFERRED to the retirement window rather than spending
-an outage now \- C: is 51G free today and ~90G once the vdi goes, monkey is
-bounced there anyway, and the drive is quiet: 5 Event ID 11 in 30 days, zero
-since the import. NO DATA MOVED in either attempt.
+.B THE MOVE IS DONE, AND THIS PAGE SAID DEFERRED FOR TWO DAYS (realisateur#934).
+Measured 2026\-09\-02: monkey's BasePath is `C:\eWSL\emonkey' and its ext4.vhdx
+is 39.92G THERE. Nothing named monkey remains on D:. That is the correct
+placement \- #274/#275 say the guest disk never sits on the USB drive \- but no
+issue records it, and it cost C: about 24G (52.7G at senechal#559's close on
+2026\-09\-02, 28.3G after).
+.PP
+What this page said until then, kept because the obstacle is real and will
+recur: the vhdx was 23.73G on D:, and `wsl \-\-manage \-\-move' returned
+ERROR_SHARING_VIOLATION twice, the second time after a 30s settle. Terminating
+a DISTRO does not detach its disk, because the utility VM holds every
+registered vhdx while ANY distro runs. It needs `wsl \-\-shutdown', which stops
+Ubuntu and therefore Zach's channel. So either that outage was spent without a
+record, or the move went another way; neither is written down.
 .SH 0. BASELINE, BEFORE ANYTHING TOUCHES MONKEY
 .nf
 
