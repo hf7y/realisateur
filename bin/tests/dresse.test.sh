@@ -8,6 +8,7 @@
 #   E a provision-class script no step reaches is PRINTED as uncovered
 #   F a step whose script is not provision-class is a BAD plan (exit 1)
 #   G no propagation set -> BLIND, exit 6
+#   I --on ships a TREE, not a file, and names the machine it changed
 #
 # Usage: bin/tests/dresse.test.sh   (exit 0 = all pass)
 
@@ -135,5 +136,41 @@ hasnt "H1 the symlink finds lib/, not \$(dirname \$0)/lib" "$out" "cli-guard.sh:
 hasnt "H2 ...so cli_guard is defined"                       "$out" "cli_guard: command not found"
 has   "H3 ...and the plan is actually printed"              "$out" "dresse (--check)"
 [ "$rcv" -ne 6 ] && ok "H4 ...and the exit is not BLIND" || bad "H4" "exit 6 through the symlink"
+
+section "I. --on drives the target host (realisateur#895 half 1)"
+write_set "$STEPS
+pivot.sh"
+for s in selfdev-app-key.sh selfdev-claude-token.sh wire-release-channel.sh \
+         selfdev-permissions-provision.sh selfdev-hooks-provision.sh; do stub "$s" 0; done
+stub setup-selfdev-project.sh 0
+printf '# runs provision-selfdev-user.sh wire-selfdev-git.sh land-selfdev.sh\n' >> "$T/bin/setup-selfdev-project.sh"
+# like real ssh: eats -o flags, leaves STDIN for tar -x, re-parses a STRING
+cat > "$T/bin/fake-ssh" <<'FAKE'
+#!/usr/bin/env bash
+a=(); while [ $# -gt 0 ]; do case "$1" in -o) shift 2;; *) a+=("$1"); shift;; esac; done
+printf 'FAKESSH host=%s\n' "${a[0]}"
+eval "${a[1]}"
+FAKE
+chmod +x "$T/bin/fake-ssh"
+out="$(cd "$T" && DRESSE_SSH_BIN="$T/bin/fake-ssh" bash "$D" --host --on vaporwave --check 2>&1)"; rcv=$?
+has "I1 it says which machine it is acting on, and from where" "$out" "on vaporwave (over ssh from"
+has "I2 the host-wide section names the TARGET, not the caller" "$out" "-- vaporwave (host-wide) --"
+has "I3 the step really went over the transport"                "$out" "FAKESSH host=vaporwave"
+has "I4 the Next hint is runnable as printed -- it keeps --on"  "$out" "--on vaporwave --apply"
+hasnt "I5 ...and does not tell the caller to sudo on the wrong box" "$out" "Next: sudo dresse --host --apply"
+
+section "I2. --on is refused for the half it does not implement"
+out="$(bash "$D" someacct --on vaporwave --check 2>&1)"; rcv=$?
+rc  "I6 an account with --on is a usage error, not a half-remote run" 2 "$rcv"
+has "I7 ...and it names the issue and the remaining half" "$out" "realisateur#895"
+out="$(bash "$D" --host --on 2>&1)"; rcv=$?
+rc  "I8 --on with no host is a usage error" 2 "$rcv"
+
+section "I3. --apply --on does not demand root on the CALLING machine"
+out="$(cd "$T" && DRESSE_SSH_BIN="$T/bin/fake-ssh" bash "$D" --host --on vaporwave --apply 2>&1)"; rcv=$?
+hasnt "I9 the local root refusal does not fire under --on" "$out" "--apply must run as root"
+has   "I10 ...it says where the privilege is actually needed" "$out" "passwordless 'sudo -n'"
+out="$(bash "$D" --host --apply 2>&1)"; rcv=$?
+rc    "I11 ...but a LOCAL --apply as non-root still refuses" 2 "$rcv"
 
 summary
