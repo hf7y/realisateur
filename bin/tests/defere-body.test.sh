@@ -6,7 +6,6 @@
 #
 # HERMETIC. Stubs `gh` on PATH; touches nothing outside $T.
 #
-# usage: ./bin/tests/defere-body.test.sh
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh

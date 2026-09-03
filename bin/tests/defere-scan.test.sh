@@ -14,7 +14,6 @@
 #
 # HERMETIC EXCEPT SECTION D, whose subject IS this repository.
 #
-# usage: ./bin/tests/defere-scan.test.sh
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh

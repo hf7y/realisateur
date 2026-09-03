@@ -8,7 +8,6 @@
 #   - lets the vendored workflow drift from the deployed one   (--live)
 #   - lets the published endpoint go stale or malformed        (--live)
 #
-# Usage: bin/tests/release-channel-wiring.test.sh [--live]
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh

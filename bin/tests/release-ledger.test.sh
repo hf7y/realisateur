@@ -13,7 +13,6 @@
 #   5. An empty channel is not clean -- zero verdicts is BAD
 #   6. Unreadable is not empty       -- BLIND(3) and BAD(1) are different facts
 #
-# Usage: bin/tests/release-ledger.test.sh   (exit 0 = all pass)
 
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh

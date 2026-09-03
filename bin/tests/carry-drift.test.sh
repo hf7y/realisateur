@@ -11,7 +11,6 @@
 # THE MAIN SIDE IS origin/main. It was HEAD until 2026-08-23; see the block
 # above the REF_MAIN resolution below for what that cost and why it moved.
 #
-# usage: ./bin/tests/carry-drift.test.sh
 
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"

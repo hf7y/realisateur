@@ -15,7 +15,6 @@
 # selfdev-credentials.test.sh -- witness for bin/selfdev-credentials.sh and
 # bin/lib/selfdev-credentials-set.sh.
 #
-# Usage: bin/tests/selfdev-credentials.test.sh   (exit 0 = all pass)
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
