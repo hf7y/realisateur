@@ -11,6 +11,7 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/bin/lib"
 cp "$HERE/../ausculte.sh" "$TMP/bin/"
 cp "$HERE/../lib/cli-guard.sh" "$TMP/bin/lib/"
+cp "$HERE/../lib/part.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/host-check.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/zaxon.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/propagation-set.sh" "$TMP/bin/lib/"

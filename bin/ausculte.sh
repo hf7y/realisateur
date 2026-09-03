@@ -22,15 +22,7 @@ cli_guard "$@"
 
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 
-# part <name> -- first path that exists: beside this file, libexec, or PATH.
-part() {
-  local n="$1" p
-  for p in "$HERE/$n" "${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/$n" \
-           "$HERE/${n%.sh}" "$(command -v "${n%.sh}" 2>/dev/null || true)"; do
-    [ -n "$p" ] && [ -x "$p" ] && { printf '%s' "$p"; return 0; }
-  done
-  return 1
-}
+. "$HERE/lib/part.sh"
 . "$HERE/lib/host-check.sh"
 . "$HERE/lib/estate-set.sh"
 JSON=0; ONLY=()

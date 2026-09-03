@@ -211,14 +211,7 @@ gh_ready() {
   GH_READY=0; return 0
 }
 
-# sibling <name> -- beside this file, in libexec, or on PATH.
-sibling() {
-  local n="$1" c
-  for c in "$HERE/$n" "${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/$n" "$(command -v "${n%.sh}" 2>/dev/null || true)"; do
-    [ -n "$c" ] && [ -r "$c" ] && { printf '%s' "$c"; return 0; }
-  done
-  return 1
-}
+. "$HERE/lib/part.sh"
 
 probe_repo_frame() {
   gh_ready || { echo "BLIND no credential here can read the registry, so enrolment is unmeasured"; return; }
@@ -234,7 +227,7 @@ probe_repo_frame() {
 probe_repo_guard() {
   gh_ready || { echo "BLIND no credential here can read the registry, so the shared guard is unmeasured"; return; }
   local rs out n
-  rs="$(sibling registry-standup.sh)" || { echo "BLIND registry-standup.sh is not reachable from here"; return; }
+  rs="$(part registry-standup.sh)" || { echo "BLIND registry-standup.sh is not reachable from here"; return; }
   out="$(bash "$rs" --check 2>&1)"
   case $? in
     0) echo "ARMED every registered project reaches the shared guard on its own pull requests" ;;
@@ -247,7 +240,7 @@ probe_repo_guard() {
 probe_repo_gates() {
   gh_ready || { echo "BLIND no credential here can read branch protection, so the gates are unmeasured"; return; }
   local bp out
-  bp="$(sibling branch-protection-provision.sh)" || { echo "BLIND branch-protection-provision.sh is not reachable from here"; return; }
+  bp="$(part branch-protection-provision.sh)" || { echo "BLIND branch-protection-provision.sh is not reachable from here"; return; }
   out="$(bash "$bp" --check 2>&1)"
   case $? in
     0) echo "ARMED every repo in the frame requires exactly the checks it runs" ;;
