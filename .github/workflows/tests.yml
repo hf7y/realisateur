@@ -13,6 +13,9 @@ on:
   pull_request:
   push:
     branches: [main]
+  # THE HATCH (#965): the carry below had no reachable trigger on 2026-09-03 and
+  # took a human at a terminal. Why, in the carry job.
+  workflow_dispatch:
 
 # One run per branch, here and in every workflow: 119 of 200 sampled runs
 # were superseded and billed anyway (#401).
@@ -24,21 +27,19 @@ permissions:
   contents: read
 
 jobs:
-  # CARRY FIRST, ON MAIN ONLY. bin/tests/carry-drift.test.sh compares
-  # origin/main against origin/bashified -- repo state, not the diff under
-  # test -- so it went red on commits that touched no carried file, and stayed
-  # red until a human ran the carry. main's CI was not a function of main, and
-  # one owed carry blocked every open PR in the repo (#592).
+  # CARRY FIRST, ON MAIN ONLY. carry-drift.test.sh compares origin/main against
+  # origin/bashified -- repo state, not the diff -- so an owed carry reddens
+  # every open PR in the repo (#592). bin/carry.sh --apply is #636's actuator:
+  # plumbing only, a no-op when nothing drifted, so state heals on the merge
+  # that owes it. Writes `bashified`, never `main` (CLAUDE.md).
   #
-  # bin/carry.sh --apply is the actuator #636 gave it: plumbing only
-  # (commit-tree + push), no checkout, and a no-op when nothing drifted. So the
-  # state heals on the merge that owes the carry, and the suite below stops
-  # being the thing that reports a debt nobody in-band can pay.
-  #
-  # It writes to `bashified`, never to `main` -- main is protected and this
-  # would be refused anyway (CLAUDE.md).
+  # ON DISPATCH TOO (#965): automerge (#939) lands merges as
+  # `app/github-actions`, GitHub fires no workflow event for those, and three
+  # merges wedged the repo with no run created at all -- a debt nothing in CI
+  # could pay. A run that skips the carry cannot pay it. Never on
+  # `pull_request`: #510 reached bashified 25 min before #511 deleted its premise.
   carry:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
