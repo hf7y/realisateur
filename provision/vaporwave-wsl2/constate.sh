@@ -43,6 +43,7 @@ p() { printf '%s\t%s\n' "$1" "${2:-}"; }
 p backend         "$(systemd-detect-virt 2>/dev/null)"
 p hostname        "$(hostnamectl --static 2>/dev/null)"
 p systemd         "$(systemctl is-system-running 2>/dev/null)"
+p failed_units    "$(systemctl --failed --no-legend 2>/dev/null | awk '{print $2}' | paste -sd, -)"
 p accounts        "$(getent passwd | awk -F: '$3>=3000 && $3<4000' | wc -l)"
 p etc_selfdev     "$(ls /etc/selfdev 2>/dev/null | wc -l)"
 p verbs_on_path   "$(ls /usr/local/bin 2>/dev/null | wc -l)"
@@ -95,7 +96,22 @@ note() { printf 'note   %-14s %s\n' "$1" "$2"; }
 echo; echo "--- graded against the contract ---"
 must backend   "$(get backend)"  "wsl"       "$([ "$(get backend)" = wsl ]; echo $?)"
 must hostname  "$(get hostname)" "vaporwave" "$([ "$(get hostname)" = vaporwave ]; echo $?)"
-must systemd   "$(get systemd)"  "running"   "$([ "$(get systemd)" = running ]; echo $?)"
+WSL_EXPECTED_FAILURES="getty@tty1.service"   # DEGRADED IS NORMAL ON A DISTRO: getty@tty1 ships enabled with no tty1 to open, and monkey -- this estate's own reference host -- reads degraded too, so demanding `running` is a check nobody can make green. Grade the FAILED UNITS, not the word.
+case "$(get systemd)" in
+  running) must systemd running "running" 0 ;;
+  degraded)
+    _unexpected=""
+    _fu="$(get failed_units)"
+    for _u in ${_fu//,/ }; do
+      case " $WSL_EXPECTED_FAILURES " in *" $_u "*) ;; *) _unexpected="$_unexpected $_u" ;; esac
+    done
+    if [ -z "$_unexpected" ]; then
+      must systemd "degraded (only $(get failed_units) -- no tty1 on a distro; monkey reads this too)" "running, or degraded by WSL-impossible units only" 0
+    else
+      must systemd "degraded:$_unexpected" "no failed unit outside $WSL_EXPECTED_FAILURES" 1
+    fi ;;
+  *) printf 'BLIND  %-14s "%s" is not a state this grades; not a pass\n' systemd "$(get systemd)"; fail=1 ;;
+esac
 must fstab     "uuid=$(get fstab_uuid) swapfile=$(get fstab_swapfile)" "both 0 -- either hangs wsl --import" \
      "$([ "$(get fstab_uuid)" = 0 ] && [ "$(get fstab_swapfile)" = 0 ]; echo $?)"
 case "$(get tailscale)" in   # a kernel-TUN tailscaled lands a ts-input DROP in the SHARED netns; Running is the hazard, absent/daemon-down/NeedsLogin/Stopped are safe, and `unreadable`/empty are NEITHER -- BLIND is not a pass
