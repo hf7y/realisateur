@@ -689,16 +689,18 @@ realisateur#672 (decided) deletes in favour of one org\-level pool. The
 `.agent\-project' marker landed separately (dcp\-gate\-site#97) because it needs
 no runner and is the root cause: without it `registry\-standup.sh' does not list
 the repo AT ALL, so no guard ever looked.
-.SH RETIRING THIS
-When etat.sh reports the cutover DONE and a week has passed with long_readout
-at 0 \- so 2026\-09\-06 at the earliest \- delete this directory, the saved VM,
-VirtualBox itself with nomac and crt\-vm, and D:\ewsl\-migration. Fold the
-durable facts into bin/lib/vmhost.sh comments; leave nothing here to rot.
+.SH RETIRED 2026\-09\-03
+Taken early on headroom, not the date: C: was 95% full with monkey's own
+ext4.vhdx growing on it. Gone from dexter \- the saved VM, both monkey.vdi
+copies, crt\-vm, nomac, VirtualBox itself; C: 28G \-> 82G free. long_readout
+and soft_lockup read 0, but over 2d9h, not the week 2026\-09\-06 wanted.
 .PP
-.B That window also carries the deferred disk move,
-because it is the one moment C: has room and monkey is stopped anyway: shut WSL
-down from port 22, move, start Ubuntu first and monkey second, restart the
-runner units. Quiesce the runners before it \- stop, never deregister.
+.B There is no rollback now.
+D:\ewsl\-migration is 23G and STAYS: monkey.tar is the only route back to a
+known\-good image, so recovery is import\-from\-tar, not boot\-the\-VM.
+.PP
+What is left to retire is this directory. Fold the durable facts into
+bin/lib/vmhost.sh comments; leave nothing here to rot.
 .SH IMPLEMENTATION NOTES
 constate.sh and etat.sh carry no comments on purpose: their reasoning is here,
 in one document, rather than scattered across two scripts.

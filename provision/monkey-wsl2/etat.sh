@@ -84,14 +84,15 @@ else
   done
 fi
 
-free_c="$(timeout 40 "${WIN[@]}" '[math]::Round((Get-PSDrive C).Free/1GB)' 2>/dev/null | tr -d '\r ')"
-vdi="$(timeout 40 "${DEXTER[@]}" 'ls -l "/mnt/c/VirtualBox VMs/monkey/monkey.vdi" 2>/dev/null | awk "{print int(\$5/1073741824)}"' 2>/dev/null | tr -d '\r ')"
-if [ -n "$free_c" ] && [ -n "$vdi" ]; then
-  step DONE "10 rollback" "monkey.vdi is ${vdi}G on C:, ${free_c}G free -- the VM is still on disk"
-  if [ "$free_c" -lt 20 ] 2>/dev/null; then step DIVERGED "C:" "only ${free_c}G free -- writing a tar here would destroy rollback. Target D:."; fi
+free_c="$(timeout 40 "${DEXTER[@]}" 'df -BG --output=avail /mnt/c 2>/dev/null | tail -1' 2>/dev/null | tr -dc '0-9')"
+vbox="$(timeout 40 "${DEXTER[@]}" 'ls "/mnt/c/Program Files/Oracle/VirtualBox/VBoxManage.exe" 2>/dev/null' 2>/dev/null | tr -d '\r')"
+if [ -n "$free_c" ]; then
+  step DONE "10 rollback" "retired (#827): no VirtualBox VM on dexter, ${free_c}G free on C:"
+  if [ "$free_c" -lt 20 ] 2>/dev/null; then step DIVERGED "C:" "only ${free_c}G free on C:, where monkey's ext4.vhdx lives and grows"; fi
 else
-  step DIVERGED "C:" "could not measure C: free or the VDI -- do not assume rollback is intact"
+  step DIVERGED "C:" "could not measure C: free -- BLIND, not healthy"
 fi
+if [ -n "$vbox" ]; then step DIVERGED "dexter" "VBoxManage is on dexter again -- senechal#438 retired VirtualBox and #827 removed it"; fi
 
 if [ -x "$HERE/constate.sh" ] && [ -r "$HERE/before.tsv" ]; then
   now="$("$HERE/constate.sh" 2>/dev/null)"
@@ -102,7 +103,7 @@ if [ -x "$HERE/constate.sh" ] && [ -r "$HERE/before.tsv" ]; then
       if [ "${b:-0}" -gt "${a:-0}" ] 2>/dev/null; then step DIVERGED "monkey" "$k rose ${a} -> ${b} since the baseline: the wedge is progressing"; fi
     done
     bk="$(printf '%s\n' "$now" | awk -F'\t' '$1=="backend"{print $2}')"
-    if [ "$bk" = wsl ]; then step DIVERGED "monkey" "backend already reads 'wsl' -- the cutover happened outside this runbook"; fi
+    if [ "$bk" != wsl ]; then step DIVERGED "monkey" "backend reads '${bk:-unreadable}', not 'wsl' -- the cutover has come undone and there is no rollback"; fi
   else
     step DIVERGED "monkey" "constate.sh returned nothing -- BLIND, not healthy"
   fi
