@@ -42,38 +42,23 @@
 # again would be selling it back.
 #
 # ---------------------------------------------------------------------------
-# THE ONE ENTRY BELOW THAT IS NOT AN ORDINARY GRANDFATHER, AND WHY IT IS HERE
+# THE RULE FOR A CONCESSION, AND THE ONE THAT PAID FOR IT
 # ---------------------------------------------------------------------------
 #
-# `vim-arcade/vim-arcade` is the product this guard was written to find. The
-# first draft of this file deliberately left it out, so that the finding
-# stayed a finding. Measured before shipping: with it absent, the lint exits
-# 1 against the live build, and bin/cut-verb-build.sh section 6a turns that
-# into a refusal -- which would have stopped the NIGHTLY CUT and frozen verb
-# distribution for all twelve projects and every account, over a violation
-# whose only fix lives in another repository's unmerged PR.
+# A row here may be a plain grandfather. It may also be a CONCESSION -- a
+# violation listed on purpose so the lint cannot arm a fleet-wide freeze over
+# something whose fix lives in another repository. A concession carries a date
+# and a reason, which is the difference between one and an omission. The lint
+# still prints it as OWED every run. DO NOT add one without both.
 #
-# That is the precise failure this repository keeps paying for, and
-# bin/verb-kind-lint.sh's own header argues against it two screens up: a
-# check nobody can make green gets deleted, not satisfied. Arming a
-# fleet-wide freeze unattended, at night, to make a point about a violation
-# that is already written down, is not a ratchet -- it is an outage.
+# `vim-arcade/vim-arcade` was that concession, and it is gone. It did not end
+# the way its own paragraph predicted (a `product` channel that still does not
+# exist). It declared `# KIND: personal` instead, and cut-verb-build.sh now
+# OMITS a personal tool from the build by name rather than refusing over it --
+# so section C reads `ok` and the row went stale on its own. Dropped by
+# --accept 2026-09-03.
 #
-# So it is listed, ONCE, with a date and a reason, which is the difference
-# between a concession and an omission. The lint still prints it as OWED on
-# every run. Removing this line is the LAST step of the migration, after the
-# product channel exists -- and note, because it is load-bearing and was
-# probed rather than assumed: THAT CHANNEL DOES NOT EXIST YET.
-# bin/wire-release-channel.sh installs the workchain build's bootstrap and its
-# clock and nothing else; there is one release repo estate-wide
-# (PROP_RELEASE_REPO, hf7y/verbs) and it carries the workchain. So this entry
-# cannot be retired by anyone today, which is exactly why it is written down
-# with a reason instead of left to be rediscovered. When the channel exists,
-# vim-arcade declares `# KIND: product`, drops out of the workchain manifest,
-# and this entry goes stale and is dropped by --accept.
-#
-# DO NOT add a second entry of this kind without the same paragraph.
-undeclared vim-arcade/vim-arcade
+# accepted 2026-09-03T03:03:16Z against a build of 17 command(s)
 undeclared bibliothecaire/consulte
 undeclared bibliothecaire/cueille
 undeclared bibliothecaire/fonde
@@ -82,4 +67,3 @@ undeclared ecosim/sonde
 undeclared gardien/fauche
 undeclared gardien/garde
 undeclared scheduler/dose
-undeclared senechal/installe
