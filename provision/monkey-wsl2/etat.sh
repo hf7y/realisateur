@@ -36,10 +36,6 @@ else
   fi
 fi
 
-# $HERE, not a bare relative path: runbook.1's SYNOPSIS says to run this from
-# THIS directory, and a bare path graded step 3 on the caller's cwd -- DONE from
-# the repo root, DIVERGED from the runbook directory, same file present both
-# times (#935).
 v="$HERE/../../bin/lib/vmhost.sh"
 if [ -r "$v" ]; then
   miss=""
