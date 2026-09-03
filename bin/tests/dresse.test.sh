@@ -173,4 +173,22 @@ has   "I10 ...it says where the privilege is actually needed" "$out" "passwordle
 out="$(bash "$D" --host --apply 2>&1)"; rcv=$?
 rc    "I11 ...but a LOCAL --apply as non-root still refuses" 2 "$rcv"
 
+section "J. a step that reports drift is not a satisfied step (--strict, so a GAP not an OK)"
+write_set "$STEPS
+pivot.sh"
+for s in selfdev-app-key.sh selfdev-claude-token.sh wire-release-channel.sh; do stub "$s" 0; done
+stub setup-selfdev-project.sh 0
+printf '# runs provision-selfdev-user.sh wire-selfdev-git.sh land-selfdev.sh\n' >> "$T/bin/setup-selfdev-project.sh"
+for s in selfdev-permissions-provision.sh selfdev-hooks-provision.sh; do   # they exit 1 on drift ONLY under --strict; without it they print it and exit 0
+  printf '#!/usr/bin/env bash\necho "%s: $*" >> "%s"\ncase " $* " in *" --strict "*) echo "18 drifted"; exit 1 ;; esac\necho "18 drifted"; exit 0\n' "$s" "$RAN" > "$T/bin/$s"
+  chmod +x "$T/bin/$s"
+done
+: > "$RAN"
+out="$(bash "$D" --host --check 2>&1)"; rcv=$?
+has "J1 the permissions step is asked --strict"       "$(cat "$RAN")" "selfdev-permissions-provision.sh: --strict"
+has "J2 the hooks step is asked --strict"             "$(cat "$RAN")" "selfdev-hooks-provision.sh: --strict"
+has "J3 drift reads as work to do, not as satisfied"  "$out" "2 with work to do"
+hasnt "J4 ...and NOT as satisfied, which is what it read as before" "$out" "5 step(s) already satisfied"
+rc  "J5 --check still exits 0: a GAP is a report, not a refusal" 0 "$rcv"
+
 summary
