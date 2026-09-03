@@ -35,34 +35,18 @@ user, and says which rows will refuse for want of root.
 .B --apply
 must be root.
 .SH --on: DRIVING ANOTHER HOST
-.B --on
-.I host
-runs the host-wide plan against
-.I host
-over ssh instead of against this machine. It exists so a host can be stood up
-holding the pinned verb build and nothing else: a step and the
-.B lib/
-it sources are shipped to a
-.BR "mktemp -d" ,
-run there, and removed. Nothing is installed and nothing survives the call, so
-this is not a second
-.B /root/realisateur-refresh
-(hf7y/realisateur#886, #839).
+\fB--on\fR \fIhost\fR runs the host-wide plan against \fIhost\fR over ssh, so a
+host can be stood up holding the pinned verb build and nothing else: a step and
+the \fBlib/\fR it sources are shipped to a \fBmktemp -d\fR, run, and removed.
+Not a checkout, and not a second \fB/root/realisateur-refresh\fR (#886).
 .PP
-It drives the
-.B --host
-plan only. An account is the other half of hf7y/realisateur#895 and is
-refused rather than half-served, because a tool that changed one machine for
-the host steps and another for the account steps would not be telling the
-caller which machine it changed.
+It drives \fB--host\fR only. An account is the other half of #895 and is refused
+rather than half-served: a run that changed one machine for the host steps and
+another for the account steps could not say which machine it changed.
 .PP
-Root is needed where the change lands.
-.B --apply --on
-does not require root locally; it requires passwordless
-.B sudo -n
-for the calling user on
-.IR host ,
-and a step that cannot get it reports BAD rather than waiting on a prompt.
+Root is needed where the change lands, so \fB--apply --on\fR wants passwordless
+\fBsudo -n\fR on \fIhost\fR, not root here; a step that cannot get it reports
+BAD rather than prompting.
 .SH THE PLAN
 The steps are checked against
 .BR bin/lib/propagation-set.sh :

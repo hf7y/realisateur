@@ -56,9 +56,8 @@ fi
 if [ $(( ALL + HOSTWIDE + (${#ACCT} > 0 ? 1 : 0) )) -gt 1 ]; then
   echo "$CLI_NAME: --host, --all and a named account are mutually exclusive -- say which" >&2; exit 2
 fi
-# HALF 1 OF #895: the per-account plan runs setup-selfdev-project.sh, itself a
-# sequence over ten more scripts. Doing the host half remotely and the account
-# half locally would leave the caller unable to say which machine it changed.
+# HALF 1 OF #895: setup-selfdev-project.sh is itself a sequence over ten more
+# scripts, and a half-remote run could not say which machine it changed.
 if [ -n "$ON" ] && [ "$HOSTWIDE" -eq 0 ]; then
   echo "$CLI_NAME: --on drives the HOST plan only (realisateur#895 half 1). For an account, run this on the host itself." >&2
   exit 2
@@ -178,7 +177,7 @@ fi
 TARGET="$ACCT"; [ "$HOSTWIDE" -eq 1 ] && TARGET=--host; [ "$ALL" -eq 1 ] && TARGET=--all
 
 # THE MACHINE THAT CHANGES: the notify-senechal line below records a machine
-# -state change, and under --on would otherwise name the caller, not the target.
+# -state change, and would otherwise name the caller rather than the target.
 TARGET_HOST="${ON:-$HOST}"
 WHERE="$HOST"; [ -z "$ON" ] || WHERE="$ON (over ssh from $HOST)"
 echo "== $CLI_NAME ($MODE) on $WHERE, uid band $UID_MIN-$UID_MAX =="

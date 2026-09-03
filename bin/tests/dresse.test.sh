@@ -138,17 +138,15 @@ has   "H3 ...and the plan is actually printed"              "$out" "dresse (--ch
 [ "$rcv" -ne 6 ] && ok "H4 ...and the exit is not BLIND" || bad "H4" "exit 6 through the symlink"
 
 section "I. --on drives the target host (realisateur#895 half 1)"
-# Restore the full host plan: G deleted the propagation set, and every step
-# must exist as a REAL FILE here because --on ships files, not names.
+# G deleted the propagation set; --on ships FILES, so every step needs one.
 write_set "$STEPS
 pivot.sh"
 for s in selfdev-app-key.sh selfdev-claude-token.sh wire-release-channel.sh \
          selfdev-permissions-provision.sh selfdev-hooks-provision.sh; do stub "$s" 0; done
 stub setup-selfdev-project.sh 0
 printf '# runs provision-selfdev-user.sh wire-selfdev-git.sh land-selfdev.sh\n' >> "$T/bin/setup-selfdev-project.sh"
-# A stub ssh that behaves like the real one where it matters: it consumes -o
-# flags, leaves STDIN attached for the remote `tar -x`, and re-parses the
-# command STRING in a shell rather than receiving an argv array.
+# Like real ssh where it matters: eats -o flags, leaves STDIN for the remote
+# `tar -x`, and re-parses the command STRING instead of receiving an argv array.
 cat > "$T/bin/fake-ssh" <<'FAKE'
 #!/usr/bin/env bash
 a=(); while [ $# -gt 0 ]; do case "$1" in -o) shift 2;; *) a+=("$1"); shift;; esac; done
@@ -156,7 +154,6 @@ printf 'FAKESSH host=%s\n' "${a[0]}"
 eval "${a[1]}"
 FAKE
 chmod +x "$T/bin/fake-ssh"
-# The steps must exist as real files to be shipped; the stubs already are.
 out="$(cd "$T" && DRESSE_SSH_BIN="$T/bin/fake-ssh" bash "$D" --host --on vaporwave --check 2>&1)"; rcv=$?
 has "I1 it says which machine it is acting on, and from where" "$out" "on vaporwave (over ssh from"
 has "I2 the host-wide section names the TARGET, not the caller" "$out" "-- vaporwave (host-wide) --"
