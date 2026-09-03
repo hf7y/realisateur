@@ -27,13 +27,15 @@ ONE NETWORK NAMESPACE for every distro. A distro's ports are the estate's.
   22 is NOT free \- Windows sshd holds it, which is why monkey took 2224.
 TWO DISTROS EXIST: Ubuntu (DEFAULT) and monkey. A bare `wsl \-d' with no name
   hits Ubuntu, WHICH CARRIES ZACH'S CHANNEL. Name the distro in every command.
-C: 28.3G free, D: 2603G. The guest disk goes on C: (realisateur#274/#275: D:
-  is the WD Elements USB that logged 1580 controller errors in a week and took
-  all 14 accounts down). Tarballs are bulk scratch and belong on D:.
-  C: also holds ~52G of retirable VirtualBox residue \- monkey.vdi 37.02G,
-  crt\-vm.vdi 8.92G, nomac.vdi 6.11G \- released by monkey\-wsl2's RETIRING
-  section once that cutover is ACCEPTED. A stock rootfs needs ~2\-3G, so this
-  fits today; it fits comfortably after that acceptance.
+C: 81.5G free, D: 2621G (measured 2026\-09\-03T05:08Z). The guest disk goes on
+  C: (realisateur#274/#275: D: is the WD Elements USB that logged 1580
+  controller errors in a week and took all 14 accounts down). Tarballs are
+  bulk scratch and belong on D:. A stock rootfs needs ~2\-3G, so space is not
+  a constraint on this standup. It was one for a day: C: was 28G free and 95%
+  full until realisateur#941 accepted the cutover and reclaimed 54G by
+  deleting the monkey/crt\-vm/nomac VMs and uninstalling VirtualBox.
+  VIRTUALBOX IS GONE FROM dexter, and so is `nomac' \- so the 2026\-08\-04
+  brief's plan to put these projects on that VM has no host left to name.
 .fi
 .PP
 .B \-\-shutdown IS NOT AVAILABLE.

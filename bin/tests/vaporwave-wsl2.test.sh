@@ -30,6 +30,8 @@ has "B4 the shared namespace is stated as the reason ports matter" "$RF" "ONE NE
 has "B5 2225 is named free, and 22 is named NOT free" "$RF" "22 is NOT free"
 has "B6 tailscale is refused with the mechanism, not just banned" "$RF" "ts-input"
 has "B7 the guest disk goes on C:, and D: is named as the drive that failed" "$RF" "WD Elements USB"
+  has "B7b the C: figure carries a timestamp -- it shipped at 28.3G and was stale within the hour (#941), and nothing pinned monkey's for two days" "$RF" "measured 2026-09-03T05:08Z"
+  has "B7c VirtualBox being gone is stated, so nomac cannot be proposed again" "$RF" "VIRTUALBOX IS GONE"
 has "B8 the uid band is the reason svc-vaporwave's 1001 is not reused" "$RF" "uid 1001 is NOT reused"
 has "B9 the credential is not copied, with the reason" "$RF" "merges the second quota back into the first"
 has "B10 ausculte is named as NOT generic, so symmetry has a stated cost" "$RF" "ausculte' is NOT generic"
