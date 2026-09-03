@@ -3,8 +3,8 @@
 vaporwave\-wsl2 \- stand a SECOND self\-dev host up as a WSL2 distro on dexter
 .SH SYNOPSIS
 .nf
-./constate.sh                              is it a self\-dev host yet?
-./constate.sh \-\-target wsl:vaporwave       the rescue route, before sshd answers
+\&./constate.sh                              is it a self\-dev host yet?
+\&./constate.sh \-\-target wsl:vaporwave       the rescue route, before sshd answers
 dresse \-\-host \-\-on vaporwave \-\-check       what the machine still needs
 .fi
 .SH DESCRIPTION
@@ -73,6 +73,30 @@ restart the distro by name:
   [network]
   hostname=vaporwave
 .fi
+.PP
+Then stop the distro BY NAME and open it again, which is what starts systemd:
+.nf
+
+  wsl.exe \-\-terminate vaporwave
+  wsl.exe \-d vaporwave \-u root \-\- systemctl is\-system\-running
+
+.fi
+.B SSHD INSTALLS HERE, AFTER THAT RESTART, NOT BEFORE.
+openssh\-server's postinst needs systemd, and in the first\-boot window there is
+none, so the install half\-completes and leaves the package unconfigured. That is
+what happened on 2026\-09\-02; it recovered with `dpkg \-\-configure \-a', but the
+recovery is not the lesson \- the ORDER is. Nothing in section 2 exists until
+this runs:
+.nf
+
+  wsl.exe \-d vaporwave \-u root \-\- apt\-get update
+  wsl.exe \-d vaporwave \-u root \-\- apt\-get install \-y openssh\-server
+
+.fi
+.B A degraded systemd here is CORRECT and is not a fault to go and fix.
+Every distro on this box reads `degraded' because getty@tty1.service ships
+enabled with no tty1 to open. monkey reads it too. `./constate.sh' grades the
+FAILED UNIT SET, not the word, and passes on getty@tty1 alone.
 .SH 2. THE PORT, AND WHY IT IS THE IDENTITY
 The namespace is shared, so the PORT selects the host, not the name. Bind 2225
 and list BOTH address families \- a bare `ListenStream=2225' binds [::] only and

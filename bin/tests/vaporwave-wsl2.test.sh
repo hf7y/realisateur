@@ -17,6 +17,9 @@ if command -v man >/dev/null 2>&1; then
   has "A5 ...and monkey's, because the comparison IS the assertion" "$R" 'ssh-keyscan -p 2224'
   has "A6 wsl.conf keeps its section headers" "$R" '[boot]'
   has "A7 dresse is driven from mandark, with --on" "$R" 'dresse --host --on vaporwave --check'
+  has "A8 the SYNOPSIS survives -- a leading dot is a macro, and ate two of its three lines" \
+    "$R" './constate.sh --target wsl:vaporwave'
+  has "A9 ...including the bare invocation above it" "$R" './constate.sh                              is it a self-dev host yet?'
 else
   ok "A1-A7 skipped: no man(1) on this runner"
 fi
@@ -45,6 +48,12 @@ has "B11 tier 2 names the owner the estate does not know" "$RF" "media-arts-coll
   has "B11c ...and the reason the old answer was wrong is stated, not just the new one" "$RF" "HIS OFFICE HOST"
   has "B11d what is owed is the App install and #916, not a multi-owner rewrite" "$RF" "same defect one step further on"
 has "B12 the build is named as NOT a prerequisite" "$RF" "verb build is NOT a prerequisite"
+has "B13 sshd installs AFTER the systemd restart -- the order that failed on 2026-09-02" \
+  "$RF" "SSHD INSTALLS HERE, AFTER THAT RESTART, NOT BEFORE."
+has "B14 ...and the restart that starts systemd is an actual command, not an instruction to infer one" \
+  "$R" 'wsl.exe --terminate vaporwave'
+has "B15 a degraded systemd is named CORRECT, so the next reader does not go fixing getty@tty1" \
+  "$RF" "degraded systemd here is CORRECT"
 
 section "C. constate.sh -- a witness that cannot see says so"
 rcv=0; out="$(VAPORWAVE_PORT=2225 timeout 90 bash "$D/constate.sh" --target ssh:no-such-host-here 2>&1)" || rcv=$?
