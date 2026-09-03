@@ -100,12 +100,28 @@ printf '%s\n' "$GOOD" > "$TMP/etc/claude-token"
 # The write needs root, so unprivileged it stops there -- which is the point:
 # a padded value must reach that step, not be refused as the wrong length.
 printf ' %s \n' "$GOOD" > "$TMP/etc/spaced"
+printf '%s\n' "$GOOD" > "$TMP/etc/first"
 O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" bash "$TOOL" --install "$TMP/etc/spaced" 2>&1)"
 case "$O" in
   *"characters, the one it replaces is"*) bad "a stray space was read as a length mismatch -- whitespace is not being stripped" ;;
   *) ok "a value padded with spaces passes validation (all whitespace stripped, not just \\r\\n)" ;;
 esac
 has "...and stops only at the privileged write" "$O" "no group"
+
+# THE FIRST INSTALL ON A HOST -- the one branch every row above skips, because
+# each pre-creates $TMP/etc/claude-token above. With no file to compare against,
+# the `else` reports the new length, and `new_len` was assigned only inside the
+# `if`: under `set -u` that died "new_len: unbound variable" and NO fresh host
+# could ever take a token. It survived because it is unreachable on re-install.
+rm -f "$TMP/etc/claude-token"
+O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" bash "$TOOL" --install "$TMP/etc/first" 2>&1)"
+case "$O" in
+  *"unbound variable"*) bad "5c a FIRST install died on an unbound variable -- no fresh host can take a token" ;;
+  *) ok "5c a FIRST install does not die on an unbound variable" ;;
+esac
+has "...it reports the length it is installing unchecked" "$O" "installing 45 characters unchecked"
+has "...and reaches the privileged write, like every other valid value" "$O" "no group"
+printf '%s\n' "$GOOD" > "$TMP/etc/claude-token"
 
 printf '%s\n' "${GOOD}EXTRA" > "$TMP/etc/wrong"
 O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" bash "$TOOL" --install "$TMP/etc/wrong" 2>&1)"; R=$?
