@@ -138,14 +138,13 @@ has   "H3 ...and the plan is actually printed"              "$out" "dresse (--ch
 [ "$rcv" -ne 6 ] && ok "H4 ...and the exit is not BLIND" || bad "H4" "exit 6 through the symlink"
 
 section "I. --on drives the target host (realisateur#895 half 1)"
-# G deleted the propagation set; --on ships FILES, so every step needs one.
 write_set "$STEPS
 pivot.sh"
 for s in selfdev-app-key.sh selfdev-claude-token.sh wire-release-channel.sh \
          selfdev-permissions-provision.sh selfdev-hooks-provision.sh; do stub "$s" 0; done
 stub setup-selfdev-project.sh 0
 printf '# runs provision-selfdev-user.sh wire-selfdev-git.sh land-selfdev.sh\n' >> "$T/bin/setup-selfdev-project.sh"
-# Like real ssh: eats -o flags, leaves STDIN for `tar -x`, re-parses a STRING.
+# like real ssh: eats -o flags, leaves STDIN for tar -x, re-parses a STRING
 cat > "$T/bin/fake-ssh" <<'FAKE'
 #!/usr/bin/env bash
 a=(); while [ $# -gt 0 ]; do case "$1" in -o) shift 2;; *) a+=("$1"); shift;; esac; done

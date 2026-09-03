@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 # dresse.sh -- stand a self-dev host, or one account on it, up (#435).
-#
 # KIND: verb
 #
-# TRAP: the step plan is checked against bin/lib/propagation-set.sh and the
-#   indirect set read from the callers -- a typed list goes stale in silence.
-# TRAP: it installs no secret unattended -- --install takes a file a human
-#   supplies, so both modes only --check it.
-# TRAP: root is required to CHANGE the host, not to look at it.
+# TRAP: the plan is checked against propagation-set.sh plus the indirect set
+#   read from the callers -- a typed list goes stale in silence.
+# TRAP: no secret is installed unattended; both modes only --check the token.
 #
 set -uo pipefail
 
@@ -54,9 +51,8 @@ fi
 if [ $(( ALL + HOSTWIDE + (${#ACCT} > 0 ? 1 : 0) )) -gt 1 ]; then
   echo "$CLI_NAME: --host, --all and a named account are mutually exclusive -- say which" >&2; exit 2
 fi
-# HALF 1 OF #895 -- an account is a ten-script sequence; see dresse(1).
 if [ -n "$ON" ] && [ "$HOSTWIDE" -eq 0 ]; then
-  echo "$CLI_NAME: --on drives the HOST plan only (realisateur#895 half 1). For an account, run this on the host itself." >&2
+  echo "$CLI_NAME: --on drives the HOST plan only (realisateur#895 half 1 -- an account is a ten-script sequence). For an account, run this on the host itself." >&2
   exit 2
 fi
 
@@ -66,7 +62,7 @@ fi
 [ -n "${PROP_PROVISION_SCRIPTS:-}" ] || {
   echo "$CLI_NAME: BLIND -- propagation-set.sh declares no provisioning set" >&2; exit 6; }
 
-# THE PLAN, in run order: script|check args|apply args|what
+# script|check args|apply args|what, in run order
 HOST_STEPS="
 selfdev-app-key.sh|--check|--apply|the GitHub App key, host-wide, group-readable by the uid band
 selfdev-claude-token.sh|--check|--check|the shared OAuth token (--install takes a file a human supplies)
@@ -81,10 +77,8 @@ wire-release-channel.sh|--check|--apply|the verb-build bootstrap and this accoun
 
 pass_n=0; fail_n=0; gap_n=0
 
-# A TAR, not `bash -s < step`: a step sources lib/ beside itself and
-# selfdev-hooks-provision.sh copies hooks/ FILES (#385/#386). %q because ssh
-# re-parses one joined string, so an empty arg vanishes (selfdev-credentials.sh
-# fetch_remote measured it). Why it is not a checkout: dresse(1).
+# A TAR: a step needs lib/ and hooks/ beside it (#385/#386). %q: ssh re-parses
+# one joined string (selfdev-credentials.sh). Why not a checkout: dresse(1).
 remote_step() { # remote_step <script> <args...>
   local s="$1"; shift
   local q="" a sudo_prefix=""
@@ -132,7 +126,6 @@ run_plan() { # run_plan <steps-block> <extra-arg-or-empty>
   done <<<"$block"
 }
 
-# Scripts reached indirectly, read out of the callers rather than listed.
 via_setup() {
   local f
   for f in "$ACCT_NEW_STEP" land-selfdev.sh; do
@@ -143,7 +136,6 @@ via_setup() {
 plan_check() {
   local named via s bad=0
   via="$(via_setup)"
-  # 6, this file's own BLIND code: 1 said "a step refused" about an unread plan.
   [ -n "$via" ] || { echo "  BLIND   cannot read $ACCT_NEW_STEP -- coverage is unverifiable"; return 6; }
   named="$(printf '%s\n%s\n%s\n' "$HOST_STEPS" "$ACCT_STEPS" "$ACCT_NEW_STEP" | cut -d'|' -f1 | grep -v '^$')"
   for s in $named; do
@@ -161,15 +153,14 @@ plan_check() {
   return $bad
 }
 
-# ROOT IS NEEDED WHERE THE CHANGE LANDS -- under --on, the remote sudo -n.
+# ROOT CHANGES THE HOST, it does not look at it -- under --on, remote sudo -n.
 if [ "$MODE" = --apply ] && [ -z "$ON" ] && [ "$(id -u)" -ne 0 ]; then
   echo "$CLI_NAME: --apply must run as root (sudo $0 $*)" >&2; exit 2
 fi
 
 TARGET="$ACCT"; [ "$HOSTWIDE" -eq 1 ] && TARGET=--host; [ "$ALL" -eq 1 ] && TARGET=--all
 
-# THE MACHINE THAT CHANGES -- the notify-senechal line below records it.
-TARGET_HOST="${ON:-$HOST}"
+TARGET_HOST="${ON:-$HOST}"   # what notify-senechal below must name
 WHERE="$HOST"; [ -z "$ON" ] || WHERE="$ON (over ssh from $HOST)"
 echo "== $CLI_NAME ($MODE) on $WHERE, uid band $UID_MIN-$UID_MAX =="
 if [ -n "$ON" ]; then
