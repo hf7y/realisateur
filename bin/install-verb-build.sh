@@ -147,6 +147,14 @@ tag="build/$BUILD_ID"
 git -C "$REPO" rev-parse -q --verify "refs/tags/$tag" >/dev/null 2>&1 \
   || die "no such build in the meta-repo: $BUILD_ID (newest is $latest_id)"
 
+approved_ok=0   # the gate binds --build too, not just --latest (#962)
+for _id in $approved_ids; do   # a walk, not a `case`: this list is NEWLINE-separated
+  [ "$_id" = "$BUILD_ID" ] && { approved_ok=1; break; }
+done
+[ "$approved_ok" -eq 1 ] || die "build $BUILD_ID exists but is NOT approved -- a cut is not a release.
+       Approve it by running promote-verb-build.yml in the meta-repo, or name an
+       approved id. Approved here: $(printf '%s ' $approved_ids)"
+
 # --- extract ------------------------------------------------------------
 # `git archive` rather than a checkout: the result is a plain tree with no
 # .git, so a build cannot be edited in place and then keep claiming to be
