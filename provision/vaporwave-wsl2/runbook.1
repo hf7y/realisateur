@@ -1,0 +1,152 @@
+.TH VAPORWAVE-WSL2 1 "2026-09-02" "realisateur" "standup runbook"
+.SH NAME
+vaporwave\-wsl2 \- stand a SECOND self\-dev host up as a WSL2 distro on dexter
+.SH SYNOPSIS
+.nf
+./constate.sh                              is it a self\-dev host yet?
+./constate.sh \-\-target wsl:vaporwave       the rescue route, before sshd answers
+dresse \-\-host \-\-on vaporwave \-\-check       what the machine still needs
+.fi
+.SH DESCRIPTION
+`svc\-vaporwave' has run `aedile' and `vkv\-inventory' out of a uid\-1001 service
+account on mandark, outside every sensor this estate has: the status page cannot
+see it (bin/monkey\-status\-collect.py reads uid 3000\-3099), it has no ROSTER row,
+no tempo, no usage gate and no App attribution. Its last reports are 2026\-08\-01
+and 2026\-07\-18. This stands it up the way monkey is stood up, so it is watched
+by the same things.
+.PP
+.B THIS IS NOT MONKEY'S MIGRATION.
+That runbook moved a live 27G machine and its whole risk was preserving identity;
+this imports a stock rootfs and creates nothing that has to survive. So it is
+short, and what it inherits is the HAZARD LIST, which was paid for once already
+and does not need paying again.
+.SH WHAT IT COSTS TO GET WRONG, MEASURED ON dexter 2026\-09\-02
+.nf
+ONE NETWORK NAMESPACE for every distro. A distro's ports are the estate's.
+  in use: 53 2223 2224 8000 8080 8090 8643. 2225 is FREE and is ours.
+  22 is NOT free \- Windows sshd holds it, which is why monkey took 2224.
+TWO DISTROS EXIST: Ubuntu (DEFAULT) and monkey. A bare `wsl \-d' with no name
+  hits Ubuntu, WHICH CARRIES ZACH'S CHANNEL. Name the distro in every command.
+C: 28.3G free, D: 2603G. The guest disk goes on C: (realisateur#274/#275: D:
+  is the WD Elements USB that logged 1580 controller errors in a week and took
+  all 14 accounts down). Tarballs are bulk scratch and belong on D:.
+  C: also holds ~52G of retirable VirtualBox residue \- monkey.vdi 37.02G,
+  crt\-vm.vdi 8.92G, nomac.vdi 6.11G \- released by monkey\-wsl2's RETIRING
+  section once that cutover is ACCEPTED. A stock rootfs needs ~2\-3G, so this
+  fits today; it fits comfortably after that acceptance.
+.fi
+.PP
+.B \-\-shutdown IS NOT AVAILABLE.
+It stops EVERY distro including Ubuntu, which carries the container stack that
+IS the channel to Zach, and dexter's sshd on 2223.
+.B wsl \-\-terminate vaporwave
+is safe and is the only stop this runbook uses. Anything that must restart WSL
+is driven from PORT 22, the Windows route, which is the only one that survives.
+.PP
+.B NO TAILSCALE IN THE DISTRO.
+A kernel\-TUN tailscaled lands a `ts\-input' chain in the SHARED namespace
+carrying `\-s 100.64.0.0/10 ! \-i tailscale0 \-j DROP', which drops tailnet
+traffic arriving on dexter's own mirrored eth0. 2223 went dead the moment
+monkey booted with it. `\-\-netfilter\-mode=off' is NOT enough; the interface is
+the conflict. vaporwave is reached by PORT, like monkey, and joins no tailnet.
+.SH 1. THE DISTRO
+ON dexter, Windows route. Import a stock rootfs; there is nothing to copy.
+.nf
+
+  ssh \-p 22 \-i ~/.ssh/id_dexter_win zach@dexter.tail893f2c.ts.net
+  wsl.exe \-\-install \-\-no\-launch \-d Ubuntu\-24.04   # or an exported rootfs tar
+  wsl.exe \-\-import vaporwave C:\evaporwave C:\evaporwave\-rootfs.tar
+  wsl.exe \-d vaporwave \-u root \-\- /bin/true
+.fi
+.PP
+.B The first boot is the window with no systemd,
+because a distro with no /etc/wsl.conf does not start it. Write the file, then
+restart the distro by name:
+.nf
+
+  [boot]
+  systemd=true
+  [user]
+  default=zach
+  [network]
+  hostname=vaporwave
+.fi
+.SH 2. THE PORT, AND WHY IT IS THE IDENTITY
+The namespace is shared, so the PORT selects the host, not the name. Bind 2225
+and list BOTH address families \- a bare `ListenStream=2225' binds [::] only and
+the route is refused. In /etc/systemd/system/ssh.socket.d/override.conf:
+.nf
+
+  [Socket]
+  ListenStream=
+  ListenStream=0.0.0.0:2225
+  ListenStream=[::]:2225
+.fi
+.PP
+Then, from mandark, prove the port selects the host rather than assuming it:
+.nf
+
+  ssh\-keyscan \-p 2225 dexter.tail893f2c.ts.net   # ours
+  ssh\-keyscan \-p 2224 dexter.tail893f2c.ts.net   # monkey's
+.fi
+.PP
+.B Two identical keys means NOTHING is listening on 2225
+and the address fell through to something else in the namespace. That is the
+hazard that cost monkey a week, and `./constate.sh' grades exactly this row.
+.SH 3. THE HOST, DRIVEN FROM mandark
+.nf
+
+  dresse \-\-host \-\-on vaporwave \-\-check     # writes nothing
+  dresse \-\-host \-\-on vaporwave \-\-apply     # remote sudo \-n, not local root
+.fi
+.PP
+Nothing of ours is installed to run this. `dresse' ships each step and the
+`lib/' it sources to a mktemp \-d and removes it, so the host ends up holding
+the pinned verb build and nothing else \- realisateur#886's invariant, not a
+second /root/realisateur\-refresh.
+.B The verb build is NOT a prerequisite:
+a greenfield host has none, which is why the tool that stands it up cannot be
+delivered by the channel that standing it up installs (realisateur#545).
+.SH 4. THE ACCOUNTS
+One unix user per project in uid 3000\-3099, the band realisateur#102 reserves.
+.B svc\-vaporwave's uid 1001 is NOT reused
+\- it is outside the band every sensor reads, which is the whole reason its work
+has been invisible.
+.PP
+Tier 1, `hf7y'\-owned and unblocked: `dog', `vibe\-kiosk', `inv\-redirects',
+`vkv23'. Run `setup\-selfdev\-project.sh' per account ON the host until
+realisateur#895's second half lands.
+.PP
+.B Tier 2 is gated and is not a step here.
+`wavebucks' (which is where `aedile' actually lives), `inventory\-app',
+`nomac.org' and `CodeDumpster' belong to `media\-arts\-collective'. realisateur
+references that owner NOWHERE: GH_ESTATE_OWNER is a scalar `hf7y' in
+bin/lib/estate\-set.sh and every consumer inherits it. Standing one up needs
+Tyler, a second App installation, and a multi\-owner estate \- not a flag.
+.SH 5. THE CREDENTIAL, LAST AND BY HAND
+A SECOND, SEPARATE Anthropic identity (Zach, 2026\-09\-02). The interactive login
+happens AS the account, ON vaporwave.
+.B It is not copied
+from /etc/selfdev/claude\-token on monkey, from zach, or into any group\-readable
+path: copying any of those silently merges the second quota back into the first,
+which is the one thing the second identity is being bought to avoid.
+.SH 6. ARMING, WHICH IS A SEPARATE ACT
+`schedule/ROSTER' in hf7y/scheduler gains `<project> | <account>@vaporwave' rows.
+Only a human edits the `state' column; that edit IS the arming. Leave them
+`parked' until the account has run clean once.
+.PP
+The watcher is already generic: bin/monkey\-watch.sh parameterises VM,
+MONKEY_HOST, MONKEY_PORT, SSH_KEY, STATE_FILE and PUBLISH_DIR (default
+`monkey'), so a second instance publishes hf7y.com/vaporwave/status.json on env
+alone. `ausculte' is NOT generic \- its hosts, arming, hygiene and fleet probes
+read monkey's status URL or ssh ${AUSCULTE_FLEET_HOST:\-monkey} \- so a second
+host is invisible to the witness until that becomes a set. That is the real
+cost of symmetry and it belongs here, not in a later pass.
+.SH ROLLBACK
+`wsl.exe \-\-terminate vaporwave' then `wsl.exe \-\-unregister vaporwave'. Nothing
+else on dexter is touched by any step above, and no account on monkey is
+modified, so there is nothing else to undo.
+.SH SEE ALSO
+.BR constate.sh (1),
+.BR dresse (1),
+realisateur#695, realisateur#886, realisateur#895, senechal#438.
