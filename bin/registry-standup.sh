@@ -20,6 +20,8 @@ cli_guard "$@"
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
 OWNER="$GH_ESTATE_OWNER"
 GH="${REGISTRY_STANDUP_GH:-gh}"
+REGISTRY_GH="$GH"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/registry-set.sh"
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"   # bin/cut-verb-build.sh
 RUNTIME_PATH="${RUNTIME_PATH:-lib/verb.sh}"            # guard.yml's runtime_path default
 GUARD_REF='hf7y/etalon/.github/workflows/guard.yml'
@@ -47,20 +49,20 @@ command -v "$GH" >/dev/null 2>&1 || blind "$GH is not on PATH -- the registry ca
 
 echo "== registry-standup (--check) -- $OWNER, marker $REGISTRY_MARKER =="
 
-Q='query($owner:String!){ user(login:$owner){ repositories(first:100, isFork:false, ownerAffiliations:OWNER){
-  nodes{ name isArchived isPrivate
-    marker: object(expression:"HEAD:'"$REGISTRY_MARKER"'"){ __typename }
+# The node fields THIS script needs, spliced into lib/registry-set.sh's marker
+# query. name/isArchived/isPrivate/marker come from the lib -- "which repos
+# count" is defined once, and only the extra reads are typed here.
+Q="$(registry_query '
     hverb:  object(expression:"HEAD:'"$RUNTIME_PATH"'"){ __typename }
     bverb:  object(expression:"bashified:'"$RUNTIME_PATH"'"){ __typename }
     hwf: object(expression:"HEAD:.github/workflows"){ ... on Tree { entries { name object { ... on Blob { text } } } } }
     bwf: object(expression:"bashified:.github/workflows"){ ... on Tree { entries { name object { ... on Blob { text } } } } }
-  } } } }'
+')"
 
 JQ='def wf($t): [($t.entries // [])[] | .object.text // ""];
     def calls: contains("'"$GUARD_REF"'");
     def wires: calls and test("runtime:[ \\t]*true");
-    .data.user.repositories.nodes[]
-    | select(.marker != null and .isArchived == false)
+    '"$REGISTRY_SELECT"'
     | [ .name, (.isPrivate|tostring),
         (wf(.hwf) | any(calls) | tostring),
         (wf(.hwf) | any(wires) | tostring),

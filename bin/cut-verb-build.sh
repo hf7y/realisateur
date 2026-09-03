@@ -29,6 +29,7 @@ cli_guard "$@"
 
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
 OWNER="${VERB_BUILD_OWNER:-$GH_ESTATE_OWNER}"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/registry-set.sh"
 VERB_META_REPO="${VERB_META_REPO:-verbs}"   # holds the published manifest the guard compares against
 BUILD_ROOT="${VERB_BUILD_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/verb-builds}"
 WRITE=0
@@ -48,6 +49,10 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+
+# AFTER the arg loop: --owner is parsed there, and setting this above it
+# would query hf7y while the build cut another owner.
+REGISTRY_OWNER="$OWNER"
 
 say() { printf '%s\n' "$*" >&2; }
 die() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
@@ -108,10 +113,7 @@ repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].nam
 # Distinct from the verb set, and the difference is the whole reason this
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
 registry=""
-_gql='query($owner:String!){ user(login:$owner){ repositories(first:100, isFork:false, ownerAffiliations:OWNER){
-        nodes{ name isArchived marker: object(expression:"HEAD:'"$REGISTRY_MARKER"'"){ __typename } } } } }'
-if _reg="$(gh api graphql -F owner="$OWNER" -f query="$_gql" \
-             --jq '.data.user.repositories.nodes[] | select(.marker != null and .isArchived == false) | .name' 2>/dev/null)"; then
+if _reg="$(registry_repos)"; then    # lib/registry-set.sh -- the marker query has one home
   registry="$_reg"
   say "registry: $(printf '%s\n' "$registry" | grep -c .) project(s) carry $REGISTRY_MARKER"
 else

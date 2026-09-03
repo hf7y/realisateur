@@ -10,12 +10,22 @@ set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 C="$ROOT/bin/cut-verb-build.sh"
+L="$ROOT/bin/lib/registry-set.sh"   # the marker query's ONE home (was four copies)
 echo "registry-marker.test"
 
-# --- 1. one query, not one per repo --------------------------------------
-grep -q 'gh api graphql' "$C" && ok "the registry is read with a single GraphQL query" \
+# --- 1. one query, not one per repo, and ONE COPY of it -------------------
+grep -q 'api graphql' "$L" && ok "the registry is read with a single GraphQL query" \
   || bad "no graphql call -- a contents call per repo is ~46 requests per nightly build"
-grep -q 'first:100' "$C" && ok "it asks for repositories in one page" || bad "no page size given"
+grep -q 'first:100' "$L" && ok "it asks for repositories in one page" || bad "no page size given"
+grep -q 'registry_repos' "$C" && ok "cut-verb-build reads the registry through the lib" \
+  || bad "cut-verb-build re-types the marker query -- that is the four-copy defect again"
+
+# The copies this lib exists to end. A fifth would be added by someone who
+# never read this test, so the test is what notices.
+copies="$(grep -rlE 'HEAD:\.agent-project|expression:"HEAD:\$REGISTRY_MARKER"' \
+            "$ROOT/bin" 2>/dev/null | grep -v '/lib/registry-set.sh$' | grep -v '/tests/' || true)"
+[ -z "$copies" ] && ok "no script under bin/ re-types the marker query" \
+  || bad "the marker query is typed again outside the lib" "$copies"
 
 # --- 2. BLIND MUST NOT LOOK LIKE EMPTY -----------------------------------
 # The load-bearing property. An empty registry in the manifest tells every
@@ -40,11 +50,18 @@ grep -qi 'to retire' "$ROOT/.agent-project" && ok "the marker says how to retire
 
 # --- 5. live, if gh is here ----------------------------------------------
 if gh auth status >/dev/null 2>&1; then
-  q='query($owner:String!){ user(login:$owner){ repositories(first:100, isFork:false, ownerAffiliations:OWNER){
-       nodes{ name isArchived marker: object(expression:"HEAD:.agent-project"){ __typename } } } } }'
-  n="$(gh api graphql -F owner=hf7y -f query="$q" --jq '[.data.user.repositories.nodes[]|select(.marker!=null and .isArchived==false)]|length' 2>/dev/null)"
-  [ -n "$n" ] && ok "the live query resolves ($n repo(s) currently carry the marker)" \
+  # Through the lib, not a fifth copy: this asserts the shipped path works.
+  # shellcheck source=bin/lib/registry-set.sh
+  . "$L"
+  n="$(registry_repos | grep -c .)"
+  [ "${n:-0}" -gt 0 ] && ok "the live query resolves ($n repo(s) currently carry the marker)" \
     || bad "the live query failed -- the mechanism does not work against the real account"
+  if u="$(frame_unenrolled)"; then
+    [ -z "$u" ] && ok "every rostered project is registry-enrolled" \
+      || echo "  note: rostered and unenrolled, so marker-derived sweeps cannot see it: $(printf '%s' "$u" | tr '\n' ' ')"
+  else
+    echo "  SKIP: the roster would not resolve, so enrolment was not graded"
+  fi
 else
   echo "  SKIP: no gh auth here; the live query was not exercised"
 fi
