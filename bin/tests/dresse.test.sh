@@ -145,8 +145,7 @@ for s in selfdev-app-key.sh selfdev-claude-token.sh wire-release-channel.sh \
          selfdev-permissions-provision.sh selfdev-hooks-provision.sh; do stub "$s" 0; done
 stub setup-selfdev-project.sh 0
 printf '# runs provision-selfdev-user.sh wire-selfdev-git.sh land-selfdev.sh\n' >> "$T/bin/setup-selfdev-project.sh"
-# Like real ssh where it matters: eats -o flags, leaves STDIN for the remote
-# `tar -x`, and re-parses the command STRING instead of receiving an argv array.
+# Like real ssh: eats -o flags, leaves STDIN for `tar -x`, re-parses a STRING.
 cat > "$T/bin/fake-ssh" <<'FAKE'
 #!/usr/bin/env bash
 a=(); while [ $# -gt 0 ]; do case "$1" in -o) shift 2;; *) a+=("$1"); shift;; esac; done

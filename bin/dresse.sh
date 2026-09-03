@@ -8,8 +8,6 @@
 # TRAP: it installs no secret unattended -- --install takes a file a human
 #   supplies, so both modes only --check it.
 # TRAP: root is required to CHANGE the host, not to look at it.
-# TRAP: --on SHIPS the step and its libs to a mktemp -d and removes them; a
-#   step sources lib/ beside itself, so `bash -s < step` runs without them.
 #
 set -uo pipefail
 
@@ -56,8 +54,7 @@ fi
 if [ $(( ALL + HOSTWIDE + (${#ACCT} > 0 ? 1 : 0) )) -gt 1 ]; then
   echo "$CLI_NAME: --host, --all and a named account are mutually exclusive -- say which" >&2; exit 2
 fi
-# HALF 1 OF #895: setup-selfdev-project.sh is itself a sequence over ten more
-# scripts, and a half-remote run could not say which machine it changed.
+# HALF 1 OF #895 -- an account is a ten-script sequence; see dresse(1).
 if [ -n "$ON" ] && [ "$HOSTWIDE" -eq 0 ]; then
   echo "$CLI_NAME: --on drives the HOST plan only (realisateur#895 half 1). For an account, run this on the host itself." >&2
   exit 2
@@ -84,14 +81,10 @@ wire-release-channel.sh|--check|--apply|the verb-build bootstrap and this accoun
 
 pass_n=0; fail_n=0; gap_n=0
 
-# THE TRANSPORT (realisateur#895). Ships a TAR to a mktemp -d and removes it:
-# a step is not self-contained -- each sources lib/ from beside itself and
-# selfdev-hooks-provision.sh copies hooks/ FILES (#385/#386), so `bash -s <
-# step` delivers one file to a machine that needs a tree. Nothing installed,
-# nothing on PATH, nothing surviving: #886's invariant, not a second #839.
-# %q-QUOTED because ssh joins argv into one string the far shell re-parses, so
-# an empty argument vanishes -- selfdev-credentials.sh's fetch_remote measured
-# that live and its comment is the long version.
+# A TAR, not `bash -s < step`: a step sources lib/ beside itself and
+# selfdev-hooks-provision.sh copies hooks/ FILES (#385/#386). %q because ssh
+# re-parses one joined string, so an empty arg vanishes (selfdev-credentials.sh
+# fetch_remote measured it). Why it is not a checkout: dresse(1).
 remote_step() { # remote_step <script> <args...>
   local s="$1"; shift
   local q="" a sudo_prefix=""
@@ -168,16 +161,14 @@ plan_check() {
   return $bad
 }
 
-# ROOT IS NEEDED WHERE THE CHANGE LANDS. Under --on that is the remote sudo -n,
-# so local root would make the caller root on the wrong machine.
+# ROOT IS NEEDED WHERE THE CHANGE LANDS -- under --on, the remote sudo -n.
 if [ "$MODE" = --apply ] && [ -z "$ON" ] && [ "$(id -u)" -ne 0 ]; then
   echo "$CLI_NAME: --apply must run as root (sudo $0 $*)" >&2; exit 2
 fi
 
 TARGET="$ACCT"; [ "$HOSTWIDE" -eq 1 ] && TARGET=--host; [ "$ALL" -eq 1 ] && TARGET=--all
 
-# THE MACHINE THAT CHANGES: the notify-senechal line below records a machine
-# -state change, and would otherwise name the caller rather than the target.
+# THE MACHINE THAT CHANGES -- the notify-senechal line below records it.
 TARGET_HOST="${ON:-$HOST}"
 WHERE="$HOST"; [ -z "$ON" ] || WHERE="$ON (over ssh from $HOST)"
 echo "== $CLI_NAME ($MODE) on $WHERE, uid band $UID_MIN-$UID_MAX =="
