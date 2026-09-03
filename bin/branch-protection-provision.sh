@@ -242,15 +242,10 @@ scan() {
 }
 
 apply() {   # ADD ONLY, read-modify-write: enforce_admins is a separate decision (#168 scoped it to realisateur and scheduler) and this script never makes it
-  # PUT REPLACES THE WHOLE PROTECTION OBJECT, so every field this payload does
-  # not carry forward is DELETED. `required_pull_request_reviews` and
-  # `restrictions` were literal `null` here, which is why adding a required
-  # context would silently drop a review requirement -- including the Code
-  # Owner review on `.github/workflows/**` that is the whole guard on the App's
-  # `workflows: write` grant (#922). A guard this script can erase is not one.
-  # Both are now carried forward, and both are RESHAPED: the GET returns
-  # `restrictions.users[].login` and `dismissal_restrictions` as objects, the
-  # PUT wants bare logins and slugs, so echoing the GET back is a 422.
+  # PUT REPLACES THE WHOLE OBJECT: a field not carried forward is dropped. Both
+  # of these were literal `null`, so adding a context erased any review
+  # requirement -- including the Code Owner guard on the #922 grant. They are
+  # RESHAPED too: the GET returns user objects, the PUT wants bare logins.
   local slug="$1" branch="$2"; shift 2
   local cur payload now
   cur="$(api_get "repos/$slug/branches/$branch/protection")" || cur='{}'

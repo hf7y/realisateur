@@ -19,9 +19,8 @@ cli_guard "$@"
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 . "$HERE/lib/host-check.sh"
 . "$HERE/lib/propagation-set.sh"   # PROP_HOST_PIN -- the build layout has one home
-# The GitHub reader, overridable the way UNARMED_SSH overrides the host reader:
-# this suite is OFFLINE by construction (see GUARD-TEST above), and a probe that
-# reached the network would make `suites` -- hermetic by design -- non-hermetic.
+# Overridable like UNARMED_SSH: a probe reaching the network would make
+# `suites` -- hermetic by design -- non-hermetic.
 UNARMED_GH="${UNARMED_GH:-gh}"
 REGISTRY_GH="$UNARMED_GH"           # captured by the lib below at source time
 . "$HERE/lib/registry-set.sh"       # the frame: registry U roster, one home
@@ -70,8 +69,7 @@ printf "SCHED_CONFS %s\nSCHED_FRAGMENT %s\nSCHED_STANDING %s\n" "$n" "$f" "$s"
 printf "VAULT_MODE %s\n" "$(stat -c %04a /srv/ecosystem1-vault 2>/dev/null)"
 printf "DRAIN_CRON %s\n" "$($SUDO cat /etc/cron.d/vault-spool-drain 2>/dev/null | grep -c vault-spool-drain.sh)"
 printf "DRAIN_BIN %s\n" "$($SUDO test -x /usr/local/libexec/selfdev/vault-spool-drain.sh && echo 1 || echo 0)"
-# hf7y/realisateur#896: on a host, every estate-owned file is the pinned build,
-# a symlink into it, or a repo own clone. Counted here, named by the probe.
+# #896: every estate-owned file is the pin, a link into it, or a repo own clone.
 printf "HC_USR_LIBEXEC %s\n" "$([ -d /usr/local/libexec ] && echo 1 || echo 0)"
 al=0; na=0
 for u in $(getent passwd | awk -F: "\$3>=3000 && \$3<=3099 {print \$1}"); do
@@ -80,12 +78,9 @@ for u in $(getent passwd | awk -F: "\$3>=3000 && \$3<=3099 {print \$1}"); do
   $SUDO test -d "$hd/.local/libexec" && al=$((al + 1))
 done
 printf "HC_ACCTS %s\nHC_ACCT_LIBEXEC %s\n" "$na" "$al"
-# Only ESTATE names are graded: the pin lists them, so `gh` and friends in
-# /usr/local/bin are not miscounted as contraband.
-# RESOLVE THE PIN FIRST. `current` is itself a symlink to the dated build, so
-# readlink -f on a verb yields .../<stamp>/... and comparing that against the
-# literal `current` path marks every correctly-linked verb contraband -- the
-# first run of this probe read 36 of 36 stray for exactly that reason.
+# Only names the pin provides, so `gh` is not miscounted.
+# RESOLVE THE PIN FIRST: `current` is a symlink, so an unresolved compare marks
+# every correctly-linked verb contraband -- this read 36 of 36 before it did.
 PINR="$(readlink -f '"$PROP_HOST_PIN"' 2>/dev/null)"
 nv=0; st=0
 if [ -n "$PINR" ]; then
@@ -197,12 +192,8 @@ probe_libexec_payload() {
   fi
 }
 
-# THE FRAME IS A GITHUB FACT, so it is read here rather than through $HOST's
-# fact block -- the reasoning .github/workflows/atteste.yml states for itself:
-# "HERE and not on a host because subject mode reads only the GitHub API".
-# On root's weekly clock there is no user credential, so the host App token is
-# borrowed exactly as collect() used to borrow it: minted per call, never
-# stored, and never echoed into FACTS.
+# The frame is a GitHub fact, read here not through $HOST's facts. Root's clock
+# has no user credential, so the App token is borrowed per call, never stored.
 GH_READY=2
 gh_ready() {
   [ "$GH_READY" != 2 ] && return "$GH_READY"
@@ -210,8 +201,7 @@ gh_ready() {
   command -v "$UNARMED_GH" >/dev/null 2>&1 || return 1
   if ! "$UNARMED_GH" auth status >/dev/null 2>&1; then
     local t app
-    # The verb first (#893), the libexec copy second -- that path retires with
-    # the rest of the bootstrap set under #892 and must not be the only route.
+    # Verb first (#893): the libexec copy retires under #892.
     app='command -v selfdev-gh-app >/dev/null 2>&1 && selfdev-gh-app --token || sudo -n /usr/local/libexec/selfdev/selfdev-gh-app.sh --token'
     if on_target_host "$HOST"; then t="$(bash -c "$app" 2>/dev/null | tail -1)"
     else t="$(${UNARMED_SSH:-ssh} -n -o ConnectTimeout=10 -o BatchMode=yes "$HOST" "$app" 2>/dev/null | tail -1)"; fi
@@ -221,8 +211,7 @@ gh_ready() {
   GH_READY=0; return 0
 }
 
-# sibling <name> -- a script beside this one, or in the installed libexec, or on
-# PATH as a verb. unarmed.sh runs from three layouts and must find its parts.
+# sibling <name> -- beside this file, in libexec, or on PATH.
 sibling() {
   local n="$1" c
   for c in "$HERE/$n" "${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/$n" "$(command -v "${n%.sh}" 2>/dev/null || true)"; do

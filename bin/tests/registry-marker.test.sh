@@ -10,7 +10,7 @@ set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 C="$ROOT/bin/cut-verb-build.sh"
-L="$ROOT/bin/lib/registry-set.sh"   # the marker query's ONE home (was four copies)
+L="$ROOT/bin/lib/registry-set.sh"   # the marker query's one home
 echo "registry-marker.test"
 
 # --- 1. one query, not one per repo, and ONE COPY of it -------------------
@@ -20,8 +20,7 @@ grep -q 'first:100' "$L" && ok "it asks for repositories in one page" || bad "no
 grep -q 'registry_repos' "$C" && ok "cut-verb-build reads the registry through the lib" \
   || bad "cut-verb-build re-types the marker query -- that is the four-copy defect again"
 
-# The copies this lib exists to end. A fifth would be added by someone who
-# never read this test, so the test is what notices.
+# A fifth copy would be added by someone who never read this test.
 copies="$(grep -rlE 'HEAD:\.agent-project|expression:"HEAD:\$REGISTRY_MARKER"' \
             "$ROOT/bin" 2>/dev/null | grep -v '/lib/registry-set.sh$' | grep -v '/tests/' || true)"
 [ -z "$copies" ] && ok "no script under bin/ re-types the marker query" \
@@ -50,7 +49,7 @@ grep -qi 'to retire' "$ROOT/.agent-project" && ok "the marker says how to retire
 
 # --- 5. live, if gh is here ----------------------------------------------
 if gh auth status >/dev/null 2>&1; then
-  # Through the lib, not a fifth copy: this asserts the shipped path works.
+  # Through the lib: this asserts the shipped path works.
   # shellcheck source=bin/lib/registry-set.sh
   . "$L"
   n="$(registry_repos | grep -c .)"

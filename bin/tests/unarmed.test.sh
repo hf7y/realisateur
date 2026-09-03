@@ -14,8 +14,7 @@ cat "$FACTS_FILE"
 EOF
 chmod +x "$T/ssh"
 
-# NO CREDENTIAL, on purpose: this suite is offline, and the repo probes must
-# report BLIND rather than reach GitHub from `suites`, which is hermetic.
+# No credential, on purpose: the repo probes must read BLIND, not reach GitHub.
 cat > "$T/gh-none" <<'EOF'
 #!/usr/bin/env bash
 exit 1
@@ -100,9 +99,7 @@ armed "$T/facts"
 mkledger "$T/L" "$(printf 'host-mode\t2026-08-11\t30d\tARMED\tthe crontab line')"
 run "$T/L" 2026-08-30
 has "B1 an armed row reads OK" "$OUT" "OK        host-mode"
-# NOT exit 0: repo-frame/guard/gates read GitHub and this suite has no
-# credential, so the floor is BLIND. BLIND never folds into OK, and the
-# property B is actually about is that an armed row is not RED.
+# Not exit 0: three rows read GitHub with no credential, so the floor is BLIND.
 rc  "B2 and the floor is BLIND, not red" 6 $RC
 has "B3 and BLIND is reported as itself, never as the floor holding" "$OUT" "BLIND -- a predicate could not run"
 
@@ -193,9 +190,8 @@ rc  "G4 an unreadable floor exits 6" 6 $RC
 has "G5 and says nothing was compared" "$OUT" "nothing was compared"
 
 section "H. a floor row whose predicate was RETIRED blinds its own row, never grades clean"
-# front-door-guard and apms-guard were two hand-typed per-repo rows; they are
-# retired into the enumerated repo-guard probe (section M). A ledger still
-# naming one must not read clean just because nothing measures it any more.
+# The two per-repo rows retired into repo-guard; a ledger still naming one
+# must not read clean because nothing measures it.
 mkledger "$T/L7" "$(printf 'front-door-guard\t2026-08-17\t7d\tUNARMED\tretired into repo-guard')"
 armed "$T/facts"
 run "$T/L7" 2026-08-30
@@ -299,17 +295,14 @@ has "M5 an estate name not resolving into the pin is named" "$OUT" "19 of 36 est
 rc  "M6 and a row inside its window is still not an alarm" 6 $RC
 hasnt "M6b and no FINDINGS banner is printed" "$OUT" "FINDINGS --"
 
-# BLIND, never clean: the three repo probes read GitHub, and this suite gives
-# them no credential. A probe that graded that as ARMED would report an
-# unmeasured estate as a conforming one.
+# BLIND, never clean: an unmeasured estate must not read as a conforming one.
 for id in repo-frame repo-guard repo-gates; do
   has "M7/$id reads BLIND without a credential" "$OUT" "BLIND     $id"
 done
 hasnt "M8 and BLIND does not read as the floor holding" "$OUT" "The floor holds"
 rc  "M9 BLIND exits 6, never 0" 6 $RC
 
-# The pin is a symlink to a dated build, so an unresolved comparison marks every
-# correctly-linked verb contraband. This is that regression, pinned.
+# The unresolved-pin regression, pinned.
 armed "$T/facts"
 run "$T/M" 2026-08-30
 hasnt "M10 a fully-linked host reports no stray estate names" "$OUT" "of 36 estate name(s)"

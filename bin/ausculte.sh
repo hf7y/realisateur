@@ -345,17 +345,15 @@ if want landing; then
 fi
 
 
-# BUILT AND NOT TURNED ON (#754). ausculte had no row for it: seven were found
-# by conversation and none by any probe, while unarmed.sh sat on a weekly clock
-# nobody reads. DOWN only on a row past ITS OWN window -- a floor that merely
-# persists is not an alarm, which is the whole design of bin/lib/unarmed.tsv.
+# BUILT AND NOT TURNED ON (#754): seven found by conversation, none by a probe,
+# while unarmed.sh sat on a weekly clock nobody reads. DOWN only past a row's
+# OWN window -- a floor that merely persists is not an alarm.
 if want unarmed; then
   if un="$(part unarmed.sh)"; then
     out="$(bash "$un" --check 2>&1)"; rc=$?
     case $rc in
       0) record unarmed OK 'the floor holds -- nothing newly built and unarmed, and no row past its own window' ;;
-      # Name the rows, never a count: "3 findings" sends the reader to the file
-      # this line exists to save them opening.
+      # Name the rows, not a count: "3 findings" sends them to the file anyway.
       1) named="$(printf '%s\n' "$out" \
                    | awk '$1 == "EXPIRED" || $1 == "GREW" || $1 == "REGRESSED" { printf "%s %s; ", $1, $2 }')"
          record unarmed DOWN "${named:-$(printf '%s' "$out" | tail -1)}" ;;
