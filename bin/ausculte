@@ -10,7 +10,7 @@ CLI_SUMMARY='is self-dev healthy enough to stop watching?'
 CLI_USAGE='  ausculte              every probe; the exit code is the answer
   ausculte --json       one object per probe
   ausculte <probe>      just one: channel hosts arming hygiene propagation
-                        rot landing fleet handoff'
+                        rot landing unarmed fleet handoff'
 CLI_FLAGS='--json'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  every declared probe answered OK
@@ -344,6 +344,24 @@ if want landing; then
   else record landing BLIND 'landing-drift.sh not present'; fi
 fi
 
+
+# BUILT AND NOT TURNED ON (#754): seven found by conversation, none by a probe,
+# while unarmed.sh sat on a weekly clock nobody reads. DOWN only past a row's
+# OWN window -- a floor that merely persists is not an alarm.
+if want unarmed; then
+  if un="$(part unarmed.sh)"; then
+    out="$(bash "$un" --check 2>&1)"; rc=$?
+    case $rc in
+      0) record unarmed OK 'the floor holds -- nothing newly built and unarmed, and no row past its own window' ;;
+      # Name the rows, not a count: "3 findings" sends them to the file anyway.
+      1) named="$(printf '%s\n' "$out" \
+                   | awk '$1 == "EXPIRED" || $1 == "GREW" || $1 == "REGRESSED" { printf "%s %s; ", $1, $2 }')"
+         record unarmed DOWN "${named:-$(printf '%s' "$out" | tail -1)}" ;;
+      2) record unarmed BLIND 'ausculte invoked unarmed.sh wrongly -- fix ausculte' ;;
+      *) record unarmed BLIND "$(printf '%s' "$out" | tail -1)" ;;
+    esac
+  else record unarmed BLIND 'unarmed.sh not present'; fi
+fi
 
 if want fleet; then
   # LOCALHOST IS NOT AN SSH TARGET -- the same fix the propagation row above
