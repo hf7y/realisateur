@@ -39,10 +39,7 @@ if command -v man >/dev/null 2>&1; then
   has "A8 ...and says why: they would contend with the live fleet's agents" "$RF" "SAME agents as the live monkey"
   has "A9 --shutdown's blast radius names the human channel, by its CURRENT carrier" "$RF" "container stack that IS the channel"
   has "A10 it says a probe inside a distro cannot identify what it measured" "$R" "cannot tell you which distro it measured"
-  # A30-A34: the FACTS block drifted for two days and no case here noticed
-  # (realisateur#934). These pin the four facts that MOVED, so the next drift
-  # is a red suite rather than an operator reading a two-day-old machine.
-  has "A30 the distro list is the CURRENT two, not the retired four" "$RF" "Ubuntu (DEFAULT) and monkey. ONLY THOSE TWO"
+  has "A30 FACTS: the distro list is the CURRENT two, not the retired four (#934)" "$RF" "Ubuntu (DEFAULT) and monkey. ONLY THOSE TWO"
   has "A31 a bare wsl -d is named as hitting the HUMAN CHANNEL now" "$RF" "now hits Ubuntu"
   hasnt "A32 ...and no longer claims port 22 is free" "$RF" "FREE: 22"
   has "A33 the disk move reads DONE, not deferred" "$RF" "THE MOVE IS DONE"
