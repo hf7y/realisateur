@@ -84,16 +84,6 @@ else
   done
 fi
 
-# ROLLBACK RETIRED 2026-09-03 (#827). The VirtualBox rollback, both monkey.vdi
-# copies, crt-vm, nomac and VirtualBox itself are gone from dexter; C: went
-# 28G -> 82G free. Grading rollback from the VDI's PRESENCE would now read
-# DIVERGED forever, which is the failure #827 step 4 named in advance.
-#
-# So this grades what still matters: headroom on C:, where monkey's live
-# ext4.vhdx sits and grows. And it measures it over the DEXTER route, not the
-# Windows sshd on :22 -- that route needs a key most callers do not hold, so it
-# answered BLIND from anywhere but the one host, and a probe that cannot reach
-# its target is not a clean result.
 free_c="$(timeout 40 "${DEXTER[@]}" 'df -BG --output=avail /mnt/c 2>/dev/null | tail -1' 2>/dev/null | tr -dc '0-9')"
 vbox="$(timeout 40 "${DEXTER[@]}" 'ls "/mnt/c/Program Files/Oracle/VirtualBox/VBoxManage.exe" 2>/dev/null' 2>/dev/null | tr -d '\r')"
 if [ -n "$free_c" ]; then
@@ -113,10 +103,6 @@ if [ -x "$HERE/constate.sh" ] && [ -r "$HERE/before.tsv" ]; then
       if [ "${b:-0}" -gt "${a:-0}" ] 2>/dev/null; then step DIVERGED "monkey" "$k rose ${a} -> ${b} since the baseline: the wedge is progressing"; fi
     done
     bk="$(printf '%s\n' "$now" | awk -F'\t' '$1=="backend"{print $2}')"
-    # Inverted 2026-09-03 with the rollback retirement (#827). Before the
-    # cutover, 'wsl' meant it had happened outside this runbook and was worth a
-    # finding. It has happened, and there is no rollback to go back to, so the
-    # finding is now the OPPOSITE reading.
     if [ "$bk" != wsl ]; then step DIVERGED "monkey" "backend reads '${bk:-unreadable}', not 'wsl' -- the cutover has come undone and there is no rollback"; fi
   else
     step DIVERGED "monkey" "constate.sh returned nothing -- BLIND, not healthy"
