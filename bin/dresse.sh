@@ -8,9 +8,8 @@
 # TRAP: it installs no secret unattended -- --install takes a file a human
 #   supplies, so both modes only --check it.
 # TRAP: root is required to CHANGE the host, not to look at it.
-# TRAP: --on SHIPS the step and its libs to a mktemp -d and removes them; it
-#   does NOT install a checkout. A step sources lib/ beside itself, so a bare
-#   `ssh host bash -s < step` runs a script whose libs are not there.
+# TRAP: --on SHIPS the step and its libs to a mktemp -d and removes them; a
+#   step sources lib/ beside itself, so `bash -s < step` runs without them.
 #
 set -uo pipefail
 
@@ -57,12 +56,9 @@ fi
 if [ $(( ALL + HOSTWIDE + (${#ACCT} > 0 ? 1 : 0) )) -gt 1 ]; then
   echo "$CLI_NAME: --host, --all and a named account are mutually exclusive -- say which" >&2; exit 2
 fi
-# HALF OF #895, AND IT SAYS WHICH HALF. The per-account plan runs
-# setup-selfdev-project.sh, which is itself an ordered sequence over ten more
-# scripts; shipping that whole set is the rest of the issue, not a flag. A
-# tool that quietly did the host half remotely and the account half locally
-# would be worse than one that refuses: the caller would not know which
-# machine it just changed.
+# HALF 1 OF #895: the per-account plan runs setup-selfdev-project.sh, itself a
+# sequence over ten more scripts. Doing the host half remotely and the account
+# half locally would leave the caller unable to say which machine it changed.
 if [ -n "$ON" ] && [ "$HOSTWIDE" -eq 0 ]; then
   echo "$CLI_NAME: --on drives the HOST plan only (realisateur#895 half 1). For an account, run this on the host itself." >&2
   exit 2
@@ -89,27 +85,14 @@ wire-release-channel.sh|--check|--apply|the verb-build bootstrap and this accoun
 
 pass_n=0; fail_n=0; gap_n=0
 
-# ===========================================================================
-# THE TRANSPORT. One spelling, not one per step (realisateur#895).
-# ===========================================================================
-# A step is not a self-contained file: every one of them sources lib/ from
-# beside itself, and selfdev-hooks-provision.sh copies hooks/ FILES, not just
-# a settings block (#385/#386 lost 13 of 15 accounts to exactly that). So
-# `ssh host bash -s < step` -- the shape monkey-status-collect.py rides -- is
-# wrong here: it delivers one file to a machine that needs a tree.
-#
-# It ships a TAR to a mktemp -d and removes it on exit. That is deliberately
-# NOT a checkout: nothing is installed, nothing is on PATH, and nothing
-# survives the call, so a host provisioned this way holds the pinned build
-# and nothing else -- which is the invariant realisateur#886 is written to
-# get, rather than a second /root/realisateur-refresh (#839).
-#
-# ARGUMENTS ARE %q-QUOTED because ssh does not pass argv. It joins everything
-# after the remote command with single spaces and lets the far shell re-parse
-# the result, so an unquoted arg word-splits and an EMPTY one vanishes
-# entirely, shifting every later argument left. That was measured live
-# against the fleet in selfdev-credentials.sh's fetch_remote, whose comment
-# is the long version.
+# THE TRANSPORT (realisateur#895). Ships a TAR to a mktemp -d and removes it:
+# a step is not self-contained -- each sources lib/ from beside itself and
+# selfdev-hooks-provision.sh copies hooks/ FILES (#385/#386), so `bash -s <
+# step` delivers one file to a machine that needs a tree. Nothing installed,
+# nothing on PATH, nothing surviving: #886's invariant, not a second #839.
+# %q-QUOTED because ssh joins argv into one string the far shell re-parses, so
+# an empty argument vanishes -- selfdev-credentials.sh's fetch_remote measured
+# that live and its comment is the long version.
 remote_step() { # remote_step <script> <args...>
   local s="$1"; shift
   local q="" a sudo_prefix=""
@@ -186,19 +169,16 @@ plan_check() {
   return $bad
 }
 
-# ROOT IS NEEDED WHERE THE CHANGE LANDS, NOT WHERE THE COMMAND IS TYPED.
-# Under --on the privilege is the remote `sudo -n`, so demanding local root
-# here would make the caller root on the WRONG machine to change the right
-# one -- and a passwordless remote sudo is a thing to prove, not assume.
+# ROOT IS NEEDED WHERE THE CHANGE LANDS. Under --on that is the remote sudo -n,
+# so local root would make the caller root on the wrong machine.
 if [ "$MODE" = --apply ] && [ -z "$ON" ] && [ "$(id -u)" -ne 0 ]; then
   echo "$CLI_NAME: --apply must run as root (sudo $0 $*)" >&2; exit 2
 fi
 
 TARGET="$ACCT"; [ "$HOSTWIDE" -eq 1 ] && TARGET=--host; [ "$ALL" -eq 1 ] && TARGET=--all
 
-# THE MACHINE THAT CHANGES, named apart from the one that typed the command.
-# The notify-senechal line below records a machine-state change; under --on
-# it would otherwise name mandark for a change that landed on the target.
+# THE MACHINE THAT CHANGES: the notify-senechal line below records a machine
+# -state change, and under --on would otherwise name the caller, not the target.
 TARGET_HOST="${ON:-$HOST}"
 WHERE="$HOST"; [ -z "$ON" ] || WHERE="$ON (over ssh from $HOST)"
 echo "== $CLI_NAME ($MODE) on $WHERE, uid band $UID_MIN-$UID_MAX =="
