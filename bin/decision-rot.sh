@@ -84,6 +84,18 @@ if ! arming_load; then
   exit 6
 fi
 
+# LIVE AND UNSWEPT: this survey walks SWEEP, so a repo the roster arms but the
+# sweep set omits rots where nothing looks. Warned, not counted -- the exit code
+# still answers "is there rot in what I read", and this says what I did not read.
+if [ "$MODE" = all ]; then
+  UNSWEPT="$(sweep_unswept "$ARMING_ROSTER")"
+  [ -n "$UNSWEPT" ] && printf '%s: %s live in %s:%s and NOT in SWEEP, so this survey did not read %s: %s. Add to SWEEP_PROJECTS in lib/roster-set.sh.\n' \
+    "$CLI_NAME" "$(printf '%s\n' "$UNSWEPT" | grep -c .)" \
+    "$ARMING_ROSTER_REPO" "$ARMING_ROSTER_PATH" \
+    "$([ "$(printf '%s\n' "$UNSWEPT" | grep -c .)" = 1 ] && echo it || echo them)" \
+    "$(printf '%s\n' "$UNSWEPT" | paste -sd' ')" >&2
+fi
+
 # `number<TAB>verdict<TAB>at<TAB>state<TAB>title`. DETAIL is OPEN ONLY; COUNT
 # stays all-states, matching `answered` (B2).
 verdicts() {
