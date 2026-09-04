@@ -239,10 +239,7 @@ done
   && ok "H1 every repo that carries a backlog is swept, armed or not" \
   || bad "H1 every repo with a backlog is in SWEEP" "unswept:$_missing"
 
-# H1 IS A FROZEN LIST -- names typed on 2026-08-22. It cannot see an ARRIVAL,
-# and did not: `american-cycle` and `dog` were armed 2026-09-04 and unswept, H1
-# green throughout. sweep_unswept reads the roster instead, so the next
-# `dose <p> --arm` on an unswept repo reports itself.
+# H1 cannot see an ARRIVAL; sweep_unswept reads the roster instead.
 has "H3 sweep_unswept names a live roster row that SWEEP omits" \
   "$(sweep_unswept "$(printf 'newcomer\tlive\nrealisateur\tlive\n')")" newcomer
 [ -z "$(sweep_unswept "$(printf 'realisateur\tlive\nwtul\tlive\n')")" ] \
@@ -251,8 +248,6 @@ has "H3 sweep_unswept names a live roster row that SWEEP omits" \
 [ -z "$(sweep_unswept "$(printf 'newcomer\tparked\n')")" ] \
   && ok "H5 a parked row is not a gap -- nothing dispatches there" \
   || bad "H5 a parked row is not a gap" "reported a parked row"
-# The roster spells apms `apms`; the repo is `apms-2173`. Comparing raw keys
-# would report a repo that IS swept, every run, forever.
 [ -z "$(sweep_unswept "$(printf 'apms\tlive\n')")" ] \
   && ok "H6 a roster key is resolved to its repo name before comparing" \
   || bad "H6 roster key resolved to repo name" "apms reported as unswept"

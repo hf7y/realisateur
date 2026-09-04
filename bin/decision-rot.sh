@@ -84,9 +84,7 @@ if ! arming_load; then
   exit 6
 fi
 
-# LIVE AND UNSWEPT: this survey walks SWEEP, so a repo the roster arms but the
-# sweep set omits rots where nothing looks. Warned, not counted -- the exit code
-# still answers "is there rot in what I read", and this says what I did not read.
+# Warned, not counted: the exit code answers "is there rot in what I read".
 if [ "$MODE" = all ]; then
   UNSWEPT="$(sweep_unswept "$ARMING_ROSTER")"
   [ -n "$UNSWEPT" ] && printf '%s: %s live in %s:%s and NOT in SWEEP, so this survey did not read %s: %s. Add to SWEEP_PROJECTS in lib/roster-set.sh.\n' \
