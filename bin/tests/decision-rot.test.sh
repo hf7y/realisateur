@@ -239,6 +239,19 @@ done
   && ok "H1 every repo that carries a backlog is swept, armed or not" \
   || bad "H1 every repo with a backlog is in SWEEP" "unswept:$_missing"
 
+# H1 cannot see an ARRIVAL; sweep_unswept reads the roster instead.
+has "H3 sweep_unswept names a live roster row that SWEEP omits" \
+  "$(sweep_unswept "$(printf 'newcomer\tlive\nrealisateur\tlive\n')")" newcomer
+[ -z "$(sweep_unswept "$(printf 'realisateur\tlive\nwtul\tlive\n')")" ] \
+  && ok "H4 a swept live row is not reported" \
+  || bad "H4 a swept live row is not reported" "$(sweep_unswept "$(printf 'realisateur\tlive\n')")"
+[ -z "$(sweep_unswept "$(printf 'newcomer\tparked\n')")" ] \
+  && ok "H5 a parked row is not a gap -- nothing dispatches there" \
+  || bad "H5 a parked row is not a gap" "reported a parked row"
+[ -z "$(sweep_unswept "$(printf 'apms\tlive\n')")" ] \
+  && ok "H6 a roster key is resolved to its repo name before comparing" \
+  || bad "H6 roster key resolved to repo name" "apms reported as unswept"
+
 # WIRED IS NOT ARMED, and the two arrays are what keep them apart. A repo that
 # drifts from ECOSYSTEM into PROJECTS starts spending quota every night.
 _armed=""

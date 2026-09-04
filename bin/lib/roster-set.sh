@@ -12,20 +12,37 @@ SWEEP_SET_LIB=1
 SWEEP_OWNER="${SWEEP_OWNER:-$GH_ESTATE_OWNER}"
 
 # SWEPT, NOT ARMED. Membership says which repos to READ; liveness is
-# lib/arming.sh's authority, read at run time. `apms` here is `apms-2173`,
-# its real repo name: $OWNER/$p below is a GitHub path, not a ROSTER key (#905).
+# lib/arming.sh's authority, read at run time. Names here are REPO names, not
+# ROSTER keys -- $OWNER/$p is a GitHub path (#905). SWEEP_ROSTER_ALIAS maps.
 SWEEP_PROJECTS=(
-  abletim apms-2173 baudin bibliothecaire chezz crt dcp-gate-site ecosim
-  gardien groc-mangr nine-speakers realisateur scheduler secretaire senechal
-  sequestria vim-arcade wtul
+  abletim american-cycle apms-2173 baudin bibliothecaire chezz crt
+  dcp-gate-site dog ecosim gardien groc-mangr nine-speakers realisateur
+  scheduler secretaire senechal sequestria vim-arcade wtul
 )
+
+SWEEP_ROSTER_ALIAS='apms=apms-2173'   # ROSTER key -> repo name, where they differ
+
+sweep_repo() {
+  local kv
+  for kv in $SWEEP_ROSTER_ALIAS; do
+    [ "${kv%%=*}" = "$1" ] && { printf '%s' "${kv#*=}"; return 0; }
+  done
+  printf '%s' "$1"
+}
+
+# sweep_unswept <roster-text> -- live ROSTER rows SWEEP omits, as repo names.
+# Reads the roster, so an ARRIVAL reports itself; H1's pinned list cannot.
+sweep_unswept() {
+  local key state repo
+  while IFS=$'\t' read -r key state; do
+    [ "$state" = live ] || continue
+    repo="$(sweep_repo "$key")"
+    case " ${SWEEP[*]} " in *" $repo "*) ;; *) printf '%s\n' "$repo" ;; esac
+  done <<< "$1"
+}
 
 # ECOSYSTEM: carries decisions, never dispatches. WIRED, NOT ARMED -- swept by
 # decision-rot, given no account, no crontab row and no quota.
-#
-# EIGHT ADDED 2026-08-22, Zach-directed. 64 open issues then sat in ELEVEN
-# repos no sensor looked at -- `tempo` read BLIND, `check-project-busy` refused
-# the name, decision-rot walked past them. They were invisible, not idle.
 #
 # ARMING IS A SEPARATE ACT and deliberately not done here: being swept costs
 # one API read per run, being armed costs quota every night.
