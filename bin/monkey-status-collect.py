@@ -3,7 +3,8 @@
 
 RUN ON monkey, AS ROOT:  sudo -n python3 monkey-status-collect.py
 Read-only: reads /etc/passwd, each account's crontab, git config and git log,
-its scheduler run ledger, and its release-tick status file. Writes nothing,
+its scheduler run ledger and run records, and its release-tick status file.
+Writes nothing,
 dispatches nothing. Prints one JSON document on stdout -- the payload published
 to https://hf7y.com/monkey/status.json by bin/monkey-watch.sh, which feeds this
 file to monkey's python3 over stdin so the version that runs is the version in
@@ -83,6 +84,61 @@ def last_runs(user):
             "prs_opened", "prs_merged", "verdict_computed", "claimed_verdict",
             "claimed_reason")
     return [{k: r.get(k) for k in keep} for r in recs[-RUNS_KEPT:]][::-1]
+
+
+# Ledger rows a milestone-gate HOLD writes for itself (lib/run-ledger.sh /
+# bin/usage-paced-runner.sh in hf7y/scheduler) -- a tick that stops here never
+# reaches a real dispatch outcome, so these are never "the next row" a
+# MILESTONE-SELF-FED row is paired with.
+_MILESTONE_HOLD_OUTCOMES = {"COOLDOWN", "BLOCKED-HOLD", "MILESTONE-BLIND", "MILESTONE-HELD"}
+
+
+def milestone_self_fed(user):
+    """Whether the account's most recent real dispatch was let through only
+    because its milestone's actionable issues are all agent-filed (#575,
+    built in scheduler#614), and for how many consecutive dispatches running
+    back from the most recent one.
+
+    usage-paced-runner.sh appends a MILESTONE-SELF-FED ledger row immediately
+    before dispatching a tick admitted on that basis, and nothing else writes
+    a row in between: TEMPO and PACED_FORCE both skip the tick with NO ledger
+    row of their own (that script's own comment says so), so the row
+    immediately following a MILESTONE-SELF-FED row in this file -- which only
+    this account's own dispatcher ever appends to -- is reliably that same
+    tick's real outcome (WORKED, IDLE, FAILED, ...).
+
+    None if the ledger cannot be read or holds no real dispatch yet -- absence
+    is a missing history, not a "no", the same rule every other probe here
+    follows."""
+    f = f"{HOME_ROOT}/{user}/.local/share/scheduler-paced-runner/ledger.tsv"
+    try:
+        with open(f) as fh:
+            lines = fh.readlines()
+    except OSError:
+        return None
+    ticks = []          # (outcome_ts, fed_since_ts_or_None), oldest first
+    pending_since = None
+    for line in lines:
+        cols = line.rstrip("\n").split("\t")
+        if len(cols) != 8:
+            continue    # a torn tail row is not a tick
+        ts, outcome = cols[0], cols[6]
+        if outcome == "MILESTONE-SELF-FED":
+            pending_since = ts
+            continue
+        if outcome in _MILESTONE_HOLD_OUTCOMES:
+            continue    # held before dispatch: not a real outcome
+        ticks.append((ts, pending_since))
+        pending_since = None
+    if not ticks:
+        return None
+    streak, since = 0, None
+    for _ts, fed_since in reversed(ticks):
+        if fed_since is None:
+            break
+        streak += 1
+        since = fed_since
+    return {"current": streak > 0, "streak": streak, "since": since}
 
 
 def release_tick(user, cron_lines):
@@ -291,6 +347,7 @@ if __name__ == "__main__":            # importable per function; `python3 - <fil
             "roster_state": (states or {}).get(u) if states is not None else None,
             "cron": c,
             "release_tick": release_tick(u, c),
+            "milestone_self_fed": milestone_self_fed(u),
             "runs": runs,
             "last_run": runs[0] if runs else None,
             "containment": containment(u, pwd.getpwnam(u).pw_uid),
