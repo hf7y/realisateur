@@ -16,6 +16,7 @@ cp "$HERE/../lib/host-check.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/zaxon.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/propagation-set.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/estate-set.sh" "$TMP/bin/lib/"
+cp "$HERE/../lib/cron-lock.sh" "$TMP/bin/lib/"
 
 stub() { printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s"\nexit %s\n' "${3:-}" "$2" > "$TMP/bin/$1"; chmod +x "$TMP/bin/$1"; }
 
@@ -435,5 +436,133 @@ printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/curl"; chmod +x "$TMP/stub/c
 out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=mandark SELFDEV_LIBEXEC="$TMP/no-libexec" bash "$TMP/bin/ausculte.sh" hosts 2>&1)"; rc=$?
 check "no readable status document is BLIND (6)" "$rc" "6"
 has "and it says nothing else measures dexter" "$out" "nothing else measures dexter"
+
+echo
+echo "-- --cadence: folded in from the retired ausculte-cadence.sh (#894) ----"
+# Hermetic the same way: AUSCULTE_BIN still overrides what --cadence shells
+# out to for its rows, only now that target can be ausculte.sh itself.
+CADSTATE="$TMP/cadstate"
+stub_cad_json() { # <json> [exit]
+  printf '#!/usr/bin/env bash\ncat <<%s\n%s\n%s\nexit %s\n' "JSON" "$1" "JSON" "${2:-0}" > "$TMP/bin/cad-source.sh"
+  chmod +x "$TMP/bin/cad-source.sh"
+}
+runcad() { OUT="$(PATH="$TMP/stub:$PATH" AUSCULTE_BIN="$TMP/bin/cad-source.sh" \
+                  AUSCULTE_CADENCE_STATE="$CADSTATE" \
+                  bash "$TMP/bin/ausculte.sh" --cadence 2>&1)"; RC=$?; }
+
+DOWN_ROW='[{"probe":"arming","status":"DOWN","detail":"two accounts stopped"}]'
+OK_ROW='[{"probe":"arming","status":"OK","detail":"all dispatching"}]'
+
+section "cadence A. a DOWN row is reported and recorded"
+rm -rf "$CADSTATE"; stub_cad_json "$DOWN_ROW"
+runcad
+check "A1 exit 5 -- a DOWN row is DOWN on the first reading, not the second" "$RC" "5"
+has "A2 it names the row and its detail" "$OUT" "arming"
+[ -f "$CADSTATE/arming.down" ] && ok "A3 the state is on disk, so a later reader can date it" \
+  || bad "A3 the state is on disk" "no state file"
+
+section "cadence B. the record is a SINCE, not a counter"
+touch -d '2001-01-01T00:00:00Z' "$CADSTATE/arming.down"
+runcad
+check "B1 still DOWN, still exit 5" "$RC" "5"
+_m="$(date -u -r "$CADSTATE/arming.down" +%Y 2>/dev/null)"
+[ "$_m" = 2001 ] && ok "B2 a persisting state does not rewrite its own timestamp" \
+  || bad "B2 a persisting state keeps its timestamp" "mtime year is now [$_m]"
+has "B3 and the row is reported as having held since then" "$OUT" "since 2001-01-01"
+
+section "cadence C. a recovery clears the record"
+stub_cad_json "$OK_ROW"
+runcad
+check "C1 exit 0" "$RC" "0"
+[ -f "$CADSTATE/arming.down" ] && bad "C2 the record is cleared" "state file survived" \
+  || ok "C2 the record is cleared"
+stub_cad_json "$DOWN_ROW"
+runcad
+has "C3 the next DOWN dates from now, not from the cleared record" "$OUT" "since now"
+
+section "cadence D. BLIND from the source is BLIND here"
+stub_cad_json '[{"probe":"hosts","status":"BLIND","detail":"cannot reach dexter"}]'
+runcad
+check "D1 a BLIND row is not DOWN and not OK" "$RC" "0"
+[ -f "$CADSTATE/hosts.blind" ] && ok "D2 BLIND keeps its own record, never the DOWN one" \
+  || bad "D2 BLIND keeps its own record" "no hosts.blind"
+[ -f "$CADSTATE/hosts.down" ] && bad "D3 a BLIND row never writes the DOWN record" "hosts.down exists" \
+  || ok "D3 a BLIND row never writes the DOWN record"
+
+section "cadence E. a non-array answer is BLIND, never 'no rows'"
+printf '#!/usr/bin/env bash\nprintf "not json\\n"\nexit 0\n' > "$TMP/bin/cad-source.sh"
+chmod +x "$TMP/bin/cad-source.sh"
+runcad
+check "E1 exit 6" "$RC" "6"
+has "E2 it says it produced no rows" "$OUT" "no rows"
+
+section "cadence E2. mints a credential when it has none"
+printf '#!/usr/bin/env bash\n[ "$1" = --token ] && printf "ghs_fixturetoken\\n"\n' > "$TMP/bin/mint.sh"
+chmod +x "$TMP/bin/mint.sh"
+printf '#!/usr/bin/env bash\nprintf "[{\\"probe\\":\\"rot\\",\\"status\\":\\"OK\\",\\"detail\\":\\"%%s\\"}]\\n" "$GH_TOKEN"\n' > "$TMP/bin/cad-source.sh"
+chmod +x "$TMP/bin/cad-source.sh"
+OUT="$(PATH="$TMP/stub:$PATH" AUSCULTE_BIN="$TMP/bin/cad-source.sh" AUSCULTE_CADENCE_STATE="$CADSTATE" \
+       SELFDEV_APP_MINT="$TMP/bin/mint.sh" GH_TOKEN='' GITHUB_TOKEN='' \
+       bash "$TMP/bin/ausculte.sh" --cadence 2>&1)"
+has "E2a the minted token reaches the probes" "$OUT" "ghs_fixturetoken"
+
+OUT="$(PATH="$TMP/stub:$PATH" AUSCULTE_BIN="$TMP/bin/cad-source.sh" AUSCULTE_CADENCE_STATE="$CADSTATE" \
+       SELFDEV_APP_MINT="$TMP/bin/mint.sh" GH_TOKEN=ghs_alreadyhere \
+       bash "$TMP/bin/ausculte.sh" --cadence 2>&1)"
+has "E2b an existing credential is not replaced" "$OUT" "ghs_alreadyhere"
+
+section "cadence F. --install-cadence writes nothing without --apply"
+before="$(crontab -l 2>/dev/null | md5sum)"
+OUT="$(bash "$TMP/bin/ausculte.sh" --install-cadence 2>&1)"; RC=$?
+has "F1 it prints the line it would install" "$OUT" "realisateur:ausculte:CADENCE"
+has "...naming --cadence, not the retired standalone script" "$OUT" "--cadence"
+eq "F2 the crontab is untouched" "$(crontab -l 2>/dev/null | md5sum)" "$before"
+
+section "cadence G. it files nothing at anybody, and reaches no human on its own"
+# Same guard #894 carried over from ausculte-cadence.sh: 47 zaxon questions
+# sent/0 answered, 10 issues/5 days over 5 rows, both cut for cause. The
+# `channel` probe still legitimately reaches zaxon (it is what answers
+# "can Zach be reached at all") -- what must stay gone is the CADENCE layer
+# escalating on its own, so the check is for zaxon_ask/issue-create/-close
+# specifically, not for zaxon.sh being sourced anywhere in the file.
+cat > "$TMP/bin/gh" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$GH_LOG"
+case "$*" in *"issue list"*) echo 654 ;; esac
+exit 0
+STUB
+chmod +x "$TMP/bin/gh"
+ghruncad() { OUT="$(PATH="$TMP/stub:$PATH" GH_LOG="$TMP/gh.log" \
+                    AUSCULTE_BIN="$TMP/bin/cad-source.sh" AUSCULTE_CADENCE_STATE="$CADSTATE" \
+                    bash "$TMP/bin/ausculte.sh" --cadence 2>&1)"; RC=$?; }
+
+: > "$TMP/gh.log"; rm -f "$CADSTATE"/*.down "$CADSTATE"/*.blind
+stub_cad_json "$DOWN_ROW"
+ghruncad; ghruncad
+check "G1 a row DOWN twice running still exits 5" "$RC" "5"
+case "$(cat "$TMP/gh.log")" in
+  *"issue create"*) bad "G2 no issue is ever created" "it called gh issue create" ;;
+  *)                ok  "G2 no issue is ever created" ;;
+esac
+
+: > "$TMP/gh.log"
+stub_cad_json "$OK_ROW"
+ghruncad
+check "G3 a recovery exits 0" "$RC" "0"
+case "$(cat "$TMP/gh.log")" in
+  *"issue close"*) bad "G4 no issue is ever closed" "it called gh issue close" ;;
+  *)               ok  "G4 no issue is ever closed" ;;
+esac
+
+live="$(grep -vE '^[[:space:]]*#' "$HERE/../ausculte.sh")"
+case "$live" in
+  *zaxon_ask*) bad "H1 no live call to zaxon_ask" "it is back -- 47 sent, 0 answered" ;;
+  *)           ok  "H1 no live call to zaxon_ask" ;;
+esac
+case "$live" in
+  *"issue create"*) bad "H2 the issue-filing leg is gone from the source too" "gh issue create is back" ;;
+  *)                ok  "H2 the issue-filing leg is gone from the source too" ;;
+esac
+has "H3 a DOWN row still exits 5, so a caller can still see it" "$live" 'exit 5'
 
 summary
