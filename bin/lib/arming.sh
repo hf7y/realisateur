@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # lib/arming.sh -- DOES ANYTHING DISPATCH TO THIS REPO? Read-only, one call.
-# Authority: the roster service on dexter, written only by the verb
-# `dose <project> --arm|--park` (scheduler#291) -- not typed by hand (misled an
-# agent twice, #521, until 2026-09-05). Read-only rule HERE:
-# decision-rot.test.sh I14, not prose.
+# Authority: the roster service on dexter. A PERSON POSTS AND THE VERB WRITES
+# -- `dose <project> --arm|--park` is the only supported writer and refuses a
+# uid 3000-3099 self-dev caller. Said "only a human edits" of the file this
+# replaced, which reads cold as "a person types the change": false, and it
+# misled an agent into reporting it as fact twice (hf7y/scheduler#521).
+# The read-only rule HERE is enforced by decision-rot.test.sh I14, not prose.
 # NOT lib/roster-set.sh, which is the SWEEP set. BLIND classifies NOTHING.
 # It read schedule/ROSTER out of a repo until hf7y/scheduler#429.
 

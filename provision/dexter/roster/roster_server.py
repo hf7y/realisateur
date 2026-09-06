@@ -1,27 +1,44 @@
 #!/usr/bin/env python3
 """roster_server.py -- the estate's arming authority. hf7y/scheduler#429, #432.
 
-The repo declares (project | account@host | rate); this holds the STATE and
-nothing else does, so the two cannot disagree -- their fields are disjoint.
-Writes are one call, need no CI, and return only once committed. Stdlib only:
-this is the process that must come back up when everything else is broken.
+STATE AND NOTHING ELSE: project -> live|parked. Writes are one call, need no
+CI, and return only once committed. Stdlib only: this is the process that must
+come back up when everything else is broken.
+
+WHY THERE IS NO DECLARATION HALF (Zach, 2026-09-05: "we don't even need
+declaration as far as I can see. State is enough"). This served a
+`project | account@host | rate` file from the repo and ingested it every 300s.
+Measured across all 23 rows the day it was cut:
+
+    account  == project in 23 of 23 rows          -- a copy of the primary key
+    rate     == 20m     in 23 of 23 rows          -- a constant, and bin/tempo.sh
+                                                     sets the real interval from
+                                                     backlog, so it is not the pace
+    host     19 monkey, 4 vaporwave               -- the only column with content
+
+and `host` is a fact each machine can answer about ITSELF: an account in the
+uid 3000-3099 band either exists locally or does not. Sourced from the machine
+it cannot go stale, which a file about the machine can. So the declaration was
+a copy of the key, a constant written 23 times, and a worse answer to a
+question the host already knows. All three are gone, and with them the ingest
+loop, the poll of a git host, and the second writer.
+
+A row is CREATED BY ITS FIRST WRITE. There is no "declare it first" 404: an
+undeclared project was never the guard it looked like, because `dose` already
+refuses to arm a project with no unix account on the host it runs on, and that
+refusal reads the machine rather than a list. A typo here creates a row that
+nothing ever converges.
 """
 import hmac
 import json
 import os
 import sqlite3
 import threading
-import time
-import urllib.request
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
 DB_PATH = os.environ.get("ROSTER_DB", "/data/roster.db")
-DECLARATION_URL = os.environ.get(
-    "ROSTER_DECLARATION_URL",
-    "https://raw.githubusercontent.com/hf7y/scheduler/main/schedule/ROSTER")
-INGEST_EVERY_S = int(os.environ.get("ROSTER_INGEST_EVERY_S", "300"))
 PORT = int(os.environ.get("ROSTER_PORT", "8646"))
 TOKEN = os.environ.get("ROSTER_WRITE_TOKEN", "")
 STATES = ("live", "parked")
@@ -29,11 +46,7 @@ STATES = ("live", "parked")
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS rows (
     project    TEXT PRIMARY KEY,
-    account    TEXT NOT NULL,
-    host       TEXT NOT NULL,
-    rate       TEXT NOT NULL,
     state      TEXT NOT NULL,
-    declared   INTEGER NOT NULL DEFAULT 1,
     updated_at TEXT,
     updated_by TEXT
 );
@@ -44,12 +57,6 @@ CREATE TABLE IF NOT EXISTS armings (
     to_state   TEXT NOT NULL,
     by         TEXT,
     remote     TEXT
-);
-CREATE TABLE IF NOT EXISTS ingest (
-    id         INTEGER PRIMARY KEY CHECK (id = 1),
-    at         TEXT,
-    rows_seen  INTEGER,
-    error      TEXT
 );
 """
 
@@ -67,64 +74,8 @@ def conn():
     return c
 
 
-def parse_declaration(text):
-    """splitlines() keeps a final unterminated line -- scheduler#430."""
-    out = []
-    for line in text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        f = [c.strip() for c in line.split("|")]
-        if len(f) < 3 or "@" not in f[1]:
-            continue
-        acct, _, host = f[1].partition("@")
-        out.append((f[0], acct, host, f[2]))
-    return out
-
-
-def ingest_once():
-    """Declaration only. NEVER writes `state`."""
-    c = conn()
-    try:
-        text = urllib.request.urlopen(DECLARATION_URL, timeout=15).read().decode()
-        declared = parse_declaration(text)
-        if not declared:
-            raise ValueError("zero rows parsed -- refusing to orphan everything")
-        with _lock, c:
-            names = {d[0] for d in declared}
-            for project, acct, host, rate in declared:
-                if c.execute("SELECT 1 FROM rows WHERE project=?", (project,)).fetchone():
-                    c.execute("UPDATE rows SET account=?, host=?, rate=?, declared=1 "
-                              "WHERE project=?", (acct, host, rate, project))
-                else:
-                    # BORN PARKED: a new declaration never arms anything.
-                    c.execute("INSERT INTO rows (project,account,host,rate,state,declared,"
-                              "updated_at,updated_by) VALUES (?,?,?,?,'parked',1,?,'ingest')",
-                              (project, acct, host, rate, now()))
-            for r in c.execute("SELECT project FROM rows WHERE declared=1").fetchall():
-                if r["project"] not in names:
-                    c.execute("UPDATE rows SET declared=0 WHERE project=?", (r["project"],))
-            c.execute("INSERT INTO ingest (id,at,rows_seen,error) VALUES (1,?,?,NULL) "
-                      "ON CONFLICT(id) DO UPDATE SET at=excluded.at, "
-                      "rows_seen=excluded.rows_seen, error=NULL", (now(), len(declared)))
-    except Exception as e:                                  # noqa: BLE001
-        with _lock, c:
-            c.execute("INSERT INTO ingest (id,at,rows_seen,error) VALUES (1,?,NULL,?) "
-                      "ON CONFLICT(id) DO UPDATE SET at=excluded.at, error=excluded.error",
-                      (now(), f"{type(e).__name__}: {e}"))
-    finally:
-        c.close()
-
-
-def ingest_loop():
-    while True:
-        ingest_once()
-        time.sleep(INGEST_EVERY_S)
-
-
 def row_json(r):
-    return {"project": r["project"], "account": r["account"], "host": r["host"],
-            "rate": r["rate"], "state": r["state"], "declared": bool(r["declared"]),
+    return {"project": r["project"], "state": r["state"],
             "updated_at": r["updated_at"], "updated_by": r["updated_by"]}
 
 
@@ -149,20 +100,15 @@ class Handler(BaseHTTPRequestHandler):
         c = conn()
         try:
             if u.path == "/healthz":
-                i = c.execute("SELECT * FROM ingest WHERE id=1").fetchone()
                 n = c.execute("SELECT COUNT(*) FROM rows").fetchone()[0]
                 live = c.execute("SELECT COUNT(*) FROM rows WHERE state='live'").fetchone()[0]
                 return self.send(200, {"ok": True, "rows": n, "live": live,
-                                       "writes_enabled": bool(TOKEN),
-                                       "declaration_url": DECLARATION_URL,
-                                       "ingest_at": i["at"] if i else None,
-                                       "ingest_rows": i["rows_seen"] if i else None,
-                                       "ingest_error": i["error"] if i else "never ran"})
+                                       "writes_enabled": bool(TOKEN)})
             if u.path == "/roster":
                 rows = [row_json(r) for r in
                         c.execute("SELECT * FROM rows ORDER BY project").fetchall()]
-                if host := (q.get("host") or [None])[0]:
-                    rows = [r for r in rows if r["host"] == host]
+                if state := (q.get("state") or [None])[0]:
+                    rows = [r for r in rows if r["state"] == state]
                 return self.send(200, {"rows": rows})
             if u.path.startswith("/roster/"):
                 r = c.execute("SELECT * FROM rows WHERE project=?",
@@ -200,19 +146,22 @@ class Handler(BaseHTTPRequestHandler):
         if state not in STATES:
             return self.send(400, {"error": f"state must be one of {STATES}"})
         project = u.path[len("/roster/"):]
+        if not project or "/" in project:
+            return self.send(400, {"error": "one project per call, no path separators"})
         c = conn()
         try:
             with _lock, c:
-                r = c.execute("SELECT * FROM rows WHERE project=?", (project,)).fetchone()
-                if not r:
-                    return self.send(404, {"error": "no such row -- declare it in "
-                                                    "schedule/ROSTER first"})
-                # ONE transaction with its audit line.
+                r = c.execute("SELECT state FROM rows WHERE project=?", (project,)).fetchone()
+                # ONE transaction with its audit line. A first write CREATES:
+                # there is no declaration to be absent from.
                 c.execute("INSERT INTO armings (ts,project,from_state,to_state,by,remote) "
                           "VALUES (?,?,?,?,?,?)",
-                          (now(), project, r["state"], state, by, self.address_string()))
-                c.execute("UPDATE rows SET state=?, updated_at=?, updated_by=? WHERE project=?",
-                          (state, now(), by, project))
+                          (now(), project, r["state"] if r else None, state, by,
+                           self.address_string()))
+                c.execute("INSERT INTO rows (project,state,updated_at,updated_by) "
+                          "VALUES (?,?,?,?) ON CONFLICT(project) DO UPDATE SET "
+                          "state=excluded.state, updated_at=excluded.updated_at, "
+                          "updated_by=excluded.updated_by", (project, state, now(), by))
             r = c.execute("SELECT * FROM rows WHERE project=?", (project,)).fetchone()
             return self.send(200, row_json(r))
         finally:
@@ -221,9 +170,6 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     conn().close()
-    # SYNCHRONOUS: a just-started container must not answer /roster empty.
-    ingest_once()
-    threading.Thread(target=ingest_loop, daemon=True).start()
     print(f"{now()} roster serving on 0.0.0.0:{PORT} db={DB_PATH} "
           f"writes={'enabled' if TOKEN else 'REFUSED (no token)'}", flush=True)
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
