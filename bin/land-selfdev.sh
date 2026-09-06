@@ -228,17 +228,21 @@ fi
 # --- stop here ---------------------------------------------------------------
 echo
 echo "== dispatch preview (NOTHING armed) =="
-if [ -x "$PROJECTS/scheduler/bin/sync-crontab.sh" ]; then
-  ( cd "$PROJECTS/scheduler" && ./bin/sync-crontab.sh ) || true
+if command -v dose >/dev/null 2>&1; then  # dose <project> defaults to --check: preview only, writes nothing (#1004 -- sync-crontab.sh is gone from hf7y/scheduler)
+  for p in ${SELFDEV_PROJECTS:-$(id -un)}; do dose "$p" || true; done
+else
+  echo "  (dose not on PATH yet -- no preview; see the installe/install-verbs steps above)"
 fi
 cat <<EOF
 
 land-selfdev: $PASS ok, $GAPS missing, $BAD bad.
 
 NOTHING IS SCHEDULED YET, deliberately. Read the preview above; there must be
-ZERO lines beginning "ERROR [". Then, and only as a separate act:
-
-    cd $PROJECTS/scheduler && ./bin/sync-crontab.sh --apply
+ZERO lines beginning "ERROR [". Then, and only as a separate act, for each
+project above:
+EOF
+for p in ${SELFDEV_PROJECTS:-$(id -un)}; do echo "    dose $p --apply"; done  # replaces the dead sync-crontab.sh --apply (#1004)
+cat <<EOF
 
 Arming dispatch is the one step that spends a shared quota, and on this
 ecosystem's accounting mandark, dexter and this host all draw on the same
