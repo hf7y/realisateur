@@ -350,4 +350,15 @@ refusal='data: {"jsonrpc":"2.0","result":{"content":[{"text":"{\n  \"status\": \
 why="$(printf '%s' "$refusal" | grep -oE '\\?"error\\?": ?\\?"[^"\\]*' | sed 's/.*"//' | head -1)"
 has "P5 zaxon reports the relay's OWN refusal reason, not 'no relay answered'" "$why" "must be at most 140"
 
+section "Q. an unread probe is not an outage (2026-09-06: OK -> DOWN, \"VM is poweroff\", on a distro up 5 days)"
+unk_ln="$(grep -n 'VMSTATE" = "unknown"' "$W" | head -1 | cut -d: -f1)"
+down_ln="$(grep -n 'VMSTATE" != "running"' "$W" | head -1 | cut -d: -f1)"
+if [ -n "$unk_ln" ] && [ -n "$down_ln" ] && [ "$unk_ln" -lt "$down_ln" ]; then
+  ok "Q1 an unreadable VM state with sshd answering is caught BEFORE the DOWN rung"
+else
+  bad "Q1 unknown+answering is caught before DOWN" "a lost wsl.exe call pages Zach as poweroff again"
+fi
+has "Q2 ...and it does not claim OK either -- the watcher lost a probe" \
+  "$(code "$W")" 'VERDICT="DEGRADED"; WHY="the host could not read the VM state'
+
 summary

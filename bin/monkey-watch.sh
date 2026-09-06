@@ -190,6 +190,8 @@ esac
 # read-only root is called out separately from "down": it is the specific
 # recurring failure here, and it looks like up from most angles.
 if   [ "$PAUSE_ACTIVE" = 1 ];           then VERDICT="PAUSED";   WHY="$PAUSE_WHY"
+elif [ "$VMSTATE" = "unknown" ] && [ "$SSHD" = "answering" ];
+                                        then VERDICT="DEGRADED"; WHY="the host could not read the VM state, but sshd answers -- it is up"
 elif [ "$VMSTATE" != "running" ];       then VERDICT="DOWN";     WHY="VM is $VMSTATE"
 elif [ "$SSHD" != "answering" ];        then VERDICT="DOWN";     WHY="VM running but sshd is $SSHD"
 elif [ "$ROOTMOUNT" = "ro" ];           then VERDICT="DEGRADED"; WHY="root is mounted READ-ONLY"
