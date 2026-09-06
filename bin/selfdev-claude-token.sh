@@ -120,9 +120,9 @@ install)
   case "$tok" in sk-ant-oat*) ;; *) die "$SRC does not hold an sk-ant-oat* token -- refusing to install it" ;; esac
 
   # A prefix is not a shape; the replaced value is the only known-good example.
+  new_len="${#tok}"  # assigned before the branch: the `else` (a FIRST install, no $TOKPATH yet) reports it too, and under `set -u` it died unbound there (2026-09-03, vaporwave)
   if [ -e "$TOKPATH" ] && selfdev_token_readable "$TOKPATH"; then
     cur_len="$(tr -d '[:space:]' < "$TOKPATH" | wc -c)"
-    new_len="${#tok}"
     if [ "$cur_len" -ne "$new_len" ] && [ "$FORCE_LEN" -eq 0 ]; then
       printf 'selfdev-claude-token: REFUSING -- the new value is %d characters, the one it replaces is %d.\n' "$new_len" "$cur_len" >&2
       printf '  A token that is the wrong length is a bad paste, and --fanout would carry it to every account.\n' >&2
