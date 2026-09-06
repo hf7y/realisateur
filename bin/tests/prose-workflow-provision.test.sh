@@ -44,7 +44,6 @@ chmod +x "$GH"
 APPTOK="$T/apptok"
 cat > "$APPTOK" <<'STUB'
 #!/usr/bin/env bash
-# selfdev-gh-app.sh --token --repos <name> stub: last line is the token.
 [ -f "$FIX/refuse-token" ] && exit 1
 echo "ghs_faketoken0000000000000000000000"
 STUB
@@ -52,8 +51,6 @@ chmod +x "$APPTOK"
 
 put() { local k; k="$(printf '%s' "$1" | tr -c 'A-Za-z0-9' '_')"; shift; cat > "$FIX/$k"; }
 
-# written_body <capture-file> -- the decoded workflow YAML from a captured
-# `-f content=<base64> ...` write, or nothing.
 written_body() {
   [ -f "$1" ] || return 0
   grep -oE 'content=[A-Za-z0-9+/=]+' "$1" | head -1 | cut -d= -f2- | base64 -d 2>/dev/null

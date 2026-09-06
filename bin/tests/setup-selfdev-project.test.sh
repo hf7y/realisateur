@@ -82,8 +82,6 @@ d="$(cd "$(dirname "$0")/.." && pwd)"
 echo "release-channel stub: $*"
 STUB
 
-# NOT staged into $HOME_DIR/.selfdev-setup/ -- step 10 calls it directly from
-# $HERE, same as this one, so its own dirname/.. is $TMP, not $PHOME.
 cat > "$BIN/prose-workflow-provision.sh" <<'STUB'
 #!/usr/bin/env bash
 d="$(cd "$(dirname "$0")/.." && pwd)"
@@ -289,11 +287,6 @@ esac
 
 echo
 echo "-- 10. .github/workflows/prose.yml at standup (hf7y/realisateur#800) ----"
-# The gap #800 named: nine steps stood an account up and none of them touched
-# .github/workflows/, so a fresh repo read NOCI until someone added the
-# workflow by hand. Step 10 delegates to prose-workflow-provision.sh --apply
-# <project>, the same verb usable standalone against a repo that already
-# exists -- not reimplemented here.
 setup
 check "10a step 10 ran, apply mode, naming the project" \
       "$(cat "$TMP/prose-calls" 2>/dev/null)" "--apply $PROJECT"

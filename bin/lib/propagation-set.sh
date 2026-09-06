@@ -215,13 +215,7 @@ prose-workflow-provision.sh
 # carry.sh and reprise.sh are LOCAL: they write to a BRANCH of this repo, not a
 # host, so per-account copies would be many writers racing one force-with-lease.
 # reprise also reads bin/lib/handoffs.tsv, THIS repo's ledger, empty elsewhere.
-# registry-standup.sh, unarmed.sh, branch-protection-provision.sh: LOCAL. FLEET subjects; unarmed rides prop_host_tools.
-# prose-workflow-provision.sh: LOCAL, same reasoning as branch-protection-
-# provision.sh -- its subject is another repo entirely, reached by a minted
-# App token and the GitHub API, never a per-account deploy key, so it needs
-# no copy on a self-dev account's own host. setup-selfdev-project.sh (itself
-# PROP_PROVISION_SCRIPTS) calls it by path from whatever clone is running it,
-# exactly as it already calls its PROP_PROVISION_SCRIPTS siblings.
+# registry-standup.sh, unarmed.sh, branch-protection-provision.sh, prose-workflow-provision.sh: LOCAL. FLEET subjects; unarmed rides prop_host_tools.
 # publish-release-verdict.sh is LOCAL because it runs in the release pipeline.
 
 # prop_host_tools -- what a provisioned host carries under

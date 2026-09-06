@@ -1,48 +1,4 @@
 #!/usr/bin/env bash
-# prose-workflow-provision.sh -- the half of #800 that lands the FILE:
-# .github/workflows/prose.yml, so a repo has something for
-# branch-protection-provision.sh to require.
-#
-# hf7y/realisateur#800 (2026-09-03, the comment that left this open): "Step 2
-# -- setup-selfdev-project.sh gaining the step that writes prose.yml at
-# standup -- is not done. Four repos needed it by hand tonight, which is four
-# more than should have." This is that step, factored out so the same code is
-# callable standalone against a repo that already exists, not only one still
-# standing up -- setup-selfdev-project.sh's own step 10 is a one-repo call
-# into this.
-#
-# THE SHAPE, confirmed live on 2026-09-06 by diffing five PRIVATE compliant
-# copies (abletim, secretaire, apms-2173, nine-speakers, gardien, ecosim,
-# wtul) against three PUBLIC ones (american-cycle, front-door, crt): a
-# private repo's copy adds `runs_on: '["self-hosted","linux"]'` (hf7y's
-# hosted minutes are refused there) and drops the `concurrency:` block a
-# public copy always carries. Nothing else differs; `state_prose: true` is on
-# both. bibliothecaire additionally carries `runtime: true`, which is a
-# project's own extra input, not part of this floor, and is left alone.
-#
-# NO LOCAL CLONE, NO PUSH TO A DEFAULT BRANCH. Every write goes through the
-# GitHub API: a branch off the default branch's tip, the file placed there by
-# the contents API, then a PR -- the same "commits nothing to main itself"
-# shape enrole-selfdev.sh and reprise.sh already use. CLAUDE.md refuses a
-# direct push to main for every account, this one included.
-#
-# IDENTITY: a GitHub App installation token, minted the way ausculte.sh's
-# --cadence branch and gh-sign.sh already mint one (selfdev-gh-app.sh
-# --token), not the invoking account's own credential. This runs as root
-# during standup, which has no `gh auth login` of its own, and the App's own
-# bot identity is the point of that script existing (its own header).
-#
-# RUNNER-FIRST IS NOT A GATE HERE, DELIBERATELY. #800 carried a correction on
-# 2026-09-03: an earlier comment said a private repo needs a self-hosted
-# runner before it can get a workflow; the provisioner actually refuses a
-# PRIVATE repo that has NO WORKFLOWS YET (needs_runner() is private AND
-# has_workflows), so the workflow lands first and its checks queue rather
-# than deadlock. apms-2173 proved it: 0 runners, 0 workflows, first check
-# green in 13s. This script does not check for a runner and does not wait.
-#
-# BRANCH PROTECTION IS A SEPARATE, REVIEWED STEP. This never calls
-# branch-protection-provision.sh and never touches required-check settings --
-# it only gives that script something to require.
 set -uo pipefail
 
 CLI_NAME='prose-workflow-provision.sh'
@@ -74,7 +30,7 @@ names=()
 for a in "$@"; do
   case "$a" in
     --check|--apply) MODE="$a" ;;
-    -*) ;;   # cli_guard above already refused anything not in CLI_FLAGS
+    -*) ;;
     *) names+=("$a") ;;
   esac
 done
@@ -89,9 +45,6 @@ blind() { say BLIND "$*"; BLIND=$((BLIND+1)); }
 
 api_get() { "$GH_BIN" api "$1" 2>/dev/null; }
 
-# mint_token <repo> -- an App installation token scoped to just this repo, or
-# nothing (rc 1). Same minting call ausculte.sh --cadence and gh-sign.sh
-# already use; not reimplemented here.
 mint_token() {
   local repo="$1" t
   [ -x "$APP_TOKEN_CMD" ] || return 1
@@ -99,58 +52,23 @@ mint_token() {
   case "$t" in gh[a-z]_*) printf '%s' "$t"; return 0 ;; *) return 1 ;; esac
 }
 
+read -r -d '' PREAMBLE_TEXT <<'TXT' || :
+prose.yml -- the estate's prose guard. The whole integration.
+
+The guard itself lives in hf7y/etalon and is maintained ONLY there, so this
+file never needs to change when the guard does. .prose-ratchet is this
+repo's own floor and only ever falls.
+TXT
+PREAMBLE="$(printf '%s\n' "$PREAMBLE_TEXT" | awk '{print (length($0) ? "# " $0 : "#")}')"
+
 body_public() {
-  cat <<'YAML'
-# prose.yml -- the estate's prose guard. The whole integration.
-#
-# The guard itself lives in hf7y/etalon and is maintained ONLY there, so this
-# file never needs to change when the guard does. .prose-ratchet is this
-# repo's own floor and only ever falls.
-name: prose
-
-on:
-  pull_request:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-jobs:
-  prose:
-    uses: hf7y/etalon/.github/workflows/guard.yml@main
-    with:
-      state_prose: true
-YAML
+  printf '%s\nname: prose\n\non:\n  pull_request:\n\nconcurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n\njobs:\n  prose:\n    uses: hf7y/etalon/.github/workflows/guard.yml@main\n    with:\n      state_prose: true\n' "$PREAMBLE"
 }
 
 body_private() {
-  cat <<'YAML'
-# prose.yml -- the estate's prose guard. The whole integration.
-#
-# The guard itself lives in hf7y/etalon and is maintained ONLY there, so this
-# file never needs to change when the guard does. .prose-ratchet is this
-# repo's own floor and only ever falls.
-#
-# runs_on: this repo is PRIVATE and hf7y's hosted minutes are refused, so the
-# required check could not start at all.
-name: prose
-
-on:
-  pull_request:
-
-jobs:
-  prose:
-    uses: hf7y/etalon/.github/workflows/guard.yml@main
-    with:
-      runs_on: '["self-hosted", "linux"]'
-      state_prose: true
-YAML
+  printf '%s\nname: prose\n\non:\n  pull_request:\n\njobs:\n  prose:\n    uses: hf7y/etalon/.github/workflows/guard.yml@main\n    with:\n      runs_on: '"'"'["self-hosted", "linux"]'"'"'\n      state_prose: true\n' "$PREAMBLE"
 }
 
-# open_pr_exists <slug> <token> -- an open PR from an earlier run of this
-# script is still open (rc 0), or not (rc 1). Checked before minting a branch
-# so a re-run of setup-selfdev-project.sh (documented idempotent) does not
-# open a second PR for the same gap while the first is still under review.
 open_pr_exists() {
   local slug="$1" token="$2" heads
   heads="$(GH_TOKEN="$token" api_get "repos/$slug/pulls?state=open&per_page=100" \
