@@ -298,11 +298,19 @@ cred_check_repo_keys() {
   # `--json title,readOnly` is REQUESTED but not, in practice, HONOURED: gh
   # 2.45.0 validates "readOnly" as a real field name (an unknown one is
   # refused with a list that names it) and then ignores the filter anyway,
-  local json; json="$("$CRED_GH_BIN" repo deploy-key list --repo "$CRED_GH_OWNER/$repo" --json title,readOnly 2>/dev/null)"
-  if [ -z "$json" ]; then
+  local json rc
+  json="$("$CRED_GH_BIN" repo deploy-key list --repo "$CRED_GH_OWNER/$repo" --json title,readOnly 2>/dev/null)"
+  rc=$?
+  # TRAP (#916): a repo with NO deploy keys prints nothing at all, rc 0 --
+  # not "[]". Empty stdout used to read as "the call failed" regardless of
+  # rc, so a real zero-keys finding (abletim, apms-2173: both push over an
+  # App installation token, not ssh) hid behind the same BLIND as a genuine
+  # API failure. rc is the only thing that tells them apart.
+  if [ "$rc" -ne 0 ]; then
     blind "deploy-key symmetry: could not list keys on $CRED_GH_OWNER/$repo (no admin access here, or the repo/call failed)"
     return
   fi
+  [ -n "$json" ] || json='[]'
   local acct want_word; [ "$want" = rw ] && want_word="WRITE" || want_word="READ-ONLY"
   for acct in "$@"; do
     # TWO jq calls, deliberately, not one with `// empty`. jq's `//` falls
