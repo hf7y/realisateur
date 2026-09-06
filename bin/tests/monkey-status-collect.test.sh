@@ -32,6 +32,8 @@ elif sys.argv[2] == "dispatch_line":
 elif sys.argv[2] == "armed":
     states = json.loads(sys.argv[4])
     print(json.dumps(m.armed(json.loads(sys.argv[3]), states, sys.argv[5])))
+elif sys.argv[2] == "milestone_self_fed":
+    print(json.dumps(m.milestone_self_fed(sys.argv[3])))
 else:
     print(json.dumps(m.release_tick("acct", json.loads(sys.argv[3]))))
 PY
@@ -158,6 +160,55 @@ eq "an UNREADABLE roster is null, not false -- could-not-look is not not-armed" 
 
 out="$(probe armed '[]' 'null' acct)"
 eq "...but with no dispatch line the answer is knowable: false" "$out" "false"
+
+section "E2. milestone_self_fed: the row after MILESTONE-SELF-FED is the real outcome (#575/#614)"
+LEDGER_DIR="$T/homes/fed/.local/share/scheduler-paced-runner"
+mkdir -p "$LEDGER_DIR"
+LEDGER="$LEDGER_DIR/ledger.tsv"
+row() { printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$1" host acct proj batch - "$2" "$3" >> "$LEDGER"; }
+
+out="$(probe milestone_self_fed fed)"
+eq "no ledger at all is null, not a verdict" "$out" "null"
+
+: > "$LEDGER"
+row 2026-09-01T00:00:00+00:00 WORKED "did work"
+out="$(probe milestone_self_fed fed)"
+eq "a real dispatch never preceded by MILESTONE-SELF-FED is not self-fed" \
+  "$(printf '%s' "$out" | jq -r .current)" "false"
+eq "...streak is 0" "$(printf '%s' "$out" | jq .streak)" "0"
+
+: > "$LEDGER"
+row 2026-09-01T00:00:00+00:00 WORKED "did work"
+row 2026-09-02T00:00:00+00:00 MILESTONE-SELF-FED "agent-filed only"
+row 2026-09-02T00:05:00+00:00 IDLE "nothing landed"
+out="$(probe milestone_self_fed fed)"
+eq "the row right after MILESTONE-SELF-FED is read as that tick's self-fed outcome" \
+  "$(printf '%s' "$out" | jq -r .current)" "true"
+eq "one such tick is a streak of 1" "$(printf '%s' "$out" | jq .streak)" "1"
+eq "since names the MILESTONE-SELF-FED row's own timestamp" \
+  "$(printf '%s' "$out" | jq -r .since)" "2026-09-02T00:00:00+00:00"
+
+row 2026-09-03T00:00:00+00:00 MILESTONE-SELF-FED "agent-filed only"
+row 2026-09-03T00:05:00+00:00 WORKED "landed something"
+out="$(probe milestone_self_fed fed)"
+eq "a second consecutive self-fed tick extends the streak" "$(printf '%s' "$out" | jq .streak)" "2"
+eq "since still points at the OLDEST row of the current streak" \
+  "$(printf '%s' "$out" | jq -r .since)" "2026-09-02T00:00:00+00:00"
+
+row 2026-09-04T00:00:00+00:00 WORKED "a human-fed tick, no MILESTONE-SELF-FED row before it"
+out="$(probe milestone_self_fed fed)"
+eq "a human-fed tick breaks the streak" "$(printf '%s' "$out" | jq -r .current)" "false"
+eq "streak resets to 0, but history is not lost -- still object, not null" \
+  "$(printf '%s' "$out" | jq .streak)" "0"
+
+: > "$LEDGER"
+row 2026-09-01T00:00:00+00:00 COOLDOWN "held after DONE"
+row 2026-09-01T00:20:00+00:00 MILESTONE-HELD "empty milestone"
+row 2026-09-01T00:40:00+00:00 MILESTONE-SELF-FED "agent-filed only"
+row 2026-09-01T00:45:00+00:00 WORKED "landed"
+out="$(probe milestone_self_fed fed)"
+eq "hold rows (COOLDOWN, MILESTONE-HELD) are never mistaken for a dispatch" \
+  "$(printf '%s' "$out" | jq .streak)" "1"
 
 section "F. identity_drift: an account that did not commit as itself (#841)"
 IH="$T/homes/ident"
