@@ -12,22 +12,11 @@
 # bin/install-verbs.sh reads, instead of retyping the registry join, and reports
 # BLIND rather than "no registered project" when the registry is absent.
 #
-# realisateur#1043: verb_set_declared moved from a local scan of
-# $INSTALLE_PROJECTS to the same three live GitHub calls cut-verb-build.sh
-# makes (gh repo list / git ls-remote / gh api trees). Sections A/B/B5 below
-# are HERMETIC the same way bin/tests/cut-verb-build-test.sh is: a fake `gh`
-# on PATH answers out of local fixture repos, and GIT_CONFIG_GLOBAL rewrites
-# https://github.com/<owner>/ to file://<fixture>/ so `git ls-remote` reaches
-# them too -- same fixture shape, because the two scripts now read the
-# identical three calls. Sections C/D/F still build REAL local checkouts
-# under $INSTALLE_PROJECTS: verb_set_worktree_of ("is it actually installed
-# on THIS host") did not move and is still local, on purpose.
-#
-# B4 is GONE. Its assertion was that a linked worktree of the same repo must
-# not double-declare -- a defect only possible because the old scan walked a
-# directory tree that could contain the same repository twice. A remote
-# enumeration via ls-remote + one tree read per sha has no worktree to see
-# twice, so the scenario that test built cannot arise on this path any more.
+# realisateur#1043: verb_set_declared reads GitHub now, not $INSTALLE_PROJECTS.
+# A/B/B5 below are hermetic like bin/tests/cut-verb-build-test.sh (fake `gh` +
+# a GIT_CONFIG_GLOBAL rewrite); C/D/F still build real local checkouts, since
+# verb_set_worktree_of stayed local. B4 (a linked worktree must not
+# double-declare) is gone: nothing here scans a worktree to double-count.
 
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -57,8 +46,7 @@ printf '#project\tname\twhy\n' > "$VERB_NOT_A_VERB_FILE"
 G() { git -c user.email=t@t -c user.name=t -C "$1" "${@:2}"; }
 g() { git -c init.defaultBranch=main -c user.email=t@t -c user.name=t "$@" >/dev/null 2>&1; }
 
-# --- the remote fixture: answers "what does the estate declare" -----------
-# Same three calls, same fixture shape, as bin/tests/cut-verb-build-test.sh.
+# --- the remote fixture (same shape as cut-verb-build-test.sh) ------------
 OWNER=fixtureowner
 export VERB_SET_OWNER="$OWNER"
 FIX="$WORK/fix"           # <repo>.git fixtures, read via ls-remote / gh api trees
@@ -77,7 +65,7 @@ mkrepo() {   # mkrepo <repo> <verb>...  -- a bashified branch carrying bin/<verb
   g -C "$d" add -A
   g -C "$d" commit -m "bashified $repo"
 }
-mkrepo_no_bashified() {   # a repo the estate lists that never bashified itself
+mkrepo_no_bashified() {   # a listed repo with no bashified branch
   local repo="$1"
   local d="$FIX/$repo.git"
   rm -rf "$d"; mkdir -p "$d"
@@ -85,9 +73,7 @@ mkrepo_no_bashified() {   # a repo the estate lists that never bashified itself
   echo x > "$d/README.md"; g -C "$d" add -A; g -C "$d" commit -m init
 }
 
-# The fake gh: `repo list` from $FIXTURE_REPOLIST, the tree API from a local
-# git repo under $FIXTURE_DIR. Verbatim shape of cut-verb-build-test.sh's own
-# stub, because verb_set_declared now reads the identical three calls.
+# The fake gh: `repo list` from $FIXTURE_REPOLIST, tree API from $FIXTURE_DIR.
 mkdir -p "$WORK/stub"
 cat > "$WORK/stub/gh" <<'STUB'
 #!/usr/bin/env bash
@@ -118,10 +104,7 @@ export PATH="$WORK/stub:$PATH"
 export FIXTURE_REPOLIST="$REPOLIST" FIXTURE_DIR="$FIX"
 export GIT_CONFIG_GLOBAL="$WORK/gitconfig" GIT_CONFIG_NOSYSTEM=1
 
-# --- the local fixture: answers "is it actually installed on THIS host" ---
-# verb_set_worktree_of never moved (realisateur#1043 only moved the DECLARED
-# question) -- install-verbs.sh still needs a real checkout to resolve a
-# declared verb's bin/<v> to a target it can compare a symlink against.
+# --- the local fixture: is it actually installed on THIS host -------------
 make_local_checkout() {
   local name="$1"; shift
   local d="$INSTALLE_PROJECTS/$name" v
@@ -143,7 +126,7 @@ mkrepo_no_bashified gamma
 printf 'alpha\nbeta\ngamma\n' > "$REPOLIST"
 register alpha; register beta    # so section F contributes no finding here
 
-make_local_checkout alpha aaa bbb   # gives verb_set_worktree_of something to point at
+make_local_checkout alpha aaa bbb
 
 # shellcheck source=../lib/verb-set.sh
 . "$LIB"
@@ -155,10 +138,6 @@ has "A2 alpha declares bbb"                                     "$decl" $'alpha\
 has "A3 beta declares aaa"                                      "$decl" $'beta\taaa'
 hasnt "A5 a project with no bashified branch declares nothing"  "$decl" 'gamma'
 check "A6 three declarations in total" "$(printf '%s\n' "$decl" | grep -c .)" "3"
-# (A4 -- "an executable with no man page is still a verb", #891 -- is
-# dropped, not weakened: verb_set_declared never looked at man/ at all, even
-# before #1043; the manifest-cutter's own man-page rules live in
-# cut-verb-build.sh and are its suite's job, not this one's.)
 
 printf 'alpha\tbbb\tfixture: not a door\n' > "$VERB_NOT_A_VERB_FILE"
 decl_exempt="$(verb_set_declared)"
@@ -169,19 +148,13 @@ printf '#project\tname\twhy\n' > "$VERB_NOT_A_VERB_FILE"   # restore for the sec
 printf -- '-- B. claimants (the check `command -v` was standing in for)\n'
 check "B1 aaa is claimed by both projects" "$(verb_set_claimants aaa | sort | tr '\n' ' ')" "alpha beta "
 check "B2 an unused name is unclaimed"     "$(verb_set_claimants zzz)" ""
-# The regression itself: nothing is installed in $INSTALLE_BIN, so `command -v`
-# finds nothing, yet the name is plainly taken.
 if command -v aaa >/dev/null 2>&1; then
   bad "B3 fixture precondition: 'aaa' must not be on the real PATH"
 else
   check "B3 a declared-but-uninstalled name is still claimed" "$(verb_set_claimants aaa | head -1)" "alpha"
 fi
 
-printf -- '-- B5. BLIND is not empty (the caveat #1043 names by name) ------------\n'
-# Every failure path below must return 6 (lib/registry-set.sh's own
-# convention for "could not look") with NOTHING on stdout: a network hiccup
-# or a bad credential must never look like "the estate declares nothing" to
-# a caller that reads stdout alone.
+printf -- '-- B5. BLIND is not empty ------------------------------------------------\n'
 authfail="$WORK/stub-authfail"; mkdir -p "$authfail"
 cat > "$authfail/gh" <<'STUB'
 #!/usr/bin/env bash
@@ -221,8 +194,6 @@ out="$(PATH="$listempty:$PATH" verb_set_declared 2>/dev/null)"; rc=$?
 check "B5e a readable-but-empty repo list returns 6, not a clean zero" "$rc"  "6"
 check "B5f ...and prints nothing to stdout"                            "$out" ""
 
-# A repo GitHub lists but this credential/host cannot read (git ls-remote
-# fails) is the exact case cut-verb-build.sh calls BLIND, not verbless.
 printf 'alpha\nbeta\nghost\n' > "$REPOLIST"
 out="$(verb_set_declared 2>/dev/null)"; rc=$?
 check "B5g a listed-but-unreadable repo returns 6"     "$rc"  "6"
@@ -232,21 +203,15 @@ check "B5i ...and verb_set_claimants propagates 6, not \"unclaimed\"" \
 printf 'alpha\nbeta\ngamma\n' > "$REPOLIST"   # restore for the sections below
 
 printf -- '-- C. absence fails loud (the intersection defect)\n'
-# C1 IS THE POINT OF THIS FILE, so it gets a fixture in which ABSENCE IS THE
-# ONLY POSSIBLE FINDING. Run against the main fixture it would pass on the
-# collision alone -- exit 1 for a reason that has nothing to do with absence --
-# and an intersection check would score green.
+# C1: a fixture where ABSENCE IS THE ONLY POSSIBLE FINDING.
 SOLO="$WORK/solo"
 mkdir -p "$SOLO/projects" "$SOLO/bin" "$SOLO/schedule"
 (
   export INSTALLE_PROJECTS="$SOLO/projects" INSTALLE_BIN="$SOLO/bin" INSTALLE_MANIFEST="$SOLO/manifest.tsv"
-  # Registered, so ABSENCE really is the only thing that can flag here.
   export SCHEDULE_DIR="$SOLO/schedule"
   printf 'PROJECT="solo"\n' > "$SCHEDULE_DIR/solo.conf"
 
-  # This subshell's ESTATE is just "solo" -- its own repolist, so the outer
-  # alpha/beta/gamma fixture never leaks into it.
-  mkrepo solo only
+  mkrepo solo only   # this subshell's estate is just "solo" -- its own repolist
   printf 'solo\n' > "$SOLO/repolist"
   export FIXTURE_REPOLIST="$SOLO/repolist"
 
@@ -271,9 +236,6 @@ pass=$((pass+3))
 
 out="$("$INSTALL_VERBS" 2>&1)"; rc=$?
 check "C2 the mixed fixture also exits 1" "$rc" "1"
-# ANCHORED TO THE ROW, not to the word. The standing footer says "Re-run with
-# --apply to install the ABSENT rows", so a bare `grep ABSENT` matches the
-# prose and passes even when no verb was reported absent at all.
 has   "C3 an ABSENT ROW exists for bbb"  "$out" '^ABSENT  *bbb'
 has   "C4 the ABSENT row names the declaring project" "$out" '^ABSENT  *bbb  *alpha'
 has   "C5 a COLLISION ROW exists for aaa" "$out" '^COLLISION  *aaa'
@@ -286,19 +248,14 @@ out="$("$INSTALL_VERBS" 2>&1)"
 if printf '%s' "$out" | grep -qE '^OK +bbb'; then ok "D1 an installed, manifested verb is OK"
 else bad "D1 an installed, manifested verb is OK"; fi
 
-# A link at the right target that installe did not make is still a finding:
-# `installe retire` will refuse it, and it is the shape of the hand-made
-# symlink whose deletion caused the 2026-07-29 dispatch outage.
-printf '' > "$INSTALLE_MANIFEST"
+printf '' > "$INSTALLE_MANIFEST"   # a hand-made link at the right target is still a finding
 out="$("$INSTALL_VERBS" 2>&1)"
 has "D2 a hand-made link with the right target is UNOWNED" "$out" '^UNOWNED  *bbb'
 
-# A dangling link must not read as present.
-ln -sfn "$WORK/gone" "$INSTALLE_BIN/bbb"
+ln -sfn "$WORK/gone" "$INSTALLE_BIN/bbb"   # dangling must not read as present
 out="$("$INSTALL_VERBS" 2>&1)"
 has "D3 a dangling link is BROKEN" "$out" '^BROKEN  *bbb'
 
-# A regular file at a verb's name is a human's, and is never touched.
 rm -f "$INSTALLE_BIN/bbb"; printf '#!/bin/sh\n' > "$INSTALLE_BIN/bbb"; chmod 755 "$INSTALLE_BIN/bbb"
 before="$(md5sum < "$INSTALLE_BIN/bbb")"
 out="$("$INSTALL_VERBS" 2>&1)"
@@ -306,9 +263,6 @@ has   "D4 a regular file is FOREIGN" "$out" '^FOREIGN  *bbb'
 check "D5 the foreign file is untouched" "$(md5sum < "$INSTALLE_BIN/bbb")" "$before"
 
 printf -- '-- F. registration: the classification, re-checked every run\n'
-# A verb is a UTILITY's finished form. The registry is what "utility" means
-# here. A project deregistered after being bashified keeps its verb forever
-# unless something re-checks; these assertions are that re-check.
 REGWORK="$WORK/reg"
 mkdir -p "$REGWORK/projects" "$REGWORK/bin" "$REGWORK/schedule"
 (
@@ -327,24 +281,18 @@ mkdir -p "$REGWORK/projects" "$REGWORK/bin" "$REGWORK/schedule"
   printf '#!/bin/sh\n' > "$d/bin/pverb"; chmod 755 "$d/bin/pverb"
   G "$d" add -A; G "$d" commit -qm verbs; G "$d" checkout -q main
 
-  # F1/F2: unregistered project declaring a verb.
-  o="$("$INSTALL_VERBS" 2>&1)"; r=$?
+  o="$("$INSTALL_VERBS" 2>&1)"; r=$?   # F1/F2: unregistered project declaring a verb
   if printf '%s' "$o" | grep -qE '^  UNREGISTERED  *prod'; then printf '  ok   F1 an unregistered project is named UNREGISTERED\n'
   else printf '  FAIL F1 an unregistered project is named UNREGISTERED\n'; exit 1; fi
   if [ "$r" = 1 ]; then printf '  ok   F2 and it makes the run exit 1\n'
   else printf '  FAIL F2 and it makes the run exit 1 (got %s)\n' "$r"; exit 1; fi
 
-  # F3: registering it clears the finding -- the check reads the registry, it
-  # does not carry a hardcoded list of projects.
-  printf 'PROJECT="prod"\n' > "$SCHEDULE_DIR/prod.conf"
+  printf 'PROJECT="prod"\n' > "$SCHEDULE_DIR/prod.conf"   # F3: registering clears the finding
   o="$("$INSTALL_VERBS" 2>&1)"
   if printf '%s' "$o" | grep -qE '^  UNREGISTERED'; then printf '  FAIL F3 registering clears the finding\n'; exit 1
   else printf '  ok   F3 registering clears the finding\n'; fi
 
-  # F4/F5: an UNREADABLE registry is BLIND, never "nothing is a utility" --
-  # reporting every project UNREGISTERED from an absence is the strong claim
-  # made from a failure to look.
-  o="$(SCHEDULE_DIR="$REGWORK/nosuchdir" "$INSTALL_VERBS" 2>&1)"
+  o="$(SCHEDULE_DIR="$REGWORK/nosuchdir" "$INSTALL_VERBS" 2>&1)"   # F4/F5: unreadable registry is BLIND
   if printf '%s' "$o" | grep -q 'BLIND: cannot read the registry'; then printf '  ok   F4 an unreadable registry reports BLIND\n'
   else printf '  FAIL F4 an unreadable registry reports BLIND\n'; exit 1; fi
   if printf '%s' "$o" | grep -qE '^  UNREGISTERED'; then printf '  FAIL F5 BLIND does not accuse every project of being unregistered\n'; exit 1

@@ -67,17 +67,8 @@ note ""
 have_installe=1
 command -v "$INSTALLE" >/dev/null 2>&1 || have_installe=0
 
-# verb_set_declared (realisateur#1043) now reads GitHub live -- `gh repo
-# list`, `git ls-remote`, `gh api .../trees` -- rather than scanning $PROJECTS
-# on disk, so this preflight needs network access (and an authenticated `gh`)
-# where it never used to. Called ONCE and cached: it used to be called five
-# times in this file, which under the old local-directory scan was five cheap
-# directory walks and is now five full repo-list-and-tree-fetch passes.
-#
-# BLIND, NOT EMPTY: a nonzero exit means the estate could not be read at all
-# -- GitHub unreachable, `gh` unauthenticated, or some repo's tree did not
-# come back -- and must never be treated as "the estate declares nothing".
-# verb_set_declared already printed the specific reason to stderr above this.
+# realisateur#1043: verb_set_declared now reads GitHub live, so this needs
+# network + an authenticated `gh`. Called once and cached (was 5x below).
 DECLARED="$(verb_set_declared)"; declared_rc=$?
 if [ "$declared_rc" -ne 0 ]; then
   echo "$CLI_NAME: FATAL: could not read the estate's declared verb set (BLIND, exit $declared_rc) -- see bin/lib/verb-set.sh's message(s) above. Refusing to treat that as a clean host with nothing declared." >&2
@@ -117,9 +108,7 @@ note ""
 
 if [ "$n_declared" = 0 ]; then
   # Zero declared is never "clean". It means discovery broke -- exactly the
-  # shape of deploy-drift-check's "nothing to check / exit 0". (BLIND itself
-  # is caught above, before this point, by declared_rc; this catches the
-  # separate case of a readable estate that genuinely names no verb.)
+  # shape of deploy-drift-check's "nothing to check / exit 0".
   echo "$CLI_NAME: FATAL: no project declares a verb. That is a discovery failure, not a clean host." >&2
   exit 1
 fi

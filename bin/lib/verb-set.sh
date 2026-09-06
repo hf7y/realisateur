@@ -11,26 +11,15 @@
 # PATH before assignment", which was true and still produced a collision --
 # PATH was the wrong thing to confirm against.
 #
-# realisateur#1043: `verb_set_declared` used to answer "what does the estate
-# declare" by scanning _verb_set_projects() (~/Documents/Projects) on
-# whichever host ran it -- host state again, same shape of bug as the PATH
-# one above. Measured on mandark: 6 of 12 declaring projects, only because the
-# other 6 weren't cloned there, or their checkout had never fetched
-# `bashified`. bin/cut-verb-build.sh already answers the identical question
-# with no local checkout: `gh repo list`, `git ls-remote` for the branch sha,
-# `gh api .../trees/<sha>` for the tree AT that sha. verb_set_declared now
-# makes the same three calls, so the two halves of this system can no longer
-# disagree about what's declared. verb_set_ref_of/verb_set_verbs_of/
-# verb_set_worktree_of stay local-checkout-based on purpose -- see each
-# function's own comment for why.
+# realisateur#1043: verb_set_declared reads GitHub directly now, the same
+# three calls bin/cut-verb-build.sh already makes, instead of scanning
+# ~/Documents/Projects -- that was host state too, same bug as PATH above.
+# verb_set_ref_of/verb_set_verbs_of/verb_set_worktree_of stay local-checkout
+# based; they answer a different question (see each one's own comment).
 
 . "${BASH_SOURCE[0]%/*}/estate-set.sh"
 
-# _verb_set_ref <dir> -- the bashified ref THIS checkout carries, if any.
-# Local-checkout only: verb_set_ref_of/verb_set_verbs_of below use it to check
-# a repo already in hand (propagation.test.sh, against this repo's own
-# working copy) against its own bashified branch -- not the estate-wide
-# question, which moved to the remote path (realisateur#1043).
+# _verb_set_ref <dir> -- the bashified ref THIS checkout carries, local only.
 _verb_set_ref() {
   local d="$1" c
   for c in bashified origin/bashified; do
@@ -50,10 +39,8 @@ verb_set_is_exempt() {
 }
 
 # verb_set_verbs_of <repo> <ref> -- an executable bin/<n> declares a verb,
-# man/<n>.1 optional (#891), filtered through the same opt-out as every caller.
-# LOCAL-CHECKOUT ONLY (see the file header): a repo already in hand, read at a
-# ref that is already in hand. propagation.test.sh uses this against this
-# repo's OWN working copy, not against the estate.
+# man/<n>.1 optional (#891). Local checkout only (propagation.test.sh, against
+# this repo's own working copy).
 verb_set_verbs_of() {
   local repo="$1" ref="$2" project v
   project="$(basename "$repo")"
@@ -66,31 +53,15 @@ verb_set_verbs_of() {
   done
 }
 
-# verb_set_ref_of <repo> -- print the bashified ref THIS checkout declares
-# from. Local-checkout only, same reason as verb_set_verbs_of above.
+# verb_set_ref_of <repo> -- the bashified ref THIS checkout declares from.
 verb_set_ref_of() { _verb_set_ref "$1"; }
 
-# --- verb_set_declared: the estate-wide question, answered remotely --------
-# realisateur#1043. _verb_set_owner reads GH_ESTATE_OWNER
-# (bin/lib/estate-set.sh, #672/#673) rather than a second hardcoded "hf7y" --
-# override with VERB_SET_OWNER, same shape as cut-verb-build.sh's
-# VERB_BUILD_OWNER, so a test fixture can point this at a fake owner.
 _verb_set_owner() { printf '%s' "${VERB_SET_OWNER:-$GH_ESTATE_OWNER}"; }
 
-# verb_set_declared -- every declaration in the ecosystem, as <project>\t<verb>.
-# Sorted, so callers get a stable order without re-sorting.
-#
-# BLIND, NOT EMPTY (same discipline as bin/cut-verb-build.sh, and the same
-# convention lib/registry-set.sh already uses: every function here returns 6,
-# never an empty success, when it could not look). A network hiccup or an
-# unauthenticated `gh` must never read as "the estate declares nothing" --
-# that is indistinguishable from a real empty estate to anything that reads
-# stdout alone, so BOTH callers (bin/install-verbs.sh, bin/land-selfdev.sh via
-# install-verbs.sh) must check the exit status, not just the output.
-#
-# Nothing is printed until every repo has been read: a `gh api .../trees`
-# call late in the loop failing must not leave a caller holding a partial,
-# already-emitted set it has no way to know is short.
+# verb_set_declared -- every declaration in the ecosystem, as <project>\t<verb>,
+# sorted. Every failure path returns 6 (lib/registry-set.sh's convention) with
+# NOTHING on stdout, never an empty success: BLIND must not read as "declares
+# nothing" to a caller that checks output but not the exit status.
 verb_set_declared() {
   local owner repos repo refs sha whole tmp rows blind=0
 
@@ -121,9 +92,6 @@ verb_set_declared() {
   rows="$tmp/rows"; : > "$rows"
 
   for repo in $repos; do
-    # rc read BEFORE the pipe: "no bashified branch" and "could not read this
-    # repo" are both an empty sha and mean opposite things (same reasoning as
-    # cut-verb-build.sh's own comment on this exact call).
     refs="$(GIT_TERMINAL_PROMPT=0 git ls-remote "https://github.com/$owner/$repo.git" refs/heads/bashified 2>/dev/null)"
     if [ $? -ne 0 ]; then
       echo "verb_set_declared: $repo: git ls-remote could not read it -- BLIND" >&2
@@ -131,10 +99,8 @@ verb_set_declared() {
       continue
     fi
     sha="$(printf '%s\n' "$refs" | awk 'NR==1{print $1}')"
-    [ -n "$sha" ] || continue   # no bashified branch: a normal answer, not blindness
+    [ -n "$sha" ] || continue   # no bashified branch -- normal, not blindness
 
-    # VERBLESS IS NOT BLIND (cut-verb-build.sh, 2026-08-18): fetch the WHOLE
-    # tree, judge the CALL by it, filter after.
     whole="$(gh api "repos/$owner/$repo/git/trees/$sha?recursive=1" -q '.tree[] | "\(.mode) \(.path)"' 2>/dev/null)"
     if [ -z "$whole" ]; then
       echo "verb_set_declared: $repo: bashified is $sha but its tree did not read -- BLIND" >&2
@@ -163,10 +129,7 @@ verb_set_declared() {
 }
 
 # verb_set_claimants <verb> -- which projects already declare this name.
-# Empty output means unclaimed. This is the check `command -v` was standing in
-# for, and unlike `command -v` it is true on a host where nothing is installed.
-# Propagates verb_set_declared's BLIND (return 6) rather than reading it as
-# "unclaimed" -- an unreadable estate is not evidence a name is free.
+# Propagates BLIND (return 6) rather than reading it as "unclaimed".
 verb_set_claimants() {
   local want="$1" out rc=0
   out="$(verb_set_declared)" || rc=$?
@@ -175,10 +138,8 @@ verb_set_claimants() {
 }
 
 # verb_set_worktree_of <repo> -- where bashified is checked out, if anywhere.
-# The same lookup `installe` does, so the two agree on a verb's target.
-# Local-checkout only, and deliberately so: this answers "where do I install
-# INTO on this host", not "what does the estate declare" -- realisateur#1043
-# only moved the latter.
+# Local checkout only; answers "install INTO where on this host", not the
+# estate-wide question above.
 verb_set_worktree_of() {
   git -C "$1" worktree list --porcelain 2>/dev/null \
     | awk '/^worktree /{w=$2} /^branch refs\/heads\/bashified$/{print w; exit}'
