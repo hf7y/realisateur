@@ -81,6 +81,17 @@ d="$(cd "$(dirname "$0")/.." && pwd)"
 : > "$d/RELEASE-BOOTSTRAPPED"
 echo "release-channel stub: $*"
 STUB
+
+# NOT staged into $HOME_DIR/.selfdev-setup/ -- step 10 calls it directly from
+# $HERE, same as this one, so its own dirname/.. is $TMP, not $PHOME.
+cat > "$BIN/prose-workflow-provision.sh" <<'STUB'
+#!/usr/bin/env bash
+d="$(cd "$(dirname "$0")/.." && pwd)"
+printf '%s\n' "$*" >> "$d/prose-calls"
+echo "prose-workflow-provision stub: $*"
+[ -f "${TMPROOT:-}/prose-fail" ] && exit 1
+exit 0
+STUB
 chmod +x "$BIN"/*.sh
 
 mkdir -p "$TMP/libexec"
@@ -142,7 +153,7 @@ chmod +x "$TMP/stub"/*
 
 # setup <failing repo>... -- one run of the script under test.
 setup() {
-    rm -f "$PHOME/wire-calls" "$PHOME/wire-cwd" "$PHOME/LANDED" "$TMP/RELEASE-BOOTSTRAPPED" "$TMP/WIRED"
+    rm -f "$PHOME/wire-calls" "$PHOME/wire-cwd" "$PHOME/LANDED" "$TMP/RELEASE-BOOTSTRAPPED" "$TMP/WIRED" "$TMP/prose-calls"
     : > "$PHOME/wire-fail-list"
     for r in "$@"; do printf '%s\n' "$r" >> "$PHOME/wire-fail-list"; done
     PATH="$TMP/stub:$PATH" SUDO_USER=fixturehands \
@@ -274,6 +285,41 @@ setup; OUT="$(cat "$TMP/out" "$TMP/err")"
 case "$OUT" in
   *"MISSING $PHOME/creds/ha_token"*) bad "9d a present secret should not be reported missing" "got: $(printf '%s' "$OUT" | grep MISSING | head -1)" ;;
   *) ok "9d a declared secret that IS present stops being a finding" ;;
+esac
+
+echo
+echo "-- 10. .github/workflows/prose.yml at standup (hf7y/realisateur#800) ----"
+# The gap #800 named: nine steps stood an account up and none of them touched
+# .github/workflows/, so a fresh repo read NOCI until someone added the
+# workflow by hand. Step 10 delegates to prose-workflow-provision.sh --apply
+# <project>, the same verb usable standalone against a repo that already
+# exists -- not reimplemented here.
+setup
+check "10a step 10 ran, apply mode, naming the project" \
+      "$(cat "$TMP/prose-calls" 2>/dev/null)" "--apply $PROJECT"
+OUT="$(cat "$TMP/out")"
+case "$OUT" in
+  *"prose-workflow-provision stub"*) ok "10b its output reached the log, not swallowed" ;;
+  *) bad "10b expected the stub's own line in the transcript" "got: $(printf '%s' "$OUT" | tail -5)" ;;
+esac
+
+: > "$TMP/prose-fail"
+setup
+rc=$?
+rm -f "$TMP/prose-fail"
+check "10c a finding/BLIND from the workflow step does not fail the whole standup" "$rc" "0"
+case "$(cat "$TMP/out" "$TMP/err")" in
+  *"WARN"*"prose-workflow-provision.sh reported a finding or was BLIND"*) ok "10d ...and says so, naming the project" ;;
+  *) bad "10d expected the WARN line" "got: $(cat "$TMP/out" "$TMP/err" | tail -5)" ;;
+esac
+
+rm -f "$BIN/prose-workflow-provision.sh"
+setup
+rc=$?
+check "10e a host with no prose-workflow-provision.sh yet still completes standup" "$rc" "0"
+case "$(cat "$TMP/out" "$TMP/err")" in
+  *"WARN"*"prose-workflow-provision.sh missing"*) ok "10f ...and says the script itself is what's missing, not a silent skip" ;;
+  *) bad "10f expected the missing-script WARN line" "got: $(cat "$TMP/out" "$TMP/err" | tail -5)" ;;
 esac
 
 echo

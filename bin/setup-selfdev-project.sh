@@ -14,6 +14,9 @@
 #      .claude/** at all (hf7y/realisateur#282)
 #   8. bin/selfdev-hooks-provision.sh              (root)  the SubagentStop hook (#272)
 #   9. the project's own runtime secrets           (root)  REPORTED, not supplied (#289)
+#  10. bin/prose-workflow-provision.sh <p> --apply (root)  .github/workflows/prose.yml
+#      by PR, so the repo has something for branch-protection-provision.sh to
+#      require -- not required here, an intentionally separate step (#800)
 
 set -uo pipefail
 
@@ -62,6 +65,10 @@ if [ "$MODE" = --check ]; then
   echo "       selfdev-release-tick.sh --install-cadence --apply as $PROJECT"
   echo "    7. selfdev-permissions-provision.sh --apply: the permissions block"
   echo "    8. selfdev-hooks-provision.sh --apply: the SubagentStop closeout hook"
+  echo "    9. report the project's own runtime secrets (never supplied here)"
+  echo "   10. prose-workflow-provision.sh --apply $PROJECT: .github/workflows/prose.yml"
+  echo "       by PR, if $PROJECT does not carry it yet (#800). Requiring it on"
+  echo "       main is a separate, reviewed step: branch-protection-provision.sh."
   echo
   echo "  it will NOT arm dispatch: that is a human editing the state column for"
   echo "  $PROJECT in scheduler's schedule/ROSTER (the sole arming authority, #364)."
@@ -220,6 +227,24 @@ else
   done < "$SECRETS_DECL"
   [ "$missing" -gt 0 ] && \
     echo "  DO      put those in place as $PROJECT by hand. This script will not: they are the project's, not the ecosystem's."
+fi
+
+# --- 10. the estate's prose guard, so a stood-up repo starts compliant ------
+# hf7y/realisateur#800: nine steps stood an account up and NOT ONE touched the
+# repo's .github/workflows/, so a fresh repo read NOCI until someone added the
+# workflow by hand. Delegated, not reimplemented -- the same script is the
+# standalone verb for a repo that already exists (prose-workflow-provision.sh
+# --apply <repo>). No local clone, no push to main: it opens a PR through the
+# GitHub API using a minted App token, same as it would run standalone.
+# NOT FATAL: a repo that already carries prose.yml is a no-op, and a host with
+# no App key installed yet should not fail an otherwise-complete standup over
+# this -- read the row above and run the verb by hand once the App is wired.
+say "10. .github/workflows/prose.yml (#800)"
+if [ -x "$HERE/prose-workflow-provision.sh" ]; then
+  "$HERE/prose-workflow-provision.sh" --apply "$PROJECT" \
+    || echo "  WARN    prose-workflow-provision.sh reported a finding or was BLIND for $PROJECT -- read the rows above; branch-protection-provision.sh has nothing to require on $PROJECT until this lands"
+else
+  echo "  WARN    $HERE/prose-workflow-provision.sh missing -- $PROJECT will start ungated; run it by hand once available"
 fi
 
 cat <<EOF
