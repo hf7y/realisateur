@@ -88,6 +88,7 @@ read -r -d '' PERMS <<'JSON'
     "Bash(rm -rf $HOME:*)",
     "Read(//etc/selfdev/app.pem)",
     "Read(//etc/selfdev/claude-token)",
+    "Read(//etc/selfdev/grocy-api-key)",
     "Read(//home/*/.claude-token)",
     "Read(//home/*/.claude/settings.json)",
     "Read(//home/*/.claude/settings.json.bak-*)",
