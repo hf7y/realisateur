@@ -103,6 +103,7 @@ jobs:
           token: ${{ secrets.VERBS_READ_TOKEN }}
 
       - name: Assemble the build
+        id: assemble
         env:
           # Needs read on every hf7y repo, including private ones. See the
           # assertion step above for why this is not GITHUB_TOKEN.
@@ -144,7 +145,15 @@ jobs:
           if [ "${ALLOW_HALF_DECLARED:-false}" = "true" ]; then
             args+=(--allow-half-declared)
           fi
-          bash "$GITHUB_WORKSPACE/.realisateur/bin/cut-verb-build.sh" "${args[@]}"
+          set +e  # #976: let a refusal's own reason survive past this step, not just its exit code
+          bash "$GITHUB_WORKSPACE/.realisateur/bin/cut-verb-build.sh" "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/assemble.log"
+          rc="${PIPESTATUS[0]}"
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            reason="$(grep -v '^[[:space:]]*$' "$RUNNER_TEMP/assemble.log" | tail -5 | sed 's/^ *//' | awk '{if (NR>1) printf "; "; printf "%s", $0} END{print ""}')"  # the refusal's last lines, not the run id
+            echo "assemble_reason=${reason:-cut-verb-build.sh exited $rc with no output}" >> "$GITHUB_OUTPUT"
+          fi
+          exit "$rc"
 
       # The publisher must outlive the realisateur checkout: it runs
       # `if: always()`, and the next step deletes .realisateur wholesale. Stage
@@ -265,6 +274,7 @@ jobs:
           CUT_BUILD:    ${{ steps.cut.outputs.build_id }}
           CUT_VERBS:    ${{ steps.cut.outputs.verbs }}
           CUT_REASON:   ${{ steps.cut.outputs.cut_reason }}
+          ASSEMBLE_REASON: ${{ steps.assemble.outputs.assemble_reason }}
           DRY_RUN:      ${{ inputs.dry_run }}
         run: |
           set -uo pipefail
@@ -299,7 +309,7 @@ jobs:
             [ -n "$reason" ] || reason="no project moved -- today's build is still current"
           else
             decision=ERROR
-            reason="the cut step produced no result; see run ${GITHUB_RUN_ID}"
+            reason="${ASSEMBLE_REASON:-the cut step produced no result; see run ${GITHUB_RUN_ID}}"
           fi
 
           echo "verdict: $decision -- $reason"
