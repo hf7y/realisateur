@@ -278,10 +278,6 @@ rc  'S8 --check-body re-runs it offline and FINDS it (1), refusing nothing' 1 "$
 has 'S9 --check-body names the same finding'         "$out" MISPLACED-DECISION
 
 section 'I. the CI backstop is wired to the same grammar'
-# deferral-ledger.yml was deleted 2026-08-22 (#511): never required, and green
-# on 260 of 262 PRs because `- none` satisfied it. A backstop satisfied by
-# declaring nothing backstops nothing; the write-time check is the one holding.
-
 hasnt 'I5 the deleted script is really gone' "$(ls "$ROOT")" 'deferral-ledger.sh'
 
 # --- DEFAULT-AFTER: the unanswered decision resolves itself (2026-08-22) -----

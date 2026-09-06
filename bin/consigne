@@ -4,106 +4,20 @@
 #
 # KIND: verb
 #
-# ===========================================================================
-# WHAT THIS IS, AND WHAT IT IS NOT
-# ===========================================================================
-#
-# It is NOT a second implementation of `fonde consign`. It runs THE SAME
-# mechanism -- bibliothecaire's `lib/consign-prose.sh`, itself vendored from
-# basheur's `impl/consign-prose` -- located at runtime, never copied. There is
-# one implementation and two doors:
-#
-#     fonde consign <path>...     the OLD door. Still works; says it is old.
-#     consigne <path>...          this one.
-#
-# Zach, 2026-08-10: "make consigne equivalent or backwards compatible with
-# fonde consign and have fonde consign loudly point to consigne as the new
-# correct approach." The equivalence is literal and mechanical, not a promise
-# in prose: `fonde`'s own do_consign runs
-#
-#     bash "$ROOT/lib/consign-prose.sh" "$VAULT" "$@"
-#
-# and so does this, with the same $VAULT resolved from the same environment
-# variable and the same default. Same argv, same deposit, same exit codes.
+# ONE implementation, two doors: this and the older `fonde consign` both exec
+# bibliothecaire's lib/consign-prose.sh, located at runtime and never copied.
 # bin/tests/consigne.test.sh case B pins that call shape against a recording
-# stub, so the two doors cannot drift into two behaviours without a red suite.
+# stub, so the two cannot drift without a red suite. Why a new door and not a
+# rename: the deposit half already worked; `consigne status` is the missing
+# half, the queue of what is now safe to remove (hf7y/scheduler#86).
 #
-# A SECOND COPY WAS THE OBVIOUS DESIGN AND IT IS THE WRONG ONE. `bin/fonde`
-# says so in its own header, about itself: "If a contract store returns to
-# PATH ... this file holds a SECOND COPY of an impl that store also holds, and
-# two copies drift." The first draft of this verb (hf7y/realisateur#121, commit
-# b81de52) did exactly that -- it reimplemented the deposit as a flat `cp` plus
-# a `git commit`, with no frontmatter, no provenance, no read-back gate and no
-# overwrite refusal. It was not backwards compatible with `fonde consign` in
-# any respect: different argv, different vault layout, different exit codes,
-# and a note the DUPLICATED report below cannot even see, because that report
-# reads the `source_sha256` the real mechanism writes and the flat copy does
-# not. That draft is what this replaces.
+# IT DELETES NOTHING, EVER -- not even a file it just reported DUPLICATED.
+# "does this paragraph describe a premise that still holds?" is not answerable
+# by hashing, so removal stays a human judgement (PROSE-REAPING.md 1).
 #
-# ===========================================================================
-# WHY IT EXISTS AT ALL, IF IT ONLY FORWARDS
-# ===========================================================================
-#
-# Because the deposit is HALF a reaping pass, and the other half has never
-# been visible anywhere. hf7y/scheduler#86, measured 2026-08-10:
-#
-#     2,391 lines sitting in the repo and in the vault at once, byte-for-byte.
-#     All deposited by one commit -- fbdbae9, 2026-08-01. Nine days later
-#     every one of them is still here.
-#
-# `consign-prose.sh` is explicit that it deletes nothing; it deposits, then
-# reports what is now safe to remove. That is the right call -- removal needs a
-# judgement the depositor cannot make. The defect is that NOTHING CONSUMES THAT
-# REPORT. It is printed once, to a terminal, and then the queue it describes
-# does not exist anywhere. `fauche` refuses to clear a repo whose prose has no
-# vault note and prints `fonde consign` as the remedy, so the incentive is to
-# deposit everything and stop: that satisfies `fauche`, satisfies nothing else,
-# and leaves the repo exactly as prose-heavy as before.
-#
-# scheduler#86 asks for that half to be "countable and prompted, not
-# remembered", and names this shape first:
-#
-#     1. `fonde consign --report` / a `consigne status` that lists DUPLICATED
-#        files, so the second half is visible as a queue rather than as nothing.
-#
-# `consigne status` is that. It is the whole reason this is a new door and not
-# a rename: the deposit half already worked.
-#
-# ===========================================================================
-# WHAT IT DOES NOT DO
-# ===========================================================================
-#
-# IT DELETES NOTHING, EVER -- not even a file it has just reported DUPLICATED.
-# Removing a source file is the judgement `consign-prose.sh` declines to make
-# and this declines for the same reason: "does this paragraph describe a
-# premise that still holds?" (PROSE-REAPING.md 1) is not answerable by hashing.
-# What changes is that the queue is now countable, so the judgement has
-# somewhere to be applied instead of being remembered.
-#
-# IT NEVER PUSHES, and it never commits either: the deposit mechanism writes
-# files into the vault working tree and stops. No code path here runs
-# `git push` or `git commit`.
-#
-# THE REASON CHANGED ON 2026-08-12 EVEN THOUGH THE BEHAVIOUR DID NOT, which is
-# worth ten seconds of a reader's time. It used to say the vault "is
-# deliberately left unpushed (Zach's 2026-08-06 licensing/IP note)". That is
-# reversed: the private hf7y/ecosystem1-vault remote IS the vault now, and a
-# reaping pass commits AND pushes (PROSE-REAPING.md 2 and 5.6). What that rule
-# actually cost, before it was reversed: mandark's working copy was found 19
-# commits ahead of origin with 9 uncommitted paths -- one laptop holding the
-# only copy of every consignment since 2026-08-02.
-#
-# So this tool still not committing is now a division of labour rather than a
-# prohibition: depositing is mechanical, deciding what a commit SAYS is not.
-#
-# WHAT THIS TOOL DOES SAY, since hf7y/realisateur#212: whether the clone it
-# just wrote into is actually ahead of origin or has uncommitted paths. It
-# still commits and pushes nothing itself -- that division of labour did not
-# move -- but a deposit that landed in a clone nobody then pushed used to be
-# silent about it, which is exactly the mandark failure above, undetected
-# until someone happened to look. Both `status` and a kept (0) plain deposit
-# now end with that line when the clone is not clean; a clean clone stays
-# quiet, same as `status`'s own "nothing to report" line does.
+# IT NEVER COMMITS AND NEVER PUSHES. No code path here runs either. It does
+# report whether the clone it wrote into is ahead of origin or dirty (#212) --
+# an unpushed deposit is not deposited.
 #
 # exit: 0 kept  2 usage  5 broken  6 blind  7 refused
 #       -- byte-identical to `fonde`'s own VERB_EXITS, because for the deposit

@@ -208,6 +208,7 @@ verbs-refresh.sh
 run-suites.sh
 carry.sh
 reprise.sh
+narrowed-close-check.sh
 verb-name-taken.sh
 selfdev-home-check.sh
 "
