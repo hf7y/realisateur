@@ -10,8 +10,12 @@ CLI_SUMMARY='is self-dev healthy enough to stop watching?'
 CLI_USAGE='  ausculte              every probe; the exit code is the answer
   ausculte --json       one object per probe
   ausculte <probe>      just one: channel hosts arming hygiene propagation
-                        rot landing unarmed fleet handoff'
-CLI_FLAGS='--json'
+                        rot landing unarmed fleet handoff
+  ausculte --cadence    run once on a clock: report, and record how long
+                        each DOWN/BLIND row has held (--quiet to hush it)
+  ausculte --install-cadence [--apply]
+                        show, or install, the crontab line for --cadence'
+CLI_FLAGS='--json --cadence --install-cadence --apply --quiet'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  every declared probe answered OK
   5  something declared is DOWN (the report names it)
@@ -25,14 +29,85 @@ HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 . "$HERE/lib/part.sh"
 . "$HERE/lib/host-check.sh"
 . "$HERE/lib/estate-set.sh"
-JSON=0; ONLY=()
+JSON=0; ONLY=(); CADENCE=0; INSTALL_CADENCE=0; APPLY=0; QUIET=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --json) JSON=1 ;;
+    --cadence) CADENCE=1 ;;
+    --install-cadence) INSTALL_CADENCE=1 ;;
+    --apply) APPLY=1 ;;
+    --quiet) QUIET=1 ;;
     -*) printf '%s: unknown flag: %s\n' "$CLI_NAME" "$1" >&2; exit 2 ;;
     *)  ONLY+=("$1") ;;
   esac; shift
 done
+{ [ "$CADENCE" = 1 ] || [ "$INSTALL_CADENCE" = 1 ]; } && [ ${#ONLY[@]} -gt 0 ] \
+  && { printf '%s: --cadence/--install-cadence take no probe name\n' "$CLI_NAME" >&2; exit 2; }
+
+if [ "$INSTALL_CADENCE" = 1 ]; then
+  self="$(readlink -f "${BASH_SOURCE[0]}")"
+  line="${AUSCULTE_CRON_SPEC:-37 */4 * * *} $self --cadence --quiet # realisateur:ausculte:CADENCE"
+  if [ "$APPLY" -eq 0 ]; then echo "  would   install into $(id -un)'s crontab: $line"; exit 0; fi
+  ( crontab -l 2>/dev/null | grep -v 'realisateur:ausculte:CADENCE'; printf '%s\n' "$line" ) | crontab -
+  # WITNESS: read it back rather than believing `crontab -` exited 0.
+  if crontab -l 2>/dev/null | grep -q 'realisateur:ausculte:CADENCE'; then
+    echo "  OK      cadence in $(id -un)'s crontab (re-read, not asserted): $line"
+    exit 0
+  fi
+  echo "  BAD     the cadence is NOT in the crontab -- nothing will run ausculte" >&2
+  exit 1
+fi
+
+# WHAT --cadence ADDS OVER A BARE RUN: a SINCE record per DOWN/BLIND row
+# (written once, on entry, never rewritten while the state holds -- that
+# mtime is the only thing an escalation ever produced that is worth keeping),
+# a GH_TOKEN minted for the root crontab that has no gh login, and nothing
+# that files or pages -- the relay and issue-filing legs cost 47 questions
+# sent/0 answered and 10 issues/5 days before both were cut for cause.
+if [ "$CADENCE" = 1 ]; then
+  . "$HERE/lib/cron-lock.sh"
+  cron_lock ausculte-cadence
+  STATE="${AUSCULTE_CADENCE_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/ausculte-cadence}"
+  mkdir -p "$STATE" || { echo "$CLI_NAME: BLIND -- cannot write $STATE" >&2; exit 6; }
+  APP_MINT="${SELFDEV_APP_MINT:-${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/selfdev-gh-app.sh}"
+  if [ -z "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ] && [ -x "$APP_MINT" ]; then
+    t="$("$APP_MINT" --token 2>/dev/null | tail -1)"
+    case "$t" in ghs_*|ghu_*|gh[a-z]_*) export GH_TOKEN="$t" ;; esac
+  fi
+  SELF="${AUSCULTE_BIN:-$HERE/ausculte.sh}"
+  [ -n "$SELF" ] && [ -x "$SELF" ] || SELF="$(command -v ausculte || true)"
+  [ -n "$SELF" ] && [ -x "$SELF" ] \
+    || { echo "$CLI_NAME: BLIND -- ausculte is not runnable from here" >&2; exit 6; }
+  out="$("$SELF" --json 2>/dev/null)"
+  cad_rows="$(printf '%s' "$out" | jq -c '.[]' 2>/dev/null)"
+  [ -n "$cad_rows" ] || { echo "$CLI_NAME: BLIND -- ausculte produced no rows" >&2; exit 6; }
+  [ "$QUIET" -eq 1 ] || printf '%s\n' "$out"
+  cad_down=0
+  while IFS= read -r row; do
+    [ -n "$row" ] || continue
+    name="$(printf '%s' "$row" | jq -r '.probe // .row // empty' 2>/dev/null)"
+    status="$(printf '%s' "$row" | jq -r '.status // empty' 2>/dev/null)"
+    detail="$(printf '%s' "$row" | jq -r '.detail // empty' 2>/dev/null)"
+    [ -n "$name" ] || continue
+    # BLIND is not DOWN: "I could not look" is a claim about the observer,
+    # and it keeps its own file so the two never collapse into one number.
+    case "$status" in
+      OK)    rm -f "$STATE/$name.down" "$STATE/$name.blind"; continue ;;
+      DOWN)  f="$STATE/$name.down";  rm -f "$STATE/$name.blind"; word=DOWN ;;
+      BLIND) f="$STATE/$name.blind"; rm -f "$STATE/$name.down"; word=BLIND ;;
+      *)     rm -f "$STATE/$name.down" "$STATE/$name.blind"; continue ;;
+    esac
+    [ "$word" = DOWN ] && cad_down=1
+    if [ ! -f "$f" ]; then
+      printf '%s\n' "$detail" > "$f"
+      [ "$QUIET" -eq 1 ] || echo "  $word    $name -- since now: $detail"
+    else
+      [ "$QUIET" -eq 1 ] || echo "  $word    $name -- since $(date -u -r "$f" +%Y-%m-%dT%H:%MZ 2>/dev/null || echo earlier): $detail"
+    fi
+  done <<< "$cad_rows"
+  [ "$cad_down" -eq 0 ] || exit 5
+  exit 0
+fi
 
 _monkey_status=''; _monkey_status_fetched=0
 fetch_monkey_status() {  # one curl per run for monkey/status.json -- hosts and arming both want it, and two fetches could disagree with each other about the same fact
