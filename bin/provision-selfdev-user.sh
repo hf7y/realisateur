@@ -35,7 +35,11 @@ bad() { printf '  BAD     %s\n' "$*"; BAD=$((BAD+1)); }
 act() { printf '  DO      %s\n' "$*"; }
 die() { printf 'provision-selfdev-user: FATAL %s\n' "$*" >&2; exit 1; }
 
-HOME_DIR="/home/$PROJECT"
+# HOME_ROOT overrides where account homes live -- the same knob
+# selfdev-permissions-provision.sh and selfdev-hooks-provision.sh already use,
+# so a test can point this whole script at a throwaway tree instead of /home.
+HOME_ROOT="${HOME_ROOT:-/home}"
+HOME_DIR="$HOME_ROOT/$PROJECT"
 echo "== provision-selfdev-user $PROJECT ($MODE) on $(hostname -s) =="
 
 # --- where does the token come from ------------------------------------------
