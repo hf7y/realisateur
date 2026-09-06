@@ -1,1 +1,2 @@
 realisateur	discipline	hf7y/realisateur#687 deleted bin/discipline.sh from main; #696 is the retirement witness
+realisateur	selfdev-gh-app	hf7y/realisateur#1055 reverted #1048's carries.tsv row; the next carry drops this stray file from bashified
