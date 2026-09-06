@@ -301,7 +301,6 @@ case "$MODE" in
       bad "git config accepted the helper write but re-reading gives '$got_helper'"
     fi
 
-    # THE AUTHOR HALF. The account, not the bot -- see the model above.
     if ident="$(account_identity)"; then
       want_name="$(printf '%s' "$ident" | sed -n 1p)"
       want_mail="$(printf '%s' "$ident" | sed -n 2p)"

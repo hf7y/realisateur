@@ -259,11 +259,8 @@ case "$1 $2" in
     repo=""
     for ((i=1; i<=$#; i++)); do [ "${!i}" = "--repo" ] && { j=$((i+1)); repo="${!j}"; }; done
     slug="${repo#hf7y/}"; slug="${slug//-/_}"
-    # A real repo with NO deploy keys prints nothing at all, rc 0 -- not
-    # "[]" (#916). STUB_EMPTY_<repo>=1 simulates exactly that, distinct
-    # from every other repo here which defaults to the literal "[]".
     evar="STUB_EMPTY_${slug}"
-    [ "${!evar:-0}" = 1 ] && exit 0
+    [ "${!evar:-0}" = 1 ] && exit 0  # simulates a real zero-key repo: empty stdout, rc 0, not "[]" (#916)
     var="STUB_JSON_${slug}"
     printf '%s' "${!var:-[]}"
     ;;
@@ -384,11 +381,7 @@ t_has "an unrecognized readOnly value is reported BLIND, never silent" "$O" "ret
 echo
 echo "-- D4. deploy-key symmetry: zero keys is a FLAG, not BLIND (#916) ------"
 # ============================================================================
-# THE REGRESSION THIS PINS: gh prints NOTHING at all, rc 0, for a repo with
-# no deploy keys -- not "[]". Empty stdout used to read as "the call failed"
-# regardless of rc, so a real zero-keys account hid behind the same BLIND as
-# a genuine API outage. Live repos this actually happened to: abletim and
-# apms-2173, both pushing over an App installation token, not ssh.
+# abletim, apms-2173: gh prints nothing at all, rc 0, for a zero-key repo -- not "[]" (#916)
 O="$(STUB_ROWS='nokeys	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
      STUB_JSON_realisateur='[]' STUB_JSON_scheduler='[]' STUB_JSON_senechal='[]' \
@@ -398,8 +391,6 @@ t_has "an own-repo with zero deploy keys (empty stdout, rc 0) is a named FLAG" "
 t_hasnt "...and it is never reported as BLIND" "$O" "could not list keys on hf7y/nokeys"
 t_rc "a fleet whose only defect is zero-keys still exits 1 (a real finding, not clean)" 1 "$R"
 
-# The genuine-failure path (gh errors, rc != 0) must still BLIND -- this is
-# what distinguishes "found nothing" from "could not look".
 O="$(STUB_ROWS='cantlook	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN=/nonexistent-gh \
      "$SCRIPT" --audit 2>&1)"

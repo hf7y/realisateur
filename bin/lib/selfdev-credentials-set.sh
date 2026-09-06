@@ -51,12 +51,8 @@ cred_classify_token() {
 }
 
 # cred_own_repo <account> -- the repo this account should hold WRITE on.
-# Most accounts' own repo is named identically to the account; where it
-# isn't (apms -> apms-2173, #905's collision), roster-set.sh's
-# SWEEP_ROSTER_ALIAS is the one place that says so (#916) -- read here
-# rather than re-declared, so the two cannot drift apart.
 cred_own_repo() {
-  sweep_repo "$1"
+  sweep_repo "$1"  # apms -> apms-2173 etc: SWEEP_ROSTER_ALIAS is the one place that says so, read not re-declared (#916)
 }
 
 # cred_grant_covers <account> <kind> <what> -- is this exact exception

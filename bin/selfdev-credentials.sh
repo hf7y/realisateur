@@ -57,7 +57,6 @@ act()   { printf '  DO    %s\n' "$*"; }
 # ============================================================================
 fetch_remote() { # fetch_remote [account-filter]
   # "-" IS THE NO-FILTER SENTINEL. NEVER AN EMPTY STRING.
-  #
   # `ssh host "bash -s" -- "$a" "$b" ""` does NOT hand the remote process argv
   # elements the way a normal exec() would: ssh joins every argument after
   # the remote command with a single SPACE into one string and has the
@@ -300,12 +299,7 @@ cred_check_repo_keys() {
   # refused with a list that names it) and then ignores the filter anyway,
   local json rc
   json="$("$CRED_GH_BIN" repo deploy-key list --repo "$CRED_GH_OWNER/$repo" --json title,readOnly 2>/dev/null)"
-  rc=$?
-  # TRAP (#916): a repo with NO deploy keys prints nothing at all, rc 0 --
-  # not "[]". Empty stdout used to read as "the call failed" regardless of
-  # rc, so a real zero-keys finding (abletim, apms-2173: both push over an
-  # App installation token, not ssh) hid behind the same BLIND as a genuine
-  # API failure. rc is the only thing that tells them apart.
+  rc=$?  # a zero-key repo prints nothing, rc 0, not "[]" -- rc alone distinguishes that from a failed call (#916)
   if [ "$rc" -ne 0 ]; then
     blind "deploy-key symmetry: could not list keys on $CRED_GH_OWNER/$repo (no admin access here, or the repo/call failed)"
     return
