@@ -1,0 +1,20 @@
+name: branch-protection  # the clock for bin/tests/branch-protection.test.sh -- suites is hermetic, so section A never ran authenticated (#950)
+
+on:
+  schedule:
+    - cron: '52 7 * * *'  # reporting-only: its own workflow, so nothing here gates a merge
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  branch-protection:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assert the required check set on main, read from the API
+        env:
+          GH_TOKEN: ${{ secrets.ECOSYSTEM_ISSUES_TOKEN || secrets.GITHUB_TOKEN }}  # same fallback as atteste.yml/etiquette.yml
+        run: bash bin/tests/branch-protection.test.sh  # already collapses BLIND to exit 0; its rc is used as-is
