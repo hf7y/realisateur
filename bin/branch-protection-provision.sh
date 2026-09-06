@@ -9,7 +9,13 @@ CLI_USAGE='  branch-protection-provision.sh                     --check (default
 
   Removal is OUT OF SCOPE. There is no flag that drops a required context:
   a gate that disappears quietly is the failure this exists to prevent, and
-  a stale name and a temporarily-broken check look identical from here.'
+  a stale name and a temporarily-broken check look identical from here.
+
+  A job whose own workflow YAML carries a `# ADVISORY: <reason>` comment
+  directly above its job key is witnessed like any other but never proposed
+  as required -- reported as an ADVISORY row instead (hf7y/realisateur#949).
+  It does not un-require a context already required; removal stays out of
+  scope above.'
 CLI_FLAGS='--check --apply'
 CLI_POSITIONAL=any
 CLI_EXITS='  (the ladder is hf7y/etalon bin/lib/exit-codes.sh, cited: no copy lives here)
@@ -51,13 +57,15 @@ api_get() { "$GH_BIN" api "$1" 2>/dev/null; }
 
 registry() { registry_repos; }   # lib/registry-set.sh -- the marker query has one home
 
-wf_parse() {   # triggers, PR branch filter and jobs of one workflow; a file it cannot parse yields no jobs, which the caller reports BLIND
+wf_parse() {   # triggers, PR branch filter, jobs and ADVISORY markers of one workflow; a file it cannot parse yields no jobs, which the caller reports BLIND
   awk '
-    function flushjob(){ if(job!="") printf "JOB\t%s\t%s\t%s\n", job, (jname==""?job:jname), juses;
-                         job=""; jname=""; juses="-" }
+    function flushjob(){ if(job!="") { disp=(jname==""?job:jname);
+                           printf "JOB\t%s\t%s\t%s\n", job, disp, juses;
+                           if (jadv!="") printf "ADV\t%s\t%s\n", disp, jadv }
+                         job=""; jname=""; juses="-"; jadv="" }
     { sub(/\r$/,"") }
     /^[A-Za-z_][A-Za-z0-9_.-]*:/ {
-      flushjob(); inbr=0; trig="";
+      flushjob(); inbr=0; trig=""; pending_adv="";
       if ($0 ~ /^on:/) { sec="on"; rest=$0; sub(/^on:[ \t]*/,"",rest);
         gsub(/[^A-Za-z0-9_]/," ",rest); n=split(rest,a," ");
         for(i=1;i<=n;i++) if(a[i]!="") print "TRIG\t" a[i];
@@ -76,8 +84,12 @@ wf_parse() {   # triggers, PR branch filter and jobs of one workflow; a file it 
       if ($0 ~ /^    [A-Za-z_]+:/) inbr=0
       next
     }
+    sec=="jobs" && /^  #[ \t]*ADVISORY:/ {   # a marker comment above a job key: `# ADVISORY: <reason>`, indented to the job'"'"'s level. Attaches to the NEXT job key line only; a job with no `uses:` and no marker is unaffected.
+      padv=$0; sub(/^  #[ \t]*ADVISORY:[ \t]*/,"",padv); pending_adv=padv; next
+    }
     sec=="jobs" && /^  [A-Za-z0-9_-]+:[ \t]*$/ { flushjob(); job=$0; sub(/^  /,"",job);
-                                                 sub(/:[ \t]*$/,"",job); next }
+                                                 sub(/:[ \t]*$/,"",job);
+                                                 jadv=pending_adv; pending_adv=""; next }
     sec=="jobs" && job!="" && /^    name:/ { jname=$0; sub(/^    name:[ \t]*/,"",jname);
                                             gsub(/"/,"",jname); sub(/[ \t]+$/,"",jname); next }
     sec=="jobs" && job!="" && /^    uses:/ { juses=$0; sub(/^    uses:[ \t]*/,"",juses);
@@ -142,8 +154,9 @@ in_set() { local n="$1"; shift; local e; for e in "$@"; do [ "$e" = "$n" ] && re
 scan() {
   local name="$1"; local slug="$OWNER/$name"
   local branch tree paths p text parsed
-  local -a produced=() req=() wedge=() missing=() candidate=()
+  local -a produced=() req=() wedge=() missing=() candidate=() advisory_skip=()
   local prot=no wit trig prbr uses disp
+  local -A advisory_reason=() advisory_file=()   # disp -> the ADVISORY marker's reason / the workflow file that carries it
 
   branch="$(api_get "repos/$slug" | jq -r '.default_branch // empty' 2>/dev/null)"
   [ -n "$branch" ] || { blind "$name: the repo would not answer -- not read, not clean"; return; }
@@ -175,6 +188,11 @@ scan() {
         while read -r j; do [ -n "$j" ] && produced+=("$disp / $j"); done <<<"$CJ"
       fi
     done < <(printf '%s' "$parsed" | awk -F'\t' '$1=="JOB"')
+    while IFS=$'\t' read -r _ disp areason; do   # a job with its own `# ADVISORY:` marker -- reported, never proposed as required
+      [ -n "$disp" ] || continue
+      advisory_reason["$disp"]="$areason"
+      advisory_file["$disp"]="$p"
+    done < <(printf '%s' "$parsed" | awk -F'\t' '$1=="ADV"')
   done
 
   mapfile -t produced < <(printf '%s\n' ${produced[@]+"${produced[@]}"} | awk 'NF && !seen[$0]++')
@@ -187,7 +205,11 @@ scan() {
   done
   for p in ${produced[@]+"${produced[@]}"}; do
     in_set "$p" ${req[@]+"${req[@]}"} && continue
-    if printf '%s\n' "$wit" | grep -qxF "$p"; then missing+=("$p"); else candidate+=("$p"); fi
+    if printf '%s\n' "$wit" | grep -qxF "$p"; then
+      if [ -n "${advisory_reason[$p]+set}" ]; then advisory_skip+=("$p"); else missing+=("$p"); fi
+    else
+      candidate+=("$p")
+    fi
   done
 
   printf '\n%s (%s)\n' "$name" "$branch"
@@ -213,6 +235,11 @@ scan() {
   if [ "${#candidate[@]}" -gt 0 ]; then
     say candid. "declared, never reached a conclusion on a PR run, NOT proposed: $(IFS=,; echo "${candidate[*]}")"
     printf '          a matrix job reports per leg; an always-skipped or filtered job gates nothing.\n'
+  fi
+  if [ "${#advisory_skip[@]}" -gt 0 ]; then
+    for a in "${advisory_skip[@]}"; do
+      say ADVISORY "$a (deliberately not required, per ${advisory_file[$a]})"
+    done
   fi
 
   if [ "${#missing[@]}" -eq 0 ]; then
