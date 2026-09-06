@@ -211,6 +211,7 @@ verbs-refresh.sh
 run-suites.sh
 carry.sh
 reprise.sh
+verb-name-taken.sh
 "
 # carry.sh and reprise.sh are LOCAL: they write to a BRANCH of this repo, not a
 # host, so per-account copies would be many writers racing one force-with-lease.
