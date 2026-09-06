@@ -71,6 +71,13 @@ declare -A OWNER=()      # verb -> first project declaring it
 declare -A ALSO=()       # verb -> other projects declaring it
 n_declared=0
 
+DECLARED_TSV="$(mktemp)"   # one sweep shared by every consumer below; catches BLIND, which `< <(...)` would lose
+trap 'rm -f "$DECLARED_TSV"' EXIT
+if ! verb_set_declared > "$DECLARED_TSV"; then
+  echo "$CLI_NAME: FATAL: could not derive the declared verb set -- BLIND, not empty. See stderr above." >&2
+  exit 1
+fi
+
 while IFS=$'\t' read -r project verb; do
   [ -n "$verb" ] || continue
   n_declared=$((n_declared + 1))
@@ -79,7 +86,7 @@ while IFS=$'\t' read -r project verb; do
   else
     OWNER[$verb]="$project"
   fi
-done < <(verb_set_declared)
+done < "$DECLARED_TSV"
 
 note "-- declared set (derived from each project's bashified branch) --------"
 last=""
@@ -91,11 +98,11 @@ while IFS=$'\t' read -r project verb; do
     last="$project"; line=""
   fi
   line="${line}${line:+ }$verb"
-done < <(verb_set_declared)
+done < "$DECLARED_TSV"
 [ -n "$last" ] && note "  $last: $line"
 
 note ""
-note "  $n_declared verb(s) declared by $(verb_set_declared | cut -f1 | sort -u | grep -c .) project(s)"
+note "  $n_declared verb(s) declared by $(cut -f1 "$DECLARED_TSV" | sort -u | grep -c .) project(s)"
 note ""
 
 if [ "$n_declared" = 0 ]; then
@@ -134,8 +141,8 @@ if [ ! -d "$SCHEDULE_DIR" ]; then
   note "         registry is not an empty one. Set SCHEDULE_DIR if it moved."
   flag
 else
-  for project in $(verb_set_declared | cut -f1 | sort -u); do
-    n="$(verb_set_declared | awk -F'\t' -v p="$project" '$1 == p' | wc -l)"
+  for project in $(cut -f1 "$DECLARED_TSV" | sort -u); do
+    n="$(awk -F'\t' -v p="$project" '$1 == p' "$DECLARED_TSV" | wc -l)"
     if [ -f "$SCHEDULE_DIR/$project.conf" ]; then
       printf '  %-13s %-16s %s\n' registered "$project" "$n verb(s)"
     else
