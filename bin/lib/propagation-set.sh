@@ -6,17 +6,14 @@
 # reaches them through the nightly verb build. The argument is what it buys the
 # DEV side: if live accounts pull `main` on a tick, every commit is a
 # deployment and `main` must turn conservative to protect them.
-#
 # PULL, NOT PUSH. The clock lives on the CONSUMER, in the account's own
 # crontab, running as the account. bin/tests/propagation.test.sh asserts this
 # mechanically -- the tick must contain no `sudo -u` and no `ssh` on its apply
 # path -- so the doctrine is enforced, not merely written here.
-#
 # BOOTSTRAP AND PAYLOAD. A build cannot deliver its own installer, so a small,
 # near-immutable bootstrap is installed once per account by
 # setup-selfdev-project.sh. It is bounded and asserted to stay bounded
 # (PROP_LEAK_BOUND); everything else is payload and arrives versioned.
-#
 # TRAP: the PROP_*_SCRIPTS values are newline-separated STRINGS consumed by
 #   `for s in $LIST`, not shell code. A `#` comment placed INSIDE the quotes
 #   does not comment anything -- it CLOSES the string and the rest of the list
@@ -212,6 +209,7 @@ run-suites.sh
 carry.sh
 reprise.sh
 verb-name-taken.sh
+selfdev-home-check.sh
 "
 # carry.sh and reprise.sh are LOCAL: they write to a BRANCH of this repo, not a
 # host, so per-account copies would be many writers racing one force-with-lease.
