@@ -1,0 +1,20 @@
+name: branch-protection
+
+on:
+  schedule:
+    - cron: '52 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  branch-protection:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Which checks actually gate main, read from the API -- suites is hermetic and cannot (#950)
+        env:
+          GH_TOKEN: ${{ secrets.ECOSYSTEM_ISSUES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: bash bin/tests/branch-protection.test.sh
