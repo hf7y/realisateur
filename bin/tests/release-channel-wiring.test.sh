@@ -97,6 +97,8 @@ echo "-- B. THE CUT IS AUTOMATIC (a schedule, not a human) -------------------"
 has "the workflow has a schedule: trigger" "$WFSRC" "schedule:"
 has "the schedule names a cron expression" "$WFSRC" "cron:"
 has "it can also be dispatched by hand for a recovery run" "$WFSRC" "workflow_dispatch"
+has "a parked dispatch does not hold the scheduled run's concurrency slot (#977)" \
+    "$WFSRC" 'group: build-verbs-${{ github.event_name }}'
 
 # ===========================================================================
 echo
@@ -139,6 +141,11 @@ has "the publish step runs even when an earlier step failed" "$WFSRC" "if: alway
 for d in CUT NO_CHANGE BLOCKED ERROR; do
   has "the workflow can emit the '$d' verdict" "$WFSRC" "$d"
 done
+
+has "an assemble-stage refusal is captured, not left in the step's own log alone (#976)" "$WFSRC" "assemble_reason"
+has "the verdict step reads the captured reason" "$WFSRC" "steps.assemble.outputs.assemble_reason"
+has "an ERROR verdict prefers the captured reason over the generic 'no result' one" \
+    "$WFSRC" 'reason="${ASSEMBLE_REASON:-the cut step produced no result'
 
 # The verdict must go to a URL, not into a clone. A file in a repo drifts the
 # moment anyone clones it, which is the bug being fixed.
@@ -279,14 +286,26 @@ fi
 echo
 echo "-- G. DEPLOYED: THE VENDORED WORKFLOW IS THE ONE THAT RUNS -------------"
 # ===========================================================================
-# The vendored copy is only evidence about the real workflow while the two
-# agree. Drift here means every assertion above is about a file nothing runs.
+# origin/main, not the working tree (#650, same shape as carry-drift.test.sh's REF_MAIN, #578): diffing $WF wedged every PR that edited it (#999, #1001, #1007) behind this required check by construction.
+depth=""
+[ "$(git -C "$REPO" rev-parse --is-shallow-repository 2>/dev/null)" = true ] && depth=--depth=1  # CI's checkout is already shallow
+REF_MAIN=""
+GIT_TERMINAL_PROMPT=0 SSH_ASKPASS_REQUIRE=never GIT_ASKPASS=/bin/true \
+  git -C "$REPO" fetch -q $depth origin main:refs/remotes/origin/main 2>/dev/null || true
+git -C "$REPO" rev-parse --verify -q "origin/main^{commit}" >/dev/null 2>&1 && REF_MAIN="origin/main"
+if [ -z "$REF_MAIN" ] && git -C "$REPO" rev-parse --verify -q "main^{commit}" >/dev/null 2>&1; then
+  REF_MAIN="main"
+  echo "  note  origin/main unreadable; comparing against the LOCAL main branch"
+fi
+
 tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT
-if gh api repos/hf7y/verbs/contents/.github/workflows/build-verbs.yml --jq '.content' 2>/dev/null | base64 -d > "$tmp"; then
-  if diff -q "$tmp" "$WF" >/dev/null; then
-    ok "the deployed workflow is byte-identical to the vendored one"
+if [ -z "$REF_MAIN" ]; then
+  bad "no main ref is readable here -- drift was NOT checked (BLIND, not clean)"
+elif gh api repos/hf7y/verbs/contents/.github/workflows/build-verbs.yml --jq '.content' 2>/dev/null | base64 -d > "$tmp"; then
+  if diff -q "$tmp" <(git -C "$REPO" show "$REF_MAIN:provision/verbs-meta/build-verbs.yml") >/dev/null; then
+    ok "the deployed workflow is byte-identical to $REF_MAIN's"
   else
-    bad "DRIFT: hf7y/verbs' workflow differs from provision/verbs-meta/build-verbs.yml"
+    bad "DRIFT: hf7y/verbs' workflow differs from $REF_MAIN's provision/verbs-meta/build-verbs.yml"
   fi
 else
   bad "could not read the deployed workflow (auth? network?) -- drift is UNKNOWN, not clean"

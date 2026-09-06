@@ -1,36 +1,35 @@
 # realisateur
 
-Zach drops ideas into this folder in a chaotic, unstructured way — a quick
-echoed note, a screenshot, a half-formed thought in a text file. No fixed
-format, no naming convention.
+**The estate's governance layer.** realisateur owns the rules the other
+projects are graded by, and the machinery that grades them: the guards
+(`atteste`, `gh-sign`, body-grammar, the deny lists), the release channel and
+its promotion boundary, self-dev account provisioning, and the cross-project
+view no single project's nightly can have.
 
-realisateur's job is to notice what's been dropped, infer the idea behind
-it, and turn it into a real, scaffolded project wired into the rest of the
-development ecosystem — most importantly, registered with the scheduler, whose
-own `README.md` is the source of truth for how, so it can keep developing
-itself unattended, the same way realisateur itself now does.
+Ruled by Zach on 2026-09-03. This file used to describe an idea-to-project
+factory: notice artifacts dropped in a folder, infer the idea, scaffold a wired
+project. That job succeeded — the estate has 19 accounts and every armed one
+carries a milestone — and it stopped. Measured the same day: the inbox is
+empty, and 54 of the 84 open issues are estate plumbing with no relation to
+scaffolding anything. The README described a job the repo was not doing.
 
-## How it works
+## What governance means here
 
-1. **Inbox**: raw dropped artifacts land at the repo root (or wherever
-   Zach puts them) — text files, PNGs, whatever. Nothing about their name
-   or shape is guaranteed.
-2. **Inference**: read/view each artifact and figure out what idea it's
-   pointing at. When it's ambiguous, pick the most reasonable
-   interpretation and act.
-3. **Wiring**: turn a viable idea into its own project — a real directory
-   (usually a sibling under `~/Documents/Projects/`), a git repo, and a
-   scheduler registration of its own if it's the kind of thing that
-   benefits from an unattended nightly loop (most agent/codebase projects
-   are).
-4. **Archive**: once an artifact has been acted on (a project scaffolded,
-   or a decision made not to), move it out of the inbox so the next run
-   doesn't re-process it — see `.claude/commands/nightly-batch.md` for the
-   exact convention.
+1. **Grade the estate.** Guards, ratchets and witnesses that other repos call
+   or inherit. A rule with no mechanism is prose; see `PROSE-REAPING.md`.
+2. **Ship the generation.** The release pin, the promotion boundary, and
+   `vaporwave` as the proving ground — milestone `v2`, one name across repos
+   (see `hf7y/scheduler`'s `v2`).
+3. **Provision identity.** Self-dev accounts, the host-wide App key, the
+   credential surface. `provision/` and `bin/selfdev-*`.
+4. **Hold the cross-project view.** `/ideate` is the interactive pass that
+   surfaces what no single project can see; `dose` apportions the fleet's work.
 
-## This project's own scheduler registration
+## What this is not
 
-realisateur is itself registered as a Tier 2 (nightly batch) participant
-— see `schedule/realisateur.conf` in the scheduler repo. Its nightly run
-is what actually processes the inbox and wires up new projects; there is
-no separate daemon or watcher.
+Not the scheduler. `hf7y/scheduler` owns dispatch, pacing and the ROSTER that
+arms a project; realisateur owns what a run is graded by once it dispatches.
+Proposals about the engine go to that repo, never a hand-edit from here.
+
+Not senechal. `hf7y/senechal` owns knowing what exists on the machines;
+realisateur owns what it generates, and files through senechal's typed doors.
