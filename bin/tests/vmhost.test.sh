@@ -110,9 +110,15 @@ vmhost_pause_clear gardien
 unset VMHOST_PAUSE_DIR
 
 section "K. the wsl backend -- monkey becomes a distro on dexter and VirtualBox goes away (#704 follow-on)"
-WSL="$T/wsl.exe"; WCALLS="$T/wcalls"; WLIST="$T/wlist"; WRUN="$T/wrun"
+WSL="$T/wsl.exe"; WCALLS="$T/wcalls"; WLIST="$T/wlist"; WRUN="$T/wrun"; WFAIL="$T/wfail"
 cat > "$WSL" <<STUB
 #!/usr/bin/env bash
+n=\$(cat "$WFAIL" 2>/dev/null || echo 0)   # the real interop failure: an error where the answer goes, on stderr, exit 0
+if [ "\$n" -gt 0 ]; then
+  printf '%s\\n' "\$((n - 1))" > "$WFAIL"
+  printf '<3>WSL (650213 - ) ERROR: UtilAcceptVsock:273: accept4 failed 110\\n' >&2
+  exit 0
+fi
 case "\$1" in
   -l) if [ "\$3" = --running ]; then cat "$WRUN"; else cat "$WLIST"; fi ;;
   --terminate) printf 'terminate %s\n' "\$2" >> "$WCALLS" ;;
@@ -147,6 +153,13 @@ has "K6b the no-driver refusal names both drivers it looked for" "$out" "wsl.exe
 has "K6c ...including VBoxManage, so the off-host message stays true either way" "$out" "VBoxManage"
 
 eq "K7 a running distro reads running" "$(vmhost_state monkey)" "running"
+printf '1\n' > "$WFAIL"
+eq "K7b one lost interop call is retried, not published -- monkey was up 5 days when this alarmed" \
+  "$(vmhost_state monkey)" "running"
+printf '9\n' > "$WFAIL"
+eq "K7c a driver that never answers reads unknown, NEVER poweroff -- poweroff is what monkey-watch alerts Zach on" \
+  "$(vmhost_state monkey)" "unknown"
+printf '0\n' > "$WFAIL"
 printf 'Ubuntu\n' > "$WRUN"
 eq "K8 a distro that is not running reads poweroff -- it holds no RAM" "$(vmhost_state monkey)" "poweroff"
 printf 'Ubuntu\nmonkey\n' > "$WRUN"
