@@ -443,7 +443,7 @@ case "${1:-} ${2:-}" in
         # DOOR FIRST, FINDING LAST, EXAMPLE FENCED BETWEEN: the other order
         # meant `tail` saw the example and never the finding (#627).
         printf 'gh-sign: REFUSED -- this %s body breaks the grammar in %s.\n' "$1 $2" "$GRAMMAR" >&2
-        printf 'gh-sign: `defere` composes a valid body; `gh-sign.sh --check-body <file>` re-runs this check.\n' >&2
+        printf 'gh-sign: `defere` composes a valid body; `gh --check-body <file>` re-runs this check.\n' >&2
         printf 'gh-sign: nothing was created.\n\n' >&2
         printf '  +-- EXAMPLE BODY -- an illustration, NOT state of any repo ---\n' >&2
         grammar_template | while IFS= read -r _t; do printf '  | %s\n' "$_t" >&2; done

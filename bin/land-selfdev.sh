@@ -13,10 +13,10 @@
 # without an explicit flag. That script is the shape realisateur's own
 # bin/install-verbs.sh header already cites as the one to imitate.
 #
-# WHAT IT DELIBERATELY DOES NOT DO: it never writes a crontab. `sync-crontab.sh`
-# is run in PREVIEW at the end and the --apply command is printed for a human.
-# Arming dispatch is the single step that spends a shared quota, and every other
-# guard in this ecosystem stops one step short of it for the same reason.
+# WHAT IT DELIBERATELY DOES NOT DO: it never writes a crontab. `dose <project>`
+# runs in PREVIEW (its --check default) at the end and the --apply command is
+# printed for a human. Arming dispatch is the single step that spends a shared
+# quota, and every other guard in this ecosystem stops one step short of it.
 
 set -uo pipefail
 
@@ -228,17 +228,20 @@ fi
 # --- stop here ---------------------------------------------------------------
 echo
 echo "== dispatch preview (NOTHING armed) =="
-if [ -x "$PROJECTS/scheduler/bin/sync-crontab.sh" ]; then
-  ( cd "$PROJECTS/scheduler" && ./bin/sync-crontab.sh ) || true
+DOSE_PROJECTS="${SELFDEV_PROJECTS:-$(id -un)}"
+if command -v dose >/dev/null 2>&1; then
+  for p in $DOSE_PROJECTS; do dose "$p" --check || true; done
 fi
 cat <<EOF
 
 land-selfdev: $PASS ok, $GAPS missing, $BAD bad.
 
 NOTHING IS SCHEDULED YET, deliberately. Read the preview above; there must be
-ZERO lines beginning "ERROR [". Then, and only as a separate act:
-
-    cd $PROJECTS/scheduler && ./bin/sync-crontab.sh --apply
+no line beginning "BROKEN:", "BLIND:" or "GAP:". Then, and only as a separate
+act, per project:
+EOF
+for p in $DOSE_PROJECTS; do echo "    dose $p --apply"; done
+cat <<EOF
 
 Arming dispatch is the one step that spends a shared quota, and on this
 ecosystem's accounting mandark, dexter and this host all draw on the same
