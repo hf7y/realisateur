@@ -192,15 +192,13 @@ if want arming; then
   elif [ "$(printf '%s' "$st" | jq -r '.accounts | length' 2>/dev/null)" = 0 ]; then
     record arming BLIND "the published monkey status lists no accounts: $(printf '%s' "$st" | jq -r '.watcher.accounts_from // .accounts_from // "no reason given"' 2>/dev/null)"
   else
-    # TRAP: fromdateiso8601 rejects a "+00:00" offset and takes only "Z", so
-    # the timestamps make jq exit mid-stream and this row printed OK off an
-    # empty result. A jq failure is BLIND, never clean.
+    # fromdateiso8601 wants "Z" only; the collector normalises to it now (#919)
     if ! stale="$(printf '%s' "$st" | jq -er --argjson d "${ARMING_STALE_DAYS:-3}" '
       (now - ($d * 86400)) as $cut
       | [ .accounts[]
           | select(.armed)
           | select(.last_run.started_at != null)
-          | select(((.last_run.started_at | sub("\\+00:00$"; "Z") | fromdateiso8601)) < $cut)
+          | select((.last_run.started_at | fromdateiso8601) < $cut)
           | .account ] | join(" ")' 2>/dev/null)"; then
       record arming BLIND 'the status document could not be graded (unreadable timestamps)'
       stale=SKIP

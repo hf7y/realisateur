@@ -75,21 +75,26 @@ case "$out" in *"#577"*) bad "rot headline names the newest" "got: $out" ;;
 
 # --- arming reads what the accounts DID ----------------------------------
 # Counting the word "armed" said OK while three accounts had been dead eight
-# days. And the first draft of the fix printed OK off a jq error, because the
-# ledger writes "+00:00" and fromdateiso8601 accepts only "Z".
+# days -- and fromdateiso8601 rejected the ledger's real offsets until the
+# collector started normalising every timestamp to Z (#919).
 status() { printf '#!/usr/bin/env bash\ncat <<'"'"'J'"'"'\n%s\nJ\n' "$1" > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"; }
-recent="$(date -u -d '-1 hour' +%Y-%m-%dT%H:%M:%S+00:00)"
-old_run="$(date -u -d '-9 days' +%Y-%m-%dT%H:%M:%S+00:00)"
+recent="$(date -u -d '-1 hour' +%Y-%m-%dT%H:%M:%SZ)"
+old_run="$(date -u -d '-9 days' +%Y-%m-%dT%H:%M:%SZ)"
 
 status "{\"accounts\":[{\"account\":\"live\",\"armed\":true,\"last_run\":{\"started_at\":\"$recent\"}}]}"
 out="$(run arming)"; rc=$?
 check "an account that dispatched recently is OK" "$rc" "0"
-has "and the offset form is parsed, not fatal" "$out" "OK      arming"
+has "and a Z-format timestamp grades cleanly" "$out" "OK      arming"
 
 status "{\"accounts\":[{\"account\":\"dead\",\"armed\":true,\"last_run\":{\"started_at\":\"$old_run\"}}]}"
 out="$(run arming)"; rc=$?
 check "an armed account that stopped dispatching is DOWN (5)" "$rc" "5"
 has "and it is named" "$out" "dead"
+
+status "{\"accounts\":[{\"account\":\"live\",\"armed\":true,\"last_run\":{\"started_at\":\"2026-09-01T00:30:45-05:00\"}}]}"
+out="$(run arming)"; rc=$?
+check "a negative-offset timestamp is not this probe's to parse -- BLIND (6), not a silent pass (#919)" "$rc" "6"
+has "and it says so rather than reading as OK" "$out" "could not be graded"
 
 # No run record is BLIND, not DOWN: three accounts dispatch and write none at
 # all (hf7y/scheduler#259), so the document cannot say either way.
