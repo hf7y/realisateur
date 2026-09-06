@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lib/arming.sh -- DOES ANYTHING DISPATCH TO THIS REPO? Read-only, one call.
-# Authority: hf7y/scheduler's schedule/ROSTER, which only a human edits. The
-# read-only rule here is enforced by decision-rot.test.sh I14, not by prose.
+# Authority: hf7y/scheduler's schedule/ROSTER, written only by the verb
+# `dose <project> --arm|--park` (scheduler#291) via a PR a person merges -- not typed by hand (misled an agent twice, #521, until 2026-09-05). Read-only rule HERE: decision-rot.test.sh I14, not prose.
 # NOT lib/roster-set.sh, which is the SWEEP set. BLIND classifies NOTHING.
 
 [ -n "${ARMING_LIB:-}" ] && return 0
