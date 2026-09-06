@@ -58,23 +58,21 @@ jobs:
     # `needs` on a job that is skipped on pull_request would skip this one too.
     if: always() && (needs.carry.result == 'success' || needs.carry.result == 'skipped')
     runs-on: ubuntu-latest
-    # GIT_AUTHOR_*/GIT_COMMITTER_* env vars beat a fixture's own `-c
-    # user.email=...` override, which broke suites that forge a foreign
-    # identity on purpose (monkey-status-collect, monkey-watch). GIT_CONFIG_GLOBAL
-    # keeps identity out of ~/.gitconfig (#847) while still losing to `-c`.
-    env:
-      GIT_CONFIG_GLOBAL: /tmp/ci-gitconfig-suites
     steps:
       - uses: actions/checkout@v4
 
       - name: Make origin/bashified resolvable
         run: git fetch --no-tags --depth=1 origin +refs/heads/bashified:refs/remotes/origin/bashified
 
-      - name: Give git a fallback identity for fixture commits (scoped file, not ~/.gitconfig)
+      # Several suites commit into fixture repositories. Most set an identity
+      # per repo or per command, but a runner has no global one at all, so
+      # anything that does not is a confusing "empty ident name" failure that
+      # has nothing to do with the assertion under test.
+      - name: Give git an identity for fixture commits
         run: |
-          git config --file "$GIT_CONFIG_GLOBAL" user.email "ci@realisateur.invalid"
-          git config --file "$GIT_CONFIG_GLOBAL" user.name  "realisateur CI"
-          git config --file "$GIT_CONFIG_GLOBAL" init.defaultBranch main
+          git config --global user.email "ci@realisateur.invalid"
+          git config --global user.name  "realisateur CI"
+          git config --global init.defaultBranch main
 
       # bin/run-suites.sh does the looping and quarantine handling (#316).
       - name: Run every suite in bin/tests/
