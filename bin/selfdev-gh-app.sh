@@ -279,13 +279,20 @@ case "$MODE" in
     ;;
 
   --wire)
-    self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+    # THE VERB NAME, NOT $0's INVOCATION PATH. This used to resolve to
+    # whatever absolute path the script happened to be run from -- a
+    # hand-copied /usr/local/libexec/selfdev/selfdev-gh-app.sh that only a
+    # human ever refreshed. Now that bin/selfdev-gh-app is a declared verb
+    # (bin/lib/carries.tsv, #893), the composed helper names it by verb on
+    # PATH, so whatever the build/pin mechanism delivers is what git actually
+    # execs on every 401 -- no hand-copied path to go stale.
+    verb=selfdev-gh-app
     # This --repos is the scope of every token the account mints; omitted, that
     # is the whole installation -- 53 repos, 2026-08-27. Never defaulted (#671).
     if [ -n "$REPOS" ]; then
-      want_helper="!'$self' --repos '$REPOS' --credential"
+      want_helper="!'$verb' --repos '$REPOS' --credential"
     else
-      want_helper="!'$self' --credential"
+      want_helper="!'$verb' --credential"
     fi
     git config --global --unset-all credential."https://github.com".helper 2>/dev/null
     git config --global --add credential."https://github.com".helper "$want_helper"
@@ -293,9 +300,9 @@ case "$MODE" in
     got_helper="$(git config --global --get-all credential."https://github.com".helper)"
     if [ "$got_helper" = "$want_helper" ]; then
       if [ -n "$REPOS" ]; then
-        ok "git credential helper -> $self --credential (scoped to: $REPOS)"
+        ok "git credential helper -> $verb --credential (scoped to: $REPOS)"
       else
-        ok "git credential helper -> $self --credential (UNSCOPED -- mints a token for every repo the App is installed on; pass --repos to narrow it, #671)"
+        ok "git credential helper -> $verb --credential (UNSCOPED -- mints a token for every repo the App is installed on; pass --repos to narrow it, #671)"
       fi
     else
       bad "git config accepted the helper write but re-reading gives '$got_helper'"
