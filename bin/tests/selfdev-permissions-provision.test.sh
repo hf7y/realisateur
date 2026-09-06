@@ -93,6 +93,41 @@ has "C: --apply leaves a correct account alone" "$out" "ok    correct"
 [ "$(ls "$T/h3/correct/.claude/")" = "$before" ] \
   && ok "C: and made no backup and no write" || bad "C: rewrote a correct account"
 
+mkhome h5 ahead "$(jq -cn --argjson w "$WANT" --arg tmpdir "$T/h5/ahead/tmp" \
+  '{permissions: ($w + {deny: ($w.deny + ["Bash(extra-rule:*)"])}), env:{TMPDIR:$tmpdir}}')"  # L: AHEAD -- deny is a superset of the pinned one (#964)
+mkdir -p "$T/h5/ahead/tmp"; chmod 700 "$T/h5/ahead/tmp"
+before="$(cat "$T/h5/ahead/.claude/settings.json")"
+
+out="$(run h5)"
+has  "L: a superset deny list reports AHEAD, not DRIFT" "$out" "AHEAD ahead"
+hasnt "L: and is never reported as DRIFT"               "$out" "DRIFT ahead"
+
+out="$(run h5 --apply)"; run h5 --strict >/dev/null 2>&1; got=$?
+has "L: --apply without --force still refuses an AHEAD account" "$out" "AHEAD ahead"
+hasnt "L: and does not claim to have written it"                "$out" "written"
+[ "$(cat "$T/h5/ahead/.claude/settings.json")" = "$before" ] \
+  && ok "L: --apply without --force left the file untouched" \
+  || bad "L: --apply without --force rewrote an AHEAD account"
+! ls "$T/h5/ahead/.claude/"settings.json.bak-* >/dev/null 2>&1 \
+  && ok "L: and made no backup" || bad "L: made a backup despite refusing to write"
+rc "L: --strict is red while an account is AHEAD" 1 "$got"
+
+out="$(run h5 --apply --force)"; run h5 --strict >/dev/null 2>&1; got=$?
+has "L: --apply --force shrinks an AHEAD account"      "$out" "-> written"
+got_perms="$(jq -c '.permissions' "$T/h5/ahead/.claude/settings.json")"
+[ "$got_perms" = "$(jq -c . <<<"$WANT")" ] \
+  && ok "L: --force brings it exactly back to the pinned block" \
+  || bad "L: --force left the extra rule in place: $got_perms"
+rc "L: --strict is green once --force has run" 0 "$got"
+
+mkhome h5 mixed "$(jq -cn --argjson w "$WANT" --arg tmpdir "$T/h5/mixed/tmp" \
+  '{permissions: ($w + {deny: ($w.deny[1:] + ["Bash(extra-rule:*)"])}), env:{TMPDIR:$tmpdir}}')"  # M: extra+missing is DRIFT, not AHEAD -- not a pure shrink
+out="$(run h5)"
+has  "M: extra plus missing rules is DRIFT, not AHEAD" "$out" "DRIFT mixed"
+hasnt "M: and is never reported as AHEAD"              "$out" "AHEAD mixed"
+out="$(run h5 --apply)"
+has "M: --apply writes a mixed account without --force" "$out" "-> written"
+
 # --- H: an empty roster is BLIND, never a clean 0 ---------------------------
 mkdir -p "$T/h4"
 # shellcheck disable=SC1007  # empty SUDO on purpose, as above.

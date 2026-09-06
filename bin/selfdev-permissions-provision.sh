@@ -21,12 +21,14 @@ CLI_NAME='selfdev-permissions-provision.sh'
 CLI_SUMMARY='give every self-dev account its permissions block and its private TMPDIR'
 CLI_USAGE='  selfdev-permissions-provision.sh            report drift, change nothing
   selfdev-permissions-provision.sh --apply    write the block
+  selfdev-permissions-provision.sh --force    with --apply, shrink an AHEAD
+                                               account'"'"'s deny list too
   selfdev-permissions-provision.sh --strict   exit 1 if any account drifts
   selfdev-permissions-provision.sh --print    print the block and exit'
-CLI_FLAGS='--apply --strict --print'
-CLI_EXITS='  0  visited every account; no --strict, or --strict and none drifted
-  1  --strict was given and at least one account lacks the block (checked
-     after --apply, so --apply --strict verifies its own work)
+CLI_FLAGS='--apply --force --strict --print'
+CLI_EXITS='  0  visited every account; no --strict, or --strict and none drifted or AHEAD
+  1  --strict was given and at least one account lacks the block or is AHEAD
+     (checked after --apply, so --apply --strict verifies its own work)
   6  BLIND -- an account home exists but its settings could not be read or
      parsed, or the roster matched no account at all. NEVER 0.'
 CLI_POSITIONAL=any
@@ -51,10 +53,11 @@ if [ -z "${ACCOUNTS:-}" ]; then
   ACCOUNTS="$DEFAULT_ACCOUNTS"
 fi
 
-APPLY=0; STRICT=0; PRINT=0
+APPLY=0; STRICT=0; PRINT=0; FORCE=0
 for a in "$@"; do
   case "$a" in
     --apply) APPLY=1 ;;
+    --force) FORCE=1 ;;
     --strict) STRICT=1 ;;
     --print) PRINT=1 ;;
   esac
@@ -111,7 +114,7 @@ else
 fi
 echo
 
-drift=0; blind=0; okc=0
+drift=0; blind=0; okc=0; ahead_n=0
 
 for u in "$@"; do
   f="$HOME_ROOT/$u/.claude/settings.json"
@@ -146,7 +149,22 @@ for u in "$@"; do
     fi
     have="$(printf '%s' "$cur" | jq -c '.permissions // "absent"' 2>/dev/null)"
     havetmp="$(printf '%s' "$cur" | jq -r '.env.TMPDIR // "absent"' 2>/dev/null)"
-    echo "  DRIFT $u: permissions=$have env.TMPDIR=$havetmp"
+
+    if printf '%s' "$cur" | jq -e --argjson want "$PERMS" '
+        ((.permissions.deny // []) - $want.deny) as $extra
+        | ($want.deny - (.permissions.deny // [])) as $missing
+        | ($missing | length == 0) and ($extra | length > 0)
+      ' >/dev/null 2>&1  # AHEAD: live deny is a pinned-block superset (#964) -- a wholesale replace would only remove rules here, never add one
+    then
+      if [ "$FORCE" != 1 ]; then
+        echo "  AHEAD $u: permissions=$have -- live deny is a superset of the pinned block; refusing to shrink it (pass --force to override)"
+        ahead_n=$((ahead_n+1))
+        continue
+      fi
+      echo "  AHEAD $u: permissions=$have -- --force given, shrinking to the pinned block"
+    else
+      echo "  DRIFT $u: permissions=$have env.TMPDIR=$havetmp"
+    fi
     drift=$((drift+1))
     [ "$APPLY" = 1 ] || continue
   fi
@@ -190,8 +208,8 @@ for u in "$@"; do
 done
 
 echo
-echo "== $okc with the block, $drift drifted, $blind BLIND, out of $# account(s) =="
+echo "== $okc with the block, $drift drifted, $ahead_n ahead, $blind BLIND, out of $# account(s) =="
 
 [ "$blind" -eq 0 ] || { echo "$CLI_NAME: $blind account(s) unreadable -- counts above are NOT trustworthy."; exit 6; }
-[ "$STRICT" = 1 ] && [ "$drift" -gt 0 ] && exit 1
+[ "$STRICT" = 1 ] && { [ "$drift" -gt 0 ] || [ "$ahead_n" -gt 0 ]; } && exit 1
 exit 0
