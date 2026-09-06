@@ -116,14 +116,21 @@ def dispatch_line(cron_lines):
     return any(RUNNER_TAG in l for l in cron_lines)
 
 
-def roster_states(host):
-    """account -> live|parked. None means COULD NOT LOOK, which armed() turns
-    into null rather than false. No fall-back: stale-read-as-live is worse."""
+def roster_states():
+    """project -> live|parked. None means COULD NOT LOOK, which armed() turns
+    into null rather than false. No fall-back: stale-read-as-live is worse.
+
+    NO HOST FILTER, and no account column to key on: the service holds state
+    and nothing else (hf7y/scheduler#432). An account name IS its project name
+    in 23 of 23 rows, and "does this project run here" is answered by whether
+    the account exists on THIS box -- which is what enumerating $HOME_ROOT
+    already does, one caller up. A roster row for a project with no local
+    account is simply never looked up."""
     try:
         d = json.loads(urllib.request.urlopen(ROSTER_URL, timeout=10).read().decode())
     except Exception:
         return None
-    return {r["account"]: r["state"] for r in d["rows"] if r["host"] == host} or None
+    return {r["project"]: r["state"] for r in d["rows"]} or None
 
 
 def armed(cron_lines, states, account):
@@ -221,7 +228,7 @@ if __name__ == "__main__":            # importable per function; `python3 - <fil
         "accounts_scope": accounts_scope(),
     }
 
-    states = roster_states(os.uname().nodename)
+    states = roster_states()
     out["roster_read"] = states is not None
     for u in accounts():
         c = cron(u)
