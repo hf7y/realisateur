@@ -100,6 +100,11 @@ jobs:
   # third party can break is a wedge (realisateur#592's shape). It is loud; the
   # propagation probe pages. Which checks actually gate `main` is read from the
   # API, not asserted here: bin/tests/branch-protection.test.sh.
+  #
+  # Machine-readable form of the paragraph above, read by
+  # bin/branch-protection-provision.sh so `--apply` never proposes this job as
+  # a required context on its own say-so (hf7y/realisateur#949):
+  # ADVISORY: reads another repository; a required check a third party can break is a wedge (realisateur#592's shape)
   deploy-drift:
     runs-on: ubuntu-latest
     permissions:

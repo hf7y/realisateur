@@ -18,7 +18,7 @@ printf '%s\n' "$*" >> "$GH_LOG"
 shift
 if [ "${1:-}" = -X ]; then
   key="$(printf '%s' "$3" | tr -c 'A-Za-z0-9' '_')"
-  cat >/dev/null
+  if [ -n "${PUT_BODY_DIR:-}" ]; then cat > "$PUT_BODY_DIR/$key"; else cat >/dev/null; fi
   [ -f "$FIX/$key.after" ] && cp "$FIX/$key.after" "$FIX/$key"
   exit 0
 fi
@@ -51,7 +51,8 @@ wf_one_job() { printf 'name: ci\non:\n  pull_request:\njobs:\n  %s:\n    runs-on
 
 put graphql <<<'tidy
 runsmore
-wedged'
+wedged
+advised'
 
 repo tidy      < <(wf_one_job suites)
 checks tidy aaa suites
@@ -76,7 +77,23 @@ checks wedged ccc suites
 put "repos/hf7y/wedged/branches/main/protection" \
   <<<'{"required_status_checks":{"strict":false,"contexts":["ghost"]},"enforce_admins":{"enabled":false}}'
 
-run() { GH_LOG="$T/log" GH_BIN="$GH" FIX="$FIX" bash "$SCRIPT" "$@" 2>&1; }
+# advised: suites is already required; deploy-drift carries an ADVISORY
+# marker directly above its job key and must never be proposed; lint carries
+# no marker and must still be proposed, exactly like runsmore's.
+repo advised   < <(printf 'name: ci\non:\n  pull_request:\njobs:\n  suites:\n    runs-on: ubuntu-latest\n  # ADVISORY: reads another repo; a required check a third party can break is a wedge\n  deploy-drift:\n    runs-on: ubuntu-latest\n  lint:\n    runs-on: ubuntu-latest\n')
+checks advised ddd suites deploy-drift lint
+put "repos/hf7y/advised/branches/main/protection" \
+  <<<'{"required_status_checks":{"strict":false,"contexts":["suites"]},"enforce_admins":{"enabled":false}}'
+cp "$FIX/$(printf '%s' 'repos/hf7y/advised/branches/main/protection' | tr -c 'A-Za-z0-9' '_')" \
+   "$FIX/$(printf '%s' 'repos/hf7y/advised/branches/main/protection' | tr -c 'A-Za-z0-9' '_').after"
+python3 - "$FIX/$(printf '%s' 'repos/hf7y/advised/branches/main/protection' | tr -c 'A-Za-z0-9' '_').after" <<'PY'
+import json,sys
+f=sys.argv[1]; d=json.load(open(f))
+d["required_status_checks"]["contexts"]=["suites","lint"]
+json.dump(d,open(f,"w"))
+PY
+
+run() { GH_LOG="$T/log" GH_BIN="$GH" FIX="$FIX" PUT_BODY_DIR="${PUT_BODY_DIR:-}" bash "$SCRIPT" "$@" 2>&1; }
 
 section "A. the argument contract"
 run --not-a-real-flag >/dev/null 2>&1; eq "A1 unknown flag exits 2" "$?" "2"
@@ -118,6 +135,24 @@ hasnt "E2 and made no PUT" "$(cat "$T/log")" "-X PUT"
 has "E3 with the flag it PUTs" "$(cat "$T/log")" "-X PUT repos/hf7y/runsmore/branches/main/protection"
 has "E4 and re-reads to confirm" "$OUT" "applied now requires [suites,lint]"
 eq  "E5 exits 0 once the delta is closed" "$RC" "0"
+
+section "H. a job with its own ADVISORY marker is witnessed but never proposed as required (hf7y/realisateur#949)"
+: > "$T/log"; OUT="$(run advised)"; RC=$?
+eq  "H1 exits 1 (lint is still a genuine finding)" "$RC" "1"
+has "H2 still proposes the unmarked job" "$OUT" "MISSING runs and does not require: lint"
+hasnt "H3 never folds the marked job into MISSING" "$OUT" "does not require: deploy-drift"
+hasnt "H4 never folds it in alongside lint either" "$OUT" "does not require: lint,deploy-drift"
+has "H5 reports it distinctly, by name" "$OUT" "ADVISORY deploy-drift"
+has "H6 names the file the marker lives in" "$OUT" "per .github/workflows/ci.yml"
+has "H7 the remedy proposed excludes it" "$OUT" "remedy  require [suites,lint] on hf7y/advised@main"
+PUT_BODY_DIR="$T/put"; mkdir -p "$PUT_BODY_DIR"
+: > "$T/log"; OUT="$(run --apply advised)"; RC=$?
+eq  "H8 --apply exits 0 once the delta (lint only) is closed" "$RC" "0"
+BODY="$T/put/$(printf '%s' 'repos/hf7y/advised/branches/main/protection' | tr -c 'A-Za-z0-9' '_')"
+[ -f "$BODY" ] || { bad "H9 the PUT body was captured" "no file at $BODY"; }
+hasnt "H10 the write itself never carries the marked job"  "$(cat "$BODY" 2>/dev/null)" "deploy-drift"
+has   "H11 the write does carry the unmarked one"          "$(cat "$BODY" 2>/dev/null)" "lint"
+unset PUT_BODY_DIR
 
 section "F. could-not-look is BLIND, never clean"
 : > "$T/log"; rm -f "$FIX/graphql"
