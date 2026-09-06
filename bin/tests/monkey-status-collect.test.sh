@@ -227,6 +227,38 @@ eq "a clone configured to commit as someone else is one finding" \
 eq "...and its own commits are not counted a second time against it" \
   "$(printf '%s' "$out" | jq '.clones[] | select(.path | endswith("/overridden")) | .count')" "0"
 
+section "H. last_runs: started_at/ended_at are normalised to UTC Z (#919)"
+# The scheduler ledger writes local-offset timestamps; ausculte's
+# fromdateiso8601 accepts only "Z" and went BLIND on a negative offset in
+# production. One document, two timestamp formats was the actual defect --
+# fixed here, at the source, not by teaching the consumer more offsets.
+mkdir -p "$T/homes/tsacct/.local/share/scheduler-runs"
+cat > "$T/homes/tsacct/.local/share/scheduler-runs/run.jsonl" <<'JSONL'
+{"run_id":"1","job":"batch","started_at":"2026-09-01T00:30:45-05:00","ended_at":"2026-09-01T00:45:00-05:00","rc":0}
+JSONL
+cat > "$T/probe5.py" <<'PY5'
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("collect", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+print(json.dumps(m.last_runs(sys.argv[2])))
+PY5
+out="$(SELFDEV_HOME_ROOT="$T/homes" PYTHONDONTWRITEBYTECODE=1 \
+  python3 "$T/probe5.py" "$COLLECTOR" tsacct)"
+eq "a negative-offset started_at is re-expressed in UTC Z" \
+  "$(printf '%s' "$out" | jq -r '.[0].started_at')" "2026-09-01T05:30:45Z"
+eq "...and ended_at too, same ledger record" \
+  "$(printf '%s' "$out" | jq -r '.[0].ended_at')" "2026-09-01T05:45:00Z"
+
+cat > "$T/homes/tsacct/.local/share/scheduler-runs/bad.jsonl" <<'JSONL'
+{"run_id":"2","job":"batch","started_at":"not-a-timestamp","ended_at":null,"rc":0}
+JSONL
+out="$(SELFDEV_HOME_ROOT="$T/homes" PYTHONDONTWRITEBYTECODE=1 \
+  python3 "$T/probe5.py" "$COLLECTOR" tsacct)"
+eq "an unparseable started_at is left as-is, not guessed into a fake Z" \
+  "$(printf '%s' "$out" | jq -r '[.[] | select(.run_id == "2")][0].started_at')" "not-a-timestamp"
+eq "a null ended_at stays null" \
+  "$(printf '%s' "$out" | jq -r '[.[] | select(.run_id == "2")][0].ended_at')" "null"
+
 section "G. identity_drift: could-not-look is not clean"
 mkdir -p "$T/homes/noident/Documents/Projects"
 cat > "$T/probe4.py" <<'PY4'

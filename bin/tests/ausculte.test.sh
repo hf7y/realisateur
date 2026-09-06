@@ -74,21 +74,33 @@ case "$out" in *"#577"*) bad "rot headline names the newest" "got: $out" ;;
 
 # --- arming reads what the accounts DID ----------------------------------
 # Counting the word "armed" said OK while three accounts had been dead eight
-# days. And the first draft of the fix printed OK off a jq error, because the
-# ledger writes "+00:00" and fromdateiso8601 accepts only "Z".
+# days. The first draft of the fix patched "+00:00" -> "Z" by string
+# substitution, which missed the negative offset the live ledger actually
+# writes (#919). Fixed at the source instead: monkey-status-collect.py now
+# normalises started_at/ended_at to UTC Z, so the published document this
+# probe reads carries one timestamp format, and fromdateiso8601 needs no
+# patching here.
 status() { printf '#!/usr/bin/env bash\ncat <<'"'"'J'"'"'\n%s\nJ\n' "$1" > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"; }
-recent="$(date -u -d '-1 hour' +%Y-%m-%dT%H:%M:%S+00:00)"
-old_run="$(date -u -d '-9 days' +%Y-%m-%dT%H:%M:%S+00:00)"
+recent="$(date -u -d '-1 hour' +%Y-%m-%dT%H:%M:%SZ)"
+old_run="$(date -u -d '-9 days' +%Y-%m-%dT%H:%M:%SZ)"
 
 status "{\"accounts\":[{\"account\":\"live\",\"armed\":true,\"last_run\":{\"started_at\":\"$recent\"}}]}"
 out="$(run arming)"; rc=$?
 check "an account that dispatched recently is OK" "$rc" "0"
-has "and the offset form is parsed, not fatal" "$out" "OK      arming"
+has "and a Z timestamp is parsed" "$out" "OK      arming"
 
 status "{\"accounts\":[{\"account\":\"dead\",\"armed\":true,\"last_run\":{\"started_at\":\"$old_run\"}}]}"
 out="$(run arming)"; rc=$?
 check "an armed account that stopped dispatching is DOWN (5)" "$rc" "5"
 has "and it is named" "$out" "dead"
+
+# The published document is expected to carry Z now, not an offset -- if
+# something upstream still emits one, this must fail visibly (BLIND), never
+# silently grade a document it did not actually parse.
+status "{\"accounts\":[{\"account\":\"offset\",\"armed\":true,\"last_run\":{\"started_at\":\"$(date -u -d '-1 hour' +%Y-%m-%dT%H:%M:%S)-05:00\"}}]}"
+out="$(run arming)"; rc=$?
+check "a document that still carries an offset is BLIND (6), not silently graded" "$rc" "6"
+has "and it says why" "$out" "unreadable timestamps"
 
 # No run record is BLIND, not DOWN: three accounts dispatch and write none at
 # all (hf7y/scheduler#259), so the document cannot say either way.
