@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# atteste-spacing.test.sh -- witness for #969: `- path: X` (space after the
-# colon) must grade identically to `- path:X`, and a body of only such
-# entries must never read clean (BLIND is not a pass).
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
