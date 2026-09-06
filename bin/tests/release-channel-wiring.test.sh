@@ -140,6 +140,11 @@ for d in CUT NO_CHANGE BLOCKED ERROR; do
   has "the workflow can emit the '$d' verdict" "$WFSRC" "$d"
 done
 
+has "an assemble-stage refusal's own reason can reach the verdict (#976)" "$WFSRC" "assemble_reason"
+has "...used as the ERROR reason, not just naming the run" "$WFSRC" 'ASSEMBLE_REASON:-the cut step produced no result'
+has "a scheduled run reports how long an approval gate starved it (#977)" "$WFSRC" "starved_note"
+has "...and the note is folded into whatever reason is finally published" "$WFSRC" "STARVED_NOTE"
+
 # The verdict must go to a URL, not into a clone. A file in a repo drifts the
 # moment anyone clones it, which is the bug being fixed.
 PUBSRC="$(cat "$PUBLISH" 2>/dev/null || true)"

@@ -52,6 +52,7 @@ on:
 
 permissions:
   contents: write
+  actions: read   # #977: the starvation report reads this run's own created_at/run_started_at
 
 concurrency:
   # Two builds committing to the same branch race and one silently loses.
@@ -69,6 +70,24 @@ jobs:
     #   this protects. An empty name applies no gate.
     environment: ${{ github.event_name == 'workflow_dispatch' && 'release' || '' }}
     steps:
+      - name: Report approval-gate starvation
+        if: github.event_name == 'schedule'   # #977: only the scheduled path can be starved -- a dispatch's own wait is visible in its approval prompt
+        id: starvation
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          run="repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          created="$(gh api "$run" --jq .created_at)"
+          started="$(gh api "$run" --jq .run_started_at)"
+          delta=$(( $(date -u -d "$started" +%s) - $(date -u -d "$created" +%s) ))
+          echo "queued ${delta}s between creation and start"
+          if [ "$delta" -ge 300 ]; then
+            mins=$(( delta / 60 ))
+            echo "::warning::this scheduled run queued ${mins}m before starting -- check for a workflow_dispatch run parked on the release approval gate, holding the shared concurrency group"
+            echo "starved_note=starved ${mins}m behind a pending approval gate before this run could start" >> "$GITHUB_OUTPUT"
+          fi
+
       # The credential is asserted BEFORE anything else, because every
       # symptom of its absence is misleading. Without it the realisateur
       # checkout fails with a not-found (the repo is private, so "missing"
@@ -103,6 +122,7 @@ jobs:
           token: ${{ secrets.VERBS_READ_TOKEN }}
 
       - name: Assemble the build
+        id: assemble
         env:
           # Needs read on every hf7y repo, including private ones. See the
           # assertion step above for why this is not GITHUB_TOKEN.
@@ -144,7 +164,21 @@ jobs:
           if [ "${ALLOW_HALF_DECLARED:-false}" = "true" ]; then
             args+=(--allow-half-declared)
           fi
-          bash "$GITHUB_WORKSPACE/.realisateur/bin/cut-verb-build.sh" "${args[@]}"
+
+          set +e   # #976: capture rc so a refusal's own reason reaches the verdict, not just "cut step produced no result"
+          bash "$GITHUB_WORKSPACE/.realisateur/bin/cut-verb-build.sh" "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/assemble.log"
+          rc="${PIPESTATUS[0]}"
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            reason="$(grep -E '^( *COLLISION|cut-verb-build\.sh:)' "$RUNNER_TEMP/assemble.log" | sed 's/^ *//' | paste -sd '; ' -)"
+            [ -n "$reason" ] || reason="assemble step failed with no recognised refusal line -- see run ${GITHUB_RUN_ID}"
+            {
+              echo "assemble_reason<<ASSEMBLE_REASON_EOF"
+              echo "$reason"
+              echo "ASSEMBLE_REASON_EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+          exit "$rc"
 
       # The publisher must outlive the realisateur checkout: it runs
       # `if: always()`, and the next step deletes .realisateur wholesale. Stage
@@ -265,6 +299,8 @@ jobs:
           CUT_BUILD:    ${{ steps.cut.outputs.build_id }}
           CUT_VERBS:    ${{ steps.cut.outputs.verbs }}
           CUT_REASON:   ${{ steps.cut.outputs.cut_reason }}
+          ASSEMBLE_REASON: ${{ steps.assemble.outputs.assemble_reason }}
+          STARVED_NOTE: ${{ steps.starvation.outputs.starved_note }}
           DRY_RUN:      ${{ inputs.dry_run }}
         run: |
           set -uo pipefail
@@ -299,8 +335,9 @@ jobs:
             [ -n "$reason" ] || reason="no project moved -- today's build is still current"
           else
             decision=ERROR
-            reason="the cut step produced no result; see run ${GITHUB_RUN_ID}"
+            reason="${ASSEMBLE_REASON:-the cut step produced no result; see run ${GITHUB_RUN_ID}}"
           fi
+          [ -z "${STARVED_NOTE:-}" ] || reason="$reason ($STARVED_NOTE)"
 
           echo "verdict: $decision -- $reason"
           prc=0
