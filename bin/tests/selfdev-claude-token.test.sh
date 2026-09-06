@@ -108,12 +108,7 @@ case "$O" in
 esac
 has "...and stops only at the privileged write" "$O" "no group"
 
-# THE FIRST INSTALL ON A HOST -- the one branch every row above skips, because
-# each pre-creates $TMP/etc/claude-token above. With no file to compare against,
-# the `else` reports the new length, and `new_len` was assigned only inside the
-# `if`: under `set -u` that died "new_len: unbound variable" and NO fresh host
-# could ever take a token. It survived because it is unreachable on re-install.
-rm -f "$TMP/etc/claude-token"
+rm -f "$TMP/etc/claude-token"  # the one branch every row above skips, by pre-creating this file -- a FIRST install, no old value to compare against
 O="$(SELFDEV_TOKEN_FILE="$TMP/etc/claude-token" bash "$TOOL" --install "$TMP/etc/first" 2>&1)"
 case "$O" in
   *"unbound variable"*) bad "5c a FIRST install died on an unbound variable -- no fresh host can take a token" ;;

@@ -120,13 +120,7 @@ install)
   case "$tok" in sk-ant-oat*) ;; *) die "$SRC does not hold an sk-ant-oat* token -- refusing to install it" ;; esac
 
   # A prefix is not a shape; the replaced value is the only known-good example.
-  # ASSIGNED BEFORE THE BRANCH, because the `else` reports it too: it was set
-  # only inside the `if`, so under `set -u` the FIRST install on a host -- the
-  # one branch where $TOKPATH does not exist yet -- died with "new_len: unbound
-  # variable" instead of installing. Every later install worked, which is why
-  # it survived: the bug is unreachable once the file exists (2026-09-03,
-  # standing up vaporwave).
-  new_len="${#tok}"
+  new_len="${#tok}"  # assigned before the branch: the `else` (a FIRST install, no $TOKPATH yet) reports it too, and under `set -u` it died unbound there (2026-09-03, vaporwave)
   if [ -e "$TOKPATH" ] && selfdev_token_readable "$TOKPATH"; then
     cur_len="$(tr -d '[:space:]' < "$TOKPATH" | wc -c)"
     if [ "$cur_len" -ne "$new_len" ] && [ "$FORCE_LEN" -eq 0 ]; then
