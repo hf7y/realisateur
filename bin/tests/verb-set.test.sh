@@ -30,6 +30,7 @@ trap 'rm -rf "$WORK"' EXIT
 export INSTALLE_PROJECTS="$WORK/projects"
 export INSTALLE_BIN="$WORK/bin"
 export INSTALLE_MANIFEST="$WORK/manifest.tsv"
+export VERB_SET_LOCAL_ROOT="$INSTALLE_PROJECTS"   # HERMETIC (#1043): points verb_set_declared's GitHub calls at local git repos instead
 # The registry. Set EXPLICITLY, and every fixture project is registered in it,
 # so the registration check (section F) contributes no finding to sections C/D.
 # Left at its default it would resolve inside the fixture, find nothing, and
@@ -97,12 +98,7 @@ else
   check "B3 a declared-but-uninstalled name is still claimed" "$(verb_set_claimants aaa | head -1)" "alpha"
 fi
 
-# Linked worktrees are the same repository. Counting one twice would read as a
-# collision with itself.
-G "$INSTALLE_PROJECTS/alpha" worktree add -q "$INSTALLE_PROJECTS/alpha-verbs" bashified 2>/dev/null
-decl2="$(verb_set_declared)"
-check "B4 a checked-out worktree does not double-declare" \
-  "$(printf '%s\n' "$decl2" | grep -c 'aaa')" "2"
+G "$INSTALLE_PROJECTS/alpha" worktree add -q "$INSTALLE_PROJECTS/alpha-verbs" bashified 2>/dev/null   # section D's install target; #1043 dropped the double-declare test, a real repo list has no worktrees
 
 printf -- '-- C. absence fails loud (the intersection defect)\n'
 # C1 IS THE POINT OF THIS FILE, so it gets a fixture in which ABSENCE IS THE
@@ -113,6 +109,7 @@ SOLO="$WORK/solo"
 mkdir -p "$SOLO/projects" "$SOLO/bin" "$SOLO/schedule"
 (
   export INSTALLE_PROJECTS="$SOLO/projects" INSTALLE_BIN="$SOLO/bin" INSTALLE_MANIFEST="$SOLO/manifest.tsv"
+  export VERB_SET_LOCAL_ROOT="$INSTALLE_PROJECTS"
   # Registered, so ABSENCE really is the only thing that can flag here.
   export SCHEDULE_DIR="$SOLO/schedule"
   printf 'PROJECT="solo"\n' > "$SCHEDULE_DIR/solo.conf"
@@ -180,7 +177,8 @@ FIX="$WORK/reg"
 mkdir -p "$FIX/projects" "$FIX/bin" "$FIX/schedule"
 (
   export INSTALLE_PROJECTS="$FIX/projects" INSTALLE_BIN="$FIX/bin" \
-         INSTALLE_MANIFEST="$FIX/manifest.tsv" SCHEDULE_DIR="$FIX/schedule"
+         INSTALLE_MANIFEST="$FIX/manifest.tsv" SCHEDULE_DIR="$FIX/schedule" \
+         VERB_SET_LOCAL_ROOT="$FIX/projects"
   d="$INSTALLE_PROJECTS/prod"
   mkdir -p "$d"; G "$d" init -q -b main
   echo x > "$d/README.md"; G "$d" add -A; G "$d" commit -qm init
