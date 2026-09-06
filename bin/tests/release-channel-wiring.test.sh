@@ -281,15 +281,38 @@ echo "-- G. DEPLOYED: THE VENDORED WORKFLOW IS THE ONE THAT RUNS -------------"
 # ===========================================================================
 # The vendored copy is only evidence about the real workflow while the two
 # agree. Drift here means every assertion above is about a file nothing runs.
+#
+# GRADED AGAINST origin/main, NOT THE WORKING TREE (hf7y/realisateur#650,
+# 2026-09-06). deploy-drift is a REQUIRED check with enforce_admins on, so
+# comparing against $WF failed every PR that proposed the very change it was
+# reviewing -- by construction, not by any real drift. #999, #1001 and #1007
+# all died on this. origin/main is what hf7y/verbs is actually deployed
+# against; a PR cannot be graded against a copy of itself.
+depth=""
+[ "$(git -C "$REPO" rev-parse --is-shallow-repository 2>/dev/null)" = true ] && depth=--depth=1
+GIT_TERMINAL_PROMPT=0 SSH_ASKPASS_REQUIRE=never GIT_ASKPASS=/bin/true \
+  git -C "$REPO" fetch -q $depth origin main:refs/remotes/origin/main 2>/dev/null || true
+REF_MAIN=""
+if git -C "$REPO" rev-parse --verify -q "origin/main^{commit}" >/dev/null 2>&1; then
+  REF_MAIN="origin/main"
+elif git -C "$REPO" rev-parse --verify -q "main^{commit}" >/dev/null 2>&1; then
+  REF_MAIN="main"
+  echo "  note  origin/main unreadable; comparing against the LOCAL main branch"
+fi
+
 tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT
-if gh api repos/hf7y/verbs/contents/.github/workflows/build-verbs.yml --jq '.content' 2>/dev/null | base64 -d > "$tmp"; then
-  if diff -q "$tmp" "$WF" >/dev/null; then
-    ok "the deployed workflow is byte-identical to the vendored one"
-  else
-    bad "DRIFT: hf7y/verbs' workflow differs from provision/verbs-meta/build-verbs.yml"
-  fi
-else
+if [ -z "$REF_MAIN" ]; then
+  bad "no main ref is readable here -- drift was NOT checked (BLIND, not clean)"
+elif ! gh api repos/hf7y/verbs/contents/.github/workflows/build-verbs.yml --jq '.content' 2>/dev/null | base64 -d > "$tmp"; then
   bad "could not read the deployed workflow (auth? network?) -- drift is UNKNOWN, not clean"
+elif ! git -C "$REPO" cat-file -e "$REF_MAIN:provision/verbs-meta/build-verbs.yml" 2>/dev/null; then
+  bad "provision/verbs-meta/build-verbs.yml does not exist on $REF_MAIN -- drift is UNKNOWN, not clean"
+else
+  if git -C "$REPO" show "$REF_MAIN:provision/verbs-meta/build-verbs.yml" | diff -q "$tmp" - >/dev/null; then
+    ok "the deployed workflow is byte-identical to $REF_MAIN's vendored one"
+  else
+    bad "DRIFT: hf7y/verbs' workflow differs from provision/verbs-meta/build-verbs.yml on $REF_MAIN"
+  fi
 fi
 
 sched="$(gh api repos/hf7y/verbs/actions/workflows --jq '.workflows[]|select(.name=="build-verbs")|.state' 2>/dev/null)"
