@@ -42,6 +42,7 @@ bin/lib/estate-set.sh	bin/lib/estate-set.sh
 bin/lib/zaxon.sh	bin/lib/zaxon.sh
 commands/cloture.md	.claude/commands/cloture.md
 commands/ideate.md	.claude/commands/ideate.md
+commands/nightly-batch.md	.claude/commands/nightly-batch.md
 commands/reap.md	.claude/commands/reap.md
 hooks/subagent-closeout.sh	hooks/subagent-closeout.sh
 hooks/stop-residue-gate.sh	hooks/stop-residue-gate.sh
