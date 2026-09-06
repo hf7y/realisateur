@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # lib/arming.sh -- DOES ANYTHING DISPATCH TO THIS REPO? Read-only, one call.
-# Authority: hf7y/scheduler's schedule/ROSTER, which only a human edits. The
-# read-only rule here is enforced by decision-rot.test.sh I14, not by prose.
+# Authority: hf7y/scheduler's schedule/ROSTER. A PERSON MERGES AND THE VERB
+# WRITES -- `dose <project> --arm|--park` (hf7y/scheduler#291) opens a PR with
+# auto-merge armed and is the only supported writer; it refuses a uid 3000-3099
+# self-dev caller. Said "only a human edits" until 2026-09-05, which reads cold
+# as "a person types the change" -- false, and it misled an agent into reporting
+# it as fact twice (scheduler ROSTER header, #521). The read-only rule HERE is
+# enforced by decision-rot.test.sh I14, not by prose.
 # NOT lib/roster-set.sh, which is the SWEEP set. BLIND classifies NOTHING.
 
 [ -n "${ARMING_LIB:-}" ] && return 0
