@@ -4,8 +4,7 @@
 RUN ON monkey, AS ROOT:  sudo -n python3 monkey-status-collect.py
 Read-only: reads /etc/passwd, each account's crontab, git config and git log,
 its scheduler run ledger and run records, and its release-tick status file.
-Writes nothing,
-dispatches nothing. Prints one JSON document on stdout -- the payload published
+Writes nothing, dispatches nothing. Prints one JSON document on stdout -- the payload published
 to https://hf7y.com/monkey/status.json by bin/monkey-watch.sh, which feeds this
 file to monkey's python3 over stdin so the version that runs is the version in
 the checkout. It runs FROM DEXTER on purpose: an empty accounts[] IS the
@@ -86,31 +85,11 @@ def last_runs(user):
     return [{k: r.get(k) for k in keep} for r in recs[-RUNS_KEPT:]][::-1]
 
 
-# Ledger rows a milestone-gate HOLD writes for itself (lib/run-ledger.sh /
-# bin/usage-paced-runner.sh in hf7y/scheduler) -- a tick that stops here never
-# reaches a real dispatch outcome, so these are never "the next row" a
-# MILESTONE-SELF-FED row is paired with.
-_MILESTONE_HOLD_OUTCOMES = {"COOLDOWN", "BLOCKED-HOLD", "MILESTONE-BLIND", "MILESTONE-HELD"}
+_MILESTONE_HOLD_OUTCOMES = {"COOLDOWN", "BLOCKED-HOLD", "MILESTONE-BLIND", "MILESTONE-HELD"}  # ledger rows a milestone-gate HOLD writes for itself (scheduler's usage-paced-runner.sh) -- a tick that stops here never reaches a real dispatch outcome, so these are never "the next row" a MILESTONE-SELF-FED row is paired with
 
 
-def milestone_self_fed(user):
-    """Whether the account's most recent real dispatch was let through only
-    because its milestone's actionable issues are all agent-filed (#575,
-    built in scheduler#614), and for how many consecutive dispatches running
-    back from the most recent one.
-
-    usage-paced-runner.sh appends a MILESTONE-SELF-FED ledger row immediately
-    before dispatching a tick admitted on that basis, and nothing else writes
-    a row in between: TEMPO and PACED_FORCE both skip the tick with NO ledger
-    row of their own (that script's own comment says so), so the row
-    immediately following a MILESTONE-SELF-FED row in this file -- which only
-    this account's own dispatcher ever appends to -- is reliably that same
-    tick's real outcome (WORKED, IDLE, FAILED, ...).
-
-    None if the ledger cannot be read or holds no real dispatch yet -- absence
-    is a missing history, not a "no", the same rule every other probe here
-    follows."""
-    f = f"{HOME_ROOT}/{user}/.local/share/scheduler-paced-runner/ledger.tsv"
+def milestone_self_fed(user):  # streak of consecutive dispatches let through only because the milestone's actionable issues are all agent-filed (#575, scheduler#614); None if the ledger cannot be read or holds no real dispatch yet
+    f = f"{HOME_ROOT}/{user}/.local/share/scheduler-paced-runner/ledger.tsv"  # usage-paced-runner.sh (hf7y/scheduler) appends MILESTONE-SELF-FED here right before dispatching a tick admitted on that basis; TEMPO/PACED_FORCE holds write no row, so the row right after one is reliably that same tick's real outcome
     try:
         with open(f) as fh:
             lines = fh.readlines()
