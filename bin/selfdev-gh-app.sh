@@ -279,13 +279,6 @@ case "$MODE" in
     ;;
 
   --wire)
-    # THE VERB NAME, NOT $0's INVOCATION PATH. This used to resolve to
-    # whatever absolute path the script happened to be run from -- a
-    # hand-copied /usr/local/libexec/selfdev/selfdev-gh-app.sh that only a
-    # human ever refreshed. Now that bin/selfdev-gh-app is a declared verb
-    # (bin/lib/carries.tsv, #893), the composed helper names it by verb on
-    # PATH, so whatever the build/pin mechanism delivers is what git actually
-    # execs on every 401 -- no hand-copied path to go stale.
     verb=selfdev-gh-app
     # This --repos is the scope of every token the account mints; omitted, that
     # is the whole installation -- 53 repos, 2026-08-27. Never defaulted (#671).
