@@ -203,6 +203,19 @@ def declared_repo_url(home, project):
     return None
 
 
+def own_repo_url(user):
+    """The GitHub remote this account's OWN project clone points at -- the
+    same probe containment() runs per project name, read just for the
+    project named after the account itself. None when the clone is absent
+    or carries no origin: the monkey page (#927, #928) needs a real repo to
+    link to and must not guess one from the account name."""
+    home = f"{HOME_ROOT}/{user}"
+    d = f"{home}/Documents/Projects/{user}"
+    url = sh("git", "-c", "safe.directory=*", "-C", d,
+             "config", "--get", "remote.origin.url").strip()
+    return url or None
+
+
 def containment(user, uid):
     """What this account reaches outside its own home. Three lists, and a
     null when the probe itself could not run -- an unreadable tree is not an
@@ -337,6 +350,7 @@ if __name__ == "__main__":            # importable per function; `python3 - <fil
             "uid": pwd.getpwnam(u).pw_uid,
             "armed": armed(c, states, u),
             "dispatch_line": dispatch_line(c),
+            "repo_url": own_repo_url(u),
             "roster_state": (states or {}).get(u) if states is not None else None,
             "cron": c,
             "release_tick": release_tick(u, c),
