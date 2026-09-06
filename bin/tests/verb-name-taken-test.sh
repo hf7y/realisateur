@@ -3,7 +3,7 @@ set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CHECK="$HERE/../verb-name-check.sh"
+CHECK="$HERE/../verb-name-taken.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -67,7 +67,7 @@ check_call() {
   bash "$CHECK" --owner "$OWNER" "$@"
 }
 
-echo "verb-name-check contract"
+echo "verb-name-taken contract"
 
 mkrepo alpha aa
 mkrepo beta  ba

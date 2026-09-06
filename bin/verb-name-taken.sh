@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-CLI_NAME='verb-name-check.sh'
+CLI_NAME='verb-name-taken.sh'
 CLI_SUMMARY='ask whether a candidate verb name is already declared by any project, live from GitHub (realisateur#975)'
-CLI_USAGE='  verb-name-check.sh <name>            is <name> free, estate-wide?
-  verb-name-check.sh <name> --owner <org>  check a different estate'
+CLI_USAGE='  verb-name-taken.sh <name>            is <name> free, estate-wide?
+  verb-name-taken.sh <name> --owner <org>  check a different estate'
 CLI_FLAGS='--owner'
 CLI_POSITIONAL=any   # the name itself, and --owner's VALUE, both land here to cli-guard
 CLI_EXITS='  0  free: no project currently declares <name>
