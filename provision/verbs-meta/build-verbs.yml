@@ -54,8 +54,7 @@ permissions:
   contents: write
 
 concurrency:
-  # Two builds committing to the same branch race and one silently loses.
-  group: build-verbs
+  group: build-verbs-${{ github.event_name }}  # same-type builds still queue rather than race the branch; a dispatch parked on its approval gate no longer also holds the SCHEDULED run's slot (#977)
   cancel-in-progress: false
 
 jobs:

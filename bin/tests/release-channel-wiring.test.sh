@@ -97,6 +97,8 @@ echo "-- B. THE CUT IS AUTOMATIC (a schedule, not a human) -------------------"
 has "the workflow has a schedule: trigger" "$WFSRC" "schedule:"
 has "the schedule names a cron expression" "$WFSRC" "cron:"
 has "it can also be dispatched by hand for a recovery run" "$WFSRC" "workflow_dispatch"
+has "a parked dispatch does not hold the scheduled run's concurrency slot (#977)" \
+    "$WFSRC" 'group: build-verbs-${{ github.event_name }}'
 
 # ===========================================================================
 echo
