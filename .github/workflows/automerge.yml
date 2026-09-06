@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write   # #965: pay-the-carry step below dispatches tests.yml
 
 jobs:
   enable:
@@ -32,3 +33,25 @@ jobs:
           done
           echo "not armed after 40 attempts -- retry with: gh pr merge --auto --squash" >&2
           exit 1
+
+      - name: pay the carry once the merge lands (#965 -- this merge fires no push event, so tests.yml's carry job never runs on its own)
+        if: success()
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 40); do   # 10 min, same budget as the arm loop above
+            merged=$(curl -fsS -H "Authorization: bearer $TOKEN" \
+                       "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER" | jq -r '.merged')
+            if [ "$merged" = "true" ]; then
+              curl -fsS -X POST -H "Authorization: bearer $TOKEN" \
+                "https://api.github.com/repos/$REPO/actions/workflows/tests.yml/dispatches" \
+                -d '{"ref":"main"}'   # explicit workflow_dispatch is the one event the token-recursion suppression exempts
+              echo "dispatched tests.yml on attempt $attempt"; exit 0
+            fi
+            sleep 15
+          done
+          echo "PR not merged after 10 min -- carry not dispatched; pay by hand: gh workflow run tests.yml" >&2
+          exit 0
