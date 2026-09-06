@@ -1,0 +1,28 @@
+# branch-protection.yml -- the clock for bin/tests/branch-protection.test.sh.
+# HERE and not in `suites` because that job is hermetic by construction and a
+# CI GITHUB_TOKEN cannot read branch protection (needs admin), so section A
+# printed BLIND and exited 0 on every PR through 2026-09-02 -- the sensor
+# existed and never fired (#950). REPORTING-ONLY, same shape as atteste.yml:
+# the script itself already collapses BLIND to exit 0 and reds only on a real
+# contract mismatch, so its exit code is used as-is.
+
+name: branch-protection
+
+on:
+  schedule:
+    - cron: '52 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  branch-protection:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assert the required check set on main, read from the API
+        env:
+          GH_TOKEN: ${{ secrets.ECOSYSTEM_ISSUES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: bash bin/tests/branch-protection.test.sh
