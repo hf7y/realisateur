@@ -112,6 +112,7 @@ has "I: pushing main is denied"    "$WANT" "git push origin main"
 has "I: --admin merging is denied" "$WANT" "gh pr merge --admin"
 has "I: the App key is unreadable" "$WANT" "/etc/selfdev/app.pem"
 for f in /etc/selfdev/claude-token \
+         /etc/selfdev/grocy-api-key \
          '/home/*/.claude/settings.json' \
          '/home/*/.claude/settings.json.bak-*' \
          '/home/*/.claude/.credentials.json'; do
