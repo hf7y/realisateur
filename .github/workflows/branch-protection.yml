@@ -1,16 +1,8 @@
-# branch-protection.yml -- the clock for bin/tests/branch-protection.test.sh.
-# HERE and not in `suites` because that job is hermetic by construction and a
-# CI GITHUB_TOKEN cannot read branch protection (needs admin), so section A
-# printed BLIND and exited 0 on every PR through 2026-09-02 -- the sensor
-# existed and never fired (#950). REPORTING-ONLY, same shape as atteste.yml:
-# the script itself already collapses BLIND to exit 0 and reds only on a real
-# contract mismatch, so its exit code is used as-is.
-
-name: branch-protection
+name: branch-protection  # the clock for bin/tests/branch-protection.test.sh -- suites is hermetic, so section A never ran authenticated (#950)
 
 on:
   schedule:
-    - cron: '52 7 * * *'
+    - cron: '52 7 * * *'  # reporting-only: its own workflow, so nothing here gates a merge
   workflow_dispatch:
 
 permissions:
@@ -24,5 +16,5 @@ jobs:
 
       - name: Assert the required check set on main, read from the API
         env:
-          GH_TOKEN: ${{ secrets.ECOSYSTEM_ISSUES_TOKEN || secrets.GITHUB_TOKEN }}
-        run: bash bin/tests/branch-protection.test.sh
+          GH_TOKEN: ${{ secrets.ECOSYSTEM_ISSUES_TOKEN || secrets.GITHUB_TOKEN }}  # same fallback as atteste.yml/etiquette.yml
+        run: bash bin/tests/branch-protection.test.sh  # already collapses BLIND to exit 0; its rc is used as-is
