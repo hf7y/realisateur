@@ -57,7 +57,6 @@ act()   { printf '  DO    %s\n' "$*"; }
 # ============================================================================
 fetch_remote() { # fetch_remote [account-filter]
   # "-" IS THE NO-FILTER SENTINEL. NEVER AN EMPTY STRING.
-  #
   # `ssh host "bash -s" -- "$a" "$b" ""` does NOT hand the remote process argv
   # elements the way a normal exec() would: ssh joins every argument after
   # the remote command with a single SPACE into one string and has the
@@ -298,11 +297,14 @@ cred_check_repo_keys() {
   # `--json title,readOnly` is REQUESTED but not, in practice, HONOURED: gh
   # 2.45.0 validates "readOnly" as a real field name (an unknown one is
   # refused with a list that names it) and then ignores the filter anyway,
-  local json; json="$("$CRED_GH_BIN" repo deploy-key list --repo "$CRED_GH_OWNER/$repo" --json title,readOnly 2>/dev/null)"
-  if [ -z "$json" ]; then
+  local json rc
+  json="$("$CRED_GH_BIN" repo deploy-key list --repo "$CRED_GH_OWNER/$repo" --json title,readOnly 2>/dev/null)"
+  rc=$?  # a zero-key repo prints nothing, rc 0, not "[]" -- rc alone distinguishes that from a failed call (#916)
+  if [ "$rc" -ne 0 ]; then
     blind "deploy-key symmetry: could not list keys on $CRED_GH_OWNER/$repo (no admin access here, or the repo/call failed)"
     return
   fi
+  [ -n "$json" ] || json='[]'
   local acct want_word; [ "$want" = rw ] && want_word="WRITE" || want_word="READ-ONLY"
   for acct in "$@"; do
     # TWO jq calls, deliberately, not one with `// empty`. jq's `//` falls

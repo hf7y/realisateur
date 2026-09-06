@@ -32,6 +32,7 @@ CRED_APP_GROUP="${CRED_APP_GROUP:-selfdev}"
 CRED_APP_ID="${CRED_APP_ID:-4521586}"
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/estate-set.sh"
 CRED_GH_OWNER="${CRED_GH_OWNER:-$GH_ESTATE_OWNER}"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/roster-set.sh"
 
 # --- the baseline file set, under ~/.config/selfdev/ ----------------------
 CRED_BASELINE_FILES="app.pem gh-app.conf"
@@ -50,9 +51,8 @@ cred_classify_token() {
 }
 
 # cred_own_repo <account> -- the repo this account should hold WRITE on.
-# Today every account's own repo is named identically to the account.
 cred_own_repo() {
-  printf '%s' "$1"
+  sweep_repo "$1"  # apms -> apms-2173 etc: SWEEP_ROSTER_ALIAS is the one place that says so, read not re-declared (#916)
 }
 
 # cred_grant_covers <account> <kind> <what> -- is this exact exception

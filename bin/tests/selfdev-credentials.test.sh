@@ -46,6 +46,8 @@ t_eq "classify: no line at all"      "$(cred_classify_token '')" missing
 
 t_eq "own_repo: identity mapping"    "$(cred_own_repo ecosim)" ecosim
 t_eq "own_repo: hyphenated account"  "$(cred_own_repo groc-mangr)" groc-mangr
+t_eq "own_repo: apms aliases to apms-2173, the #905 collision (#916)" \
+     "$(cred_own_repo apms)" apms-2173
 
 # The shipped table is EMPTY -- no account has a reviewed exception today.
 [ -z "$(cred_list_grants ecosim)" ] && t_ok "grants: shipped CRED_GRANTS has no rows for ecosim" \
@@ -256,7 +258,10 @@ case "$1 $2" in
   "repo deploy-key")
     repo=""
     for ((i=1; i<=$#; i++)); do [ "${!i}" = "--repo" ] && { j=$((i+1)); repo="${!j}"; }; done
-    var="STUB_JSON_${repo#hf7y/}"; var="${var//-/_}"
+    slug="${repo#hf7y/}"; slug="${slug//-/_}"
+    evar="STUB_EMPTY_${slug}"
+    [ "${!evar:-0}" = 1 ] && exit 0  # simulates a real zero-key repo: empty stdout, rc 0, not "[]" (#916)
+    var="STUB_JSON_${slug}"
     printf '%s' "${!var:-[]}"
     ;;
   *) exit 1 ;;
@@ -371,6 +376,25 @@ O="$(STUB_ROWS='oddshape	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y' \
      STUB_JSON_scheduler='[]' STUB_JSON_senechal='[]' STUB_JSON_oddshape='[]' \
      "$SCRIPT" --audit 2>&1)"
 t_has "an unrecognized readOnly value is reported BLIND, never silent" "$O" "returned an unreadable readOnly value"
+
+# ============================================================================
+echo
+echo "-- D4. deploy-key symmetry: zero keys is a FLAG, not BLIND (#916) ------"
+# ============================================================================
+# abletim, apms-2173: gh prints nothing at all, rc 0, for a zero-key repo -- not "[]" (#916)
+O="$(STUB_ROWS='nokeys	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y' \
+     CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
+     STUB_JSON_realisateur='[]' STUB_JSON_scheduler='[]' STUB_JSON_senechal='[]' \
+     STUB_EMPTY_nokeys=1 \
+     "$SCRIPT" --audit 2>&1)"; R=$?
+t_has "an own-repo with zero deploy keys (empty stdout, rc 0) is a named FLAG" "$O" "nokeys: no deploy key registered on nokeys"
+t_hasnt "...and it is never reported as BLIND" "$O" "could not list keys on hf7y/nokeys"
+t_rc "a fleet whose only defect is zero-keys still exits 1 (a real finding, not clean)" 1 "$R"
+
+O="$(STUB_ROWS='cantlook	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y' \
+     CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN=/nonexistent-gh \
+     "$SCRIPT" --audit 2>&1)"
+t_has "gh unreachable is still BLIND, not read as zero keys" "$O" "not on PATH -- could not check GitHub-side"
 
 # ============================================================================
 echo
