@@ -190,7 +190,6 @@ PROP_LEAK_BOUND=7
 # travels IN THE BUILD and dexter runs it from the pin, not from a clone.
 # Before cutting anything in this list, ask what invokes it FROM SOMEWHERE ELSE.
 PROP_LOCAL_SCRIPTS="
-ausculte-cadence.sh
 monkey-watch.sh
 monkey-watch-win.sh
 monkey-status-collect.py
@@ -226,7 +225,7 @@ reprise.sh
 prop_host_tools() {
   # The probes ausculte composes are LOCAL-class and ride here, or it is
   # BLIND about them on a host.
-  printf 'dresse.sh\nausculte-cadence.sh\ndecision-rot.sh\nlanding-drift.sh\nvault-spool-drain.sh\nunarmed.sh\n'
+  printf 'dresse.sh\ndecision-rot.sh\nlanding-drift.sh\nvault-spool-drain.sh\nunarmed.sh\n'
   local s; for s in $PROP_PROVISION_SCRIPTS; do [ "$s" = dresse.sh ] || printf '%s\n' "$s"; done
 }
 

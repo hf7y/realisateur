@@ -6,7 +6,7 @@
 # `reprise`; ausculte reports the row and --apply opens its own PR. It is LOCAL
 # in bin/lib/propagation-set.sh -- it acts on THIS repo's handoff table, so
 # shipping it to twelve accounts would give each one a tool with nothing to do.
-# RUNNER: bin/ausculte.sh (the `handoff` probe), on ausculte-cadence's clock
+# RUNNER: bin/ausculte.sh (the `handoff` probe), on ausculte --cadence's clock
 # GUARD-TEST: bin/tests/reprise.test.sh
 # GATE: none -- `--check` reports and `--apply` opens a PR a human merges. It
 #   deletes nothing that is not already present at its destination, so there is
