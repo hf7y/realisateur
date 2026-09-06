@@ -286,14 +286,26 @@ fi
 echo
 echo "-- G. DEPLOYED: THE VENDORED WORKFLOW IS THE ONE THAT RUNS -------------"
 # ===========================================================================
-# The vendored copy is only evidence about the real workflow while the two
-# agree. Drift here means every assertion above is about a file nothing runs.
+# origin/main, not the working tree (#650, same shape as carry-drift.test.sh's REF_MAIN, #578): diffing $WF wedged every PR that edited it (#999, #1001, #1007) behind this required check by construction.
+depth=""
+[ "$(git -C "$REPO" rev-parse --is-shallow-repository 2>/dev/null)" = true ] && depth=--depth=1  # CI's checkout is already shallow
+REF_MAIN=""
+GIT_TERMINAL_PROMPT=0 SSH_ASKPASS_REQUIRE=never GIT_ASKPASS=/bin/true \
+  git -C "$REPO" fetch -q $depth origin main:refs/remotes/origin/main 2>/dev/null || true
+git -C "$REPO" rev-parse --verify -q "origin/main^{commit}" >/dev/null 2>&1 && REF_MAIN="origin/main"
+if [ -z "$REF_MAIN" ] && git -C "$REPO" rev-parse --verify -q "main^{commit}" >/dev/null 2>&1; then
+  REF_MAIN="main"
+  echo "  note  origin/main unreadable; comparing against the LOCAL main branch"
+fi
+
 tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT
-if gh api repos/hf7y/verbs/contents/.github/workflows/build-verbs.yml --jq '.content' 2>/dev/null | base64 -d > "$tmp"; then
-  if diff -q "$tmp" "$WF" >/dev/null; then
-    ok "the deployed workflow is byte-identical to the vendored one"
+if [ -z "$REF_MAIN" ]; then
+  bad "no main ref is readable here -- drift was NOT checked (BLIND, not clean)"
+elif gh api repos/hf7y/verbs/contents/.github/workflows/build-verbs.yml --jq '.content' 2>/dev/null | base64 -d > "$tmp"; then
+  if diff -q "$tmp" <(git -C "$REPO" show "$REF_MAIN:provision/verbs-meta/build-verbs.yml") >/dev/null; then
+    ok "the deployed workflow is byte-identical to $REF_MAIN's"
   else
-    bad "DRIFT: hf7y/verbs' workflow differs from provision/verbs-meta/build-verbs.yml"
+    bad "DRIFT: hf7y/verbs' workflow differs from $REF_MAIN's provision/verbs-meta/build-verbs.yml"
   fi
 else
   bad "could not read the deployed workflow (auth? network?) -- drift is UNKNOWN, not clean"
