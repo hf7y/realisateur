@@ -117,6 +117,21 @@ eq "a clone whose conf DECLARES its differently-named repo is not foreign" \
 eq "and the genuinely stray clone is still reported" \
   "$(printf '%s' "$out" | jq '[.foreign_clones[] | select(.path | endswith("/Documents/Projects/stray"))] | length')" "1"
 
+section "E1. own_repo_url: the account's own clone's remote, never a guess (#927, #928)"
+cat > "$T/probe2b.py" <<'PY'
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("collect", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+print(json.dumps(m.own_repo_url(sys.argv[2])))
+PY
+orp() { PATH="$T/stub:$PATH" SELFDEV_HOME_ROOT="$T/homes" PYTHONDONTWRITEBYTECODE=1 \
+  python3 "$T/probe2b.py" "$COLLECTOR" "$1"; }
+out="$(orp acct2)"
+eq "acct2's own clone reports its real origin" "$out" '"https://github.com/hf7y/acct2.git"'
+out="$(orp nosuchaccount)"
+eq "an account with no clone by its own name reports null, not a guessed URL" "$out" "null"
+
 section "C. release_tick: a retired clock is an absence, not a reading"
 [ -s "$STATUS" ] && ok "the fixture account HAS a status file to be tempted by" \
   || bad "fixture status file" "missing, so the case below proves nothing"
