@@ -255,7 +255,7 @@ GH="$(real_gh)" || {
 # is where a cross-repo handoff lands.
 signable=0
 case "${1:-} ${2:-}" in
-  'issue comment'|'issue create'|'issue close'|'pr comment'|'pr create') signable=1 ;;
+  'issue comment'|'issue create'|'issue close'|'issue edit'|'pr comment'|'pr create'|'pr edit') signable=1 ;;
 esac
 
 # `gh api` IS THE SAME WRITE BY ANOTHER ROUTE, unstamped and read as Zach's (2026-08-21).
@@ -268,16 +268,32 @@ if [ "${1:-}" = api ]; then
   done
   [ "$api_comment" -eq 1 ] && signable=1
 fi
+# A PATCH to /issues/<n> or /pulls/<n> (bare) REWRITES THE BODY, same write as
+# `issue edit`, one route around it (#970): it named no comment path above, so
+# it fell through unsignable and unchecked, indistinguishable from a read.
+api_edit=0
+if [ "${1:-}" = api ]; then
+  for _a in "$@"; do
+    case "$_a" in
+      */issues/[0-9]*|*/pulls/[0-9]*)
+        case "$_a" in *comments*|*/timeline*|*/reviews*) ;; *) api_edit=1 ;; esac ;;
+    esac
+  done
+  [ "$api_edit" -eq 1 ] && signable=1
+fi
 # Only when comments EXIST (a note on every read is not read); the count is
 # already in the reply, so no extra request.
 if [ "${1:-}" = api ] && ! human_at_keyboard; then
-  _issue_read=0 _path=""
+  _issue_read=0 _path="" _has_write=0
   for _a in "$@"; do
     case "$_a" in
+      -f|--raw-field|-F|--field|-X|--method) _has_write=1 ;;
       */issues/[0-9]*) case "$_a" in *comments*|*/timeline*) ;; *) _issue_read=1; _path="$_a" ;; esac ;;
     esac
   done
-  if [ "$_issue_read" -eq 1 ]; then
+  # A write sharing this same path (an edit, caught above) is not a read the
+  # comment count can be printed against -- let it fall through and be signed.
+  if [ "$_issue_read" -eq 1 ] && [ "$_has_write" -eq 0 ]; then
     # RAW, ALWAYS: --jq would filter `comments` out before it can be counted.
     _jq="" _args=() _skip=0
     for _a in "$@"; do
@@ -406,7 +422,7 @@ for ((i = 0; i < ${#args[@]}; i++)); do
 done
 # `gh api` spells it body=<text>/body=@<file> in ONE word: -F is a field here.
 bflag=-1
-if [ "$api_comment" -eq 1 ]; then
+if [ "$api_comment" -eq 1 ] || [ "$api_edit" -eq 1 ]; then
   found=0
   for ((i = 0; i < ${#args[@]}; i++)); do
     case "${args[$i]}" in
@@ -435,28 +451,36 @@ else
   body="$(cat -- "${args[$bi]}" 2>/dev/null)" || exec "$GH" "$@"
 fi
 
-# Comments are exempt; no bypass flag, an override is a toll booth.
+# Comments are exempt; no bypass flag, an override is a toll booth. An EDIT
+# rewrites a whole body exactly as CREATE does -- and an `api` PATCH to the
+# same path is the same write again (#970) -- so both are graded here too.
+_grammar_gate=0
 case "${1:-} ${2:-}" in
-  'issue create'|'pr create')
-    if [ "$grammar_ok" -eq 1 ]; then
-      if findings="$(grammar_check "$body")"; then :; else
-        # DOOR FIRST, FINDING LAST, EXAMPLE FENCED BETWEEN: the other order
-        # meant `tail` saw the example and never the finding (#627).
-        printf 'gh-sign: REFUSED -- this %s body breaks the grammar in %s.\n' "$1 $2" "$GRAMMAR" >&2
-        printf 'gh-sign: `defere` composes a valid body; `gh --check-body <file>` re-runs this check.\n' >&2
-        printf 'gh-sign: nothing was created.\n\n' >&2
-        printf '  +-- EXAMPLE BODY -- an illustration, NOT state of any repo ---\n' >&2
-        grammar_template | while IFS= read -r _t; do printf '  | %s\n' "$_t" >&2; done
-        printf '  +------------------------------------------------------------\n\n' >&2
-        printf 'gh-sign: what is wrong with YOUR body:\n' >&2
-        while IFS= read -r _f; do printf '  %s\n' "$_f" >&2; done <<<"$findings"
-          exit 7
-      fi
-    else
-      printf 'gh-sign: BLIND -- no grammar library at %s; body not checked.\n' "$GRAMMAR" >&2
-    fi ;;
-  'issue close') close_check "$body" ;;
+  'issue create'|'pr create'|'issue edit'|'pr edit') _grammar_gate=1 ;;
 esac
+[ "$api_edit" -eq 1 ] && _grammar_gate=1
+
+if [ "$_grammar_gate" -eq 1 ]; then
+  if [ "$grammar_ok" -eq 1 ]; then
+    if findings="$(grammar_check "$body")"; then :; else
+      # DOOR FIRST, FINDING LAST, EXAMPLE FENCED BETWEEN: the other order
+      # meant `tail` saw the example and never the finding (#627).
+      printf 'gh-sign: REFUSED -- this %s body breaks the grammar in %s.\n' "$1 $2" "$GRAMMAR" >&2
+      printf 'gh-sign: `defere` composes a valid body; `gh --check-body <file>` re-runs this check.\n' >&2
+      printf 'gh-sign: nothing was written.\n\n' >&2
+      printf '  +-- EXAMPLE BODY -- an illustration, NOT state of any repo ---\n' >&2
+      grammar_template | while IFS= read -r _t; do printf '  | %s\n' "$_t" >&2; done
+      printf '  +------------------------------------------------------------\n\n' >&2
+      printf 'gh-sign: what is wrong with YOUR body:\n' >&2
+      while IFS= read -r _f; do printf '  %s\n' "$_f" >&2; done <<<"$findings"
+        exit 7
+    fi
+  else
+    printf 'gh-sign: BLIND -- no grammar library at %s; body not checked.\n' "$GRAMMAR" >&2
+  fi
+elif [ "${1:-} ${2:-}" = 'issue close' ]; then
+  close_check "$body"
+fi
 
 # Already signed. Signing twice pushes the first stamp off the last line.
 last="$(printf '%s\n' "$body" | grep -v '^[[:space:]]*$' | tail -1)"
