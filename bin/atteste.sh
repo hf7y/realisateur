@@ -92,13 +92,15 @@ grade() {
     w="${words[i]}"; w="${w#\`}"
     for k in $KINDS; do
       case "$w" in
-        "$k":?*)
-          found=1; v="$(clean "${w#"$k":}")"
-          case "$k" in
-            path) [ -n "$e_path" ] || e_path="$v" ;;
-            repo) [ -n "$e_repo" ] || e_repo="$v" ;;
-            *)    [ -n "$e_other" ] || e_other="$k:$v" ;;
-          esac ;;
+        "$k":?*) v="$(clean "${w#"$k":}")" ;;
+        "$k":)   v="$(clean "${words[i + 1]:-}")" ;;
+        *)       continue ;;
+      esac
+      found=1
+      case "$k" in
+        path) [ -n "$e_path" ] || e_path="$v" ;;
+        repo) [ -n "$e_repo" ] || e_repo="$v" ;;
+        *)    [ -n "$e_other" ] || e_other="$k:$v" ;;
       esac
     done
     if [ "$w" = on ] && [ -z "$host" ]; then
