@@ -34,6 +34,8 @@ elif sys.argv[2] == "armed":
     print(json.dumps(m.armed(json.loads(sys.argv[3]), states, sys.argv[5])))
 elif sys.argv[2] == "milestone_self_fed":
     print(json.dumps(m.milestone_self_fed(sys.argv[3])))
+elif sys.argv[2] == "last_runs":
+    print(json.dumps(m.last_runs(sys.argv[3])))
 else:
     print(json.dumps(m.release_tick("acct", json.loads(sys.argv[3]))))
 PY
@@ -151,6 +153,20 @@ eq "a dispatch line whose ROSTER row is LIVE is armed" "$out" "true"
 
 out="$(probe armed '[]' '{"acct":"live"}' acct)"
 eq "a live ROSTER row with no dispatch line is not armed" "$out" "false"
+
+section "H. last_runs: a negative-offset started_at republishes as UTC Z (#919)"
+mkdir -p "$T/homes/tzuser/.local/share/scheduler-runs"
+cat > "$T/homes/tzuser/.local/share/scheduler-runs/2026-09-01.jsonl" <<'JSONL'
+{"run_id":"r1","job":"batch","started_at":"2026-09-01T00:30:45-05:00","ended_at":"2026-09-01T00:45:00-05:00","rc":0}
+{"run_id":"r0","job":"batch","started_at":"garbage","rc":1}
+JSONL
+out="$(probe last_runs tzuser)"
+eq "-05:00 converts to the same instant in Z, not a naive suffix swap" \
+  "$(printf '%s' "$out" | jq -r '.[] | select(.run_id == "r1") | .started_at')" "2026-09-01T05:30:45Z"
+eq "ended_at is normalised too, not just the field ausculte's arming probe reads" \
+  "$(printf '%s' "$out" | jq -r '.[] | select(.run_id == "r1") | .ended_at')" "2026-09-01T05:45:00Z"
+eq "a value that isn't a timestamp is passed through, not guessed at" \
+  "$(printf '%s' "$out" | jq -r '.[] | select(.run_id == "r0") | .started_at')" "garbage"
 
 out="$(probe armed "$RUN" '{}' acct)"
 eq "a roster that names no row for this account is not armed" "$out" "false"

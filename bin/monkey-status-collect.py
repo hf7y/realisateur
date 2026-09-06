@@ -14,7 +14,7 @@ Every field is a probe of live state at generation time. A field this
 script cannot read is null, never a guess: a missing ledger means the
 account has never run, which is a finding, not a blank.
 """
-import json, os, pwd, subprocess, time, urllib.request
+import datetime, json, os, pwd, subprocess, time, urllib.request
 
 UID_LO, UID_HI = 3000, 3100          # the self-dev band (provision-selfdev-user.sh)
 CADENCE_H = 24                       # this page is republished daily
@@ -64,6 +64,16 @@ def cron(user):
             if l.strip() and not l.lstrip().startswith("#")]
 
 
+def to_utc_z(ts):  # started_at/ended_at ship in the runner's local zone; consumers accept only "Z" (#919)
+    if not ts:
+        return ts
+    try:
+        dt = datetime.datetime.strptime(ts.replace("Z", "+00:00"), "%Y-%m-%dT%H:%M:%S%z")
+    except ValueError:
+        return ts  # not this function's job to invent a time for malformed input
+    return dt.astimezone(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def last_runs(user):
     """Most recent run records from this account's scheduler ledger."""
     d = f"{HOME_ROOT}/{user}/.local/share/scheduler-runs"
@@ -82,7 +92,11 @@ def last_runs(user):
             "status", "commits_added", "issues_opened", "issues_closed",
             "prs_opened", "prs_merged", "verdict_computed", "claimed_verdict",
             "claimed_reason")
-    return [{k: r.get(k) for k in keep} for r in recs[-RUNS_KEPT:]][::-1]
+    out = [{k: r.get(k) for k in keep} for r in recs[-RUNS_KEPT:]][::-1]
+    for r in out:
+        r["started_at"] = to_utc_z(r["started_at"])
+        r["ended_at"] = to_utc_z(r["ended_at"])
+    return out
 
 
 _MILESTONE_HOLD_OUTCOMES = {"COOLDOWN", "BLOCKED-HOLD", "MILESTONE-BLIND", "MILESTONE-HELD"}  # ledger rows a milestone-gate HOLD writes for itself (scheduler's usage-paced-runner.sh) -- a tick that stops here never reaches a real dispatch outcome, so these are never "the next row" a MILESTONE-SELF-FED row is paired with
