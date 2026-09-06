@@ -32,6 +32,10 @@ elif sys.argv[2] == "dispatch_line":
 elif sys.argv[2] == "armed":
     states = json.loads(sys.argv[4])
     print(json.dumps(m.armed(json.loads(sys.argv[3]), states, sys.argv[5])))
+elif sys.argv[2] == "to_utc_z":
+    print(json.dumps(m.to_utc_z(json.loads(sys.argv[3]))))
+elif sys.argv[2] == "last_runs":
+    print(json.dumps(m.last_runs(sys.argv[3])))
 else:
     print(json.dumps(m.release_tick("acct", json.loads(sys.argv[3]))))
 PY
@@ -247,5 +251,27 @@ chmod +x "$T/stub/git"
 out="$(PATH="$T/stub:$PATH" SELFDEV_HOME_ROOT="$T/homes" PYTHONDONTWRITEBYTECODE=1 \
   python3 "$T/probe4.py" "$COLLECTOR" ident)"
 eq "a git log that refuses (dubious ownership prints NOTHING) is null, not zero" "$out" "null"
+
+section "H. to_utc_z / last_runs: every offset the ledger writes normalises to Z (#919)"
+eq "a negative offset (the one the live ledger actually emits) converts to Z" \
+  "$(probe to_utc_z '"2026-09-01T00:30:45-05:00"')" '"2026-09-01T05:30:45Z"'
+eq "a positive offset converts too, not just the one the old sub matched" \
+  "$(probe to_utc_z '"2026-09-01T00:30:45+02:00"')" '"2026-08-31T22:30:45Z"'
+eq "an already-Z timestamp passes through unchanged" \
+  "$(probe to_utc_z '"2026-09-01T00:30:45Z"')" '"2026-09-01T00:30:45Z"'
+eq "null passes through as null, never guessed at" \
+  "$(probe to_utc_z 'null')" "null"
+eq "unparseable input passes through unchanged rather than crashing the collector" \
+  "$(probe to_utc_z '"not-a-timestamp"')" '"not-a-timestamp"'
+
+mkdir -p "$T/homes/ledger/.local/share/scheduler-runs"
+cat > "$T/homes/ledger/.local/share/scheduler-runs/runs.jsonl" <<'JSONL'
+{"run_id":"1","job":"dispatch","started_at":"2026-09-01T00:30:45-05:00","ended_at":"2026-09-01T00:31:02-05:00","rc":0}
+JSONL
+out="$(probe last_runs ledger)"
+eq "last_runs publishes started_at normalised to Z, not the ledger's local offset" \
+  "$(printf '%s' "$out" | jq '.[0].started_at')" '"2026-09-01T05:30:45Z"'
+eq "...and ended_at the same way" \
+  "$(printf '%s' "$out" | jq '.[0].ended_at')" '"2026-09-01T05:31:02Z"'
 
 summary

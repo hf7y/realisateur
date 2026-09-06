@@ -15,6 +15,7 @@ script cannot read is null, never a guess: a missing ledger means the
 account has never run, which is a finding, not a blank.
 """
 import json, os, pwd, subprocess, time, urllib.request
+from datetime import datetime, timezone
 
 UID_LO, UID_HI = 3000, 3100          # the self-dev band (provision-selfdev-user.sh)
 CADENCE_H = 24                       # this page is republished daily
@@ -64,6 +65,26 @@ def cron(user):
             if l.strip() and not l.lstrip().startswith("#")]
 
 
+def to_utc_z(ts):
+    """Normalise an ISO-8601 timestamp carrying ANY offset (the ledger writes
+    local time, e.g. America/Chicago's "-05:00") to a UTC "...Z" string, so
+    every consumer of this document can assume one format instead of
+    re-deriving it (realisateur#919: fromdateiso8601 accepts only "Z", and a
+    string-substitution fix for "+00:00" alone left every negative offset --
+    the one the live ledger actually emits -- unparsed, BLIND forever).
+    None and unparseable input pass through unchanged: a timestamp this
+    script cannot normalise is a finding for the reader, not a guess here."""
+    if not ts:
+        return ts
+    try:
+        dt = datetime.fromisoformat(ts)
+    except ValueError:
+        return ts
+    if dt.tzinfo is None:
+        return ts
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def last_runs(user):
     """Most recent run records from this account's scheduler ledger."""
     d = f"{HOME_ROOT}/{user}/.local/share/scheduler-runs"
@@ -82,7 +103,11 @@ def last_runs(user):
             "status", "commits_added", "issues_opened", "issues_closed",
             "prs_opened", "prs_merged", "verdict_computed", "claimed_verdict",
             "claimed_reason")
-    return [{k: r.get(k) for k in keep} for r in recs[-RUNS_KEPT:]][::-1]
+    out = [{k: r.get(k) for k in keep} for r in recs[-RUNS_KEPT:]][::-1]
+    for r in out:
+        r["started_at"] = to_utc_z(r["started_at"])
+        r["ended_at"] = to_utc_z(r["ended_at"])
+    return out
 
 
 def release_tick(user, cron_lines):
