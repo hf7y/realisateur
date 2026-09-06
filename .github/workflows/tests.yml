@@ -163,6 +163,19 @@ jobs:
       - name: Ratchet -- fail only on a finding a file did not already have
         run: bash bin/shellcheck-lint.sh
 
+  narrowed-close:
+    runs-on: ubuntu-latest   # its own job, like comment-claims: it grades the PR BODY, not the tree, so a red line here means something different from a red suite
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash bin/narrowed-close-check.sh "$GITHUB_REPOSITORY" "$PR"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+
   comment-claims:
     runs-on: ubuntu-latest   # its own job for the reason shellcheck has one: `suites` proves the guard BEHAVES against fixtures, this runs it against the REAL tree, and two claims deserve two red/green lines
     steps:

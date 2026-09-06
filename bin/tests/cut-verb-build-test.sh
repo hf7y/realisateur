@@ -320,9 +320,6 @@ cut >/dev/null 2>&1
 check "no readable repositories is BLIND, not a zero-verb build" "$?" "1"
 
 # --- 10. man-page-optional (#891): an executable alone IS a verb ---------
-# The defect this used to exist for: `ecosim-sensor`, an executable with no
-# page, fell out of the derivation and surfaced later as a wrapper failing on
-# a path that was never going to exist. This case no longer refuses.
 mkrepo epsilon ea
 add_half_exec epsilon ee
 printf 'epsilon\n' > "$TMP/repolist"
