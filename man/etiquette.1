@@ -48,6 +48,17 @@ declaration
 .BR gh-sign (1)
 enforces when the issue is created, so the label is a view of the body rather
 than a second opinion about it.
+.PP
+An owner who answers OUT LOUD rather than by typing a comment has still
+answered \(em but nothing sees it until an agent relays the ruling. Do that
+with
+.B "<!-- decision-by: <who> -->"
+on the comment carrying the ruling, not with the
+.B answered
+label: that label means the answer lives somewhere this predicate cannot
+see at all, and reaching for it when the ruling is right there in the
+comment you just wrote spends its audit value for nothing
+(hf7y/realisateur#924).
 .TP
 .BI written: verb
 That verb applies the label at filing time and nothing else should. A person
