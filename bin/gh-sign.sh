@@ -255,22 +255,34 @@ GH="$(real_gh)" || {
 # is where a cross-repo handoff lands.
 signable=0
 case "${1:-} ${2:-}" in
-  'issue comment'|'issue create'|'issue close'|'pr comment'|'pr create') signable=1 ;;
+  'issue comment'|'issue create'|'issue close'|'issue edit'|'pr comment'|'pr create'|'pr edit') signable=1 ;;  # edit REPLACES a body wholesale -- the more dangerous direction (#970)
 esac
 
 # `gh api` IS THE SAME WRITE BY ANOTHER ROUTE, unstamped and read as Zach's (2026-08-21).
 api_comment=0
+api_edit=0  # a PATCH to the issue/pr itself is `edit` by the api route (#970)
 if [ "${1:-}" = api ]; then
+  _has_body_field=0
+  for _a in "$@"; do
+    case "$_a" in
+      body=@*|body=*) _has_body_field=1 ;;
+    esac
+  done
   for _a in "$@"; do
     case "$_a" in
       */issues/*/comments|*/pulls/*/comments|*/issues/comments/*) api_comment=1 ;;
+      */issues/[0-9]*|*/pulls/[0-9]*)
+        case "$_a" in
+          *comments*|*/timeline*|*/reviews*|*/requested_reviewers*) ;;
+          *) [ "$_has_body_field" -eq 1 ] && api_edit=1 ;;  # path shape alone also matches a GET
+        esac ;;
     esac
   done
-  [ "$api_comment" -eq 1 ] && signable=1
+  { [ "$api_comment" -eq 1 ] || [ "$api_edit" -eq 1 ]; } && signable=1
 fi
 # Only when comments EXIST (a note on every read is not read); the count is
 # already in the reply, so no extra request.
-if [ "${1:-}" = api ] && ! human_at_keyboard; then
+if [ "${1:-}" = api ] && [ "$api_edit" -eq 0 ] && ! human_at_keyboard; then  # an edit must reach the write path below, not exit here unsigned
   _issue_read=0 _path=""
   for _a in "$@"; do
     case "$_a" in
@@ -406,7 +418,7 @@ for ((i = 0; i < ${#args[@]}; i++)); do
 done
 # `gh api` spells it body=<text>/body=@<file> in ONE word: -F is a field here.
 bflag=-1
-if [ "$api_comment" -eq 1 ]; then
+if [ "$api_comment" -eq 1 ] || [ "$api_edit" -eq 1 ]; then
   found=0
   for ((i = 0; i < ${#args[@]}; i++)); do
     case "${args[$i]}" in
@@ -436,27 +448,30 @@ else
 fi
 
 # Comments are exempt; no bypass flag, an override is a toll booth.
+grammar_gate() {  # <label> -- edit is graded the SAME as create (#970): a replace can erase unseen too
+  if [ "$grammar_ok" -eq 1 ]; then
+    if findings="$(grammar_check "$body")"; then :; else
+      # DOOR FIRST, FINDING LAST, EXAMPLE FENCED BETWEEN: the other order
+      # meant `tail` saw the example and never the finding (#627).
+      printf 'gh-sign: REFUSED -- this %s body breaks the grammar in %s.\n' "$1" "$GRAMMAR" >&2
+      printf 'gh-sign: `defere` composes a valid body; `gh-sign.sh --check-body <file>` re-runs this check.\n' >&2
+      printf 'gh-sign: nothing was written.\n\n' >&2
+      printf '  +-- EXAMPLE BODY -- an illustration, NOT state of any repo ---\n' >&2
+      grammar_template | while IFS= read -r _t; do printf '  | %s\n' "$_t" >&2; done
+      printf '  +------------------------------------------------------------\n\n' >&2
+      printf 'gh-sign: what is wrong with YOUR body:\n' >&2
+      while IFS= read -r _f; do printf '  %s\n' "$_f" >&2; done <<<"$findings"
+        exit 7
+    fi
+  else
+    printf 'gh-sign: BLIND -- no grammar library at %s; body not checked.\n' "$GRAMMAR" >&2
+  fi
+}
 case "${1:-} ${2:-}" in
-  'issue create'|'pr create')
-    if [ "$grammar_ok" -eq 1 ]; then
-      if findings="$(grammar_check "$body")"; then :; else
-        # DOOR FIRST, FINDING LAST, EXAMPLE FENCED BETWEEN: the other order
-        # meant `tail` saw the example and never the finding (#627).
-        printf 'gh-sign: REFUSED -- this %s body breaks the grammar in %s.\n' "$1 $2" "$GRAMMAR" >&2
-        printf 'gh-sign: `defere` composes a valid body; `gh-sign.sh --check-body <file>` re-runs this check.\n' >&2
-        printf 'gh-sign: nothing was created.\n\n' >&2
-        printf '  +-- EXAMPLE BODY -- an illustration, NOT state of any repo ---\n' >&2
-        grammar_template | while IFS= read -r _t; do printf '  | %s\n' "$_t" >&2; done
-        printf '  +------------------------------------------------------------\n\n' >&2
-        printf 'gh-sign: what is wrong with YOUR body:\n' >&2
-        while IFS= read -r _f; do printf '  %s\n' "$_f" >&2; done <<<"$findings"
-          exit 7
-      fi
-    else
-      printf 'gh-sign: BLIND -- no grammar library at %s; body not checked.\n' "$GRAMMAR" >&2
-    fi ;;
+  'issue create'|'pr create'|'issue edit'|'pr edit') grammar_gate "$1 $2" ;;
   'issue close') close_check "$body" ;;
 esac
+[ "$api_edit" -eq 1 ] && grammar_gate "gh api PATCH (issue/pr edit)"  # the api route in, same grade
 
 # Already signed. Signing twice pushes the first stamp off the last line.
 last="$(printf '%s\n' "$body" | grep -v '^[[:space:]]*$' | tail -1)"
