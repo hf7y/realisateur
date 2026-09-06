@@ -124,8 +124,7 @@ say ""
 label_findings=0; provisioned=0
 for g in "${GRAMMAR[@]}"; do
   name="$(g_field "$g" 1)"; color="$(g_field "$g" 2)"; meaning="$(g_field "$g" 4)"
-  # GitHub caps a description at 100 chars; the full meaning stays in the one
-  # home and this is a pointer to it.
+  # GitHub caps a description at 100 chars -- a pointer, not the meaning.
   desc="${meaning:0:96}"
   if printf '%s\n' "$have" | cut -f1 | grep -qxF "$name"; then
     continue
@@ -164,8 +163,7 @@ while IFS=$'\t' read -r num has_label title; do
     # An answered decision is an agent's work: left labelled it brakes dispatch.
     decision)
       want=yes
-      # UNCOUNTED and BLIND keep the label -- clearing would be forgery --
-      # but are REPORTED (#553): only one non-answer is a silence.
+      # UNCOUNTED and BLIND keep the label (clearing is forgery) but REPORT (#553).
       issue_answered_json "$issue_json"
       case $? in
         0) want=no; answered=1 ;;
@@ -180,14 +178,8 @@ while IFS=$'\t' read -r num has_label title; do
       row UNDECLARED "$num" "line 1 declares neither DECISION: nor NO-DECISION: -- ${title:0:52}"
       continue ;;
   esac
-  # ANSWERED IS NOT AGREEMENT. `answered=1` means the body still opens
-  # `DECISION: @zach ... DEFAULT-AFTER Nd` while a comment already ruled it.
-  # Reconciling the LABEL and stopping there leaves that banner standing
-  # forever, and the banner is the first thing an agent reads -- so it re-asks
-  # a settled call, which is Zach's complaint of 2026-09-01 and again
-  # 2026-09-06 ("nobody reads comments??"). Measured: hf7y/secretaire#17 was
-  # answered, unlabelled, CLOSED, and etiquette reported `0 findings` on it.
-  # Report it before the label check can swallow it as agreement.
+  # Answered is not agreement: the body still ASKS what a comment already ruled.
+  # Report before the label check below, which returns early on a match.
   if [ "$answered" = 1 ] && [ "$noted" -eq 0 ]; then
     findings=$((findings + 1)); noted=1
     row ANSWERED "$num" "body still asks a call a comment already ruled -- ${title:0:52}"
