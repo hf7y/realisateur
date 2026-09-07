@@ -27,6 +27,7 @@ mkdir -p "$BIN/lib" "$TMP/stub" "$PHOME"
 
 cp "$SETUP" "$BIN/setup-selfdev-project.sh"
 cp "$HERE/../lib/estate-set.sh" "$BIN/lib/estate-set.sh"
+cp "$HERE/../lib/selfdev-ssh-transport.sh" "$BIN/lib/selfdev-ssh-transport.sh"
 
 # --- the four scripts it sequences, as stubs -----------------------------
 # Each records that it ran, where the harness can see it. The wiring stub is
@@ -80,6 +81,15 @@ cat > "$BIN/wire-release-channel.sh" <<'STUB'
 d="$(cd "$(dirname "$0")/.." && pwd)"
 : > "$d/RELEASE-BOOTSTRAPPED"
 echo "release-channel stub: $*"
+STUB
+
+cat > "$BIN/selfdev-permissions-provision.sh" <<'STUB'  # section 10 ships this dir over a fake ssh; tar needs every file present
+#!/usr/bin/env bash
+echo "permissions-provision stub: $*"
+STUB
+cat > "$BIN/selfdev-hooks-provision.sh" <<'STUB'
+#!/usr/bin/env bash
+echo "hooks-provision stub: $*"
 STUB
 chmod +x "$BIN"/*.sh
 
@@ -275,6 +285,42 @@ case "$OUT" in
   *"MISSING $PHOME/creds/ha_token"*) bad "9d a present secret should not be reported missing" "got: $(printf '%s' "$OUT" | grep MISSING | head -1)" ;;
   *) ok "9d a declared secret that IS present stops being a finding" ;;
 esac
+
+echo
+echo "-- 10. --host <hostname> drives the whole sequence over ssh (realisateur#895) --"
+cat > "$TMP/stub/ssh" <<'FAKE'  # fake ssh, same shape as bin/tests/dresse.test.sh's --on section
+#!/usr/bin/env bash
+a=(); while [ $# -gt 0 ]; do case "$1" in -o) shift 2 ;; *) a+=("$1"); shift ;; esac; done
+printf 'FAKESSH host=%s\n' "${a[0]}"
+eval "${a[1]}"
+FAKE
+chmod +x "$TMP/stub/ssh"
+
+setup_host() {
+    rm -f "$PHOME/wire-calls" "$PHOME/wire-cwd" "$PHOME/LANDED" "$TMP/RELEASE-BOOTSTRAPPED" "$TMP/WIRED"
+    : > "$PHOME/wire-fail-list"
+    PATH="$TMP/stub:$PATH" SUDO_USER=fixturehands \
+      TMPROOT="$TMP" SELFDEV_LIBEXEC="$TMP/libexec" SELFDEV_SSH_BIN="$TMP/stub/ssh" \
+      bash "$BIN/setup-selfdev-project.sh" "$PROJECT" --apply --no-key --host monkey \
+      > "$TMP/out" 2> "$TMP/err"
+}
+setup_host; RCH=$?
+check "10a a run through --host still exits 0" "$RCH" "0"
+has "10b it names the target and says it is over ssh" "$(cat "$TMP/out")" "on monkey, driven over ssh"
+has "10c the call really went over the ssh transport" "$(cat "$TMP/out")" "FAKESSH host=monkey"
+check "10d ...and the recursive run still landed" \
+      "$([ -f "$PHOME/LANDED" ] && echo ran || echo skipped)" "ran"
+has "10e ...and still ran the release bootstrap" "$(cat "$TMP/out")" \
+    "release-channel stub: fixtureproj --apply"  # stdout, not a marker file: that stub's own tree is gone by now
+
+cat > "$TMP/stub/ssh" <<'FAKE2'
+#!/usr/bin/env bash
+exit 255
+FAKE2
+chmod +x "$TMP/stub/ssh"
+setup_host; RCH=$?
+check "10f an unreachable host exits 6, not ssh's own 255" "$RCH" "6"
+has "10g the message names the host and says FATAL" "$(cat "$TMP/err")" "FATAL could not reach monkey"
 
 echo
 summary
