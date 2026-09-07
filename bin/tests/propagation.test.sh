@@ -574,8 +574,18 @@ hasnt "TICK_LINK=0 never runs the host-tools section, even with the var set" "$O
   || bad "a per-account tick wrote into the host libexec dir"
 
 O="$(TICK_LINK=1 VERB_BUILD_ROOT="$HT/build" TICK_STATE="$T/s_ht_b" \
-     TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"
-hasnt "TICK_HOST_LIBEXEC unset -> host-tools section never runs either" "$O" "host tools (payload-class"
+     TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"; R=$?
+# #853: TICK_LINK=1 with no TICK_HOST_LIBEXEC used to `return 0` before this
+# section ever printed, so a host asking for the sync got no refresh AND no
+# mention of why -- dexter's crontab measured this exact shape on 2026-09-01,
+# silent since. It must now surface as a gap, not vanish.
+has "TICK_LINK=1 with TICK_HOST_LIBEXEC unset now surfaces the section" "$O" "host tools (payload-class"
+has "...as a gap naming the missing var" "$O" "TICK_HOST_LIBEXEC"
+has "...pointing at the fix" "$O" "wire-release-channel.sh --host"
+[ ! -e "$HT/libexec/ausculte-cadence.sh" ] \
+  && ok "...and still nothing was written -- visibility only, not a new sync" \
+  || bad "an unset TICK_HOST_LIBEXEC still wrote into a host libexec dir"
+rc "the gap counts against the exit code -- no longer a clean 0" 1 "$R"
 
 O="$(TICK_LINK=1 TICK_HOST_LIBEXEC="$HT/libexec" VERB_BUILD_ROOT="$HT/build" \
      TICK_STATE="$T/s_ht_c" TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"

@@ -169,10 +169,22 @@ host_tools_carried() { # <pin-dir> -> "carried-path<TAB>basename" for every libe
 }
 
 sync_host_tools() {  # #517: the payload half of prop_host_tools, refreshed on the clock that already runs -- gated to the host-wide tick only, and only for what the adopted build itself carries
-  [ "$TICK_LINK" = 1 ] && [ -n "$HOST_LIBEXEC" ] || return 0
-  local pin="$BUILD_ROOT/current" rows carried base src dst
+  [ "$TICK_LINK" = 1 ] || return 0
   echo
   echo "-- host tools (payload-class, #517) ------------------------------------"
+  if [ -z "$HOST_LIBEXEC" ]; then
+    # #853: this used to be a bare `return 0` before the section header ever
+    # printed -- a host asking for TICK_LINK got no refresh AND no mention of
+    # why, so an operator staring at a clean summary had no way to see it.
+    # Still does not touch anything: the no-op is unchanged, only its
+    # visibility is. wire_host() in wire-release-channel.sh always sets both
+    # TICK_LINK=1 and TICK_HOST_LIBEXEC together, so a row with the former and
+    # not the latter was not produced that way -- whether this row predates
+    # that writer is a question for a human, not this script.
+    gap "TICK_LINK=1 but TICK_HOST_LIBEXEC is empty -- host tools are NOT refreshed. This host's payload-class probes (the libexec/ rows in carries.tsv) go stale silently. Set TICK_HOST_LIBEXEC in this cron line's env (see wire-release-channel.sh --host), or drop TICK_LINK if this is not meant to be the host-wide tick."
+    return 0
+  fi
+  local pin="$BUILD_ROOT/current" rows carried base src dst
   if ! rows="$(host_tools_carried "$pin")"; then
     bad "cannot read $pin/realisateur/bin/lib/carries.tsv -- host tool freshness is UNVERIFIED"
     return 0
