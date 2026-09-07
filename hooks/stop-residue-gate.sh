@@ -224,7 +224,13 @@ is_written() { # is_written <abs-path> -- did this session's transcript write it
   return 1
 }
 
-discover_opened_prs() {
+# CANDIDATES, not verdicts. Every PR URL the transcript mentions; the loop
+# below decides which of them this session actually opened, by age. Matching on
+# the command text was tried and is worse than useless: any command that merely
+# CONTAINS "gh pr create" -- writing docs about it, grepping for it, patching
+# this file -- counts as having run it. Three matched on 2026-09-07 and one was
+# real.
+discover_prs_mentioned() {
   local transcript="$1"
   [ -n "$transcript" ] && [ -r "$transcript" ] || return 0
   grep -oE 'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[0-9]+' "$transcript" 2>/dev/null | sort -u
@@ -266,16 +272,40 @@ advice() {
   echo "destroying work to get past this hook is the one outcome it exists to prevent."
 }
 
+# The SessionStart baseline marks when this session began; its mtime is that
+# moment. With no baseline this hook cannot tell whose PR is whose, so it says
+# so and declines to block on PRs -- the file half already takes the same line,
+# because losing a block beats damaging what another session is still writing.
+session_started=''
+if [ -n "${BASELINE_FILE:-}" ] && [ -f "$BASELINE_FILE" ]; then
+  session_started="$(stat -c %Y "$BASELINE_FILE" 2>/dev/null)" || session_started=''
+fi
+[ -n "$session_started" ] || log "no SessionStart baseline -- cannot tell which PRs this session opened, so not blocking on any"
+
 pr_report=""
 if command -v gh >/dev/null 2>&1; then
   while IFS= read -r url; do
     [ -n "$url" ] || continue
     slug="${url#https://github.com/}"; num="${slug##*/}"; slug="${slug%/pull/*}"
-    meta="$(gh api "repos/$slug/pulls/$num" --jq '"\(.state)\t\(.draft)\t\(.auto_merge != null)\t\(.body // "")"' 2>/dev/null)" || {
+    meta="$(gh api "repos/$slug/pulls/$num" --jq '"\(.state)\t\(.draft)\t\(.auto_merge != null)\t\(.created_at)\t\(.body // "")"' 2>/dev/null)" || {
       log "could not read $url -- not blocking on a tracker this hook cannot reach"; continue; }
     st="${meta%%$'\t'*}"; rest="${meta#*$'\t'}"; dr="${rest%%$'\t'*}"
-    rest="${rest#*$'\t'}"; am="${rest%%$'\t'*}"; body="${rest#*$'\t'}"
+    rest="${rest#*$'\t'}"; am="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
+    created="${rest%%$'\t'*}"; body="${rest#*$'\t'}"
     [ "$st" = open ] || continue
+    # OPENED BY THIS SESSION, or not this hook's business. A PR that predates
+    # the session was somebody else's work in flight, and every exit this hook
+    # offers -- merge, land, convert to draft -- would damage it.
+    [ -n "$session_started" ] || continue   # said why above; not blocking blind
+    created_epoch="$(date -d "$created" +%s 2>/dev/null)" || created_epoch=''
+    if [ -z "$created_epoch" ]; then
+      log "note: cannot parse $created for $url -- not blocking on a date this hook cannot read."
+      continue
+    fi
+    if [ "$created_epoch" -lt "$session_started" ]; then
+      log "note: $url predates this session ($created) -- mentioned, not opened here."
+      continue
+    fi
     if [ "$dr" = true ]; then
       log "note: $url is still a DRAFT -- a draft claims nothing, which is a valid way to stop."
       continue
@@ -289,7 +319,7 @@ if command -v gh >/dev/null 2>&1; then
       *DELIVERS*) : ;;
       *) pr_report+="    and carries no DELIVERS block, so nothing can check whether it landed"$'\n' ;;
     esac
-  done < <(discover_opened_prs "$transcript")
+  done < <(discover_prs_mentioned "$transcript")
 fi
 if [ -n "$pr_report" ]; then
   {

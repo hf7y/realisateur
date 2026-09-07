@@ -96,27 +96,59 @@ section "C. a PR this turn opened, still open, is not a finished run"
 G="$T/g"; newrepo "$G"
 TR="$T/g-transcript"; transcript_pr "$TR"
 
-printf 'open\tfalse\tfalse\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+# A PR block needs to know WHEN this session began, or it cannot tell a PR the
+# turn opened from one it merely linked. The SessionStart baseline is that
+# mark, so these cases run with one, and pr-state carries a created_at after
+# it. Fixed dates, never `date` -- a suite that drifts with the clock is worse
+# than one that fails.
+CJOB="$T/cjob"; mkdir -p "$CJOB/tmp"
+CSID="c-session"
+payload "$G" "" "$CSID" | CLAUDE_JOB_DIR="$CJOB" "$SCRIPT" --baseline >/dev/null 2>&1
+touch -d '2026-09-07T12:00:00Z' "$CJOB/tmp/stop-residue-baselines/$CSID" 2>/dev/null
+AFTER='2026-09-07T18:00:00Z'   # opened during the session
+BEFORE='2026-09-06T09:00:00Z'  # somebody else's, still in flight
+runpr() { payload "$1" "${2:-}" "$CSID" | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$CJOB" PATH="$T/bin:$PATH" "$SCRIPT" 2>&1; }
+rcof()  { payload "$1" "${2:-}" "$CSID" | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$CJOB" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
+
+printf 'open\tfalse\tfalse\t%s\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
 OUT="$(runpr "$G" "$TR")"; RC="$(rcof "$G" "$TR")"
 rc  "C1 an open non-draft PR blocks the stop" 2 "$RC"
 has "C2 and names the PR" "$OUT" "pull/7"
 
-printf 'open\ttrue\tfalse\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+printf 'open\ttrue\tfalse\t%s\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
 RC="$(rcof "$G" "$TR")"
 rc "C3 a DRAFT claims nothing, so it does not block" 0 "$RC"
 
-printf 'closed\tfalse\tfalse\tNO-DECISION: x' > "$T/pr-state"
+printf 'closed\tfalse\tfalse\t%s\tNO-DECISION: x' "$AFTER" > "$T/pr-state"
 RC="$(rcof "$G" "$TR")"
 rc "C4 a merged or closed PR does not block" 0 "$RC"
 
-printf 'open\tfalse\ttrue\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+printf 'open\tfalse\ttrue\t%s\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
 OUT="$(runpr "$G" "$TR")"; RC="$(rcof "$G" "$TR")"
 rc  "C5 an open PR with AUTO-MERGE ARMED does not block" 0 "$RC"
 has "C6 and says so, rather than passing silently" "$OUT" "AUTO-MERGE ARMED"
 
-printf 'open\tfalse\tfalse\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+printf 'open\tfalse\tfalse\t%s\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
 OUT="$(runpr "$G" "$TR")"
 has "C7 the refusal names arming auto-merge as the preferred exit" "$OUT" "--auto"
+
+# The 2026-09-07 false positive: commenting on somebody else's open PR made
+# `gh pr comment`'s own output (.../pull/N#issuecomment-ID) look like a PR this
+# turn opened, and every exit offered would have damaged work in flight.
+printf 'open\tfalse\tfalse\t%s\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$BEFORE" > "$T/pr-state"
+OUT="$(runpr "$G" "$TR")"; RC="$(rcof "$G" "$TR")"
+rc  "C8 a PR opened before this session does not block" 0 "$RC"
+has "C9 and it says mentioned, not opened here"         "$OUT" "predates this session"
+
+# No baseline: the hook cannot tell whose PR is whose. The file half already
+# warns rather than blocking; the PR half must too, because its remedies are
+# destructive to another session's work.
+printf 'open\tfalse\tfalse\t%s\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
+NB="$T/nb"; mkdir -p "$NB/tmp"
+OUT="$(payload "$G" "$TR" "no-baseline-sid" | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$NB" PATH="$T/bin:$PATH" "$SCRIPT" 2>&1)"
+payload "$G" "$TR" "no-baseline-sid" | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$NB" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1
+rc  "C10 no baseline does not block on PRs" 0 "$?"
+has "C11 and says why it is not blocking"   "$OUT" "cannot tell which PRs"
 
 echo
 section "D. a HUMAN-STEP block this turn asked a human to run, without verified: (#714 Rule 2)"
