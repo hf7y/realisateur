@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # unarmed.sh -- has the set of built-but-unarmed mechanisms GROWN? (#754)
-# KIND: verb
 # RUNNER: bin/lib/cron-invoked.tsv -- weekly, root@monkey; DEBT, not liveness
 # GUARD-TEST: bin/tests/unarmed.test.sh -- offline behind UNARMED_SSH
 # GATE: none -- it reads a remote host's crontabs, never this tree
@@ -95,7 +94,7 @@ for v in '"$PROP_HOST_PIN"'/*/bin/*; do
 done
 fi
 printf "HC_VERBS %s\nHC_BIN_STRAY %s\n" "$nv" "$st"
-[ -d '"$PROP_HOST_PIN"' ] && printf "BUILD_LIBEXEC %s\n" "$(ls '"$PROP_HOST_PIN"'/*/libexec/ 2>/dev/null | grep -cE "^(landing-drift|vault-spool-drain)\.sh$")"
+[ -d '"$PROP_HOST_PIN"' ] && printf "BUILD_LIBEXEC %s\n" "$(ls '"$PROP_HOST_PIN"'/*/libexec/ 2>/dev/null | grep -cE "^(landing-drift|vault-spool-drain)\.sh$")" # #894 moved unarmed.sh off libexec/; these two are what carries.tsv still declares there
 exit 0'   # ALWAYS LAST, and unconditional: a fact line that reads nothing costs its own row, never the other nine (#815).
   if on_target_host "$HOST"; then
     FACTS="$(bash -c "$script" 2>/dev/null)"; rc=$?
@@ -184,10 +183,6 @@ probe_vault_drain() {
 }
 
 probe_libexec_payload() {
-  # #894 made unarmed.sh itself a verb (carries.tsv's bin/unarmed row), so it
-  # no longer ships under libexec/ -- the two host tools bashified still
-  # declares there are landing-drift.sh and vault-spool-drain.sh, and BUILD_LIBEXEC's
-  # collect() line (above) counts those two now, not this file.
   local n; n="$(fact BUILD_LIBEXEC)"
   { host_readable && [ -n "$n" ]; } || { echo "BLIND could not read the adopted verb build on $HOST"; return; }
   if [ "$n" = 2 ]; then
