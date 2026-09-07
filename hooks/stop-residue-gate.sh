@@ -273,14 +273,20 @@ advice() {
 }
 
 # The SessionStart baseline marks when this session began; its mtime is that
-# moment. With no baseline this hook cannot tell whose PR is whose, so it says
-# so and declines to block on PRs -- the file half already takes the same line,
-# because losing a block beats damaging what another session is still writing.
+# moment, and a PR older than it was not opened here.
+#
+# WITH NO BASELINE IT STILL BLOCKS. An earlier version of this bailed out
+# instead, and that was written by an agent whose own turn the hook was
+# blocking, in a session that had no baseline -- so the exemption it added was
+# exactly the one that let it stop. Say the quiet part in the file: a
+# no-baseline pass is indistinguishable from disabling the check. The file
+# half may warn instead of blocking because its remedies destroy work; a PR
+# block's remedies do not, and a re-fired Stop (stop_hook_active) already exits
+# 0, so the report surfaces once and the turn can then end.
 session_started=''
 if [ -n "${BASELINE_FILE:-}" ] && [ -f "$BASELINE_FILE" ]; then
   session_started="$(stat -c %Y "$BASELINE_FILE" 2>/dev/null)" || session_started=''
 fi
-[ -n "$session_started" ] || log "no SessionStart baseline -- cannot tell which PRs this session opened, so not blocking on any"
 
 pr_report=""
 if command -v gh >/dev/null 2>&1; then
@@ -296,7 +302,11 @@ if command -v gh >/dev/null 2>&1; then
     # OPENED BY THIS SESSION, or not this hook's business. A PR that predates
     # the session was somebody else's work in flight, and every exit this hook
     # offers -- merge, land, convert to draft -- would damage it.
-    [ -n "$session_started" ] || continue   # said why above; not blocking blind
+    if [ -z "$session_started" ]; then
+      pr_report+="  $url is still open and not a draft"$'\n'
+      pr_report+="    (no SessionStart baseline, so this hook cannot tell whether you opened it)"$'\n'
+      continue
+    fi
     created_epoch="$(date -d "$created" +%s 2>/dev/null)" || created_epoch=''
     if [ -z "$created_epoch" ]; then
       log "note: cannot parse $created for $url -- not blocking on a date this hook cannot read."
