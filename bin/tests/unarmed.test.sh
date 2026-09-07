@@ -307,4 +307,42 @@ armed "$T/facts"
 run "$T/M" 2026-08-30
 hasnt "M10 a fully-linked host reports no stray estate names" "$OUT" "of 36 estate name(s)"
 
+section "N. host-contraband walks REAL accounts, not canned facts: #887 pinned"
+# Section M drives probe_host_contraband off canned FACTS. #887 is the live
+# case that predicate exists to catch: a self-dev account carrying a private,
+# stale ~/.local/libexec/selfdev the host tick never refreshes (15 of 18,
+# measured 2026-08-27; dcp-gate-site's is the one still on a live clock).
+# This runs the ACTUAL collect() script -- the same one K's runreal() drives
+# for host-mode/libexec-payload -- against two fake accounts with real
+# uid-range passwd rows and a real on-disk tree, so the regression this row
+# exists to catch is reproduced, not just its arithmetic re-asserted.
+mkdir -p "$T/homes/fixture-clean" \
+         "$T/homes/fixture-contraband/.local/libexec/selfdev/lib"
+touch "$T/homes/fixture-contraband/.local/libexec/selfdev/install-verb-build.sh" \
+      "$T/homes/fixture-contraband/.local/libexec/selfdev/selfdev-release-tick.sh"
+cat > "$T/stub/getent" <<GETENT
+#!/usr/bin/env bash
+[ "\$1" = passwd ] || exit 1
+if [ -n "\${2:-}" ]; then
+  [ "\$2" = fixture-clean ]      && echo "fixture-clean:x:3001:3001::$T/homes/fixture-clean:/bin/bash"
+  [ "\$2" = fixture-contraband ] && echo "fixture-contraband:x:3002:3002::$T/homes/fixture-contraband:/bin/bash"
+  exit 0
+fi
+echo "fixture-clean:x:3001:3001::$T/homes/fixture-clean:/bin/bash"
+echo "fixture-contraband:x:3002:3002::$T/homes/fixture-contraband:/bin/bash"
+GETENT
+chmod +x "$T/stub/getent"
+mkdir -p "$T/pin2/current/verbs/bin"
+touch "$T/pin2/current/verbs/bin/fixture-887-probe.sh"
+
+runreal "$T/ssh-run" "$T/pin2"
+has "N1 one of two REAL accounts carries an on-disk .local/libexec, counted not guessed" "$OUT" "1 of 2 account(s) carry ~/.local/libexec"
+has "N2 host-contraband names it contraband against the real walk, not a canned count" "$OUT" "carries estate files outside the pinned build"
+
+# The tree gone: the count drops to zero, proving the probe reads the tree on
+# disk each time rather than latching a stale answer.
+rm -rf "$T/homes/fixture-contraband/.local/libexec"
+runreal "$T/ssh-run" "$T/pin2"
+hasnt "N3 removing the private tree clears it from the per-account count" "$OUT" "account(s) carry ~/.local/libexec"
+
 summary
