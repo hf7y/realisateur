@@ -84,6 +84,12 @@ gap() { printf '  MISSING %s\n' "$*"; GAPS=$((GAPS+1)); }
 bad() { printf '  BAD     %s\n' "$*"; BAD=$((BAD+1)); }
 die() { printf '%s: FATAL: %s\n' "${0##*/}" "$*" >&2; exit 5; }
 
+for _r in ${REPOS//,/ }; do  # bare names only: owner/repo 422s opaquely against access_tokens (#1069)
+  case "${_r,,}" in
+    "${OWNER,,}"/*) die "--repos entry '$_r' is owner-qualified -- drop the '${_r%%/*}/' prefix, GitHub wants bare repo names (e.g. '${_r#*/}')" ;;
+  esac
+done
+
 # --- the JWT -----------------------------------------------------------------
 # RS256 by hand rather than a library, because the whole point of this script is
 # that a self-dev account can mint its own credential with nothing but openssl,
