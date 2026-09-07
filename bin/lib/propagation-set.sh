@@ -197,6 +197,7 @@ landing-drift.sh
 vault-spool-drain.sh
 stale-paths.sh
 cut-verb-build.sh
+push-verb-build.sh
 registry-standup.sh
 branch-protection-provision.sh
 publish-release-verdict.sh
