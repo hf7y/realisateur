@@ -575,10 +575,6 @@ hasnt "TICK_LINK=0 never runs the host-tools section, even with the var set" "$O
 
 O="$(TICK_LINK=1 VERB_BUILD_ROOT="$HT/build" TICK_STATE="$T/s_ht_b" \
      TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"; R=$?
-# #853: TICK_LINK=1 with no TICK_HOST_LIBEXEC used to `return 0` before this
-# section ever printed, so a host asking for the sync got no refresh AND no
-# mention of why -- dexter's crontab measured this exact shape on 2026-09-01,
-# silent since. It must now surface as a gap, not vanish.
 has "TICK_LINK=1 with TICK_HOST_LIBEXEC unset now surfaces the section" "$O" "host tools (payload-class"
 has "...as a gap naming the missing var" "$O" "TICK_HOST_LIBEXEC"
 has "...pointing at the fix" "$O" "wire-release-channel.sh --host"
