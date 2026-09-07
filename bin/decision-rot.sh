@@ -88,9 +88,9 @@ fi
 # Warned, not counted: the exit code answers "is there rot in what I read".
 if [ "$MODE" = all ]; then
   UNSWEPT="$(sweep_unswept "$ARMING_ROSTER")"
-  [ -n "$UNSWEPT" ] && printf '%s: %s live in %s:%s and NOT in SWEEP, so this survey did not read %s: %s. Add to SWEEP_PROJECTS in lib/roster-set.sh.\n' \
+  [ -n "$UNSWEPT" ] && printf '%s: %s live in %s and NOT in SWEEP, so this survey did not read %s: %s. Add to SWEEP_PROJECTS in lib/roster-set.sh.\n' \
     "$CLI_NAME" "$(printf '%s\n' "$UNSWEPT" | grep -c .)" \
-    "$ARMING_ROSTER_REPO" "$ARMING_ROSTER_PATH" \
+    "$ARMING_ROSTER_URL" \
     "$([ "$(printf '%s\n' "$UNSWEPT" | grep -c .)" = 1 ] && echo it || echo them)" \
     "$(printf '%s\n' "$UNSWEPT" | paste -sd' ')" >&2
 fi
