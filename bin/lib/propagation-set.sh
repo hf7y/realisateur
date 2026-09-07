@@ -211,11 +211,12 @@ reprise.sh
 narrowed-close-check.sh
 verb-name-taken.sh
 selfdev-home-check.sh
+prose-workflow-provision.sh
 "
 # carry.sh and reprise.sh are LOCAL: they write to a BRANCH of this repo, not a
 # host, so per-account copies would be many writers racing one force-with-lease.
 # reprise also reads bin/lib/handoffs.tsv, THIS repo's ledger, empty elsewhere.
-# registry-standup.sh, unarmed.sh, branch-protection-provision.sh: LOCAL. FLEET subjects; unarmed rides prop_host_tools.
+# registry-standup.sh, unarmed.sh, branch-protection-provision.sh, prose-workflow-provision.sh: LOCAL. FLEET subjects; unarmed rides prop_host_tools.
 # publish-release-verdict.sh is LOCAL because it runs in the release pipeline.
 
 # prop_host_tools -- what a provisioned host carries under
