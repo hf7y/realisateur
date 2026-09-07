@@ -171,6 +171,7 @@ gh-sign.sh
 consigne
 ausculte.sh
 atteste.sh
+decision-rot.sh
 "
 
 # --- THE LEAK, with a bound on it -------------------------------------------
@@ -191,7 +192,6 @@ monkey-watch.sh
 monkey-watch-win.sh
 monkey-status-collect.py
 repose.sh
-decision-rot.sh
 landing-drift.sh
 vault-spool-drain.sh
 stale-paths.sh
@@ -225,7 +225,7 @@ selfdev-home-check.sh
 prop_host_tools() {
   # The probes ausculte composes are LOCAL-class and ride here, or it is
   # BLIND about them on a host.
-  printf 'dresse.sh\ndecision-rot.sh\nlanding-drift.sh\nvault-spool-drain.sh\nunarmed.sh\n'
+  printf 'dresse.sh\nlanding-drift.sh\nvault-spool-drain.sh\nunarmed.sh\n'
   local s; for s in $PROP_PROVISION_SCRIPTS; do [ "$s" = dresse.sh ] || printf '%s\n' "$s"; done
 }
 
