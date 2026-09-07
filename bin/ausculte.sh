@@ -452,6 +452,20 @@ if want fleet; then
       $SU test -r "$d/pull-block.state" &&
         echo "FLEET-PULL $a $($SU cat "$d/pull-block.state")"
     done
+    # A clone left checked out on a feature branch whose PR merged and whose
+    # upstream ref then vanished cannot fast-forward, ever -- and benches its
+    # account permanently, invisibly, until a human happens to read a
+    # dose-now log line (hf7y/scheduler#653). `git`, not $SU: it refuses to
+    # touch a repo root does not own ("dubious ownership"), so this runs AS
+    # the owning account, the same identity #653 repaired wtul under.
+    for a in $(getent passwd | awk -F: "\$3>=3000 && \$3<=3099 {print \$1}"); do
+      d="/home/$a/Documents/Projects/scheduler"
+      $SU test -d "$d/.git" || continue
+      br="$(sudo -n -u "$a" git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+      [ -n "$br" ] && [ "$br" != main ] || continue
+      sudo -n -u "$a" git -C "$d" ls-remote --exit-code origin "$br" >/dev/null 2>&1 \
+        || echo "FLEET-STRANDED $a $br"
+    done
     echo "FLEET-LEDGERS $n"'
   if on_target_host "${AUSCULTE_FLEET_HOST:-monkey}"; then
     led="$(bash -c "$_fleet_probe" 2>/dev/null)"
@@ -464,10 +478,13 @@ if want fleet; then
       gate_err="$(printf '%s\n' "$led" | awk '$1=="FLEET-GATE-ERR" && $3+0 >= 2 {print $2"("$3")"}' | tr '\n' ' ')"
       # ANY cause, and >=2 not 3: the escalation dies before writing back.
       frozen="$(printf '%s\n' "$led" | awk '$1=="FLEET-PULL" && $3+0 >= 2 {print $2"("$3" "$4")"}' | tr '\n' ' ')"
+      stranded="$(printf '%s\n' "$led" | awk '$1=="FLEET-STRANDED" {print $2"("$3")"}' | tr '\n' ' ')"
       if [ -n "$gate_err" ]; then
         record fleet DOWN "the usage gate is ERRORing, not pacing: $gate_err consecutive failure(s) -- no account here is being held on purpose"
       elif [ -n "$frozen" ]; then
         record fleet DOWN "deployed code is FROZEN, so a merged fix cannot land: $frozen blocked tick(s)"
+      elif [ -n "$stranded" ]; then
+        record fleet DOWN "clone(s) on a branch whose upstream vanished, refusing to fast-forward, benched until a human looks: $stranded (hf7y/scheduler#653)"
       elif [ "${n_led:-0}" -eq 0 ]; then
         # Zero ledgers is not a quiet fleet, it is a fleet we cannot see.
         record fleet BLIND 'no account has a paced-runner ledger -- cannot tell whether any of them worked'
