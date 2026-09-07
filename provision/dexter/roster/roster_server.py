@@ -11,9 +11,9 @@ declaration as far as I can see. State is enough"). This served a
 Measured across all 23 rows the day it was cut:
 
     account  == project in 23 of 23 rows          -- a copy of the primary key
-    rate     == 20m     in 23 of 23 rows          -- a constant, and bin/tempo.sh
-                                                     sets the real interval from
-                                                     backlog, so it is not the pace
+    rate     == 20m     in 23 of 23 rows          -- a constant, and scheduler's
+                                                     tempo.sh sets the real interval
+                                                     from backlog, so it is not the pace
     host     19 monkey, 4 vaporwave               -- the only column with content
 
 and `host` is a fact each machine can answer about ITSELF: an account in the
