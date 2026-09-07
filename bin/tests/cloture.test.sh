@@ -109,6 +109,29 @@ out="$(run env CLAUDE_CODE_SESSION_ID="$$" GH_MODE=quiet "$SCRIPT" blocked 2>&1)
 hasnt 'E2 a NO-DECISION: issue is not' "$out" 'AWAITING-A-PERSON'
 
 # ---------------------------------------------------------------------------
+section 'G. untracked junk is dealt with, not narrated'
+
+# The 2026-09-07 case: a 12MB file nobody owned sat in a repo root and the
+# close reported it in prose. A row is not enough on its own -- it has to name
+# the path, or the next close reports a count and moves on again.
+git init -q "$T/repo" 2>/dev/null
+( cd "$T/repo" && git config user.email t@t && git config user.name t \
+  && : > tracked.txt && git add tracked.txt && git commit -qm init ) 2>/dev/null
+
+out="$(run "$SCRIPT" 2>&1)"
+hasnt 'G1 a clean repo raises no UNTRACKED row' "$out" 'UNTRACKED'
+
+: > "$T/repo/json"
+out="$(run "$SCRIPT" 2>&1)"
+has 'G2 an untracked non-ignored file is UNTRACKED' "$out" 'UNTRACKED'
+has 'G3 and the row names the path'                 "$out" 'json'
+
+printf 'json\n' > "$T/repo/.gitignore"
+( cd "$T/repo" && git add .gitignore && git commit -qm ignore ) 2>/dev/null
+out="$(run "$SCRIPT" 2>&1)"
+hasnt 'G4 an ignored file is not a finding' "$out" '    json'
+
+# ---------------------------------------------------------------------------
 section 'F. usage'
 
 run "$SCRIPT" --help >/dev/null 2>&1; rc 'F1 --help exits 0' 0 $?

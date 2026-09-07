@@ -206,8 +206,20 @@ check_branches() {
   [ "${stale:-0}" -gt 0 ] && row 'PRUNABLE-WORKTREES' \
     "$stale worktree record(s) whose directory is gone -- each one pins its branch"
 
-  [ -n "$(git status --porcelain 2>/dev/null)" ] && \
+  [ -n "$(git status --porcelain --untracked-files=no 2>/dev/null)" ] && \
     row 'UNCOMMITTED' 'tracked changes in the working tree'
+
+  # Untracked and not ignored: it will sit in `git status` forever and belongs
+  # to nobody. On 2026-09-07 a 12MB PostScript file named `json` sat in this
+  # repo's root and the close reported it in prose rather than dealing with it.
+  local u n
+  u="$(git status --porcelain --untracked-files=all 2>/dev/null | sed -n 's/^?? //p')"
+  n="$(printf '%s' "$u" | grep -c . || true)"
+  if [ "${n:-0}" -gt 0 ]; then
+    row 'UNTRACKED' "$n path(s) untracked and not ignored"
+    note 'commit, ignore, or move it out -- reporting it is not dealing with it'
+    printf '%s\n' "$u" | head -10 | sed 's/^/    /'
+  fi
 
   local b n
   while read -r b; do
