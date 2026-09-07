@@ -3,7 +3,8 @@
 `build-verbs.yml` belongs at `hf7y/verbs/.github/workflows/build-verbs.yml`
 and is deployed there **by hand**; it is kept here because realisateur owns the
 build logic it calls. `tests.yml`'s `deploy-drift` job is the only thing that
-notices the two disagreeing, and it is advisory, never required.
+notices the two disagreeing, and it has been required, not advisory, since
+2026-09-03 (`bin/tests/branch-protection.test.sh`).
 
 ## The channel, hop by hop
 
