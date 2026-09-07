@@ -94,7 +94,7 @@ for v in '"$PROP_HOST_PIN"'/*/bin/*; do
 done
 fi
 printf "HC_VERBS %s\nHC_BIN_STRAY %s\n" "$nv" "$st"
-[ -d '"$PROP_HOST_PIN"' ] && printf "BUILD_LIBEXEC %s\n" "$(ls '"$PROP_HOST_PIN"'/*/libexec/ 2>/dev/null | grep -cE "^(unarmed|vault-spool-drain)\.sh$")"
+[ -d '"$PROP_HOST_PIN"' ] && printf "BUILD_LIBEXEC %s\n" "$(ls '"$PROP_HOST_PIN"'/*/libexec/ 2>/dev/null | grep -cE "^(landing-drift|vault-spool-drain)\.sh$")" # #894 moved unarmed.sh off libexec/; these two are what carries.tsv still declares there
 exit 0'   # ALWAYS LAST, and unconditional: a fact line that reads nothing costs its own row, never the other nine (#815).
   if on_target_host "$HOST"; then
     FACTS="$(bash -c "$script" 2>/dev/null)"; rc=$?
