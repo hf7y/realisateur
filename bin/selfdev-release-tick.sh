@@ -173,7 +173,6 @@ sync_host_tools() {  # #517: the payload half of prop_host_tools, refreshed on t
   echo
   echo "-- host tools (payload-class, #517) ------------------------------------"
   if [ -z "$HOST_LIBEXEC" ]; then
-    # #853: was a silent `return 0` before the header even printed; still a no-op, now named.
     gap "TICK_LINK=1 but TICK_HOST_LIBEXEC is empty -- host tools are NOT refreshed. This host's payload-class probes (the libexec/ rows in carries.tsv) go stale silently. Set TICK_HOST_LIBEXEC in this cron line's env (see wire-release-channel.sh --host), or drop TICK_LINK if this is not meant to be the host-wide tick."
     return 0
   fi
