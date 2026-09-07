@@ -213,12 +213,6 @@ narrowed-close-check.sh
 verb-name-taken.sh
 selfdev-home-check.sh
 "
-# push-verb-build.sh is LOCAL: it runs on mandark only, from mandark's own
-# checkout, and pushes a build TO a host over ssh (hf7y/realisateur#892). It
-# is the producer-side counterpart to install-verb-build.sh (PROP_BOOTSTRAP,
-# consumer-side); classifying it bootstrap or payload would put a copy of it
-# on every host it is meant to push TO, which is the exact residency #892
-# retires. The receiving host never carries a copy of it, transiently or not.
 # carry.sh and reprise.sh are LOCAL: they write to a BRANCH of this repo, not a
 # host, so per-account copies would be many writers racing one force-with-lease.
 # reprise also reads bin/lib/handoffs.tsv, THIS repo's ledger, empty elsewhere.

@@ -1,46 +1,4 @@
 #!/usr/bin/env bash
-# push-verb-build.sh -- mandark side of hf7y/realisateur#892: mandark cuts or
-# fetches a dated verb build and PUSHES it onto a host, then swaps that
-# host's `current` atomically. The host runs nothing of ours to make that
-# happen -- no installer, no root checkout, no per-account clock. It just has
-# a directory tree that gets atomically repointed.
-#
-# This is the reverse of install-verb-build.sh (host pulls, host switches
-# itself). That script is not touched here and stays exactly what a
-# consumer-side account still uses today; this one is the new producer side.
-#
-# TRAP: "the host runs nothing of ours" means no FILE of ours lands on the
-#   host, transiently or otherwise -- not merely "no crontab". dresse.sh's
-#   own remote_step() tars bin/lib + a named script to a remote mktemp dir
-#   and runs it there; that shape is exactly the provisioning-script
-#   residency #892 exists to retire, so the swap below does not reuse it.
-#   The swap ships as a POSIX command string over ssh's stdin, built from
-#   coreutils (ln, mv, readlink, test) only -- nothing with a filename in
-#   this repo ever touches the host's disk.
-#
-# TRAP: the swap primitive is defined ONCE, as atomic_swap_local(). The
-#   remote path ships that exact function body over ssh via `declare -f` and
-#   runs it there -- so the code this file's own atomicity witness (see
-#   bin/tests/push-verb-build.test.sh) exercises locally is byte-identical
-#   to what executes on a real host, not a parallel reimplementation that
-#   could drift from what was tested.
-#
-# TRAP: staging happens under the build's OWN id
-#   ($REMOTE_ROOT/$BUILD_ID/...), never under `current` or `current.tmp`.
-#   Nothing resolves that path until the swap runs, so a transfer that dies
-#   partway leaves an inert, unreferenced directory -- not a half-installed
-#   live one. The swap itself is `ln -sfn` to a tmp name then `mv -Tf` over
-#   `current`, the same idiom install-verb-build.sh already uses: a plain
-#   `ln -sfn` over an existing symlink-to-a-directory would create the new
-#   link INSIDE the old target instead of replacing it.
-#
-# TRAP: build-or-fetch is DELEGATED, not reimplemented. --cut calls
-#   cut-verb-build.sh --assemble; --fetch calls install-verb-build.sh
-#   --latest with no --apply (which fetches the newest APPROVED build,
-#   verifies every verb it promises, and leaves it at $BUILD_ROOT/<id>
-#   WITHOUT switching anything -- see that script's own APPLY==0 path). A
-#   second implementation of "is this build complete" is a second place for
-#   that check to go stale.
 set -uo pipefail
 
 CLI_NAME='push-verb-build.sh'
@@ -59,7 +17,7 @@ overridable so bin/tests/push-verb-build.test.sh can run with no real ssh,
 no real host and no network -- same posture as install-verb-build.sh and
 selfdev-credentials.sh.'
 CLI_FLAGS='--cut --fetch --build --latest --rollback --list --host --build-root --remote-root --ssh --rsync --ssh-timeout --check --apply'
-CLI_POSITIONAL=any   # flag VALUES read as positionals to cli-guard; the loop below rejects anything genuinely unknown.
+CLI_POSITIONAL=any
 CLI_EXITS='  0  pushed and the swap verified on re-read (or, under --check, could be)
   1  refused: an incomplete local build, a push/swap step failed, or the swap did not verify on re-read
   2  usage error
@@ -104,16 +62,6 @@ done
 say() { printf '%s\n' "$*" >&2; }
 die() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
 
-# ===========================================================================
-# THE PRIMITIVES. Pure functions, no ssh -- unit-tested directly in
-# bin/tests/push-verb-build.test.sh against plain fixture directories that
-# stand in for "a host's build root".
-# ===========================================================================
-
-# select_local_build <root> <'latest'|id> -- prints "<id>\t<dir>" on success.
-# Verifies manifest.tsv exists and every verb it promises is present and
-# executable, the same completeness bar install-verb-build.sh holds what IT
-# extracts to. A half-written local build must not be pushable.
 select_local_build() {
   local root="$1" want="$2" id="" dir="" d cand missing=0 total f project verb
   [ -d "$root" ] || { say "select_local_build: no local build root at $root"; return 1; }
@@ -142,10 +90,6 @@ select_local_build() {
   printf '%s\t%s\n' "$id" "$dir"
 }
 
-# atomic_swap_local <root> <id> -- THE swap. ln -sfn to a tmp name, then
-# mv -Tf over `current`. This exact body is what runs on a real host too
-# (see remote_atomic_swap below): it is shipped over ssh via `declare -f`,
-# never retyped.
 atomic_swap_local() {
   local root="$1" id="$2"
   [ -f "$root/$id/manifest.tsv" ] || { echo "atomic_swap_local: $root/$id has no manifest.tsv -- refusing to point current at it" >&2; return 1; }
@@ -153,31 +97,16 @@ atomic_swap_local() {
   mv -Tf "$root/current.tmp" "$root/current" || { echo "atomic_swap_local: cannot move current into place" >&2; return 1; }
 }
 
-# ===========================================================================
-# THE TRANSPORT. Everything below this line touches ssh/rsync and needs a
-# real host to prove end to end; the suite stubs the binaries to prove the
-# WIRING (right host, right paths, right propagation of a nonzero exit), and
-# says so rather than claiming a network test it cannot run.
-# ===========================================================================
-
-# push_tree <ssh> <rsync> <local-dir> <host> <remote-root> <id>
 push_tree() {
   local sshbin="$1" rsyncbin="$2" local_dir="$3" host="$4" remote_root="$5" id="$6"
   "$sshbin" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" "$host" \
       "mkdir -p $(printf '%q' "$remote_root")" || {
     say "push_tree: could not create $remote_root on $host"; return 1; }
-  # Staged under the build's OWN id -- nothing resolves this path until the
-  # swap, so a transfer that dies partway is inert, not half-installed.
   "$rsyncbin" -a --delete -e "$sshbin -o BatchMode=yes -o ConnectTimeout=$SSH_TIMEOUT" \
       "$local_dir/" "$host:$remote_root/$id/" || {
     say "push_tree: rsync to $host:$remote_root/$id failed"; return 1; }
 }
 
-# remote_atomic_swap <ssh> <host> <remote-root> <id> -- runs
-# atomic_swap_local's OWN BODY on the far side over a one-shot ssh session.
-# Nothing is written to the host's disk to make this run: the function body
-# arrives on ssh's stdin and is interpreted by the remote's own /bin/bash,
-# the same way `mkdir -p` above is a string, not a file.
 remote_atomic_swap() {
   local sshbin="$1" host="$2" remote_root="$3" id="$4"
   "$sshbin" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" "$host" bash -s -- "$remote_root" "$id" <<EOF
@@ -187,17 +116,12 @@ atomic_swap_local "\$1" "\$2"
 EOF
 }
 
-# verify_remote_build <ssh> <host> <remote-root> <id> -- BLIND-safe existence
-# check before a --rollback swap: this host must already hold <id>, or
-# pointing current at it would be pointing at nothing.
 verify_remote_build() {
   local sshbin="$1" host="$2" remote_root="$3" id="$4"
   "$sshbin" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" "$host" \
       "test -f $(printf '%q' "$remote_root/$id/manifest.tsv")" 2>/dev/null
 }
 
-# verify_remote_current <ssh> <host> <remote-root> <id> -- WITNESS: read the
-# pin back off the host, rather than trusting the swap's own exit code.
 verify_remote_current() {
   local sshbin="$1" host="$2" remote_root="$3" id="$4" got
   got="$("$sshbin" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" "$host" \
@@ -209,10 +133,6 @@ probe_host() {
   local sshbin="$1" host="$2"
   "$sshbin" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" "$host" true 2>/dev/null
 }
-
-# ===========================================================================
-# build-or-fetch, delegated.
-# ===========================================================================
 
 sibling() { local n="$1" p; p="$HERE/$n"; [ -x "$p" ] && printf '%s' "$p" || return 1; }
 
@@ -229,7 +149,7 @@ do_cut() {
   fi
   id="$(cat "$tmp/BUILD_ID")"
   if [ -e "$BUILD_ROOT/$id" ]; then
-    rm -rf "$tmp"   # already have it -- not an error, just nothing new to keep
+    rm -rf "$tmp"
   else
     mv "$tmp" "$BUILD_ROOT/$id"
   fi
@@ -239,10 +159,6 @@ do_fetch() {
   local installer rc
   installer="$(sibling install-verb-build.sh)" || { say "$CLI_NAME: install-verb-build.sh is not beside this script -- cannot fetch a build here"; return 1; }
   mkdir -p "$BUILD_ROOT" || { say "$CLI_NAME: cannot create $BUILD_ROOT"; return 1; }
-  # No --apply: fetches the newest APPROVED build, verifies every verb it
-  # promises, and leaves it at $BUILD_ROOT/<id> -- install-verb-build.sh's
-  # own APPLY==0 path never switches anything, which is exactly the "fetch,
-  # don't adopt" primitive this needs. mandark's OWN `current` is untouched.
   "$installer" --build-root "$BUILD_ROOT" --latest >&2
   rc=$?
   case "$rc" in
@@ -251,10 +167,6 @@ do_fetch() {
     *) say "$CLI_NAME: install-verb-build.sh --latest refused (exit $rc) -- see rows above"; return 1 ;;
   esac
 }
-
-# ===========================================================================
-# main
-# ===========================================================================
 
 if [ "$DO_LIST" -eq 1 ]; then
   [ -d "$BUILD_ROOT" ] || die "no builds at $BUILD_ROOT"
@@ -271,9 +183,6 @@ if [ "$DO_LIST" -eq 1 ]; then
   exit 0
 fi
 
-# Selection is exclusive: each names a DIFFERENT id to push, so accepting two
-# would mean picking one silently -- same reasoning wire-release-channel.sh
-# applies to --host/--all/<account>.
 sel_n=$((DO_CUT + DO_FETCH + WANT_LATEST + (${#BUILD_ID} > 0 ? 1 : 0) + (${#ROLLBACK_ID} > 0 ? 1 : 0)))
 [ "$sel_n" -gt 0 ] || cli_die "name a build: --cut, --fetch, --build <id>, --latest, or --rollback <id>"
 [ "$sel_n" -eq 1 ] || cli_die "--cut, --fetch, --build, --latest and --rollback are mutually exclusive -- say which build to push"
@@ -314,7 +223,6 @@ if [ -n "$ROLLBACK_ID" ]; then
   fi
 fi
 
-# --- build-or-fetch, then resolve which local id/dir that produced --------
 if [ "$DO_CUT" -eq 1 ]; then
   do_cut || exit $?
   WANT_LATEST=1

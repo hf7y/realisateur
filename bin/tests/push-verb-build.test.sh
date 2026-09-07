@@ -1,26 +1,4 @@
 #!/usr/bin/env bash
-#
-# push-verb-build.test.sh -- witness for bin/push-verb-build.sh
-# (hf7y/realisateur#892: mandark pushes a build onto a host and swaps
-# `current` atomically; the host runs nothing of ours to do it).
-#
-# WHAT THIS CAN AND CANNOT PROVE, STATED UP FRONT:
-#   A. select_local_build() and atomic_swap_local() are pure, local, and
-#      network-free -- exercised directly against fixture directories that
-#      stand in for a host's build root. Section B is THE ATOMICITY WITNESS
-#      #892 asks for by name: a real concurrent reader process, racing a real
-#      swap, that must never observe a partial or missing tree.
-#   B. push_tree()/remote_atomic_swap()/the main CLI are exercised against a
-#      STUBBED ssh/rsync (section D), which proves the WIRING -- right host,
-#      right paths, BLIND vs. a real failure told apart, a bad swap refused
-#      -- not that a real network push to a real host works. That needs a
-#      real host and is explicitly out of scope for this suite.
-# NAMING NOTE: this suite's own helpers are prefixed `t_`, not `ok`/`bad` --
-# sourcing the script under test would redefine bare ok()/bad() and silently
-# swallow every assertion into the SCRIPT's own counters instead of this
-# suite's (see bin/tests/selfdev-credentials.test.sh's header for the
-# incident that established the rule).
-#
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 
@@ -36,12 +14,12 @@ t_has() { case "$2" in *"$3"*) t_ok "$1" ;; *) t_bad "$1" "missing: $3 -- got: $
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 
-mk_verb() { # mk_verb <dir> <project> <verb> <echo-text>
+mk_verb() {
   mkdir -p "$1/$2/bin"
   printf '#!/bin/sh\necho %s\n' "$4" > "$1/$2/bin/$3"
   chmod +x "$1/$2/bin/$3"
 }
-mk_manifest() { # mk_manifest <dir> <row>...  -- row is "project<TAB>verb"
+mk_manifest() {
   local dir="$1"; shift
   {
     printf '# verb build fixture\n'
@@ -53,12 +31,9 @@ mk_manifest() { # mk_manifest <dir> <row>...  -- row is "project<TAB>verb"
   } > "$dir/manifest.tsv"
 }
 
-# ============================================================================
 echo "-- A. select_local_build(): the build-selection logic, no ssh needed --"
-# ============================================================================
 say() { printf '%s\n' "$*" >&2; }
-# shellcheck source=/dev/null
-. <(sed -n '/^select_local_build()/,/^}/p; /^atomic_swap_local()/,/^}/p' "$SCRIPT")
+eval "$(sed -n '/^select_local_build()/,/^}/p; /^atomic_swap_local()/,/^}/p' "$SCRIPT")"
 
 ROOT="$T/A"; mkdir -p "$ROOT"
 
@@ -68,16 +43,10 @@ mk_manifest "$ROOT/2026-09-01T000000Z" "proj	alpha"
 mk_verb "$ROOT/2026-09-03T000000Z" proj alpha alpha
 mk_manifest "$ROOT/2026-09-03T000000Z" "proj	alpha"
 
-# A build the manifest promises a verb for, but the verb never landed --
-# exactly the shape a partial `cut --assemble` or a partial local fetch
-# would leave, and the one thing this MUST refuse to push.
 mkdir -p "$ROOT/2026-09-02T000000Z"
 mk_manifest "$ROOT/2026-09-02T000000Z" "proj	alpha" "proj	beta"
 mk_verb "$ROOT/2026-09-02T000000Z" proj alpha alpha
-# beta deliberately not created
 
-# A bare-clone leftover (install-verb-build.sh's own $BUILD_ROOT/repo shape)
-# must never be mistaken for a build.
 mkdir -p "$ROOT/repo/objects"
 
 OUT="$(select_local_build "$ROOT" "2026-09-01T000000Z" 2>&1)"; RC=$?
@@ -101,14 +70,8 @@ t_rc "an empty build root: refused, not silently 'nothing to push'" 1 "$RC"
 t_has "...and the bare-clone leftover under a REAL root is never picked as a build" \
       "$(select_local_build "$ROOT" latest 2>&1)" "2026-09-03T000000Z"
 
-# ============================================================================
 echo
 echo "-- B. atomic_swap_local(): THE ATOMICITY WITNESS -----------------------"
-# ============================================================================
-# hf7y/realisateur#892's own requirement: "A witness for that belongs in this
-# change" -- a process reading through `current` CONCURRENTLY with a swap
-# must never observe a partial or missing tree. This runs a real background
-# reader against a real filesystem while swaps happen underneath it.
 
 WROOT="$T/B"; mkdir -p "$WROOT"
 mk_verb "$WROOT/A" proj alpha A
@@ -160,18 +123,13 @@ else
   t_bad "...and the reader actually observed BOTH builds" "saw: $(sort -u "$SEEN" | tr '\n' ' ')"
 fi
 
-# A swap that names a nonexistent build must refuse rather than point
-# current at nothing -- the same completeness bar as section A, enforced at
-# the point of the write itself, not only at selection time.
 atomic_swap_local "$WROOT" A >/dev/null 2>&1
 OUT="$(atomic_swap_local "$WROOT" no-such-build 2>&1)"; RC=$?
 t_rc "swapping to a build with no manifest.tsv: refused" 1 "$RC"
 t_eq "...and current did NOT move" "$(readlink "$WROOT/current")" A
 
-# ============================================================================
 echo
 echo "-- C. the CLI contract -------------------------------------------------"
-# ============================================================================
 "$SCRIPT" --not-a-real-flag >/dev/null 2>&1; t_rc "unknown flag exits 2" 2 $?
 "$SCRIPT" --help >/dev/null 2>&1;            t_rc "--help exits 0" 0 $?
 HELP_OUT="$("$SCRIPT" --help 2>&1)"
@@ -189,44 +147,28 @@ t_rc "two selectors named at once: exits 2, refuses to pick one silently" 2 "$RC
 OUT="$("$SCRIPT" --latest 2>&1)"; RC=$?
 t_rc "a selector with no --host: exits 2" 2 "$RC"
 
-# ============================================================================
 echo
 echo "-- D. push+swap over a STUBBED ssh/rsync (wiring only, not a real host) --"
-# ============================================================================
 CROOT="$T/D"; mkdir -p "$CROOT"
 mk_verb "$CROOT/2026-09-04T000000Z" proj alpha alpha
 mk_manifest "$CROOT/2026-09-04T000000Z" "proj	alpha"
 
 STUB="$T/stub"; mkdir -p "$STUB"
 LOG="$T/ssh.log"; : > "$LOG"
-REMOTE="$T/remote-fs"; mkdir -p "$REMOTE"   # what the stub PRETENDS is the host's disk
+REMOTE="$T/remote-fs"; mkdir -p "$REMOTE"
 
-# Understands exactly the shapes push-verb-build.sh issues: `true` (probe),
-# `mkdir -p <path>` (push_tree's remote mkdir), `test -f <path>` (rollback's
-# existence check), `readlink <path>` (the post-swap witness), and
-# `bash -s -- <root> <id>` with the swap function on stdin (the actual swap).
-# Everything is logged so the test can assert on exact argv, not just rc.
-# Each single-word-shaped remote command (mkdir/test/readlink) arrives as ONE
-# combined argv element (push-verb-build.sh builds it as one quoted string);
-# the swap command (`bash -s -- root id`) arrives as SEPARATE argv elements,
-# exactly as the real script issues each one -- the stub mirrors that shape
-# rather than normalising it away, so a shape regression in the real script
-# would show up here as a stub mismatch, not get silently accommodated.
 cat > "$STUB/ssh" <<STUBSH
 #!/usr/bin/env bash
 LOG="$LOG"
 REMOTE="$REMOTE"
 printf 'ARGV: %s\n' "\$*" >> "\$LOG"
 [ "\${STUB_SSH_UNREACHABLE:-0}" = 1 ] && exit 255
-# argv: -o ... -o ... HOST <rest...>
-shift 4   # drop the two -o pairs
-shift     # drop HOST
+shift 4; shift
 case "\$1" in
   true) exit "\${STUB_TRUE_RC:-0}" ;;
   bash)
-    shift 3   # drop: bash -s --
+    shift 3
     root="\$1"; id="\$2"
-    # the swap function body + call arrive on OUR stdin, inherited as-is
     exec bash -s -- "\$REMOTE\$root" "\$id" ;;
   "mkdir -p "*)
     path="\${1#mkdir -p }"
@@ -248,10 +190,9 @@ LOG="$LOG"
 REMOTE="$REMOTE"
 printf 'RSYNC-ARGV: %s\n' "\$*" >> "\$LOG"
 [ "\${STUB_RSYNC_FAIL:-0}" = 1 ] && exit 11
-# last two args: SRC "host:DEST"
 src="\${@: -2:1}"
 dst="\${@: -1:1}"
-dst="\${dst#*:}"     # strip "host:"
+dst="\${dst#*:}"
 mkdir -p "\$REMOTE\$dst"
 cp -a "\$src"/. "\$REMOTE\$dst"
 STUBRSYNC
