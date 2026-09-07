@@ -120,7 +120,7 @@ n_tool=$(printf '%s\n' "$tools" | grep -c .)
 [ "$n_tool" -ge "$n_prov" ] \
   && ok "every provisioning step travels with it (no second list)" \
   || bad "every provisioning step travels" "want at least $n_prov, got $n_tool"
-for extra in decision-rot.sh unarmed.sh; do
+for extra in landing-drift.sh vault-spool-drain.sh; do
   printf '%s\n' "$tools" | grep -qx "$extra" \
     && ok "the host carries $extra, so ausculte is not blind about it there" \
     || bad "the host carries $extra" "absent from prop_host_tools"

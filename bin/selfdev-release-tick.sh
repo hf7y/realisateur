@@ -169,10 +169,14 @@ host_tools_carried() { # <pin-dir> -> "carried-path<TAB>basename" for every libe
 }
 
 sync_host_tools() {  # #517: the payload half of prop_host_tools, refreshed on the clock that already runs -- gated to the host-wide tick only, and only for what the adopted build itself carries
-  [ "$TICK_LINK" = 1 ] && [ -n "$HOST_LIBEXEC" ] || return 0
-  local pin="$BUILD_ROOT/current" rows carried base src dst
+  [ "$TICK_LINK" = 1 ] || return 0
   echo
   echo "-- host tools (payload-class, #517) ------------------------------------"
+  if [ -z "$HOST_LIBEXEC" ]; then
+    gap "TICK_LINK=1 but TICK_HOST_LIBEXEC is empty -- host tools are NOT refreshed. This host's payload-class probes (the libexec/ rows in carries.tsv) go stale silently. Set TICK_HOST_LIBEXEC in this cron line's env (see wire-release-channel.sh --host), or drop TICK_LINK if this is not meant to be the host-wide tick."
+    return 0
+  fi
+  local pin="$BUILD_ROOT/current" rows carried base src dst
   if ! rows="$(host_tools_carried "$pin")"; then
     bad "cannot read $pin/realisateur/bin/lib/carries.tsv -- host tool freshness is UNVERIFIED"
     return 0

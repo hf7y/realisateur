@@ -177,11 +177,6 @@ done
 [ -z "$missing" ] && ok "every lib/ file a shipped script names, and that exists on disk, is in prop_support_libs" \
                   || bad "named by a shipped script, present on disk, and NOT shipped:$missing"
 
-case $'\n'"$SHIPPED_LIBS"$'\n' in
-  *$'\n'lib/answered.jq$'\n'*) ok "lib/answered.jq ships -- the .sh|.tsv whitelist that stranded it is gone (rot read BLIND on monkey, 2026-08-27)" ;;
-  *) bad "lib/answered.jq is still not in the support set; decision-rot cannot read its own predicate" ;;
-esac
-
 echo
 echo "-- 1c. A CARRIED SCRIPT'S LIB IS ITSELF CARRIED, NOT JUST NEEDED -------"
 carried_libs="$(printf '%s\n' "$CARRIES_BLOCK" | awk -F'\t' '$1 ~ /^bin\/lib\//{sub(/^bin\//,"",$1); print $1}' | sort -u)"
@@ -574,8 +569,14 @@ hasnt "TICK_LINK=0 never runs the host-tools section, even with the var set" "$O
   || bad "a per-account tick wrote into the host libexec dir"
 
 O="$(TICK_LINK=1 VERB_BUILD_ROOT="$HT/build" TICK_STATE="$T/s_ht_b" \
-     TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"
-hasnt "TICK_HOST_LIBEXEC unset -> host-tools section never runs either" "$O" "host tools (payload-class"
+     TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"; R=$?
+has "TICK_LINK=1 with TICK_HOST_LIBEXEC unset now surfaces the section" "$O" "host tools (payload-class"
+has "...as a gap naming the missing var" "$O" "TICK_HOST_LIBEXEC"
+has "...pointing at the fix" "$O" "wire-release-channel.sh --host"
+[ ! -e "$HT/libexec/ausculte-cadence.sh" ] \
+  && ok "...and still nothing was written -- visibility only, not a new sync" \
+  || bad "an unset TICK_HOST_LIBEXEC still wrote into a host libexec dir"
+rc "the gap counts against the exit code -- no longer a clean 0" 1 "$R"
 
 O="$(TICK_LINK=1 TICK_HOST_LIBEXEC="$HT/libexec" VERB_BUILD_ROOT="$HT/build" \
      TICK_STATE="$T/s_ht_c" TICK_INSTALLER="$INST_CURRENT" "$TICK" --check 2>&1)"

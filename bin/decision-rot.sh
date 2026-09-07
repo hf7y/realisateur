@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # decision-rot.sh -- how many of Zach's answers is nobody acting on?
+# KIND: verb
 #
 # RUNNER: no -- a SURVEY: run in a triage pass, or ahead of /ideate.
 # GUARD-TEST: bin/tests/decision-rot.test.sh, offline behind a fake `gh`
@@ -23,7 +24,7 @@ CLI_POSITIONAL=any
 CLI_EXITS='  0  clean -- every answered issue in a repo that dispatches is closed
   1  rot found -- at least one answered issue is still open
   6  BLIND -- a repo or the arming roster could not be read; the count is NOT trustworthy'
-. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 
 # DECISION_ROT_OWNER: for the suite, whose fixture logins are not this estate's.
