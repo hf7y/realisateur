@@ -198,6 +198,7 @@ has "a project absent from the vault is named, not silently skipped" "$OUT" "UNR
 
 OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$TMP/no-such-vault" "$CONSIGNE" status 2>&1)"; rc=$?
 check "status with no vault is BLIND (6), never 'nothing to report'" "$rc" "6"
+has "...and says CLONE, not just 'no vault' (#1061)" "$OUT" "no clone of the vault"
 
 # A vault whose projects are all clean must SAY so, not print an empty report
 # that reads as "checked, nothing found" the same way a broken read does.
@@ -206,6 +207,17 @@ note "$TMP/vault-clean/wtul/OLD.md" "$SRC" "docs/gone.md" \
      "2222222222222222222222222222222222222222222222222222222222222222"
 OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$TMP/vault-clean" "$CONSIGNE" status 2>&1)"
 has "a clean vault says so in words" "$OUT" "Nothing is sitting in both places"
+
+OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$TMP/vault-e" "$CONSIGNE" status --diverged 2>&1)"; rc=$?
+check "status --diverged exits 0 (#1061 gap 2: a list a run can act on)" "$rc" "0"
+check "...and prints exactly the diverged path" "$OUT" "scheduler/BLOCKERS.md"
+hasnt "...no DUPLICATED row"                    "$OUT" "DUPLICATED"
+hasnt "...no UNREADABLE row"                    "$OUT" "UNREADABLE"
+hasnt "...no header"                            "$OUT" "consigne status"
+hasnt "...no counts or prompt"                  "$OUT" "STILL IN THE REPO"
+
+OUT="$(PATH="$BASE_PATH" "$CONSIGNE" --diverged DOC.md 2>&1)"; rc=$?
+check "--diverged outside \`status\` is a usage error (2)" "$rc" "2"
 
 # ===========================================================================
 echo
