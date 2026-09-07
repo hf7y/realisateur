@@ -62,6 +62,31 @@ has 'A4 a home command no build produces is INSTALLED-NOT-BUILT' "$out" 'INSTALL
 rm -f "$T/home/commands/retired.md" "$T/build/realisateur/commands/nightly-batch.md"
 
 # ---------------------------------------------------------------------------
+section 'H. hooks: installed is not the same as wired'
+
+# The case this exists for: hooks/stop-residue-gate.sh was built and merged in
+# #711, carried in the build, and absent from the home -- so nothing consumed
+# a close's exit code and its findings could be reported in prose instead.
+mkdir -p "$T/build/realisateur/hooks" "$T/hooks"
+printf '{"hooks":{"Stop":[{"hooks":[{"command":"~/.claude/hooks/wired.sh"}]}]}}\n' > "$T/settings.json"
+
+: > "$T/build/realisateur/hooks/wired.sh"
+: > "$T/hooks/wired.sh"
+out="$(run env CLAUDE_HOOKS_DIR="$T/hooks" CLAUDE_SETTINGS="$T/settings.json" "$SCRIPT" 2>&1)"
+hasnt 'H1 a hook that is installed and wired raises nothing' "$out" 'wired.sh'
+
+: > "$T/build/realisateur/hooks/absent.sh"
+out="$(run env CLAUDE_HOOKS_DIR="$T/hooks" CLAUDE_SETTINGS="$T/settings.json" "$SCRIPT" 2>&1)"
+has 'H2 a hook in the build and not in the home is HOOK-NOT-INSTALLED' "$out" 'HOOK-NOT-INSTALLED'
+has 'H3 and it names the hook'                                        "$out" 'absent.sh'
+
+: > "$T/hooks/absent.sh"
+out="$(run env CLAUDE_HOOKS_DIR="$T/hooks" CLAUDE_SETTINGS="$T/settings.json" "$SCRIPT" 2>&1)"
+has  'H4 installed but named by no event is HOOK-NOT-WIRED' "$out" 'HOOK-NOT-WIRED'
+hasnt 'H5 and it is no longer reported as uninstalled'      "$out" 'HOOK-NOT-INSTALLED'
+rm -f "$T/build/realisateur/hooks/absent.sh" "$T/hooks/absent.sh"
+
+# ---------------------------------------------------------------------------
 section 'B. the no-clone acceptance test'
 
 out="$(run "$SCRIPT" 2>&1)"

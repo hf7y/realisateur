@@ -35,6 +35,8 @@ VERSION='2026-09-07'
 BUILD="${VERB_BUILD_DIR:-$HOME/.local/share/verb-builds/current}"
 HOME_COMMANDS="${CLAUDE_COMMANDS_DIR:-$HOME/.claude/commands}"
 PROJECTS_ROOT="${CLAUDE_PROJECTS_ROOT:-$HOME/.claude/projects}"
+HOME_HOOKS="${CLAUDE_HOOKS_DIR:-$HOME/.claude/hooks}"
+SETTINGS="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"
 
 findings=0
 blind=0
@@ -95,6 +97,26 @@ check_unwired() {
     done
   else
     blind_row "no build at $BUILD or no commands dir at $HOME_COMMANDS"
+  fi
+
+  # HOOKS. A hook is the only thing here that can make a rule arrive as a
+  # consequence rather than as a paragraph the agent already read, so a hook
+  # that exists and is not wired is the most expensive shape of this defect.
+  # Measured 2026-09-07: the build carried nine and this home wired three,
+  # and the missing six included the Stop residue gate -- so a close could
+  # report its findings in prose and end the turn, which is what happened.
+  if [ -d "$BUILD" ] && [ -d "$HOME_HOOKS" ]; then
+    local h b
+    for h in "$BUILD"/*/hooks/*.sh; do
+      [ -e "$h" ] || continue
+      b="$(basename "$h")"
+      [ -e "$HOME_HOOKS/$b" ] || { row 'HOOK-NOT-INSTALLED' "$b is in the build and not in $HOME_HOOKS"; continue; }
+      [ -f "$SETTINGS" ] || continue
+      grep -qF "$b" "$SETTINGS" 2>/dev/null \
+        || row 'HOOK-NOT-WIRED' "$b is installed and no event in settings.json runs it"
+    done
+  else
+    blind_row "no build at $BUILD or no hooks dir at $HOME_HOOKS"
   fi
 
   # NOT CHECKED HERE: whether a script declares `# KIND:` and so survives the
