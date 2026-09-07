@@ -138,14 +138,7 @@ has "C2 the stub's canned 'ok' satisfied the witness check" "$OUT" "can spend a 
 hasnt "C3 the witness never fell through to a real failure" "$OUT" "could NOT spend a token"
 
 section "D. --host <hostname> drives the target over ssh (realisateur#895)"
-# A fake ssh in the same shape bin/tests/dresse.test.sh already proved: eat the
-# -o flags, keep the host, then eval the remote command STRING in this shell.
-# tar's stdin is still open (this runs on the far side of the real
-# `tar | ssh` pipe), so the remote `tar -x` really extracts the shipped tree,
-# and the recursive `bash .../provision-selfdev-user.sh` that follows runs the
-# very same stubs (sudo, id) already on PATH -- proving the transport
-# reproduces local execution rather than a second, untested code path.
-cat > "$STUB/ssh" <<'FAKE'
+cat > "$STUB/ssh" <<'FAKE'  # fake ssh, same shape as bin/tests/dresse.test.sh's: eat -o, eval the rest
 #!/usr/bin/env bash
 a=(); while [ $# -gt 0 ]; do case "$1" in -o) shift 2 ;; *) a+=("$1"); shift ;; esac; done
 printf 'FAKESSH host=%s\n' "${a[0]}"

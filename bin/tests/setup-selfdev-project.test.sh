@@ -83,12 +83,7 @@ d="$(cd "$(dirname "$0")/.." && pwd)"
 echo "release-channel stub: $*"
 STUB
 
-# The remaining two: setup-selfdev-project.sh already tolerates either being
-# absent (WARN, not a refusal) -- but section 10 below SHIPS this directory
-# over a fake ssh, and tar exits nonzero on a member that does not exist, so
-# every file setup-selfdev-project.sh sequences needs a stub here, same as a
-# real host's checkout would actually have all nine.
-cat > "$BIN/selfdev-permissions-provision.sh" <<'STUB'
+cat > "$BIN/selfdev-permissions-provision.sh" <<'STUB'  # section 10 ships this dir over a fake ssh; tar needs every file present
 #!/usr/bin/env bash
 echo "permissions-provision stub: $*"
 STUB
@@ -293,14 +288,7 @@ esac
 
 echo
 echo "-- 10. --host <hostname> drives the whole sequence over ssh (realisateur#895) --"
-# Same fake-ssh shape bin/tests/dresse.test.sh's --on section already proved:
-# eat the -o flags, keep the host, eval the remote command STRING in this
-# shell. tar's stdin is still open (this runs on the far side of the real
-# `tar | ssh` pipe), so the recursive `bash .../setup-selfdev-project.sh` that
-# follows runs the exact same nine-step sequence through the exact same
-# stubs -- proving the transport reproduces the local run, not a second,
-# untested code path.
-cat > "$TMP/stub/ssh" <<'FAKE'
+cat > "$TMP/stub/ssh" <<'FAKE'  # fake ssh, same shape as bin/tests/dresse.test.sh's --on section
 #!/usr/bin/env bash
 a=(); while [ $# -gt 0 ]; do case "$1" in -o) shift 2 ;; *) a+=("$1"); shift ;; esac; done
 printf 'FAKESSH host=%s\n' "${a[0]}"
@@ -322,14 +310,8 @@ has "10b it names the target and says it is over ssh" "$(cat "$TMP/out")" "on mo
 has "10c the call really went over the ssh transport" "$(cat "$TMP/out")" "FAKESSH host=monkey"
 check "10d ...and the recursive run still landed" \
       "$([ -f "$PHOME/LANDED" ] && echo ran || echo skipped)" "ran"
-# NOT a $TMP/RELEASE-BOOTSTRAPPED file check: that stub writes beside its own
-# $0, which under --host is the ssh payload's OWN mktemp tree -- removed by
-# the transport's cleanup trap before this test can look, same as a real
-# target host keeping nothing of ours resident once the run ends. Its stdout
-# survives (the fd is inherited through the whole ssh/eval chain), so that is
-# the witness here.
 has "10e ...and still ran the release bootstrap" "$(cat "$TMP/out")" \
-    "release-channel stub: fixtureproj --apply"
+    "release-channel stub: fixtureproj --apply"  # stdout, not a marker file: that stub's own tree is gone by now
 
 cat > "$TMP/stub/ssh" <<'FAKE2'
 #!/usr/bin/env bash

@@ -14,11 +14,6 @@
 #      .claude/** at all (hf7y/realisateur#282)
 #   8. bin/selfdev-hooks-provision.sh              (root)  the SubagentStop hook (#272)
 #   9. the project's own runtime secrets           (root)  REPORTED, not supplied (#289)
-#
-# --host <hostname>: drive the whole sequence from here instead (realisateur#895)
-# -- ships this script and everything it sequences to <hostname> over ssh and
-# runs the SAME nine steps there, root and all; nothing of ours need be
-# resident on <hostname> beforehand.
 
 set -uo pipefail
 
@@ -42,8 +37,10 @@ if [ -n "$TARGET_HOST" ]; then
   . "$HERE/lib/selfdev-ssh-transport.sh"
   echo "== setup-selfdev-project $PROJECT ($MODE) on $TARGET_HOST, driven over ssh =="
   EXTRA_ARGS=(); [ "$WANT_KEY" -eq 0 ] && EXTRA_ARGS+=(--no-key)
-  selfdev_ssh_ship_run "$TARGET_HOST" 1 "$HERE/.." \
-    "bin/setup-selfdev-project.sh bin/provision-selfdev-user.sh bin/wire-selfdev-git.sh bin/land-selfdev.sh bin/selfdev-app-key.sh bin/wire-release-channel.sh bin/selfdev-permissions-provision.sh bin/selfdev-hooks-provision.sh bin/lib" \
+  SHIP_PATHS=(bin/setup-selfdev-project.sh bin/provision-selfdev-user.sh bin/wire-selfdev-git.sh
+              bin/land-selfdev.sh bin/selfdev-app-key.sh bin/wire-release-channel.sh
+              bin/selfdev-permissions-provision.sh bin/selfdev-hooks-provision.sh bin/lib)
+  selfdev_ssh_ship_run "$TARGET_HOST" 1 "$HERE/.." SHIP_PATHS \
     bin/setup-selfdev-project.sh "$PROJECT" "$MODE" "${EXTRA_ARGS[@]}"
   rc=$?
   if [ "$rc" -eq 255 ] || [ "$rc" -eq 6 ]; then

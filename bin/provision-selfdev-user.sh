@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 # provision-selfdev-user.sh -- add a self-dev project account to this host.
-#
-# --host <hostname>: drive it from here instead (realisateur#895) -- ships
-# this script and its lib/ dependency to <hostname> over ssh and runs it
-# there, unmodified.
 
 set -uo pipefail
 
@@ -28,8 +24,8 @@ case "$PROJECT" in ""|-*) echo "$USAGE" >&2; exit 2 ;; esac
 if [ -n "$TARGET_HOST" ]; then
   . "$ROOT/lib/selfdev-ssh-transport.sh"
   echo "== provision-selfdev-user $PROJECT ($MODE) on $TARGET_HOST, driven over ssh =="
-  selfdev_ssh_ship_run "$TARGET_HOST" 1 "$ROOT/.." \
-    "bin/provision-selfdev-user.sh bin/lib/selfdev-claude-token.sh" \
+  SHIP_PATHS=(bin/provision-selfdev-user.sh bin/lib/selfdev-claude-token.sh)
+  selfdev_ssh_ship_run "$TARGET_HOST" 1 "$ROOT/.." SHIP_PATHS \
     bin/provision-selfdev-user.sh "$PROJECT" "$MODE"
   rc=$?
   if [ "$rc" -eq 255 ] || [ "$rc" -eq 6 ]; then
