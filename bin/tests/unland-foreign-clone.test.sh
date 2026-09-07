@@ -182,28 +182,15 @@ else
 fi
 
 section "M. --host <hostname> drives the filesystem half over ssh; gh stays local (realisateur#895)"
-# HERMETICITY, same shape as bin/tests/provision-selfdev-user.test.sh's D/E and
-# bin/tests/dresse.test.sh's fake-ssh: no real ssh, no real gh, no real sudo.
-# The fake `ssh` below `eval`s the shipped command IN THIS SAME PROCESS TREE
-# (there is no second machine in a test), so $T/homeM plays the role of BOTH
-# "here" (for message text) and "the target's filesystem" (for the actual
-# probe/removal) -- exactly what D/E already lean on.
 mkdir -p "$T/stub"
 cat > "$T/stub/ssh" <<'FAKE'
 #!/usr/bin/env bash
 a=(); while [ $# -gt 0 ]; do case "$1" in -o) shift 2 ;; *) a+=("$1"); shift ;; esac; done
-# to stderr, not stdout: the caller captures the shipped script's STDOUT to
-# parse its TSV rows, so a marker on stdout would corrupt that parse. stderr
-# passes straight through an unredirected `$(...)`, so it still reaches the
-# test's own capture.
 printf 'FAKESSH host=%s\n' "${a[0]}" >&2
 eval "${a[1]}"
 FAKE
 chmod +x "$T/stub/ssh"
 
-# a stub sudo, same shape as provision-selfdev-user.test.sh's: strip -n/-u/-H,
-# exec the rest as this test's own user. selfdev_ssh_ship_run always wraps the
-# shipped script in `sudo -n`, whether or not the mode actually needs root.
 cat > "$T/stub/sudo" <<'STUBSH'
 #!/usr/bin/env bash
 args=("$@"); i=0
@@ -255,9 +242,6 @@ eq  "M6 findings exit 1"                              "$RC" "1"
   || bad "M7 --check removed nothing on the (fake) target"
 
 if command -v fakeroot >/dev/null 2>&1; then
-  # fakeroot makes `id -u` read 0 for this whole process tree, standing in for
-  # the target's real root (the stub sudo above only strips the sudo wrapper;
-  # it does not, by itself, make the shipped script's own root gate pass).
   OUT="$(SELFDEV_PASSWD="$T/passwdM" SELFDEV_HOME_ROOT="$T/homeM" UNLAND_GH="$T/gh-stubM" \
           SELFDEV_SSH_BIN="$T/stub/ssh" PATH="$T/stub:$PATH" \
           fakeroot "$SCRIPT" realisateur --apply --host monkey 2>&1)"; RC=$?

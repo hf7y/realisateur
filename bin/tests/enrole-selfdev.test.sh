@@ -122,11 +122,6 @@ echo "-- H. the argument contract (cli-guard)"
 "$SCRIPT" >/dev/null 2>&1;                          rc "H3 no project named exits 2" 2 "$?"
 
 echo "-- I. --sync --on <h>: the host half is driven from here over ssh (realisateur#895)"
-# Fake ssh, same shape as bin/tests/provision-selfdev-user.test.sh's D/E and
-# bin/tests/dresse.test.sh's --on section: strip -o pairs, then read the
-# remaining args directly (host, remote command) rather than eval them --
-# there is nothing to ship here (dose already lives on the target as a verb),
-# so the stub only needs to recognise the command shape, not execute it.
 STUB="$T/stub"; mkdir -p "$STUB"
 cat > "$STUB/ssh" <<'FAKE'
 #!/usr/bin/env bash

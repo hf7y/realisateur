@@ -208,13 +208,7 @@ fi
 # Separate flag, because it needs a different privilege and a different machine
 # than the repo half: editing a clone works anywhere, installing a crontab must
 # happen ON the host, AS the account.
-if [ "$SYNC" -eq 1 ] && [ "$MODE" != --check ] && [ -n "$ON" ]; then
-  # Driven from here over ssh (realisateur#895), using the shared transport's
-  # own knobs (bin/lib/selfdev-ssh-transport.sh) -- not its ship_run helper,
-  # because there is nothing to ship: `dose` is already installed on the
-  # target as a verb (same reason bin/dresse.sh's own --on runs a command
-  # remotely rather than shipping one). This is the exact remote sudo -u shape
-  # bin/selfdev-credentials.sh's cmd_apply already uses for its own host half.
+if [ "$SYNC" -eq 1 ] && [ "$MODE" != --check ] && [ -n "$ON" ]; then  # driven from here over ssh (realisateur#895); dose is already a verb on the target, so this uses the transport's own knobs directly rather than its ship_run helper -- the same remote sudo -u shape bin/selfdev-credentials.sh's cmd_apply already uses
   . "$(dirname "${BASH_SOURCE[0]}")/lib/selfdev-ssh-transport.sh"
   echo "-- host half (dose as $PROJECT, on $ON, driven over ssh)"
   out="$("$SELFDEV_SSH_BIN" -o BatchMode=yes -o ConnectTimeout="$SELFDEV_SSH_TIMEOUT" "$ON" \

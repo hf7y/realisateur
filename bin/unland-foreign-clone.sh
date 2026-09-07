@@ -76,16 +76,7 @@ residue() {  # a bootstrap copy can hold work that exists nowhere else -- `sched
   return 0
 }
 
-# ==============================================================================
-# --remote-fs-only -- what --host ships to the target and runs there, over ssh,
-# as root (selfdev_ssh_ship_run's sudo prefix). NO gh call lives here: the
-# deploy-key API is the operator's own, not the target's, matching
-# selfdev-credentials.sh's local-gh/remote-fs split (realisateur#895).
-#
-# Prints one machine-readable row per account:
-#   UNLANDFS<TAB>acct<TAB>OWN|NORMAL<TAB>has_clone(0/1)<TAB>residue-or-'-'<TAB>rm_result-or-'-'
-# ==============================================================================
-if [ "$REMOTE_FS_ONLY" -eq 1 ]; then
+if [ "$REMOTE_FS_ONLY" -eq 1 ]; then  # what --host ships to the target and runs there, over ssh, as root; no gh call here (realisateur#895) -- prints UNLANDFS<TAB>acct<TAB>OWN|NORMAL<TAB>has_clone(0/1)<TAB>residue-or-'-'<TAB>rm_result-or-'-'
   [ "$MODE" = --check ] || [ "$(id -u)" -eq 0 ] || die "$MODE --remote-fs-only needs root on this host" 5
 
   roster="$(accounts)"
@@ -120,13 +111,7 @@ if [ "$REMOTE_FS_ONLY" -eq 1 ]; then
   exit 0
 fi
 
-# ==============================================================================
-# --host <hostname> -- driven from here (the operator's machine, e.g. mandark)
-# over ssh. The deploy-key half stays exactly where gh is authenticated (here);
-# only the filesystem probe/removal ships to the target, via the shared
-# transport (bin/lib/selfdev-ssh-transport.sh, realisateur#895/#1083).
-# ==============================================================================
-if [ -n "$TARGET_HOST" ]; then
+if [ -n "$TARGET_HOST" ]; then  # driven from here over ssh; deploy-key half stays local (gh is authenticated here), only the fs probe/removal ships (bin/lib/selfdev-ssh-transport.sh, realisateur#895/#1083)
   . "$HERE/lib/selfdev-ssh-transport.sh"
   echo "== unland-foreign-clone $PROJECT ($MODE) on $TARGET_HOST, driven over ssh -- deploy-key checks stay local =="
 
@@ -220,11 +205,7 @@ WITNESS
   exit 1
 fi
 
-# ==============================================================================
-# local execution -- unchanged (realisateur#895 leaves this path exactly as it
-# was; --host above is additive, not a replacement)
-# ==============================================================================
-KEYS=""   # a clone's credential outlives the clone unless something also revokes it (#852); listed ONCE here, not per account -- 30+ accounts is 30+ API calls otherwise, and a failed list stays silent so a key check that cannot run never blocks the clone removal that is this tool's primary contract
+KEYS=""   # local execution, unchanged by realisateur#895 -- a clone's credential outlives the clone unless something also revokes it (#852); listed ONCE here, not per account -- 30+ accounts is 30+ API calls otherwise, and a failed list stays silent so a key check that cannot run never blocks the clone removal that is this tool's primary contract
 if command -v "$GH" >/dev/null 2>&1; then
   KEYS="$("$GH" repo deploy-key list --repo "$KEY_OWNER/$PROJECT" --json id,title \
            --jq '.[] | (.id|tostring) + "\t" + .title' 2>/dev/null)" || KEYS=""  # wire-selfdev-git.sh titles a deploy key "<host>-<account>-<project>", read-only, one per foreign clone it grants
