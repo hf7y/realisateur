@@ -29,6 +29,14 @@ earns its place only if the trap is still live. Prefer a **runnable witness**
 editing this file cause *mechanical* damage without this paragraph, and can the
 claim be re-derived from the code **today**?
 
+**A document may name a VERB. It may not name a script path, a flag, or a
+guard's job** (Zach, 2026-08-23: *"prose is cancer"*; #579). A verb is a front
+door whose `--help` is its own source, so it cannot go stale silently; the
+other three go stale the moment the mechanism moves, and 24 of them were
+measured across 6 repos. **Deleting the sentence is the fix.** Do not repoint
+it at the replacement, and do not build a detector for this — a detector is one
+more mechanism that prose would then have to describe.
+
 **The vault** — narrative, post-mortems, superseded decisions. The private
 `hf7y/ecosystem1-vault` remote **is** the vault (#212). Commit **and push**; an
 unpushed deposit is not deposited. `man consigne` owns the resolution order.
