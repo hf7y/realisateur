@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # decision-rot.sh -- how many of Zach's answers is nobody acting on?
+# KIND: verb
 #
 # RUNNER: no -- a SURVEY: run in a triage pass, or ahead of /ideate.
 # GUARD-TEST: bin/tests/decision-rot.test.sh, offline behind a fake `gh`

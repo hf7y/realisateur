@@ -177,11 +177,6 @@ done
 [ -z "$missing" ] && ok "every lib/ file a shipped script names, and that exists on disk, is in prop_support_libs" \
                   || bad "named by a shipped script, present on disk, and NOT shipped:$missing"
 
-case $'\n'"$SHIPPED_LIBS"$'\n' in
-  *$'\n'lib/answered.jq$'\n'*) ok "lib/answered.jq ships -- the .sh|.tsv whitelist that stranded it is gone (rot read BLIND on monkey, 2026-08-27)" ;;
-  *) bad "lib/answered.jq is still not in the support set; decision-rot cannot read its own predicate" ;;
-esac
-
 echo
 echo "-- 1c. A CARRIED SCRIPT'S LIB IS ITSELF CARRIED, NOT JUST NEEDED -------"
 carried_libs="$(printf '%s\n' "$CARRIES_BLOCK" | awk -F'\t' '$1 ~ /^bin\/lib\//{sub(/^bin\//,"",$1); print $1}' | sort -u)"
