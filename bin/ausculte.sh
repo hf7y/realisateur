@@ -452,12 +452,6 @@ if want fleet; then
       $SU test -r "$d/pull-block.state" &&
         echo "FLEET-PULL $a $($SU cat "$d/pull-block.state")"
     done
-    # A clone left checked out on a feature branch whose PR merged and whose
-    # upstream ref then vanished cannot fast-forward, ever -- and benches its
-    # account permanently, invisibly, until a human happens to read a
-    # dose-now log line (hf7y/scheduler#653). `git`, not $SU: it refuses to
-    # touch a repo root does not own ("dubious ownership"), so this runs AS
-    # the owning account, the same identity #653 repaired wtul under.
     for a in $(getent passwd | awk -F: "\$3>=3000 && \$3<=3099 {print \$1}"); do
       d="/home/$a/Documents/Projects/scheduler"
       $SU test -d "$d/.git" || continue
