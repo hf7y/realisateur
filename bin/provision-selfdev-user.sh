@@ -1,15 +1,43 @@
 #!/usr/bin/env bash
 # provision-selfdev-user.sh -- add a self-dev project account to this host.
+#
+# --host <hostname>: drive it from here instead (realisateur#895) -- ships
+# this script and its lib/ dependency to <hostname> over ssh and runs it
+# there, unmodified.
 
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$ROOT/lib/selfdev-claude-token.sh"
 
-PROJECT="${1:-}"
-MODE="${2:---check}"
-case "$PROJECT" in ""|-*) echo "usage: $0 <project> [--check|--apply]" >&2; exit 2 ;; esac
-case "$MODE" in --check|--apply) ;; *) echo "usage: $0 <project> [--check|--apply]" >&2; exit 2 ;; esac
+USAGE="usage: $0 <project> [--check|--apply] [--host <hostname>]"
+PROJECT=""; MODE="--check"; TARGET_HOST=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --check|--apply) MODE="$1" ;;
+    --host) shift; TARGET_HOST="${1:-}" ;;
+    -*) echo "$USAGE" >&2; exit 2 ;;
+    *) [ -z "$PROJECT" ] || { echo "$USAGE" >&2; exit 2; }
+       PROJECT="$1" ;;
+  esac
+  shift
+done
+case "$PROJECT" in ""|-*) echo "$USAGE" >&2; exit 2 ;; esac
+[ -n "$TARGET_HOST" ] && [ -z "${TARGET_HOST##-*}" ] && { echo "$USAGE" >&2; exit 2; }
+
+if [ -n "$TARGET_HOST" ]; then
+  . "$ROOT/lib/selfdev-ssh-transport.sh"
+  echo "== provision-selfdev-user $PROJECT ($MODE) on $TARGET_HOST, driven over ssh =="
+  selfdev_ssh_ship_run "$TARGET_HOST" 1 "$ROOT/.." \
+    "bin/provision-selfdev-user.sh bin/lib/selfdev-claude-token.sh" \
+    bin/provision-selfdev-user.sh "$PROJECT" "$MODE"
+  rc=$?
+  if [ "$rc" -eq 255 ] || [ "$rc" -eq 6 ]; then
+    echo "provision-selfdev-user: FATAL could not reach $TARGET_HOST, or nothing ran there (ssh rc=$rc)" >&2
+    exit 6
+  fi
+  exit "$rc"
+fi
 
 # The uid band reserved for self-dev projects: clear of the human 1000s and of
 # the office's romulus=1001, so a future merge of conventions cannot collide.

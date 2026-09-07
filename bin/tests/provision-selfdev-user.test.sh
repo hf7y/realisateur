@@ -137,4 +137,49 @@ has "C1 the witness call was routed through sudo's env -i shape" "$LOGGED" "env 
 has "C2 the stub's canned 'ok' satisfied the witness check" "$OUT" "can spend a token under a cron-shaped environment"
 hasnt "C3 the witness never fell through to a real failure" "$OUT" "could NOT spend a token"
 
+section "D. --host <hostname> drives the target over ssh (realisateur#895)"
+# A fake ssh in the same shape bin/tests/dresse.test.sh already proved: eat the
+# -o flags, keep the host, then eval the remote command STRING in this shell.
+# tar's stdin is still open (this runs on the far side of the real
+# `tar | ssh` pipe), so the remote `tar -x` really extracts the shipped tree,
+# and the recursive `bash .../provision-selfdev-user.sh` that follows runs the
+# very same stubs (sudo, id) already on PATH -- proving the transport
+# reproduces local execution rather than a second, untested code path.
+cat > "$STUB/ssh" <<'FAKE'
+#!/usr/bin/env bash
+a=(); while [ $# -gt 0 ]; do case "$1" in -o) shift 2 ;; *) a+=("$1"); shift ;; esac; done
+printf 'FAKESSH host=%s\n' "${a[0]}"
+eval "${a[1]}"
+FAKE
+chmod +x "$STUB/ssh"
+
+HOSTPROJECT="fixture895"
+mkdir -p "$T/home/$HOSTPROJECT"
+run_host_apply() {
+  HOME_ROOT="$T/home" \
+  SELFDEV_TOKEN_FILE="$TOKENFILE" \
+  SELFDEV_GH_HOSTS="$T/no-such-hosts.yml" \
+  SELFDEV_SSH_BIN="$STUB/ssh" \
+  PATH="$STUB:$PATH" \
+  "$SCRIPT" "$HOSTPROJECT" --apply --host monkey 2>&1
+}
+OUTD="$(run_host_apply)"; RCD=$?
+has "D1 says which target it is acting on" "$OUTD" "on monkey, driven over ssh"
+has "D2 the call really went over the ssh transport" "$OUTD" "FAKESSH host=monkey"
+rc  "D3 a real provisioning run through --host still exits 0" 0 "$RCD"
+PROFILE_D="$T/home/$HOSTPROJECT/.profile"
+has "D4 the shipped, unmodified copy did the real work (wrote the stanza)" \
+    "$(cat "$PROFILE_D" 2>/dev/null)" "# selfdev: private scratch"
+
+section "E. --host: an unreachable target is FATAL (exit 6), not a raw ssh code"
+cat > "$STUB/ssh" <<'FAKE'
+#!/usr/bin/env bash
+exit 255
+FAKE
+chmod +x "$STUB/ssh"
+OUTE="$(HOME_ROOT="$T/home" SELFDEV_SSH_BIN="$STUB/ssh" PATH="$STUB:$PATH" \
+        "$SCRIPT" "$HOSTPROJECT" --apply --host ghost 2>&1)"; RCE=$?
+eq  "E1 an unreachable host exits 6, not ssh's own 255" "$RCE" "6"
+has "E2 the message names the host and says FATAL" "$OUTE" "FATAL could not reach ghost"
+
 summary

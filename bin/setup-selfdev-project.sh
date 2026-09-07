@@ -14,23 +14,47 @@
 #      .claude/** at all (hf7y/realisateur#282)
 #   8. bin/selfdev-hooks-provision.sh              (root)  the SubagentStop hook (#272)
 #   9. the project's own runtime secrets           (root)  REPORTED, not supplied (#289)
+#
+# --host <hostname>: drive the whole sequence from here instead (realisateur#895)
+# -- ships this script and everything it sequences to <hostname> over ssh and
+# runs the SAME nine steps there, root and all; nothing of ours need be
+# resident on <hostname> beforehand.
 
 set -uo pipefail
 
+USAGE="usage: $0 <project> [--check|--apply] [--no-key] [--host <hostname>]"
 PROJECT="${1:-}"; shift 2>/dev/null || true
-MODE="--check"; WANT_KEY=1
-for a in "$@"; do
-  case "$a" in
-    --check|--apply) MODE="$a" ;;
+MODE="--check"; WANT_KEY=1; TARGET_HOST=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --check|--apply) MODE="$1" ;;
     --no-key)        WANT_KEY=0 ;;
-    *) echo "usage: $0 <project> [--check|--apply] [--no-key]" >&2; exit 2 ;;
+    --host)          shift; TARGET_HOST="${1:-}" ;;
+    *) echo "$USAGE" >&2; exit 2 ;;
   esac
+  shift
 done
-case "$PROJECT" in ""|-*) echo "usage: $0 <project> [--check|--apply] [--no-key]" >&2; exit 2 ;; esac
+case "$PROJECT" in ""|-*) echo "$USAGE" >&2; exit 2 ;; esac
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+
+if [ -n "$TARGET_HOST" ]; then
+  . "$HERE/lib/selfdev-ssh-transport.sh"
+  echo "== setup-selfdev-project $PROJECT ($MODE) on $TARGET_HOST, driven over ssh =="
+  EXTRA_ARGS=(); [ "$WANT_KEY" -eq 0 ] && EXTRA_ARGS+=(--no-key)
+  selfdev_ssh_ship_run "$TARGET_HOST" 1 "$HERE/.." \
+    "bin/setup-selfdev-project.sh bin/provision-selfdev-user.sh bin/wire-selfdev-git.sh bin/land-selfdev.sh bin/selfdev-app-key.sh bin/wire-release-channel.sh bin/selfdev-permissions-provision.sh bin/selfdev-hooks-provision.sh bin/lib" \
+    bin/setup-selfdev-project.sh "$PROJECT" "$MODE" "${EXTRA_ARGS[@]}"
+  rc=$?
+  if [ "$rc" -eq 255 ] || [ "$rc" -eq 6 ]; then
+    echo "setup-selfdev-project: FATAL could not reach $TARGET_HOST, or nothing ran there (ssh rc=$rc)" >&2
+    exit 6
+  fi
+  exit "$rc"
+fi
 
 [ "$(id -u)" -eq 0 ] || { echo "$0: run as root (sudo bash $0 $PROJECT $MODE)" >&2; exit 2; }
 
-HERE="$(cd "$(dirname "$0")" && pwd)"
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
 HOST="$(hostname -s 2>/dev/null || echo unknown)"
 # Whose key, and whose repo checkout, we are working from. Under sudo this is
