@@ -160,6 +160,18 @@ printf '{"cwd":"%s","transcript_path":"%s","session_id":"nb2","stop_hook_active"
   | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$NB" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1
 rc "C12 a re-fired Stop exits 0, so the block surfaces once" 0 "$?"
 
+# Ordering: a stopping state is a stopping state whoever opened the PR. Asking
+# whose it is before asking whether it is already handled reported a PR with
+# auto-merge armed, and blocked a turn on it.
+printf 'open\tfalse\ttrue\t%s\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
+OUT="$(nb_run 2>&1)"; nb_run >/dev/null 2>&1
+rc  "C13 auto-merge wins even with no baseline" 0 "$?"
+has "C14 and says so"                           "$OUT" "AUTO-MERGE ARMED"
+
+printf 'open\ttrue\tfalse\t%s\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
+nb_run >/dev/null 2>&1
+rc "C15 a draft wins even with no baseline" 0 "$?"
+
 echo
 section "D. a HUMAN-STEP block this turn asked a human to run, without verified: (#714 Rule 2)"
 

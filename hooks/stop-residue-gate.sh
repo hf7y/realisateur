@@ -299,6 +299,18 @@ if command -v gh >/dev/null 2>&1; then
     rest="${rest#*$'\t'}"; am="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
     created="${rest%%$'\t'*}"; body="${rest#*$'\t'}"
     [ "$st" = open ] || continue
+    # DRAFT and AUTO-MERGE first: both are valid ways to stop no matter who
+    # opened the PR, so asking whose it is before asking whether it is already
+    # handled reports work that is already handled. That inversion shipped for
+    # one commit and blocked a turn on a PR with auto-merge armed.
+    if [ "$dr" = true ]; then
+      log "note: $url is still a DRAFT -- a draft claims nothing, which is a valid way to stop."
+      continue
+    fi
+    if [ "$am" = true ]; then
+      log "note: $url has AUTO-MERGE ARMED -- it lands when its required checks pass. Valid way to stop."
+      continue
+    fi
     # OPENED BY THIS SESSION, or not this hook's business. A PR that predates
     # the session was somebody else's work in flight, and every exit this hook
     # offers -- merge, land, convert to draft -- would damage it.
@@ -314,14 +326,6 @@ if command -v gh >/dev/null 2>&1; then
     fi
     if [ "$created_epoch" -lt "$session_started" ]; then
       log "note: $url predates this session ($created) -- mentioned, not opened here."
-      continue
-    fi
-    if [ "$dr" = true ]; then
-      log "note: $url is still a DRAFT -- a draft claims nothing, which is a valid way to stop."
-      continue
-    fi
-    if [ "$am" = true ]; then
-      log "note: $url has AUTO-MERGE ARMED -- it lands when its required checks pass. Valid way to stop."
       continue
     fi
     pr_report+="  $url is still open and not a draft"$'\n'
