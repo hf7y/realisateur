@@ -367,11 +367,6 @@ FLEET-LEDGERS 1"
 out="$(run fleet)"; rc=$?
 check "one blocked tick is a blip, not a freeze" "$rc" "0"
 
-# hf7y/scheduler#653: a clone left on a branch whose PR merged and whose
-# upstream then vanished cannot fast-forward, ever, and nothing else surfaces it.
-# SELFDEV_LOCAL_HOSTNAME forced here, not left to `run`: on a runner actually
-# named monkey, on_target_host would take the local bash -c branch and this
-# ssh stub would never be consulted at all.
 fleet "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
 FLEET-STRANDED wtul route-deliveries-empty-labels-collapse
 FLEET-LEDGERS 1"
