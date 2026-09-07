@@ -121,6 +121,68 @@ echo "-- H. the argument contract (cli-guard)"
 "$SCRIPT" --help >/dev/null 2>&1;                   rc "H2 --help exits 0" 0 "$?"
 "$SCRIPT" >/dev/null 2>&1;                          rc "H3 no project named exits 2" 2 "$?"
 
+echo "-- I. --sync --on <h>: the host half is driven from here over ssh (realisateur#895)"
+# Fake ssh, same shape as bin/tests/provision-selfdev-user.test.sh's D/E and
+# bin/tests/dresse.test.sh's --on section: strip -o pairs, then read the
+# remaining args directly (host, remote command) rather than eval them --
+# there is nothing to ship here (dose already lives on the target as a verb),
+# so the stub only needs to recognise the command shape, not execute it.
+STUB="$T/stub"; mkdir -p "$STUB"
+cat > "$STUB/ssh" <<'FAKE'
+#!/usr/bin/env bash
+a=(); while [ $# -gt 0 ]; do case "$1" in -o) shift 2 ;; *) a+=("$1"); shift ;; esac; done
+echo "FAKESSH host=${a[0]}"
+echo "FAKESSH cmd=${a[1]:-}"
+case "${a[1]:-}" in
+  *"dose 'widget' --apply"*)
+    case "${a[0]}" in
+      brokenhost) echo "BROKEN: crontab drifted"; exit 0 ;;
+      failhost)   exit 3 ;;
+      *)          echo "dose: converged"; exit 0 ;;
+    esac
+    ;;
+  *) exit 1 ;;
+esac
+FAKE
+chmod +x "$STUB/ssh"
+
+Ci="$(mkclone i)"
+OUT="$(SELFDEV_HOME_ROOT="$HOMES" SELFDEV_SSH_BIN="$STUB/ssh" \
+        "$SCRIPT" widget --host testhost --apply --sync --on goodhost --repo "$Ci" 2>&1)"; RC=$?
+rc  "I1 exits 0 on a converged remote dose"                0 "$RC"
+has "I2 says which host it drove, and that it went over ssh" "$OUT" "on goodhost, driven over ssh"
+has "I3 the ssh transport really fired"                       "$OUT" "FAKESSH host=goodhost"
+has "I4 the remote call is dose, as the project's own account" "$OUT" "sudo -n -u 'widget' -H bash -lc \"dose 'widget' --apply\""
+has "I5 reports convergence, naming the host"                  "$OUT" "crontab converged for widget on goodhost"
+
+OUT="$(SELFDEV_HOME_ROOT="$HOMES" SELFDEV_SSH_BIN="$STUB/ssh" \
+        "$SCRIPT" widget --host testhost --apply --sync --on brokenhost --repo "$Ci" 2>&1)"; RC=$?
+rc  "I6 a BROKEN line from dose is a finding, not a silent OK" 1 "$RC"
+has "I7 says to read the rows above"                            "$OUT" "printed BROKEN/BLIND/GAP lines"
+
+OUT="$(SELFDEV_HOME_ROOT="$HOMES" SELFDEV_SSH_BIN="$STUB/ssh" \
+        "$SCRIPT" widget --host testhost --apply --sync --on failhost --repo "$Ci" 2>&1)"; RC=$?
+rc  "I8 a nonzero dose exit is a finding" 1 "$RC"
+has "I9 names the exit code and the host" "$OUT" "dose widget --apply on failhost exited 3"
+
+cat > "$STUB/ssh-dead" <<'FAKE'
+#!/usr/bin/env bash
+exit 255
+FAKE
+chmod +x "$STUB/ssh-dead"
+OUT="$(SELFDEV_HOME_ROOT="$HOMES" SELFDEV_SSH_BIN="$STUB/ssh-dead" \
+        "$SCRIPT" widget --host testhost --apply --sync --on ghost --repo "$Ci" 2>&1)"; RC=$?
+rc  "I10 an unreachable target is a finding, not a crash" 1 "$RC"
+has "I11 names the ssh rc"                                  "$OUT" "could not reach ghost over ssh (rc=255)"
+
+echo "-- J. --host and --on never collide: --host still names the paced conf, --on the ssh target"
+Cj="$(mkclone j)"
+OUT="$(SELFDEV_SSH_BIN="$STUB/ssh" run "$Cj" --apply --sync --on goodhost 2>&1)"; RC=$?
+rc  "J1 exits 0" 0 "$RC"
+has "J2 the repo half wrote _paced.testhost.conf -- --host's job, untouched by --on" \
+    "$(cat "$Cj/schedule/_paced.testhost.conf")" "widget|1|1|"
+has "J3 the host half drove goodhost -- --on's job, untouched by --host" "$OUT" "FAKESSH host=goodhost"
+
 echo
 printf 'enrole-selfdev: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

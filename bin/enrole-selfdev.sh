@@ -25,10 +25,16 @@ CLI_USAGE='  enrole-selfdev.sh <project>                    --check (default): p
   enrole-selfdev.sh <project> --apply --host h   target another host'"'"'s _paced.<h>.conf
   enrole-selfdev.sh <project> --apply --sync     ALSO run dose <project> --apply as <project>
                                                  (host half; needs to be root or that user)
+  enrole-selfdev.sh <project> --apply --sync --on <h>   the host half, driven from HERE over
+                                                 ssh to <h> instead (realisateur#895) -- --on,
+                                                 not --host, because --host already names which
+                                                 _paced.<host>.conf to write, a different thing
+                                                 (dresse.sh faced the same collision; --on matches
+                                                 its own --host/--on split)
 
   --repo <dir>   the scheduler clone to edit (default: $SCHEDULER_REPO, else
                  ~/Documents/Projects/scheduler)'
-CLI_FLAGS='--check --apply --retire --sync --host --repo'
+CLI_FLAGS='--check --apply --retire --sync --host --repo --on'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  enrolled (or, under --check, would enrol with no findings)
   1  findings: a precondition is unmet -- read the BAD rows
@@ -38,12 +44,13 @@ CLI_EXITS='  0  enrolled (or, under --check, would enrol with no findings)
 . "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
 cli_guard "$@"
 
-MODE=--check; PROJECT=""; HOST=""; SYNC=0; REPO="${SCHEDULER_REPO:-$HOME/Documents/Projects/scheduler}"
+MODE=--check; PROJECT=""; HOST=""; SYNC=0; ON=""; REPO="${SCHEDULER_REPO:-$HOME/Documents/Projects/scheduler}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --check|--apply|--retire) MODE="$1" ;;
     --sync)  SYNC=1 ;;
     --host)  shift; HOST="${1:-}" ;;
+    --on)    shift; ON="${1:-}" ;;   # the ssh TARGET for --sync's host half (realisateur#895); --host above is unrelated -- it names a _paced.<host>.conf, not a machine to reach
     --repo)  shift; REPO="${1:-}" ;;
     -*)      cli_die "unknown flag: $1" ;;
     *)       [ -z "$PROJECT" ] && PROJECT="$1" || cli_die "unexpected argument: $1" ;;
@@ -201,7 +208,23 @@ fi
 # Separate flag, because it needs a different privilege and a different machine
 # than the repo half: editing a clone works anywhere, installing a crontab must
 # happen ON the host, AS the account.
-if [ "$SYNC" -eq 1 ] && [ "$MODE" != --check ]; then
+if [ "$SYNC" -eq 1 ] && [ "$MODE" != --check ] && [ -n "$ON" ]; then
+  # Driven from here over ssh (realisateur#895), using the shared transport's
+  # own knobs (bin/lib/selfdev-ssh-transport.sh) -- not its ship_run helper,
+  # because there is nothing to ship: `dose` is already installed on the
+  # target as a verb (same reason bin/dresse.sh's own --on runs a command
+  # remotely rather than shipping one). This is the exact remote sudo -u shape
+  # bin/selfdev-credentials.sh's cmd_apply already uses for its own host half.
+  . "$(dirname "${BASH_SOURCE[0]}")/lib/selfdev-ssh-transport.sh"
+  echo "-- host half (dose as $PROJECT, on $ON, driven over ssh)"
+  out="$("$SELFDEV_SSH_BIN" -o BatchMode=yes -o ConnectTimeout="$SELFDEV_SSH_TIMEOUT" "$ON" \
+           "sudo -n -u '$PROJECT' -H bash -lc \"dose '$PROJECT' --apply\"" 2>&1)"; rc=$?
+  printf '%s\n' "$out" | sed 's/^/    /'
+  if [ "$rc" -eq 255 ]; then bad "--sync could not reach $ON over ssh (rc=255)"
+  elif [ "$rc" -ne 0 ]; then bad "dose $PROJECT --apply on $ON exited $rc"
+  elif printf '%s' "$out" | grep -qE '^(BROKEN|BLIND|GAP):'; then bad "dose $PROJECT --apply on $ON printed BROKEN/BLIND/GAP lines -- read them above"
+  else ok "crontab converged for $PROJECT on $ON (dose $PROJECT --apply)"; fi
+elif [ "$SYNC" -eq 1 ] && [ "$MODE" != --check ]; then
   echo "-- host half (dose as $PROJECT)"
   if [ "$(id -un)" = "$PROJECT" ]; then RUN=(bash -lc)
   elif [ "$(id -u)" -eq 0 ]; then RUN=(sudo -u "$PROJECT" -H bash -lc)

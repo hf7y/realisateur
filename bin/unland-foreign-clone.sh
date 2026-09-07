@@ -4,24 +4,38 @@ set -uo pipefail
 CLI_NAME='unland-foreign-clone.sh'
 CLI_SUMMARY='remove the clone of <project> that bin/land-selfdev.sh minted into self-dev accounts that do not own it, keeping the checkout of the one that does, and revoke the deploy key that clone was reading with (#852)'
 CLI_USAGE='  unland-foreign-clone.sh <project>            --check (default): list what would go, remove nothing
-  unland-foreign-clone.sh <project> --apply    remove them, then print the witness to paste back'
-CLI_FLAGS='--check --apply'
+  unland-foreign-clone.sh <project> --apply    remove them, then print the witness to paste back
+  unland-foreign-clone.sh <project> --apply --host <hostname>
+                                                drive <hostname> over ssh (realisateur#895): the
+                                                deploy-key API calls still run LOCALLY, wherever the
+                                                operator'"'"'s gh is authenticated -- only the
+                                                filesystem probe/removal is shipped to the target.
+
+  --remote-fs-only is what --host ships to the target; not meant to be typed
+  by a human directly (it never touches gh, and prints machine-readable rows).'
+CLI_FLAGS='--check --apply --host --remote-fs-only'
 CLI_POSITIONAL='<project>'
 CLI_EXITS='  0  nothing left to remove
   1  findings: clones or keys are present (--check), or one was kept back or
      could not be revoked (--apply)
-  5  refused: --apply without root
+  5  refused: --apply without root (local mode), or --remote-fs-only --apply
+     without root on the target
   6  BLIND: the self-dev uid band matched no account at all -- nothing was
-     looked at, and a 0-account pass is NOT a clean result'
+     looked at, and a 0-account pass is NOT a clean result; also raised when
+     --host cannot reach the target at all'
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/lib/cli-guard.sh"
 cli_guard "$@"
 
 MODE=--check
 PROJECT=
+TARGET_HOST=""
+REMOTE_FS_ONLY=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --check|--apply) MODE="$1" ;;
+    --host) shift; TARGET_HOST="${1:-}" ;;
+    --remote-fs-only) REMOTE_FS_ONLY=1 ;;
     [a-z][a-z0-9-]*) [ -n "$PROJECT" ] && cli_die "one project at a time: already given '$PROJECT'"; PROJECT="$1" ;;
     *) cli_die "unexpected argument: $1" ;;
   esac
@@ -44,20 +58,6 @@ bad() { printf '  BAD     %s\n' "$*"; BAD=$((BAD+1)); }
 act() { printf '  DO      %s\n' "$*"; }
 die() { printf '\n%s: %s\n' "$CLI_NAME" "$*" >&2; exit "${2:-5}"; }
 
-echo "== unland-foreign-clone $PROJECT ($MODE) -- $(hostname -s), uid $UID_LO-$((UID_HI-1)) under $HOME_ROOT =="
-
-KEYS=""   # a clone's credential outlives the clone unless something also revokes it (#852); listed ONCE here, not per account -- 30+ accounts is 30+ API calls otherwise, and a failed list stays silent so a key check that cannot run never blocks the clone removal that is this tool's primary contract
-if command -v "$GH" >/dev/null 2>&1; then
-  KEYS="$("$GH" repo deploy-key list --repo "$KEY_OWNER/$PROJECT" --json id,title \
-           --jq '.[] | (.id|tostring) + "\t" + .title' 2>/dev/null)" || KEYS=""  # wire-selfdev-git.sh titles a deploy key "<host>-<account>-<project>", read-only, one per foreign clone it grants
-fi
-deploy_key_id() {  # <title> -> the key id on stdout, 1 if no key has that title
-  [ -n "$KEYS" ] || return 1
-  printf '%s\n' "$KEYS" | awk -F'\t' -v t="$1" '$2==t {print $1; found=1} END{exit !found}'
-}
-
-[ "$MODE" = --check ] || [ "$(id -u)" -eq 0 ] || die "$MODE needs root (sudo $CLI_NAME $PROJECT $MODE)" 5
-
 accounts() {  # the uid band IS the roster, same predicate bin/monkey-status-collect.py uses -- never a typed list
   { [ -n "$PASSWD_SRC" ] && cat "$PASSWD_SRC" || getent passwd; } 2>/dev/null \
     | awk -F: -v lo="$UID_LO" -v hi="$UID_HI" '$3+0>=lo && $3+0<hi {print $1}' | sort
@@ -75,6 +75,168 @@ residue() {  # a bootstrap copy can hold work that exists nowhere else -- `sched
   [ -n "$out" ] && printf 'unpushed commits (%s)' "$(printf '%s\n' "$out" | grep -c .)"
   return 0
 }
+
+# ==============================================================================
+# --remote-fs-only -- what --host ships to the target and runs there, over ssh,
+# as root (selfdev_ssh_ship_run's sudo prefix). NO gh call lives here: the
+# deploy-key API is the operator's own, not the target's, matching
+# selfdev-credentials.sh's local-gh/remote-fs split (realisateur#895).
+#
+# Prints one machine-readable row per account:
+#   UNLANDFS<TAB>acct<TAB>OWN|NORMAL<TAB>has_clone(0/1)<TAB>residue-or-'-'<TAB>rm_result-or-'-'
+# ==============================================================================
+if [ "$REMOTE_FS_ONLY" -eq 1 ]; then
+  [ "$MODE" = --check ] || [ "$(id -u)" -eq 0 ] || die "$MODE --remote-fs-only needs root on this host" 5
+
+  roster="$(accounts)"
+  if [ -z "$roster" ]; then
+    echo "BLIND: no account in uid $UID_LO-$((UID_HI-1)) on $(hostname -s 2>/dev/null || echo unknown) -- nothing was looked at." >&2
+    exit 6
+  fi
+
+  for a in $roster; do
+    case "$a" in ''|*/*|.|..) continue ;; esac  # it becomes a path component below; a roster that can hold anything else is a delete-anything primitive
+
+    if [ "$a" = "$PROJECT" ]; then  # THE OWNING ACCOUNT -- never a removal target, on this host or any other
+      printf 'UNLANDFS\t%s\tOWN\t-\t-\t-\n' "$a"
+      continue
+    fi
+
+    d="$HOME_ROOT/$a/Documents/Projects/$PROJECT"
+    has_clone=1; [ -d "$d" ] || has_clone=0
+    res="-"
+    if [ "$has_clone" -eq 1 ]; then
+      r="$(residue "$d")"
+      [ -n "$r" ] && res="$r"
+    fi
+
+    rmres="-"
+    if [ "$MODE" = --apply ] && [ "$has_clone" -eq 1 ] && [ "$res" = "-" ]; then
+      if rm -rf "$d"; then rmres="ok"; else rmres="failed"; fi
+    fi
+
+    printf 'UNLANDFS\t%s\tNORMAL\t%s\t%s\t%s\n' "$a" "$has_clone" "$res" "$rmres"
+  done
+  exit 0
+fi
+
+# ==============================================================================
+# --host <hostname> -- driven from here (the operator's machine, e.g. mandark)
+# over ssh. The deploy-key half stays exactly where gh is authenticated (here);
+# only the filesystem probe/removal ships to the target, via the shared
+# transport (bin/lib/selfdev-ssh-transport.sh, realisateur#895/#1083).
+# ==============================================================================
+if [ -n "$TARGET_HOST" ]; then
+  . "$HERE/lib/selfdev-ssh-transport.sh"
+  echo "== unland-foreign-clone $PROJECT ($MODE) on $TARGET_HOST, driven over ssh -- deploy-key checks stay local =="
+
+  KEYS=""   # a clone's credential outlives the clone unless something also revokes it (#852); listed ONCE here, not per account
+  if command -v "$GH" >/dev/null 2>&1; then
+    KEYS="$("$GH" repo deploy-key list --repo "$KEY_OWNER/$PROJECT" --json id,title \
+             --jq '.[] | (.id|tostring) + "\t" + .title' 2>/dev/null)" || KEYS=""
+  fi
+  deploy_key_id() {  # <title> -> the key id on stdout, 1 if no key has that title
+    [ -n "$KEYS" ] || return 1
+    printf '%s\n' "$KEYS" | awk -F'\t' -v t="$1" '$2==t {print $1; found=1} END{exit !found}'
+  }
+
+  SHIP_PATHS=(bin/unland-foreign-clone.sh bin/lib/cli-guard.sh bin/lib/estate-set.sh)
+  FSOUT="$(selfdev_ssh_ship_run "$TARGET_HOST" 1 "$HERE/.." SHIP_PATHS \
+    bin/unland-foreign-clone.sh "$PROJECT" "$MODE" --remote-fs-only)"
+  rc=$?
+  if [ "$rc" -eq 255 ] || [ "$rc" -eq 6 ]; then
+    echo "$CLI_NAME: FATAL could not reach $TARGET_HOST, or nothing ran there (ssh rc=$rc)" >&2
+    exit 6
+  fi
+
+  found_any=0
+  while IFS=$'\t' read -r tag a role has_clone res rmres; do
+    [ "$tag" = UNLANDFS ] || continue
+    found_any=1
+    title="$TARGET_HOST-$a-$PROJECT"
+    kid="$(deploy_key_id "$title")" || kid=""
+
+    if [ "$role" = OWN ]; then
+      ok "$a: KEPT -- this account owns $PROJECT, so its dev checkout on $TARGET_HOST is left alone"
+      continue
+    fi
+
+    d="$HOME_ROOT/$a/Documents/Projects/$PROJECT"  # message text only -- the real path lives on $TARGET_HOST
+
+    if [ "$has_clone" -eq 1 ] && [ "$res" != "-" ]; then
+      bad "$a: KEPT -- $d on $TARGET_HOST has $res; salvage it, then re-run"
+      continue
+    fi
+
+    if [ "$has_clone" -eq 0 ] && [ -z "$kid" ]; then
+      ok "$a: no clone at $d on $TARGET_HOST, no deploy key '$title'"
+      continue
+    fi
+
+    if [ "$MODE" = --apply ]; then
+      if [ "$has_clone" -eq 1 ]; then
+        case "$rmres" in
+          ok) act "$a: removed $d on $TARGET_HOST" ;;
+          *)  bad "$a: could not remove $d on $TARGET_HOST" ;;
+        esac
+      fi
+      if [ -n "$kid" ]; then
+        if "$GH" repo deploy-key delete "$kid" --repo "$KEY_OWNER/$PROJECT" >/dev/null 2>&1; then
+          act "$a: revoked deploy key '$title' (id $kid) on $KEY_OWNER/$PROJECT"
+        else
+          bad "$a: could not revoke deploy key '$title' (id $kid) on $KEY_OWNER/$PROJECT"
+        fi
+      fi
+    else
+      [ "$has_clone" -eq 1 ] && gap "$a: would remove $d on $TARGET_HOST"
+      [ -n "$kid" ] && gap "$a: would revoke deploy key '$title' (id $kid) on $KEY_OWNER/$PROJECT"
+    fi
+  done <<<"$FSOUT"
+
+  if [ "$found_any" -eq 0 ]; then
+    echo "BLIND: $TARGET_HOST answered, but no account in uid $UID_LO-$((UID_HI-1)) was found." >&2
+    exit 6
+  fi
+
+  echo
+  printf '%s (%s) on %s: %d ok, %d to remove, %d kept back\n' "$CLI_NAME" "$MODE" "$TARGET_HOST" "$PASS" "$GAPS" "$BAD"
+
+  cat <<WITNESS
+
+== WITNESS -- run this after --apply and paste the output ==
+  ssh $TARGET_HOST sudo find $HOME_ROOT -maxdepth 4 -type d -path '*/Documents/Projects/$PROJECT'
+  echo "clones left: \$(ssh $TARGET_HOST sudo find $HOME_ROOT -maxdepth 4 -type d -path '*/Documents/Projects/$PROJECT' | grep -c .) (expect 1 -- $PROJECT's own)"
+  ssh $TARGET_HOST 'command -v ausculte; ausculte --help >/dev/null 2>&1; echo "ausculte rc=$?"'
+Root over ssh, and find rather than a glob, for the same reason the local
+witness uses them: $PROJECT's own home is 0700 on $TARGET_HOST too.
+WITNESS
+
+  if [ "$MODE" = --check ]; then
+    [ "$GAPS" -eq 0 ] && [ "$BAD" -eq 0 ] && exit 0
+    echo "Next: $CLI_NAME $PROJECT --apply --host $TARGET_HOST"
+    exit 1
+  fi
+  [ "$BAD" -eq 0 ] && exit 0
+  exit 1
+fi
+
+# ==============================================================================
+# local execution -- unchanged (realisateur#895 leaves this path exactly as it
+# was; --host above is additive, not a replacement)
+# ==============================================================================
+KEYS=""   # a clone's credential outlives the clone unless something also revokes it (#852); listed ONCE here, not per account -- 30+ accounts is 30+ API calls otherwise, and a failed list stays silent so a key check that cannot run never blocks the clone removal that is this tool's primary contract
+if command -v "$GH" >/dev/null 2>&1; then
+  KEYS="$("$GH" repo deploy-key list --repo "$KEY_OWNER/$PROJECT" --json id,title \
+           --jq '.[] | (.id|tostring) + "\t" + .title' 2>/dev/null)" || KEYS=""  # wire-selfdev-git.sh titles a deploy key "<host>-<account>-<project>", read-only, one per foreign clone it grants
+fi
+deploy_key_id() {  # <title> -> the key id on stdout, 1 if no key has that title
+  [ -n "$KEYS" ] || return 1
+  printf '%s\n' "$KEYS" | awk -F'\t' -v t="$1" '$2==t {print $1; found=1} END{exit !found}'
+}
+
+echo "== unland-foreign-clone $PROJECT ($MODE) -- $(hostname -s), uid $UID_LO-$((UID_HI-1)) under $HOME_ROOT =="
+
+[ "$MODE" = --check ] || [ "$(id -u)" -eq 0 ] || die "$MODE needs root (sudo $CLI_NAME $PROJECT $MODE)" 5
 
 roster="$(accounts)"
 if [ -z "$roster" ]; then

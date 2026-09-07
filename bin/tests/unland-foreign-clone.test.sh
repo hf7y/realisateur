@@ -181,5 +181,110 @@ else
   ok "L7 skipped: no fakeroot, so the apply path cannot be driven here"
 fi
 
+section "M. --host <hostname> drives the filesystem half over ssh; gh stays local (realisateur#895)"
+# HERMETICITY, same shape as bin/tests/provision-selfdev-user.test.sh's D/E and
+# bin/tests/dresse.test.sh's fake-ssh: no real ssh, no real gh, no real sudo.
+# The fake `ssh` below `eval`s the shipped command IN THIS SAME PROCESS TREE
+# (there is no second machine in a test), so $T/homeM plays the role of BOTH
+# "here" (for message text) and "the target's filesystem" (for the actual
+# probe/removal) -- exactly what D/E already lean on.
+mkdir -p "$T/stub"
+cat > "$T/stub/ssh" <<'FAKE'
+#!/usr/bin/env bash
+a=(); while [ $# -gt 0 ]; do case "$1" in -o) shift 2 ;; *) a+=("$1"); shift ;; esac; done
+# to stderr, not stdout: the caller captures the shipped script's STDOUT to
+# parse its TSV rows, so a marker on stdout would corrupt that parse. stderr
+# passes straight through an unredirected `$(...)`, so it still reaches the
+# test's own capture.
+printf 'FAKESSH host=%s\n' "${a[0]}" >&2
+eval "${a[1]}"
+FAKE
+chmod +x "$T/stub/ssh"
+
+# a stub sudo, same shape as provision-selfdev-user.test.sh's: strip -n/-u/-H,
+# exec the rest as this test's own user. selfdev_ssh_ship_run always wraps the
+# shipped script in `sudo -n`, whether or not the mode actually needs root.
+cat > "$T/stub/sudo" <<'STUBSH'
+#!/usr/bin/env bash
+args=("$@"); i=0
+while [ $i -lt ${#args[@]} ]; do
+  case "${args[$i]}" in
+    -u) i=$((i+2)); continue ;;
+    -n|-H) i=$((i+1)); continue ;;
+    *) break ;;
+  esac
+done
+exec "${args[@]:$i}"
+STUBSH
+chmod +x "$T/stub/sudo"
+
+cat > "$T/passwdM" <<'EOF'
+root:x:0:0::/root:/bin/bash
+realisateur:x:3010:3010::/home/realisateur:/bin/bash
+ecosim:x:3011:3011::/home/ecosim:/bin/bash
+EOF
+mkclone "$T/homeM/ecosim/Documents/Projects/realisateur"
+mkclone "$T/homeM/realisateur/Documents/Projects/realisateur"
+
+cat > "$T/gh-stubM" <<'EOF'
+#!/usr/bin/env bash
+case "$*" in
+  "repo deploy-key list --repo hf7y/realisateur --json id,title --jq"*)
+    printf '333\tmonkey-ecosim-realisateur\n' ;;
+  "repo deploy-key delete 333 --repo hf7y/realisateur") exit 0 ;;
+  *) exit 1 ;;
+esac
+EOF
+chmod +x "$T/gh-stubM"
+
+runM() {  # runM <mode>
+  SELFDEV_PASSWD="$T/passwdM" SELFDEV_HOME_ROOT="$T/homeM" UNLAND_GH="$T/gh-stubM" \
+    SELFDEV_SSH_BIN="$T/stub/ssh" PATH="$T/stub:$PATH" \
+    "$SCRIPT" realisateur "$1" --host monkey 2>&1
+}
+
+OUT="$(runM --check)"; RC=$?
+has "M1 says it is driven over ssh"                 "$OUT" "on monkey, driven over ssh"
+has "M2 the ssh transport really fired"              "$OUT" "FAKESSH host=monkey"
+has "M3 ecosim's foreign clone is named"              "$OUT" "would remove $T/homeM/ecosim/Documents/Projects/realisateur on monkey"
+has "M4 ecosim's deploy key is found via LOCAL gh"    "$OUT" "would revoke deploy key 'monkey-ecosim-realisateur' (id 333) on hf7y/realisateur"
+has "M5 the owning account's checkout is kept"        "$OUT" "realisateur: KEPT -- this account owns realisateur"
+eq  "M6 findings exit 1"                              "$RC" "1"
+[ -d "$T/homeM/ecosim/Documents/Projects/realisateur" ] \
+  && ok "M7 --check removed nothing on the (fake) target" \
+  || bad "M7 --check removed nothing on the (fake) target"
+
+if command -v fakeroot >/dev/null 2>&1; then
+  # fakeroot makes `id -u` read 0 for this whole process tree, standing in for
+  # the target's real root (the stub sudo above only strips the sudo wrapper;
+  # it does not, by itself, make the shipped script's own root gate pass).
+  OUT="$(SELFDEV_PASSWD="$T/passwdM" SELFDEV_HOME_ROOT="$T/homeM" UNLAND_GH="$T/gh-stubM" \
+          SELFDEV_SSH_BIN="$T/stub/ssh" PATH="$T/stub:$PATH" \
+          fakeroot "$SCRIPT" realisateur --apply --host monkey 2>&1)"; RC=$?
+  eq  "M8 a clean --apply over --host exits 0"          "$RC" "0"
+  [ -d "$T/homeM/ecosim/Documents/Projects/realisateur" ] \
+    && bad "M9 ecosim's clone is gone from the (fake) target" \
+    || ok "M9 ecosim's clone is gone from the (fake) target"
+  [ -d "$T/homeM/realisateur/Documents/Projects/realisateur" ] \
+    && ok "M10 the owning account's checkout survived" \
+    || bad "M10 the owning account's checkout survived"
+  has "M11 says the removal happened on the target"     "$OUT" "removed $T/homeM/ecosim/Documents/Projects/realisateur on monkey"
+  has "M12 and the deploy key was revoked, via LOCAL gh" "$OUT" "revoked deploy key 'monkey-ecosim-realisateur' (id 333) on hf7y/realisateur"
+else
+  ok "M8 skipped: no fakeroot, so the apply-over-host path cannot be driven here"
+fi
+
+section "N. --host: an unreachable target is FATAL (exit 6), not a raw ssh code"
+cat > "$T/stub/ssh-dead" <<'FAKE'
+#!/usr/bin/env bash
+exit 255
+FAKE
+chmod +x "$T/stub/ssh-dead"
+OUT="$(SELFDEV_PASSWD="$T/passwdM" SELFDEV_HOME_ROOT="$T/homeM" UNLAND_GH="$T/gh-stubM" \
+        SELFDEV_SSH_BIN="$T/stub/ssh-dead" PATH="$T/stub:$PATH" \
+        "$SCRIPT" realisateur --check --host ghost 2>&1)"; RC=$?
+eq  "N1 an unreachable host exits 6, not ssh's own 255" "$RC" "6"
+has "N2 the message names the host and says FATAL"      "$OUT" "FATAL could not reach ghost"
+
 echo
 summary
