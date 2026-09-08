@@ -52,7 +52,6 @@ bin/lib/arming.sh	bin/lib/arming.sh
 # lib/registry-set.sh that is not on the branch it lands on.
 bin/lib/registry-set.sh	bin/lib/registry-set.sh
 bin/lib/zaxon.sh	bin/lib/zaxon.sh
-commands/cloture.md	.claude/commands/cloture.md
 commands/ideate.md	.claude/commands/ideate.md
 commands/nightly-batch.md	.claude/commands/nightly-batch.md
 commands/reap.md	.claude/commands/reap.md
