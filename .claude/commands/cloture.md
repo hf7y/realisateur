@@ -47,34 +47,26 @@ gh pr list --head <branch> --state open  # an open PR already covers it
 git status --porcelain -uall             # uncommitted AND untracked
 ```
 
-Every local branch resolves to one of three states, **checked against the
-remote, not asserted**:
+Every branch and every path resolves, **checked against the remote, not
+asserted**:
 
-- **Reflects `main`** — merging it would change nothing. Reap it; no judgement
-  is required and none should be performed. Record branch and sha first.
-- **Has an open PR** — draft if the work or decision isn't finished, ready if
-  it is. This makes the remote the source of truth for what's outstanding.
-- **Genuinely unlanded** — commits that would still change main. Push and open
-  a PR, or say what it is and why it stays, **with a URL**.
+- **Reflects `main`** — merging changes nothing. Record branch and sha, reap
+  it; no judgement is required and none should be performed.
+- **Has an open PR** — draft if unfinished, ready if not. The remote is then
+  the source of truth for what is outstanding.
+- **Genuinely unlanded** — push and open a PR, or say why it stays, **with a
+  URL**. Re-read an existing body: `gh` refuses a bad one at the write, and
+  nothing re-reads it after.
+- **Uncommitted** — commit (message via file) or discard deliberately. Paths
+  predating this session are neither: touching them adopts or destroys a
+  concurrent run's work.
+- **Untracked, not ignored** — commit, ignore, or move it out. It will sit in
+  `git status` forever belonging to nobody, and reporting it is not dealing
+  with it.
 
-Handle what's left:
-
-- **Uncommitted tracked changes** -> commit (via a message file) or discard
-  deliberately. Paths that predate this session are NOT that: leave them alone,
-  since committing or reverting them adopts or destroys a concurrent run's work.
-- **Untracked and not ignored** -> commit it, ignore it, or move it out of the
-  repo. It will sit in `git status` forever and belong to nobody. Reporting it
-  is not dealing with it.
-- **Committed but unpushed, no PR** -> push and open one. A one-line draft PR
-  beats a branch only this host knows exists.
-- **Pushed with an open PR** -> re-read the body against the grammar `gh`
-  refuses at write time. A body edited after the write is not re-read by
-  anything, so read it yourself.
-
-**A branch you cannot resolve is not an exception you may narrate.** It needs
-an issue URL like anything else. "Documented exception" written only into the
-reply is how a checkout reaches thirty branches with no record that any of it
-happened.
+**An unresolved branch is not an exception you may narrate.** It needs a URL
+like anything else; "documented exception" written only into the reply is how
+a checkout reaches thirty branches with no record any of it happened.
 
 ## 2. Name the philosophy delta, or say "none"
 
@@ -113,19 +105,18 @@ the defect, not the coverage.
 
 ### Built but not wired
 
-A thing that exists and nothing reaches. Three shapes, all worth a look:
+A thing that exists and nothing reaches. Nothing should need a checkout to run
+on mandark, and the verb build should match the home:
 
 ```
-installe list | grep Documents/Projects   # a name on PATH resolving into a CLONE
+installe list | grep Documents/Projects   # a PATH name resolving into a CLONE
 ```
 
-Nothing should need a checkout to run on mandark. Also compare what the verb
-build carries against what the home actually has — commands in
-`~/.claude/commands/`, hooks in `~/.claude/hooks/`, and whether
-`settings.json` names each hook at an event. **A hook that is installed and
-wired to nothing enforces nothing**, and it is the most expensive shape of
-this, because a hook is the only surface that makes a rule arrive as a
-consequence rather than as a paragraph.
+Compare the build's `commands/` and `hooks/` against `~/.claude/`, and check
+`settings.json` names each hook at an event. **An installed hook wired to
+nothing enforces nothing** — the most expensive shape here, because a hook is
+the only surface that makes a rule arrive as a consequence rather than as a
+paragraph.
 
 ### Where each goes
 
