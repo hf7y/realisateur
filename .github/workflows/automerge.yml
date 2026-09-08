@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  actions: write   # #965: pay-the-carry step below dispatches tests.yml
+  actions: write   # #965: pay-the-carry step below dispatches tests.yml and roster-image.yml
 
 jobs:
   enable:
@@ -49,7 +49,22 @@ jobs:
               curl -fsS -X POST -H "Authorization: bearer $TOKEN" \
                 "https://api.github.com/repos/$REPO/actions/workflows/tests.yml/dispatches" \
                 -d '{"ref":"main"}'   # explicit workflow_dispatch is the one event the token-recursion suppression exempts
-              echo "dispatched tests.yml on attempt $attempt"; exit 0
+              echo "dispatched tests.yml on attempt $attempt"
+
+              # realisateur#1080: roster-image.yml hits the same suppression --
+              # an auto-merged PR touching provision/dexter/roster/** fires no
+              # push event either, so the image never republishes on its own
+              # (found live: PR #1106 merged via this bot, ghcr.io/hf7y/roster
+              # got no build for that merge until dispatched by hand).
+              files=$(curl -fsS -H "Authorization: bearer $TOKEN" \
+                        "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/files?per_page=100" | jq -r '.[].filename')
+              if grep -qE '^(provision/dexter/roster/|\.github/workflows/roster-image\.yml)' <<<"$files"; then
+                curl -fsS -X POST -H "Authorization: bearer $TOKEN" \
+                  "https://api.github.com/repos/$REPO/actions/workflows/roster-image.yml/dispatches" \
+                  -d '{"ref":"main"}'
+                echo "dispatched roster-image.yml on attempt $attempt"
+              fi
+              exit 0
             fi
             sleep 15
           done
