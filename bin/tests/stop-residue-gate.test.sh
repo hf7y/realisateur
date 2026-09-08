@@ -216,7 +216,7 @@ echo "-- F. a turn that defers its own remaining work"
 asst_act() { jq -nc --arg n "$1" '{"type":"assistant","message":{"content":[{"type":"tool_use","name":$n,"input":{}}]}}'; }
 newrepo "$T/f" >/dev/null 2>&1 || mkdir -p "$T/f"
 
-{ user_turn "finish the three items"; asst_turn "Two are done. Say the word and I'\''ll continue, or I'\''ll pick them up on the next pass."; } > "$T/f1.jsonl"
+{ user_turn "finish the three items"; asst_turn "Two are done. Say the word and I'll continue, or I'll pick them up on the next pass."; } > "$T/f1.jsonl"
 F1_OUT="$(run "$T/f" "$T/f1.jsonl")"; F1_RC=$?
 rc  "F1 deferring to a later turn -> BLOCKED (2)"        2 "$F1_RC"
 has "F1 names the deferral"                              "$F1_OUT" "puts its own remaining work off"
@@ -224,9 +224,23 @@ has "F1 offers the two ways out"                         "$F1_OUT" "Do it NOW, o
 
 # THE ONE THAT MATTERS: the turn DID things. An act elsewhere used to skip the
 # whole check, which is how four deferrals shipped in turns that merged PRs.
-{ user_turn "finish it"; asst_act Write; asst_turn "Merged. I'\''ll pick them up on the next pass."; } > "$T/f2.jsonl"
+{ user_turn "finish it"; asst_act Write; asst_turn "Merged. I'll pick them up on the next pass."; } > "$T/f2.jsonl"
 F2_RC=$(run "$T/f" "$T/f2.jsonl" >/dev/null 2>&1; echo $?)
 rc  "F2 an act elsewhere in the turn does NOT excuse the deferral" 2 "$F2_RC"
+
+# A turn that QUOTES a deferral is discussing one, not making one. This gate
+# blocked its own author for quoting the sentence it was built to catch.
+{ user_turn "explain the fix"; asst_turn "The old text was **\"Say the word and I'll continue, or I'll pick them up on the next pass\"**, which slipped through."; } > "$T/f6.jsonl"
+F6_RC=$(run "$T/f" "$T/f6.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F6 quoting a deferral is not making one"            0 "$F6_RC"
+
+{ user_turn "explain"; printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"text","text":"Here is what it caught:\n\n```\nI will pick them up on the next pass\n```\n\nThat is the shape."}]}}'; } > "$T/f7.jsonl"
+F7_RC=$(run "$T/f" "$T/f7.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F7 a deferral inside a fenced block is quoted material" 0 "$F7_RC"
+
+{ user_turn "status"; asst_turn "The next pass should check whether the cut landed."; } > "$T/f8.jsonl"
+F8_RC=$(run "$T/f" "$T/f8.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F8 naming a next pass without promising anything is not a deferral" 0 "$F8_RC"
 
 { user_turn "finish it"; asst_turn "All three landed. Nothing is outstanding."; } > "$T/f3.jsonl"
 F3_RC=$(run "$T/f" "$T/f3.jsonl" >/dev/null 2>&1; echo $?)
