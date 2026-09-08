@@ -224,9 +224,6 @@ if [ "$LINK" -eq 1 ]; then
   [ "$skipped" -eq 0 ] || say 'the skipped ones are installe-owned -- reconcile deliberately, not by clobbering.'
 
   # --- drop links for verbs this build no longer promises ---------------
-  # The loop above only ever ADDS: it walks the NEW manifest, so a verb a
-  # nightly build dropped keeps its old link, now pointing at
-  # `current/<project>/bin/<verb>` -- which after the switch above does not
   wanted="$(grep -v '^#' "$DEST/manifest.tsv" | cut -f2)"
   dropped=0
   for have in "$BIN"/*; do

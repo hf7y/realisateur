@@ -101,8 +101,6 @@ gh auth status >/dev/null 2>&1 \
   || die 'gh is not authenticated. Refusing: an unauthenticated read sees no private repo and would cut a SHORT build that looks complete.'
 
 # --- 1. which repositories carry a bashified branch ---------------------
-# `gh repo list`, not a typed list: a project that bashifies itself tomorrow
-# joins with nobody editing a file. The private repos
 say "reading $OWNER's repositories ..."
 repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].name' 2>/dev/null)" \
   || die "cannot list $OWNER's repositories -- BLIND, not empty."
@@ -426,9 +424,6 @@ if [ -n "$ASSEMBLE" ]; then
 
     rm -rf "${ASSEMBLE:?}/$project"
     mkdir -p "$ASSEMBLE/$project"
-    # THE WHOLE bashified TREE, not just bin/ + man/.
-    #
-    # This copied only bin/ and man/ first, on the reasoning that a build's
     rm -rf "$work/.git"
     cp -a "$work/." "$ASSEMBLE/$project/"
     say "  assembled $project at ${sha:0:12}"
@@ -438,8 +433,6 @@ if [ -n "$ASSEMBLE" ]; then
   printf '%s\n' "$build_id" > "$ASSEMBLE/BUILD_ID"
 
   # Prove the tree matches the promise before CI is allowed to commit it.
-  #
-  # THE EXECUTABLE BIT IS NOT A WITNESS. This check was `-f && -x` and it
   bad=0
   while IFS=$'\t' read -r project verb _ _; do
     [ -n "${verb:-}" ] || continue

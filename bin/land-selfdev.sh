@@ -71,9 +71,6 @@ SHARED_PACED="$PROJECTS/scheduler/schedule/_paced.conf"
 if [ -f "$PROJECTS/scheduler/schedule/_paced.$HOST.conf" ]; then
   ok "schedule/_paced.$HOST.conf exists -- this host has its own rotation"
 elif [ -d "$PROJECTS/scheduler" ]; then
-  # The fallback is not wrong by itself: mandark deliberately has no host file
-  # and reads the shared one, which is documented in _paced.dexter.conf's own
-  # header. What matters is WHAT would be inherited. Falling back onto a file
   enabled=$(grep -cE '^[a-z][^|]*\|1\|' "$SHARED_PACED" 2>/dev/null || echo 0)
   if [ "${enabled:-0}" -gt 0 ]; then
     bad "no schedule/_paced.$HOST.conf, and the shared _paced.conf has $enabled ENABLED row(s) -- this host would silently dispatch another machine's rotation"

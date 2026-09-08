@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-#      usage-paced-runner.sh pulls it every tick. realisateur was 15 commits
 #
 # TRAPS (the rest of this header is in the vault):
 # HERMETIC. No network, no ssh, no sudo, no read of the live machine. Fixture

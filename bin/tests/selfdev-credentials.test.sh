@@ -107,11 +107,6 @@ t_has "BLIND row: reported as BLIND, not ok" "$GRADE_OUT" "BLIND"
 grade nobody ""
 t_eq "empty row: treated the same as BLIND (exit 2)" "$GRADE_RC" 2
 
-# THE HOST-WIDE KEY, 2026-08-12. The pem column used to grade a per-account
-# file's MODE; it now grades whether this account could READ the one key at
-# /etc/selfdev/app.pem. `unreadable` is the case that mode:644 used to stand
-# in for, and it is the one that actually happens: group membership granted
-# but not yet in effect for that session.
 UNREADABLE_PEM_ROW=$'unreadable\tok\tmatch\tgho\t-\tapp\t0\t0\t0\t'"$CRED_APP_ID"$'\t'"$CRED_GH_OWNER"
 grade x "$UNREADABLE_PEM_ROW"
 t_has "host-wide key present but unreadable: flagged" "$GRADE_OUT" "CANNOT READ IT"
@@ -398,8 +393,6 @@ t_has "gh unreachable is still BLIND, not read as zero keys" "$O" "not on PATH -
 echo
 echo "-- E. --apply: idempotency, converge actions, and refusals ------------"
 # ============================================================================
-# NO FIXTURE SOURCE KEY any more. --apply used to push a private copy of the
-# App key into the account from a local source path, and the source-path knobs
 
 LOG="$T/apply.log"; : > "$LOG"
 CLEAN_SINGLE='conv-clean	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y'
