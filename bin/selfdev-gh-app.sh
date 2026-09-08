@@ -46,9 +46,6 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-# WHERE THE CREDENTIAL LIVES is answered in ONE place for every reader --
-# bin/lib/selfdev-app-key.sh -- and not re-spelled here. Until 2026-08-12 this
-# line said `$HOME/.config/selfdev/gh-app.conf`, i.e. one copy of one key per
 _sd_lib="$(dirname "${BASH_SOURCE[0]}")/lib/selfdev-app-key.sh"
 [ -r "$_sd_lib" ] || _sd_lib="$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh"
 if [ -r "$_sd_lib" ]; then

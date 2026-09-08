@@ -101,8 +101,6 @@ consequence, not a paragraph.
 ### Where each goes
 
 The **owning** repo — `check-project-busy <target>` first if it isn't this one.
-Never `.scheduler/FOCUS.md`, `BLOCKERS.md` or `QUESTIONS.md`: retired by
-hf7y/scheduler#66, and finding one is itself a finding (hf7y/realisateur#230).
 
 - **A cross-project write**, reverted ones and any second account or host
   included — one issue or PR comment each, with repo and sha.

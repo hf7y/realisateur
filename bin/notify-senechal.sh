@@ -184,9 +184,6 @@ FROM_PROJECT="${NOTIFY_FROM_PROJECT:-realisateur}"
 title="$(printf '%s' "$text" | head -1 | cut -c1-72)"
 [ -n "$title" ] || die "the note has no first line to title it with"
 
-# THE FOOTER IS A GATE, NOT DECORATION (senechal#221 ->
-# realisateur#220). `scheduler -i` stamped every issue it filed with
-#
 # TRAP: line 1, the DEFERRED block AND the DELIVERS block satisfy
 #   bin/gh-sign.sh, which refuses a body declaring no DECISION:/NO-DECISION:,
 #   carrying no ledger, or shipping nowhere. Delete any of them as

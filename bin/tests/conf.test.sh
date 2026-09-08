@@ -47,10 +47,6 @@ printf 'OTHER="x"\n' > "$T/e.conf"
 conf_repo_path "$T/e.conf" >/dev/null 2>&1
 eq "A5  no PROJECT_REPO_PATH returns 1" "$?" "1"
 
-# --- B: RETIRED 2026-08-14 -----------------------------------------------------
-# This section exercised restamp-discipline.sh end to end against a fixture
-# ecosystem, including its "a pass that reached nothing exits nonzero" guard.
-# The script is gone, and so is the checklist it stamped (#684)
 
 # --- C: the population ratchet -----------------------------------------------
 # WHY A RATCHET AND NOT A LIST. lib/conf.sh's header used to NAME the four

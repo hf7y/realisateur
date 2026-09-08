@@ -128,9 +128,6 @@ fi
 # rederived from the published data is a number nobody can check.
 RENDER="$WORK/status.json"
 # THE DELIMITER IS QUOTED AND EVERY VALUE ARRIVES THROUGH THE ENVIRONMENT.
-# It was `<<PY`, unquoted, so the shell expanded the whole body before python
-# saw it -- including the backticks in this block's own comments. Every gated
-# cut printed `publish-release-verdict.sh: line 229: decision: command not
 PREV_HISTORY="$PREV_HISTORY" NOW="$NOW" DECISION="$DECISION" REASON="$REASON" \
 MAIN_SHA="$MAIN_SHA" CI_RUN="$CI_RUN" BUILD_ID="$BUILD_ID" \
 VALID_UNTIL="$VALID_UNTIL" HISTORY_MAX="$HISTORY_MAX" \
