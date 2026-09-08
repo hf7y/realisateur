@@ -3,11 +3,7 @@
 # `gh` off PATH so there is no build to wait for. hf7y/scheduler#429: a park of
 # 20 PRs on 2026-08-30 left EIGHT unmerged, each having exited 0.
 #
-# STATE ONLY. The service used to ingest a `project | account@host | rate`
-# declaration from the repo every 300s; measured across all 23 rows, `account`
-# equalled `project` in 23 of 23, `rate` was the constant `20m` in 23 of 23,
-# and `host` is a fact each box answers about itself. Zach, 2026-09-05: "we
-# don't even need declaration as far as I can see. State is enough."
+# STATE ONLY -- why there is no declaration half: roster_server.py's docstring.
 set -uo pipefail
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"

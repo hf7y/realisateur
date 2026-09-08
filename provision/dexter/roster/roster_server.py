@@ -5,29 +5,18 @@ STATE AND NOTHING ELSE: project -> live|parked. Writes are one call, need no
 CI, and return only once committed. Stdlib only: this is the process that must
 come back up when everything else is broken.
 
-WHY THERE IS NO DECLARATION HALF (Zach, 2026-09-05: "we don't even need
-declaration as far as I can see. State is enough"). This served a
-`project | account@host | rate` file from the repo and ingested it every 300s.
-Measured across all 23 rows the day it was cut:
+NO DECLARATION HALF (Zach, 2026-09-05: "State is enough"). Measured over all
+23 rows the day it was cut, the three columns dropped were a copy of the
+primary key (account == project, 23/23), a constant (rate == 20m, 23/23), and
+`host` -- a fact each machine answers about ITSELF, since a uid 3000-3099
+account exists locally or does not. Read from the machine it cannot go stale;
+a file about the machine can. The ingest loop and the poll of a git host went
+with them.
 
-    account  == project in 23 of 23 rows          -- a copy of the primary key
-    rate     == 20m     in 23 of 23 rows          -- a constant, and scheduler's
-                                                     tempo.sh sets the real interval
-                                                     from backlog, so it is not the pace
-    host     19 monkey, 4 vaporwave               -- the only column with content
-
-and `host` is a fact each machine can answer about ITSELF: an account in the
-uid 3000-3099 band either exists locally or does not. Sourced from the machine
-it cannot go stale, which a file about the machine can. So the declaration was
-a copy of the key, a constant written 23 times, and a worse answer to a
-question the host already knows. All three are gone, and with them the ingest
-loop, the poll of a git host, and the second writer.
-
-A row is CREATED BY ITS FIRST WRITE. There is no "declare it first" 404: an
-undeclared project was never the guard it looked like, because `dose` already
-refuses to arm a project with no unix account on the host it runs on, and that
-refusal reads the machine rather than a list. A typo here creates a row that
-nothing ever converges.
+A row is CREATED BY ITS FIRST WRITE. The "declare it first" 404 was never the
+guard it looked like: `dose` already refuses to arm a project with no unix
+account on the host it runs on, and that refusal reads the machine. A typo
+here creates a row that nothing ever converges.
 """
 import hmac
 import json
