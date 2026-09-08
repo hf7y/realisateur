@@ -1,0 +1,63 @@
+# cutover-rows.tsv -- every row bin/cutover-check.sh grades, as data.
+#
+# WHY DATA: a row used to be three lines of bash plus its prose, so twenty-five
+# of them priced more than the prose ratchet allows and the check could not grow
+# to the size that would make it trustworthy. Same shape as unarmed.tsv.
+#
+# id  section  token  expect  label  why
+#
+# expect:  absent   the token must not appear (residue, and things that must stay gone)
+#          present  it must appear at least once
+#          all      it must appear once per account -- MUST-KEEP, so a partial is a FAIL
+#
+# The probe in cutover-check.sh emits the tokens; that half is code because it
+# runs on the far host. This file decides what each one MEANS.
+#
+# THREE SECTIONS, and the last two are the ones that rot. "The new thing works"
+# is easy to satisfy while the old thing sits beside it still armed -- so B
+# checks for what should no longer EXIST, and C asserts what must SURVIVE.
+# C is what makes the report safe to ACT on: a cleanup driven by B alone can cut
+# something load-bearing and still read green. Every C row is graded per account
+# (`all`), so losing one path on one account is a FAIL, not a rounding error.
+#
+# SCOPE EVERY ROW TO THE HOST BEING GRADED. B5 names conf files by basename
+# because `_paced.monkey.conf` on vaporwave is monkey's live config: "cleaning
+# that up so vaporwave passes" would break the host that still dispatches.
+#
+# A ROW IS CHEAP ON PURPOSE. The first version of this check had ten rows
+# written as bash, Zach did not trust it, and it could not grow because each row
+# also cost prose against the ratchet. Rows here are data and cost nothing, so
+# the honest answer to "what else would prove it" is always: add the row.
+A1	A	ROOTROSTER ok	present	root reads the roster under env -i -- what an armed cron row is, and no credential	this is the wall host mode dies on
+A2	A	SERVICEREAD ok	present	the installed build's dose-common reads a service URL	the build predates the cutover
+A3	A	GHROSTER present	absent	fetch_roster delegates to no gh path -- the roster read leaves GitHub alone	every tick asks github.com whether it may run a local job
+A4	A	GATE ok	present	usage-gate.sh rides the build	absent, every tick HOLDs at rc=127 and reads as a busy quota
+A5	A	ROOTCRONROW	present	the host has a host-mode dispatch clock	no PACED_HOST_MODE row in root's crontab means nothing dispatches
+A6	A	LIBGHAPP ok	present	the build carries lib/gh-app-token.sh	without it the runner cannot mint, falls back to root's ambient auth, and holds MILESTONE-BLIND on every row -- silently, before LIB-MISSING existed
+A7	A	HOSTCRED ok	present	host mode resolves BOTH App credentials from /etc/selfdev	the conf alone mints nothing; SELFDEV_GH_APP_SH was the half that was missing
+A8	A	CLAUDETOK ok	present	the host-wide Claude token is readable by root	root has no ~/.claude/.credentials.json, so without this every dispatch dies at the model call
+A9	A	DISPATCHED	present	the host state dir records a real DISPATCH	WOULD-DISPATCH and MILESTONE-BLIND are not dispatch; a runner that has never dispatched is stalled, not idle
+A10	A	ROOTVERDICT	absent	no verdict state under /root	root drives but the job runs AS the account; a verdict here means reader and writer disagree about whose home it is
+A11	A	ROOTBATCH	absent	no nightly-batch state under /root	same split-brain, the other half
+A12	A	LEGACYSCHED	absent	usage-gate's LEGACY_SCHED_DIR is unreachable	a conf dir under a person's home is a second source of schedule truth
+B1	B	CLONE	absent	no account carries a scheduler clone	the whole point of gen-2; each is a second, staler copy of the dispatcher
+B2	B	ACCTCRON	absent	no per-account RUNNER crontab row	host mode dispatches for all of them; these double-dispatch
+B3	B	PRIVATEPIN	absent	ONE build pin per host (#180), no per-account verb-builds	$HOME/.local/bin precedes /usr/local/bin, so their verbs resolve into a staler build
+B4	B	ACCTSTATE	absent	no account-mode rotation state left behind	a second rotation pointer for a rotation that no longer exists
+B5	B	CLONEPATHCONF	absent	no conf in the build names a per-account clone path	on a clone-free host every one of those rows is a path that cannot exist
+B6	B	SETUPDIR	absent	no ~/.selfdev-setup/ left from provisioning	scaffolding that outlived the build it scaffolded
+B7	B	ACCTLIBEXEC	absent	no per-account ~/.local/libexec/selfdev/	#887: fifteen copies of host tools, each free to go stale on its own
+B8	B	TICKSTATUS	absent	no per-account release-tick status file	the account-private clock's own state, for a clock that should be the host's
+B9	B	ACCTTICKCRON	absent	no second selfdev-release:TICK row per account	the host-wide tick already runs; these race it
+B10	B	ACCTAPPCONF	absent	no per-account App credential under ~/.config/selfdev	one host-wide key (#624); per-account copies drift and cannot be rotated together
+B11	B	ACCTGATE	absent	no per-account ~/.local/bin/usage-gate.sh	dose-project.sh prefers it over the build's, so a stale copy silently outranks the shipped one
+B12	B	NIGHTLYREPO	absent	no nightly-batch working clone per account	another clone by another name
+B13	B	INSTEADOF	absent	no url.*.insteadof rewrite in any account's git config (#171)	a rewrite makes every remote lie about where it points
+B14	B	HANDRUN	absent	no ~/handrun.log	the residue of a human running the loop by hand
+C1	C	KEEPCLAUDE	all	every account keeps ~/.claude/settings.json	without it the account has no permissions, no hooks, and dispatches into a refusal
+C2	C	KEEPGH	all	every account keeps ~/.config/gh/hosts.yml	the fallback auth every gh read lands on when no App token is minted
+C3	C	KEEPREGISTRY	all	every account keeps ~/.local/share/scheduler-registry	the registry IS the account's memory of what it has run
+C4	C	KEEPVERDICT	all	every account keeps its own scheduler-verdict dir	this is where the job writes; deleting it is how the split-brain becomes permanent
+C5	C	KEEPTMP	all	every account keeps ~/tmp	the .profile TMPDIR block points here; without it every job writes to a shared /tmp
+C6	C	KEEPSELFDEVGRP	all	every account is still in group selfdev	the group is what reads /etc/selfdev; losing it is losing every credential at once
+C7	C	KEEPLINGER	all	every account still has linger enabled	without linger the account's units die at logout and the host dispatches into nothing

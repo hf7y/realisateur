@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 # cutover-check.test.sh -- witness for bin/cutover-check.sh.
-#
-# HERMETIC: CUTOVER_SSH points at a stub printing a fixture, so this grades the
-# GRADING, never the estate -- CI has no route to vaporwave or monkey. The
-# fixtures are those two hosts as measured 2026-09-08.
+# HERMETIC behind CUTOVER_SSH: it grades the GRADING, never the estate.
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -23,67 +20,100 @@ EOF
 chmod +x "$T/ssh"
 run() { FACTS_FILE="$1" CUTOVER_SSH="$T/ssh" "$SCRIPT" --host fixture 2>&1; }
 
+# Every MUST-KEEP token for one account; C grades per account.
+keep() {
+  local a="$1"
+  printf 'KEEPCLAUDE %s\nKEEPGH %s\nKEEPREGISTRY %s\nKEEPVERDICT %s\nKEEPTMP %s\nKEEPSELFDEVGRP %s\nKEEPLINGER %s\n' \
+    "$a" "$a" "$a" "$a" "$a" "$a" "$a"
+}
+
 # --- a host that has fully crossed ------------------------------------------
-cat > "$T/clean" <<'EOF'
-PROBE-OK
-BUILD 2026-09-08T031951Z
-ACCT dog
-ROOTCRON 1
-ROOTROSTER ok
-GATE ok
-SERVICEREAD ok
-EOF
+{
+  echo PROBE-OK
+  echo "BUILD 2026-09-08T053342Z"
+  echo "ACCT dog"; echo "ACCT vkv23"
+  echo "ROOTROSTER ok"; echo "SERVICEREAD ok"; echo "GATE ok"
+  echo "LIBGHAPP ok"; echo "HOSTCRED ok"; echo "CLAUDETOK ok"
+  echo "ROOTCRONROW"; echo "DISPATCHED"
+  keep dog; keep vkv23
+} > "$T/clean"
 
-# --- a host with everything still in front of it ----------------------------
-cat > "$T/dirty" <<'EOF'
-PROBE-OK
-BUILD 2026-09-07T031807Z
-ACCT ecosim
-CLONE ecosim
-PRIVATEPIN ecosim
-ACCTSTATE ecosim
-ACCTCRON ecosim
-ROOTCRON 0
-ROOTROSTER fail
-GHROSTER present
-CLONEPATHCONF _paced.monkey.conf
-EOF
-
-section "A. a crossed host passes, and says so"
 OUT="$(run "$T/clean")"; RC=$?
-rc  "A1 a fully crossed host exits 0" 0 "$RC"
-has "A2 names the credential-free root read"  "$OUT" "A1 root reads the roster"
-has "A3 names the service read"               "$OUT" "A2 the installed build"
-has "A4 no residue rows fire"                 "$OUT" "B1 no account carries a scheduler clone"
+rc  "A0 a crossed host exits 0"                 0 "$RC"
+has "A1 names the roster read"                  "$OUT" "A1 root reads the roster"
+has "A6 names the carried library"              "$OUT" "A6 the build carries lib/gh-app-token.sh"
+has "A9 a real DISPATCH is what counts"         "$OUT" "A9 the host state dir records a real DISPATCH"
+has "A10 no verdict under /root"                "$OUT" "A10 no verdict state under /root"
+has "C1 MUST-KEEP passes per account"           "$OUT" "C1 every account keeps ~/.claude/settings.json (2/2)"
+hasnt "A0b a clean host claims no FAIL"         "$OUT" "FAIL"
 
-section "B. residue is reported even when the new half works"
+# --- the host still in front of the migration -------------------------------
+{
+  echo PROBE-OK
+  echo "BUILD 2026-09-01T030800Z"
+  echo "ACCT crt"; echo "ACCT wtul"
+  echo "ROOTROSTER fail"
+  echo "GHROSTER present"
+  echo "CLONE crt"; echo "CLONE wtul"
+  echo "ACCTCRON crt"; echo "PRIVATEPIN wtul"; echo "ACCTSTATE crt"
+  echo "CLONEPATHCONF _paced.monkey.conf"
+  echo "SETUPDIR crt"; echo "ACCTLIBEXEC crt"; echo "ACCTLIBEXEC wtul"
+  echo "TICKSTATUS crt"; echo "ACCTTICKCRON crt"; echo "ACCTAPPCONF crt"
+  echo "ACCTGATE wtul"; echo "NIGHTLYREPO crt"; echo "INSTEADOF wtul"
+  echo "HANDRUN crt"
+  echo "ROOTVERDICT"; echo "ROOTBATCH"; echo "LEGACYSCHED"
+  keep crt; keep wtul
+} > "$T/dirty"
+
 OUT="$(run "$T/dirty")"; RC=$?
-rc  "B1 a host with residue exits 1" 1 "$RC"
-has "B2 a clone is named, with the account"      "$OUT" "scheduler clone(s) remain: ecosim"
-has "B3 a per-account RUNNER row is named"       "$OUT" "still carry their own RUNNER row: ecosim"
-has "B4 a private build pin is named"            "$OUT" "keep a private build root: ecosim"
-has "B5 account-mode rotation state is named"    "$OUT" "scheduler-paced-runner: ecosim"
-has "B6 a conf naming a clone path is named"     "$OUT" "_paced.monkey.conf"
-has "B7 the gh roster read is caught"            "$OUT" "fetch_roster still goes through gh"
+rc  "B0 a host with residue exits 1"            1 "$RC"
+has "B1 names the clones"                       "$OUT" "crt wtul"
+has "B2 names the RUNNER row"                   "$OUT" "B2 no per-account RUNNER crontab row"
+has "B7 names the per-account libexec"          "$OUT" "B7 no per-account ~/.local/libexec/selfdev/"
+has "B13 names the insteadof rewrite"           "$OUT" "B13 no url.*.insteadof rewrite"
+has "A10 the split-brain is a FAIL when present" "$OUT" "FAIL  A10"
+has "A12 the legacy schedule dir is a FAIL"     "$OUT" "FAIL  A12"
+has "A6 an old build has no gh-app-token"       "$OUT" "FAIL  A6"
+has "B5 scopes the conf to THIS host"           "$OUT" "_paced.monkey.conf"
 
-section "C. counts reconcile with their own lists"
-# A count that cannot be reconciled with the names beside it is worse than no
-# count: `^CLONE` also matches CLONEPATHCONF, and this check once reported
-# seven clones and then named none of them.
-case "$OUT" in
-  *"1 scheduler clone(s) remain: ecosim"*) ok "C1 one CLONE row counts one, not one-per-prefix-match" ;;
-  *) bad "C1 the clone count does not match its list" "$(printf '%s\n' "$OUT" | grep 'clone(s) remain')" ;;
-esac
+# --- C is not decorative: drop one MUST-KEEP path, the report MUST go red ----
+grep -v '^KEEPVERDICT vkv23$' "$T/clean" > "$T/cut"
+OUT="$(run "$T/cut")"; RC=$?
+rc  "C0 losing ONE must-keep path fails the host" 1 "$RC"
+has "C4 says which, and how many of how many"   "$OUT" "C4 every account keeps its own scheduler-verdict dir -- only 1 of 2 account(s)"
 
-section "D. BLIND is never clean"
-OUT="$(FACTS_FILE=UNREACHABLE CUTOVER_SSH="$T/ssh" "$SCRIPT" --host fixture 2>&1)"; RC=$?
-rc  "D1 an unreachable host exits 6, not 0 and not 1" 6 "$RC"
-has "D2 and says BLIND"                     "$OUT" "BLIND"
-has "D3 and says nothing was verified"      "$OUT" "nothing was verified"
-hasnt "D4 and claims no passing rows"       "$OUT" "no account carries a scheduler clone"
+# --- BLIND is never clean ---------------------------------------------------
+OUT="$(run UNREACHABLE)"; RC=$?
+rc  "D1 an unreachable host is BLIND"           6 "$RC"
+has "D2 and says BLIND"                         "$OUT" "BLIND"
+has "D3 and says nothing was verified"          "$OUT" "nothing was verified"
+hasnt "D4 and claims no passing rows"           "$OUT" "no account carries a scheduler clone"
 
-OUT="$(printf 'garbage\n' > "$T/truncated"; run "$T/truncated")"; RC=$?
+printf 'garbage\n' > "$T/truncated"
+OUT="$(run "$T/truncated")"; RC=$?
 rc  "D5 a probe that did not complete is BLIND too" 6 "$RC"
 
-printf '\ncutover-check.test.sh: %d passed, %d failed\n' "$pass" "$fail"
-[ "$fail" -eq 0 ]
+# --- the row file is the contract -------------------------------------------
+OUT="$(CUTOVER_ROWS=/nonexistent FACTS_FILE="$T/clean" CUTOVER_SSH="$T/ssh" "$SCRIPT" --host fixture 2>&1)"; RC=$?
+rc  "E1 no row file is BLIND, not a clean run"  6 "$RC"
+
+printf 'X1\tA\tSOMETOKEN\tmaybe\ta label\ta why\n' > "$T/badrows"
+OUT="$(CUTOVER_ROWS="$T/badrows" FACTS_FILE="$T/clean" CUTOVER_SSH="$T/ssh" "$SCRIPT" --host fixture 2>&1)"; RC=$?
+rc  "E2 an unknown expect is a FAIL, not a skip" 1 "$RC"
+has "E3 and says the row graded nothing"        "$OUT" "graded nothing"
+
+# --- the shipped row file is well-formed ------------------------------------
+ROWS="$ROOT/bin/lib/cutover-rows.tsv"
+badrow=0; nrow=0
+while IFS=$'\t' read -r id sec token expect label why; do
+  case "$id" in ''|\#*) continue ;; esac
+  nrow=$((nrow + 1))
+  case "$sec" in A|B|C) ;; *) badrow=$((badrow + 1)); echo "    bad section '$sec' on $id" ;; esac
+  case "$expect" in absent|present|all) ;; *) badrow=$((badrow + 1)); echo "    bad expect '$expect' on $id" ;; esac
+  [ -n "$token" ] && [ -n "$label" ] && [ -n "$why" ] || { badrow=$((badrow + 1)); echo "    empty field on $id"; }
+done < "$ROWS"
+eq  "F1 every shipped row is well-formed"       "$badrow" 0
+[ "$nrow" -ge 25 ] && ok "F2 the floor is $nrow rows, which is enough to be worth trusting" \
+                   || bad "F2 only $nrow rows -- the 10-row version is what Zach did not trust"
+
+summary

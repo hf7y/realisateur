@@ -6,10 +6,9 @@
 # GUARD-TEST: bin/tests/cutover-check.test.sh -- hermetic behind CUTOVER_SSH
 # GATE: none -- it grades a host, never this tree
 #
-# TWO HALVES, and the second rots: "the new thing works" is easy to satisfy
-# while the old thing sits beside it still armed, so every B row checks for
-# something that should no longer EXIST, and C asserts what must SURVIVE.
 # BLIND IS NEVER CLEAN -- an unreachable host exits 6, never 0.
+# READS, NEVER OPENS -- credential rows test existence and mode, never contents.
+# The rows, and why each one is there, are bin/lib/cutover-rows.tsv.
 set -uo pipefail
 
 CLI_NAME='cutover-check.sh'
@@ -36,17 +35,19 @@ SSH="${CUTOVER_SSH:-ssh}"
 UID_LO="${CUTOVER_UID_LO:-3000}"
 UID_HI="${CUTOVER_UID_HI:-3099}"
 BUILD_ROOT="${CUTOVER_BUILD_ROOT:-/usr/local/share/verb-builds}"
+HERE="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+ROWS="${CUTOVER_ROWS:-$HERE/lib/cutover-rows.tsv}"
 
 pass=0; fail=0
 section() { printf '\n%s\n' "$*"; }
 ok()      { pass=$((pass + 1)); printf '  ok    %s\n' "$1"; }
-bad()     { fail=$((fail + 1)); printf '  FAIL  %s\n' "$1"; [ $# -gt 1 ] && printf '        %s\n' "$2"; return 0; }
+bad()     { fail=$((fail + 1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf '        %s\n' "$2"; return 0; }
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 
 printf 'cutover-check -- %s\n' "$HOST"
+[ -r "$ROWS" ] || { section "BLIND"; bad "no row file at $ROWS -- nothing to grade with"; exit 6; }
 
-# ONE round trip. Every probe below reads from this; a second ssh per row would
-# make the report a mix of moments rather than one observation of one host.
+# ONE round trip: a second ssh per row would make the report a mix of moments.
 FACTS="$T/facts"
 if ! "$SSH" -o BatchMode=yes -o ConnectTimeout=15 "$HOST" bash -s -- \
       "$UID_LO" "$UID_HI" "$BUILD_ROOT" > "$FACTS" 2>"$T/err" <<'PROBE'
@@ -55,31 +56,65 @@ LO="$1"; HI="$2"; BR="$3"
 accts() { awk -F: -v lo="$LO" -v hi="$HI" '$3>=lo && $3<hi {print $1}' /etc/passwd; }
 echo "PROBE-OK"
 echo "BUILD $(readlink "$BR/current" 2>/dev/null)"
+S="$BR/current/scheduler"
+
 for a in $(accts); do
+  h="/home/$a"
   echo "ACCT $a"
-  sudo -n test -d "/home/$a/Documents/Projects/scheduler" && echo "CLONE $a"
-  sudo -n test -d "/home/$a/.local/share/verb-builds"     && echo "PRIVATEPIN $a"
-  sudo -n test -d "/home/$a/.local/share/scheduler-paced-runner" && echo "ACCTSTATE $a"
+  sudo -n test -d "$h/Documents/Projects/scheduler"          && echo "CLONE $a"
+  sudo -n test -d "$h/.local/share/verb-builds"              && echo "PRIVATEPIN $a"
+  sudo -n test -d "$h/.local/share/scheduler-paced-runner"   && echo "ACCTSTATE $a"
+  sudo -n test -d "$h/.selfdev-setup"                        && echo "SETUPDIR $a"
+  sudo -n test -d "$h/.local/libexec/selfdev"                && echo "ACCTLIBEXEC $a"
+  sudo -n test -e "$h/.local/state/selfdev-release-tick.status" && echo "TICKSTATUS $a"
+  sudo -n test -e "$h/.config/selfdev/gh-app.conf"           && echo "ACCTAPPCONF $a"
+  sudo -n test -e "$h/.config/selfdev/app.pem"               && echo "ACCTAPPCONF $a"
+  sudo -n test -e "$h/.local/bin/usage-gate.sh"              && echo "ACCTGATE $a"
+  sudo -n test -e "$h/handrun.log"                           && echo "HANDRUN $a"
+  sudo -n sh -c "ls -d $h/.local/share/*-nightly-batch/repo" >/dev/null 2>&1 && echo "NIGHTLYREPO $a"
   n=$(sudo -n -u "$a" crontab -l 2>/dev/null | grep -c 'scheduler-paced-runner:RUNNER' || true)
   [ "${n:-0}" -gt 0 ] && echo "ACCTCRON $a"
+  n=$(sudo -n -u "$a" crontab -l 2>/dev/null | grep -c 'selfdev-release:TICK' || true)
+  [ "${n:-0}" -gt 0 ] && echo "ACCTTICKCRON $a"
+  n=$(sudo -n -u "$a" git config --get-regexp '^url\..*\.insteadof' 2>/dev/null | grep -c . || true)
+  [ "${n:-0}" -gt 0 ] && echo "INSTEADOF $a"
+  sudo -n test -e "$h/.claude/settings.json"                 && echo "KEEPCLAUDE $a"
+  sudo -n test -e "$h/.config/gh/hosts.yml"                  && echo "KEEPGH $a"
+  sudo -n test -d "$h/.local/share/scheduler-registry"       && echo "KEEPREGISTRY $a"
+  sudo -n test -d "$h/.local/share/scheduler-verdict"        && echo "KEEPVERDICT $a"
+  sudo -n test -d "$h/tmp"                                   && echo "KEEPTMP $a"
+  id -nG "$a" 2>/dev/null | tr ' ' '\n' | grep -qx selfdev   && echo "KEEPSELFDEVGRP $a"
+  [ "$(loginctl show-user "$a" -p Linger --value 2>/dev/null)" = yes ] && echo "KEEPLINGER $a"
 done
-echo "ROOTCRON $(sudo -n crontab -l 2>/dev/null | grep -c 'PACED_HOST_MODE=1' || true)"
+
+n=$(sudo -n crontab -l 2>/dev/null | grep -c 'PACED_HOST_MODE=1' || true)
+[ "${n:-0}" -gt 0 ] && echo "ROOTCRONROW"
 # the roster read, as the identity an armed cron row actually has
 sudo -n env -i /usr/bin/curl -fsS --max-time 8 \
   "${SCHEDULER_ROSTER_URL:-http://100.107.253.56:8646}/roster" >/dev/null 2>&1 \
   && echo "ROOTROSTER ok" || echo "ROOTROSTER fail"
-S="$BR/current/scheduler"
 [ -x "$S/bin/usage-gate.sh" ]                        && echo "GATE ok"
+[ -e "$S/lib/gh-app-token.sh" ]                      && echo "LIBGHAPP ok"
 grep -q 'ROSTER_URL' "$S/lib/dose-common.sh" 2>/dev/null && echo "SERVICEREAD ok"
-# Ask what fetch_roster DELEGATES to: the gh call is inside fetch_repo_file,
-# so grepping for `gh_as api ... schedule/ROSTER` passes a build that reads the
-# roster over gh every tick. COMMENTS STRIPPED FIRST, or it grades a paragraph.
+# Ask what fetch_roster DELEGATES to -- the gh call is inside fetch_repo_file.
+# COMMENTS STRIPPED FIRST, or this grades a paragraph, not the code beside it.
 sed -n '/^fetch_roster()/,/^}/p' "$S/lib/dose-common.sh" 2>/dev/null \
   | sed 's/#.*//' \
   | grep -qE 'fetch_repo_file|gh_as|\bgh ' && echo "GHROSTER present"
-grep -rl 'Documents/Projects/scheduler' "$S/schedule/" 2>/dev/null | while read -r f; do
-  echo "CLONEPATHCONF $(basename "$f")"
+grep -rl 'Documents/Projects/scheduler' "$S/schedule/" 2>/dev/null | while read -r fq; do
+  echo "CLONEPATHCONF $(basename "$fq")"
 done
+sudo -n test -r /etc/selfdev/gh-app.conf \
+  && sudo -n test -x /usr/local/libexec/selfdev/selfdev-gh-app.sh \
+  && echo "HOSTCRED ok"
+sudo -n test -r /etc/selfdev/claude-token && echo "CLAUDETOK ok"
+# the split-brain: root drives, the account runs, so nothing per-project is root's
+sudo -n test -d /root/.local/share/scheduler-verdict && echo "ROOTVERDICT"
+sudo -n sh -c 'ls -d /root/.local/share/*-nightly-batch' >/dev/null 2>&1 && echo "ROOTBATCH"
+sudo -n test -d /home/zach/Documents/Projects/scheduler/schedule && echo "LEGACYSCHED"
+n=$(sudo -n grep -c ' DISPATCH ' /var/lib/scheduler-paced-runner/run.log 2>/dev/null || true)
+[ "${n:-0}" -gt 0 ] && echo "DISPATCHED"
+exit 0
 PROBE
 then
   section "BLIND"
@@ -89,46 +124,37 @@ then
 fi
 grep -q '^PROBE-OK$' "$FACTS" || { section "BLIND"; bad "the probe did not run to completion on $HOST"; exit 6; }
 
-# WHOLE TOKEN, not a prefix: `^CLONE` also matches CLONEPATHCONF, which made
-# this report seven clones and then name none of them.
+# WHOLE TOKEN: `^CLONE` also matches CLONEPATHCONF -- seven clones, none named.
 f() { grep -cE "^$1( |\$)" "$FACTS" 2>/dev/null || true; }
-names() { grep "^$1 " "$FACTS" 2>/dev/null | awk '{print $2}' | paste -sd' ' -; }
+names() { grep "^$1 " "$FACTS" 2>/dev/null | awk '{print $2}' | sort -u | paste -sd' ' -; }
 NACCT=$(f ACCT)
 [ "$NACCT" -gt 0 ] || { section "BLIND"; bad "no uid $UID_LO-$UID_HI accounts found on $HOST -- a host with none cannot be graded"; exit 6; }
 
-section "A. the cutover landed"
-[ "$(f 'ROOTROSTER ok')" -gt 0 ] \
-  && ok "A1 root reads the roster under env -i -- what an armed cron row is, and no credential" \
-  || bad "A1 root cannot read the roster with a cleared environment" "this is the wall host mode dies on"
-[ "$(f 'SERVICEREAD ok')" -gt 0 ] \
-  && ok "A2 the installed build's dose-common reads a service URL" \
-  || bad "A2 the build carries no ROSTER_URL -- it predates the cutover"
-[ "$(f 'GHROSTER present')" -eq 0 ] \
-  && ok "A3 fetch_roster delegates to no gh path -- the roster read leaves GitHub alone" \
-  || bad "A3 fetch_roster still goes through gh/fetch_repo_file" "every tick asks github.com whether it may run a local job"
-[ "$(f 'GATE ok')" -gt 0 ] \
-  && ok "A4 usage-gate.sh rides the build -- absent, every tick HOLDs at rc=127 and reads as a busy quota" \
-  || bad "A4 the build carries no usage-gate.sh"
-[ "$(f ROOTCRON)" -gt 0 ] && [ "$(grep '^ROOTCRON' "$FACTS" | awk '{print $2}')" -gt 0 ] \
-  && ok "A5 the host has a host-mode dispatch clock" \
-  || bad "A5 no PACED_HOST_MODE row in root's crontab -- nothing dispatches"
-
-section "B. RESIDUE -- the old design is gone, not merely unused"
-[ "$(f CLONE)" -eq 0 ] \
-  && ok "B1 no account carries a scheduler clone" \
-  || bad "B1 $(f CLONE) scheduler clone(s) remain: $(names CLONE)" "the whole point of gen-2; each is a second, staler copy of the dispatcher"
-[ "$(f ACCTCRON)" -eq 0 ] \
-  && ok "B2 no per-account RUNNER crontab row" \
-  || bad "B2 $(f ACCTCRON) account(s) still carry their own RUNNER row: $(names ACCTCRON)" "host mode dispatches for all of them; these double-dispatch"
-[ "$(f PRIVATEPIN)" -eq 0 ] \
-  && ok "B3 ONE build pin per host (#180), no per-account verb-builds" \
-  || bad "B3 $(f PRIVATEPIN) account(s) keep a private build root: $(names PRIVATEPIN)" "\$HOME/.local/bin precedes /usr/local/bin, so their verbs resolve into a staler build"
-[ "$(f ACCTSTATE)" -eq 0 ] \
-  && ok "B4 no account-mode rotation state left behind" \
-  || bad "B4 $(f ACCTSTATE) account(s) keep \$HOME/.local/share/scheduler-paced-runner: $(names ACCTSTATE)" "a second rotation pointer for a rotation that no longer exists"
-[ "$(f CLONEPATHCONF)" -eq 0 ] \
-  && ok "B5 no conf in the build names a per-account clone path" \
-  || bad "B5 $(f CLONEPATHCONF) conf(s) still name Documents/Projects/scheduler: $(names CLONEPATHCONF)" "on a clone-free host every one of those rows is a path that cannot exist"
+cur=''
+while IFS=$'\t' read -r id sec token expect label why; do
+  case "$id" in ''|\#*) continue ;; esac
+  if [ "$sec" != "$cur" ]; then
+    cur="$sec"
+    case "$sec" in
+      A) section 'A. the cutover landed' ;;
+      B) section 'B. RESIDUE -- the old design is gone, not merely unused' ;;
+      C) section 'C. MUST-KEEP -- asserted PRESENT, so a cleanup cannot cut load-bearing state' ;;
+      *) section "$sec" ;;
+    esac
+  fi
+  n="$(f "$token")"
+  case "$expect" in
+    absent)
+      [ "$n" -eq 0 ] && ok "$id $label" \
+        || bad "$id $label -- but $n: $(names "$token")" "$why" ;;
+    present)
+      [ "$n" -gt 0 ] && ok "$id $label" || bad "$id $label -- absent" "$why" ;;
+    all)
+      [ "$n" -ge "$NACCT" ] && ok "$id $label ($n/$NACCT)" \
+        || bad "$id $label -- only $n of $NACCT account(s)" "$why" ;;
+    *) bad "$id has expect='$expect', which is not absent|present|all" "the row file is malformed, so this row graded nothing" ;;
+  esac
+done < "$ROWS"
 
 printf '\ncutover-check -- %s: %d passed, %d failed\n' "$HOST" "$pass" "$fail"
 [ "$fail" -eq 0 ]
