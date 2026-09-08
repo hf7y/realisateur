@@ -46,8 +46,8 @@ asserted**:
   URL**. Re-read an existing body: `gh` refuses a bad one at the write, and
   nothing re-reads it after.
 - **Uncommitted** — commit (message via file) or discard deliberately. Paths
-  predating this session are neither: touching them adopts or destroys a
-  concurrent run's work.
+  predating this session are neither, and are not an exception either: they get
+  an issue in the OWNING repo naming the files, or they are not dealt with.
 - **Untracked, not ignored** — commit, ignore, or move it out. It will sit in
   `git status` forever belonging to nobody, and reporting it is not dealing
   with it.
@@ -117,11 +117,11 @@ hf7y/scheduler#66, and finding one is itself a finding (hf7y/realisateur#230).
 
 ## 4. What is blocked on Zach, from this session
 
-Only this session's own. What is piled up estate-wide is a different question
-with its own surface, and answering it here would be a fourth one.
+Only this session's own; the estate-wide pile is its own question.
 
-An issue whose body opens `DECISION:` and is still open is waiting on a person.
-`NO-DECISION:` is not.
+An issue whose body opens `DECISION:` and is still open is waiting on a person;
+`NO-DECISION:` is not. **Residue this session CAUSED is never one of these** --
+repair it or file it; handing it back as "yours to reconcile" is the failure.
 
 ## 5. Close
 
