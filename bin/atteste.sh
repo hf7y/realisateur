@@ -18,7 +18,8 @@ CLI_USAGE='  atteste.sh <owner/repo#n|url>...  grade the DELIVERS entries of eac
                                    closes -- its own block can be a subset.
   atteste.sh --body <file>         grade a body against THIS working tree
                                    before you file it ("-" reads stdin)
-  DELETED, GONE or RETIRED in an entry inverts it: being there is the GAP.'
+  DELETED, GONE or RETIRED opening the note inverts an entry: being there
+  is the GAP. Later in the note it is description, not a claim (crt#178).'
 CLI_FLAGS='--body'
 CLI_POSITIONAL=subject
 CLI_EXITS='  0  every entry that could be checked was SATISFIED, and at least one was
@@ -50,8 +51,26 @@ clean() {
 # repo_path <repo> <ref> <path> -- 0 exists, 1 absent, 2 COULD NOT TELL. The
 # third is the point: `gh api` fails the same for "no file" and "GitHub down".
 repo_path() {
-  local repo="$1" ref="$2" p="$3" q='' out rc
+  local repo="$1" ref="$2" p="$3" q='' out rc dir base names n
   [ -n "$ref" ] && [ "$ref" != - ] && q="?ref=$ref"
+  # A GLOB NAMES A SET. american-cycle#212 delivered `data/pack-*.json` -- seven
+  # files, all present, graded as one absent path. List the parent and match.
+  case "$p" in
+    *'*'*)
+      dir="${p%/*}"; [ "$dir" = "$p" ] && dir=''
+      base="${p##*/}"
+      names="$("$GH" api "repos/$repo/contents/$dir$q" --jq '.[].name' 2>/dev/null)" || names=''
+      if [ -z "$names" ]; then
+        "$GH" api "repos/$repo" >/dev/null 2>&1 || return 2
+        return 1
+      fi
+      while IFS= read -r n; do
+        # $base is the pattern here, so it stays unquoted on purpose.
+        # shellcheck disable=SC2053
+        [[ $n == $base ]] && return 0
+      done <<<"$names"
+      return 1 ;;
+  esac
   out="$("$GH" api "repos/$repo/contents/$p$q" 2>&1 >/dev/null)"; rc=$?
   [ "$rc" -eq 0 ] && return 0
   case "$out" in
@@ -77,13 +96,23 @@ dark() { blind=$((blind + 1));         say BLIND "$1"; }
 # mode: gh = look in <default-repo> at <ref>; tree = look in $ROOT on disk.
 grade() {
   local entry="$1" drepo="$2" ref="$3" mode="$4"
-  local words=() w i k v e_path='' e_repo='' e_other='' host='' found=0 gone=0 gonew
+  local words=() gonew_w=() w i k v e_path='' e_repo='' e_other='' host='' found=0 gone=0 gonew
   local IFS=$' \t\n'
   read -ra words <<<"$entry"
 
   # ABSENCE PROVES A RETIREMENT (#872, #878). Not `.`: it splits retired.md.
-  gonew=" ${entry^^} "; gonew="${gonew//[,;:()\`]/ }"
-  case "$gonew" in *' DELETED '*|*' GONE '*|*' RETIRED '*) gone=1 ;; esac
+  # ONLY WHERE THE NOTE OPENS WITH IT. `path:X -- DELETED` claims a deletion;
+  # `path:X -- crt-vm forwarding reframed as retired history` describes what the
+  # file now SAYS, and crt#178 spent a day red on that reading. So the marker
+  # must be one of the note's first two words. Narrowing this can only cost a
+  # false GAP -- loud, and the author rewords -- never a false SATISFIED.
+  gonew=" ${entry^^} "
+  case "$gonew" in *' -- '*) gonew=" ${gonew#* -- }" ;; esac
+  gonew="${gonew//[,;:()\`]/ }"
+  read -ra gonew_w <<<"$gonew"
+  case " ${gonew_w[0]:-} ${gonew_w[1]:-} " in
+    *' DELETED '*|*' GONE '*|*' RETIRED '*) gone=1 ;;
+  esac
 
   case "${entry,,}" in none|none.|'none '*) return 0 ;; esac
   claimed=$((claimed + 1))
@@ -156,7 +185,12 @@ grade() {
   esac
 
   if [ "$mode" = tree ]; then
-    if [ -e "$ROOT/$e_path" ]; then
+    local tree_hit=0
+    case "$e_path" in
+      *'*'*) compgen -G "$ROOT/$e_path" >/dev/null 2>&1 && tree_hit=1 ;;
+      *)     [ -e "$ROOT/$e_path" ] && tree_hit=1 ;;
+    esac
+    if [ "$tree_hit" -eq 1 ]; then
       if [ "$gone" -eq 1 ]; then gap "path:$e_path is claimed GONE and is still in this tree"
       else sat "path:$e_path is in this tree"; fi
     elif [ "$gone" -eq 1 ]; then sat "path:$e_path is gone from this tree, as claimed"
