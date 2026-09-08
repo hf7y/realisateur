@@ -54,8 +54,7 @@ the problem worse while looking like progress**.
 - **Zach answers question-issues by commenting and leaving them open.** State
   carries no signal. `etiquette` prints the grammar and derives the label.
 - **Before reaping into another project's repo, run `check-project-busy
-  <project>`** — a direct file write needs the guard; a front-door write
-  (`scheduler -i`, `notify-senechal`) carries its own regulator.
+  <project>`** — a direct write needs the guard; `notify-senechal` carries its own.
 
 ## 4. Branch doctrine
 

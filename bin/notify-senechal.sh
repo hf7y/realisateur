@@ -174,7 +174,7 @@ command -v gh >/dev/null 2>&1 || die "gh is not on PATH -- cannot file, and coul
 
 # --- 1. file it through the front door, and capture the issue it created ----
 #
-# THE FRONT DOOR IS GITHUB (scheduler#22). `scheduler -i`
+# THE FRONT DOOR IS GITHUB (scheduler#22).
 DEST_REPO="${NOTIFY_SENECHAL_REPO:-$GH_ESTATE_OWNER/senechal}"
 FROM_PROJECT="${NOTIFY_FROM_PROJECT:-realisateur}"
 
