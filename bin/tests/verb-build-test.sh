@@ -160,7 +160,6 @@ check "...and after a rollback the SAME link resolves to the older build" \
 # --- 8. THE VERB COUNT PROPAGATES, NOT JUST THE VERB CONTENT ------------
 # Test 7 proves an EXISTING verb follows `current` for free. It says nothing
 # about a build whose verb SET changed, which is the question an operator
-# actually asks of a nightly channel: "a verb was added last night -- do the
 mk_build "2026-08-08T0130Z" "vim-arcade:entraine senechal:installe scheduler:arme bibliothecaire:consulte"
 approve "2026-08-08T0130Z"
 run --build 2026-08-08T0130Z --apply --link >/dev/null 2>&1

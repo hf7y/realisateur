@@ -9,51 +9,20 @@
 #   executable `bin/<name>`. A `man/<name>.1` beside it is carried when
 #   present and is never a precondition (lib/verb-set.sh).
 #
-# Before #891 the rule was a conjunction with `man/<name>.1`, and a HALF of
-# it -- an executable with no page -- was silently discarded rather than
-# reported: `ecosim-sensor` sat in that hole for its whole existence and
-# surfaced instead as `ecosim-sensor-tick` reporting WRAPPER_NO_SENSOR, which
-# read as a stale build and cost the misdiagnosis in realisateur#66.
-# cut-verb-build.sh REFUSES on that shape still, but only in the direction
-# that remains a defect: a man page with no executable beside it (a script
-# that moved or was deleted, its doc left behind). An executable with no page
-# is no longer a defect; it is a verb, and this file is now the ONLY way to
-# keep one off PATH -- not a way to silence a refusal that no longer fires.
+# cut-verb-build.sh still REFUSES a man page with no executable beside it (a
+# script that moved or was deleted, its doc left behind). An executable with
+# no page is not a defect; it is a verb, and this file is the ONLY way to keep
+# one off PATH -- not a way to silence a refusal that no longer fires.
 #
 # THE TEST, Zach 2026-08-11, when this file blocked every nightly build:
 #
 #     "would another agent or Zach ever call one of those?"
 #
-# That is the question, and it is not the one the mechanical rule asks. The
-# rule asks whether `bin/<name>` exists -- a fact about the tree. This asks
-# whether the name is a FRONT DOOR: something a person or another project
-# types. Everything else is an internal that happens to be executable, and an
-# internal does not stop being one by qualifying mechanically.
-#
-# Applied, the test is usually obvious and usually already answered by the
-# project's own shape: ecosim declares `sonde`, so `sonde` is the door and its
-# instruments are behind it. When the answer is genuinely unclear, that IS the
-# finding -- write down which way you decided and why, which is what every row
-# below does.
-#
-# WHAT A ROW IS, AND IS NOT
-#   IS      an executable that does a job of its own -- an installer, a cron
-#           wrapper, a scraper, an archiver -- and would gain nothing from a
-#           slot on PATH.
-#   IS NOT  a genuine front door that merely has no page written yet. Ship it
-#           as a verb with no page, or write the page -- a row here would
-#           bury a real door permanently instead of documenting it.
-#
-# The distinguishing question, and it is not a matter of taste: would anyone
-# ever type this name at a shell expecting the ecosystem's verb contract --
-# `--help`, a page, a stable name on PATH? If yes it is a verb and it is
-# missing its page. If no it gets a row.
-#
-# A row states the evidence it was judged on, in the file's own words where
-# the file says so. `vim-arcade bin/sync-engine.sh` and `bibliothecaire
-# bin/page92.py` both declare it themselves; the rest were judged by reading
-# their headers on `bashified` on 2026-08-11, which is what the last column
-# quotes.
+# A verb is a FRONT DOOR -- a name a person or another project TYPES. The
+# mechanical rule asks only whether `bin/<name>` exists. An executable that
+# qualifies and is nobody's door gets a row stating the evidence it was judged
+# on. A genuine door with no page yet does NOT: ship it pageless or write the
+# page, because a row here buries it permanently.
 #
 # STALENESS IS VISIBLE IN THE ARTIFACT, not enforced here. Every row that
 # ACTUALLY applies is written into the build manifest as a `# NOT-A-VERB` line,

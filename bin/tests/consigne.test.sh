@@ -224,7 +224,6 @@ echo
 echo "-- F. IT IS NOT A SECOND IMPLEMENTATION --------------------------------"
 # ===========================================================================
 # The defect this verb was rewritten to avoid, asserted against its own source.
-# The first draft (#121, b81de52) copied files with `cp` and committed them,
 SRC_TEXT="$(grep -v '^[[:space:]]*#' "$CONSIGNE")"
 hasnt "it does not run git push"   "$SRC_TEXT" "git push"
 hasnt "it does not run git commit" "$SRC_TEXT" "git commit"
@@ -337,7 +336,6 @@ if command -v flock >/dev/null 2>&1; then
 
   # BIBLIOTHECAIRE_VAULT set explicitly on every case below, even the ones
   # that don't reach vault_locked's directory check (the usage-error cases) --
-  # a missing --vault/env falls back to the real host default,
   OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$VL" "$CONSIGNE" lock -- echo hello world 2>&1)"; rc=$?
   check "lock runs the wrapped command" "$rc" "0"
   has   "...and its stdout reaches the caller" "$OUT" "hello world"

@@ -87,8 +87,7 @@ echo "-- B. cred_grade_account: pure grading, no network --------------------"
 
 # grade <account> <row> -- sets GLOBALS GRADE_OUT/GRADE_RC/GRADE_FLAGS/GRADE_GAPS.
 # NOT `res="$(grade ...)"`: a first draft packed everything into one
-# \x1f-delimited string and unpacked it with `read`, which stops at the
-# FIRST NEWLINE regardless of IFS -- cred_grade_account's own output is
+# \x1f-delimited string and unpacked it with `read`, which stops at the first newline.
 grade() {
   GRADE_OUT="$(cred_grade_account "$1" "$2" 2>&1)"; GRADE_RC=$?
   GRADE_FLAGS="$(grep -c '^  FLAG \[drift\]' <<<"$GRADE_OUT" || true)"
@@ -368,8 +367,7 @@ O="$(STUB_ROWS='badword	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y' \
 t_has "real gh shape: a WRITE key on a shared repo is still flagged" "$O" "realisateur (SHARED repo) deploy key is WRITE"
 
 # The fail-loud default arm itself: an unrecognized readOnly-shaped value
-# must read as BLIND, never as silence. Exercised directly, not by trying to
-# reproduce a gh version skew: `has()` on the fixture object true either way,
+# must read as BLIND, never as silence.
 O="$(STUB_ROWS='oddshape	ok:600	ok	match	gho	-	app	0	0	0	4521586	hf7y' \
      CRED_SSH_BIN="$STUB/ssh" CRED_GH_BIN="$STUB/gh" \
      STUB_JSON_realisateur='[{"title":"monkey-oddshape-realisateur","readOnly":"maybe"}]' \

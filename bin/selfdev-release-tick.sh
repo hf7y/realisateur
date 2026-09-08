@@ -289,7 +289,6 @@ retire_cadence() {
   fi
 
   # The shims that point INTO the build root go before the root itself:
-  # removing the root first leaves $HOME/.local/bin full of dangling links,
   local shim tgt inst
   inst="$(command -v installe 2>/dev/null || true)"
   if [ -d "$LOCAL_BIN" ]; then
@@ -437,7 +436,6 @@ check_clock
 
 # --- the CHANNEL's own health, read live from the published verdict ---------
 # This is the row that separates "no new build because nothing changed" from
-# "no new build because main is broken". Without it both are just an absence,
 echo
 echo "-- release channel (live) ---------------------------------------------"
 led="$(dirname "${BASH_SOURCE[0]}")/release-ledger.sh"

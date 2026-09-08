@@ -8,29 +8,24 @@
 # read out of a consumer's CLONE, and a stale clone is the bug being fixed.
 # One live endpoint, no local copy to rot: hf7y.com/verbs/status.json.
 #
-# WHY THIS ENDPOINT. A uid-3000 account's credential grants read on its OWN
-# repo only, so the verdict must be readable with NO credential or the
-# consumers that need it most cannot see it. Disclosed, deliberately: project
-# names, short SHAs, run and build ids for private repos -- no code, no
-# diffs, no paths, no credentials.
+# WHY UNAUTHENTICATED. A uid-3000 account's credential grants read on its OWN
+# repo only, so the consumers that need the verdict most could not see it.
+# Disclosed deliberately: project names, short SHAs, run and build ids -- no
+# code, no diffs, no paths, no credentials.
 #
 # IT MUST RUN ON NIGHTS THAT PRODUCE NOTHING, or "nothing changed" and "main
 # is broken" are again the same absence. `if: always()`, and the decision is
 # a closed enum -- CUT | NO_CHANGE | BLOCKED | ERROR -- refused here AND on
 # the consumer, so "unrecognised" never means "probably fine".
 #
-# THE CHANNEL'S FAILURE MODE IS SILENCE, AND SILENCE RENDERS AS THE LAST GOOD
-# VERDICT. That is guard-estate's "BLIND must not grade as CLEAN" applied to
-# a channel. The fix is NOT a tighter staleness window: a nightly emitter
-# legitimately looks 0-24h old, so 26h is the FLOOR a nightly cadence
-# imposes, not slack. Instead, (1) the producer writes `valid_until` from its
-# own cadence, so one number moves both halves, and a consumer past it grades
-# BAD whatever the decision says; (2) build-verbs.yml re-invokes this with a
-# MINIMAL argv on failure, recovering the case where the logic was right and
-# the argument vector was fatal. Neither covers the other: (1) misses a
-# publisher failing inside its cadence, (2) misses a workflow that never ran.
+# SILENCE RENDERS AS THE LAST GOOD VERDICT -- "BLIND must not grade as CLEAN",
+# applied to a channel. NOT fixed by a tighter staleness window: a nightly
+# emitter legitimately looks 0-24h old, so 26h is a floor, not slack. Instead
+# the producer writes `valid_until` from its own cadence, so one number moves
+# both halves; and build-verbs.yml re-invokes this with a MINIMAL argv on
+# failure. Neither covers the other -- the first misses a publisher failing
+# inside its cadence, the second a workflow that never ran.
 #
-# ============================================================================
 # EXIT CODES
 #   0  published (or --dry-run rendered)
 #   1  could not publish

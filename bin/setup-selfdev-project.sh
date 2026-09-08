@@ -198,7 +198,6 @@ the 25 lines shown. Re-run it directly to see all of them:
 
 # --- 6. the release bootstrap, and the account's own clock -------------------
 # DELEGATED to bin/wire-release-channel.sh since 2026-08-10, not reimplemented.
-# It was inline here, which meant the only way to give an account a clock was
 say "6/8 release bootstrap + clock"
 "$HERE/wire-release-channel.sh" "$PROJECT" --apply
 

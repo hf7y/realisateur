@@ -39,11 +39,9 @@ CRED_SSH_BIN="${CRED_SSH_BIN:-ssh}"
 CRED_GH_BIN="${CRED_GH_BIN:-gh}"
 CRED_SSH_TIMEOUT="${CRED_SSH_TIMEOUT:-20}"
 CRED_PASSWD_FILE="${CRED_PASSWD_FILE:-/etc/passwd}"       # a REMOTE path
-# NO CANONICAL-SOURCE KNOBS. There used to be CRED_APP_PEM_SRC /
-# CRED_APP_CONF_SRC pointing at a local copy of the App key to push out per
-# account. The credential is host-wide now and bin/selfdev-app-key.sh places
-# it; a second script holding its own opinion about where the key lives is
-# precisely realisateur#209.
+# NO CANONICAL-SOURCE KNOBS: the App credential is host-wide and
+# bin/selfdev-app-key.sh places it. A second script with its own opinion about
+# where the key lives is precisely realisateur#209.
 
 PASS=0; GAPS=0; BAD=0; BLIND_N=0
 ok()    { printf '  ok    %s\n' "$*"; PASS=$((PASS+1)); }
@@ -89,8 +87,7 @@ REPOS="$*"
 probe_one() {
   local owner="$1"; shift
   # THE CREDENTIAL IS HOST-WIDE as of 2026-08-12: /etc/selfdev/{app.pem,gh-app.conf},
-  # one file readable by group `selfdev`, not a copy per account. So what this
-  # probe asks changed shape: not "does this account have its own key" but
+  # one file readable by group `selfdev`, not a copy per account.
   local pem="${SELFDEV_APP_PEM:-/etc/selfdev/app.pem}"
   local conf="${SELFDEV_APP_CONF:-/etc/selfdev/gh-app.conf}"
   local hosts="$HOME/.config/gh/hosts.yml"
@@ -295,8 +292,7 @@ cred_check_deploy_keys() { # cred_check_deploy_keys <account>...
 cred_check_repo_keys() {
   local repo="$1" want="$2"; shift 2
   # `--json title,readOnly` is REQUESTED but not, in practice, HONOURED: gh
-  # 2.45.0 validates "readOnly" as a real field name (an unknown one is
-  # refused with a list that names it) and then ignores the filter anyway,
+  # 2.45.0 validates "readOnly" as a real field name, then omits it anyway.
   local json rc
   json="$("$CRED_GH_BIN" repo deploy-key list --repo "$CRED_GH_OWNER/$repo" --json title,readOnly 2>/dev/null)"
   rc=$?  # a zero-key repo prints nothing, rc 0, not "[]" -- rc alone distinguishes that from a failed call (#916)
@@ -309,7 +305,6 @@ cred_check_repo_keys() {
   for acct in "$@"; do
     # TWO jq calls, deliberately, not one with `// empty`. jq's `//` falls
     # through on `false` as well as `null` -- `.readOnly // empty` silently
-    # turned every legitimate `"readOnly": false` (a WRITE key -- exactly the
     local suf="-$acct-$repo" found
     found="$(printf '%s' "$json" | jq -r --arg suf "$suf" '[.[] | select(.title | endswith($suf))] | length')"
     if [ "${found:-0}" -eq 0 ] 2>/dev/null; then
@@ -421,8 +416,6 @@ cmd_apply() {
   local failed=0 changed=0
 
   # --- 1. the App credential: HOST-WIDE, placed by the script that owns it --
-  #
-  # This block used to copy a private app.pem + gh-app.conf into the account,
   if [ "$pem" != "ok:600" ] || [ "$conf" = missing ]; then
     act "placing the host-wide App credential and adding $acct to group $CRED_APP_GROUP (selfdev-app-key.sh --apply)"
     if "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \
