@@ -17,9 +17,9 @@ Paragraph by paragraph: **does this describe a premise that STILL HOLDS?**
 Row three is what makes this more than tidying: a long justification for a knob
 is *evidence about the knob*, and vaulting it launders dead config into a
 cleaner-looking file while the knob survives. Reaping **flags** a mechanism; it
-does not delete it. Verify before you preserve — a trap paragraph earns its
-place only if the trap is still live — and prefer a **runnable witness**, three
-lines the reader can paste, over a paragraph asserting the same.
+does not delete it. Prefer a **runnable witness** over a paragraph asserting the
+same. And when the ratchet flags +N, **the answer is always reap** (Zach,
+2026-09-07): a large baseline is itself the evidence that N lines of junk exist.
 
 ## 2. The three destinations
 
