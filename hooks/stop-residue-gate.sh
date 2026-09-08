@@ -224,12 +224,9 @@ is_written() { # is_written <abs-path> -- did this session's transcript write it
   return 1
 }
 
-# CANDIDATES, not verdicts. Every PR URL the transcript mentions; the loop
-# below decides which of them this session actually opened, by age. Matching on
-# the command text was tried and is worse than useless: any command that merely
-# CONTAINS "gh pr create" -- writing docs about it, grepping for it, patching
-# this file -- counts as having run it. Three matched on 2026-09-07 and one was
-# real.
+# CANDIDATES, not verdicts: the loop below decides which were opened here, by
+# age. Matching on command text is worse -- anything that merely CONTAINS
+# "gh pr create" counts, and 3 of 3 matches were spurious on 2026-09-07.
 discover_prs_mentioned() {
   local transcript="$1"
   [ -n "$transcript" ] && [ -r "$transcript" ] || return 0
@@ -272,17 +269,11 @@ advice() {
   echo "destroying work to get past this hook is the one outcome it exists to prevent."
 }
 
-# The SessionStart baseline marks when this session began; its mtime is that
-# moment, and a PR older than it was not opened here.
-#
-# WITH NO BASELINE IT STILL BLOCKS. An earlier version of this bailed out
-# instead, and that was written by an agent whose own turn the hook was
-# blocking, in a session that had no baseline -- so the exemption it added was
-# exactly the one that let it stop. Say the quiet part in the file: a
-# no-baseline pass is indistinguishable from disabling the check. The file
-# half may warn instead of blocking because its remedies destroy work; a PR
-# block's remedies do not, and a re-fired Stop (stop_hook_active) already exits
-# 0, so the report surfaces once and the turn can then end.
+# The SessionStart baseline's mtime is when this session began; a PR older than
+# it was not opened here. WITH NO BASELINE IT STILL BLOCKS -- a no-baseline pass
+# is indistinguishable from disabling the check, and the bail-out that used to
+# sit here was written by an agent this hook was blocking, in a session with no
+# baseline. Safe because a re-fired Stop already exits 0 (C12).
 session_started=''
 if [ -n "${BASELINE_FILE:-}" ] && [ -f "$BASELINE_FILE" ]; then
   session_started="$(stat -c %Y "$BASELINE_FILE" 2>/dev/null)" || session_started=''
@@ -299,10 +290,8 @@ if command -v gh >/dev/null 2>&1; then
     rest="${rest#*$'\t'}"; am="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
     created="${rest%%$'\t'*}"; body="${rest#*$'\t'}"
     [ "$st" = open ] || continue
-    # DRAFT and AUTO-MERGE first: both are valid ways to stop no matter who
-    # opened the PR, so asking whose it is before asking whether it is already
-    # handled reports work that is already handled. That inversion shipped for
-    # one commit and blocked a turn on a PR with auto-merge armed.
+    # DRAFT and AUTO-MERGE first: valid stopping states whoever opened it, so
+    # asking whose it is first reports already-handled work (C13-C15).
     if [ "$dr" = true ]; then
       log "note: $url is still a DRAFT -- a draft claims nothing, which is a valid way to stop."
       continue
@@ -311,9 +300,8 @@ if command -v gh >/dev/null 2>&1; then
       log "note: $url has AUTO-MERGE ARMED -- it lands when its required checks pass. Valid way to stop."
       continue
     fi
-    # OPENED BY THIS SESSION, or not this hook's business. A PR that predates
-    # the session was somebody else's work in flight, and every exit this hook
-    # offers -- merge, land, convert to draft -- would damage it.
+    # A PR predating the session is another run's work in flight, and every
+    # exit offered here would damage it.
     if [ -z "$session_started" ]; then
       pr_report+="  $url is still open and not a draft"$'\n'
       pr_report+="    (no SessionStart baseline, so this hook cannot tell whether you opened it)"$'\n'

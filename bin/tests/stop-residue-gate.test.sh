@@ -96,11 +96,9 @@ section "C. a PR this turn opened, still open, is not a finished run"
 G="$T/g"; newrepo "$G"
 TR="$T/g-transcript"; transcript_pr "$TR"
 
-# A PR block needs to know WHEN this session began, or it cannot tell a PR the
-# turn opened from one it merely linked. The SessionStart baseline is that
-# mark, so these cases run with one, and pr-state carries a created_at after
-# it. Fixed dates, never `date` -- a suite that drifts with the clock is worse
-# than one that fails.
+# These run WITH a baseline, and pr-state carries a created_at after it. Fixed
+# dates, never `date`: a suite that drifts with the clock is worse than one
+# that fails.
 CJOB="$T/cjob"; mkdir -p "$CJOB/tmp"
 CSID="c-session"
 payload "$G" "" "$CSID" | CLAUDE_JOB_DIR="$CJOB" "$SCRIPT" --baseline >/dev/null 2>&1
@@ -132,37 +130,31 @@ printf 'open\tfalse\tfalse\t%s\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-
 OUT="$(runpr "$G" "$TR")"
 has "C7 the refusal names arming auto-merge as the preferred exit" "$OUT" "--auto"
 
-# The 2026-09-07 false positive: commenting on somebody else's open PR made
-# `gh pr comment`'s own output (.../pull/N#issuecomment-ID) look like a PR this
-# turn opened, and every exit offered would have damaged work in flight.
+# `gh pr comment` prints .../pull/N#issuecomment-ID, which read as a PR this
+# turn opened.
 printf 'open\tfalse\tfalse\t%s\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$BEFORE" > "$T/pr-state"
 OUT="$(runpr "$G" "$TR")"; RC="$(rcof "$G" "$TR")"
 rc  "C8 a PR opened before this session does not block" 0 "$RC"
 has "C9 and it says mentioned, not opened here"         "$OUT" "predates this session"
 
-# No baseline: the hook cannot tell whose PR is whose, and it BLOCKS anyway.
-# The bail-out that used to live here was added by an agent the hook was
-# blocking, in a session with no baseline -- the exemption was the one that let
-# it stop. A no-baseline pass is indistinguishable from disabling the check.
+# No baseline: it cannot tell whose PR is whose and BLOCKS anyway. A
+# no-baseline pass is indistinguishable from disabling the check.
 printf 'open\tfalse\tfalse\t%s\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
 NB="$T/nb"; mkdir -p "$NB/tmp"
-nb_run() { payload "$G" "$TR" "no-baseline-sid" | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$NB" PATH="$T/bin:$PATH" "$SCRIPT" "$@"; }
+nb_run() { payload "$G" "$TR" "no-baseline-sid" | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$NB" PATH="$T/bin:$PATH" "$SCRIPT"; }
 OUT="$(nb_run 2>&1)"
 nb_run >/dev/null 2>&1; NBRC=$?
 rc  "C10 no baseline still blocks on an open PR" 2 "$NBRC"
 has "C11 and admits it cannot tell whose it is" "$OUT" "cannot tell whether you opened it"
 
-# The escape that makes blocking safe rather than a wall: a re-fired Stop
-# exits 0, so the report is seen once and the turn can then end.
+# What makes blocking safe rather than a wall.
 OUT2="$(printf '{"cwd":"%s","transcript_path":"%s","session_id":"nb2","stop_hook_active":true}' "$G" "$TR" \
         | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$NB" PATH="$T/bin:$PATH" "$SCRIPT" 2>&1)"
 printf '{"cwd":"%s","transcript_path":"%s","session_id":"nb2","stop_hook_active":true}' "$G" "$TR" \
   | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$NB" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1
 rc "C12 a re-fired Stop exits 0, so the block surfaces once" 0 "$?"
 
-# Ordering: a stopping state is a stopping state whoever opened the PR. Asking
-# whose it is before asking whether it is already handled reported a PR with
-# auto-merge armed, and blocked a turn on it.
+# A stopping state is one whoever opened the PR.
 printf 'open\tfalse\ttrue\t%s\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
 OUT="$(nb_run 2>&1)"; nb_run >/dev/null 2>&1
 rc  "C13 auto-merge wins even with no baseline" 0 "$?"

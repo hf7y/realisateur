@@ -12,24 +12,19 @@ description: Session-closing rite -- reconcile every branch against the remote, 
      a binary that was never put on PATH, which turned the whole routine into
      a pointer at a command not found. -->
 
-`/cloture` is the closing counterpart to `/ideate`'s opening posture: a rhythm
-to run after a big job, so a session ends "clear to clear" instead of trailing
-off. A session can end with local branches that reconcile cleanly yet have no
-PR at all -- the question is not "is the content safe" but "can the next reader
-find it without asking". Repo prose is never the residue channel: GitHub issues
-and PR bodies already are one, are searchable, and do not need this repo to
-keep growing to hold them.
+`/cloture` closes a session the way `/ideate` opens one. The question is not
+"is the content safe" but "can the next reader find it without asking" — and
+repo prose is never the answer, because issues and PR bodies are already
+searchable and do not make this repo grow.
 
-**Posture: report, route, and surface — do NOT build.** If closing reveals
-unfinished work, file it where something dispatches from (a GitHub issue in the
-owning repo) or land it as a PR/draft PR — never start building it at the end
-of a session, and never park it only in this conversation. The one exception is
-finishing what this session already did: committing and pushing that isn't new
-work, it's the session not having landed yet.
+**Report, route, surface — do NOT build.** Unfinished work goes to an issue in
+the owning repo or a PR, never into this conversation only. The one exception
+is finishing what this session already did: committing and pushing is the
+session landing, not new work.
 
-**Run the whole thing again after you act.** Clearing one row reveals the next.
-A close is finished when a pass finds nothing, not when you have explained why
-the findings are acceptable.
+**Run it again after you act.** Clearing one row reveals the next. A close ends
+when a pass finds nothing, not when you have explained why the findings are
+acceptable.
 
 ## 1. Branch reconciliation
 
@@ -134,20 +129,16 @@ consequence rather than as a paragraph.
 
 ### Where each goes
 
-File in the **owning** repo — run `check-project-busy <target>` first if you're
-writing into files of a repo that isn't this one. Nothing gets appended to
-`.scheduler/FOCUS.md`, `BLOCKERS.md` or `QUESTIONS.md`: retired by
-hf7y/scheduler#66 on 2026-08-07. Finding one is a finding
-(hf7y/realisateur#230), not a destination.
+The **owning** repo — `check-project-busy <target>` first if it isn't this one.
+Never `.scheduler/FOCUS.md`, `BLOCKERS.md` or `QUESTIONS.md`: retired by
+hf7y/scheduler#66, and finding one is itself a finding (hf7y/realisateur#230).
 
-- **A cross-project write**, including reverted ones and any second account or
-  host touched — one issue or PR comment per write, with repo and sha.
-- **A decision blocked on Zach** — an issue titled as the question, in the repo
-  it's about. He answers by commenting and leaving it open; `etiquette` prints
-  the grammar and derives the label.
-- **An insight true beyond this session** — a *rule* goes in a doctrine file
-  (step 2). A fact or finding is an issue. Neither, and just interesting, needs
-  no durable home.
+- **A cross-project write**, reverted ones and any second account or host
+  included — one issue or PR comment each, with repo and sha.
+- **A decision blocked on Zach** — an issue titled as the question. He comments
+  and leaves it open; `etiquette` derives the label.
+- **An insight** — a *rule* goes in a doctrine file (step 2), a finding is an
+  issue, and merely interesting needs no home.
 
 ## 4. What is blocked on Zach, from this session
 
@@ -159,13 +150,9 @@ An issue whose body opens `DECISION:` and is still open is waiting on a person.
 
 ## 5. Close
 
-Re-read what you are about to say before you write it. **Every clause naming a
-problem, gap, defect or FLAG must be immediately followed by an issue or PR
-URL.** Never a bare statement of fact. If a clause fails that test, go file it
-before finishing.
+Re-read it before you write it: **every clause naming a problem is immediately
+followed by an issue or PR URL**, or it is not finished.
 
-State plainly, with **links, not descriptions**: which branches got a PR and
-which URL, which issues were filed and which URL, what was pushed and where
-(with revert shas), what was reaped and its recorded sha. Zach should never
-have to ask whether something landed — the answer is a URL, not a sentence
-promising one exists.
+**Links, not descriptions** — which branches got which PR, which issues were
+filed, what was pushed and where, what was reaped and its sha. Zach should
+never have to ask whether something landed.
