@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
-"""bake_schedule.py -- build-time only. Fetches hf7y/scheduler's schedule/ at
-a pinned commit and lays down the subset roster_server.py serves. realisateur
-#1080: CI reads scheduler ONCE, here; the image then carries the config, and
-the dispatch path never reads git again.
-
-Same filter as scheduler's own schedule_confs() (bin/carry.sh): every
-schedule/*.conf and schedule/_*.md. schedule/ROSTER and schedule/FREEZE never
-carry either suffix, so PATTERN already excludes them -- and they must never
-be baked in here: Zach's ruling on hf7y/scheduler#1080 keeps both as live
-`gh api` reads, structurally, forever.
-"""
+"""bake_schedule.py -- build-time: fetches scheduler's schedule/ at a pinned commit (realisateur#1080)."""
 import io
 import os
 import re
@@ -17,7 +7,7 @@ import sys
 import tarfile
 import urllib.request
 
-PATTERN = re.compile(r"^[^/]+/schedule/(_[^/]+\.md|[^/]+\.conf)$")
+PATTERN = re.compile(r"^[^/]+/schedule/(_[^/]+\.md|[^/]+\.conf)$")  # ROSTER, FREEZE never match -- stay live gh api reads
 
 
 def main():
@@ -35,12 +25,8 @@ def main():
                 continue
             src = member
             if src.issym():
-                # Real example, hf7y/scheduler: schedule/scheduler.conf ->
-                # ../.scheduler/schedule.conf. The image ships no .scheduler/
-                # tree for that link to resolve against, so bake the TARGET's
-                # bytes -- resolved inside this same tarball, one hop only.
                 target = os.path.normpath(os.path.join(os.path.dirname(member.name), src.linkname))
-                src = by_name.get(target)
+                src = by_name.get(target)  # e.g. schedule/scheduler.conf -> ../.scheduler/schedule.conf, one hop, resolved inside the tarball
                 if src is None or not src.isfile():
                     sys.exit(f"bake_schedule: {member.name} -> {member.linkname} "
                               "does not resolve to a file inside the tarball")

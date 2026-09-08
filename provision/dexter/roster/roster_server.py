@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """roster_server.py -- the estate's arming authority. hf7y/scheduler#429, #432.
 
-STATE, PLUS THE CONFIG BAKED INTO THIS IMAGE: project -> live|parked, and
-schedule/*.conf, schedule/_*.md served read-only from what the build baked in
-(realisateur#1080). Writes are STATE ONLY -- one call, need no CI, and return
-only once committed. Stdlib only: this is the process that must come back up
-when everything else is broken.
+STATE, PLUS schedule/ CONFIG BAKED INTO THE IMAGE (realisateur#1080). Writes
+are state only -- one call, need no CI, return once committed. Stdlib only:
+must come back up when everything else is broken.
 
 A row is CREATED BY ITS FIRST WRITE -- there is no "declare it first" 404.
 `dose` already refuses to arm a project with no unix account on the host it
@@ -27,13 +25,9 @@ PORT = int(os.environ.get("ROSTER_PORT", "8646"))
 TOKEN = os.environ.get("ROSTER_WRITE_TOKEN", "")
 STATES = ("live", "parked")
 
-# bake_schedule.py lays this down at build time; nothing here ever fetches it.
-SCHEDULE_DIR = os.environ.get("ROSTER_SCHEDULE_DIR", "/opt/roster/schedule")
-# Same filter as scheduler's own schedule_confs() (hf7y/scheduler:bin/carry.sh).
-SCHEDULE_NAME_RE = re.compile(r"^(_[^/]+\.md|[^/]+\.conf)$")
-# ROSTER/FREEZE never match the pattern above, so this is belt-and-suspenders:
-# they stay live `gh api` reads, structurally, forever (realisateur#1080).
-SCHEDULE_BLOCKED = {"ROSTER", "FREEZE"}
+SCHEDULE_DIR = os.environ.get("ROSTER_SCHEDULE_DIR", "/opt/roster/schedule")  # baked in by bake_schedule.py, never fetched here
+SCHEDULE_NAME_RE = re.compile(r"^(_[^/]+\.md|[^/]+\.conf)$")  # same filter as scheduler's schedule_confs()
+SCHEDULE_BLOCKED = {"ROSTER", "FREEZE"}  # belt-and-suspenders -- these stay live gh api reads, forever
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS rows (
@@ -124,9 +118,7 @@ class Handler(BaseHTTPRequestHandler):
             c.close()
 
     def serve_schedule(self, name):
-        # "/" rejected before anything else touches it: os.path.join with a
-        # slash-free name can never escape SCHEDULE_DIR, traversal or not.
-        if not name or "/" in name:
+        if not name or "/" in name:  # slash-free name can never escape SCHEDULE_DIR via os.path.join
             return self.send(400, {"error": "bad schedule filename"})
         if name in SCHEDULE_BLOCKED or not SCHEDULE_NAME_RE.match(name):
             return self.send(404, {"error": "no such schedule file"})
