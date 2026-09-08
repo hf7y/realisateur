@@ -19,6 +19,8 @@ bin/check-project-busy	bin/check-project-busy.sh
 bin/decision-rot	bin/decision-rot.sh
 bin/defere	bin/defere.sh
 bin/etiquette	bin/etiquette.sh
+bin/tarife	bin/tarife.sh
+man/tarife.1	man/tarife.1
 bin/notify-senechal	bin/notify-senechal.sh
 bin/unarmed	bin/unarmed.sh
 # consigne itself was hand-added to bashified on 2026-08-17 (#329) but never
