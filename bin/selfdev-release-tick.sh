@@ -8,8 +8,6 @@
 # exits 6 BLIND saying so. The rule is "fail LOUD", not "fail STOPPED" --
 # halting a nightly on a network blip is just a different silent failure.
 #
-# EXIT CODES
-
 set -uo pipefail
 
 CLI_NAME='selfdev-release-tick.sh'

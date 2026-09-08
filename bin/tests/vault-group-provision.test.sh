@@ -48,6 +48,10 @@ OUT="$(HOME_ROOT="$T/home2" SUDO='' PATH="$T/fakebin:$PATH" \
 has "F1 a missing spool is a finding -- deposits would have nowhere to go" "$OUT" "no-spool does not exist"
 has "F2 an undrained spool is a finding -- a queue nothing drains is a backlog" "$OUT" "does not drain the spool"
 
+# SHADOW the real consigne rather than hoping the host has none. $PATH stays on
+# the end for coreutils, so a mandark that HAS the build installed answered F3
+# with the host's spool-capable copy and failed a test CI kept green.
+printf '#!/bin/sh\n# no spool marker here\n' > "$T/fakebin/consigne"; chmod +x "$T/fakebin/consigne"
 OUT="$(HOME_ROOT="$T/home2" SUDO='' PATH="$T/fakebin:$PATH" \
        "$SCRIPT" --check --dir "$T/vaultdir" 2>&1)"
 has "F3 with no spool-capable consigne on PATH, tightening is REFUSED" "$OUT" "cannot spool"

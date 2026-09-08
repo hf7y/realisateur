@@ -11,8 +11,6 @@
 #   both "nothing new"; you cannot detect an absence by looking at what was
 #   produced. This reads the clock, not the output.
 #
-# EXIT CODES
-
 set -uo pipefail
 
 CLI_NAME='release-ledger.sh'

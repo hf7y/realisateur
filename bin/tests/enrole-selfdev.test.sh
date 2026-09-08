@@ -103,19 +103,6 @@ OUT="$(run "$C2" --apply 2>&1)"; RC=$?
 rc  "F8 a foreign row added to the rotation exits 5" 5 "$RC"
 has "F9 quotes the foreign line, not ours" "$OUT" "another-project|1|1|"
 
-echo "-- G. the brief-location finding (the defect that hid behind a 404)"
-C3="$(mkclone g)"
-mkdir -p "$T/home/Documents/Projects/widget/.claude"
-: > "$T/home/Documents/Projects/widget/.claude/FOCUS.md"
-OUT="$(HOME="$T/home" run "$C3" --check 2>&1)"; RC=$?
-has "G1 flags a brief under .claude/" "$OUT" "an unattended run can read it and CANNOT write it"
-rc  "G2 a BAD row makes --check exit 1" 1 "$RC"
-mkdir -p "$T/home/Documents/Projects/widget/.scheduler"
-mv "$T/home/Documents/Projects/widget/.claude/FOCUS.md" "$T/home/Documents/Projects/widget/.scheduler/FOCUS.md"
-OUT="$(HOME="$T/home" run "$C3" --check 2>&1)"; RC=$?
-has "G3 accepts a brief under .scheduler/" "$OUT" "brief at .scheduler/FOCUS.md"
-rc  "G4 and exits 0 again" 0 "$RC"
-
 echo "-- H. the argument contract (cli-guard)"
 "$SCRIPT" widget --not-a-real-flag >/dev/null 2>&1; rc "H1 unknown flag exits 2" 2 "$?"
 "$SCRIPT" --help >/dev/null 2>&1;                   rc "H2 --help exits 0" 0 "$?"

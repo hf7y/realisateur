@@ -25,11 +25,6 @@
 # both halves; and build-verbs.yml re-invokes this with a MINIMAL argv on
 # failure. Neither covers the other -- the first misses a publisher failing
 # inside its cadence, the second a workflow that never ran.
-#
-# EXIT CODES
-#   0  published (or --dry-run rendered)
-#   1  could not publish
-#   2  usage error
 set -uo pipefail
 
 CLI_NAME='publish-release-verdict.sh'
