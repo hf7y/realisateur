@@ -89,12 +89,8 @@ fixed — flagging it"*, which contains none of the obvious trigger words, and
 Zach had to ask who had been told.
 
 **Filed is not dispatchable.** Since 2026-09-04 a project runs only while a
-milestone holds an open issue, so attach it at creation:
-
-```
-gh issue create --milestone "<title>" ...
-gh issue list -R <slug> --milestone "<title>"   # confirm it is actually there
-```
+milestone holds an open issue, so `gh issue create --milestone "<title>"` at
+creation, then `gh issue list --milestone` to confirm it is actually there.
 
 ### Layered not replaced
 
