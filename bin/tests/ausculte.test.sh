@@ -367,6 +367,14 @@ FLEET-LEDGERS 1"
 out="$(run fleet)"; rc=$?
 check "one blocked tick is a blip, not a freeze" "$rc" "0"
 
+fleet "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
+FLEET-STRANDED wtul route-deliveries-empty-labels-collapse
+FLEET-LEDGERS 1"
+out="$(PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=not-monkey bash "$TMP/bin/ausculte.sh" fleet 2>&1)"; rc=$?
+check "a clone stranded on a vanished upstream branch is DOWN (5)" "$rc" "5"
+has  "and it names the account and the branch" "$out" "wtul(route-deliveries-empty-labels-collapse)"
+has  "and it cites the issue" "$out" "#653"
+
 # THE FALSE OK THIS PROBE WAS BORN WITH: it globbed a path no account had.
 fleet "FLEET-LEDGERS 0"
 out="$(run fleet)"; rc=$?
