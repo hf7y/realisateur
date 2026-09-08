@@ -120,7 +120,7 @@ up="$(git -C "$VAULT" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/
 if [ -n "$up" ]; then
   ahead="$(git -C "$VAULT" rev-list --count "$up..HEAD" 2>/dev/null)"
   case "$ahead" in ''|*[!0-9]*) ahead=0 ;; esac
-  [ "$ahead" -gt 0 ] && say "  NOT PUSHED -- $VAULT is $ahead commit(s) ahead of $up; this does not push (PROSE-REAPING.md 5.6)"
+  [ "$ahead" -gt 0 ] && say "  NOT PUSHED -- $VAULT is $ahead commit(s) ahead of $up; this does not push (PROSE-REAPING.md 2: an unpushed deposit is not deposited)"
 fi
 
 say

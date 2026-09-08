@@ -80,17 +80,17 @@ DECISION_ROT_JQ="$(cat "$ANSWERED_JQ_FILE")"
 # shellcheck source=bin/lib/arming.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/arming.sh"
 if ! arming_load; then
-  printf '%s: BLIND -- could not read %s:%s, so no repo can be told from a parked one. Classifying none of them.\n' \
-    "$CLI_NAME" "$ARMING_ROSTER_REPO" "$ARMING_ROSTER_PATH" >&2
+  printf '%s: BLIND -- could not read %s, so no repo can be told from a parked one. Classifying none of them.\n' \
+    "$CLI_NAME" "$ARMING_ROSTER_URL" >&2
   exit 6
 fi
 
 # Warned, not counted: the exit code answers "is there rot in what I read".
 if [ "$MODE" = all ]; then
   UNSWEPT="$(sweep_unswept "$ARMING_ROSTER")"
-  [ -n "$UNSWEPT" ] && printf '%s: %s live in %s:%s and NOT in SWEEP, so this survey did not read %s: %s. Add to SWEEP_PROJECTS in lib/roster-set.sh.\n' \
+  [ -n "$UNSWEPT" ] && printf '%s: %s live in %s and NOT in SWEEP, so this survey did not read %s: %s. Add to SWEEP_PROJECTS in lib/roster-set.sh.\n' \
     "$CLI_NAME" "$(printf '%s\n' "$UNSWEPT" | grep -c .)" \
-    "$ARMING_ROSTER_REPO" "$ARMING_ROSTER_PATH" \
+    "$ARMING_ROSTER_URL" \
     "$([ "$(printf '%s\n' "$UNSWEPT" | grep -c .)" = 1 ] && echo it || echo them)" \
     "$(printf '%s\n' "$UNSWEPT" | paste -sd' ')" >&2
 fi

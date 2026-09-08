@@ -168,10 +168,9 @@ print("%s: %s (%s)" % (p["door"], key, ", ".join(
 ')"
 
 command -v gh >/dev/null 2>&1 || die "gh is not on PATH -- cannot file, and could not confirm a filing either"
-# NOTE: no senechal clone is required any more -- the note goes to GitHub.
-# The check that used to be here (`[ -d "$SENECHAL/.git" ]`) is removed
-# deliberately: keeping it would have made this script keep DEMANDING the very
-# checkout the change exists to make unnecessary, on every host, forever.
+# NO senechal clone is required: the note goes to GitHub. Do not reinstate a
+# `[ -d "$SENECHAL/.git" ]` check -- it would demand the very checkout this
+# exists to make unnecessary.
 
 # --- 1. file it through the front door, and capture the issue it created ----
 #
