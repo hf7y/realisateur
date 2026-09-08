@@ -253,6 +253,17 @@ is_written() { # is_written <abs-path> -- did this session's transcript write it
 # CANDIDATES, not verdicts: the loop below decides which were opened here, by
 # age. Matching on command text is worse -- anything that merely CONTAINS
 # "gh pr create" counts, and 3 of 3 matches were spurious on 2026-09-07.
+pr_failing_checks() { # <slug> <head-sha> -> count of failing checks, or BLIND
+  local slug="$1" sha="$2" n
+  [ -n "$sha" ] || { echo BLIND; return; }
+  # BLIND fails OPEN here on purpose: this hook decides whether an agent may
+  # stop, and a check it could not read must not become a reason to block.
+  n="$(gh api "repos/$slug/commits/$sha/check-runs" \
+        --jq '[.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out")] | length' \
+        2>/dev/null)" || { echo BLIND; return; }
+  case "$n" in ''|*[!0-9]*) echo BLIND ;; *) echo "$n" ;; esac
+}
+
 discover_prs_mentioned() {
   local transcript="$1"
   [ -n "$transcript" ] && [ -r "$transcript" ] || return 0
@@ -310,11 +321,12 @@ if command -v gh >/dev/null 2>&1; then
   while IFS= read -r url; do
     [ -n "$url" ] || continue
     slug="${url#https://github.com/}"; num="${slug##*/}"; slug="${slug%/pull/*}"
-    meta="$(gh api "repos/$slug/pulls/$num" --jq '"\(.state)\t\(.draft)\t\(.auto_merge != null)\t\(.created_at)\t\(.body // "")"' 2>/dev/null)" || {
+    meta="$(gh api "repos/$slug/pulls/$num" --jq '"\(.state)\t\(.draft)\t\(.auto_merge != null)\t\(.created_at)\t\(.head.sha)\t\(.body // "")"' 2>/dev/null)" || {
       log "could not read $url -- not blocking on a tracker this hook cannot reach"; continue; }
     st="${meta%%$'\t'*}"; rest="${meta#*$'\t'}"; dr="${rest%%$'\t'*}"
     rest="${rest#*$'\t'}"; am="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
-    created="${rest%%$'\t'*}"; body="${rest#*$'\t'}"
+    created="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
+    headsha="${rest%%$'\t'*}"; body="${rest#*$'\t'}"
     [ "$st" = open ] || continue
     # DRAFT and AUTO-MERGE first: valid stopping states whoever opened it, so
     # asking whose it is first reports already-handled work (C13-C15).
@@ -322,8 +334,22 @@ if command -v gh >/dev/null 2>&1; then
       log "note: $url is still a DRAFT -- a draft claims nothing, which is a valid way to stop."
       continue
     fi
+    # ARMED IS A PREDICTION, SO CHECK IT. "It lands when its required checks
+    # pass" was never verified, so an armed PR that is RED -- which will never
+    # land, and which only the agent can fix -- read as handled work. That is
+    # this estate's signature defect sitting inside the guard meant to catch it.
     if [ "$am" = true ]; then
-      log "note: $url has AUTO-MERGE ARMED -- it lands when its required checks pass. Valid way to stop."
+      failing="$(pr_failing_checks "$slug" "$headsha")"
+      if [ "$failing" = 0 ]; then
+        log "note: $url has AUTO-MERGE ARMED and nothing failing -- it lands when its checks pass. Valid way to stop."
+        continue
+      fi
+      if [ "$failing" = BLIND ]; then
+        log "note: $url has AUTO-MERGE ARMED; its checks could not be read, so this hook is not blocking on them."
+        continue
+      fi
+      pr_report+="  $url has AUTO-MERGE ARMED but $failing required check(s) FAILING"$'\n'
+      pr_report+="    armed is not landing: it merges when the checks pass, and they do not"$'\n'
       continue
     fi
     # A PR predating the session is another run's work in flight, and every
