@@ -69,6 +69,7 @@ selfdev-claude-token.sh|--check|--check|the shared OAuth token (--install takes 
 wire-release-channel.sh|--host --check|--host --apply|the verb-build channel: bootstrap, pin, links, root's clock
 selfdev-permissions-provision.sh|--strict|--apply|the .claude permissions block on every account
 selfdev-hooks-provision.sh|--strict|--apply|the SubagentStop hook on every account
+selfdev-libexec-probe.sh|--strict|--strict|the 15 stale ~/.local/libexec/selfdev trees and dcp-gate-site's private release tick (#887 -- read-only; there is no --apply, removal is a human's act)
 "
 ACCT_NEW_STEP="setup-selfdev-project.sh"
 ACCT_STEPS="
