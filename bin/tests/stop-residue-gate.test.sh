@@ -211,6 +211,39 @@ rc "D4 a tool_result in between is not mistaken for a new turn" 2 "$D4_RC"
 D5_RC=$(run "$T/d" "$T/d5.jsonl" >/dev/null 2>&1; echo $?)
 rc "D5 no HUMAN-STEP block at all -> exit 0" 0 "$D5_RC"
 
+echo "-- F. a turn that defers its own remaining work"
+
+asst_act() { jq -nc --arg n "$1" '{"type":"assistant","message":{"content":[{"type":"tool_use","name":$n,"input":{}}]}}'; }
+newrepo "$T/f" >/dev/null 2>&1 || mkdir -p "$T/f"
+
+{ user_turn "finish the three items"; asst_turn "Two are done. Say the word and I'\''ll continue, or I'\''ll pick them up on the next pass."; } > "$T/f1.jsonl"
+F1_OUT="$(run "$T/f" "$T/f1.jsonl")"; F1_RC=$?
+rc  "F1 deferring to a later turn -> BLOCKED (2)"        2 "$F1_RC"
+has "F1 names the deferral"                              "$F1_OUT" "puts its own remaining work off"
+has "F1 offers the two ways out"                         "$F1_OUT" "Do it NOW, or give it a URL"
+
+# THE ONE THAT MATTERS: the turn DID things. An act elsewhere used to skip the
+# whole check, which is how four deferrals shipped in turns that merged PRs.
+{ user_turn "finish it"; asst_act Write; asst_turn "Merged. I'\''ll pick them up on the next pass."; } > "$T/f2.jsonl"
+F2_RC=$(run "$T/f" "$T/f2.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F2 an act elsewhere in the turn does NOT excuse the deferral" 2 "$F2_RC"
+
+{ user_turn "finish it"; asst_turn "All three landed. Nothing is outstanding."; } > "$T/f3.jsonl"
+F3_RC=$(run "$T/f" "$T/f3.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F3 a turn that defers nothing does not block"       0 "$F3_RC"
+
+# Saying the number is not enough -- cited_already reads NON-assistant lines, so
+# the artifact must actually have been created in this transcript.
+url_result() { jq -nc --arg u "$1" '{"type":"user","message":{"content":[{"type":"tool_result","content":[]}]},"toolUseResult":{"stdout":$u}}'; }
+
+{ user_turn "finish it"; asst_turn "I will file the rest as hf7y/realisateur#1120 rather than leave them."; } > "$T/f4.jsonl"
+F4_RC=$(run "$T/f" "$T/f4.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F4 typing an issue number, having filed nothing, is still a deferral" 2 "$F4_RC"
+
+{ user_turn "finish it"; url_result "https://github.com/hf7y/realisateur/issues/1120"; asst_turn "I will pick the rest up under hf7y/realisateur#1120."; } > "$T/f5.jsonl"
+F5_RC=$(run "$T/f" "$T/f5.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F5 a deferral whose issue this transcript actually created is a citation" 0 "$F5_RC"
+
 D6DIR="$T/nojq"; mkdir -p "$D6DIR"
 for c in bash cat dirname git grep sed; do ln -s "$(command -v "$c")" "$D6DIR/$c"; done
 D6_RC=$(payload "$T/d" "$T/d1.jsonl" | PATH="$D6DIR" "$SCRIPT" >/dev/null 2>&1; echo $?)
