@@ -97,4 +97,31 @@ eq "F2 and it no longer names a git host" \
 eq "F3 the collector keys on PROJECT, not on an account or host column the service dropped" \
    "$(grep -c 'r\["account"\]\|r\["host"\]' "$HERE/bin/monkey-status-collect.py")" "0"
 
+section "G. schedule/ config is served from what the build baked in -- never fetched here, never carried"
+SCHED="$T/schedule"; mkdir -p "$SCHED"
+printf 'PROJECT=alpha\n' > "$SCHED/alpha.conf"
+printf '# fragment\nsome prose\n' > "$SCHED/_gen2.md"
+printf 'ROSTER-CONTENTS-MUST-NEVER-SERVE\n' > "$SCHED/ROSTER"
+printf 'FREEZE-CONTENTS-MUST-NEVER-SERVE\n' > "$SCHED/FREEZE"
+
+env -i PATH=/usr/bin:/bin ROSTER_DB="$T/sched.db" ROSTER_PORT="$((PORT + 3))" \
+    ROSTER_SCHEDULE_DIR="$SCHED" python3 "$SRV" > "$T/sched.log" 2>&1 &
+SCHEDPID=$!
+SURL="http://127.0.0.1:$((PORT + 3))"
+for _ in $(seq 1 40); do curl -fsS "$SURL/healthz" >/dev/null 2>&1 && break; sleep 0.25; done
+
+eq "G1 a served .conf returns exactly what the build baked in" \
+   "$(curl -fsS "$SURL/schedule/alpha.conf")" "PROJECT=alpha"
+eq "G2 an .md fragment is served the same way" \
+   "$(curl -fsS "$SURL/schedule/_gen2.md")" "$(printf '# fragment\nsome prose')"
+eq "G3 a missing file 404s" \
+   "$(curl -s -o /dev/null -w '%{http_code}' "$SURL/schedule/nosuch.conf")" "404"
+eq "G4 ROSTER is never served, even sitting right there in the baked dir" \
+   "$(curl -s -o /dev/null -w '%{http_code}' "$SURL/schedule/ROSTER")" "404"
+eq "G5 FREEZE is never served either -- both stay live gh api reads, forever" \
+   "$(curl -s -o /dev/null -w '%{http_code}' "$SURL/schedule/FREEZE")" "404"
+eq "G6 a path-traversal attempt is rejected, not answered from outside the dir" \
+   "$(curl -s --path-as-is -o /dev/null -w '%{http_code}' "$SURL/schedule/../etc/passwd")" "400"
+kill "$SCHEDPID" 2>/dev/null
+
 summary
