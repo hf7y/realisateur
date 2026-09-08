@@ -13,12 +13,10 @@ on:
   pull_request:
   push:
     branches: [main]
-  # THE HATCH (#965): the carry below had no reachable trigger on 2026-09-03 and
-  # took a human at a terminal. Why, in the carry job.
+  # THE HATCH (#965): the carry below needs one. Why, in the carry job.
   workflow_dispatch:
 
-# One run per branch, here and in every workflow: 119 of 200 sampled runs
-# were superseded and billed anyway (#401).
+# One run per branch, here and in every workflow: superseded runs bill (#401).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

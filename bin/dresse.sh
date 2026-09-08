@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # dresse.sh -- stand a self-dev host, or one account on it, up (#435).
-# KIND: verb
+# NOT A VERB until it ships (#1041): it claimed the channel and never shipped.
 #
 # TRAP: the plan is checked against propagation-set.sh plus the indirect set
 #   read from the callers -- a typed list goes stale in silence.

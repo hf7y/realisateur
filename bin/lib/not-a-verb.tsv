@@ -6,15 +6,12 @@
 #
 # THE RULE IT EXEMPTS FROM, SINCE #891
 #   a project declares a verb  <=>  its `bashified` branch carries an
-#   executable `bin/<name>`. A `man/<name>.1` beside it is carried when
-#   present and is never a precondition (lib/verb-set.sh).
+#   executable `bin/<name>`. A `man/<name>.1` beside it is carried when present
+#   and is never a precondition (lib/verb-set.sh) -- though cut-verb-build.sh
+#   still REFUSES a page with no executable beside it. An executable with no
+#   page is a verb, and this file is the ONLY way to keep one off PATH.
 #
-# cut-verb-build.sh still REFUSES a man page with no executable beside it (a
-# script that moved or was deleted, its doc left behind). An executable with
-# no page is not a defect; it is a verb, and this file is the ONLY way to keep
-# one off PATH -- not a way to silence a refusal that no longer fires.
-#
-# THE TEST, Zach 2026-08-11, when this file blocked every nightly build:
+# THE TEST, Zach:
 #
 #     "would another agent or Zach ever call one of those?"
 #

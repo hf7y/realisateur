@@ -164,6 +164,7 @@ vault-group-provision.sh
 # --- PAYLOAD: reaches user paths as a verb, inside a dated build ------------
 PROP_PAYLOAD_SCRIPTS="
 defere.sh
+tarife.sh
 etiquette.sh
 check-project-busy.sh
 notify-senechal.sh
