@@ -72,14 +72,19 @@ human_step_violations() { # <this-turn's assistant text> -> one line per HUMAN-S
 
 completion_claims() { # <this turn's assistant text> -> one tagged line per act the turn CLAIMS; P=done, F=promised (#752, #681 2.1)
   awk '
-    { s = tolower($0); gsub(/\047/, "", s); sub(/^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+/, "", s)
+    /^[[:space:]]*```/ { fence = !fence; next }                       # a fenced block is quoted material, not a claim
+    fence { next }
+    /^[[:space:]]*>/ { next }                                        # so is a blockquote
+    { raw = $0; line = $0
+      gsub(/\*?"[^"]*"\*?/, " ", line)                               # a quoted span is words being DISCUSSED -- including my own, quoted back
+      s = tolower(line); gsub(/\047/, "", s); sub(/^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+/, "", s)
       if (s ~ /(^|[.!?] )i( ?ve| have)? (just |now )?(filed|committed|pushed|merged|landed|fixed|patched|deleted|removed)([ ,.]|$)/ ||
           s ~ /(^|[.!?] )i( ?ve| have)? (just |now )?(opened|created|raised)[^.!?]*(issue|pull request|pr[ .,]|#[0-9])/ ||
           s ~ /(^|[.!?] )(filed|landed) (it |this )?as #[0-9]/)
-        print "P" substr($0, 1, 140)
-      else if (s ~ /(^|[.!?] )i( ?ll| will) (also |then |next |now )?(file|open|commit|push|create|fix|land|delete|remove|continue|resume|carry on|pick (it|them|this|those) up|follow up|get to (it|them)|do (it|them|that))([ ,.]|$)/ ||
-               s ~ /(next (pass|session|turn|time)|another pass|a future (pass|session|turn))/)
-        print "F" substr($0, 1, 140) }
+        print "P" substr(raw, 1, 140)
+      else if (s ~ /(^|[^a-z])i( ?ll| will) (also |then |next |now )?(file|open|commit|push|create|fix|land|delete|remove|continue|resume|carry on|pick (it|them|this|those) up|follow up|get to (it|them)|do (it|them|that))([ ,.]|$)/ ||
+               s ~ /(^|[^a-z])i( ?ll| will) [^.!?]*(next (pass|session|turn|time)|another pass|a future (pass|session|turn))/)
+        print "F" substr(raw, 1, 140) }
   '
 }
 
