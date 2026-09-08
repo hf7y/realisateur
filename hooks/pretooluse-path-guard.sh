@@ -83,7 +83,7 @@ case "$path" in
     rest="${path#"$proj_root"/}"
     other="${rest%%/*}"
     if [ -n "$other" ] && [ "$other" != "$me" ]; then
-      block "that is $other's project tree, not $me's -- use its front door instead (scheduler -i $other, or notify-senechal <door> <field>=<value>), never a direct write"
+      block "that is $other's project tree, not $me's -- use its front door instead (notify-senechal <door> <field>=<value>, or an issue in $other's repo), never a direct write"
     fi
     ;;
 esac

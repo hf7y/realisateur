@@ -77,7 +77,8 @@ completion_claims() { # <this turn's assistant text> -> one tagged line per act 
           s ~ /(^|[.!?] )i( ?ve| have)? (just |now )?(opened|created|raised)[^.!?]*(issue|pull request|pr[ .,]|#[0-9])/ ||
           s ~ /(^|[.!?] )(filed|landed) (it |this )?as #[0-9]/)
         print "P" substr($0, 1, 140)
-      else if (s ~ /(^|[.!?] )i( ?ll| will) (also |then |next |now )?(file|open|commit|push|create|fix|land|delete|remove)([ ,.]|$)/)
+      else if (s ~ /(^|[.!?] )i( ?ll| will) (also |then |next |now )?(file|open|commit|push|create|fix|land|delete|remove|continue|resume|carry on|pick (it|them|this|those) up|follow up|get to (it|them)|do (it|them|that))([ ,.]|$)/ ||
+               s ~ /(next (pass|session|turn|time)|another pass|a future (pass|session|turn))/)
         print "F" substr($0, 1, 140) }
   '
 }
@@ -145,9 +146,16 @@ if [ -n "$transcript" ] && [ -r "$transcript" ] && command -v jq >/dev/null 2>&1
   ' "$transcript" 2>/dev/null)" || turn_acts=""
   claim_report=""
   defect_report=""
+  defer_report=""
+  while IFS= read -r claim; do
+    case "$claim" in F*) cited_already "$claim" "$transcript" || defer_report+="  ${claim#?}"$'\n' ;; esac
+  done < <(completion_claims <<<"$turn_text")
   if ! grep -qE "$ACT_RE" <<<"$turn_acts"; then
     while IFS= read -r claim; do
-      case "$claim" in P*) cited_already "$claim" "$transcript" && continue ;; esac  # a done-claim naming an artifact this transcript has already seen is a citation, not a fresh claim
+      case "$claim" in
+        F*) continue ;;                                                             # a deferral has its own block, with its own remedy
+        P*) cited_already "$claim" "$transcript" && continue ;;                     # a done-claim naming an artifact this transcript has already seen is a citation, not a fresh claim
+      esac
       claim_report+="  ${claim#?}"$'\n'
     done < <(completion_claims <<<"$turn_text")
     while IFS= read -r found; do
@@ -165,6 +173,19 @@ if [ -n "$transcript" ] && [ -r "$transcript" ] && command -v jq >/dev/null 2>&1
       echo "NOW -- Edit, git commit, gh issue create, gh pr create -- or cite the artifact"
       echo "that already carries it (#N, or a URL this transcript has seen). A finding"
       echo "stated in a reply and left there dies with the transcript."
+    } >&2
+    exit 2
+  fi
+  if [ -n "$defer_report" ]; then
+    {
+      echo "BLOCKED: this turn puts its own remaining work off to a later turn."
+      echo
+      printf '%s' "$defer_report"
+      echo
+      echo "A later turn may not come, and a promise made in a reply dies with the"
+      echo "transcript. Do it NOW, or give it a URL -- an issue in the owning repo,"
+      echo "with a milestone so something dispatches to it. An act elsewhere in this"
+      echo "turn does not pay for the part you deferred."
     } >&2
     exit 2
   fi
