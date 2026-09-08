@@ -3,43 +3,31 @@ scope: user
 description: Session-closing rite -- reconcile every branch against the remote, deal with residue rather than narrating it, file findings as issues/PRs (never repo prose), surface what is blocked on Zach. Does not build.
 ---
 
-<!-- Source: hf7y/realisateur:.claude/commands/cloture.md -- installed at USER
-     level, so "this repo" below means realisateur, not your cwd. Edit it
-     there, never the installed copy.
+<!-- Source: hf7y/realisateur:.claude/commands/cloture.md, installed at USER
+     level: "this repo" below means realisateur, not your cwd. Edit it there.
+     Self-contained on purpose -- git and gh, nothing else. -->
 
-     SELF-CONTAINED ON PURPOSE. Everything here runs from a shell with git and
-     gh and nothing else installed. An earlier version delegated the checks to
-     a binary that was never put on PATH, which turned the whole routine into
-     a pointer at a command not found. -->
+`/cloture` closes a session the way `/ideate` opens one. Not "is the content
+safe" but "can the next reader find it without asking" — and repo prose is
+never the answer, because issues are searchable and do not make this repo grow.
 
-`/cloture` closes a session the way `/ideate` opens one. The question is not
-"is the content safe" but "can the next reader find it without asking" — and
-repo prose is never the answer, because issues and PR bodies are already
-searchable and do not make this repo grow.
-
-**Report, route, surface — do NOT build.** Unfinished work goes to an issue in
-the owning repo or a PR, never into this conversation only. The one exception
-is finishing what this session already did: committing and pushing is the
-session landing, not new work.
-
-**Run it again after you act.** Clearing one row reveals the next. A close ends
-when a pass finds nothing, not when you have explained why the findings are
-acceptable.
+**Report, route, surface — do NOT build**, except to finish what this session
+already did: committing and pushing is it landing, not new work. **Run it again
+after you act** — clearing one row reveals the next, and a close ends when a
+pass finds nothing, not when you have explained why the findings are fine.
 
 ## 1. Branch reconciliation
 
-**Prune first.** A worktree whose directory is gone still pins its branch, and
-git reports it as *used by worktree* — which reads as somebody else's live
-work and is not:
+**Prune first** -- a worktree whose directory is gone still pins its branch, and
+git calls that *used by worktree*, which reads as somebody else's live work:
 
 ```
 git worktree list          # look for `prunable`
 git worktree prune -v      # removes ONLY records whose directory is missing
 ```
 
-**Then ask the right question.** `git cherry` compares patch-ids, so
-squash-merges and reworks make it report unique commits for branches whose
-content already landed. It finds candidates; it does not decide.
+**Then ask the right question.** `git cherry` compares patch-ids, so a
+squash-merge reports as unlanded. It finds candidates; it does not decide.
 
 ```
 git diff --stat origin/main..<branch>    # empty, or overwhelmingly deletions => BEHIND
