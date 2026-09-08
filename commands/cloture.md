@@ -1,6 +1,6 @@
 ---
 scope: user
-description: Session-closing rite -- reconcile every branch against the remote, deal with residue rather than narrating it, file findings as issues/PRs (never repo prose), surface what is blocked on Zach. Does not build.
+description: Session-closing rite -- reconcile every branch against the remote, deal with residue rather than narrating it, FIX the rows one edit away and file only what it cannot reach, surface what is blocked on Zach.
 ---
 
 <!-- Source: hf7y/realisateur:.claude/commands/cloture.md, installed at USER
@@ -11,10 +11,10 @@ description: Session-closing rite -- reconcile every branch against the remote, 
 safe" but "can the next reader find it without asking" — and repo prose is
 never the answer, because issues are searchable and do not make this repo grow.
 
-**Report, route, surface — do NOT build**, except to finish what this session
-already did: committing and pushing is it landing, not new work. **Run it again
-after you act** — clearing one row reveals the next, and a close ends when a
-pass finds nothing, not when you have explained why the findings are fine.
+**FIX the rows you can reach; file only what you cannot** (Zach, 2026-09-07). A
+row one edit away — an unwired hook, a matcher that does not deliver — closes
+here, with a PR. **Run it again after you act**: clearing one row reveals the
+next, and a close ends when a pass finds nothing, not when you explain why not.
 
 ## 1. Branch reconciliation
 
