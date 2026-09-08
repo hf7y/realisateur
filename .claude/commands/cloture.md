@@ -13,8 +13,8 @@ never the answer, because issues are searchable and do not make this repo grow.
 
 **FIX the rows you can reach; file only what you cannot** (Zach, 2026-09-07). A
 row one edit away — an unwired hook, a matcher that does not deliver — closes
-here, with a PR. **Run it again after you act**: clearing one row reveals the
-next, and a close ends when a pass finds nothing, not when you explain why not.
+here, with a PR, and **run it again**: clearing one reveals the next, and a
+close ends when a pass finds nothing, not when you explain why not.
 
 ## 1. Branch reconciliation
 
@@ -43,14 +43,12 @@ asserted**:
 - **Has an open PR** — draft if unfinished, ready if not. The remote is then
   the source of truth for what is outstanding.
 - **Genuinely unlanded** — push and open a PR, or say why it stays, **with a
-  URL**. Re-read an existing body: `gh` refuses a bad one at the write, and
-  nothing re-reads it after.
+  URL**. Re-read an existing body: `gh` grades it at the write, nothing after.
 - **Uncommitted** — commit (message via file) or discard deliberately. Paths
   predating this session are neither, and are not an exception either: they get
   an issue in the OWNING repo naming the files, or they are not dealt with.
-- **Untracked, not ignored** — commit, ignore, or move it out. It will sit in
-  `git status` forever belonging to nobody, and reporting it is not dealing
-  with it.
+- **Untracked, not ignored** — commit, ignore, or move it out; it sits in
+  `git status` forever belonging to nobody, and reporting is not dealing.
 
 **An unresolved branch is not an exception you may narrate.** It needs a URL
 like anything else; "documented exception" written only into the reply is how
@@ -59,22 +57,19 @@ a checkout reaches thirty branches with no record any of it happened.
 ## 2. Name the philosophy delta, or say "none"
 
 Did this session change what the ecosystem *believes* — a rule in
-`PROSE-REAPING.md` or `CLAUDE.md`? Those two are the doctrine still in this
-repo; the rest were consigned to the vault in #366.
-
-If yes: name the delta in one sentence and confirm the file is in a commit or
-PR from step 1, not merely described in chat. If no, **say "philosophy delta:
-none" explicitly** — silence is indistinguishable from forgetting to look.
+`PROSE-REAPING.md` or `CLAUDE.md`, the doctrine still here after #366 consigned
+the rest? If yes, name the delta in one sentence and confirm the file is in a
+commit or PR from step 1, not merely described in chat. If no, **say "philosophy
+delta: none" explicitly** — silence is the same as forgetting to look.
 
 ## 3. Three things that leave a session, and where each goes
 
 ### Raised but not filed
 
 Every FLAG, gap or defect this session named and did not fix needs an issue or
-PR URL. The rule is **structural, not lexical** — a keyword sweep will not
-catch it. realisateur#165: a close named a real defect with *"Not something I
-fixed — flagging it"*, which contains none of the obvious trigger words, and
-Zach had to ask who had been told.
+PR URL, and the rule is **structural, not lexical**: realisateur#165 named a
+real defect as *"Not something I fixed — flagging it"*, which holds none of the
+words a keyword sweep looks for, and Zach had to ask who had been told.
 
 **Filed is not dispatchable.** Since 2026-09-04 a project runs only while a
 milestone holds an open issue, so every issue this session files OR TOUCHES gets
@@ -83,24 +78,25 @@ one -- and "no milestone fits" is a finding to file, never a line in the reply.
 ### Layered not replaced
 
 Did this session add a surface while the ones it duplicates stayed? Name what
-each new file replaces, or say why the thing it duplicates remains. A check
-that already exists is owned by whatever owns it — a second implementation is
-the defect, not the coverage.
+each new file replaces, or say why the duplicate remains: a check that already
+exists is owned by whatever owns it, and a second implementation is the defect,
+not the coverage.
 
 ### Built but not wired
 
-A thing that exists and nothing reaches. Nothing should need a checkout to run
-on mandark, and the verb build should match the home:
+A thing that exists and nothing reaches. Ask it of **what THIS session stood
+up, on the host that runs it** — a service with no consumer, a merged read no
+build carries, an unarmed row. Name each and the consumer reaching it: a check
+that cannot see its target reports clean. On mandark the target is
 
 ```
 installe list | grep Documents/Projects   # a PATH name resolving into a CLONE
 ```
 
-Compare the build's `commands/` and `hooks/` against `~/.claude/`, and check
-`settings.json` names each hook at an event. **An installed hook wired to
-nothing enforces nothing** — the most expensive shape here, because a hook is
-the only surface that makes a rule arrive as a consequence rather than as a
-paragraph.
+with the build's `commands/` and `hooks/` matching `~/.claude/`, and
+`settings.json` naming each hook at an event. **A hook wired to nothing
+enforces nothing** — the only surface that makes a rule arrive as a
+consequence, not a paragraph.
 
 ### Where each goes
 
@@ -123,11 +119,14 @@ An issue whose body opens `DECISION:` and is still open is waiting on a person;
 `NO-DECISION:` is not. **Residue this session CAUSED is never one of these** --
 repair it or file it; handing it back as "yours to reconcile" is the failure.
 
+**"Blocked on Zach: nothing" under an unmet goal is an alarm, not a pass** --
+the only thing that stopped is then the agent. The stopping condition is the
+end state the ASK named, never a green check under it: while an unblocked next
+command exists, run it. Reporting is not landing.
+
 ## 5. Close
 
 Re-read it before you write it: **every clause naming a problem is immediately
-followed by an issue or PR URL**, or it is not finished.
-
-**Links, not descriptions** — which branches got which PR, which issues were
-filed, what was pushed and where, what was reaped and its sha. Zach should
-never have to ask whether something landed.
+followed by an issue or PR URL**, and it is **links, not descriptions** — which
+branch got which PR, which issues were filed, what was pushed where, what was
+reaped and its sha. Zach should never have to ask whether something landed.
