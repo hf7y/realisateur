@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # unarmed.sh -- has the set of built-but-unarmed mechanisms GROWN? (#754)
+# KIND: verb
 # RUNNER: bin/lib/cron-invoked.tsv -- weekly, root@monkey; DEBT, not liveness
 # GUARD-TEST: bin/tests/unarmed.test.sh -- offline behind UNARMED_SSH
 # GATE: none -- it reads a remote host's crontabs, never this tree
