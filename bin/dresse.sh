@@ -199,6 +199,6 @@ if [ "$MODE" = --check ]; then
   echo "== nothing done (--check): $pass_n step(s) already satisfied, $gap_n with work to do, $fail_n blind. Next: $NEXT =="
 else
   echo "== $pass_n step(s) ran, $fail_n refused =="
-  [ "$fail_n" -eq 0 ] && echo "  DO      notify-senechal 'realisateur: $CLI_NAME --apply on $TARGET_HOST changed machine-wide config (App key, release channel, per-account .claude blocks). Owned by realisateur.'"
+  [ "$pass_n" -gt 0 ] && echo "  DO      file what changed through senechal's typed door: notify-senechal <door> <field>=<value> ... (prose exits 2; notify-senechal --doors lists them)"
 fi
 [ "$fail_n" -eq 0 ]
