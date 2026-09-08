@@ -3,11 +3,9 @@
 # alert when it changes state.
 #
 # TRAPS (the rest of this header is in the vault):
-# WHY THIS EXISTS (#274). publish-monkey-status.sh refuses to publish unless
-# its ssh collection succeeds, so the page cannot report the one thing worth
-# reporting: on 2026-08-14 monkey went unreachable for hours and the page
-# showed the healthy world from before, because publishing REQUIRED the thing
-# that broke. The monitoring inherited the failure it was meant to report.
+# WHY THIS EXISTS (#274). PUBLISHING MUST NOT REQUIRE THE THING THAT BROKE.
+# The predecessor published only on a successful ssh collection, so an
+# unreachable monkey rendered as the healthy world from before it went away.
 # THE COLLECTOR IS THE SOURCE OF THE ACCOUNT ROWS. THIS SCRIPT IS NOT.
 # monkey-status-collect.py runs as root ON monkey and reads each account's real
 # crontab and ledger; a missing ledger on an ARMED account is a finding, not a
@@ -146,8 +144,7 @@ mssh_n() { timeout "$SSH_DEADLINE" ssh -n -i "$SSH_KEY" -p "$MONKEY_PORT" -o Bat
 GUEST_JSON=""; GUEST_ERR=""; ROOTMOUNT=""; UPTIME=""; LONG_READOUT=""
 if [ "$SSHD" = "answering" ]; then
   # Fed over STDIN rather than installed on monkey, so the version that runs is
-  # the version in this checkout -- no second copy to drift. Borrowed wholesale
-  # from publish-monkey-status.sh, which got this right.
+  # the version in this checkout -- no second copy to drift.
   GUEST_JSON="$(mssh 'sudo -n python3 -' < "$COLLECTOR")"; guest_rc=$?
   if ! printf '%s' "$GUEST_JSON" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if isinstance(d.get("accounts"),list) else 1)' 2>/dev/null; then
     # 124 is `timeout`'s. A stalled ssh and a collector that answered badly are
