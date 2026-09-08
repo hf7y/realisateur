@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 # lib/arming.sh -- DOES ANYTHING DISPATCH TO THIS REPO? Read-only, one call.
-# Authority: the roster service on dexter. A PERSON POSTS AND THE VERB WRITES
-# -- `dose <project> --arm|--park` is the only supported writer and refuses a
-# uid 3000-3099 self-dev caller. Said "only a human edits" of the file this
-# replaced, which reads cold as "a person types the change": false, and it
-# misled an agent into reporting it as fact twice (hf7y/scheduler#521).
-# The read-only rule HERE is enforced by decision-rot.test.sh I14, not prose.
+# Authority: the roster service on dexter. `dose <project> --arm|--park` is the
+# only supported writer and refuses a uid 3000-3099 self-dev caller -- not "a
+# human edits it", which misled an agent twice (hf7y/scheduler#521).
+# Read-only HERE is enforced by decision-rot.test.sh I14, not prose.
 # NOT lib/roster-set.sh, which is the SWEEP set. BLIND classifies NOTHING.
-# It read schedule/ROSTER out of a repo until hf7y/scheduler#429.
 
 [ -n "${ARMING_LIB:-}" ] && return 0
 ARMING_LIB=1

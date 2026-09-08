@@ -5,18 +5,10 @@ STATE AND NOTHING ELSE: project -> live|parked. Writes are one call, need no
 CI, and return only once committed. Stdlib only: this is the process that must
 come back up when everything else is broken.
 
-NO DECLARATION HALF (Zach, 2026-09-05: "State is enough"). Measured over all
-23 rows the day it was cut, the three columns dropped were a copy of the
-primary key (account == project, 23/23), a constant (rate == 20m, 23/23), and
-`host` -- a fact each machine answers about ITSELF, since a uid 3000-3099
-account exists locally or does not. Read from the machine it cannot go stale;
-a file about the machine can. The ingest loop and the poll of a git host went
-with them.
-
-A row is CREATED BY ITS FIRST WRITE. The "declare it first" 404 was never the
-guard it looked like: `dose` already refuses to arm a project with no unix
-account on the host it runs on, and that refusal reads the machine. A typo
-here creates a row that nothing ever converges.
+A row is CREATED BY ITS FIRST WRITE -- there is no "declare it first" 404.
+`dose` already refuses to arm a project with no unix account on the host it
+runs on, and that refusal reads the machine. A typo here makes a row nothing
+ever converges.
 """
 import hmac
 import json
