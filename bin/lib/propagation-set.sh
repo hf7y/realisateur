@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # propagation-set.sh -- THE DEV/PROD CONTRACT, in one place.
-#
 # THE DECISION (#134, Zach-directed). Self-dev accounts do NOT pull fresh
 # clones of realisateur. `main` IS NOT A DEPLOY REF; everything they use
 # reaches them through the nightly verb build. The argument is what it buys the
@@ -154,6 +153,7 @@ selfdev-app-key.sh
 selfdev-claude-token.sh
 selfdev-permissions-provision.sh
 selfdev-hooks-provision.sh
+selfdev-libexec-probe.sh
 unland-foreign-clone.sh
 install-verbs.sh
 stamp-verb-build.sh
