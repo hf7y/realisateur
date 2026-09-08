@@ -1,0 +1,68 @@
+.TH TARIFE 1 "2026-09-08" "realisateur" "bashified verb"
+.SH NAME
+tarife \- price this tree against the estate's guards, before you push
+.SH SYNOPSIS
+.B tarife
+.br
+.B tarife
+--gate
+.br
+.B tarife
+--refresh
+.br
+.B tarife
+--quiet
+.SH DESCRIPTION
+Runs the guards that grade a pull request, against the working tree, so their
+verdict arrives in the terminal instead of five minutes later in CI.
+.PP
+The prose ratchet and the state-prose lint are
+.B hf7y/etalon's
+and are never copied here. They are fetched by reference and executed from a
+cache under
+.IR $XDG_CACHE_HOME/etalon-guards ,
+which is what CI does when it checks etalon out into
+.IR .etalon :
+a different runner, not a vendored copy.
+.SH OPTIONS
+.TP
+.B --gate
+Only the guards fast enough to run at every turn end: the prose ratchet and the
+state-prose lint. Skips shellcheck, which is 88s on realisateur's tree. An
+unchanged tree exits immediately \- the result is fingerprinted on HEAD plus the
+working diff, so re-running costs nothing.
+.TP
+.B --refresh
+Re-fetch the guards even if the cache is warm. The cache otherwise refreshes on
+a 12-hour TTL.
+.TP
+.B --quiet
+Print findings only.
+.SH EXIT STATUS
+.TP
+.B 0
+Every guard passed.
+.TP
+.B 1
+A guard found something. Its own output says what, and what to do about it.
+.TP
+.B 6
+BLIND \- a guard could not be fetched and no cached copy exists. Never folded
+into 0.
+.SH ENVIRONMENT
+.TP
+.B TARIFE_CACHE
+Where the fetched guards live. Default
+.IR ${XDG_CACHE_HOME:-$HOME/.cache}/etalon-guards .
+.TP
+.B TARIFE_TTL_MIN
+Minutes before a cached guard is re-fetched. Default 720.
+.SH NOTES
+A stale cache still answers. The guards change rarely, and a ratchet a day out
+of date still tells you that you added prose; refusing to run offline would make
+this useless exactly where it is most needed.
+.SH SEE ALSO
+.BR reap (1)
+is what the ratchet tells you to run, and it asks for twice the deficit \- the
+tree is full of prose that outlived its mechanism, and paying the deficit
+exactly leaves the tree where it was.
