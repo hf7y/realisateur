@@ -29,6 +29,11 @@ earns its place only if the trap is still live. Prefer a **runnable witness**
 editing this file cause *mechanical* damage without this paragraph, and can the
 claim be re-derived from the code **today**?
 
+**A document may name a VERB, never a script path, flag, or guard's job** (Zach,
+2026-08-23; #579). A verb's `--help` is its own source; the others go stale the
+moment the mechanism moves, and 24 had. **Deleting the sentence is the fix** —
+do not repoint it, and do not build a detector, itself a mechanism to describe.
+
 **The vault** — narrative, post-mortems, superseded decisions. The private
 `hf7y/ecosystem1-vault` remote **is** the vault (#212). Commit **and push**; an
 unpushed deposit is not deposited. `man consigne` owns the resolution order.

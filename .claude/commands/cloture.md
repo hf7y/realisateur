@@ -1,140 +1,133 @@
 ---
 scope: user
-description: Session-closing rite -- reconcile every branch against the remote, run the closeout lint, file residue as issues/PRs (never repo prose), surface decisions. Does not build.
+description: Session-closing rite -- reconcile every branch against the remote, deal with residue rather than narrating it, file findings as issues/PRs (never repo prose), surface what is blocked on Zach. Does not build.
 ---
 
-<!-- Source: hf7y/realisateur:.claude/commands/cloture.md -- installed verbatim at
-     USER level, so "this repo" below means realisateur, not your cwd. Edit it
-     there, never the installed copy. -->
+<!-- Source: hf7y/realisateur:.claude/commands/cloture.md, installed at USER
+     level: "this repo" below means realisateur, not your cwd. Edit it there.
+     Self-contained on purpose -- git and gh, nothing else. -->
 
-`/cloture` is the closing counterpart to `/ideate`'s opening posture: a rhythm
-to run after a big job, so a session ends "clear to clear" instead of trailing
-off. A session can end with local branches that reconcile cleanly on lint yet
-have no PR at all -- the lint checks "is the content safe", not "can the next
-reader find it without asking". Repo prose is never the residue channel:
-GitHub issues and PR bodies already are one, are searchable, and do not need
-this repo to keep growing to hold them.
+`/cloture` closes a session the way `/ideate` opens one. Not "is the content
+safe" but "can the next reader find it without asking" — and repo prose is
+never the answer, because issues are searchable and do not make this repo grow.
 
-**Posture: report, route, and surface — do NOT build.** If closing
-reveals unfinished work, file it where something dispatches from (a
-GitHub issue in the owning repo) or land it as a PR/draft PR — never
-start building it at the end of a session, and never park it only in
-this conversation. The one exception is finishing what the lint flags as
-*undurable*: committing and pushing work this session already did isn't
-new work, it's the session not having landed yet.
+**Report, route, surface — do NOT build**, except to finish what this session
+already did: committing and pushing is it landing, not new work. **Run it again
+after you act** — clearing one row reveals the next, and a close ends when a
+pass finds nothing, not when you have explained why the findings are fine.
 
-## 1. Branch reconciliation — no dangling branches for later discovery
+## 1. Branch reconciliation
 
-**Every local branch this session touched or leaves behind must resolve
-to one of three states, checked directly against the remote, not
-asserted:**
-
-- **Reflects `main`** — merged (`git cherry` against `origin/main` shows
-  nothing new) or its tip is reachable from a remote ref already. Nothing
-  to do.
-- **Has an open PR** — pushed, and `gh pr view` finds it. Draft is fine
-  if the work or the decision isn't finished; ready (with or without
-  `DECISION:`, per the grammar in `bin/lib/body-grammar.sh`) if it is. This is what
-  makes the remote the source of truth for "what's outstanding" instead
-  of this checkout.
-- **Documented as an intentional exception** — a repo whose registration
-  is itself missing/stale (no check for this exists now; #511 deleted
-  `closeout-lint`'s `[missing-repo]` row — say so by hand), a branch
-  deliberately parked mid-experiment, etc. Say so in the session close
-  (step 4) with the branch name and why — not as a new repo file, just
-  in what you tell Zach.
-
-`closeout-lint` used to clear all of this in one run; #511 deleted it for
-reporting clean without looking. Check each branch by hand instead, against
-`origin` not this checkout, and handle anything left over the same way:
+**Prune first** -- a worktree whose directory is gone still pins its branch, and
+git calls that *used by worktree*, which reads as somebody else's live work:
 
 ```
-git status                                          # uncommitted, and is it this run's or pre-existing
-git cherry origin/main                               # anything not yet on main
-git merge-base --is-ancestor <branch> <remote-ref>    # tip already reachable via another remote ref
-gh pr list --head <branch>                            # an open PR already covers it
+git worktree list          # look for `prunable`
+git worktree prune -v      # removes ONLY records whose directory is missing
 ```
 
-- **Uncommitted changes `git status` shows** -> commit (via a message file) or
-  discard deliberately. Paths that predate this session are NOT that: leave
-  them alone, since committing or reverting them adopts or destroys a
+**Then ask the right question.** `git cherry` compares patch-ids, so a
+squash-merge reports as unlanded. It finds candidates; it does not decide.
+
+```
+git diff --stat origin/main..<branch>    # empty, or overwhelmingly deletions => BEHIND
+gh pr list --head <branch> --state open  # an open PR already covers it
+git status --porcelain -uall             # uncommitted AND untracked
+```
+
+Every branch and every path resolves, **checked against the remote, not
+asserted**:
+
+- **Reflects `main`** — merging changes nothing. Record branch and sha, reap
+  it; no judgement is required and none should be performed.
+- **Has an open PR** — draft if unfinished, ready if not. The remote is then
+  the source of truth for what is outstanding.
+- **Genuinely unlanded** — push and open a PR, or say why it stays, **with a
+  URL**. Re-read an existing body: `gh` refuses a bad one at the write, and
+  nothing re-reads it after.
+- **Uncommitted** — commit (message via file) or discard deliberately. Paths
+  predating this session are neither: touching them adopts or destroys a
   concurrent run's work.
-- **Committed but unpushed, no PR** -> push and open one. A one-line draft PR
-  beats a branch only this host knows exists.
-- **Pushed with an open PR** -> re-read the body against the grammar in
-  `bin/lib/body-grammar.sh` (what `gh-sign` refuses at write time): does it
-  still say what is true now (draft vs ready, `DECISION:` vs none)? `gh-sign`
-  refuses a bad body AT THE WRITE; a body edited afterward is not re-read by
-  anything, so read it yourself, for anything you touched.
+- **Untracked, not ignored** — commit, ignore, or move it out. It will sit in
+  `git status` forever belonging to nobody, and reporting it is not dealing
+  with it.
+
+**An unresolved branch is not an exception you may narrate.** It needs a URL
+like anything else; "documented exception" written only into the reply is how
+a checkout reaches thirty branches with no record any of it happened.
 
 ## 2. Name the philosophy delta, or say "none"
 
-Did this session change what the ecosystem *believes* -- a rule in
-`PROSE-REAPING.md` or `CLAUDE.md`?
-Those two are the doctrine still in this repo; the rest were consigned to the
-vault in #366 and cannot be edited as part of a commit here.
+Did this session change what the ecosystem *believes* — a rule in
+`PROSE-REAPING.md` or `CLAUDE.md`? Those two are the doctrine still in this
+repo; the rest were consigned to the vault in #366.
 
-If yes: name the delta in one sentence and confirm the file was actually
-edited and is in a commit or PR from step 1, not merely described in chat. If
-no, **say "philosophy delta: none" explicitly** -- silence here is
-indistinguishable from forgetting to look.
+If yes: name the delta in one sentence and confirm the file is in a commit or
+PR from step 1, not merely described in chat. If no, **say "philosophy delta:
+none" explicitly** — silence is indistinguishable from forgetting to look.
 
-## 3. Every cross-project write, and every piece of residue, is a GitHub issue or a PR — not repo prose
+## 3. Three things that leave a session, and where each goes
 
-**Nothing from this session gets appended to `.scheduler/FOCUS.md`,
-`BLOCKERS.md`, or `QUESTIONS.md`.** Those surfaces were RETIRED by
-hf7y/scheduler#66 on 2026-08-07 and do not exist in this repo. Prose lives
-in issues and PRs — searchable, closeable, and not something every
-project's clone has to carry forever. If you find one of those files
-anywhere, it is a finding (hf7y/realisateur#230), not a destination.
+### Raised but not filed
 
-For each of the following, file a GitHub issue in the **owning** repo
-(the repo the write/finding/decision is actually about — run
-`check-project-busy <target>` first if you're about to write into a
-repo that isn't this one) rather than a row in a file:
+Every FLAG, gap or defect this session named and did not fix needs an issue or
+PR URL. The rule is **structural, not lexical** — a keyword sweep will not
+catch it. realisateur#165: a close named a real defect with *"Not something I
+fixed — flagging it"*, which contains none of the obvious trigger words, and
+Zach had to ask who had been told.
 
-- **A cross-project write** (including reverted ones, and any second
-  account/host touched) — the CLAUDE.md subagent rule, applied to
-  yourself. One issue (or a comment on the relevant PR) per write, with
-  repo + sha, so a run that can't see this conversation can still act on
-  it.
-- **A deferred write** because `check-project-busy` said BUSY — same
-  destination. Re-check before filing: locks are short, and if it now
-  reports `free`, do the write for real instead of filing about it.
-  Carry the actual payload in the issue body, not a pointer back to this
-  chat — an issue nobody but you can decode is a second dropped write
-  wearing a filed one's clothes.
-- **A decision blocked on Zach** — an issue, titled as the question,
-  in the repo it's about. He answers by commenting and leaving it open
-  (`etiquette` prints the grammar and derives the label) — not by closing
-  it, not by labelling it, and not by editing a file back.
-- **An insight true beyond this session** — if it's a *rule*, it goes in
-  a doctrine file for real (step 2). If it's a fact or a finding rather
-  than a rule, it's an issue. If it's neither — just interesting — it
-  does not need a durable home at all.
+**Filed is not dispatchable.** Since 2026-09-04 a project runs only while a
+milestone holds an open issue, so `gh issue create --milestone "<title>"` at
+creation, then `gh issue list --milestone` to confirm it is actually there.
 
-**Retire check, every time.** Grepping the session for "deferred", "BUSY",
-"left undone" catches the common phrasings, but the rule is **structural, not
-lexical**: every FLAG, gap or defect this session named and did not fix --
-whatever words named it -- needs an issue URL or a PR URL before step 4.
+### Layered not replaced
 
-realisateur#165, 2026-08-11: a close named a real shim-drift defect with
-*"Not something I fixed -- flagging it"* and stopped. That sentence contains
-none of the trigger words and was exactly the un-filed residue this step
-exists to catch; Zach had to ask "who did you tell about this?" **A close that
-names a defect and attaches no URL has not routed it, however it is worded.**
+Did this session add a surface while the ones it duplicates stayed? Name what
+each new file replaces, or say why the thing it duplicates remains. A check
+that already exists is owned by whatever owns it — a second implementation is
+the defect, not the coverage.
 
-## 4. Close
+### Built but not wired
 
-Before writing anything, re-read what you are about to say. **Every clause
-naming a problem, gap, defect or FLAG must be immediately followed by an
-issue/PR URL, or the words "documented exception" with the step-1 reasoning.**
-Never a bare statement of fact. If a clause fails that test, go file it
-(step 3) before finishing. Same check as the retire check, applied where it
-matters: to what you are about to hand Zach.
+A thing that exists and nothing reaches. Nothing should need a checkout to run
+on mandark, and the verb build should match the home:
 
-State plainly, with **links, not descriptions**: which branches got a PR and
-which URL, which issues got filed and which URL, what was pushed and where
-(with revert shas), and what was left as a documented exception and why. Zach
-should never have to ask whether something landed -- the answer is a URL, not
-a sentence promising one exists.
+```
+installe list | grep Documents/Projects   # a PATH name resolving into a CLONE
+```
+
+Compare the build's `commands/` and `hooks/` against `~/.claude/`, and check
+`settings.json` names each hook at an event. **An installed hook wired to
+nothing enforces nothing** — the most expensive shape here, because a hook is
+the only surface that makes a rule arrive as a consequence rather than as a
+paragraph.
+
+### Where each goes
+
+The **owning** repo — `check-project-busy <target>` first if it isn't this one.
+Never `.scheduler/FOCUS.md`, `BLOCKERS.md` or `QUESTIONS.md`: retired by
+hf7y/scheduler#66, and finding one is itself a finding (hf7y/realisateur#230).
+
+- **A cross-project write**, reverted ones and any second account or host
+  included — one issue or PR comment each, with repo and sha.
+- **A decision blocked on Zach** — an issue titled as the question. He comments
+  and leaves it open; `etiquette` derives the label.
+- **An insight** — a *rule* goes in a doctrine file (step 2), a finding is an
+  issue, and merely interesting needs no home.
+
+## 4. What is blocked on Zach, from this session
+
+Only this session's own. What is piled up estate-wide is a different question
+with its own surface, and answering it here would be a fourth one.
+
+An issue whose body opens `DECISION:` and is still open is waiting on a person.
+`NO-DECISION:` is not.
+
+## 5. Close
+
+Re-read it before you write it: **every clause naming a problem is immediately
+followed by an issue or PR URL**, or it is not finished.
+
+**Links, not descriptions** — which branches got which PR, which issues were
+filed, what was pushed and where, what was reaped and its sha. Zach should
+never have to ask whether something landed.
