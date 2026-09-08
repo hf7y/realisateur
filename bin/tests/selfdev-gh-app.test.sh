@@ -162,7 +162,6 @@ eq  "H2 exits 5" "$rcH2" "5"
 
 # --- I: --adopt no longer invents a per-account path ---------------------------
 # It used to install ~/.config/selfdev/<account>/<account>.pem plus a conf
-# naming it -- which is how ONE App key came to sit on disk under four names,
 outI="$(run env SELFDEV_GH_API="http://127.0.0.1:1" "$SCRIPT" --adopt \
         --account acct2 --key "$T/app.pem" --app-id 4520255 2>&1)"; rcI=$?
 has "I prints the fingerprint"  "$outI" "fingerprint:"

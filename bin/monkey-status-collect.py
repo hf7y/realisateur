@@ -25,9 +25,10 @@ IDENT_MAX = 5                        # offending commits listed per clone
 TICK_TAG = "realisateur:selfdev-release:TICK"
 RUNNER_TAG = "scheduler:scheduler-paced-runner:RUNNER"
 BOOTSTRAP_CLONES = {"scheduler"}  # land-selfdev.sh clones scheduler into EVERY account, so it is expected. realisateur is NOT: #134 stopped minting it per account, so a realisateur clone is now residue and must read as foreign. containment() keeps `{user, *BOOTSTRAP_CLONES}`, so realisateur@monkey's own checkout stays expected.
-ROSTER_URL = os.environ.get(
-    "SELFDEV_ROSTER_URL",
-    "https://raw.githubusercontent.com/hf7y/scheduler/main/schedule/ROSTER")
+# THE ARMING AUTHORITY, no longer a file in a repo (hf7y/scheduler#429). The
+# literal matches GH_ESTATE_ROSTER_URL -- piped over ssh with no environment,
+# this cannot source it; bin/tests/roster-service.test.sh pins that they agree.
+ROSTER_URL = os.environ.get("SELFDEV_ROSTER_URL", "http://100.107.253.56:8646/roster")
 HOME_ROOT = os.environ.get("SELFDEV_HOME_ROOT", "/home")          # fixture seams:
 SUDOERS_D = os.environ.get("SELFDEV_SUDOERS_D", "/etc/sudoers.d")  # unset in production
 
@@ -163,23 +164,21 @@ def dispatch_line(cron_lines):
     return any(RUNNER_TAG in l for l in cron_lines)
 
 
-def roster_states(host):
+def roster_states():
+    """project -> live|parked. None means COULD NOT LOOK, which armed() turns
+    into null rather than false. No fall-back: stale-read-as-live is worse.
+
+    NO HOST FILTER, and no account column to key on: the service holds state
+    and nothing else (hf7y/scheduler#432). An account name IS its project name
+    in 23 of 23 rows, and "does this project run here" is answered by whether
+    the account exists on THIS box -- which is what enumerating $HOME_ROOT
+    already does, one caller up. A roster row for a project with no local
+    account is simply never looked up."""
     try:
-        raw = urllib.request.urlopen(ROSTER_URL, timeout=10).read().decode()
+        d = json.loads(urllib.request.urlopen(ROSTER_URL, timeout=10).read().decode())
     except Exception:
         return None
-    out = {}
-    for line in raw.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        f = [c.strip() for c in line.split("|")]
-        if len(f) < 4:
-            continue
-        acct, _, h = f[1].partition("@")
-        if h == host:
-            out[acct] = f[3]
-    return out or None
+    return {r["project"]: r["state"] for r in d["rows"]} or None
 
 
 def armed(cron_lines, states, account):
@@ -340,7 +339,7 @@ if __name__ == "__main__":            # importable per function; `python3 - <fil
         "accounts_scope": accounts_scope(),
     }
 
-    states = roster_states(os.uname().nodename)
+    states = roster_states()
     out["roster_read"] = states is not None
     for u in accounts():
         c = cron(u)

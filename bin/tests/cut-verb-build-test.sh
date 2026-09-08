@@ -28,8 +28,7 @@ mkdir -p "$FIX" "$OUT"
 g() { git -c init.defaultBranch=main -c user.email=t@t -c user.name=t "$@" >/dev/null 2>&1; }
 
 # --- fixture projects ----------------------------------------------------
-# A project's bashified branch carries bin/<verb> (executable), man/<verb>.1,
-# and lib/verb.sh which the verb SOURCES. That last file is the point: the
+# A project's bashified branch carries bin/<verb> (executable) and man/<verb>.1.
 mkrepo() {
     local repo="$1"; shift
     local d="$FIX/$repo.git"
@@ -388,7 +387,6 @@ check "...and every row is <project><TAB><name><TAB><why>" \
 
 # --- 14. the CHANNEL check is WIRED, not merely present -----------------
 # Section 6a runs bin/verb-kind-lint.sh over the tree this script just
-# assembled. Asserted here rather than only in that lint's own suite,
 mkrepo theta tv
 printf '#!/usr/bin/env bash\n# KIND: product\n. "$(dirname "$0")/../lib/verb.sh"\nprintf "tv\\n"\n' \
     > "$FIX/theta.git/bin/tv"

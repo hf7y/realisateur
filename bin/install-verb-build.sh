@@ -203,8 +203,7 @@ mv -Tf "$BUILD_ROOT/current.tmp" "$BUILD_ROOT/current" || die 'cannot move curre
 say "current -> $BUILD_ID"
 
 # --- the ~/.local/bin links, written once -------------------------------
-# Off by default: `installe` (senechal) owns ~/.local/bin and its manifest,
-# and this script does not get to quietly take that over. --link is for a
+# Off by default: `installe` (senechal) owns ~/.local/bin and its manifest.
 if [ "$LINK" -eq 1 ]; then
   mkdir -p "$BIN"
   linked=0; skipped=0

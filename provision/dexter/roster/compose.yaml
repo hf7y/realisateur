@@ -1,0 +1,27 @@
+# roster -- the estate's arming authority, at /srv/roster/ on dexter.
+# hf7y/scheduler#429, #432. Deploy: sudo docker compose pull && up -d.
+services:
+  roster:
+    # PULLED, NOT BUILT: a dexter that lost its checkout recovers from this file.
+    image: ghcr.io/hf7y/roster:latest
+    container_name: roster
+    restart: always
+    volumes:
+      # SERVICE STATE (the roster and its arming log), never overwritten from a repo.
+      - ./data:/data
+    env_file:
+      # ROSTER_WRITE_TOKEN. Absent -> every write is refused, never open.
+      - ./data/.env
+    # 100.107.253.56 is dexter's tailnet address AND monkey's own eth0 -- every
+    # WSL2 distro on dexter shares one namespace (measured 2026-09-01). So these
+    # two lines reach mandark and monkey without binding 0.0.0.0, which would
+    # hand 192.168.0.22 and the house LAN the estate's arming control (crt#402).
+    ports:
+      - "127.0.0.1:8646:8646"
+      - "100.107.253.56:8646:8646"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if __import__('json').load(urllib.request.urlopen('http://127.0.0.1:8646/healthz',timeout=5))['ok'] else 1)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

@@ -220,9 +220,7 @@ case "$MODE" in
     ok "fingerprint: $fp"
     echo "          ^ must equal the SHA256: shown on the App's settings page"
 
-    # ADOPT NO LONGER INVENTS A PATH. It used to write
-    # ~/.config/selfdev/<account>/<account>.pem plus a conf naming it -- which
-    # is how one App key came to sit on disk under four different names, and
+    # ADOPT INVENTS NO PATH: one App key under four names is what that cost.
     if [ "$(id -u)" -eq 0 ] && [ -x "$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh" ]; then
       "$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh" --apply --from "$ADOPT_KEY" --app-id "$ADOPT_ID" --owner "$OWNER" \
         || die "selfdev-app-key.sh --apply refused; the key was NOT installed"

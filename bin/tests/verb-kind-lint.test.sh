@@ -392,7 +392,6 @@ echo
 echo "== 9. A 32-ROW MANIFEST, WITH ITS ONE PRODUCT DECLARED =="
 # Verb names carry the fx- prefix so no fixture name is ever a real verb:
 # a grep for a verb's callers must not count this file (#186). All 32 are
-# given `# KIND: verb` except vim-arcade/vim-arcade -- `# KIND: product`, the
 b="$(new_build real)"
 while read -r p v; do
   [ -n "$p" ] || continue
