@@ -2,22 +2,14 @@
 # cutover-check.sh -- has a host actually crossed to gen-2, and is the old
 # design's residue GONE?
 # KIND: verb
-# RUNNER: by hand, and by whoever migrates a host; reads a REMOTE host
+# RUNNER: operator -- whoever migrates a host; reads a REMOTE host, so CI cannot
 # GUARD-TEST: bin/tests/cutover-check.test.sh -- hermetic behind CUTOVER_SSH
 # GATE: none -- it grades a host, never this tree
 #
-# TWO HALVES, and the second is the one that rots. "The new thing works" is
-# easy to assert and easy to satisfy while the old thing sits beside it still
-# armed. Every B row checks for something that should no longer EXIST.
-#
-# BLIND IS NEVER CLEAN. An unreachable host exits 6. Absent input reporting as
-# a healthy state is this estate's signature defect, and a cutover check that
-# goes quiet when it cannot look would be the worst instance of it.
-#
-# IT IS THE MIGRATION PLAN, EXECUTABLE. vaporwave was born clone-free and
-# passes the hard rows cheaply; monkey has 19 clones, 13 per-account RUNNER
-# rows and 19 per-account state dirs, and every FAIL here is one step of that
-# migration in the order the steps have to happen.
+# TWO HALVES, and the second rots: "the new thing works" is easy to satisfy
+# while the old thing sits beside it still armed, so every B row checks for
+# something that should no longer EXIST, and C asserts what must SURVIVE.
+# BLIND IS NEVER CLEAN -- an unreachable host exits 6, never 0.
 set -uo pipefail
 
 CLI_NAME='cutover-check.sh'
@@ -79,12 +71,9 @@ sudo -n env -i /usr/bin/curl -fsS --max-time 8 \
 S="$BR/current/scheduler"
 [ -x "$S/bin/usage-gate.sh" ]                        && echo "GATE ok"
 grep -q 'ROSTER_URL' "$S/lib/dose-common.sh" 2>/dev/null && echo "SERVICEREAD ok"
-# The gh call is INSIDE fetch_repo_file, taking $rel -- so grepping for
-# `gh_as api ... schedule/ROSTER` finds nothing and passes on a build that
-# reads the roster over gh on every tick. Ask what fetch_roster DELEGATES to.
-# COMMENTS STRIPPED FIRST. A prose mention of fetch_repo_file inside
-# fetch_roster made this flag a build that reads over curl -- a check that
-# grades a paragraph instead of the code it sits next to.
+# Ask what fetch_roster DELEGATES to: the gh call is inside fetch_repo_file,
+# so grepping for `gh_as api ... schedule/ROSTER` passes a build that reads the
+# roster over gh every tick. COMMENTS STRIPPED FIRST, or it grades a paragraph.
 sed -n '/^fetch_roster()/,/^}/p' "$S/lib/dose-common.sh" 2>/dev/null \
   | sed 's/#.*//' \
   | grep -qE 'fetch_repo_file|gh_as|\bgh ' && echo "GHROSTER present"
@@ -100,9 +89,8 @@ then
 fi
 grep -q '^PROBE-OK$' "$FACTS" || { section "BLIND"; bad "the probe did not run to completion on $HOST"; exit 6; }
 
-# WHOLE TOKEN, not a prefix. `^CLONE` also matches CLONEPATHCONF, which made
-# this report seven clones and then name none of them -- a count that cannot be
-# reconciled with its own list is worse than no count.
+# WHOLE TOKEN, not a prefix: `^CLONE` also matches CLONEPATHCONF, which made
+# this report seven clones and then name none of them.
 f() { grep -cE "^$1( |\$)" "$FACTS" 2>/dev/null || true; }
 names() { grep "^$1 " "$FACTS" 2>/dev/null | awk '{print $2}' | paste -sd' ' -; }
 NACCT=$(f ACCT)
@@ -134,10 +122,10 @@ section "B. RESIDUE -- the old design is gone, not merely unused"
   || bad "B2 $(f ACCTCRON) account(s) still carry their own RUNNER row: $(names ACCTCRON)" "host mode dispatches for all of them; these double-dispatch"
 [ "$(f PRIVATEPIN)" -eq 0 ] \
   && ok "B3 ONE build pin per host (#180), no per-account verb-builds" \
-  || bad "B3 $(f PRIVATEPIN) account(s) keep a private build root: $(names PRIVATEPIN)" "~/.local/bin precedes /usr/local/bin, so their verbs resolve into a staler build"
+  || bad "B3 $(f PRIVATEPIN) account(s) keep a private build root: $(names PRIVATEPIN)" "\$HOME/.local/bin precedes /usr/local/bin, so their verbs resolve into a staler build"
 [ "$(f ACCTSTATE)" -eq 0 ] \
   && ok "B4 no account-mode rotation state left behind" \
-  || bad "B4 $(f ACCTSTATE) account(s) keep ~/.local/share/scheduler-paced-runner: $(names ACCTSTATE)" "a second rotation pointer for a rotation that no longer exists"
+  || bad "B4 $(f ACCTSTATE) account(s) keep \$HOME/.local/share/scheduler-paced-runner: $(names ACCTSTATE)" "a second rotation pointer for a rotation that no longer exists"
 [ "$(f CLONEPATHCONF)" -eq 0 ] \
   && ok "B5 no conf in the build names a per-account clone path" \
   || bad "B5 $(f CLONEPATHCONF) conf(s) still name Documents/Projects/scheduler: $(names CLONEPATHCONF)" "on a clone-free host every one of those rows is a path that cannot exist"

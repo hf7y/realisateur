@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 # cutover-check.test.sh -- witness for bin/cutover-check.sh.
 #
-# HERMETIC: CUTOVER_SSH points at a stub that prints a fixture instead of
-# reaching a host, so this suite grades the GRADING and never the estate. CI
-# has no route to vaporwave or monkey, and a check that quietly passed when it
-# could not look is the exact defect cutover-check exists to refuse.
-#
-# The fixtures are the two real hosts as measured 2026-09-08: vaporwave clean
-# but for its conf rows, monkey with everything still in front of it.
+# HERMETIC: CUTOVER_SSH points at a stub printing a fixture, so this grades the
+# GRADING, never the estate -- CI has no route to vaporwave or monkey. The
+# fixtures are those two hosts as measured 2026-09-08.
 set -uo pipefail
+# shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SCRIPT="$ROOT/bin/cutover-check.sh"
@@ -85,7 +82,6 @@ has "D2 and says BLIND"                     "$OUT" "BLIND"
 has "D3 and says nothing was verified"      "$OUT" "nothing was verified"
 hasnt "D4 and claims no passing rows"       "$OUT" "no account carries a scheduler clone"
 
-printf '%s\n' > /dev/null
 OUT="$(printf 'garbage\n' > "$T/truncated"; run "$T/truncated")"; RC=$?
 rc  "D5 a probe that did not complete is BLIND too" 6 "$RC"
 

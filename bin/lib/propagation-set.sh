@@ -174,6 +174,7 @@ ausculte.sh
 atteste.sh
 decision-rot.sh
 unarmed.sh
+cutover-check.sh
 "
 
 # --- THE LEAK, with a bound on it -------------------------------------------
