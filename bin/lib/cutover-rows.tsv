@@ -46,7 +46,7 @@ B3	B	PRIVATEPIN	absent	ONE build pin per host (#180), no per-account verb-builds
 B4	B	ACCTSTATE	absent	no account-mode rotation state left behind	a second rotation pointer for a rotation that no longer exists
 B5	B	CLONEPATHCONF	absent	no conf in the build names a per-account clone path	on a clone-free host every one of those rows is a path that cannot exist
 B6	B	SETUPDIR	absent	no ~/.selfdev-setup/ left from provisioning	scaffolding that outlived the build it scaffolded
-B7	B	ACCTLIBEXEC	absent	no per-account ~/.local/libexec/selfdev/	#887: fifteen copies of host tools, each free to go stale on its own
+B7	B	ACCTLIBEXEC	absent	no per-account ~/.local/libexec/selfdev/	#887: one copy of the host tools per account, each free to go stale on its own
 B8	B	TICKSTATUS	absent	no per-account release-tick status file	the account-private clock's own state, for a clock that should be the host's
 B9	B	ACCTTICKCRON	absent	no second selfdev-release:TICK row per account	the host-wide tick already runs; these race it
 B10	B	ACCTAPPCONF	absent	no per-account App credential under ~/.config/selfdev	one host-wide key (#624); per-account copies drift and cannot be rotated together

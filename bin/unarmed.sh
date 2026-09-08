@@ -225,6 +225,18 @@ probe_repo_frame() {
   fi
 }
 
+probe_cutover() {
+  local cc out n
+  cc="$(part cutover-check.sh)" || { echo "BLIND cutover-check.sh is not reachable from here"; return; }
+  out="$(bash "$cc" --host "$HOST" 2>&1)"
+  case $? in
+    0) echo "ARMED $HOST has crossed to gen-2 and carries none of the old design's residue" ;;
+    1) n="$(printf '%s\n' "$out" | awk '$1 == "FAIL" { printf "%s ", $2 }')"
+       echo "UNARMED $HOST has not finished crossing, and these are the remaining steps in order: ${n:-see cutover-check --host $HOST}" ;;
+    *) echo "BLIND cutover-check could not read $HOST, which is never the same as clean" ;;
+  esac
+}
+
 probe_repo_guard() {
   gh_ready || { echo "BLIND no credential here can read the registry, so the shared guard is unmeasured"; return; }
   local rs out n
