@@ -39,6 +39,7 @@ exit 1
 SHIM
   chmod +x "$T/stub/crontab"
 }
+mkpasswd
 mkcrontabbin
 mkdir -p "$T/cronfix"
 
