@@ -10,9 +10,7 @@ can't be reverted -- an ordinary commit, branch, or new local scheduler
 registration never qualifies.
 
 **Findings go in the issue tracker, never in a markdown surface.**
-`BLOCKERS.md`, `.scheduler/FOCUS.md` and `.scheduler/QUESTIONS.md` were
-retired by hf7y/scheduler#66 and do not exist in this repo. One
-destination, and it is a command: `gh issue create -R hf7y/realisateur`.
+One destination, and it is a command: `gh issue create -R hf7y/realisateur`.
 
 This command is designed to run unattended overnight, with no human
 review step until the morning.

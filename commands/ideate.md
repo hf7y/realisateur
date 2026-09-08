@@ -28,9 +28,7 @@ With no argument, run the full sweep.
 
 `ausculte` for the estate's health before you touch any project.
 
-**Read each project's open ISSUES, not its files.** `BLOCKERS.md`,
-`.scheduler/FOCUS.md` and `.scheduler/QUESTIONS.md` were retired ecosystem-wide
-by `hf7y/scheduler#66`. Do not read them, write them, or scaffold them.
+**Read each project's open ISSUES, not its files.**
 
 Don't trust a prior session's claims about status — start from what the survey
 actually found, not a stale mental model.
