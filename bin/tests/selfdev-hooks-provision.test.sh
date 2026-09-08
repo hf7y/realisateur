@@ -97,6 +97,14 @@ has "I: the session-marker release hook is wired on SessionEnd (vim-arcade#207)"
 has "I: PreToolUse is the wired event too (#707)" "$WANT" "PreToolUse"
 has "I: the path-guard hook is the command" "$WANT" "pretooluse-path-guard.sh"
 has "I: the PreToolUse matcher is Write|Edit" "$WANT" "Write|Edit"
+
+PG_M="$(printf '%s' "$WANT" | jq -r '.PreToolUse[] | select([.hooks[].command] | any(test("pretooluse-path-guard"))) | .matcher')"
+for t in Write Edit Read Grep Glob NotebookRead Bash; do
+  case "$PG_M" in
+    *"$t"*) ok "I: path-guard's matcher covers $t (#1092)" ;;
+    *)      bad "I: path-guard handles $t but its matcher does not deliver it: $PG_M" ;;
+  esac
+done
 has "I: the credential-hold hook is the command too (#714)" "$WANT" "pretooluse-credential-hold.sh"
 has "I: the memory-budget PreToolUse hook is the command too (#715)" "$WANT" "pretooluse-memory-budget.sh"
 has "I: a second PreToolUse matcher is Bash" "$WANT" "Bash"
@@ -113,8 +121,8 @@ has "I: UserPromptSubmit is the wired event too (#714)" "$WANT" "UserPromptSubmi
   && ok "I: the PreToolUse hook type is command too" || bad "I: the PreToolUse hook type is not command"
 [ "$(printf '%s' "$WANT" | jq -r '.UserPromptSubmit[0].hooks[0].type')" = "command" ] \
   && ok "I: the UserPromptSubmit hook type is command too" || bad "I: the UserPromptSubmit hook type is not command"
-[ "$(printf '%s' "$WANT" | jq '.PreToolUse | length')" = "2" ] \
-  && ok "I: PreToolUse carries both matcher groups" || bad "I: PreToolUse does not carry two matcher groups"
+[ "$(printf '%s' "$WANT" | jq '.PreToolUse | length')" = "3" ] \
+  && ok "I: PreToolUse carries all three matcher groups" || bad "I: PreToolUse does not carry three matcher groups"
 
 mkdir -p "$T/hj/acctj/.claude/hooks"
 printf '%s' "$WANT" | jq '{hooks:.}' > "$T/hj/acctj/.claude/settings.json"

@@ -123,12 +123,17 @@ read -r -d '' HOOKS <<'JSON'
   ],
   "PreToolUse": [
     {
-      "matcher": "Write|Edit",
+      "matcher": "Write|Edit|Read|Grep|Glob|NotebookRead|Bash",
       "hooks": [
         {
           "type": "command",
           "command": "~/.claude/hooks/pretooluse-path-guard.sh"
-        },
+        }
+      ]
+    },
+    {
+      "matcher": "Write|Edit",
+      "hooks": [
         {
           "type": "command",
           "command": "~/.claude/hooks/pretooluse-memory-budget.sh"
