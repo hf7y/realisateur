@@ -30,9 +30,7 @@ With no argument, run the full sweep.
 
 **Read each project's open ISSUES, not its files.** `BLOCKERS.md`,
 `.scheduler/FOCUS.md` and `.scheduler/QUESTIONS.md` were retired ecosystem-wide
-by `hf7y/scheduler#66` on 2026-08-07. Do not read them, do not write them, do
-not scaffold them. (This command told agents to read and cross-write
-those files until 2026-08-17; that instruction was the cause named in #187.)
+by `hf7y/scheduler#66`. Do not read them, write them, or scaffold them.
 
 Don't trust a prior session's claims about status — start from what the survey
 actually found, not a stale mental model.
@@ -111,9 +109,8 @@ knob. **Never edit a ROSTER row to change pace.**
 
 ## 5. Proposals about scheduler itself go through the front door
 
-`scheduler -i scheduler "<the proposal>"`. Don't hand-edit scheduler's engine
-from an ideate session — it may have concurrent work in flight, and realisateur
-is not its owner.
+File an issue in `hf7y/scheduler`. Never hand-edit its engine from an ideate
+session: it may have concurrent work in flight, and realisateur is not its owner.
 
 ## 6. Commit, push, and stop
 
