@@ -77,6 +77,7 @@ esac
 
 me="$(id -un 2>/dev/null)"  # ANOTHER PROJECT'S TREE (CLAUDE.md subagent rules): this account's own project is $SELFDEV_PROJECTS_ROOT/$me; a write under that root but under a different name reaches past that project's own regulator
 proj_root="${SELFDEV_PROJECTS_ROOT:-$HOME/Documents/Projects}"
+[ -d "$proj_root/$me" ] || exit 0
 case "$path" in
   "$proj_root"/*)
     rest="${path#"$proj_root"/}"
