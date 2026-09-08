@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """roster_server.py -- the estate's arming authority. hf7y/scheduler#429, #432.
 
-STATE AND NOTHING ELSE: project -> live|parked. Writes are one call, need no
-CI, and return only once committed. Stdlib only: this is the process that must
-come back up when everything else is broken.
+STATE, PLUS THE CONFIG BAKED INTO THIS IMAGE: project -> live|parked, and
+schedule/*.conf, schedule/_*.md served read-only from what the build baked in
+(realisateur#1080). Writes are STATE ONLY -- one call, need no CI, and return
+only once committed. Stdlib only: this is the process that must come back up
+when everything else is broken.
 
 A row is CREATED BY ITS FIRST WRITE -- there is no "declare it first" 404.
 `dose` already refuses to arm a project with no unix account on the host it
@@ -13,6 +15,7 @@ ever converges.
 import hmac
 import json
 import os
+import re
 import sqlite3
 import threading
 from datetime import datetime, timezone
@@ -23,6 +26,14 @@ DB_PATH = os.environ.get("ROSTER_DB", "/data/roster.db")
 PORT = int(os.environ.get("ROSTER_PORT", "8646"))
 TOKEN = os.environ.get("ROSTER_WRITE_TOKEN", "")
 STATES = ("live", "parked")
+
+# bake_schedule.py lays this down at build time; nothing here ever fetches it.
+SCHEDULE_DIR = os.environ.get("ROSTER_SCHEDULE_DIR", "/opt/roster/schedule")
+# Same filter as scheduler's own schedule_confs() (hf7y/scheduler:bin/carry.sh).
+SCHEDULE_NAME_RE = re.compile(r"^(_[^/]+\.md|[^/]+\.conf)$")
+# ROSTER/FREEZE never match the pattern above, so this is belt-and-suspenders:
+# they stay live `gh api` reads, structurally, forever (realisateur#1080).
+SCHEDULE_BLOCKED = {"ROSTER", "FREEZE"}
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS rows (
@@ -106,9 +117,29 @@ class Handler(BaseHTTPRequestHandler):
                 args.append(int((q.get("limit") or ["200"])[0]))
                 return self.send(200, {"armings": [dict(r) for r in
                                                    c.execute(sql, args).fetchall()]})
+            if u.path.startswith("/schedule/"):
+                return self.serve_schedule(u.path[len("/schedule/"):])
             return self.send(404, {"error": "no such path"})
         finally:
             c.close()
+
+    def serve_schedule(self, name):
+        # "/" rejected before anything else touches it: os.path.join with a
+        # slash-free name can never escape SCHEDULE_DIR, traversal or not.
+        if not name or "/" in name:
+            return self.send(400, {"error": "bad schedule filename"})
+        if name in SCHEDULE_BLOCKED or not SCHEDULE_NAME_RE.match(name):
+            return self.send(404, {"error": "no such schedule file"})
+        path = os.path.join(SCHEDULE_DIR, name)
+        if not os.path.isfile(path):
+            return self.send(404, {"error": "no such schedule file"})
+        with open(path, "rb") as f:
+            body = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_POST(self):
         u = urlparse(self.path)
