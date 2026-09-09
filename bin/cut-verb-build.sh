@@ -470,8 +470,8 @@ if [ -n "$ASSEMBLE" ]; then
     case "${mkind%%[[:space:]]*}" in
       personal)
         say "  PERSONAL $mproject/$mverb: declares '# KIND: personal' -- NOT carried to any"
-        say "           account. It reaches PATH as a symlink into its own checkout, and that"
-        say "           is the intended permanent state. Omitted from this build."
+        say "           account. Omitted from this build; it reaches PATH on the host that"
+        say "           wants it via 'installe personal $mproject' (hf7y/senechal#785)."
         rm -f "$ASSEMBLE/$mproject/bin/$mverb"
         personal_out=$((personal_out + 1)) ;;
       *) printf '%s\n' "$mline" >> "$kept" ;;

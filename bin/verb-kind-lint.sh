@@ -167,9 +167,9 @@ say "== C. NO PERSONAL TOOL RIDES THE VERB BUILD =="
 # having been in it.
 for x in ${PERSONAL+"${PERSONAL[@]}"}; do
   loud "  PERSONAL ${x}: declares '# KIND: personal' but is in the verb manifest."
-  loud "           A personal tool reaches PATH as a symlink into its own checkout"
-  loud "           and is never carried to the 13 self-dev accounts. Take it off"
-  loud "           the channel; that symlink is the intended permanent state."
+  loud "           A personal tool is never carried to the 13 self-dev accounts."
+  loud "           Take it off the channel; it reaches PATH on the host that wants"
+  loud "           it via 'installe personal <project>' (hf7y/senechal#785)."
   violations=$((violations + 1))
 done
 [ "${#PERSONAL[@]}" -eq 0 ] && say "  ok    no personal tool in this build's manifest"
