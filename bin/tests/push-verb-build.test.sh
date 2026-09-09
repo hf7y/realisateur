@@ -11,6 +11,7 @@ t_bad() { echo "  FAIL $1"; fail=$((fail+1)); [ $# -gt 1 ] && echo "       $2"; 
 t_eq()  { if [ "$2" = "$3" ]; then t_ok "$1"; else t_bad "$1" "expected '$3', got '$2'"; fi; }
 t_rc()  { if [ "$2" = "$3" ]; then t_ok "$1"; else t_bad "$1" "expected exit $2, got $3"; fi; }
 t_has() { case "$2" in *"$3"*) t_ok "$1" ;; *) t_bad "$1" "missing: $3 -- got: $2" ;; esac; }
+t_not_has() { case "$2" in *"$3"*) t_bad "$1" "should not contain: $3 -- got: $2" ;; *) t_ok "$1" ;; esac; }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 
@@ -166,11 +167,33 @@ printf 'ARGV: %s\n' "\$*" >> "\$LOG"
 shift 4; shift
 case "\$1" in
   true) exit "\${STUB_TRUE_RC:-0}" ;;
+  sudo)
+    if [ "\$2" = "-n" ] && [ "\$3" = "bash" ]; then
+      if [ "\${STUB_SUDO_ALSO_FAIL:-0}" = 1 ]; then
+        echo "sudo: a password is required" >&2; exit 1
+      fi
+      shift 5
+      root="\$1"; id="\$2"
+      exec bash -s -- "\$REMOTE\$root" "\$id"
+    fi
+    echo "stub ssh: unrecognised remote command: \$*" >&2; exit 98 ;;
   bash)
+    if [ "\${STUB_REQUIRE_SUDO:-0}" = 1 ]; then
+      echo "sudo: a password is required" >&2; exit 1
+    fi
     shift 3
     root="\$1"; id="\$2"
     exec bash -s -- "\$REMOTE\$root" "\$id" ;;
+  "sudo -n mkdir -p "*)
+    if [ "\${STUB_SUDO_ALSO_FAIL:-0}" = 1 ]; then
+      echo "sudo: a password is required" >&2; exit 1
+    fi
+    path="\${1#sudo -n mkdir -p }"
+    mkdir -p "\$REMOTE\$path"; exit \$? ;;
   "mkdir -p "*)
+    if [ "\${STUB_REQUIRE_SUDO:-0}" = 1 ]; then
+      echo "mkdir: cannot create directory: Permission denied" >&2; exit 1
+    fi
     path="\${1#mkdir -p }"
     mkdir -p "\$REMOTE\$path"; exit \$? ;;
   "test -f "*)
@@ -190,6 +213,15 @@ LOG="$LOG"
 REMOTE="$REMOTE"
 printf 'RSYNC-ARGV: %s\n' "\$*" >> "\$LOG"
 [ "\${STUB_RSYNC_FAIL:-0}" = 1 ] && exit 11
+case " \$* " in
+  *" --rsync-path=sudo -n rsync "*)
+    if [ "\${STUB_SUDO_ALSO_FAIL:-0}" = 1 ]; then exit 11; fi ;;
+  *)
+    if [ "\${STUB_REQUIRE_SUDO:-0}" = 1 ]; then
+      echo "rsync: mkdir failed: Permission denied (13)" >&2
+      exit 11
+    fi ;;
+esac
 src="\${@: -2:1}"
 dst="\${@: -1:1}"
 dst="\${dst#*:}"
@@ -222,6 +254,7 @@ t_has "the ssh log shows the swap ran over stdin (bash -s), not a named script o
       "$(cat "$LOG")" "bash"
 t_bad_if_found() { grep -q "push-verb-build.sh" "$LOG" && t_bad "$1" "the log names this script's own filename -- something shipped it as a file" || t_ok "$1"; }
 t_bad_if_found "no file belonging to this repo is ever named in what crosses ssh's argv"
+t_not_has "...the plain path worked -- no '(via sudo -n)' anywhere in the output" "$OUT" "(via sudo -n)"
 
 : > "$LOG"
 OUT="$(STUB_SSH_UNREACHABLE=1 run --build 2026-09-04T000000Z --host deadhost --apply 2>&1)"; RC=$?
@@ -242,5 +275,54 @@ t_has "...no transfer happened (rsync never invoked)" "$(cat "$LOG")" ""
 OUT="$(run --rollback no-such-id --host fakehost --apply 2>&1)"; RC=$?
 t_rc "--rollback to a build the host does NOT hold: refused, exits 1" 1 "$RC"
 t_has "...names the missing build, never swaps blind" "$OUT" "refusing to swap"
+
+echo
+echo "-- E. sudo -n escalation: plain path refused, unconditional retry -------"
+ESC="$T/E"; mkdir -p "$ESC"
+mk_verb "$ESC/2026-09-05T000000Z" proj alpha alpha
+mk_manifest "$ESC/2026-09-05T000000Z" "proj	alpha"
+
+run_e() { PUSH_SSH_BIN="$STUB/ssh" PUSH_RSYNC_BIN="$STUB/rsync" PUSH_BUILD_ROOT="$ESC" \
+        PUSH_REMOTE_ROOT="/verb-builds-e" "$SCRIPT" "$@"; }
+
+: > "$LOG"
+OUT="$(STUB_REQUIRE_SUDO=1 run_e --build 2026-09-05T000000Z --host fakehost --apply 2>&1)"; RC=$?
+t_rc "mkdir+rsync+swap all refused plain, all succeed under sudo -n: --apply exits 0" 0 "$RC"
+t_has "...push OK line names the escalation" "$OUT" \
+      "OK      2026-09-05T000000Z is on fakehost at /verb-builds-e/2026-09-05T000000Z (via sudo -n)"
+t_has "...swap OK line names the escalation too" "$OUT" \
+      "re-read off the host, not inferred from an exit code) (via sudo -n)"
+t_eq "...and the remote current really points at the pushed id" \
+     "$(readlink "$REMOTE/verb-builds-e/current")" "2026-09-05T000000Z"
+t_eq "...and the pushed tree is really there" \
+     "$(sh "$REMOTE/verb-builds-e/2026-09-05T000000Z/proj/bin/alpha" 2>/dev/null)" alpha
+t_has "...the mkdir that actually ran was the sudo -n one" "$(cat "$LOG")" "sudo -n mkdir -p"
+t_has "...the rsync retry carried --rsync-path='sudo -n rsync'" "$(cat "$LOG")" "rsync-path=sudo -n rsync"
+t_has "...the swap that actually ran was over sudo -n bash -s" "$(cat "$LOG")" "sudo -n bash"
+
+: > "$LOG"
+OUT="$(STUB_REQUIRE_SUDO=1 run_e --rollback 2026-09-05T000000Z --host fakehost --apply 2>&1)"; RC=$?
+t_rc "--rollback: plain swap refused, sudo -n succeeds: exits 0" 0 "$RC"
+t_has "...rollback's own OK line (a separate report site) names the escalation" "$OUT" \
+      "current -> 2026-09-05T000000Z (re-read off the host, not inferred from an exit code) (via sudo -n)"
+
+: > "$LOG"
+OUT="$(STUB_REQUIRE_SUDO=1 STUB_SUDO_ALSO_FAIL=1 PUSH_SSH_BIN="$STUB/ssh" PUSH_RSYNC_BIN="$STUB/rsync" \
+      PUSH_BUILD_ROOT="$ESC" PUSH_REMOTE_ROOT="/verb-builds-f" \
+      "$SCRIPT" --build 2026-09-05T000000Z --host fakehost --apply 2>&1)"; RC=$?
+t_rc "mkdir refused plain AND under sudo -n: today's clean failure holds, exits 1" 1 "$RC"
+t_has "...same BAD message as an un-escalated failure" "$OUT" \
+      "BAD     push to fakehost failed -- current on fakehost is UNCHANGED"
+t_not_has "...no escalation is claimed when escalation itself failed" "$OUT" "(via sudo -n)"
+[ -e "$REMOTE/verb-builds-f" ] && t_bad "...and nothing was ever written to the remote" "found $REMOTE/verb-builds-f" \
+                                || t_ok "...and nothing was ever written to the remote"
+
+: > "$LOG"
+OUT="$(STUB_REQUIRE_SUDO=1 STUB_SUDO_ALSO_FAIL=1 run_e --rollback 2026-09-05T000000Z --host fakehost --apply 2>&1)"; RC=$?
+t_rc "--rollback swap refused plain AND under sudo -n: exits 1" 1 "$RC"
+t_has "...BAD, swap refused, matches today's message" "$OUT" \
+      "BAD     the swap on fakehost failed or refused -- see rows above"
+t_eq "...and current on the host is unchanged" \
+     "$(readlink "$REMOTE/verb-builds-e/current")" "2026-09-05T000000Z"
 
 summary
