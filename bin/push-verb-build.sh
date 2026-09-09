@@ -14,8 +14,7 @@ CLI_USAGE='  push-verb-build.sh --cut     --host H [--apply]   cut a fresh build
 --check (default) previews with no writes anywhere, local or remote.
 --build-root, --remote-root, --ssh, --rsync and --ssh-timeout are all
 overridable so bin/tests/push-verb-build.test.sh can run with no real ssh,
-no real host and no network -- same posture as install-verb-build.sh and
-selfdev-credentials.sh.'
+no real host and no network -- same posture as install-verb-build.sh.'
 CLI_FLAGS='--cut --fetch --build --latest --rollback --list --host --build-root --remote-root --ssh --rsync --ssh-timeout --check --apply'
 CLI_POSITIONAL=any
 CLI_EXITS='  0  pushed and the swap verified on re-read (or, under --check, could be)
