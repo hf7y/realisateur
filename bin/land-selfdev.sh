@@ -31,6 +31,10 @@ PROJECTS="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}"
 LIBEXEC="${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}"
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
 GH_OWNER="${SELFDEV_GH_OWNER:-$GH_ESTATE_OWNER}"
+# Where scheduler's own schedule/ lands for every account but scheduler's own
+# (#1138): the served build, same pin every other verb reads
+# (bin/lib/propagation-set.sh's PROP_HOST_PIN).
+SCHEDULER_BUILD_ROOT="${VERB_HOST_BUILD_ROOT:-/usr/local/share/verb-builds}/current/scheduler"
 
 PASS=0; GAPS=0; BAD=0
 ok()  { printf '  OK      %s\n' "$*"; PASS=$((PASS+1)); }
@@ -67,10 +71,14 @@ case "$linger" in yes) ok "linger enabled" ;; *) gap "linger is not enabled (nee
 # SHARED _paced.conf when there is no host file. On a new host that fallback is
 # not a default, it is another machine's rotation.
 HOST="$(hostname -s)"
-SHARED_PACED="$PROJECTS/scheduler/schedule/_paced.conf"
-if [ -f "$PROJECTS/scheduler/schedule/_paced.$HOST.conf" ]; then
+# Own checkout if this account has one (only scheduler's does, #1138), else
+# the served build -- the same fallback the dispatch path itself already uses.
+SCHED_SCHEDULE_DIR="$PROJECTS/scheduler/schedule"
+[ -d "$SCHED_SCHEDULE_DIR" ] || SCHED_SCHEDULE_DIR="$SCHEDULER_BUILD_ROOT/schedule"
+SHARED_PACED="$SCHED_SCHEDULE_DIR/_paced.conf"
+if [ -f "$SCHED_SCHEDULE_DIR/_paced.$HOST.conf" ]; then
   ok "schedule/_paced.$HOST.conf exists -- this host has its own rotation"
-elif [ -d "$PROJECTS/scheduler" ]; then
+elif [ -d "$SCHED_SCHEDULE_DIR" ]; then
   enabled=$(grep -cE '^[a-z][^|]*\|1\|' "$SHARED_PACED" 2>/dev/null || echo 0)
   if [ "${enabled:-0}" -gt 0 ]; then
     bad "no schedule/_paced.$HOST.conf, and the shared _paced.conf has $enabled ENABLED row(s) -- this host would silently dispatch another machine's rotation"
@@ -78,7 +86,7 @@ elif [ -d "$PROJECTS/scheduler" ]; then
     gap "no schedule/_paced.$HOST.conf; this host falls back to the shared _paced.conf, which currently has 0 enabled rows (inert, but give this host its own file before arming anything)"
   fi
 else
-  gap "scheduler not cloned yet; cannot check for _paced.$HOST.conf"
+  gap "no scheduler checkout and no installed build found at $SCHEDULER_BUILD_ROOT/schedule -- cannot check for _paced.$HOST.conf"
 fi
 
 # THREE WAYS THIS USER CAN BE AUTHENTICATED, and the check must know all of
@@ -166,23 +174,29 @@ clone_or_update() {
   fi
 }
 
-# SCHEDULER ONLY, and load-bearing per account: its schedule/<p>.conf files are
-# the registry the loop below derives every other repo from, and
-# _paced.<host>.conf dispatches out of the account's OWN checkout.
+# #1138: no longer cloned unconditionally. #350's "no clones on the dispatch
+# path" ruling means every account but scheduler's own reads schedule/<p>.conf
+# from the served build (SCHEDULER_BUILD_ROOT above), never touching a
+# checkout the dispatch path itself does not use. scheduler's own account
+# still clones -- it is the one developing scheduler.
 #
 # REALISATEUR IS NOT CLONED HERE (#134, quoted in bin/lib/propagation-set.sh):
 # "Self-dev accounts do NOT pull fresh clones of realisateur ... everything
 # they use reaches them through the nightly verb build." What this script needs
 # it takes from $LIBEXEC below; the account that OWNS realisateur gets its
 # checkout from the derived loop, out of schedule/realisateur.conf's REPO_URL.
-clone_or_update scheduler "https://github.com/$GH_OWNER/scheduler.git"
+if [ "$(id -un)" = scheduler ]; then
+  clone_or_update scheduler "https://github.com/$GH_OWNER/scheduler.git"
+fi
 
 # DERIVED, NOT TYPED: schedule/<p>.conf declares REPO_URL and that IS the registry.
 # THE DEFAULT WAS THE FACTORY -- `senechal ecosim`, with setup-selfdev-project.sh passing
 # `senechal $PROJECT` over it: every account landed a repo it does not own (scheduler#307).
+# Own checkout if this account has one, else the served build (#1138).
 for p in ${SELFDEV_PROJECTS:-$(id -un)}; do
   conf="$PROJECTS/scheduler/schedule/$p.conf"
-  if [ ! -f "$conf" ]; then bad "$p: no schedule/$p.conf -- not a registered project"; continue; fi
+  [ -f "$conf" ] || conf="$SCHEDULER_BUILD_ROOT/schedule/$p.conf"
+  if [ ! -f "$conf" ]; then bad "$p: no schedule/$p.conf -- not a registered project (checked \$PROJECTS/scheduler and $SCHEDULER_BUILD_ROOT)"; continue; fi
   url="$(grep -hE '^REPO_URL=' "$conf" | head -1 | cut -d'"' -f2)"
   [ -n "$url" ] || { bad "$p: schedule/$p.conf declares no REPO_URL"; continue; }
   clone_or_update "$p" "$url"
