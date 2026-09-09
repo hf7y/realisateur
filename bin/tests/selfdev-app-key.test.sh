@@ -83,7 +83,7 @@ echo "-- F. the argument contract"
 "$SCRIPT" --help >/dev/null 2>&1;            eq "F2 --help exits 0" "$?" "0"
 
 echo "-- G. every reader resolves through the lib, not its own spelling"
-for f in "$ROOT/selfdev-gh-app.sh" "$ROOT/selfdev-credentials.sh"; do
+for f in "$ROOT/selfdev-gh-app.sh"; do
   n="$(basename "$f")"
   code="$(grep -v '^[[:space:]]*#' "$f")"
   case "$code" in

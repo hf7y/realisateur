@@ -78,8 +78,11 @@ wire-release-channel.sh|--check|--apply|the verb-build bootstrap and this accoun
 
 pass_n=0; fail_n=0; gap_n=0
 
-# A TAR: a step needs lib/ and hooks/ beside it (#385/#386). %q: ssh re-parses
-# one joined string (selfdev-credentials.sh). Why not a checkout: dresse(1).
+# A TAR: a step needs lib/ and hooks/ beside it (#385/#386). %q: ssh joins
+# every argument after the remote command into ONE string and has the far
+# side's shell re-parse it -- an empty argument silently vanishes and shifts
+# everything after it, so every argument here is %q-quoted rather than passed
+# bare. Why not a checkout: dresse(1).
 remote_step() { # remote_step <script> <args...>
   local s="$1"; shift
   local q="" a sudo_prefix=""

@@ -203,7 +203,6 @@ push-verb-build.sh
 registry-standup.sh
 branch-protection-provision.sh
 publish-release-verdict.sh
-selfdev-credentials.sh
 shellcheck-lint.sh
 comment-claims.sh
 verb-kind-lint.sh
