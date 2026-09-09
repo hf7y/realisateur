@@ -10,7 +10,7 @@ CLI_SUMMARY='is self-dev healthy enough to stop watching?'
 CLI_USAGE='  ausculte              every probe; the exit code is the answer
   ausculte --json       one object per probe
   ausculte <probe>      just one: channel hosts arming hygiene propagation
-                        rot landing unarmed fleet handoff
+                        rot landing unarmed fleet fatals handoff
   ausculte --cadence    run once on a clock: report, and record how long
                         each DOWN/BLIND row has held (--quiet to hush it)
   ausculte --install-cadence [--apply]
@@ -534,6 +534,41 @@ $_led" ;;
       fi
     fi
   fi
+fi
+
+if want fatals; then  # A HARD ABORT BEFORE `claude` STARTS writes no ledger row, so `fleet` above never sees it -- two accounts hard-aborted every dispatch for days on exactly that gap (#1005) and a four-line sweep.log FATAL count found both in a minute
+  _fatals_probe='
+    sudo -n true 2>/dev/null && SU="sudo -n" || SU=""   # homes are 0700
+    n_checked=0
+    while IFS=: read -r u _ id _; do
+      case "$id" in "" | *[!0-9]*) continue ;; esac
+      [ "$id" -ge 3000 ] && [ "$id" -lt 3100 ] || continue
+      L=$($SU find /home/$u/.local/share -maxdepth 2 -name sweep.log 2>/dev/null | head -1)
+      [ -n "$L" ] || continue
+      $SU test -r "$L" || continue
+      n_checked=$((n_checked + 1))
+      c=$($SU grep -c FATAL "$L" 2>/dev/null)
+      [ "${c:-0}" -gt 0 ] && printf "FATALS-FOUND %s %s\n" "$u" "$c"
+    done < /etc/passwd
+    echo "FATALS-CHECKED $n_checked"'
+  if on_target_host "${AUSCULTE_FLEET_HOST:-monkey}"; then
+    fat="$(bash -c "$_fatals_probe" 2>/dev/null)"
+  else
+    fat="$(${AUSCULTE_SSH:-ssh} -o ConnectTimeout=10 -o BatchMode=yes "${AUSCULTE_FLEET_HOST:-monkey}" "$_fatals_probe" 2>/dev/null)"
+  fi
+  case "$fat" in
+    *FATALS-CHECKED*)
+      n_checked="$(printf '%s\n' "$fat" | sed -n 's/^FATALS-CHECKED //p')"
+      found="$(printf '%s\n' "$fat" | awk '$1=="FATALS-FOUND" {printf "%s(%s) ", $2, $3}')"
+      if [ -n "$found" ]; then
+        record fatals DOWN "aborting every dispatch, unreported until now: $found"
+      elif [ "${n_checked:-0}" -eq 0 ]; then  # zero readable is not zero aborting -- same trap as fleet's ledger count
+        record fatals BLIND 'no sweep.log could be read for any account -- cannot tell whether one is aborting'
+      else
+        record fatals OK "$n_checked account(s) checked, none aborting before dispatch"
+      fi ;;
+    *) record fatals BLIND 'could not read any account sweep.log' ;;
+  esac
 fi
 
 
