@@ -19,7 +19,16 @@ is *evidence about the knob*, and vaulting it launders dead config into a
 cleaner-looking file while the knob survives. Reaping **flags** a mechanism; it
 does not delete it. Prefer a **runnable witness** over a paragraph asserting the
 same. And when the ratchet flags +N, **the answer is always reap** (Zach,
-2026-09-07): a large baseline is itself the evidence that N lines of junk exist.
+2026-09-07): a large baseline is itself the evidence that junk exists.
+
+**N is a count of FILES, and only a file that stops existing pays it.** The
+census asks how many files carry prose, not how many lines they hold, so
+shortening a comment in a file that survives moves it by zero. That is
+deliberate: a line count is payable by rewriting your own lines, which is the
+cheapest move available and leaves a half-stated premise behind -- worse than
+either keeping the paragraph or removing it. So reaping means asking what
+nothing reads. A script the verb build ships and no crontab invokes, a doctrine
+page for a mechanism that was retired, a spec for a check that is gone.
 
 ## 2. The three destinations
 
