@@ -12,8 +12,7 @@ registration never qualifies.
 **Findings go in the issue tracker, never in a markdown surface.**
 One destination, and it is a command: `gh issue create -R hf7y/realisateur`.
 
-This command is designed to run unattended overnight, with no human
-review step until the morning.
+This command runs unattended overnight, with no human review until morning.
 
 ## 1. Orient
 
@@ -170,6 +169,5 @@ filed. Anything that must survive the run is an ISSUE, not a paragraph.
 
 ## 7. Before finishing
 
-Confirm every meaningful change -- in realisateur's own repo AND in any
-new project's repo -- has a real commit, pushed to its remote. An
-overnight run that is not saved anywhere didn't happen.
+`stop-residue-gate.sh` refuses a turn that ends with uncommitted work, here and
+in any new project. It is a consequence now, not a reminder.

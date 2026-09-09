@@ -44,6 +44,7 @@ cat > "$T/bin/gh" <<'EOF'
 case "$*" in
   *check-runs*) printf '%s\n' "${STUB_FAILING:-0}" ;;
   *pulls/*)     cat "$STUB_PR" 2>/dev/null || exit 1 ;;
+  *issues/*)    [ -n "${STUB_ISSUE:-}" ] || exit 1; printf '%s\n' "$STUB_ISSUE" ;;
 esac
 EOF
 chmod +x "$T/bin/gh"
@@ -341,6 +342,38 @@ RC="$(markb "$T/dirty" sess-g)"
 rc "E7 --baseline on a dirty tree still exits 0" 0 "$RC"
 RC="$(markb "$T" sess-h)"
 rc "E8 --baseline outside a repo still exits 0" 0 "$RC"
+
+section "M. an issue nothing dispatches to (#1141)"
+
+asst_cmd() { jq -nc --arg c "$1" '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":$c}}]}}'; }
+runms() { payload "$1" "$2" | STUB_ISSUE="$3" PATH="$T/bin:$PATH" "$SCRIPT" 2>&1; }
+rcms()  { payload "$1" "$2" | STUB_ISSUE="$3" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
+
+newrepo "$T/m"
+ISSUE_URL="https://github.com/hf7y/realisateur/issues/1141"
+{ user_turn "file it"; asst_cmd "gh issue create -R hf7y/realisateur --title x"; url_result "$ISSUE_URL"
+  asst_turn "Filed it."; } > "$T/m1.jsonl"
+
+OUT="$(runms "$T/m" "$T/m1.jsonl" "$(printf 'open\t')")"
+has "M1 an open issue this turn filed with no milestone blocks" "$OUT" "OPEN and in no milestone"
+rc  "M2 and exits 2" 2 "$(rcms "$T/m" "$T/m1.jsonl" "$(printf 'open\t')")"
+has "M3 and it names the issue, not just the rule" "$OUT" "$ISSUE_URL"
+
+rc  "M4 the same issue in a milestone does not block" 0 \
+    "$(rcms "$T/m" "$T/m1.jsonl" "$(printf 'open\tEvery witness fails loudly')")"
+
+rc  "M5 a closed issue with no milestone does not block" 0 \
+    "$(rcms "$T/m" "$T/m1.jsonl" "$(printf 'closed\t')")"
+
+{ user_turn "what does it say"; asst_cmd "gh issue view 1141 --json body"; url_result "$ISSUE_URL"
+  asst_turn "It says nothing new."; } > "$T/m2.jsonl"
+rc  "M6 a turn that only READ an issue does not block" 0 \
+    "$(rcms "$T/m" "$T/m2.jsonl" "$(printf 'open\t')")"
+
+OUT="$(payload "$T/m" "$T/m1.jsonl" | STUB_ISSUE="" PATH="$T/bin:$PATH" "$SCRIPT" 2>&1)"
+has "M7 an unreadable issue says BLIND rather than passing quietly" "$OUT" "BLIND"
+rc  "M8 and BLIND alone does not block the turn" 0 \
+    "$(payload "$T/m" "$T/m1.jsonl" | STUB_ISSUE="" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?")"
 
 summary
 [ "$fail" -eq 0 ] || exit 1

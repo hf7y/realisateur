@@ -112,6 +112,37 @@ stated_defects() { # <this turn's assistant text> -> one line per sentence asser
 
 ACT_RE='^(Write|Edit|NotebookEdit)$|git +commit|git +push|gh +(issue|pr) +(create|comment)|gh +api.*(issues|pulls)|notify-senechal'
 
+# AN ISSUE NOTHING DISPATCHES TO IS RESIDUE (#1141). Why, in the message below.
+TURN_SLICE='. as $all |
+  ([range(0; length) | select($all[.].type == "user" and ($all[.] | has("toolUseResult") | not))] | last) as $b |
+  if $b == null then [] else $all[($b + 1):] end'
+
+milestone_gaps() { # <transcript> -> one line per OPEN issue this turn wrote to with no milestone
+  local wrote urls u slug num meta ms st n=0
+  wrote="$(jq -rs "$TURN_SLICE"' | [.[] | select(.type=="assistant") | (.message.content // [])[]
+             | select(.type=="tool_use") | (.input.command // "")]
+           | map(select(test("gh +issue +(create|comment|edit)"))) | length' "$1" 2>/dev/null)"
+  # A turn that only READ issues is not touching them; M6 pins that.
+  [ "${wrote:-0}" -gt 0 ] || return 0
+  urls="$(jq -rs "$TURN_SLICE"' | [.[] | select(.toolUseResult != null)
+             | (.toolUseResult | if type=="object" then (.stdout // .content // "") else . end | tostring)] | .[]' \
+          "$1" 2>/dev/null |
+          grep -oE 'https://github\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+/issues/[0-9]+' | sort -u)"
+  [ -n "$urls" ] || return 0
+  command -v gh >/dev/null 2>&1 || { printf 'BLIND: gh is not on PATH, so no milestone could be checked.\n'; return 0; }
+  while IFS= read -r u; do
+    [ -n "$u" ] || continue
+    n=$((n + 1)); [ "$n" -gt 8 ] && { printf 'BLIND: more than 8 issues touched; only the first 8 were checked.\n'; break; }
+    slug="${u#https://github.com/}"; num="${slug##*/}"; slug="${slug%/issues/*}"
+    meta="$(gh api "repos/$slug/issues/$num" --jq '"\(.state)\t\(.milestone.title // "")"' 2>/dev/null)" || {
+      printf 'BLIND: %s could not be read, so its milestone is unknown.\n' "$u"; continue; }
+    st="${meta%%$'\t'*}"; ms="${meta#*$'\t'}"
+    [ "$st" = open ] || continue
+    [ -n "$ms" ] || printf '%s is OPEN and in no milestone\n' "$u"
+  done <<<"$urls"
+}
+
+
 cited_already() { # <flagged text> <transcript> -- true when it names an artifact this transcript has already seen
   local cite seen                                    # gh issue create prints a URL, not #N, so the number is the identity
   cite="$(grep -oE '#[0-9]+|/(issues|pull)/[0-9]+' <<<"$1" | grep -oE '[0-9]+' | sed -n 1p)"
@@ -191,6 +222,24 @@ if [ -n "$transcript" ] && [ -r "$transcript" ] && command -v jq >/dev/null 2>&1
       echo "transcript. Do it NOW, or give it a URL -- an issue in the owning repo,"
       echo "with a milestone so something dispatches to it. An act elsewhere in this"
       echo "turn does not pay for the part you deferred."
+    } >&2
+    exit 2
+  fi
+  ms_report="$(milestone_gaps "$transcript")"
+  ms_blind="$(grep '^BLIND:' <<<"$ms_report")"
+  ms_gaps="$(grep -v '^BLIND:' <<<"$ms_report" | grep -v '^$')"
+  [ -n "$ms_blind" ] && printf '%s\n' "$ms_blind" >&2
+  if [ -n "$ms_gaps" ]; then
+    {
+      echo "BLOCKED: this turn wrote to an issue that nothing dispatches to."
+      echo
+      printf '%s\n' "$ms_gaps"
+      echo
+      echo "A project runs only while a milestone holds an open issue, so an open issue"
+      echo "in no milestone is a finding nothing will ever pick up -- built-not-wired,"
+      echo "in the tracker. Put it in one: gh issue edit <n> --milestone \"<title>\"."
+      echo "If none fits, write that into the issue body and give it the nearest"
+      echo "anyway. Leaving it unplaced and explaining why in the reply is the failure."
     } >&2
     exit 2
   fi

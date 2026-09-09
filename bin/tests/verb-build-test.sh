@@ -213,8 +213,7 @@ check "...VERBATIM -- byte-identical to what the build carries, so carry-drift c
 check "a hook in the build is installed executable into HOOK_DEST" \
       "$([ -x "$HOOK_DEST/subagent-closeout.sh" ] && echo yes)" "yes"
 
-# A symlink at the destination is never ours, and cp would write THROUGH it
-# and clobber whatever it points at. Same rule as install-shims.sh.
+# A symlink at the destination is never ours; cp would write THROUGH it.
 victim="$TMP/victim.md"; printf 'do not clobber\n' > "$victim"
 ln -sfn "$victim" "$CMD_DEST/cloture.md"
 run --build 2026-08-10T0130Z --apply --link >/dev/null 2>&1
