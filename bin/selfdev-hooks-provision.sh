@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # selfdev-hooks-provision.sh -- every self-dev account runs THE-FLOOR gate
-# 3.2's closeout hooks (SubagentStart baseline + SubagentStop, SessionStart baseline + Stop), the verb-pin hook (SessionStart, #708), the path guard (PreToolUse, #707), the credential hold (PreToolUse+UserPromptSubmit, #714), the memory budget guard+report (PreToolUse+SessionStart, #715) and the session marker (SessionStart+SessionEnd, hf7y/vim-arcade#207): wired in settings.json, and file.
+# 3.2's closeout hooks (SubagentStart baseline + SubagentStop, SessionStart baseline + Stop), the verb-pin hook (SessionStart, #708), the path guard (PreToolUse, #707), the credential hold (PreToolUse+UserPromptSubmit, #714), the memory budget guard+report (PreToolUse+SessionStart, #715), the destructive-gh refusal (PreToolUse, #1128) and the session marker (SessionStart+SessionEnd, hf7y/vim-arcade#207): wired in settings.json, and file.
 #
 # RUNNER: bin/tests/selfdev-hooks-provision.test.sh -- and an operator, on the host
 # GUARD-TEST: bin/tests/selfdev-hooks-provision.test.sh
@@ -145,6 +145,10 @@ read -r -d '' HOOKS <<'JSON'
       "hooks": [
         {
           "type": "command",
+          "command": "~/.claude/hooks/deny-destructive-gh.sh"
+        },
+        {
+          "type": "command",
           "command": "~/.claude/hooks/pretooluse-credential-hold.sh"
         },
         {
@@ -194,6 +198,7 @@ declare -A HOOK_SRC=(
   [pretooluse-path-guard.sh]="${SELFDEV_PRETOOLUSE_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pretooluse-path-guard.sh}"
   [pre-issue-dup-check.sh]="${SELFDEV_DUPCHECK_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pre-issue-dup-check.sh}"
   [pretooluse-credential-hold.sh]="${SELFDEV_CREDENTIAL_HOLD_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pretooluse-credential-hold.sh}"
+  [deny-destructive-gh.sh]="${SELFDEV_DENY_DESTRUCTIVE_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/deny-destructive-gh.sh}"
   [pretooluse-memory-budget.sh]="${SELFDEV_MEMORY_BUDGET_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/pretooluse-memory-budget.sh}"
   [session-start-memory-budget.sh]="${SELFDEV_SESSIONSTART_MEMORY_BUDGET_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/session-start-memory-budget.sh}"
   [session-marker.sh]="${SELFDEV_SESSION_MARKER_HOOK_SRC:-$PROP_HOST_PIN/realisateur/hooks/session-marker.sh}"

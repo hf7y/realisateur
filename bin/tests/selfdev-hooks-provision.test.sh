@@ -108,6 +108,7 @@ done
 has "I: the credential-hold hook is the command too (#714)" "$WANT" "pretooluse-credential-hold.sh"
 has "I: the memory-budget PreToolUse hook is the command too (#715)" "$WANT" "pretooluse-memory-budget.sh"
 has "I: a second PreToolUse matcher is Bash" "$WANT" "Bash"
+has "I: the destructive-gh refusal is wired at PreToolUse|Bash (#1128)" "$WANT" "deny-destructive-gh.sh"
 has "I: UserPromptSubmit is the wired event too (#714)" "$WANT" "UserPromptSubmit"
 [ "$(printf '%s' "$WANT" | jq -r '.SubagentStop[0].hooks[0].type')" = "command" ] \
   && ok "I: the hook type is command" || bad "I: the hook type is not command"
@@ -127,7 +128,7 @@ has "I: UserPromptSubmit is the wired event too (#714)" "$WANT" "UserPromptSubmi
 mkdir -p "$T/hj/acctj/.claude/hooks"
 printf '%s' "$WANT" | jq '{hooks:.}' > "$T/hj/acctj/.claude/settings.json"
 SRC="$T/hook-src.sh"; printf '#!/usr/bin/env bash\necho current\n' > "$SRC"; chmod +x "$SRC"
-run_hj() { HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$SRC" SELFDEV_STOP_HOOK_SRC="$SRC" SELFDEV_SESSIONSTART_HOOK_SRC="$SRC" SELFDEV_PRETOOLUSE_HOOK_SRC="$SRC" SELFDEV_CREDENTIAL_HOLD_HOOK_SRC="$SRC" SELFDEV_MEMORY_BUDGET_HOOK_SRC="$SRC" SELFDEV_SESSIONSTART_MEMORY_BUDGET_HOOK_SRC="$SRC" SELFDEV_SESSION_MARKER_HOOK_SRC="$SRC" "$SCRIPT" "$@" 2>&1; }
+run_hj() { HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$SRC" SELFDEV_STOP_HOOK_SRC="$SRC" SELFDEV_SESSIONSTART_HOOK_SRC="$SRC" SELFDEV_PRETOOLUSE_HOOK_SRC="$SRC" SELFDEV_CREDENTIAL_HOLD_HOOK_SRC="$SRC" SELFDEV_MEMORY_BUDGET_HOOK_SRC="$SRC" SELFDEV_SESSIONSTART_MEMORY_BUDGET_HOOK_SRC="$SRC" SELFDEV_SESSION_MARKER_HOOK_SRC="$SRC" SELFDEV_DENY_DESTRUCTIVE_HOOK_SRC="$SRC" "$SCRIPT" "$@" 2>&1; }
 
 printf '#!/usr/bin/env bash\necho stale\n' > "$T/hj/acctj/.claude/hooks/subagent-closeout.sh"
 O="$(run_hj)"
@@ -175,12 +176,17 @@ if [ "$(cat "$T/hj/acctj/.claude/hooks/session-marker.sh")" = "$(cat "$SRC")" ];
 else
   bad "J: --apply did not install session-marker.sh"
 fi
+if [ "$(cat "$T/hj/acctj/.claude/hooks/deny-destructive-gh.sh")" = "$(cat "$SRC")" ]; then
+  ok "J: --apply installs the destructive-gh refusal too, absent -> present (#1128)"
+else
+  bad "J: --apply did not install deny-destructive-gh.sh"
+fi
 
 O="$(run_hj)"
 case "$O" in *"hook FILE is"*) bad "J: a current hook file should not report drift: $O" ;;
-  *) ok "J: all eight current hook files stop being a finding" ;; esac
+  *) ok "J: all nine current hook files stop being a finding" ;; esac
 
-O="$(HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$T/no-such-build" SELFDEV_STOP_HOOK_SRC="$T/no-such-build" SELFDEV_SESSIONSTART_HOOK_SRC="$T/no-such-build" SELFDEV_PRETOOLUSE_HOOK_SRC="$T/no-such-build" SELFDEV_CREDENTIAL_HOLD_HOOK_SRC="$T/no-such-build" SELFDEV_MEMORY_BUDGET_HOOK_SRC="$T/no-such-build" SELFDEV_SESSIONSTART_MEMORY_BUDGET_HOOK_SRC="$T/no-such-build" SELFDEV_SESSION_MARKER_HOOK_SRC="$T/no-such-build" "$SCRIPT" 2>&1)"
+O="$(HOME_ROOT="$T/hj" SUDO='' SELFDEV_HOOK_SRC="$T/no-such-build" SELFDEV_STOP_HOOK_SRC="$T/no-such-build" SELFDEV_SESSIONSTART_HOOK_SRC="$T/no-such-build" SELFDEV_PRETOOLUSE_HOOK_SRC="$T/no-such-build" SELFDEV_CREDENTIAL_HOLD_HOOK_SRC="$T/no-such-build" SELFDEV_MEMORY_BUDGET_HOOK_SRC="$T/no-such-build" SELFDEV_SESSIONSTART_MEMORY_BUDGET_HOOK_SRC="$T/no-such-build" SELFDEV_SESSION_MARKER_HOOK_SRC="$T/no-such-build" SELFDEV_DENY_DESTRUCTIVE_HOOK_SRC="$T/no-such-build" "$SCRIPT" 2>&1)"
 case "$O" in *"BLIND the hook file source"*) ok "J: an unreadable build source says BLIND, not ok" ;;
   *) bad "J: unreadable source did not report BLIND: $O" ;; esac
 
