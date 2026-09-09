@@ -60,6 +60,7 @@ done
 
 say() { printf '%s\n' "$*" >&2; }
 die() { printf '%s: %s\n' "$CLI_NAME" "$*" >&2; exit 1; }
+via_suffix() { [ "${1:-}" = "sudo -n" ] && printf ' (via sudo -n)'; :; }
 
 select_local_build() {
   local root="$1" want="$2" id="" dir="" d cand missing=0 total f project verb
@@ -98,21 +99,34 @@ atomic_swap_local() {
 
 push_tree() {
   local sshbin="$1" rsyncbin="$2" local_dir="$3" host="$4" remote_root="$5" id="$6"
-  "$sshbin" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" "$host" \
-      "mkdir -p $(printf '%q' "$remote_root")" || {
-    say "push_tree: could not create $remote_root on $host"; return 1; }
-  "$rsyncbin" -a --delete -e "$sshbin -o BatchMode=yes -o ConnectTimeout=$SSH_TIMEOUT" \
-      "$local_dir/" "$host:$remote_root/$id/" || {
-    say "push_tree: rsync to $host:$remote_root/$id failed"; return 1; }
+  PUSH_VIA=plain
+  if ! "$sshbin" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" "$host" \
+      "mkdir -p $(printf '%q' "$remote_root")"; then
+    PUSH_VIA="sudo -n"
+    "$sshbin" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" "$host" \
+        "sudo -n mkdir -p $(printf '%q' "$remote_root")" || {
+      say "push_tree: could not create $remote_root on $host"; return 1; }
+  fi
+  if ! "$rsyncbin" -a --delete -e "$sshbin -o BatchMode=yes -o ConnectTimeout=$SSH_TIMEOUT" \
+      "$local_dir/" "$host:$remote_root/$id/"; then
+    PUSH_VIA="sudo -n"
+    "$rsyncbin" -a --delete --rsync-path='sudo -n rsync' -e "$sshbin -o BatchMode=yes -o ConnectTimeout=$SSH_TIMEOUT" \
+        "$local_dir/" "$host:$remote_root/$id/" || {
+      say "push_tree: rsync to $host:$remote_root/$id failed"; return 1; }
+  fi
 }
 
 remote_atomic_swap() {
-  local sshbin="$1" host="$2" remote_root="$3" id="$4"
-  "$sshbin" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" "$host" bash -s -- "$remote_root" "$id" <<EOF
-set -uo pipefail
+  local sshbin="$1" host="$2" remote_root="$3" id="$4" script
+  script="set -uo pipefail
 $(declare -f atomic_swap_local)
-atomic_swap_local "\$1" "\$2"
-EOF
+atomic_swap_local \"\$1\" \"\$2\""
+  SWAP_VIA=plain
+  if "$sshbin" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" "$host" bash -s -- "$remote_root" "$id" <<<"$script"; then
+    return 0
+  fi
+  SWAP_VIA="sudo -n"
+  "$sshbin" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" "$host" sudo -n bash -s -- "$remote_root" "$id" <<<"$script"
 }
 
 verify_remote_build() {
@@ -214,7 +228,7 @@ if [ -n "$ROLLBACK_ID" ]; then
     exit 1
   fi
   if verify_remote_current "$SSH_BIN" "$HOST" "$REMOTE_ROOT" "$ROLLBACK_ID"; then
-    echo "  OK      $HOST's current -> $ROLLBACK_ID (re-read off the host, not inferred from an exit code)"
+    echo "  OK      $HOST's current -> $ROLLBACK_ID (re-read off the host, not inferred from an exit code)$(via_suffix "$SWAP_VIA")"
     exit 0
   else
     echo "  BAD     the swap ran but $HOST's current does NOT read back as $ROLLBACK_ID"
@@ -261,14 +275,14 @@ if ! push_tree "$SSH_BIN" "$RSYNC_BIN" "$BUILD_DIR" "$HOST" "$REMOTE_ROOT" "$BUI
   echo "  BAD     push to $HOST failed -- current on $HOST is UNCHANGED. Rows above say which step refused."
   exit 1
 fi
-echo "  OK      $BUILD_ID is on $HOST at $REMOTE_ROOT/$BUILD_ID"
+echo "  OK      $BUILD_ID is on $HOST at $REMOTE_ROOT/$BUILD_ID$(via_suffix "$PUSH_VIA")"
 
 if ! remote_atomic_swap "$SSH_BIN" "$HOST" "$REMOTE_ROOT" "$BUILD_ID"; then
   echo "  BAD     the swap on $HOST failed or refused -- the pushed tree is there but current did not move"
   exit 1
 fi
 if verify_remote_current "$SSH_BIN" "$HOST" "$REMOTE_ROOT" "$BUILD_ID"; then
-  echo "  OK      $HOST's current -> $BUILD_ID (re-read off the host, not inferred from an exit code)"
+  echo "  OK      $HOST's current -> $BUILD_ID (re-read off the host, not inferred from an exit code)$(via_suffix "$SWAP_VIA")"
   exit 0
 else
   echo "  BAD     the swap ran but $HOST's current does NOT read back as $BUILD_ID"
