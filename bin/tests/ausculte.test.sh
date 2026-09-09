@@ -469,34 +469,76 @@ echo
 echo "-- fatals: an abort with no ledger row at all ---------------------------"
 runf() { PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=not-monkey bash "$TMP/bin/ausculte.sh" "$@" 2>&1; }  # forced off "monkey": on the real host this account is itself uid 3000-3099 with a real sweep.log, and on_target_host would take the local-exec branch fleet's own test already covers
 fatals() { printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s"\nexit 0\n' "$1" > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"; }
+# AUSCULTE_FLEET_HOSTS pinned to monkey alone below: these assertions are
+# about the single-host FATALS-CHECKED/-FOUND grammar, not fleet-set
+# aggregation, which gets its own host-differentiated section further down
+# (#1139) -- left at the real default (monkey vaporwave) there.
 
 fatals "FATALS-CHECKED 3"
-out="$(runf fatals)"; rc=$?
+out="$(AUSCULTE_FLEET_HOSTS=monkey runf fatals)"; rc=$?
 check "no account aborting is OK (0)" "$rc" "0"
 has "and it names how many were checked" "$out" "3 account(s) checked"
 
 fatals "FATALS-FOUND dcp-gate-site 69
 FATALS-CHECKED 3"
-out="$(runf fatals)"; rc=$?
+out="$(AUSCULTE_FLEET_HOSTS=monkey runf fatals)"; rc=$?
 check "an account hard-aborting every dispatch is DOWN (5)" "$rc" "5"
 has "and it names the account and the count" "$out" "dcp-gate-site(69)"
 
 fatals "FATALS-FOUND dcp-gate-site 69
 FATALS-FOUND realisateur 56
 FATALS-CHECKED 3"
-out="$(runf fatals)"; rc=$?
+out="$(AUSCULTE_FLEET_HOSTS=monkey runf fatals)"; rc=$?
 check "two accounts aborting are both named, not just the first" "$rc" "5"
 has "...dcp-gate-site" "$out" "dcp-gate-site(69)"
 has "...and realisateur" "$out" "realisateur(56)"
 
 fatals "FATALS-CHECKED 0"
-out="$(runf fatals)"; rc=$?
+out="$(AUSCULTE_FLEET_HOSTS=monkey runf fatals)"; rc=$?
 check "no sweep.log readable for any account is BLIND (6), not a quiet fleet" "$rc" "6"
 has "and it says it cannot tell" "$out" "cannot tell"
 
 printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"
-out="$(runf fatals)"; rc=$?
+out="$(AUSCULTE_FLEET_HOSTS=monkey runf fatals)"; rc=$?
 check "an unreachable host is BLIND (6)" "$rc" "6"
+
+echo
+echo "-- fatals: a SET of hosts, not a single default (#1139) -----------------"
+# This probe landed (#1062) after fleet-hosts-set.sh existed and still asked
+# only ${AUSCULTE_FLEET_HOST:-monkey} -- reusing fleet's own host-differentiated
+# ssh stub (fleet_hosts, defined above) to prove the same fix applies here.
+fleet_hosts monkey    0 "FATALS-CHECKED 3" \
+            vaporwave 0 "FATALS-CHECKED 2"
+out="$(runf fatals)"; rc=$?
+check "both hosts in the set answer clean, so fatals is OK" "$rc" "0"
+has "and BOTH hosts' checked counts are summed, not just the first" "$out" "5 account(s) checked"
+
+fleet_hosts monkey    0 "FATALS-FOUND wtul 4
+FATALS-CHECKED 3" \
+            vaporwave 1 ""
+out="$(runf fatals)"; rc=$?
+check "an abort found on one host outranks the other host being unreachable -- DOWN (5), not BLIND" "$rc" "5"
+has "and the found abort is named" "$out" "wtul(4)"
+has "and the unreachable host is STILL named, not silently dropped" "$out" "UNREACHABLE"
+has "...specifically vaporwave" "$out" "vaporwave"
+
+fleet_hosts monkey    0 "FATALS-CHECKED 3" \
+            vaporwave 1 ""
+out="$(runf fatals)"; rc=$?
+check "one host in the set unreachable (and the other clean) is BLIND (6), never folded into an OK" "$rc" "6"
+has "and the unreachable host is named" "$out" "vaporwave"
+has "and it says its state is not clean, not merely absent" "$out" "not clean"
+hasnt "and it never reports the whole fatals row as OK on a partial read" "$out" "OK      fatals"
+
+fleet_hosts monkey    1 "" vaporwave 1 ""
+out="$(runf fatals)"; rc=$?
+check "both hosts unreachable is BLIND (6)" "$rc" "6"
+has "and it says so plainly" "$out" "could not read any account sweep.log on any host"
+
+fleet_hosts monkey 0 "FATALS-CHECKED 3"
+out="$(AUSCULTE_FLEET_HOSTS=monkey runf fatals)"; rc=$?
+check "AUSCULTE_FLEET_HOSTS overrides the set down to one host" "$rc" "0"
+has "and only that host's count is used" "$out" "3 account(s) checked"
 
 echo
 echo "-- NOT-MINE: the containment boundary is not a failure -----------------"
