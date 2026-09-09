@@ -466,6 +466,39 @@ check "AUSCULTE_FLEET_HOSTS overrides the set down to one host" "$rc" "0"
 has "and only that host's account is counted" "$out" "1 account(s) reported"
 
 echo
+echo "-- fatals: an abort with no ledger row at all ---------------------------"
+runf() { PATH="$TMP/stub:$PATH" SELFDEV_LOCAL_HOSTNAME=not-monkey bash "$TMP/bin/ausculte.sh" "$@" 2>&1; }  # forced off "monkey": on the real host this account is itself uid 3000-3099 with a real sweep.log, and on_target_host would take the local-exec branch fleet's own test already covers
+fatals() { printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s"\nexit 0\n' "$1" > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"; }
+
+fatals "FATALS-CHECKED 3"
+out="$(runf fatals)"; rc=$?
+check "no account aborting is OK (0)" "$rc" "0"
+has "and it names how many were checked" "$out" "3 account(s) checked"
+
+fatals "FATALS-FOUND dcp-gate-site 69
+FATALS-CHECKED 3"
+out="$(runf fatals)"; rc=$?
+check "an account hard-aborting every dispatch is DOWN (5)" "$rc" "5"
+has "and it names the account and the count" "$out" "dcp-gate-site(69)"
+
+fatals "FATALS-FOUND dcp-gate-site 69
+FATALS-FOUND realisateur 56
+FATALS-CHECKED 3"
+out="$(runf fatals)"; rc=$?
+check "two accounts aborting are both named, not just the first" "$rc" "5"
+has "...dcp-gate-site" "$out" "dcp-gate-site(69)"
+has "...and realisateur" "$out" "realisateur(56)"
+
+fatals "FATALS-CHECKED 0"
+out="$(runf fatals)"; rc=$?
+check "no sweep.log readable for any account is BLIND (6), not a quiet fleet" "$rc" "6"
+has "and it says it cannot tell" "$out" "cannot tell"
+
+printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"
+out="$(runf fatals)"; rc=$?
+check "an unreachable host is BLIND (6)" "$rc" "6"
+
+echo
 echo "-- NOT-MINE: the containment boundary is not a failure -----------------"
 # monkey is a WSL2 DISTRO on dexter. Holding shell on its own host is backwards,
 # so root@monkey has an empty authorized_keys and no key -- and with only
