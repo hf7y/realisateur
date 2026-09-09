@@ -134,7 +134,7 @@ mkdir -p "$PROJECTS"
 WIRE="$(dirname "$0")/wire-selfdev-git.sh"
 
 wire_repo() {
-  local name="$1" access=""
+  local name="$1" owner="${2:-$GH_OWNER}" access=""
   [ -x "$WIRE" ] || { gap "$name: wire-selfdev-git.sh not found beside $(basename "$0") -- clone will use whatever credential happens to exist"; return 0; }
   # READ-WRITE only for the account's OWN repo. The account is named for its
   # project, which is the whole reason one unix user per project buys anything.
@@ -142,14 +142,32 @@ wire_repo() {
   # NOT piped into sed: a pipeline's status is the LAST command's, so `| sed`
   # would swallow every failure this script exists to surface.
   local out rc
-  out="$("$WIRE" "$name" --apply $access 2>&1)"; rc=$?
+  # SELFDEV_GH_OWNER, scoped to just this one call: wire-selfdev-git.sh
+  # already reads that override (same default chain $GH_OWNER above uses),
+  # so this repo's own owner (#1133, read from ITS OWN REPO_URL below) does
+  # not leak into $GH_OWNER and misdirect the scheduler clone or any other
+  # repo still correctly on the estate default.
+  out="$(SELFDEV_GH_OWNER="$owner" "$WIRE" "$name" --apply $access 2>&1)"; rc=$?
   printf '%s\n' "$out" | sed 's/^/    /'
   [ "$rc" -eq 0 ] || bad "$name: git credentials could not be wired (rc=$rc)"
 }
 
 clone_or_update() {
   local name="$1" url="$2" dir="$PROJECTS/$1"
-  case "$url" in *"github.com/$GH_OWNER/"*|*"github.com:$GH_OWNER/"*) wire_repo "$name" ;; esac
+  case "$url" in
+    *"github.com/$GH_OWNER/"*|*"github.com:$GH_OWNER/"*) wire_repo "$name" "$GH_OWNER" ;;
+    *)
+      # #1133: an account's OWN repo in a SECOND org (media-arts-collective,
+      # not hf7y) used to fall straight through here with NO credential
+      # wired at all -- this case only ever matched $GH_OWNER. Wire it too,
+      # for the owner this URL actually names, not the estate default.
+      if [ "$name" = "$(id -un)" ]; then
+        local url_owner
+        url_owner="${url%.git}"; url_owner="${url_owner#*github.com[:/]}"; url_owner="${url_owner%%/*}"
+        wire_repo "$name" "$url_owner"
+      fi
+      ;;
+  esac
   if [ -d "$dir/.git" ]; then
     act "$name: fast-forward only"
     git -C "$dir" fetch -q origin && git -C "$dir" pull -q --ff-only || \

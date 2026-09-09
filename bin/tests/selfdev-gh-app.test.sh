@@ -354,7 +354,9 @@ BINDIR="$(cd "$(dirname "$0")/.." && pwd)"
 has "M4 the provisioning caller scopes to the project itself" \
     "$(cat "$BINDIR/setup-selfdev-project.sh")" "--wire --repos '\$PROJECT'"
 has "M5 the re-wire caller does too, or --apply silently unscopes the fleet" \
-    "$(cat "$BINDIR/selfdev-credentials.sh")" '--wire --repos $(cred_own_repo "$acct")'
+    "$(cat "$BINDIR/selfdev-credentials.sh")" 'own_repo_bare="$(cred_own_repo "$acct")"'
+has "M5b ...and the scope it passes is that same value (bare: #1133 made cred_own_repo owner-qualified, and --repos wants bare)" \
+    "$(cat "$BINDIR/selfdev-credentials.sh")" '--wire --repos $own_repo_bare'
 no  "M6 no second list of repos was invented beside cred_own_repo" \
     "$(cat "$BINDIR/lib/selfdev-credentials-set.sh")" "cred_wire_scope"
 

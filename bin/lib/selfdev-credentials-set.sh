@@ -50,9 +50,26 @@ cred_classify_token() {
   esac
 }
 
-# cred_own_repo <account> -- the repo this account should hold WRITE on.
+# cred_own_repo <account> -- the OWNER-QUALIFIED ("owner/repo") repo this
+# account should hold WRITE on. #1133: wavebucks and inventory-app live in
+# media-arts-collective, not hf7y, so this cannot be $CRED_GH_OWNER/<name> by
+# assumption -- it has to be READ, the same way land-selfdev.sh already reads
+# an account's own clone URL: schedule/<project>.conf's REPO_URL, under
+# ${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler/schedule (the same
+# knob install-verbs.sh, verb-set.sh and land-selfdev.sh itself all share).
+# No conf found (not yet registered, or no scheduler checkout here) falls
+# back to $CRED_GH_OWNER/<repo>, <repo> still resolved through sweep_repo so
+# apms -> apms-2173 (#916) keeps working for every hf7y-owned account.
 cred_own_repo() {
-  sweep_repo "$1"  # apms -> apms-2173 etc: SWEEP_ROSTER_ALIAS is the one place that says so, read not re-declared (#916)
+  local acct="$1" conf url
+  conf="${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler/schedule/$acct.conf"
+  if [ -r "$conf" ]; then
+    url="$(grep -hE '^REPO_URL=' "$conf" | head -1 | cut -d'"' -f2)"
+    url="${url%.git}"
+    url="${url#*github.com[:/]}"
+    case "$url" in */*) printf '%s\n' "$url"; return 0 ;; esac
+  fi
+  printf '%s/%s\n' "$CRED_GH_OWNER" "$(sweep_repo "$acct")"
 }
 
 # cred_grant_covers <account> <kind> <what> -- is this exact exception

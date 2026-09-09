@@ -275,7 +275,9 @@ cred_check_deploy_keys() { # cred_check_deploy_keys <account>...
   for repo in $CRED_SHARED_REPOS; do
     others=""
     for acct in "$@"; do
-      [ "$(cred_own_repo "$acct")" = "$repo" ] && continue
+      # cred_own_repo is owner-qualified (#1133); CRED_SHARED_REPOS is bare
+      # and always $CRED_GH_OWNER-owned, so compare against the qualified form.
+      [ "$(cred_own_repo "$acct")" = "$CRED_GH_OWNER/$repo" ] && continue
       others="$others $acct"
     done
     # shellcheck disable=SC2086
@@ -291,13 +293,19 @@ cred_check_deploy_keys() { # cred_check_deploy_keys <account>...
 # so a shared repo (checked for all ten accounts at once) costs one call.
 cred_check_repo_keys() {
   local repo="$1" want="$2"; shift 2
+  # repo arrives bare (from CRED_SHARED_REPOS) or owner-qualified (#1133,
+  # cred_own_repo's return shape) -- SLUG is what GitHub's API needs, BARE is
+  # what the deploy-key TITLE carries (wire-selfdev-git.sh's TITLE has no
+  # owner in it) and what every message below already names.
+  local slug="$repo" bare="$repo"
+  case "$repo" in */*) bare="${repo##*/}" ;; *) slug="$CRED_GH_OWNER/$repo" ;; esac
   # `--json title,readOnly` is REQUESTED but not, in practice, HONOURED: gh
   # 2.45.0 validates "readOnly" as a real field name, then omits it anyway.
   local json rc
-  json="$("$CRED_GH_BIN" repo deploy-key list --repo "$CRED_GH_OWNER/$repo" --json title,readOnly 2>/dev/null)"
+  json="$("$CRED_GH_BIN" repo deploy-key list --repo "$slug" --json title,readOnly 2>/dev/null)"
   rc=$?  # a zero-key repo prints nothing, rc 0, not "[]" -- rc alone distinguishes that from a failed call (#916)
   if [ "$rc" -ne 0 ]; then
-    blind "deploy-key symmetry: could not list keys on $CRED_GH_OWNER/$repo (no admin access here, or the repo/call failed)"
+    blind "deploy-key symmetry: could not list keys on $slug (no admin access here, or the repo/call failed)"
     return
   fi
   [ -n "$json" ] || json='[]'
@@ -305,10 +313,10 @@ cred_check_repo_keys() {
   for acct in "$@"; do
     # TWO jq calls, deliberately, not one with `// empty`. jq's `//` falls
     # through on `false` as well as `null` -- `.readOnly // empty` silently
-    local suf="-$acct-$repo" found
+    local suf="-$acct-$bare" found
     found="$(printf '%s' "$json" | jq -r --arg suf "$suf" '[.[] | select(.title | endswith($suf))] | length')"
     if [ "${found:-0}" -eq 0 ] 2>/dev/null; then
-      bad "$acct: no deploy key registered on $repo (title ending '$suf') -- expected $want_word"
+      bad "$acct: no deploy key registered on $bare (title ending '$suf') -- expected $want_word"
       continue
     fi
     # readOnly-OR-read_only, resolved by KEY PRESENCE rather than `//`, which
@@ -319,14 +327,14 @@ cred_check_repo_keys() {
       | if ($m | has("readOnly")) then ($m.readOnly | tostring) else ($m.read_only | tostring) end
     ')"
     case "$want:$ro" in
-      rw:false|ro:true) ok "$acct: $repo deploy key is $want_word, matching the symmetry rule" ;;
-      rw:true)  bad "$acct: $repo (OWN repo) deploy key is READ-ONLY -- cannot push its own work" ;;
-      ro:false) bad "$acct: $repo (SHARED repo) deploy key is WRITE -- the symmetry rule says shared repos are read-only; a stray write key here is exactly the cross-repo-push shape Zach flagged" ;;
+      rw:false|ro:true) ok "$acct: $bare deploy key is $want_word, matching the symmetry rule" ;;
+      rw:true)  bad "$acct: $bare (OWN repo) deploy key is READ-ONLY -- cannot push its own work" ;;
+      ro:false) bad "$acct: $bare (SHARED repo) deploy key is WRITE -- the symmetry rule says shared repos are read-only; a stray write key here is exactly the cross-repo-push shape Zach flagged" ;;
       *)
         # FAIL LOUD ON AN UNRECOGNIZED SHAPE. A silent `case` with no default
         # arm is exactly how this bug hid the first time: `$ro` read the
         # literal string "null" (the field name gh's own error message calls
-        blind "deploy-key symmetry: $acct on $repo returned an unreadable readOnly value ('$ro') -- gh's JSON shape may have changed" ;;
+        blind "deploy-key symmetry: $acct on $bare returned an unreadable readOnly value ('$ro') -- gh's JSON shape may have changed" ;;
     esac
   done
 }
@@ -436,8 +444,18 @@ cmd_apply() {
     echo "  --    $acct already pushes as the App over https; left alone"
   else
     act "selfdev-gh-app.sh --wire as $acct (helper=$wire_own, $leftover leftover rewrite(s))"
+    # selfdev-gh-app.sh's --repos is bare names ONLY -- it mints a token
+    # against ONE App installation owner and rejects an owner-qualified entry
+    # outright (#1069). cred_own_repo is owner-qualified (#1133); strip back
+    # to bare here. NOTE: this still assumes the App is installed on the same
+    # owner as the account's own repo -- true for every hf7y account today,
+    # NOT yet true for a media-arts-collective own-repo, which is why
+    # wire_repo/wire-selfdev-git.sh (land-selfdev.sh) is the credential path
+    # #1133 actually fixes for those two accounts; the App push path is a
+    # separate, still-single-owner mechanism, untouched here.
+    local own_repo_bare; own_repo_bare="$(cred_own_repo "$acct")"; own_repo_bare="${own_repo_bare##*/}"
     if "$CRED_SSH_BIN" -o BatchMode=yes "$CRED_HOST" \
-         "sudo -n -u '$acct' bash -lc '${CRED_APP_WIRE:-/usr/local/libexec/selfdev/selfdev-gh-app.sh} --wire --repos $(cred_own_repo "$acct")'"; then
+         "sudo -n -u '$acct' bash -lc '${CRED_APP_WIRE:-/usr/local/libexec/selfdev/selfdev-gh-app.sh} --wire --repos $own_repo_bare'"; then
       echo "  OK    $acct wired to the App"
       changed=1
     else

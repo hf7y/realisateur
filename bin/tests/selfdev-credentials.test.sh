@@ -44,10 +44,35 @@ t_eq "classify: github_pat_ token"   "$(cred_classify_token 'oauth_token: github
 t_eq "classify: classic ghp_ token"  "$(cred_classify_token 'oauth_token: ghp_abc123')" other
 t_eq "classify: no line at all"      "$(cred_classify_token '')" missing
 
-t_eq "own_repo: identity mapping"    "$(cred_own_repo ecosim)" ecosim
-t_eq "own_repo: hyphenated account"  "$(cred_own_repo groc-mangr)" groc-mangr
-t_eq "own_repo: apms aliases to apms-2173, the #905 collision (#916)" \
-     "$(cred_own_repo apms)" apms-2173
+# own_repo is owner-qualified since #1133. With no schedule/<p>.conf to read
+# (HERMETIC: INSTALLE_PROJECTS points at an empty tree, not whatever
+# scheduler checkout happens to sit beside this repo's real $HOME) it falls
+# back to $CRED_GH_OWNER/<repo>, <repo> still resolved through sweep_repo.
+OWN_REPO_EMPTY="$T/no-scheduler-here"
+t_eq "own_repo: no conf -> falls back to CRED_GH_OWNER/<repo>" \
+     "$(INSTALLE_PROJECTS="$OWN_REPO_EMPTY" cred_own_repo ecosim)" "$CRED_GH_OWNER/ecosim"
+t_eq "own_repo: hyphenated account, same fallback" \
+     "$(INSTALLE_PROJECTS="$OWN_REPO_EMPTY" cred_own_repo groc-mangr)" "$CRED_GH_OWNER/groc-mangr"
+t_eq "own_repo: apms aliases to apms-2173 via the fallback, the #905 collision (#916)" \
+     "$(INSTALLE_PROJECTS="$OWN_REPO_EMPTY" cred_own_repo apms)" "$CRED_GH_OWNER/apms-2173"
+
+# #1133: wavebucks and inventory-app live in media-arts-collective, not hf7y
+# -- own_repo has to read THIS from the account's own conf, not assume
+# CRED_GH_OWNER, or the estate-wide owner splits in a way one variable cannot
+# express.
+OWN_REPO_FIX="$T/cross-org-projects"
+mkdir -p "$OWN_REPO_FIX/scheduler/schedule"
+printf 'PROJECT="wavebucks"\nREPO_URL="https://github.com/media-arts-collective/wavebucks.git"\n' \
+  > "$OWN_REPO_FIX/scheduler/schedule/wavebucks.conf"
+t_eq "own_repo: a cross-org account resolves owner-qualified from its own conf's REPO_URL" \
+     "$(INSTALLE_PROJECTS="$OWN_REPO_FIX" cred_own_repo wavebucks)" "media-arts-collective/wavebucks"
+
+# The same seam, ssh-style REPO_URL (ecosim's real shape) and hf7y-owned --
+# proves the read path itself, not just the fallback, lands on hf7y too.
+printf 'PROJECT="ecosim"\nREPO_URL="git@github.com:hf7y/ecosim.git"\n' \
+  > "$OWN_REPO_FIX/scheduler/schedule/ecosim.conf"
+t_eq "own_repo: an hf7y-owned conf resolves via REPO_URL too (ssh form)" \
+     "$(INSTALLE_PROJECTS="$OWN_REPO_FIX" cred_own_repo ecosim)" "hf7y/ecosim"
 
 # The shipped table is EMPTY -- no account has a reviewed exception today.
 [ -z "$(cred_list_grants ecosim)" ] && t_ok "grants: shipped CRED_GRANTS has no rows for ecosim" \
