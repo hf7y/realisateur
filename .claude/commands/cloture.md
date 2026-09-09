@@ -73,7 +73,8 @@ words a keyword sweep looks for, and Zach had to ask who had been told.
 
 **Filed is not dispatchable.** Since 2026-09-04 a project runs only while a
 milestone holds an open issue, so every issue this session files OR TOUCHES gets
-one -- and "no milestone fits" is a finding to file, never a line in the reply.
+one; if none fits, write that into the issue and give it the nearest anyway.
+`stop-residue-gate.sh` refuses the turn, so this is a consequence, not advice.
 
 ### Layered not replaced
 
