@@ -183,6 +183,18 @@ GH_APP="${SELFDEV_LIBEXEC:-/usr/local/libexec/selfdev}/selfdev-gh-app.sh"
 [ -x "$GH_APP" ] || die "$GH_APP is not installed, so $PROJECT gets no git credential
 helper and cannot clone over https. Install the host tools first:
     sudo $HERE/wire-release-channel.sh --host --apply"
+# --repos IS DELIBERATELY OWN-REPO-ONLY, NOT own-repo+senechal (#1136). Step
+# 3/8 above gives this account a READ-ONLY deploy key on senechal/scheduler/
+# realisateur because the App's installation permissions are NOT read-only
+# (confirmed live on unattended-vaporwave: contents:write) -- adding senechal
+# to this --repos list would hand this account's App token WRITE access to
+# senechal, not just the read the deploy key gives it. That is the exact
+# cannot-push -> can-push conversion #1136 warns removing wire-selfdev-git.sh
+# without a replacement would cause, except self-inflicted here, immediately,
+# for every new account. Do not "fix" the senechal read gap by widening this
+# list until there is a per-repo-permission mechanism narrower than the
+# installation's own write grant; until then the deploy key stays the only
+# read path for senechal, per repo #1136.
 run_as "'$GH_APP' --wire --repos '$PROJECT'" 2>&1 | sed 's/^/  /'
 [ "${PIPESTATUS[0]}" -eq 0 ] || die "selfdev-gh-app.sh --wire failed for $PROJECT -- no git
 credential helper, so the clone in 5/8 cannot authenticate. Read the rows above."
