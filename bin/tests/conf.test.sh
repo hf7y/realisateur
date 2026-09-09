@@ -87,7 +87,12 @@ else
 fi
 
 # Section D exercised session-marker.sh; RESTORED at hooks/session-marker.sh
-# (hf7y/vim-arcade#207), sourcing this file's conf_repo_path as before -- see
-# bin/tests/selfdev-hooks-provision.test.sh section I/J for its wiring coverage.
+# (hf7y/vim-arcade#207). It no longer sources this file: since #1135 it
+# carries its own inlined copy of conf_repo_path, because the installed
+# layout (~/.claude/hooks/) has no bin/lib/ beside it for a checkout-relative
+# source to find -- see hooks/session-marker.sh's own comment on the copy.
+# Its wiring is covered by bin/tests/selfdev-hooks-provision.test.sh section
+# I/J, and the K section added there for #1135 executes it (and every other
+# provisioned hook) under env -i to catch exactly this shape of failure.
 
 summary

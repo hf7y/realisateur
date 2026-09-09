@@ -5,8 +5,34 @@
 set -uo pipefail
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=bin/lib/conf.sh
-. "$SELF_DIR/../bin/lib/conf.sh"
+
+# conf_repo_path is INLINED from bin/lib/conf.sh, not sourced (#1135): this
+# hook is installed to ~/.claude/hooks/ on every self-dev account (see
+# bin/selfdev-hooks-provision.sh), a layout where "$SELF_DIR/../bin/lib/"
+# does not exist -- only a checkout has bin/ sitting beside hooks/. Sourcing
+# a path that only resolves in one of the two layouts is exactly how every
+# SessionEnd on every account failed silently: the source failed under
+# `set -uo pipefail` (no `-e`), so the script kept running with the function
+# undefined and still exited 0. Keep this in sync with bin/lib/conf.sh's
+# conf_repo_path by hand -- bin/tests/conf.test.sh section C's ratchet scans
+# bin/*.sh and bin/lib/*.sh, not hooks/, so nothing else enforces that.
+conf_repo_path() {
+  local conf="$1" p
+  p="$(grep -E '^[[:space:]]*PROJECT_REPO_PATH=' "$conf" 2>/dev/null | head -1)"
+  [ -n "$p" ] || return 1
+  p="${p#*=}"
+  p="${p%%[[:space:]]#*}"
+  p="${p#"${p%%[![:space:]]*}"}"
+  p="${p%"${p##*[![:space:]]}"}"
+  case "$p" in
+    '"'*'"') p="${p#\"}"; p="${p%\"}" ;;
+    "'"*"'") p="${p#\'}"; p="${p%\'}" ;;
+  esac
+  [ -n "$p" ] || return 1
+  p="${p//\$\{HOME\}/$HOME}"
+  p="${p//\$HOME/$HOME}"
+  printf '%s\n' "$p"
+}
 
 SCHED_ROOT="${SCHED_ROOT:-${INSTALLE_PROJECTS:-$HOME/Documents/Projects}/scheduler}"
 REGISTRY_DIR="${SCHEDULER_REGISTRY_DIR:-$HOME/.local/share/scheduler-registry}"
