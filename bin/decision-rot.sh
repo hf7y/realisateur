@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # decision-rot.sh -- how many of Zach's answers is nobody acting on?
+# NOT A VERB (#1041): its own RUNNER line below says SURVEY, not runner.
 #
 # RUNNER: no -- a SURVEY: run in a triage pass, or ahead of /ideate.
 # GUARD-TEST: bin/tests/decision-rot.test.sh, offline behind a fake `gh`
@@ -23,7 +24,7 @@ CLI_POSITIONAL=any
 CLI_EXITS='  0  clean -- every answered issue in a repo that dispatches is closed
   1  rot found -- at least one answered issue is still open
   6  BLIND -- a repo or the arming roster could not be read; the count is NOT trustworthy'
-. "$(dirname "${BASH_SOURCE[0]}")/lib/cli-guard.sh"
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/cli-guard.sh"
 cli_guard "$@"
 
 # DECISION_ROT_OWNER: for the suite, whose fixture logins are not this estate's.
@@ -79,17 +80,17 @@ DECISION_ROT_JQ="$(cat "$ANSWERED_JQ_FILE")"
 # shellcheck source=bin/lib/arming.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/arming.sh"
 if ! arming_load; then
-  printf '%s: BLIND -- could not read %s:%s, so no repo can be told from a parked one. Classifying none of them.\n' \
-    "$CLI_NAME" "$ARMING_ROSTER_REPO" "$ARMING_ROSTER_PATH" >&2
+  printf '%s: BLIND -- could not read %s, so no repo can be told from a parked one. Classifying none of them.\n' \
+    "$CLI_NAME" "$ARMING_ROSTER_URL" >&2
   exit 6
 fi
 
 # Warned, not counted: the exit code answers "is there rot in what I read".
 if [ "$MODE" = all ]; then
   UNSWEPT="$(sweep_unswept "$ARMING_ROSTER")"
-  [ -n "$UNSWEPT" ] && printf '%s: %s live in %s:%s and NOT in SWEEP, so this survey did not read %s: %s. Add to SWEEP_PROJECTS in lib/roster-set.sh.\n' \
+  [ -n "$UNSWEPT" ] && printf '%s: %s live in %s and NOT in SWEEP, so this survey did not read %s: %s. Add to SWEEP_PROJECTS in lib/roster-set.sh.\n' \
     "$CLI_NAME" "$(printf '%s\n' "$UNSWEPT" | grep -c .)" \
-    "$ARMING_ROSTER_REPO" "$ARMING_ROSTER_PATH" \
+    "$ARMING_ROSTER_URL" \
     "$([ "$(printf '%s\n' "$UNSWEPT" | grep -c .)" = 1 ] && echo it || echo them)" \
     "$(printf '%s\n' "$UNSWEPT" | paste -sd' ')" >&2
 fi

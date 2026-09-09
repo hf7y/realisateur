@@ -3,7 +3,8 @@
 `build-verbs.yml` belongs at `hf7y/verbs/.github/workflows/build-verbs.yml`
 and is deployed there **by hand**; it is kept here because realisateur owns the
 build logic it calls. `tests.yml`'s `deploy-drift` job is the only thing that
-notices the two disagreeing, and it is advisory, never required.
+notices the two disagreeing, and it has been required, not advisory, since
+2026-09-03 (`bin/tests/branch-protection.test.sh`).
 
 ## The channel, hop by hop
 
@@ -42,9 +43,8 @@ build that looks complete. **The count is in `manifest.tsv`, never in prose.**
 
 `TICK_HOST_LIBEXEC` is empty unless `wire-release-channel.sh --host` set it
 (#517), so the probes ride the clock on a host-wide install and **not** on a
-per-account one: on mandark 2026-08-29 the verb pin was that morning's build
-while `~/.local/libexec/selfdev` was 18 days old. The provision-class half is
-a human's act on purpose (`bin/lib/carries.tsv` says why).
+per-account one. The provision-class half is a human's act on purpose
+(`bin/lib/carries.tsv` says why).
 
 ## Host-wide, not per-account
 
@@ -53,7 +53,7 @@ a human's act on purpose (`bin/lib/carries.tsv` says why).
 `$HOME` and a per-account install is **invisible from outside the account**.
 mandark is per-account deliberately -- `~/.local/bin` PRECEDES `/usr/local/bin`
 there and is full of `installe`-owned links, so a host-wide install would be
-shadowed rather than adopted (VERB-DISTRIBUTION §7 reconciles the two).
+shadowed rather than adopted.
 
 ## Retiring a verb is three acts
 

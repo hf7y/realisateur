@@ -63,8 +63,7 @@ done
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# THE LEDGER FILE -- per branch, inside .git, so it is never committed and
-# never leaks between branches. A session that files six items and then has to
+# THE LEDGER FILE -- per branch, inside .git, so it is never committed.
 ledger_path() {
   local gd br
   gd="$(git rev-parse --git-dir 2>/dev/null)" || return 1

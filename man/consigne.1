@@ -7,6 +7,7 @@ left behind
 .I path\fR...
 .br
 .B consigne status
+.RB [ \-\-diverged ]
 .RI [ project ...]
 .br
 .B consigne lock
@@ -79,6 +80,16 @@ A count and a prompt are printed after the rows.
 Acting on the queue is the per-paragraph judgement
 .I PROSE-REAPING.md
 \(sc1 asks for, and there is deliberately no flag here that makes it.
+.PP
+.B \-\-diverged
+narrows the report to bare
+.I proj/rel
+paths, one per line \(em the DIVERGED rows only, with no header, no push
+status, no counts and no prompt. DIVERGED is the more urgent of the two
+actionable states: the vault note is already a stale fork and neither copy
+says so, and the full report buries that handful of rows among ones that need
+no action at all. The bare list is meant to be saved somewhere a later run can
+work through it (hf7y/realisateur#1061).
 .PP
 Both
 .B status

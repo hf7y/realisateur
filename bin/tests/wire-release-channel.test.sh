@@ -120,7 +120,7 @@ n_tool=$(printf '%s\n' "$tools" | grep -c .)
 [ "$n_tool" -ge "$n_prov" ] \
   && ok "every provisioning step travels with it (no second list)" \
   || bad "every provisioning step travels" "want at least $n_prov, got $n_tool"
-for extra in decision-rot.sh unarmed.sh; do
+for extra in landing-drift.sh vault-spool-drain.sh; do
   printf '%s\n' "$tools" | grep -qx "$extra" \
     && ok "the host carries $extra, so ausculte is not blind about it there" \
     || bad "the host carries $extra" "absent from prop_host_tools"
@@ -138,13 +138,8 @@ grep -q 'ln -sfn "$HOST_LIBEXEC/dresse.sh" "$HOST_BIN/dresse"' "$SCRIPT" \
   || bad "dresse is deployed and never linked; a verb nobody can type is not installed"
 
 
-# --- the checkout these bytes come from (2026-08-22) ------------------------
-# Deploy verified against a git ref; drift fails loud.
-# This script IS the deploy and it verified nothing. /root/realisateur-refresh
-# sat 12 commits behind main, `--host --apply` ran out of it, reported
-# "3 ok, 0 gap, 0 bad", and installed the OLD install-verb-build.sh -- so
-# realisateur#531's libexec clock was "applied" and absent. Every mtime moved,
-# which reads exactly like success.
+# --- the checkout these bytes come from --------------------------------------
+# Why, at length, in wire-release-channel.sh's own header. Asserted here.
 echo
 echo "== 8. THE CHECKOUT THESE BYTES COME FROM ================================"
 harness_tmp

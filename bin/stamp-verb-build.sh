@@ -67,7 +67,6 @@ act() { printf '  ..    %s\n' "$*"; }
 
 # The hook, generated rather than shipped as a file of its own: a second file
 # in the bootstrap set is another copy that rots. The LIB PATH is baked in at
-# install time and the hook sources it, so the hook holds no copy of the
 write_hook() {
   mkdir -p "$HOOK_DIR" || return 1
   cat > "$HOOK" <<EOF

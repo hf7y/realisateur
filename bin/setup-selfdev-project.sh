@@ -17,20 +17,41 @@
 
 set -uo pipefail
 
+USAGE="usage: $0 <project> [--check|--apply] [--no-key] [--host <hostname>]"
 PROJECT="${1:-}"; shift 2>/dev/null || true
-MODE="--check"; WANT_KEY=1
-for a in "$@"; do
-  case "$a" in
-    --check|--apply) MODE="$a" ;;
+MODE="--check"; WANT_KEY=1; TARGET_HOST=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --check|--apply) MODE="$1" ;;
     --no-key)        WANT_KEY=0 ;;
-    *) echo "usage: $0 <project> [--check|--apply] [--no-key]" >&2; exit 2 ;;
+    --host)          shift; TARGET_HOST="${1:-}" ;;
+    *) echo "$USAGE" >&2; exit 2 ;;
   esac
+  shift
 done
-case "$PROJECT" in ""|-*) echo "usage: $0 <project> [--check|--apply] [--no-key]" >&2; exit 2 ;; esac
+case "$PROJECT" in ""|-*) echo "$USAGE" >&2; exit 2 ;; esac
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+
+if [ -n "$TARGET_HOST" ]; then
+  . "$HERE/lib/selfdev-ssh-transport.sh"
+  echo "== setup-selfdev-project $PROJECT ($MODE) on $TARGET_HOST, driven over ssh =="
+  EXTRA_ARGS=(); [ "$WANT_KEY" -eq 0 ] && EXTRA_ARGS+=(--no-key)
+  SHIP_PATHS=(bin/setup-selfdev-project.sh bin/provision-selfdev-user.sh bin/wire-selfdev-git.sh
+              bin/land-selfdev.sh bin/selfdev-app-key.sh bin/wire-release-channel.sh
+              bin/selfdev-permissions-provision.sh bin/selfdev-hooks-provision.sh bin/lib)
+  selfdev_ssh_ship_run "$TARGET_HOST" 1 "$HERE/.." SHIP_PATHS \
+    bin/setup-selfdev-project.sh "$PROJECT" "$MODE" "${EXTRA_ARGS[@]}"
+  rc=$?
+  if [ "$rc" -eq 255 ] || [ "$rc" -eq 6 ]; then
+    echo "setup-selfdev-project: FATAL could not reach $TARGET_HOST, or nothing ran there (ssh rc=$rc)" >&2
+    exit 6
+  fi
+  exit "$rc"
+fi
 
 [ "$(id -u)" -eq 0 ] || { echo "$0: run as root (sudo bash $0 $PROJECT $MODE)" >&2; exit 2; }
 
-HERE="$(cd "$(dirname "$0")" && pwd)"
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
 HOST="$(hostname -s 2>/dev/null || echo unknown)"
 # Whose key, and whose repo checkout, we are working from. Under sudo this is
@@ -177,7 +198,6 @@ the 25 lines shown. Re-run it directly to see all of them:
 
 # --- 6. the release bootstrap, and the account's own clock -------------------
 # DELEGATED to bin/wire-release-channel.sh since 2026-08-10, not reimplemented.
-# It was inline here, which meant the only way to give an account a clock was
 say "6/8 release bootstrap + clock"
 "$HERE/wire-release-channel.sh" "$PROJECT" --apply
 

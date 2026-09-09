@@ -16,9 +16,14 @@ bin/gh	bin/gh-sign.sh
 bin/ausculte	bin/ausculte.sh
 bin/atteste	bin/atteste.sh
 bin/check-project-busy	bin/check-project-busy.sh
+bin/cutover-check	bin/cutover-check.sh
+bin/decision-rot	bin/decision-rot.sh
 bin/defere	bin/defere.sh
 bin/etiquette	bin/etiquette.sh
+bin/tarife	bin/tarife.sh
+man/tarife.1	man/tarife.1
 bin/notify-senechal	bin/notify-senechal.sh
+bin/unarmed	bin/unarmed.sh
 # consigne itself was hand-added to bashified on 2026-08-17 (#329) but never
 # carried, so every fix since -- including the spool door, #742 -- reaches no
 # account (realisateur#857 gap 1). This row makes carry.sh --apply the path.
@@ -39,8 +44,18 @@ bin/lib/path-guard.tsv	bin/lib/path-guard.tsv
 bin/lib/propagation-set.sh	bin/lib/propagation-set.sh
 bin/lib/roster-set.sh	bin/lib/roster-set.sh
 bin/lib/estate-set.sh	bin/lib/estate-set.sh
+bin/lib/fleet-hosts-set.sh	bin/lib/fleet-hosts-set.sh
+# arming.sh is bin/decision-rot.sh's only lib not already carried for another
+# reason (#894 made decision-rot.sh a verb, riding this row instead of
+# prop_support_libs()'s libexec derivation). Uncarried, bin/decision-rot
+# sources a lib/arming.sh that is not on the branch it lands on.
+bin/lib/arming.sh	bin/lib/arming.sh
+# registry-set.sh is bin/unarmed.sh's only lib not already carried for another
+# reason (#894 made unarmed.sh a verb too, riding this row instead of the
+# libexec derivation it used to travel on). Uncarried, bin/unarmed sources a
+# lib/registry-set.sh that is not on the branch it lands on.
+bin/lib/registry-set.sh	bin/lib/registry-set.sh
 bin/lib/zaxon.sh	bin/lib/zaxon.sh
-commands/cloture.md	.claude/commands/cloture.md
 commands/ideate.md	.claude/commands/ideate.md
 commands/nightly-batch.md	.claude/commands/nightly-batch.md
 commands/reap.md	.claude/commands/reap.md
@@ -68,9 +83,7 @@ hooks/session-marker.sh	hooks/session-marker.sh
 # of them -- selfdev-release-tick.sh and install-verb-build.sh -- would be
 # overwriting themselves mid-run. The install below is atomic anyway, but the
 # smallest correct set is the one that was actually going stale.
-libexec/decision-rot.sh	bin/decision-rot.sh
 libexec/landing-drift.sh	bin/landing-drift.sh
-libexec/unarmed.sh	bin/unarmed.sh
 # vault-spool-drain.sh is not a probe: it is the privileged half of `consigne`
 # once the vault's read door is shut (#742), and /etc/cron.d/vault-spool-drain
 # invokes it by its libexec path. It rides for the same reason the probes do --

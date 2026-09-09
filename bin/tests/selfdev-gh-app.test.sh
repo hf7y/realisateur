@@ -161,8 +161,6 @@ has "H2 refuses without --app-id" "$outH2" "app-id"
 eq  "H2 exits 5" "$rcH2" "5"
 
 # --- I: --adopt no longer invents a per-account path ---------------------------
-# It used to install ~/.config/selfdev/<account>/<account>.pem plus a conf
-# naming it -- which is how ONE App key came to sit on disk under four names,
 outI="$(run env SELFDEV_GH_API="http://127.0.0.1:1" "$SCRIPT" --adopt \
         --account acct2 --key "$T/app.pem" --app-id 4520255 2>&1)"; rcI=$?
 has "I prints the fingerprint"  "$outI" "fingerprint:"
@@ -349,16 +347,33 @@ no  "M3 no --repos means no scope is invented" "$(mhelper)" "--repos"
 has "M3 ...and the unscoped posture is stated, not silent" "$outM3" "UNSCOPED"
 
 echo
-echo "-- M: the two callers that must supply the list --------------------------"
+echo "-- M: the caller that must supply the list --------------------------------"
 BINDIR="$(cd "$(dirname "$0")/.." && pwd)"
 # OWN repo and nothing else: realisateur reaches an account through the verb
 # build (#134) and each clones only its own REPO_URL (scheduler#307).
+# The re-wire caller, bin/selfdev-credentials.sh, was removed in #1134 (its
+# credential-audit check moved to hf7y/etalon); this is the one caller left.
 has "M4 the provisioning caller scopes to the project itself" \
     "$(cat "$BINDIR/setup-selfdev-project.sh")" "--wire --repos '\$PROJECT'"
-has "M5 the re-wire caller does too, or --apply silently unscopes the fleet" \
-    "$(cat "$BINDIR/selfdev-credentials.sh")" '--wire --repos $(cred_own_repo "$acct")'
-no  "M6 no second list of repos was invented beside cred_own_repo" \
-    "$(cat "$BINDIR/lib/selfdev-credentials-set.sh")" "cred_wire_scope"
+
+echo
+echo "-- N: an owner-qualified --repos entry is refused, not sent to GitHub -----"
+
+outN1="$(mwire --repos hf7y/dog 2>&1)"; rcN1=$?
+has "N1 the qualified form is refused before any request" "$outN1" "owner-qualified"
+has "N1 ...naming the fix"                                "$outN1" "drop the 'hf7y/' prefix"
+has "N1 ...and the bare form to use"                       "$outN1" "'dog'"
+eq  "N1 ...exits 5 like the script's other refusals"       "$rcN1" "5"
+no  "N1 ...never bakes the bad value into the helper"       "$(mhelper)" "hf7y/dog"
+
+outN2="$(mwire --repos wtul,hf7y/senechal 2>&1)"; rcN2=$?
+has "N2 a mixed list is still caught" "$outN2" "hf7y/senechal' is owner-qualified"
+eq  "N2 ...exits 5"                   "$rcN2" "5"
+
+outN3="$(mwire --repos WTUL 2>&1)"; rcN3=$?
+no  "N3 a bare name that merely shares a case with the owner is not caught" \
+    "$outN3" "owner-qualified"
+
 echo
 summary
 [ "$fail" -eq 0 ] || exit 1

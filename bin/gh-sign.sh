@@ -94,8 +94,6 @@ real_gh() {
 }
 
 # --- which copy is this, and when was it cut? -------------------------------
-# Invoked as the link, ${BASH_SOURCE[0]} names no build and has no lib/ beside
-# it; resolving it needs readlink, the external this file cannot
 SELF="${BASH_SOURCE[0]}"
 BUILD_ID=''
 locate_self() {
@@ -112,8 +110,7 @@ locate_self() {
 locate_self || :
 
 # Days since 1970-01-01 from a civil date, arithmetic only (Hinnant's
-# days_from_civil). `date -d` is the external this file may not have; a string
-# comparison of build ids cannot answer "how
+# days_from_civil). `date -d` is the external this file may not have.
 days_from_civil() {
   local y=$((10#$1)) m=$((10#$2)) d=$((10#$3)) era yoe doy doe
   y=$(( y - (m <= 2) ))

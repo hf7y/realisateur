@@ -13,12 +13,10 @@ on:
   pull_request:
   push:
     branches: [main]
-  # THE HATCH (#965): the carry below had no reachable trigger on 2026-09-03 and
-  # took a human at a terminal. Why, in the carry job.
+  # THE HATCH (#965): the carry below needs one. Why, in the carry job.
   workflow_dispatch:
 
-# One run per branch, here and in every workflow: 119 of 200 sampled runs
-# were superseded and billed anyway (#401).
+# One run per branch, here and in every workflow: superseded runs bill (#401).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -96,15 +94,12 @@ jobs:
   # NOT in `suites`: that job is hermetic by construction and must stay so. A
   # network call there would make every unrelated failure ambiguous.
   #
-  # ADVISORY, deliberately: it reads another repository, and a required check a
-  # third party can break is a wedge (realisateur#592's shape). It is loud; the
-  # propagation probe pages. Which checks actually gate `main` is read from the
-  # API, not asserted here: bin/tests/branch-protection.test.sh.
-  #
-  # Machine-readable form of the paragraph above, read by
-  # bin/branch-protection-provision.sh so `--apply` never proposes this job as
-  # a required context on its own say-so (hf7y/realisateur#949):
-  # ADVISORY: reads another repository; a required check a third party can break is a wedge (realisateur#592's shape)
+  # REQUIRED since 2026-09-03 (Zach, moved in bin/tests/branch-protection.test.sh):
+  # deploy-drift's subject is hf7y/verbs, this estate's own repo, not a third
+  # party, so the #592 wedge argument does not apply here -- its red means the
+  # deployed workflow diverged from the source (#645). Which checks actually
+  # gate `main` is read from the API, not asserted here:
+  # bin/tests/branch-protection.test.sh.
   deploy-drift:
     runs-on: ubuntu-latest
     permissions:

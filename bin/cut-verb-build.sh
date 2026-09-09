@@ -94,7 +94,6 @@ if [ "$DRY_RUN" -eq 1 ] && { [ -n "$ASSEMBLE" ] || [ "$WRITE" -eq 1 ]; }; then
 fi
 
 # An unreadable repository must FAIL LOUDLY, never wait for a password:
-# ls-remote against an unreadable repo prompts, and in CI the job hangs to the
 export GIT_TERMINAL_PROMPT=0
 
 command -v gh >/dev/null 2>&1 || die 'gh is not on PATH -- cannot read the declarations. Refusing to cut an empty build.'
@@ -102,15 +101,13 @@ gh auth status >/dev/null 2>&1 \
   || die 'gh is not authenticated. Refusing: an unauthenticated read sees no private repo and would cut a SHORT build that looks complete.'
 
 # --- 1. which repositories carry a bashified branch ---------------------
-# `gh repo list`, not a typed list: a project that bashifies itself tomorrow
-# joins with nobody editing a file. The private repos
 say "reading $OWNER's repositories ..."
 repos="$(gh repo list "$OWNER" --limit 200 --no-archived --json name -q '.[].name' 2>/dev/null)" \
   || die "cannot list $OWNER's repositories -- BLIND, not empty."
 [ -n "$repos" ] || die "$OWNER has no readable repositories -- BLIND, not empty."
 
 # --- 1b. THE REGISTRY: which repos are agent PROJECTS ----------------------
-# Distinct from the verb set, and the difference is the whole reason this
+# Distinct from the verb set: a repo can be a project and declare no verb.
 REGISTRY_MARKER="${REGISTRY_MARKER:-.agent-project}"
 registry=""
 if _reg="$(registry_repos)"; then    # lib/registry-set.sh -- the marker query has one home
@@ -152,7 +149,6 @@ for repo in $repos; do
       *"not found"*|*"404"*|*"Repository not found"*)
         # Reaching this line means `gh repo list` ALREADY returned this repo,
         # so the credential can see it. git then 404ing is not ambiguity --
-        # GitHub masks a contents-403 as a 404 for private repos, and a
         hint=" -- but the API LISTED this repo, so the credential sees it and only its CONTENTS are refused. GitHub reports a contents-403 as 404 on a private repo. Fix: grant the fine-grained PAT 'Contents: Read' (Repository permissions), then re-run. Re-selecting repositories will not help; they are already selected." ;;
       *) hint="" ;;
     esac
@@ -335,7 +331,6 @@ manifest="$tmp/manifest.tsv"
   fi
   # WHAT THIS BUILD DECIDED NOT TO INCLUDE, AND WHY -- in the artifact every
   # account consumes, not only on the terminal of whoever ran the cut. A
-  # half-declaration's whole failure mode is that its consequence lands on a
   if [ -s "$halves" ]; then
     printf '# %d name(s) on a bashified branch are NOT in this build. NOT-A-VERB rows\n' \
            "$(wc -l < "$halves" | tr -d ' ')"
@@ -349,8 +344,7 @@ manifest="$tmp/manifest.tsv"
 
 # --- 5a. the manifest's SHAPE -------------------------------------------
 # Four tab-separated fields, a 40-hex sha, and a repo_url that names the
-# project it claims to come from. This is cheap and it is the only part of
-# the pipeline a credential-less CI can exercise (see --dry-run), so it is
+# project it claims to come from.
 shape_bad=0
 while IFS= read -r line; do
   case "$line" in '#'*|'') continue ;; esac
@@ -391,7 +385,6 @@ say "derived $verb_count verb(s) from $projects project(s)"
 
 # --- 6. assemble the tree CI commits ------------------------------------
 # The meta-repo's whole content, laid out as <project>/bin/<verb> +
-# <project>/man/<verb>.1, so a consumer clones ONE repository instead of
 if [ -n "$ASSEMBLE" ]; then
   mkdir -p "$ASSEMBLE" || die "cannot create $ASSEMBLE"
   # Only ever prune paths this build owns. A blanket wipe of $ASSEMBLE
@@ -431,9 +424,6 @@ if [ -n "$ASSEMBLE" ]; then
 
     rm -rf "${ASSEMBLE:?}/$project"
     mkdir -p "$ASSEMBLE/$project"
-    # THE WHOLE bashified TREE, not just bin/ + man/.
-    #
-    # This copied only bin/ and man/ first, on the reasoning that a build's
     rm -rf "$work/.git"
     cp -a "$work/." "$ASSEMBLE/$project/"
     say "  assembled $project at ${sha:0:12}"
@@ -443,8 +433,6 @@ if [ -n "$ASSEMBLE" ]; then
   printf '%s\n' "$build_id" > "$ASSEMBLE/BUILD_ID"
 
   # Prove the tree matches the promise before CI is allowed to commit it.
-  #
-  # THE EXECUTABLE BIT IS NOT A WITNESS. This check was `-f && -x` and it
   bad=0
   while IFS=$'\t' read -r project verb _ _; do
     [ -n "${verb:-}" ] || continue

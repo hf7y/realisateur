@@ -10,12 +10,9 @@ can't be reverted -- an ordinary commit, branch, or new local scheduler
 registration never qualifies.
 
 **Findings go in the issue tracker, never in a markdown surface.**
-`BLOCKERS.md`, `.scheduler/FOCUS.md` and `.scheduler/QUESTIONS.md` were
-retired by hf7y/scheduler#66 and do not exist in this repo. One
-destination, and it is a command: `gh issue create -R hf7y/realisateur`.
+One destination, and it is a command: `gh issue create -R hf7y/realisateur`.
 
-This command is designed to run unattended overnight, with no human
-review step until the morning.
+This command runs unattended overnight, with no human review until morning.
 
 ## 1. Orient
 
@@ -25,11 +22,9 @@ previous nightly run left work in progress (check the last report under
 `~/reports/realisateur/`), pick up from there rather than starting over.
 
 **Promotion signals are inference over prose, and the most convincing output
-is the most likely to be wrong** -- a 5-project "cluster" on 2026-07-26 turned
-out to be a shared boilerplate footer. Judging one means opening its members
-and reading them, which is an `/ideate` job with a human present, not a batch
-one. This pass MAY file a striking candidate as an issue for the next
-interactive pass. It must NOT stamp `(re-arrival: …)`/`[iface: …]`, reorder
+is the most likely to be wrong.** Judging one means opening its members and
+reading them -- an `/ideate` job with a human present, not a batch one. This
+pass MAY file a striking candidate as an issue for the next interactive pass. It must NOT stamp `(re-arrival: …)`/`[iface: …]`, reorder
 anything, or change a weight. A promotion nobody stated is the silent reorder
 `/ideate` 4.5 forbids.
 
@@ -62,9 +57,8 @@ An empty inbox is now the **normal** state, not an exception. Intake is
 bursty; most nights there is nothing dropped.
 
 **The failure mode this prevents:** with no artifact, the pass builds another
-lint or guard *about its own batch process*. Real, tested, committed code,
-which is what makes it hard to see. Seven runs on 2026-07-26 produced five such
-scripts and **zero** commits into any of the twelve scaffolded projects.
+lint or guard *about its own batch process* -- real, tested, committed code,
+which is what makes it hard to see, and zero commits into any scaffolded project.
 
 So when there is no artifact to process, the job is **stewardship of the
 other projects**, and the output is *routing*, not building:
@@ -175,6 +169,5 @@ filed. Anything that must survive the run is an ISSUE, not a paragraph.
 
 ## 7. Before finishing
 
-Confirm every meaningful change -- in realisateur's own repo AND in any
-new project's repo -- has a real commit, pushed to its remote. An
-overnight run that is not saved anywhere didn't happen.
+`stop-residue-gate.sh` refuses a turn that ends with uncommitted work, here and
+in any new project. It is a consequence now, not a reminder.

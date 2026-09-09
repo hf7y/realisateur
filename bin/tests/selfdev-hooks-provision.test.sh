@@ -97,6 +97,14 @@ has "I: the session-marker release hook is wired on SessionEnd (vim-arcade#207)"
 has "I: PreToolUse is the wired event too (#707)" "$WANT" "PreToolUse"
 has "I: the path-guard hook is the command" "$WANT" "pretooluse-path-guard.sh"
 has "I: the PreToolUse matcher is Write|Edit" "$WANT" "Write|Edit"
+
+PG_M="$(printf '%s' "$WANT" | jq -r '.PreToolUse[] | select([.hooks[].command] | any(test("pretooluse-path-guard"))) | .matcher')"
+for t in Write Edit Read Grep Glob NotebookRead Bash; do
+  case "$PG_M" in
+    *"$t"*) ok "I: path-guard's matcher covers $t (#1092)" ;;
+    *)      bad "I: path-guard handles $t but its matcher does not deliver it: $PG_M" ;;
+  esac
+done
 has "I: the credential-hold hook is the command too (#714)" "$WANT" "pretooluse-credential-hold.sh"
 has "I: the memory-budget PreToolUse hook is the command too (#715)" "$WANT" "pretooluse-memory-budget.sh"
 has "I: a second PreToolUse matcher is Bash" "$WANT" "Bash"
@@ -113,8 +121,8 @@ has "I: UserPromptSubmit is the wired event too (#714)" "$WANT" "UserPromptSubmi
   && ok "I: the PreToolUse hook type is command too" || bad "I: the PreToolUse hook type is not command"
 [ "$(printf '%s' "$WANT" | jq -r '.UserPromptSubmit[0].hooks[0].type')" = "command" ] \
   && ok "I: the UserPromptSubmit hook type is command too" || bad "I: the UserPromptSubmit hook type is not command"
-[ "$(printf '%s' "$WANT" | jq '.PreToolUse | length')" = "2" ] \
-  && ok "I: PreToolUse carries both matcher groups" || bad "I: PreToolUse does not carry two matcher groups"
+[ "$(printf '%s' "$WANT" | jq '.PreToolUse | length')" = "3" ] \
+  && ok "I: PreToolUse carries all three matcher groups" || bad "I: PreToolUse does not carry three matcher groups"
 
 mkdir -p "$T/hj/acctj/.claude/hooks"
 printf '%s' "$WANT" | jq '{hooks:.}' > "$T/hj/acctj/.claude/settings.json"
@@ -190,6 +198,82 @@ for b in "$T/hk/acctk/.claude"/settings.json.bak-*; do
 done
 [ "$loose" -eq 0 ] && ok "K: every backup it wrote is 600, whatever the source was" \
                    || bad "K: $loose backup(s) wider than 600"
+
+echo
+echo "L: env -i witness -- a provisioned hook is not allowed to be silently broken (#1135)"
+# hf7y/realisateur#1135: hooks/session-marker.sh sourced a lib
+# ("$SELF_DIR/../bin/lib/conf.sh") that only resolves in a checkout, not in
+# the installed layout this script itself produces (~/.claude/hooks/, with no
+# bin/ beside it). The source failed, but under `set -uo pipefail` (no `-e`)
+# the script kept going and still exited 0 -- absent input read as a healthy
+# state, this estate's signature defect. Nothing caught it because nothing
+# ran a provisioned hook the way cron actually invokes one: a stripped
+# environment, `env -i`. This section provisions REAL hook files (not the
+# J-section stub) into a fresh account and executes every command the
+# provisioning JSON wires, under `env -i`, failing on a non-zero exit OR any
+# stderr -- so a hook that "fails open" can no longer hide behind exit 0.
+mkhome hl acctl ''
+HOOKS_SRC_DIR="$REPO_BIN/../hooks"
+run_hl() {
+  HOME_ROOT="$T/hl" SUDO='' \
+    SELFDEV_HOOK_SRC="$HOOKS_SRC_DIR/subagent-closeout.sh" \
+    SELFDEV_STOP_HOOK_SRC="$HOOKS_SRC_DIR/stop-residue-gate.sh" \
+    SELFDEV_SESSIONSTART_HOOK_SRC="$HOOKS_SRC_DIR/session-start-verb-pin.sh" \
+    SELFDEV_PRETOOLUSE_HOOK_SRC="$HOOKS_SRC_DIR/pretooluse-path-guard.sh" \
+    SELFDEV_DUPCHECK_HOOK_SRC="$HOOKS_SRC_DIR/pre-issue-dup-check.sh" \
+    SELFDEV_CREDENTIAL_HOLD_HOOK_SRC="$HOOKS_SRC_DIR/pretooluse-credential-hold.sh" \
+    SELFDEV_MEMORY_BUDGET_HOOK_SRC="$HOOKS_SRC_DIR/pretooluse-memory-budget.sh" \
+    SELFDEV_SESSIONSTART_MEMORY_BUDGET_HOOK_SRC="$HOOKS_SRC_DIR/session-start-memory-budget.sh" \
+    SELFDEV_SESSION_MARKER_HOOK_SRC="$HOOKS_SRC_DIR/session-marker.sh" \
+    "$SCRIPT" "$@" 2>&1
+}
+run_hl --apply >/dev/null
+
+ACCTL_HOOKS="$T/hl/acctl/.claude/hooks"
+[ -d "$ACCTL_HOOKS" ] && ok "L: --apply provisioned real hook files for the witness account" \
+                       || bad "L: no hooks were provisioned for the witness account"
+
+# A neutral, non-git cwd: some of these hooks (subagent-closeout.sh,
+# stop-residue-gate.sh) inspect the working tree they are run from and
+# legitimately report on it -- e.g. UNATTRIBUTED when no baseline was ever
+# recorded. That is real, working behavior, not the defect this section
+# hunts for, and running them from THIS repo's own (possibly dirty) checkout
+# would fold that ambient noise into the witness and make it worthless.
+L_CWD="$T/hl-cwd"; mkdir -p "$L_CWD"
+# A real Claude Code invocation always feeds a JSON payload with session_id
+# and cwd on stdin -- an empty stdin is not what these hooks actually see in
+# production, and several (correctly) log a line when session_id is absent
+# from the payload. Feed the shape the hook contract promises, so a genuine
+# "no baseline" NOTE from a normal payload cannot be confused with #1135's
+# "the dependency this hook needs is not there" defect.
+L_PAYLOAD="$(printf '{"session_id":"witness-session","cwd":"%s"}' "$L_CWD")"
+
+l_ran=0
+while IFS= read -r cmdline; do
+  [ -n "$cmdline" ] || continue
+  hookfile="${cmdline#"~/.claude/hooks/"}"
+  hookname="${hookfile%% *}"
+  args="${hookfile#"$hookname"}"
+  args="${args# }"
+  path="$ACCTL_HOOKS/$hookname"
+  if [ ! -x "$path" ]; then
+    bad "L: $cmdline -- hook file not installed at $path"
+    continue
+  fi
+  l_ran=$((l_ran+1))
+  lout="$T/l.out"; lerr="$T/l.err"
+  # shellcheck disable=SC2086  # args is one fixed flag/subcommand from the provisioning JSON, not user input
+  ( cd "$L_CWD" && printf '%s' "$L_PAYLOAD" | env -i HOME="$T/hl/acctl" PATH=/usr/bin:/bin \
+    bash "$path" $args >"$lout" 2>"$lerr" )
+  lrc=$?
+  if [ "$lrc" -eq 0 ] && [ ! -s "$lerr" ]; then
+    ok "L: $cmdline runs clean under env -i (exit 0, no stderr)"
+  else
+    bad "L: $cmdline (exit=$lrc, stderr: $(cat "$lerr" 2>/dev/null))"
+  fi
+done < <(printf '%s' "$WANT" | jq -r '[.[][] | .hooks[].command] | unique[]')
+[ "$l_ran" -gt 0 ] && ok "L: the witness actually executed hooks ($l_ran command(s))" \
+                   || bad "L: the witness found nothing to execute -- this checked NOTHING"
 
 echo
 echo "  passed: $pass  failed: $fail"

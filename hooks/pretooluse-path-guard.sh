@@ -77,12 +77,13 @@ esac
 
 me="$(id -un 2>/dev/null)"  # ANOTHER PROJECT'S TREE (CLAUDE.md subagent rules): this account's own project is $SELFDEV_PROJECTS_ROOT/$me; a write under that root but under a different name reaches past that project's own regulator
 proj_root="${SELFDEV_PROJECTS_ROOT:-$HOME/Documents/Projects}"
+[ -d "$proj_root/$me" ] || exit 0
 case "$path" in
   "$proj_root"/*)
     rest="${path#"$proj_root"/}"
     other="${rest%%/*}"
     if [ -n "$other" ] && [ "$other" != "$me" ]; then
-      block "that is $other's project tree, not $me's -- use its front door instead (scheduler -i $other, or notify-senechal <door> <field>=<value>), never a direct write"
+      block "that is $other's project tree, not $me's -- use its front door instead (notify-senechal <door> <field>=<value>, or an issue in $other's repo), never a direct write"
     fi
     ;;
 esac

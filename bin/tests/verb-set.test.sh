@@ -33,7 +33,6 @@ export INSTALLE_MANIFEST="$WORK/manifest.tsv"
 export VERB_SET_LOCAL_ROOT="$INSTALLE_PROJECTS"   # HERMETIC (#1043): points verb_set_declared's GitHub calls at local git repos instead
 # The registry. Set EXPLICITLY, and every fixture project is registered in it,
 # so the registration check (section F) contributes no finding to sections C/D.
-# Left at its default it would resolve inside the fixture, find nothing, and
 export SCHEDULE_DIR="$WORK/schedule"
 mkdir -p "$INSTALLE_PROJECTS" "$INSTALLE_BIN" "$SCHEDULE_DIR"
 register() { printf 'PROJECT="%s"\n' "$1" > "$SCHEDULE_DIR/$1.conf"; }
@@ -104,7 +103,6 @@ printf -- '-- C. absence fails loud (the intersection defect)\n'
 # C1 IS THE POINT OF THIS FILE, so it gets a fixture in which ABSENCE IS THE
 # ONLY POSSIBLE FINDING. Run against the main fixture it would pass on the
 # collision alone -- exit 1 for a reason that has nothing to do with absence --
-# and an intersection check would score green. That is the "PASS text, not the
 SOLO="$WORK/solo"
 mkdir -p "$SOLO/projects" "$SOLO/bin" "$SOLO/schedule"
 (

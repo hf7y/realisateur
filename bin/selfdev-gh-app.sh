@@ -46,9 +46,6 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-# WHERE THE CREDENTIAL LIVES is answered in ONE place for every reader --
-# bin/lib/selfdev-app-key.sh -- and not re-spelled here. Until 2026-08-12 this
-# line said `$HOME/.config/selfdev/gh-app.conf`, i.e. one copy of one key per
 _sd_lib="$(dirname "${BASH_SOURCE[0]}")/lib/selfdev-app-key.sh"
 [ -r "$_sd_lib" ] || _sd_lib="$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh"
 if [ -r "$_sd_lib" ]; then
@@ -83,6 +80,12 @@ ok()  { printf '  OK      %s\n' "$*"; PASS=$((PASS+1)); }
 gap() { printf '  MISSING %s\n' "$*"; GAPS=$((GAPS+1)); }
 bad() { printf '  BAD     %s\n' "$*"; BAD=$((BAD+1)); }
 die() { printf '%s: FATAL: %s\n' "${0##*/}" "$*" >&2; exit 5; }
+
+for _r in ${REPOS//,/ }; do  # bare names only: owner/repo 422s opaquely against access_tokens (#1069)
+  case "${_r,,}" in
+    "${OWNER,,}"/*) die "--repos entry '$_r' is owner-qualified -- drop the '${_r%%/*}/' prefix, GitHub wants bare repo names (e.g. '${_r#*/}')" ;;
+  esac
+done
 
 # --- the JWT -----------------------------------------------------------------
 # RS256 by hand rather than a library, because the whole point of this script is
@@ -214,9 +217,7 @@ case "$MODE" in
     ok "fingerprint: $fp"
     echo "          ^ must equal the SHA256: shown on the App's settings page"
 
-    # ADOPT NO LONGER INVENTS A PATH. It used to write
-    # ~/.config/selfdev/<account>/<account>.pem plus a conf naming it -- which
-    # is how one App key came to sit on disk under four different names, and
+    # ADOPT INVENTS NO PATH: one App key under four names is what that cost.
     if [ "$(id -u)" -eq 0 ] && [ -x "$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh" ]; then
       "$(dirname "${BASH_SOURCE[0]}")/selfdev-app-key.sh" --apply --from "$ADOPT_KEY" --app-id "$ADOPT_ID" --owner "$OWNER" \
         || die "selfdev-app-key.sh --apply refused; the key was NOT installed"

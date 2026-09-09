@@ -102,7 +102,9 @@ CONSIGNE_LOCK_TIMEOUT="${CONSIGNE_LOCK_TIMEOUT:-30}"
 CONSIGNE_LOCK_TIMEOUT_RC=66
 vault_locked() { # <vault> <command> [args...] -- runs command holding the lock
   local vault="$1"; shift
-  [ -d "$vault" ] || blind "no vault at $vault to lock (set BIBLIOTHECAIRE_VAULT)"
+  [ -d "$vault" ] || blind "no clone of the vault at $vault to lock -- the vault
+       itself is the hf7y/ecosystem1-vault remote; clone it there, or set
+       BIBLIOTHECAIRE_VAULT to an existing clone"
   # NO `--` HERE: unlike most GNU tools, flock's own command-variant syntax is
   # `flock [options] <file> <command> [args...]` with no separator -- a `--`
   # in that position is parsed as the command itself and fails to execve.
@@ -132,6 +134,10 @@ usage:
                                   is safe to remove until it reports one.
   consigne status [<project>...]  what is deposited AND still in the repo.
                                   No argument: every project in the vault.
+                                  --diverged narrows this to bare `proj/rel`
+                                  paths, one per line, for the DIVERGED rows
+                                  only -- nothing else, so it can be saved as
+                                  a list to work through (hf7y/realisateur#1061).
   consigne lock -- <command>...   run <command> holding the vault's write
                                   lock (hf7y/realisateur#213). For the manual
                                   commit-and-push PROSE-REAPING.md 5.6 asks
@@ -307,9 +313,14 @@ status_field() { # <file> <field> -- first frontmatter value, or empty
 }
 
 do_status() {
-  [ -d "$VAULT" ] || blind "no vault at $VAULT (set BIBLIOTHECAIRE_VAULT)"
+  local diverged_only="${STATUS_DIVERGED_ONLY:-0}"
 
-  vault_push_report "$VAULT"
+  [ -d "$VAULT" ] || blind "no clone of the vault at $VAULT -- the vault itself
+       is the hf7y/ecosystem1-vault remote, reachable by \`gh\` from any host
+       with the normal credential; clone it to $VAULT, or set
+       BIBLIOTHECAIRE_VAULT to an existing clone"
+
+  [ "$diverged_only" -eq 1 ] || vault_push_report "$VAULT"
 
   local -a projects=()
   if [ $# -gt 0 ]; then
@@ -326,7 +337,7 @@ do_status() {
   [ "${#projects[@]}" -gt 0 ] && [ -n "${projects[0]}" ] \
     || blind "no project directories under $VAULT -- nothing has been consigned here"
 
-  printf 'consigne status -- %s\n\n' "$VAULT"
+  [ "$diverged_only" -eq 1 ] || printf 'consigne status -- %s\n\n' "$VAULT"
 
   local n_dup=0 n_div=0 n_reap=0 n_bad=0 lines_dup=0
 
@@ -351,7 +362,8 @@ do_status() {
   local proj note repo rel want got live n
   for proj in "${projects[@]}"; do
     if [ ! -d "$VAULT/$proj" ]; then
-      printf '  UNREADABLE  %s -- no such directory in the vault\n' "$proj"
+      [ "$diverged_only" -eq 1 ] ||
+        printf '  UNREADABLE  %s -- no such directory in the vault\n' "$proj"
       n_bad=$((n_bad + 1))
       continue
     fi
@@ -361,8 +373,9 @@ do_status() {
       rel="$(status_field "$note"  source_path)"
       want="$(status_field "$note" source_sha256)"
       if [ -z "$repo" ] || [ -z "$rel" ] || [ -z "$want" ]; then
-        printf '  UNREADABLE  %s -- no source_repo/source_path/source_sha256 frontmatter\n' \
-          "${note#"$VAULT"/}"
+        [ "$diverged_only" -eq 1 ] ||
+          printf '  UNREADABLE  %s -- no source_repo/source_path/source_sha256 frontmatter\n' \
+            "${note#"$VAULT"/}"
         n_bad=$((n_bad + 1)); continue
       fi
       live="$repo/$rel"
@@ -377,14 +390,21 @@ do_status() {
       n="$(wc -l < "$live" 2>/dev/null | tr -d ' ')"
       case "$n" in ''|*[!0-9]*) n=0 ;; esac
       if [ "$got" = "$want" ]; then
-        printf '  DUPLICATED  %-52s (%s lines)\n' "$proj/$rel" "$n"
+        [ "$diverged_only" -eq 1 ] ||
+          printf '  DUPLICATED  %-52s (%s lines)\n' "$proj/$rel" "$n"
         n_dup=$((n_dup + 1)); lines_dup=$((lines_dup + n))
       else
-        printf '  DIVERGED    %-52s -- the vault copy is a stale fork\n' "$proj/$rel"
+        if [ "$diverged_only" -eq 1 ]; then
+          printf '%s\n' "$proj/$rel"
+        else
+          printf '  DIVERGED    %-52s -- the vault copy is a stale fork\n' "$proj/$rel"
+        fi
         n_div=$((n_div + 1))
       fi
     done < <(find "$VAULT/$proj" -type f -name '*.md' 2>/dev/null | sort)
   done
+
+  [ "$diverged_only" -eq 1 ] && return 0
 
   local i
   for i in "${!gone_repo[@]}"; do
@@ -454,6 +474,7 @@ if [ "${1:-}" = lock ]; then
   exit $?
 fi
 
+STATUS_DIVERGED_ONLY=0
 ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -463,6 +484,11 @@ while [ $# -gt 0 ]; do
     # deposit the vault path itself as a document.
     --vault)   shift; [ $# -gt 0 ] || die "--vault needs a path"; VAULT="$1" ;;
     --vault=*) VAULT="${1#*=}"; [ -n "$VAULT" ] || die "--vault needs a path" ;;
+    # `status` only. Bare `proj/rel` paths, one per line, nothing else --
+    # the DIVERGED row is the one that is actively dangerous (a stale fork
+    # neither copy admits to) and the full report buries it among rows that
+    # need no action, so it had no form a run could act on (hf7y/realisateur#1061).
+    --diverged) STATUS_DIVERGED_ONLY=1 ;;
     --)        die "'--' is not accepted." ;;
     -*)        die "unknown flag: $1 (try --help)" ;;
     *)         ARGS+=("$1") ;;
@@ -472,6 +498,10 @@ done
 
 if [ "${#ARGS[@]}" -eq 0 ]; then
   die "needs at least one path, or \`status\` (try --help)"
+fi
+
+if [ "$STATUS_DIVERGED_ONLY" -eq 1 ] && [ "${ARGS[0]}" != status ]; then
+  die "--diverged only applies to \`consigne status\`"
 fi
 
 if [ "${ARGS[0]}" = status ]; then

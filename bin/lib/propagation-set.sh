@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # propagation-set.sh -- THE DEV/PROD CONTRACT, in one place.
-#
 # THE DECISION (#134, Zach-directed). Self-dev accounts do NOT pull fresh
 # clones of realisateur. `main` IS NOT A DEPLOY REF; everything they use
 # reaches them through the nightly verb build. The argument is what it buys the
@@ -154,6 +153,7 @@ selfdev-app-key.sh
 selfdev-claude-token.sh
 selfdev-permissions-provision.sh
 selfdev-hooks-provision.sh
+selfdev-libexec-probe.sh
 unland-foreign-clone.sh
 install-verbs.sh
 stamp-verb-build.sh
@@ -164,6 +164,7 @@ vault-group-provision.sh
 # --- PAYLOAD: reaches user paths as a verb, inside a dated build ------------
 PROP_PAYLOAD_SCRIPTS="
 defere.sh
+tarife.sh
 etiquette.sh
 check-project-busy.sh
 notify-senechal.sh
@@ -171,6 +172,9 @@ gh-sign.sh
 consigne
 ausculte.sh
 atteste.sh
+decision-rot.sh
+unarmed.sh
+cutover-check.sh
 "
 
 # --- THE LEAK, with a bound on it -------------------------------------------
@@ -191,16 +195,14 @@ monkey-watch.sh
 monkey-watch-win.sh
 monkey-status-collect.py
 repose.sh
-decision-rot.sh
 landing-drift.sh
 vault-spool-drain.sh
 stale-paths.sh
 cut-verb-build.sh
+push-verb-build.sh
 registry-standup.sh
 branch-protection-provision.sh
-unarmed.sh
 publish-release-verdict.sh
-selfdev-credentials.sh
 shellcheck-lint.sh
 comment-claims.sh
 verb-kind-lint.sh
@@ -215,7 +217,7 @@ selfdev-home-check.sh
 # carry.sh and reprise.sh are LOCAL: they write to a BRANCH of this repo, not a
 # host, so per-account copies would be many writers racing one force-with-lease.
 # reprise also reads bin/lib/handoffs.tsv, THIS repo's ledger, empty elsewhere.
-# registry-standup.sh, unarmed.sh, branch-protection-provision.sh: LOCAL. FLEET subjects; unarmed rides prop_host_tools.
+# registry-standup.sh, branch-protection-provision.sh: LOCAL. FLEET subjects.
 # publish-release-verdict.sh is LOCAL because it runs in the release pipeline.
 
 # prop_host_tools -- what a provisioned host carries under
@@ -225,7 +227,7 @@ selfdev-home-check.sh
 prop_host_tools() {
   # The probes ausculte composes are LOCAL-class and ride here, or it is
   # BLIND about them on a host.
-  printf 'dresse.sh\ndecision-rot.sh\nlanding-drift.sh\nvault-spool-drain.sh\nunarmed.sh\n'
+  printf 'dresse.sh\nlanding-drift.sh\nvault-spool-drain.sh\n'
   local s; for s in $PROP_PROVISION_SCRIPTS; do [ "$s" = dresse.sh ] || printf '%s\n' "$s"; done
 }
 

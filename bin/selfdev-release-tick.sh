@@ -8,8 +8,6 @@
 # exits 6 BLIND saying so. The rule is "fail LOUD", not "fail STOPPED" --
 # halting a nightly on a network blip is just a different silent failure.
 #
-# EXIT CODES
-
 set -uo pipefail
 
 CLI_NAME='selfdev-release-tick.sh'
@@ -45,8 +43,6 @@ CRON_TAG='# realisateur:selfdev-release:TICK'
 CRON_SPEC="${TICK_CRON_SPEC:-41 5 * * *}"
 # Environment the cron line carries, in `VAR=val` form, ahead of the command.
 # Empty for a per-account tick: its defaults ARE the account's own paths.
-#
-# The host-scoped tick needs it, because every path it works on is deliberately
 CRON_ENV="${TICK_CRON_ENV:-}"
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/estate-set.sh"
 RELEASE_STATUS_URL="${RELEASE_STATUS_URL:-https://$GH_ESTATE_SITE/verbs/status.json}"
@@ -89,8 +85,6 @@ bad() { printf '  bad   %s\n' "$*"; BAD=$((BAD+1)); }
 act() { printf '  ..    %s\n' "$*"; }
 
 # ---------------------------------------------------------------------------
-# Locate the installer. Beside this script first (the bootstrap layout on a
-# consumer), then in a realisateur checkout (the dev layout). NOT derived from
 find_installer() {
   # An override that names a path which is not there is a MISSING installer,
   # not an installer. Returning it anyway would make "bootstrap incomplete"
@@ -137,8 +131,6 @@ check_clock() {
 }
 
 # ---------------------------------------------------------------------------
-# The pin row. Delegates entirely: install-verb-build.sh --check already
-# prints "yours:" / "latest:" and distinguishes exit 1 (newer exists) from
 check_pin() {
   local inst out rc
   if ! inst="$(find_installer)"; then
@@ -169,10 +161,14 @@ host_tools_carried() { # <pin-dir> -> "carried-path<TAB>basename" for every libe
 }
 
 sync_host_tools() {  # #517: the payload half of prop_host_tools, refreshed on the clock that already runs -- gated to the host-wide tick only, and only for what the adopted build itself carries
-  [ "$TICK_LINK" = 1 ] && [ -n "$HOST_LIBEXEC" ] || return 0
-  local pin="$BUILD_ROOT/current" rows carried base src dst
+  [ "$TICK_LINK" = 1 ] || return 0
   echo
   echo "-- host tools (payload-class, #517) ------------------------------------"
+  if [ -z "$HOST_LIBEXEC" ]; then
+    gap "TICK_LINK=1 but TICK_HOST_LIBEXEC is empty -- host tools are NOT refreshed. This host's payload-class probes (the libexec/ rows in carries.tsv) go stale silently. Set TICK_HOST_LIBEXEC in this cron line's env (see wire-release-channel.sh --host), or drop TICK_LINK if this is not meant to be the host-wide tick."
+    return 0
+  fi
+  local pin="$BUILD_ROOT/current" rows carried base src dst
   if ! rows="$(host_tools_carried "$pin")"; then
     bad "cannot read $pin/realisateur/bin/lib/carries.tsv -- host tool freshness is UNVERIFIED"
     return 0
@@ -229,8 +225,6 @@ install_cadence() {
 }
 
 # ---------------------------------------------------------------------------
-# The other half of install_cadence: hf7y/realisateur#180 retires the
-# per-account clock and private build root now that one host-wide channel
 retire_cadence() {
   echo "-- retire cadence (account $(id -un)) ---------------------------------"
   local probe; probe="$(command -v "$HOST_PROBE_VERB" 2>/dev/null || true)"
@@ -285,7 +279,6 @@ retire_cadence() {
   fi
 
   # The shims that point INTO the build root go before the root itself:
-  # removing the root first leaves $HOME/.local/bin full of dangling links,
   local shim tgt inst
   inst="$(command -v installe 2>/dev/null || true)"
   if [ -d "$LOCAL_BIN" ]; then
@@ -319,8 +312,6 @@ retire_cadence() {
 }
 
 # ---------------------------------------------------------------------------
-# --survey: the read-only operator view. It does not write, does not adopt,
-# and does not need the accounts to trust it -- it runs each account's own
 
 survey_scan_accounts() {
   while IFS=: read -r user _ uid _ _ home _; do
@@ -373,9 +364,6 @@ EOF
     [ "${clk:-0}" -gt 0 ] 2>/dev/null && age="$(( (now - clk) / 3600 ))h"
     printf '  %-16s %-26s %-8s %-6s %s\n' "$user" "$pin" "$age" "$cron" \
            "$([ "${host:-no}" = yes ] && echo host-wide || echo private)"
-    # THREE STATES, and the middle one is the point. Before hf7y/realisateur#180
-    # a missing private pin meant the channel had no consumer here. AFTER it,
-    # it is the FINISHED state, and grading it as a gap makes this view report
     if [ "${host:-no}" = yes ] && [ "$pin" = NONE ]; then
       ok "$user: follows the host-wide channel ($HOST_BIN); no private pin or clock to keep"
     elif [ "$pin" = NONE ]; then
@@ -432,8 +420,6 @@ echo "-- clock --------------------------------------------------------------"
 check_clock
 
 # --- the CHANNEL's own health, read live from the published verdict ---------
-# This is the row that separates "no new build because nothing changed" from
-# "no new build because main is broken". Without it both are just an absence,
 echo
 echo "-- release channel (live) ---------------------------------------------"
 led="$(dirname "${BASH_SOURCE[0]}")/release-ledger.sh"
@@ -460,7 +446,6 @@ if [ "$MODE" = apply ] && [ "$pin_rc" = 1 ]; then
   # DELEGATED. This script has no switching logic: install-verb-build.sh
   # verifies every verb the manifest promises and discards an incomplete
   # build rather than switching to it. Fail-CLOSED, here, deliberately.
-  # The optional flag is an ARRAY appended after the literal call, not folded
   link_arg=(); [ "$TICK_LINK" = 1 ] && link_arg=(--link)
   if "$inst" --latest --apply "${link_arg[@]}" 2>&1 | sed 's/^/        /'; then
     after="$(current_pin)"

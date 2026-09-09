@@ -198,6 +198,7 @@ has "a project absent from the vault is named, not silently skipped" "$OUT" "UNR
 
 OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$TMP/no-such-vault" "$CONSIGNE" status 2>&1)"; rc=$?
 check "status with no vault is BLIND (6), never 'nothing to report'" "$rc" "6"
+has "...and says CLONE, not just 'no vault' (#1061)" "$OUT" "no clone of the vault"
 
 # A vault whose projects are all clean must SAY so, not print an empty report
 # that reads as "checked, nothing found" the same way a broken read does.
@@ -207,12 +208,22 @@ note "$TMP/vault-clean/wtul/OLD.md" "$SRC" "docs/gone.md" \
 OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$TMP/vault-clean" "$CONSIGNE" status 2>&1)"
 has "a clean vault says so in words" "$OUT" "Nothing is sitting in both places"
 
+OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$TMP/vault-e" "$CONSIGNE" status --diverged 2>&1)"; rc=$?
+check "status --diverged exits 0 (#1061 gap 2: a list a run can act on)" "$rc" "0"
+check "...and prints exactly the diverged path" "$OUT" "scheduler/BLOCKERS.md"
+hasnt "...no DUPLICATED row"                    "$OUT" "DUPLICATED"
+hasnt "...no UNREADABLE row"                    "$OUT" "UNREADABLE"
+hasnt "...no header"                            "$OUT" "consigne status"
+hasnt "...no counts or prompt"                  "$OUT" "STILL IN THE REPO"
+
+OUT="$(PATH="$BASE_PATH" "$CONSIGNE" --diverged DOC.md 2>&1)"; rc=$?
+check "--diverged outside \`status\` is a usage error (2)" "$rc" "2"
+
 # ===========================================================================
 echo
 echo "-- F. IT IS NOT A SECOND IMPLEMENTATION --------------------------------"
 # ===========================================================================
 # The defect this verb was rewritten to avoid, asserted against its own source.
-# The first draft (#121, b81de52) copied files with `cp` and committed them,
 SRC_TEXT="$(grep -v '^[[:space:]]*#' "$CONSIGNE")"
 hasnt "it does not run git push"   "$SRC_TEXT" "git push"
 hasnt "it does not run git commit" "$SRC_TEXT" "git commit"
@@ -325,7 +336,6 @@ if command -v flock >/dev/null 2>&1; then
 
   # BIBLIOTHECAIRE_VAULT set explicitly on every case below, even the ones
   # that don't reach vault_locked's directory check (the usage-error cases) --
-  # a missing --vault/env falls back to the real host default,
   OUT="$(PATH="$BASE_PATH" BIBLIOTHECAIRE_VAULT="$VL" "$CONSIGNE" lock -- echo hello world 2>&1)"; rc=$?
   check "lock runs the wrapped command" "$rc" "0"
   has   "...and its stdout reaches the caller" "$OUT" "hello world"

@@ -17,6 +17,7 @@ cp "$HERE/../lib/zaxon.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/propagation-set.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/estate-set.sh" "$TMP/bin/lib/"
 cp "$HERE/../lib/cron-lock.sh" "$TMP/bin/lib/"
+cp "$HERE/../lib/fleet-hosts-set.sh" "$TMP/bin/lib/"
 
 stub() { printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s"\nexit %s\n' "${3:-}" "$2" > "$TMP/bin/$1"; chmod +x "$TMP/bin/$1"; }
 
@@ -298,6 +299,13 @@ has "and it says nothing is publishing it" "$out" "expired at"
 
 echo
 echo "-- fleet: the reason an account gives for stopping ---------------------"
+# Pinned to ONE host for this whole block (#1139 added a second default host,
+# vaporwave, to the fleet set): the ssh stub below answers identically for
+# whichever host it is called with, so a second host would double every
+# count these assertions pin exactly (e.g. "1 still working"). The multi-host
+# set itself -- BOTH answering, and one UNREACHABLE reading BLIND rather than
+# folding into the other's OK -- gets its own section right after this one.
+export AUSCULTE_FLEET_HOSTS=monkey
 fleet() { printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s"\nexit 0\n' "$1" > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"; }
 
 fleet "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
@@ -383,11 +391,79 @@ check "an unreachable host is BLIND (6)" "$rc" "6"
 # on the one machine holding the files. ssh stays stubbed FAILING here: if the
 # local path were not taken the message would be the ssh fallback's.
 printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/stub/ssh"; chmod +x "$TMP/stub/ssh"
-out="$(PATH="$TMP/stub:$PATH" AUSCULTE_FLEET_HOST=selfhost SELFDEV_LOCAL_HOSTNAME=selfhost \
+out="$(PATH="$TMP/stub:$PATH" AUSCULTE_FLEET_HOSTS=selfhost SELFDEV_LOCAL_HOSTNAME=selfhost \
        bash "$TMP/bin/ausculte.sh" fleet 2>&1)"; rc=$?
 check "reading its OWN host needs no ssh -- still BLIND here, but for the right reason" "$rc" "6"
 has  "and the reason is an empty fleet, not an unreachable one" "$out" "no account has a paced-runner ledger"
 hasnt "so the ssh fallback was never taken" "$out" "could not read the accounts"
+unset AUSCULTE_FLEET_HOSTS
+
+echo
+echo "-- fleet: a SET of hosts, not a single default (#1139) -----------------"
+# The stub differentiates by the host argument ssh was actually called with,
+# so these assertions exercise BOTH members of the default fleet set.
+# Per-host FILES, not one TSV row: the fixtures are multi-line ledger tails,
+# and a "row" awk can print is one physical line -- a multi-line value in a
+# line-oriented table silently truncated to its first line the first time
+# this was tried.
+fleet_hosts() {  # fleet_hosts <host> <exit> <output> [<host> <exit> <output> ...]
+  rm -rf "$TMP/fleet-hosts"; mkdir -p "$TMP/fleet-hosts"
+  while [ $# -gt 0 ]; do
+    printf '%s' "$2" > "$TMP/fleet-hosts/$1.exit"
+    printf '%s' "$3" > "$TMP/fleet-hosts/$1.out"
+    shift 3
+  done
+  cat > "$TMP/stub/ssh" <<STUB
+#!/usr/bin/env bash
+host=""
+while [ \$# -gt 0 ]; do
+  case "\$1" in
+    -o) shift 2 ;;              # "-o ConnectTimeout=10": an OPTION's VALUE is
+    -*) shift ;;                # not itself dash-prefixed -- consume the pair
+    *)  host="\$1"; break ;;
+  esac
+done
+d="$TMP/fleet-hosts"
+[ -f "\$d/\$host.exit" ] || exit 1
+[ -s "\$d/\$host.out" ] && cat "\$d/\$host.out"
+exit "\$(cat "\$d/\$host.exit")"
+STUB
+  chmod +x "$TMP/stub/ssh"
+}
+
+# SELFDEV_LOCAL_HOSTNAME pinned to a name in neither set: on_target_host's
+# match is against the REAL hostname otherwise, and a runner whose own
+# hostname happens to BE "monkey" would take the no-ssh-needed local path for
+# that host and silently bypass the ssh stub these assertions depend on.
+runh() { SELFDEV_LOCAL_HOSTNAME=test-runner run "$@"; }
+
+fleet_hosts monkey    0 "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
+FLEET-LEDGERS 1" \
+            vaporwave 0 "2026-08-20	vaporwave	wavebucks	wavebucks	batch	0	DONE	fine
+FLEET-LEDGERS 1"
+out="$(runh fleet)"; rc=$?
+check "both hosts in the set answer OK, so the fleet is OK" "$rc" "0"
+has "and BOTH hosts' accounts are counted, not just the first" "$out" "2 account(s) reported"
+
+fleet_hosts monkey    0 "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
+FLEET-LEDGERS 1" \
+            vaporwave 1 ""
+out="$(runh fleet)"; rc=$?
+check "one host in the set unreachable is BLIND (6), never folded into the other's OK" "$rc" "6"
+has "and the unreachable host is NAMED, not silently dropped" "$out" "vaporwave"
+has "and it says its state is not clean, not merely absent" "$out" "not clean"
+hasnt "and it never reports the whole fleet as OK on a partial read" "$out" "OK      fleet"
+
+fleet_hosts monkey    1 "" vaporwave 1 ""
+out="$(runh fleet)"; rc=$?
+check "both hosts unreachable is BLIND (6)" "$rc" "6"
+has "and it says so plainly" "$out" "could not read the accounts paced-runner ledgers"
+
+fleet_hosts monkey 0 "2026-08-20	monkey	wtul	wtul	batch	0	DONE	fine
+FLEET-LEDGERS 1"
+out="$(AUSCULTE_FLEET_HOSTS=monkey runh fleet)"; rc=$?
+check "AUSCULTE_FLEET_HOSTS overrides the set down to one host" "$rc" "0"
+has "and only that host's account is counted" "$out" "1 account(s) reported"
 
 echo
 echo "-- fatals: an abort with no ledger row at all ---------------------------"

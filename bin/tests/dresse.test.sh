@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-#
-#
-
 set -uo pipefail
 # shellcheck source=bin/tests/lib/harness.sh
 . "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/harness.sh"
@@ -43,12 +40,14 @@ selfdev-app-key.sh
 selfdev-claude-token.sh
 wire-release-channel.sh
 selfdev-permissions-provision.sh
-selfdev-hooks-provision.sh'
+selfdev-hooks-provision.sh
+selfdev-libexec-probe.sh'
 
 write_set "$STEPS
 pivot.sh"
 for s in selfdev-app-key.sh selfdev-claude-token.sh wire-release-channel.sh \
-         selfdev-permissions-provision.sh selfdev-hooks-provision.sh; do stub "$s" 0; done
+         selfdev-permissions-provision.sh selfdev-hooks-provision.sh \
+         selfdev-libexec-probe.sh; do stub "$s" 0; done
 # The indirect set is READ OUT of this file, so the stub names what it runs.
 stub setup-selfdev-project.sh 0
 printf '# runs provision-selfdev-user.sh wire-selfdev-git.sh land-selfdev.sh\n' >> "$T/bin/setup-selfdev-project.sh"
@@ -131,7 +130,8 @@ section "I. --on drives the target host (realisateur#895 half 1)"
 write_set "$STEPS
 pivot.sh"
 for s in selfdev-app-key.sh selfdev-claude-token.sh wire-release-channel.sh \
-         selfdev-permissions-provision.sh selfdev-hooks-provision.sh; do stub "$s" 0; done
+         selfdev-permissions-provision.sh selfdev-hooks-provision.sh \
+         selfdev-libexec-probe.sh; do stub "$s" 0; done
 stub setup-selfdev-project.sh 0
 printf '# runs provision-selfdev-user.sh wire-selfdev-git.sh land-selfdev.sh\n' >> "$T/bin/setup-selfdev-project.sh"
 # like real ssh: eats -o flags, leaves STDIN for tar -x, re-parses a STRING

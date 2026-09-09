@@ -29,6 +29,7 @@ HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 . "$HERE/lib/part.sh"
 . "$HERE/lib/host-check.sh"
 . "$HERE/lib/estate-set.sh"
+. "$HERE/lib/fleet-hosts-set.sh"
 JSON=0; ONLY=(); CADENCE=0; INSTALL_CADENCE=0; APPLY=0; QUIET=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -211,14 +212,21 @@ if want arming; then
     elif [ -n "$stale" ]; then
       record arming DOWN "armed but not dispatching for ${ARMING_STALE_DAYS:-3}d: $stale (status generated $gen)"
     elif [ -n "$norec" ]; then
-      # The document omits their last_run; their ledgers are on the host.
-      lr="$(${AUSCULTE_SSH:-ssh} -o ConnectTimeout=10 -o BatchMode=yes "${AUSCULTE_FLEET_HOST:-monkey}" "
-        sudo -n true 2>/dev/null && SU='sudo -n' || SU=''
-        for a in $norec; do
-          f=/home/\$a/.local/share/scheduler-paced-runner/ledger.tsv
-          \$SU test -r \"\$f\" && printf '%s %s\n' \"\$a\" \"\$(\$SU tail -1 \"\$f\" | cut -f1)\"
-        done" 2>/dev/null)"
-      if [ -n "$lr" ]; then
+      # The document omits their last_run; their ledgers are on a host. Which
+      # one is not recorded here, so every host in the set is asked (#1139) --
+      # an account with no record is not evidence it lives on the first host
+      # that answers, and an unreachable host must not silently look like an
+      # account that simply has no ledger there.
+      lr=""
+      for _ah in "${FLEET_HOSTS[@]}"; do
+        lr="$lr $(${AUSCULTE_SSH:-ssh} -o ConnectTimeout=10 -o BatchMode=yes "$_ah" "
+          sudo -n true 2>/dev/null && SU='sudo -n' || SU=''
+          for a in $norec; do
+            f=/home/\$a/.local/share/scheduler-paced-runner/ledger.tsv
+            \$SU test -r \"\$f\" && printf '%s %s\n' \"\$a\" \"\$(\$SU tail -1 \"\$f\" | cut -f1)\"
+          done" 2>/dev/null)"
+      done
+      if [ -n "${lr// /}" ]; then
         record arming DOWN "published status omits last_run for: $norec (hf7y/scheduler#259) -- their own ledgers say: $(printf '%s' "$lr" | tr '\n' ' ')"
       else
         record arming BLIND "no run record published for: $norec -- cannot tell whether they dispatched (hf7y/scheduler#259)"
@@ -430,7 +438,7 @@ fi
 
 if want fleet; then
   # LOCALHOST IS NOT AN SSH TARGET -- the same fix the propagation row above
-  # already carries. This probe ssh'd to ${AUSCULTE_FLEET_HOST:-monkey}
+  # already carries. This probe used to ssh to ${AUSCULTE_FLEET_HOST:-monkey}
   # unconditionally, including FROM monkey, where the ledgers actually live.
   # root there has an EMPTY authorized_keys and no config, key or known_hosts,
   # so `ssh monkey` from monkey fails host key verification and the row read
@@ -453,60 +461,79 @@ if want fleet; then
         echo "FLEET-PULL $a $($SU cat "$d/pull-block.state")"
     done
     echo "FLEET-LEDGERS $n"'
-  if on_target_host "${AUSCULTE_FLEET_HOST:-monkey}"; then
-    led="$(bash -c "$_fleet_probe" 2>/dev/null)"
+  # A SET, NOT A DEFAULT (hf7y/realisateur#1139): this used to ask only
+  # ${AUSCULTE_FLEET_HOST:-monkey}, so a second host's silence read as health.
+  # fleet-hosts-set.sh names who to ask; a host in that set this probe cannot
+  # reach is recorded BELOW as unreachable and MUST NOT be folded into an OK --
+  # reproducing "silence reads as health" at the scale of a whole host would be
+  # worse than not fixing the single-host version at all.
+  f_all=""; f_unreachable=""; f_reached=0
+  for _fh in "${FLEET_HOSTS[@]}"; do
+    if on_target_host "$_fh"; then
+      _led="$(bash -c "$_fleet_probe" 2>/dev/null)"
+    else
+      _led="$(${AUSCULTE_SSH:-ssh} -o ConnectTimeout=10 -o BatchMode=yes "$_fh" "$_fleet_probe" 2>/dev/null)"
+    fi
+    case "$_led" in
+      *FLEET-LEDGERS*) f_reached=$((f_reached + 1)); f_all="$f_all
+$_led" ;;
+      *) f_unreachable="$f_unreachable $_fh" ;;
+    esac
+  done
+  if [ "$f_reached" -eq 0 ]; then
+    record fleet BLIND "could not read the accounts paced-runner ledgers on any host in the fleet set:${f_unreachable:- (none reachable)}"
   else
-    led="$(${AUSCULTE_SSH:-ssh} -o ConnectTimeout=10 -o BatchMode=yes "${AUSCULTE_FLEET_HOST:-monkey}" "$_fleet_probe" 2>/dev/null)"
-  fi
-  case "$led" in
-    *FLEET-LEDGERS*)
-      n_led="$(printf '%s\n' "$led" | sed -n 's/^FLEET-LEDGERS //p')"
-      gate_err="$(printf '%s\n' "$led" | awk '$1=="FLEET-GATE-ERR" && $3+0 >= 2 {print $2"("$3")"}' | tr '\n' ' ')"
-      # ANY cause, and >=2 not 3: the escalation dies before writing back.
-      frozen="$(printf '%s\n' "$led" | awk '$1=="FLEET-PULL" && $3+0 >= 2 {print $2"("$3" "$4")"}' | tr '\n' ' ')"
-      if [ -n "$gate_err" ]; then
-        record fleet DOWN "the usage gate is ERRORing, not pacing: $gate_err consecutive failure(s) -- no account here is being held on purpose"
-      elif [ -n "$frozen" ]; then
-        record fleet DOWN "deployed code is FROZEN, so a merged fix cannot land: $frozen blocked tick(s)"
-      elif [ "${n_led:-0}" -eq 0 ]; then
-        # Zero ledgers is not a quiet fleet, it is a fleet we cannot see.
-        record fleet BLIND 'no account has a paced-runner ledger -- cannot tell whether any of them worked'
+    n_led="$(printf '%s\n' "$f_all" | awk '$1=="FLEET-LEDGERS"{s+=$2} END{print s+0}')"
+    gate_err="$(printf '%s\n' "$f_all" | awk '$1=="FLEET-GATE-ERR" && $3+0 >= 2 {print $2"("$3")"}' | tr '\n' ' ')"
+    # ANY cause, and >=2 not 3: the escalation dies before writing back.
+    frozen="$(printf '%s\n' "$f_all" | awk '$1=="FLEET-PULL" && $3+0 >= 2 {print $2"("$3" "$4")"}' | tr '\n' ' ')"
+    unreach_note=""; [ -n "$f_unreachable" ] && unreach_note=" -- UNREACHABLE, not counted, not clean:$f_unreachable"
+    if [ -n "$gate_err" ]; then
+      record fleet DOWN "the usage gate is ERRORing, not pacing: $gate_err consecutive failure(s) -- no account here is being held on purpose$unreach_note"
+    elif [ -n "$frozen" ]; then
+      record fleet DOWN "deployed code is FROZEN, so a merged fix cannot land: $frozen blocked tick(s)$unreach_note"
+    elif [ -n "$f_unreachable" ]; then
+      # #1139 constraint: a host in the set that could not be reached is BLIND,
+      # never silently skipped into whatever the reachable hosts reported.
+      record fleet BLIND "could not reach:$f_unreachable -- its fleet state is unknown, not clean ($f_reached host(s) reached, $n_led ledger(s) there)"
+    elif [ "${n_led:-0}" -eq 0 ]; then
+      # Zero ledgers is not a quiet fleet, it is a fleet we cannot see.
+      record fleet BLIND 'no account has a paced-runner ledger -- cannot tell whether any of them worked'
+    else
+      # DONE and COOLDOWN are both fine -- COOLDOWN is the pacer holding a
+      # finished account back on purpose. SO IS NOT-DONE WITH A REASON, which
+      # this row called DOWN until 2026-08-22: it is what the runner records
+      # for an agent verdict of CONTINUE (schedule/_verdict-semantics.md,
+      # "there is ACTIONABLE work left"), the healthy steady state of an
+      # account with a backlog. Measured that day, 9 of 14 accounts read
+      # NOT-DONE and six had shipped a merged PR in that very run. A monitor
+      # that reports DOWN in the normal case is one a human checks by hand
+      # every time. So the finding is SILENCE, not incompleteness:
+      #
+      #   blank reason      the account stopped and said nothing (scheduler#261)
+      #   no-verdict:       the runner ran it and no verdict was written
+      #
+      # Both mean the sensor got nothing; an account that explained itself is
+      # answering, and whether its answer is good news is its tracker's
+      # question, not this probe's.
+      mute="$(printf '%s\n' "$f_all" | grep -v '^FLEET-LEDGERS' \
+               | awk -F'\t' '$7 == "NOT-DONE" {
+                   r = $8; sub(/^[ \t]+/, "", r)
+                   if (r == "")                 print $3": *** NO REASON RECORDED ***"
+                   else if (r ~ /^no-verdict:/) print $3": "r }' || true)"
+      working="$(printf '%s\n' "$f_all" | grep -v '^FLEET-LEDGERS' \
+               | awk -F'\t' '$7 == "NOT-DONE" {
+                   r = $8; sub(/^[ \t]+/, "", r)
+                   if (r != "" && r !~ /^no-verdict:/) print $3 }' || true)"
+      n_mute="$(printf '%s' "$mute" | grep -c . || true)"
+      n_work="$(printf '%s' "$working" | grep -c . || true)"
+      if [ "${n_mute:-0}" -gt 0 ]; then
+        record fleet DOWN "$n_mute of $n_led account(s) stopped without saying why: $(printf '%s' "$mute" | head -1 | cut -c1-90)"
       else
-        # DONE and COOLDOWN are both fine -- COOLDOWN is the pacer holding a
-        # finished account back on purpose. SO IS NOT-DONE WITH A REASON, which
-        # this row called DOWN until 2026-08-22: it is what the runner records
-        # for an agent verdict of CONTINUE (schedule/_verdict-semantics.md,
-        # "there is ACTIONABLE work left"), the healthy steady state of an
-        # account with a backlog. Measured that day, 9 of 14 accounts read
-        # NOT-DONE and six had shipped a merged PR in that very run. A monitor
-        # that reports DOWN in the normal case is one a human checks by hand
-        # every time. So the finding is SILENCE, not incompleteness:
-        #
-        #   blank reason      the account stopped and said nothing (scheduler#261)
-        #   no-verdict:       the runner ran it and no verdict was written
-        #
-        # Both mean the sensor got nothing; an account that explained itself is
-        # answering, and whether its answer is good news is its tracker's
-        # question, not this probe's.
-        mute="$(printf '%s\n' "$led" | grep -v '^FLEET-LEDGERS' \
-                 | awk -F'\t' '$7 == "NOT-DONE" {
-                     r = $8; sub(/^[ \t]+/, "", r)
-                     if (r == "")                 print $3": *** NO REASON RECORDED ***"
-                     else if (r ~ /^no-verdict:/) print $3": "r }' || true)"
-        working="$(printf '%s\n' "$led" | grep -v '^FLEET-LEDGERS' \
-                 | awk -F'\t' '$7 == "NOT-DONE" {
-                     r = $8; sub(/^[ \t]+/, "", r)
-                     if (r != "" && r !~ /^no-verdict:/) print $3 }' || true)"
-        n_mute="$(printf '%s' "$mute" | grep -c . || true)"
-        n_work="$(printf '%s' "$working" | grep -c . || true)"
-        if [ "${n_mute:-0}" -gt 0 ]; then
-          record fleet DOWN "$n_mute of $n_led account(s) stopped without saying why: $(printf '%s' "$mute" | head -1 | cut -c1-90)"
-        else
-          record fleet OK "$n_led account(s) reported${n_work:+, $n_work still working}"
-        fi
-      fi ;;
-    *) record fleet BLIND 'could not read the accounts paced-runner ledgers' ;;
-  esac
+        record fleet OK "$n_led account(s) reported${n_work:+, $n_work still working}"
+      fi
+    fi
+  fi
 fi
 
 if want fatals; then  # A HARD ABORT BEFORE `claude` STARTS writes no ledger row, so `fleet` above never sees it -- two accounts hard-aborted every dispatch for days on exactly that gap (#1005) and a four-line sweep.log FATAL count found both in a minute

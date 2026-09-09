@@ -42,7 +42,9 @@ mkdir -p "$T/bin"
 cat > "$T/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 case "$*" in
-  *pulls/*) cat "$STUB_PR" 2>/dev/null || exit 1 ;;
+  *check-runs*) printf '%s\n' "${STUB_FAILING:-0}" ;;
+  *pulls/*)     cat "$STUB_PR" 2>/dev/null || exit 1 ;;
+  *issues/*)    [ -n "${STUB_ISSUE:-}" ] || exit 1; printf '%s\n' "$STUB_ISSUE" ;;
 esac
 EOF
 chmod +x "$T/bin/gh"
@@ -96,27 +98,83 @@ section "C. a PR this turn opened, still open, is not a finished run"
 G="$T/g"; newrepo "$G"
 TR="$T/g-transcript"; transcript_pr "$TR"
 
-printf 'open\tfalse\tfalse\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+# These run WITH a baseline, and pr-state carries a created_at after it. Fixed
+# dates, never `date`: a suite that drifts with the clock is worse than one
+# that fails.
+CJOB="$T/cjob"; mkdir -p "$CJOB/tmp"
+CSID="c-session"
+payload "$G" "" "$CSID" | CLAUDE_JOB_DIR="$CJOB" "$SCRIPT" --baseline >/dev/null 2>&1
+touch -d '2026-09-07T12:00:00Z' "$CJOB/tmp/stop-residue-baselines/$CSID" 2>/dev/null
+AFTER='2026-09-07T18:00:00Z'   # opened during the session
+BEFORE='2026-09-06T09:00:00Z'  # somebody else's, still in flight
+runpr() { payload "$1" "${2:-}" "$CSID" | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$CJOB" PATH="$T/bin:$PATH" "$SCRIPT" 2>&1; }
+rcof()  { payload "$1" "${2:-}" "$CSID" | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$CJOB" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
+
+printf 'open\tfalse\tfalse\t%s\tdeadbee\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
 OUT="$(runpr "$G" "$TR")"; RC="$(rcof "$G" "$TR")"
 rc  "C1 an open non-draft PR blocks the stop" 2 "$RC"
 has "C2 and names the PR" "$OUT" "pull/7"
 
-printf 'open\ttrue\tfalse\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+printf 'open\ttrue\tfalse\t%s\tdeadbee\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
 RC="$(rcof "$G" "$TR")"
 rc "C3 a DRAFT claims nothing, so it does not block" 0 "$RC"
 
-printf 'closed\tfalse\tfalse\tNO-DECISION: x' > "$T/pr-state"
+printf 'closed\tfalse\tfalse\t%s\tdeadbee\tNO-DECISION: x' "$AFTER" > "$T/pr-state"
 RC="$(rcof "$G" "$TR")"
 rc "C4 a merged or closed PR does not block" 0 "$RC"
 
-printf 'open\tfalse\ttrue\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+printf 'open\tfalse\ttrue\t%s\tdeadbee\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
 OUT="$(runpr "$G" "$TR")"; RC="$(rcof "$G" "$TR")"
 rc  "C5 an open PR with AUTO-MERGE ARMED does not block" 0 "$RC"
 has "C6 and says so, rather than passing silently" "$OUT" "AUTO-MERGE ARMED"
 
-printf 'open\tfalse\tfalse\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' > "$T/pr-state"
+# ARMED IS NOT LANDING. The fixture above is armed AND green; these three are
+# armed and RED, which merges never and which only the agent can fix.
+OUT="$(STUB_FAILING=1 runpr "$G" "$TR")"; RC="$(STUB_FAILING=1 rcof "$G" "$TR")"
+rc  "C5a armed but FAILING blocks -- it will never land" 2 "$RC"
+has "C5b and says arming is not landing"        "$OUT" "armed is not landing"
+has "C5c and counts the failing checks"         "$OUT" "1 required check(s) FAILING"
+OUT="$(STUB_FAILING=BLIND runpr "$G" "$TR")"; RC="$(STUB_FAILING=BLIND rcof "$G" "$TR")"
+rc  "C5d checks it cannot read fail OPEN -- a stop guard must not block on BLIND" 0 "$RC"
+has "C5e and says the checks could not be read" "$OUT" "could not be read"
+
+printf 'open\tfalse\tfalse\t%s\tdeadbee\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
 OUT="$(runpr "$G" "$TR")"
 has "C7 the refusal names arming auto-merge as the preferred exit" "$OUT" "--auto"
+
+# `gh pr comment` prints .../pull/N#issuecomment-ID, which read as a PR this
+# turn opened.
+printf 'open\tfalse\tfalse\t%s\tdeadbee\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$BEFORE" > "$T/pr-state"
+OUT="$(runpr "$G" "$TR")"; RC="$(rcof "$G" "$TR")"
+rc  "C8 a PR opened before this session does not block" 0 "$RC"
+has "C9 and it says mentioned, not opened here"         "$OUT" "predates this session"
+
+# No baseline: it cannot tell whose PR is whose and BLOCKS anyway. A
+# no-baseline pass is indistinguishable from disabling the check.
+printf 'open\tfalse\tfalse\t%s\tdeadbee\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
+NB="$T/nb"; mkdir -p "$NB/tmp"
+nb_run() { payload "$G" "$TR" "no-baseline-sid" | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$NB" PATH="$T/bin:$PATH" "$SCRIPT"; }
+OUT="$(nb_run 2>&1)"
+nb_run >/dev/null 2>&1; NBRC=$?
+rc  "C10 no baseline still blocks on an open PR" 2 "$NBRC"
+has "C11 and admits it cannot tell whose it is" "$OUT" "cannot tell whether you opened it"
+
+# What makes blocking safe rather than a wall.
+OUT2="$(printf '{"cwd":"%s","transcript_path":"%s","session_id":"nb2","stop_hook_active":true}' "$G" "$TR" \
+        | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$NB" PATH="$T/bin:$PATH" "$SCRIPT" 2>&1)"
+printf '{"cwd":"%s","transcript_path":"%s","session_id":"nb2","stop_hook_active":true}' "$G" "$TR" \
+  | STUB_PR="$T/pr-state" CLAUDE_JOB_DIR="$NB" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1
+rc "C12 a re-fired Stop exits 0, so the block surfaces once" 0 "$?"
+
+# A stopping state is one whoever opened the PR.
+printf 'open\tfalse\ttrue\t%s\tdeadbee\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
+OUT="$(nb_run 2>&1)"; nb_run >/dev/null 2>&1
+rc  "C13 auto-merge wins even with no baseline" 0 "$?"
+has "C14 and says so"                           "$OUT" "AUTO-MERGE ARMED"
+
+printf 'open\ttrue\tfalse\t%s\tdeadbee\tNO-DECISION: x\n\n<!-- DELIVERS -->\n- none\n<!-- /DELIVERS -->' "$AFTER" > "$T/pr-state"
+nb_run >/dev/null 2>&1
+rc "C15 a draft wins even with no baseline" 0 "$?"
 
 echo
 section "D. a HUMAN-STEP block this turn asked a human to run, without verified: (#714 Rule 2)"
@@ -164,6 +222,53 @@ rc "D4 a tool_result in between is not mistaken for a new turn" 2 "$D4_RC"
 { user_turn "just chatting"; asst_turn "no manual steps needed here."; } > "$T/d5.jsonl"
 D5_RC=$(run "$T/d" "$T/d5.jsonl" >/dev/null 2>&1; echo $?)
 rc "D5 no HUMAN-STEP block at all -> exit 0" 0 "$D5_RC"
+
+echo "-- F. a turn that defers its own remaining work"
+
+asst_act() { jq -nc --arg n "$1" '{"type":"assistant","message":{"content":[{"type":"tool_use","name":$n,"input":{}}]}}'; }
+newrepo "$T/f" >/dev/null 2>&1 || mkdir -p "$T/f"
+
+{ user_turn "finish the three items"; asst_turn "Two are done. Say the word and I'll continue, or I'll pick them up on the next pass."; } > "$T/f1.jsonl"
+F1_OUT="$(run "$T/f" "$T/f1.jsonl")"; F1_RC=$?
+rc  "F1 deferring to a later turn -> BLOCKED (2)"        2 "$F1_RC"
+has "F1 names the deferral"                              "$F1_OUT" "puts its own remaining work off"
+has "F1 offers the two ways out"                         "$F1_OUT" "Do it NOW, or give it a URL"
+
+# THE ONE THAT MATTERS: the turn DID things. An act elsewhere used to skip the
+# whole check, which is how four deferrals shipped in turns that merged PRs.
+{ user_turn "finish it"; asst_act Write; asst_turn "Merged. I'll pick them up on the next pass."; } > "$T/f2.jsonl"
+F2_RC=$(run "$T/f" "$T/f2.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F2 an act elsewhere in the turn does NOT excuse the deferral" 2 "$F2_RC"
+
+# A turn that QUOTES a deferral is discussing one, not making one. This gate
+# blocked its own author for quoting the sentence it was built to catch.
+{ user_turn "explain the fix"; asst_turn "The old text was **\"Say the word and I'll continue, or I'll pick them up on the next pass\"**, which slipped through."; } > "$T/f6.jsonl"
+F6_RC=$(run "$T/f" "$T/f6.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F6 quoting a deferral is not making one"            0 "$F6_RC"
+
+{ user_turn "explain"; printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"text","text":"Here is what it caught:\n\n```\nI will pick them up on the next pass\n```\n\nThat is the shape."}]}}'; } > "$T/f7.jsonl"
+F7_RC=$(run "$T/f" "$T/f7.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F7 a deferral inside a fenced block is quoted material" 0 "$F7_RC"
+
+{ user_turn "status"; asst_turn "The next pass should check whether the cut landed."; } > "$T/f8.jsonl"
+F8_RC=$(run "$T/f" "$T/f8.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F8 naming a next pass without promising anything is not a deferral" 0 "$F8_RC"
+
+{ user_turn "finish it"; asst_turn "All three landed. Nothing is outstanding."; } > "$T/f3.jsonl"
+F3_RC=$(run "$T/f" "$T/f3.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F3 a turn that defers nothing does not block"       0 "$F3_RC"
+
+# Saying the number is not enough -- cited_already reads NON-assistant lines, so
+# the artifact must actually have been created in this transcript.
+url_result() { jq -nc --arg u "$1" '{"type":"user","message":{"content":[{"type":"tool_result","content":[]}]},"toolUseResult":{"stdout":$u}}'; }
+
+{ user_turn "finish it"; asst_turn "I will file the rest as hf7y/realisateur#1120 rather than leave them."; } > "$T/f4.jsonl"
+F4_RC=$(run "$T/f" "$T/f4.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F4 typing an issue number, having filed nothing, is still a deferral" 2 "$F4_RC"
+
+{ user_turn "finish it"; url_result "https://github.com/hf7y/realisateur/issues/1120"; asst_turn "I will pick the rest up under hf7y/realisateur#1120."; } > "$T/f5.jsonl"
+F5_RC=$(run "$T/f" "$T/f5.jsonl" >/dev/null 2>&1; echo $?)
+rc  "F5 a deferral whose issue this transcript actually created is a citation" 0 "$F5_RC"
 
 D6DIR="$T/nojq"; mkdir -p "$D6DIR"
 for c in bash cat dirname git grep sed; do ln -s "$(command -v "$c")" "$D6DIR/$c"; done
@@ -237,6 +342,38 @@ RC="$(markb "$T/dirty" sess-g)"
 rc "E7 --baseline on a dirty tree still exits 0" 0 "$RC"
 RC="$(markb "$T" sess-h)"
 rc "E8 --baseline outside a repo still exits 0" 0 "$RC"
+
+section "M. an issue nothing dispatches to (#1141)"
+
+asst_cmd() { jq -nc --arg c "$1" '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":$c}}]}}'; }
+runms() { payload "$1" "$2" | STUB_ISSUE="$3" PATH="$T/bin:$PATH" "$SCRIPT" 2>&1; }
+rcms()  { payload "$1" "$2" | STUB_ISSUE="$3" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
+
+newrepo "$T/m"
+ISSUE_URL="https://github.com/hf7y/realisateur/issues/1141"
+{ user_turn "file it"; asst_cmd "gh issue create -R hf7y/realisateur --title x"; url_result "$ISSUE_URL"
+  asst_turn "Filed it."; } > "$T/m1.jsonl"
+
+OUT="$(runms "$T/m" "$T/m1.jsonl" "$(printf 'open\t')")"
+has "M1 an open issue this turn filed with no milestone blocks" "$OUT" "OPEN and in no milestone"
+rc  "M2 and exits 2" 2 "$(rcms "$T/m" "$T/m1.jsonl" "$(printf 'open\t')")"
+has "M3 and it names the issue, not just the rule" "$OUT" "$ISSUE_URL"
+
+rc  "M4 the same issue in a milestone does not block" 0 \
+    "$(rcms "$T/m" "$T/m1.jsonl" "$(printf 'open\tEvery witness fails loudly')")"
+
+rc  "M5 a closed issue with no milestone does not block" 0 \
+    "$(rcms "$T/m" "$T/m1.jsonl" "$(printf 'closed\t')")"
+
+{ user_turn "what does it say"; asst_cmd "gh issue view 1141 --json body"; url_result "$ISSUE_URL"
+  asst_turn "It says nothing new."; } > "$T/m2.jsonl"
+rc  "M6 a turn that only READ an issue does not block" 0 \
+    "$(rcms "$T/m" "$T/m2.jsonl" "$(printf 'open\t')")"
+
+OUT="$(payload "$T/m" "$T/m1.jsonl" | STUB_ISSUE="" PATH="$T/bin:$PATH" "$SCRIPT" 2>&1)"
+has "M7 an unreadable issue says BLIND rather than passing quietly" "$OUT" "BLIND"
+rc  "M8 and BLIND alone does not block the turn" 0 \
+    "$(payload "$T/m" "$T/m1.jsonl" | STUB_ISSUE="" PATH="$T/bin:$PATH" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?")"
 
 summary
 [ "$fail" -eq 0 ] || exit 1

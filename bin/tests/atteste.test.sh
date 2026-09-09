@@ -368,6 +368,15 @@ has "L7 a marker followed by punctuation still flips" "$OUT" "GAP       path:bin
 runbody 'path:bin/real.sh -- (GONE).'
 has "L8 and so does one wrapped in brackets" "$OUT" "GAP       path:bin/real.sh"
 
+runbody 'path:bin/real.sh -- crt-vm forwarding reframed as retired history'
+has "L8b RETIRED late in the note describes the file, it does not claim deletion" "$OUT" "SATISFIED path:bin/real.sh"
+
+runbody 'path:bin/*.sh -- a glob names a set, and the set is there'
+has "L8c a glob matching a file in the tree is SATISFIED" "$OUT" "SATISFIED path:bin/*.sh"
+
+runbody 'path:bin/*.rb -- nothing matches this one'
+has "L8d a glob matching nothing is still a GAP" "$OUT" "GAP       path:bin/*.rb"
+
 cat > "$T/gh3" <<'GHEOF'
 #!/usr/bin/env bash
 case "$2" in

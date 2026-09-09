@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  actions: write   # #965: pay-the-carry step below dispatches tests.yml
+  actions: write   # #965: pay-the-carry step below dispatches tests.yml and roster-image.yml
 
 jobs:
   enable:
@@ -43,15 +43,35 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 120); do   # 30 min: #1039 merged at 13m09s against the old 10 min budget -- 6 same-day PRs sharing the runner queue was enough to blow it, and a merge this loop misses reddens every open PR (#592) until paid by hand
-            merged=$(curl -fsS -H "Authorization: bearer $TOKEN" \
-                       "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER" | jq -r '.merged')
+            pr=$(curl -fsS -H "Authorization: bearer $TOKEN" \
+                   "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER")
+            merged=$(jq -r '.merged' <<<"$pr")
+            state=$(jq -r '.state' <<<"$pr")
+            if [ "$merged" != "true" ] && [ "$state" = "closed" ]; then
+              echo "PR closed without merging -- there is no carry to pay"; exit 0
+            fi
             if [ "$merged" = "true" ]; then
               curl -fsS -X POST -H "Authorization: bearer $TOKEN" \
                 "https://api.github.com/repos/$REPO/actions/workflows/tests.yml/dispatches" \
                 -d '{"ref":"main"}'   # explicit workflow_dispatch is the one event the token-recursion suppression exempts
-              echo "dispatched tests.yml on attempt $attempt"; exit 0
+              echo "dispatched tests.yml on attempt $attempt"
+
+              files=$(curl -fsS -H "Authorization: bearer $TOKEN" \
+                        "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/files?per_page=100" | jq -r '.[].filename')
+              if grep -qE '^(provision/dexter/roster/|\.github/workflows/roster-image\.yml)' <<<"$files"; then   # realisateur#1080: same push-suppression as tests.yml -- #1106 merged but never rebuilt ghcr.io/hf7y/roster
+                curl -fsS -X POST -H "Authorization: bearer $TOKEN" \
+                  "https://api.github.com/repos/$REPO/actions/workflows/roster-image.yml/dispatches" \
+                  -d '{"ref":"main"}'
+                echo "dispatched roster-image.yml on attempt $attempt"
+              fi
+              exit 0
             fi
             sleep 15
           done
-          echo "PR not merged after 30 min -- carry not dispatched; pay by hand: gh workflow run tests.yml" >&2
-          exit 0
+          # LOUD. On 2026-09-08 three PRs (#1122, #1123, #1125) merged well past
+          # this budget -- a rebase that waits on a human, a queue behind six
+          # runs. Each left bashified uncarried, and carry-drift then reddened
+          # every open PR until two hand dispatches paid it. The step said so on
+          # stderr and exited 0, so the run was green and nobody looked.
+          echo "PR not merged after 30 min -- carry NOT dispatched; pay it: gh workflow run tests.yml --ref main" >&2
+          exit 1

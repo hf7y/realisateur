@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # dresse.sh -- stand a self-dev host, or one account on it, up (#435).
-# KIND: verb
+# NOT A VERB until it ships (#1041): it claimed the channel and never shipped.
 #
 # TRAP: the plan is checked against propagation-set.sh plus the indirect set
 #   read from the callers -- a typed list goes stale in silence.
@@ -69,6 +69,7 @@ selfdev-claude-token.sh|--check|--check|the shared OAuth token (--install takes 
 wire-release-channel.sh|--host --check|--host --apply|the verb-build channel: bootstrap, pin, links, root's clock
 selfdev-permissions-provision.sh|--strict|--apply|the .claude permissions block on every account
 selfdev-hooks-provision.sh|--strict|--apply|the SubagentStop hook on every account
+selfdev-libexec-probe.sh|--strict|--strict|the 15 stale ~/.local/libexec/selfdev trees and dcp-gate-site's private release tick (#887 -- read-only; there is no --apply, removal is a human's act)
 "
 ACCT_NEW_STEP="setup-selfdev-project.sh"
 ACCT_STEPS="
@@ -77,8 +78,11 @@ wire-release-channel.sh|--check|--apply|the verb-build bootstrap and this accoun
 
 pass_n=0; fail_n=0; gap_n=0
 
-# A TAR: a step needs lib/ and hooks/ beside it (#385/#386). %q: ssh re-parses
-# one joined string (selfdev-credentials.sh). Why not a checkout: dresse(1).
+# A TAR: a step needs lib/ and hooks/ beside it (#385/#386). %q: ssh joins
+# every argument after the remote command into ONE string and has the far
+# side's shell re-parse it -- an empty argument silently vanishes and shifts
+# everything after it, so every argument here is %q-quoted rather than passed
+# bare. Why not a checkout: dresse(1).
 remote_step() { # remote_step <script> <args...>
   local s="$1"; shift
   local q="" a sudo_prefix=""
@@ -198,6 +202,6 @@ if [ "$MODE" = --check ]; then
   echo "== nothing done (--check): $pass_n step(s) already satisfied, $gap_n with work to do, $fail_n blind. Next: $NEXT =="
 else
   echo "== $pass_n step(s) ran, $fail_n refused =="
-  [ "$fail_n" -eq 0 ] && echo "  DO      notify-senechal 'realisateur: $CLI_NAME --apply on $TARGET_HOST changed machine-wide config (App key, release channel, per-account .claude blocks). Owned by realisateur.'"
+  [ "$pass_n" -gt 0 ] && echo "  DO      file what changed through senechal's typed door: notify-senechal <door> <field>=<value> ... (prose exits 2; notify-senechal --doors lists them)"
 fi
 [ "$fail_n" -eq 0 ]

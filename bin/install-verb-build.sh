@@ -203,8 +203,7 @@ mv -Tf "$BUILD_ROOT/current.tmp" "$BUILD_ROOT/current" || die 'cannot move curre
 say "current -> $BUILD_ID"
 
 # --- the ~/.local/bin links, written once -------------------------------
-# Off by default: `installe` (senechal) owns ~/.local/bin and its manifest,
-# and this script does not get to quietly take that over. --link is for a
+# Off by default: `installe` (senechal) owns ~/.local/bin and its manifest.
 if [ "$LINK" -eq 1 ]; then
   mkdir -p "$BIN"
   linked=0; skipped=0
@@ -225,9 +224,6 @@ if [ "$LINK" -eq 1 ]; then
   [ "$skipped" -eq 0 ] || say 'the skipped ones are installe-owned -- reconcile deliberately, not by clobbering.'
 
   # --- drop links for verbs this build no longer promises ---------------
-  # The loop above only ever ADDS: it walks the NEW manifest, so a verb a
-  # nightly build dropped keeps its old link, now pointing at
-  # `current/<project>/bin/<verb>` -- which after the switch above does not
   wanted="$(grep -v '^#' "$DEST/manifest.tsv" | cut -f2)"
   dropped=0
   for have in "$BIN"/*; do

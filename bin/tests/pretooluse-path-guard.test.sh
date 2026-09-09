@@ -78,6 +78,7 @@ section "D. another project's tree (dynamic: \$SELFDEV_PROJECTS_ROOT/\$(whoami) 
 run_d() { payload "$1" "$2" | PATH_GUARD_TABLE="$TABLE" SELFDEV_PROJECTS_ROOT="$T/Projects" "$SCRIPT" 2>&1; }
 rcof_d() { payload "$1" "$2" | PATH_GUARD_TABLE="$TABLE" SELFDEV_PROJECTS_ROOT="$T/Projects" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
 ME="$(id -un)"
+mkdir -p "$T/Projects/$ME"
 
 RC="$(rcof_d Write "$T/Projects/$ME/foo.sh")"
 rc "D1 a write to this account's own project tree is fine" 0 "$RC"
@@ -93,6 +94,16 @@ rc "D3 blocks regardless of how deep under the other project the path is" 2 "$RC
 
 RC="$(rcof_d Write "/somewhere/else/entirely.sh")"
 rc "D4 a path outside SELFDEV_PROJECTS_ROOT entirely is not this check's business" 0 "$RC"
+
+HUMAN="$T/HumanHome"
+mkdir -p "$HUMAN/some-other-project/bin"
+rcof_h() { payload "$1" "$2" | PATH_GUARD_TABLE="$TABLE" SELFDEV_PROJECTS_ROOT="$HUMAN" "$SCRIPT" >/dev/null 2>&1; printf '%s' "$?"; }
+
+RC="$(rcof_h Edit "$HUMAN/some-other-project/bin/foo.sh")"
+rc "D5 an account owning no \$root/\$me is not a project account -- not blocked (#1092)" 0 "$RC"
+
+RC="$(rcof_h Write "$HUMAN/another/deep/path.sh")"
+rc "D6 and that holds however deep the path is" 0 "$RC"
 
 section "F. the vault's read door (#742) -- both routes, and the deposit exemption"
 

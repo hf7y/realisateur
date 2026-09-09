@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # unarmed.sh -- has the set of built-but-unarmed mechanisms GROWN? (#754)
+# NOT A VERB (#1041): a crontab row invokes it; see RUNNER below.
 # RUNNER: bin/lib/cron-invoked.tsv -- weekly, root@monkey; DEBT, not liveness
 # GUARD-TEST: bin/tests/unarmed.test.sh -- offline behind UNARMED_SSH
 # GATE: none -- it reads a remote host's crontabs, never this tree
@@ -94,7 +95,7 @@ for v in '"$PROP_HOST_PIN"'/*/bin/*; do
 done
 fi
 printf "HC_VERBS %s\nHC_BIN_STRAY %s\n" "$nv" "$st"
-[ -d '"$PROP_HOST_PIN"' ] && printf "BUILD_LIBEXEC %s\n" "$(ls '"$PROP_HOST_PIN"'/*/libexec/ 2>/dev/null | grep -cE "^(unarmed|vault-spool-drain)\.sh$")"
+[ -d '"$PROP_HOST_PIN"' ] && printf "BUILD_LIBEXEC %s\n" "$(ls '"$PROP_HOST_PIN"'/*/libexec/ 2>/dev/null | grep -cE "^(landing-drift|vault-spool-drain)\.sh$")" # #894 moved unarmed.sh off libexec/; these two are what carries.tsv still declares there
 exit 0'   # ALWAYS LAST, and unconditional: a fact line that reads nothing costs its own row, never the other nine (#815).
   if on_target_host "$HOST"; then
     FACTS="$(bash -c "$script" 2>/dev/null)"; rc=$?
@@ -222,6 +223,18 @@ probe_repo_frame() {
   else
     echo "UNARMED rostered, dispatched to, and carrying no $REGISTRY_MARKER, so every marker-derived sweep reads them as absent rather than as a finding: $(printf '%s' "$u" | tr '\n' ' ')"
   fi
+}
+
+probe_cutover() {
+  local cc out n
+  cc="$(part cutover-check.sh)" || { echo "BLIND cutover-check.sh is not reachable from here"; return; }
+  out="$(bash "$cc" --host "$HOST" 2>&1)"
+  case $? in
+    0) echo "ARMED $HOST has crossed to gen-2 and carries none of the old design's residue" ;;
+    1) n="$(printf '%s\n' "$out" | awk '$1 == "FAIL" { printf "%s ", $2 }')"
+       echo "UNARMED $HOST has not finished crossing, and these are the remaining steps in order: ${n:-see cutover-check --host $HOST}" ;;
+    *) echo "BLIND cutover-check could not read $HOST, which is never the same as clean" ;;
+  esac
 }
 
 probe_repo_guard() {

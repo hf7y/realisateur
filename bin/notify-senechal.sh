@@ -168,14 +168,13 @@ print("%s: %s (%s)" % (p["door"], key, ", ".join(
 ')"
 
 command -v gh >/dev/null 2>&1 || die "gh is not on PATH -- cannot file, and could not confirm a filing either"
-# NOTE: no senechal clone is required any more -- the note goes to GitHub.
-# The check that used to be here (`[ -d "$SENECHAL/.git" ]`) is removed
-# deliberately: keeping it would have made this script keep DEMANDING the very
-# checkout the change exists to make unnecessary, on every host, forever.
+# NO senechal clone is required: the note goes to GitHub. Do not reinstate a
+# `[ -d "$SENECHAL/.git" ]` check -- it would demand the very checkout this
+# exists to make unnecessary.
 
 # --- 1. file it through the front door, and capture the issue it created ----
 #
-# THE FRONT DOOR IS GITHUB (scheduler#22). `scheduler -i`
+# THE FRONT DOOR IS GITHUB (scheduler#22).
 DEST_REPO="${NOTIFY_SENECHAL_REPO:-$GH_ESTATE_OWNER/senechal}"
 FROM_PROJECT="${NOTIFY_FROM_PROJECT:-realisateur}"
 
@@ -185,9 +184,6 @@ FROM_PROJECT="${NOTIFY_FROM_PROJECT:-realisateur}"
 title="$(printf '%s' "$text" | head -1 | cut -c1-72)"
 [ -n "$title" ] || die "the note has no first line to title it with"
 
-# THE FOOTER IS A GATE, NOT DECORATION (senechal#221 ->
-# realisateur#220). `scheduler -i` stamped every issue it filed with
-#
 # TRAP: line 1, the DEFERRED block AND the DELIVERS block satisfy
 #   bin/gh-sign.sh, which refuses a body declaring no DECISION:/NO-DECISION:,
 #   carrying no ledger, or shipping nowhere. Delete any of them as

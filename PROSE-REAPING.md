@@ -14,14 +14,12 @@ Paragraph by paragraph: **does this describe a premise that STILL HOLDS?**
 | Held *at the time* — explains why a past decision was right | **The vault** |
 | **Expired**, and the paragraph exists to *defend a mechanism* | **Flag the mechanism for deletion.** Do not relocate the paragraph |
 
-The third row is what makes this more than tidying. A long justification for a
-knob is *evidence about the knob*; moving it to the vault launders dead config
-into a cleaner-looking file and the knob survives.
-
-**Reaping flags a mechanism; it does not delete it** — that is a separate
-change with its own review. **Verify before you preserve:** a trap paragraph
-earns its place only if the trap is still live. Prefer a **runnable witness**
-— three lines the reader can paste — over a paragraph asserting the same.
+Row three is what makes this more than tidying: a long justification for a knob
+is *evidence about the knob*, and vaulting it launders dead config into a
+cleaner-looking file while the knob survives. Reaping **flags** a mechanism; it
+does not delete it. Prefer a **runnable witness** over a paragraph asserting the
+same. And when the ratchet flags +N, **the answer is always reap** (Zach,
+2026-09-07): a large baseline is itself the evidence that N lines of junk exist.
 
 ## 2. The three destinations
 
@@ -29,47 +27,41 @@ earns its place only if the trap is still live. Prefer a **runnable witness**
 editing this file cause *mechanical* damage without this paragraph, and can the
 claim be re-derived from the code **today**?
 
+**A document may name a VERB, never a script path, flag, or guard's job** (Zach,
+2026-08-23; #579). A verb's `--help` is its own source; the others go stale the
+moment the mechanism moves, and 24 had. **Deleting the sentence is the fix** —
+do not repoint it, and do not build a detector, itself a mechanism to describe.
+
 **The vault** — narrative, post-mortems, superseded decisions. The private
 `hf7y/ecosystem1-vault` remote **is** the vault (#212). Commit **and push**; an
-unpushed deposit is not deposited. `man consigne` owns the resolution order.
-
-**Never resolve a `vault:` pointer** (Zach, 2026-08-29; #742, #762). CLAUDE.md
-defines the notation. Everything in the vault is there because §1 ruled it
-non-current, so following a pointer re-imports a premise that was retired — and
-the how-to that stood here was the invitation. Establish the fact from live
-code, config or API, else say UNVERIFIED and act on nothing.
-`hooks/pretooluse-path-guard.sh` refuses both routes. Depositing is unaffected,
-and a **new** citation is never written: a reaping pass deposits and then
-deletes the claim with its pointer (#741), it does not repoint.
+unpushed deposit is not deposited. `man consigne` owns the resolution order,
+and CLAUDE.md owns the read ban that `hooks/pretooluse-path-guard.sh` enforces.
+A reaping pass deposits and then deletes the claim with its pointer (#741); it
+never repoints and never writes a new citation.
 
 **GitHub issues** — the work. One actionable item, one issue, in its own repo.
 
 ## 3. Reap *into issues*, not only into the vault
 
-**Backlog that lives as prose cannot be counted** — a scheduler cannot pace
-against it and a human cannot see it growing. A pass that moves everything to
-the vault **makes the problem worse while looking like progress**.
+Backlog that lives as prose cannot be counted — a scheduler cannot pace against
+it and a human cannot see it growing, so a pass that vaults everything **makes
+the problem worse while looking like progress**.
 
 > **Vault gets narrative. Issues get work.**
-
-The destination table is §1's and is not restated here. Note only what the read
-ban changes: a paragraph that both explains a past decision and names work
-becomes an issue **and** a deposit, never an issue that cites the deposit.
 
 - **An issue title is a countable unit; a bullet in a file is not.** The point
   is arithmetic, not tidiness.
 - **Zach answers question-issues by commenting and leaving them open.** State
   carries no signal. `etiquette` prints the grammar and derives the label.
 - **Before reaping into another project's repo, run `check-project-busy
-  <project>`** — a direct file write needs the guard; a front-door write
-  (`scheduler -i`, `notify-senechal`) carries its own regulator.
+  <project>`** — a direct write needs the guard; `notify-senechal` carries its own.
 
 ## 4. Branch doctrine
 
 Self-dev commits land on one branch name ecosystem-wide, `main` today.
 `SELFDEV_BRANCH` retargets it from one place — **do not special-case a project
-by editing a script**. The branch *name* is rarely the real problem:
-`vim-arcade` was already on `main` and still could not converge, because a
-read-only deploy key (`scheduler#38`) turns every local commit into a permanent
-unpushed warning. Ask both questions — is it on the agreed branch, and can that
-branch reach its remote?
+by editing a script**. The name is rarely the real problem: `vim-arcade` was
+already on `main` and still could not converge, because a read-only deploy key
+(`scheduler#38`) turns every local commit into a permanent unpushed warning.
+Ask both questions — is it on the agreed branch, and can that branch reach its
+remote?

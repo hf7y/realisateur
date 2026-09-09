@@ -72,13 +72,19 @@ human_step_violations() { # <this-turn's assistant text> -> one line per HUMAN-S
 
 completion_claims() { # <this turn's assistant text> -> one tagged line per act the turn CLAIMS; P=done, F=promised (#752, #681 2.1)
   awk '
-    { s = tolower($0); gsub(/\047/, "", s); sub(/^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+/, "", s)
+    /^[[:space:]]*```/ { fence = !fence; next }                       # a fenced block is quoted material, not a claim
+    fence { next }
+    /^[[:space:]]*>/ { next }                                        # so is a blockquote
+    { raw = $0; line = $0
+      gsub(/\*?"[^"]*"\*?/, " ", line)                               # a quoted span is words being DISCUSSED -- including my own, quoted back
+      s = tolower(line); gsub(/\047/, "", s); sub(/^[[:space:]]*([-*]|[0-9]+\.)[[:space:]]+/, "", s)
       if (s ~ /(^|[.!?] )i( ?ve| have)? (just |now )?(filed|committed|pushed|merged|landed|fixed|patched|deleted|removed)([ ,.]|$)/ ||
           s ~ /(^|[.!?] )i( ?ve| have)? (just |now )?(opened|created|raised)[^.!?]*(issue|pull request|pr[ .,]|#[0-9])/ ||
           s ~ /(^|[.!?] )(filed|landed) (it |this )?as #[0-9]/)
-        print "P" substr($0, 1, 140)
-      else if (s ~ /(^|[.!?] )i( ?ll| will) (also |then |next |now )?(file|open|commit|push|create|fix|land|delete|remove)([ ,.]|$)/)
-        print "F" substr($0, 1, 140) }
+        print "P" substr(raw, 1, 140)
+      else if (s ~ /(^|[^a-z])i( ?ll| will) (also |then |next |now )?(file|open|commit|push|create|fix|land|delete|remove|continue|resume|carry on|pick (it|them|this|those) up|follow up|get to (it|them)|do (it|them|that))([ ,.]|$)/ ||
+               s ~ /(^|[^a-z])i( ?ll| will) [^.!?]*(next (pass|session|turn|time)|another pass|a future (pass|session|turn))/)
+        print "F" substr(raw, 1, 140) }
   '
 }
 
@@ -105,6 +111,37 @@ stated_defects() { # <this turn's assistant text> -> one line per sentence asser
 }
 
 ACT_RE='^(Write|Edit|NotebookEdit)$|git +commit|git +push|gh +(issue|pr) +(create|comment)|gh +api.*(issues|pulls)|notify-senechal'
+
+# AN ISSUE NOTHING DISPATCHES TO IS RESIDUE (#1141). Why, in the message below.
+TURN_SLICE='. as $all |
+  ([range(0; length) | select($all[.].type == "user" and ($all[.] | has("toolUseResult") | not))] | last) as $b |
+  if $b == null then [] else $all[($b + 1):] end'
+
+milestone_gaps() { # <transcript> -> one line per OPEN issue this turn wrote to with no milestone
+  local wrote urls u slug num meta ms st n=0
+  wrote="$(jq -rs "$TURN_SLICE"' | [.[] | select(.type=="assistant") | (.message.content // [])[]
+             | select(.type=="tool_use") | (.input.command // "")]
+           | map(select(test("gh +issue +(create|comment|edit)"))) | length' "$1" 2>/dev/null)"
+  # A turn that only READ issues is not touching them; M6 pins that.
+  [ "${wrote:-0}" -gt 0 ] || return 0
+  urls="$(jq -rs "$TURN_SLICE"' | [.[] | select(.toolUseResult != null)
+             | (.toolUseResult | if type=="object" then (.stdout // .content // "") else . end | tostring)] | .[]' \
+          "$1" 2>/dev/null |
+          grep -oE 'https://github\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+/issues/[0-9]+' | sort -u)"
+  [ -n "$urls" ] || return 0
+  command -v gh >/dev/null 2>&1 || { printf 'BLIND: gh is not on PATH, so no milestone could be checked.\n'; return 0; }
+  while IFS= read -r u; do
+    [ -n "$u" ] || continue
+    n=$((n + 1)); [ "$n" -gt 8 ] && { printf 'BLIND: more than 8 issues touched; only the first 8 were checked.\n'; break; }
+    slug="${u#https://github.com/}"; num="${slug##*/}"; slug="${slug%/issues/*}"
+    meta="$(gh api "repos/$slug/issues/$num" --jq '"\(.state)\t\(.milestone.title // "")"' 2>/dev/null)" || {
+      printf 'BLIND: %s could not be read, so its milestone is unknown.\n' "$u"; continue; }
+    st="${meta%%$'\t'*}"; ms="${meta#*$'\t'}"
+    [ "$st" = open ] || continue
+    [ -n "$ms" ] || printf '%s is OPEN and in no milestone\n' "$u"
+  done <<<"$urls"
+}
+
 
 cited_already() { # <flagged text> <transcript> -- true when it names an artifact this transcript has already seen
   local cite seen                                    # gh issue create prints a URL, not #N, so the number is the identity
@@ -145,9 +182,16 @@ if [ -n "$transcript" ] && [ -r "$transcript" ] && command -v jq >/dev/null 2>&1
   ' "$transcript" 2>/dev/null)" || turn_acts=""
   claim_report=""
   defect_report=""
+  defer_report=""
+  while IFS= read -r claim; do
+    case "$claim" in F*) cited_already "$claim" "$transcript" || defer_report+="  ${claim#?}"$'\n' ;; esac
+  done < <(completion_claims <<<"$turn_text")
   if ! grep -qE "$ACT_RE" <<<"$turn_acts"; then
     while IFS= read -r claim; do
-      case "$claim" in P*) cited_already "$claim" "$transcript" && continue ;; esac  # a done-claim naming an artifact this transcript has already seen is a citation, not a fresh claim
+      case "$claim" in
+        F*) continue ;;                                                             # a deferral has its own block, with its own remedy
+        P*) cited_already "$claim" "$transcript" && continue ;;                     # a done-claim naming an artifact this transcript has already seen is a citation, not a fresh claim
+      esac
       claim_report+="  ${claim#?}"$'\n'
     done < <(completion_claims <<<"$turn_text")
     while IFS= read -r found; do
@@ -165,6 +209,37 @@ if [ -n "$transcript" ] && [ -r "$transcript" ] && command -v jq >/dev/null 2>&1
       echo "NOW -- Edit, git commit, gh issue create, gh pr create -- or cite the artifact"
       echo "that already carries it (#N, or a URL this transcript has seen). A finding"
       echo "stated in a reply and left there dies with the transcript."
+    } >&2
+    exit 2
+  fi
+  if [ -n "$defer_report" ]; then
+    {
+      echo "BLOCKED: this turn puts its own remaining work off to a later turn."
+      echo
+      printf '%s' "$defer_report"
+      echo
+      echo "A later turn may not come, and a promise made in a reply dies with the"
+      echo "transcript. Do it NOW, or give it a URL -- an issue in the owning repo,"
+      echo "with a milestone so something dispatches to it. An act elsewhere in this"
+      echo "turn does not pay for the part you deferred."
+    } >&2
+    exit 2
+  fi
+  ms_report="$(milestone_gaps "$transcript")"
+  ms_blind="$(grep '^BLIND:' <<<"$ms_report")"
+  ms_gaps="$(grep -v '^BLIND:' <<<"$ms_report" | grep -v '^$')"
+  [ -n "$ms_blind" ] && printf '%s\n' "$ms_blind" >&2
+  if [ -n "$ms_gaps" ]; then
+    {
+      echo "BLOCKED: this turn wrote to an issue that nothing dispatches to."
+      echo
+      printf '%s\n' "$ms_gaps"
+      echo
+      echo "A project runs only while a milestone holds an open issue, so an open issue"
+      echo "in no milestone is a finding nothing will ever pick up -- built-not-wired,"
+      echo "in the tracker. Put it in one: gh issue edit <n> --milestone \"<title>\"."
+      echo "If none fits, write that into the issue body and give it the nearest"
+      echo "anyway. Leaving it unplaced and explaining why in the reply is the failure."
     } >&2
     exit 2
   fi
@@ -224,7 +299,21 @@ is_written() { # is_written <abs-path> -- did this session's transcript write it
   return 1
 }
 
-discover_opened_prs() {
+# CANDIDATES, not verdicts: the loop below decides which were opened here, by
+# age. Matching on command text is worse -- anything that merely CONTAINS
+# "gh pr create" counts, and 3 of 3 matches were spurious on 2026-09-07.
+pr_failing_checks() { # <slug> <head-sha> -> count of failing checks, or BLIND
+  local slug="$1" sha="$2" n
+  [ -n "$sha" ] || { echo BLIND; return; }
+  # BLIND fails OPEN here on purpose: this hook decides whether an agent may
+  # stop, and a check it could not read must not become a reason to block.
+  n="$(gh api "repos/$slug/commits/$sha/check-runs" \
+        --jq '[.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out")] | length' \
+        2>/dev/null)" || { echo BLIND; return; }
+  case "$n" in ''|*[!0-9]*) echo BLIND ;; *) echo "$n" ;; esac
+}
+
+discover_prs_mentioned() {
   local transcript="$1"
   [ -n "$transcript" ] && [ -r "$transcript" ] || return 0
   grep -oE 'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[0-9]+' "$transcript" 2>/dev/null | sort -u
@@ -266,22 +355,66 @@ advice() {
   echo "destroying work to get past this hook is the one outcome it exists to prevent."
 }
 
+# The SessionStart baseline's mtime is when this session began; a PR older than
+# it was not opened here. WITH NO BASELINE IT STILL BLOCKS -- a no-baseline pass
+# is indistinguishable from disabling the check, and the bail-out that used to
+# sit here was written by an agent this hook was blocking, in a session with no
+# baseline. Safe because a re-fired Stop already exits 0 (C12).
+session_started=''
+if [ -n "${BASELINE_FILE:-}" ] && [ -f "$BASELINE_FILE" ]; then
+  session_started="$(stat -c %Y "$BASELINE_FILE" 2>/dev/null)" || session_started=''
+fi
+
 pr_report=""
 if command -v gh >/dev/null 2>&1; then
   while IFS= read -r url; do
     [ -n "$url" ] || continue
     slug="${url#https://github.com/}"; num="${slug##*/}"; slug="${slug%/pull/*}"
-    meta="$(gh api "repos/$slug/pulls/$num" --jq '"\(.state)\t\(.draft)\t\(.auto_merge != null)\t\(.body // "")"' 2>/dev/null)" || {
+    meta="$(gh api "repos/$slug/pulls/$num" --jq '"\(.state)\t\(.draft)\t\(.auto_merge != null)\t\(.created_at)\t\(.head.sha)\t\(.body // "")"' 2>/dev/null)" || {
       log "could not read $url -- not blocking on a tracker this hook cannot reach"; continue; }
     st="${meta%%$'\t'*}"; rest="${meta#*$'\t'}"; dr="${rest%%$'\t'*}"
-    rest="${rest#*$'\t'}"; am="${rest%%$'\t'*}"; body="${rest#*$'\t'}"
+    rest="${rest#*$'\t'}"; am="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
+    created="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
+    headsha="${rest%%$'\t'*}"; body="${rest#*$'\t'}"
     [ "$st" = open ] || continue
+    # DRAFT and AUTO-MERGE first: valid stopping states whoever opened it, so
+    # asking whose it is first reports already-handled work (C13-C15).
     if [ "$dr" = true ]; then
       log "note: $url is still a DRAFT -- a draft claims nothing, which is a valid way to stop."
       continue
     fi
+    # ARMED IS A PREDICTION, SO CHECK IT. "It lands when its required checks
+    # pass" was never verified, so an armed PR that is RED -- which will never
+    # land, and which only the agent can fix -- read as handled work. That is
+    # this estate's signature defect sitting inside the guard meant to catch it.
     if [ "$am" = true ]; then
-      log "note: $url has AUTO-MERGE ARMED -- it lands when its required checks pass. Valid way to stop."
+      failing="$(pr_failing_checks "$slug" "$headsha")"
+      if [ "$failing" = 0 ]; then
+        log "note: $url has AUTO-MERGE ARMED and nothing failing -- it lands when its checks pass. Valid way to stop."
+        continue
+      fi
+      if [ "$failing" = BLIND ]; then
+        log "note: $url has AUTO-MERGE ARMED; its checks could not be read, so this hook is not blocking on them."
+        continue
+      fi
+      pr_report+="  $url has AUTO-MERGE ARMED but $failing required check(s) FAILING"$'\n'
+      pr_report+="    armed is not landing: it merges when the checks pass, and they do not"$'\n'
+      continue
+    fi
+    # A PR predating the session is another run's work in flight, and every
+    # exit offered here would damage it.
+    if [ -z "$session_started" ]; then
+      pr_report+="  $url is still open and not a draft"$'\n'
+      pr_report+="    (no SessionStart baseline, so this hook cannot tell whether you opened it)"$'\n'
+      continue
+    fi
+    created_epoch="$(date -d "$created" +%s 2>/dev/null)" || created_epoch=''
+    if [ -z "$created_epoch" ]; then
+      log "note: cannot parse $created for $url -- not blocking on a date this hook cannot read."
+      continue
+    fi
+    if [ "$created_epoch" -lt "$session_started" ]; then
+      log "note: $url predates this session ($created) -- mentioned, not opened here."
       continue
     fi
     pr_report+="  $url is still open and not a draft"$'\n'
@@ -289,7 +422,7 @@ if command -v gh >/dev/null 2>&1; then
       *DELIVERS*) : ;;
       *) pr_report+="    and carries no DELIVERS block, so nothing can check whether it landed"$'\n' ;;
     esac
-  done < <(discover_opened_prs "$transcript")
+  done < <(discover_prs_mentioned "$transcript")
 fi
 if [ -n "$pr_report" ]; then
   {
@@ -381,5 +514,32 @@ if [ -n "$foreign_report" ] || [ -n "$unattr_report" ]; then
     echo "Leave all of the above alone: none of it is yours to commit or revert."
     echo "Mention in your reply that you stopped with it present."
   } >&2
+fi
+
+# --- price the tree BEFORE a push, not after one (man 1 tarife) ---------------
+if [ -n "$cwd" ] && git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  price=""
+  if command -v tarife >/dev/null 2>&1; then price="tarife"
+  elif [ -x "$cwd/bin/tarife.sh" ];       then price="$cwd/bin/tarife.sh"
+  fi
+  if [ -n "$price" ]; then
+    price_out="$(cd "$cwd" && "$price" --gate --quiet 2>&1)"; price_rc=$?
+    case "$price_rc" in
+      1) {
+           echo "BLOCKED: this tree is over a guard that grades every PR, and you have not paid it."
+           echo
+           printf '%s
+' "$price_out"
+           echo
+           echo "This is the verdict CI would give you in five minutes. Pay it now:"
+           echo "the directive above names the routine and the number. Reaping your own"
+           echo "added lines back out is the move it refuses."
+         } >&2
+         exit 2 ;;
+      6) log "tarife BLIND -- the guards could not be fetched and no cache exists. This tree went UNPRICED; CI will be the first to say so." ;;
+    esac
+  else
+    log "no tarife on PATH and no bin/tarife.sh here -- this tree went UNPRICED"
+  fi
 fi
 exit 0
