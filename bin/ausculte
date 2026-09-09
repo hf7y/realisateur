@@ -238,29 +238,58 @@ if want arming; then
 fi
 
 if want hygiene; then  # THE QUESTION'S OWNER, NOT ECOSIM'S CI (#706): hf7y/ecosim#91 refused a CI grant onto 0700 self-dev homes for "is any account holding something it shouldn't" -- a host fact about monkey, read where host facts about monkey already get read. monkey-status-collect.py (schema 2) already publishes containment and credentials per account; this probe only grades what it already collects.
-  st="$(curl -s -m 20 "${MONKEY_STATUS_URL:-https://$GH_ESTATE_SITE/monkey/status.json}" 2>/dev/null)"
-  if ! printf '%s' "$st" | jq -e '.accounts' >/dev/null 2>&1; then
-    record hygiene BLIND 'the published monkey status could not be read'
-  elif [ "$(printf '%s' "$st" | jq -r '.schema // 0')" -lt 2 ] 2>/dev/null; then
-    record hygiene BLIND "monkey status schema $(printf '%s' "$st" | jq -r '.schema') publishes no containment/credentials field"
-  else
-    unreadable="$(printf '%s' "$st" | jq -r '.accounts[] | select(.containment == null) | .account' | tr '\n' ' ')"
-    contained="$(printf '%s' "$st" | jq -r '
-      .accounts[]
-      | select(.containment != null)
-      | select((.containment.foreign_clones|length)>0 or (.containment.outside_home|length)>0 or (.containment.sudoers|length)>0)
-      | .account' | tr '\n' ' ')"
-    shapes="$(printf '%s' "$st" | jq -r '[.accounts[].credentials | tostring] | unique | length')"  # UNIFORMITY, NOT AN ABSOLUTE BAR: this repo does not invent what mode a credential file "should" be -- only whether every account got the SAME treatment (ecosim#91's row_creds, ported as-is).
-    if [ -n "$contained" ]; then
-      record hygiene DOWN "holding something it should not: $contained${unreadable:+; unreadable: $unreadable}"
-    elif [ "${shapes:-0}" -gt 1 ]; then
-      record hygiene DOWN "$shapes distinct credential permission shapes across accounts -- not every account got the same treatment${unreadable:+; unreadable: $unreadable}"
-    elif [ -n "$unreadable" ]; then
-      record hygiene BLIND "containment unreadable for: $unreadable"
+  # A SET, NOT A DEFAULT (hf7y/realisateur#1139): this used to curl only
+  # monkey's published status.json, reproducing this issue's own defect --
+  # a second host's silence reading as health -- in the one probe the
+  # fleet/fatals migrations did not touch. monkey-watch.sh publishes the same
+  # document shape per instance (<host>/status.json), so each host in the set
+  # gets its own curl and its own grade; a host whose document cannot be read,
+  # or is the wrong schema, is BLIND for THAT HOST, never folded into another
+  # host's OK. <HOST>_STATUS_URL overrides one host's URL -- the same name
+  # MONKEY_STATUS_URL already used, just no longer the only host it works for.
+  hy_down=""; hy_blind=""; hy_ok=""; hy_n=0
+  for _hh in "${FLEET_HOSTS[@]}"; do
+    _hh_var="$(printf '%s' "$_hh" | tr '[:lower:]' '[:upper:]')_STATUS_URL"
+    _hh_url="${!_hh_var:-https://$GH_ESTATE_SITE/$_hh/status.json}"
+    st="$(curl -s -m 20 "$_hh_url" 2>/dev/null)"
+    if ! printf '%s' "$st" | jq -e '.accounts' >/dev/null 2>&1; then
+      hy_blind="$hy_blind $_hh:unreadable"
+    elif [ "$(printf '%s' "$st" | jq -r '.schema // 0')" -lt 2 ] 2>/dev/null; then
+      hy_blind="$hy_blind $_hh:schema $(printf '%s' "$st" | jq -r '.schema') has no containment/credentials field"
     else
-      n="$(printf '%s' "$st" | jq -r '.accounts | length')"
-      record hygiene OK "$n account(s): no foreign clone, no file outside home, no sudoers.d entry, one shared credential shape"
+      unreadable="$(printf '%s' "$st" | jq -r '.accounts[] | select(.containment == null) | .account' | tr '\n' ' ')"
+      contained="$(printf '%s' "$st" | jq -r '
+        .accounts[]
+        | select(.containment != null)
+        | select((.containment.foreign_clones|length)>0 or (.containment.outside_home|length)>0 or (.containment.sudoers|length)>0)
+        | .account' | tr '\n' ' ')"
+      # UNIFORMITY, NOT AN ABSOLUTE BAR: this repo does not invent what mode a
+      # credential file "should" be -- only whether every account on THIS HOST
+      # got the SAME treatment (ecosim#91's row_creds, ported as-is). Graded
+      # per host: nothing says two different hosts must share a shape with
+      # each other.
+      shapes="$(printf '%s' "$st" | jq -r '[.accounts[].credentials | tostring] | unique | length')"
+      if [ -n "$contained" ]; then
+        hy_down="$hy_down $_hh:holding something it should not: $contained${unreadable:+; unreadable: $unreadable}"
+      elif [ "${shapes:-0}" -gt 1 ]; then
+        hy_down="$hy_down $_hh:$shapes distinct credential permission shapes across accounts -- not every account got the same treatment${unreadable:+; unreadable: $unreadable}"
+      elif [ -n "$unreadable" ]; then
+        hy_blind="$hy_blind $_hh:containment unreadable for: $unreadable"
+      else
+        _hn="$(printf '%s' "$st" | jq -r '.accounts | length')"
+        hy_ok="$hy_ok $_hh($_hn)"; hy_n=$((hy_n + _hn))
+      fi
     fi
+  done
+  # DOWN beats BLIND beats OK, the same aggregation fleet/fatals already use
+  # above: a real finding on one host must not hide behind another host merely
+  # being unreadable, and an unreadable host must never be folded into an OK.
+  if [ -n "$hy_down" ]; then
+    record hygiene DOWN "${hy_down# }${hy_blind:+ -- also could not grade:$hy_blind}"
+  elif [ -n "$hy_blind" ]; then
+    record hygiene BLIND "could not grade:$hy_blind"
+  else
+    record hygiene OK "$hy_n account(s) across${hy_ok:+:$hy_ok} -- no foreign clone, no file outside home, no sudoers.d entry, one shared credential shape per host"
   fi
 fi
 
