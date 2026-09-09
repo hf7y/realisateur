@@ -172,6 +172,62 @@ check "a real DOWN finding outranks an unrelated BLIND account" "$rc" "5"
 has "and both are named" "$out" "b"
 has "the unreadable account is named too, not silently dropped" "$out" "e"
 
+echo
+echo "-- hygiene: a SET of hosts, not a single default (#1139) -----------------"
+# The stub differentiates by the HOST NAME IN THE URL curl was actually called
+# with (.../<host>/status.json) -- the same idea as fleet_hosts's ssh-argument
+# stub further below: BOTH members of the default fleet set get exercised, and
+# one host unreachable (or unreadable) must read BLIND, never fold into the
+# other's OK. The rows above all answered identically for every host (the
+# stub ignores its argument), so they already proved grading survives being
+# asked twice; these prove the CROSS-HOST aggregation itself.
+hygiene_hosts() {  # hygiene_hosts <host> <exit> <body> [<host> <exit> <body> ...]
+  rm -rf "$TMP/hygiene-hosts"; mkdir -p "$TMP/hygiene-hosts"
+  while [ $# -gt 0 ]; do
+    printf '%s' "$2" > "$TMP/hygiene-hosts/$1.exit"
+    printf '%s' "$3" > "$TMP/hygiene-hosts/$1.out"
+    shift 3
+  done
+  cat > "$TMP/stub/curl" <<STUB
+#!/usr/bin/env bash
+url="\${!#}"                  # curl is called "curl -s -m 20 <url>"
+tmp="\${url%/status.json}"
+host="\${tmp##*/}"
+d="$TMP/hygiene-hosts"
+[ -f "\$d/\$host.exit" ] || exit 1
+[ -s "\$d/\$host.out" ] && cat "\$d/\$host.out"
+exit "\$(cat "\$d/\$host.exit")"
+STUB
+  chmod +x "$TMP/stub/curl"
+}
+
+hygiene_hosts monkey    0 "{\"schema\":2,\"accounts\":[$CLEAN]}" \
+              vaporwave 0 "{\"schema\":2,\"accounts\":[$CLEAN]}"
+out="$(run hygiene)"; rc=$?
+check "both hosts clean is OK (0)" "$rc" "0"
+
+hygiene_hosts monkey    0 "{\"schema\":2,\"accounts\":[$CLEAN]}" \
+              vaporwave 1 ""
+out="$(run hygiene)"; rc=$?
+check "one host in the set unreachable is BLIND (6), never folded into the other's OK" "$rc" "6"
+has "and the unreachable host is named" "$out" "vaporwave"
+hasnt "and it never reports the whole hygiene row as OK on a partial read" "$out" "OK      hygiene"
+
+hygiene_hosts monkey    0 "{\"schema\":2,\"accounts\":[$CLEAN,$BAD_CLONE]}" \
+              vaporwave 1 ""
+out="$(run hygiene)"; rc=$?
+check "a real DOWN finding on one host outranks the other host being unreachable" "$rc" "5"
+has "and the finding is named" "$out" "b"
+has "and the unreachable host is still named, not silently dropped" "$out" "vaporwave"
+
+hygiene_hosts monkey    1 "" vaporwave 1 ""
+out="$(run hygiene)"; rc=$?
+check "both hosts unreachable is BLIND (6)" "$rc" "6"
+
+hygiene_hosts monkey 0 "{\"schema\":2,\"accounts\":[$CLEAN]}"
+out="$(AUSCULTE_FLEET_HOSTS=monkey run hygiene)"; rc=$?
+check "AUSCULTE_FLEET_HOSTS overrides the set down to one host" "$rc" "0"
+
 # --- propagation reads the channel's VERDICT, not the verb count ---------
 # The count said OK through two days of a refusing cutter. curl/ssh stubbed.
 verdict() { printf '#!/usr/bin/env bash\ncat <<'"'"'J'"'"'\n%s\nJ\n' "$1" > "$TMP/stub/curl"; chmod +x "$TMP/stub/curl"; }
