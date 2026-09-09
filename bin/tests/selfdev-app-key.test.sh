@@ -83,15 +83,14 @@ echo "-- F. the argument contract"
 "$SCRIPT" --help >/dev/null 2>&1;            eq "F2 --help exits 0" "$?" "0"
 
 echo "-- G. every reader resolves through the lib, not its own spelling"
-for f in "$ROOT/selfdev-gh-app.sh" "$ROOT/selfdev-credentials.sh"; do
-  n="$(basename "$f")"
-  code="$(grep -v '^[[:space:]]*#' "$f")"
-  case "$code" in
-    *'$HOME/.config/selfdev/gh-app.conf'*|*'$HOME/.config/selfdev/app.pem'*)
-      bad "G: $n still defaults to a per-account credential path" ;;
-    *) ok "G: $n no longer defaults to a per-account credential path" ;;
-  esac
-done
+f="$ROOT/selfdev-gh-app.sh"
+n="$(basename "$f")"
+code="$(grep -v '^[[:space:]]*#' "$f")"
+case "$code" in
+  *'$HOME/.config/selfdev/gh-app.conf'*|*'$HOME/.config/selfdev/app.pem'*)
+    bad "G: $n still defaults to a per-account credential path" ;;
+  *) ok "G: $n no longer defaults to a per-account credential path" ;;
+esac
 
 echo
 summary

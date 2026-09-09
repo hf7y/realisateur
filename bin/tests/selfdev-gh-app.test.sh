@@ -347,16 +347,14 @@ no  "M3 no --repos means no scope is invented" "$(mhelper)" "--repos"
 has "M3 ...and the unscoped posture is stated, not silent" "$outM3" "UNSCOPED"
 
 echo
-echo "-- M: the two callers that must supply the list --------------------------"
+echo "-- M: the caller that must supply the list --------------------------------"
 BINDIR="$(cd "$(dirname "$0")/.." && pwd)"
 # OWN repo and nothing else: realisateur reaches an account through the verb
 # build (#134) and each clones only its own REPO_URL (scheduler#307).
+# The re-wire caller, bin/selfdev-credentials.sh, was removed in #1134 (its
+# credential-audit check moved to hf7y/etalon); this is the one caller left.
 has "M4 the provisioning caller scopes to the project itself" \
     "$(cat "$BINDIR/setup-selfdev-project.sh")" "--wire --repos '\$PROJECT'"
-has "M5 the re-wire caller does too, or --apply silently unscopes the fleet" \
-    "$(cat "$BINDIR/selfdev-credentials.sh")" '--wire --repos $(cred_own_repo "$acct")'
-no  "M6 no second list of repos was invented beside cred_own_repo" \
-    "$(cat "$BINDIR/lib/selfdev-credentials-set.sh")" "cred_wire_scope"
 
 echo
 echo "-- N: an owner-qualified --repos entry is refused, not sent to GitHub -----"
