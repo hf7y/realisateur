@@ -551,24 +551,44 @@ if want fatals; then  # A HARD ABORT BEFORE `claude` STARTS writes no ledger row
       [ "${c:-0}" -gt 0 ] && printf "FATALS-FOUND %s %s\n" "$u" "$c"
     done < /etc/passwd
     echo "FATALS-CHECKED $n_checked"'
-  if on_target_host "${AUSCULTE_FLEET_HOST:-monkey}"; then
-    fat="$(bash -c "$_fatals_probe" 2>/dev/null)"
+  # A SET, NOT A DEFAULT (hf7y/realisateur#1139): this probe landed (#1062)
+  # AFTER the fleet probe above was fixed to read fleet-hosts-set.sh, and
+  # still asked only ${AUSCULTE_FLEET_HOST:-monkey} -- the exact regression
+  # this issue is about, on a probe new enough that it should have known
+  # better. A hard abort on a second host in the set must be found, and a
+  # host this probe cannot reach must read BLIND, never be folded silently
+  # into "none aborting".
+  ft_all=""; ft_unreachable=""; ft_reached=0
+  for _th in "${FLEET_HOSTS[@]}"; do
+    if on_target_host "$_th"; then
+      _fat="$(bash -c "$_fatals_probe" 2>/dev/null)"
+    else
+      _fat="$(${AUSCULTE_SSH:-ssh} -o ConnectTimeout=10 -o BatchMode=yes "$_th" "$_fatals_probe" 2>/dev/null)"
+    fi
+    case "$_fat" in
+      *FATALS-CHECKED*) ft_reached=$((ft_reached + 1)); ft_all="$ft_all
+$_fat" ;;
+      *) ft_unreachable="$ft_unreachable $_th" ;;
+    esac
+  done
+  if [ "$ft_reached" -eq 0 ]; then
+    record fatals BLIND "could not read any account sweep.log on any host in the fleet set:${ft_unreachable:- (none reachable)}"
   else
-    fat="$(${AUSCULTE_SSH:-ssh} -o ConnectTimeout=10 -o BatchMode=yes "${AUSCULTE_FLEET_HOST:-monkey}" "$_fatals_probe" 2>/dev/null)"
+    n_checked="$(printf '%s\n' "$ft_all" | awk '$1=="FATALS-CHECKED"{s+=$2} END{print s+0}')"
+    found="$(printf '%s\n' "$ft_all" | awk '$1=="FATALS-FOUND" {printf "%s(%s) ", $2, $3}')"
+    unreach_note=""; [ -n "$ft_unreachable" ] && unreach_note=" -- UNREACHABLE, not counted, not clean:$ft_unreachable"
+    if [ -n "$found" ]; then
+      record fatals DOWN "aborting every dispatch, unreported until now: $found$unreach_note"
+    elif [ -n "$ft_unreachable" ]; then
+      # #1139 constraint: a host in the set that could not be reached is
+      # BLIND, never silently folded into whatever the reachable hosts found.
+      record fatals BLIND "could not reach:$ft_unreachable -- its fatals state is unknown, not clean ($ft_reached host(s) reached, ${n_checked:-0} account(s) checked there)"
+    elif [ "${n_checked:-0}" -eq 0 ]; then  # zero readable is not zero aborting -- same trap as fleet's ledger count
+      record fatals BLIND 'no sweep.log could be read for any account -- cannot tell whether one is aborting'
+    else
+      record fatals OK "$n_checked account(s) checked, none aborting before dispatch"
+    fi
   fi
-  case "$fat" in
-    *FATALS-CHECKED*)
-      n_checked="$(printf '%s\n' "$fat" | sed -n 's/^FATALS-CHECKED //p')"
-      found="$(printf '%s\n' "$fat" | awk '$1=="FATALS-FOUND" {printf "%s(%s) ", $2, $3}')"
-      if [ -n "$found" ]; then
-        record fatals DOWN "aborting every dispatch, unreported until now: $found"
-      elif [ "${n_checked:-0}" -eq 0 ]; then  # zero readable is not zero aborting -- same trap as fleet's ledger count
-        record fatals BLIND 'no sweep.log could be read for any account -- cannot tell whether one is aborting'
-      else
-        record fatals OK "$n_checked account(s) checked, none aborting before dispatch"
-      fi ;;
-    *) record fatals BLIND 'could not read any account sweep.log' ;;
-  esac
 fi
 
 
