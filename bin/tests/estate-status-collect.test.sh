@@ -111,6 +111,25 @@ out="$(DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
 eq "success + rc 0 + no REPORT.md is DEGRADED" "$(printf '%s' "$out" | field '["verdict"]')" '"DEGRADED"'
 has "...and the finding names the report" "$out" "wrote no REPORT.md"
 
+# run-agent.sh's own report, signed. rc 0 and a clean tree is an orderly pass
+# that landed nothing -- legible, and NOT a finding (#1329).
+{ printf '=== result: success  turns=47  cost=$1.02\n'
+  printf '=== %s container exited (rc=0) ===\n' "$now"
+  printf '=== REPORT.md (/x/REPORT.md) -- WRITTEN BY run-agent.sh, the agent wrote none ===\n'
+  printf 'harness-report: rc=0 turns=47 of 150 tree=clean branch=main\n'
+} > "$T/agent/roster.$stamp.log"
+out="$(DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
+eq "a harness-written report is its own state, not \`present\` and not \`missing\`" \
+   "$(printf '%s' "$out" | field '["nightly"]["passes"][0]["report"]')" '"synthesized"'
+eq "...and rc 0 on a clean tree is OK, not DEGRADED" \
+   "$(printf '%s' "$out" | field '["verdict"]')" '"OK"'
+
+sed -i 's/tree=clean/tree=dirty/' "$T/agent/roster.$stamp.log"
+out="$(DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
+eq "...while a dirty tree under the same silence IS a finding" \
+   "$(printf '%s' "$out" | field '["verdict"]')" '"DEGRADED"'
+has "...and it quotes the harness's own line" "$out" "tree=dirty"
+
 rm -f "$T/agent/roster.$stamp.log"
 out="$(DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
 eq "a repo on the list with no log at all reads as never dispatched" \

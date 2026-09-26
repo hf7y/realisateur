@@ -207,6 +207,11 @@ def nightly_run():
 RESULT = re.compile(r"^=== result: (\S+)\s+turns=(\d+)\s+cost=\$(\S+)")
 EXITED = re.compile(r"^=== (\S+) container exited \(rc=(\d+)\) ===")
 NOREPORT = re.compile(r"^NOT FOUND at that path\.|^=== NO CHECKOUT at ")
+# run-agent.sh writes a REPORT.md itself when the agent wrote none, and signs
+# it -- so "the agent said nothing" stays visible instead of being papered over,
+# and the facts it leaves (rc, tree) are what grades the pass. #1329.
+SYNTHREPORT = re.compile(r"^=== REPORT\.md \(.*\) -- WRITTEN BY run-agent\.sh")
+HARNESSFACTS = re.compile(r"^harness-report: .*tree=(\S+)")
 
 
 def pass_row(repo):
@@ -220,14 +225,16 @@ def pass_row(repo):
     if not path:
         return {"repo": repo, "log": None, "result": None, "turns": None,
                 "cost_usd": None, "rc": None, "report": None, "pr": None,
-                "at": None, "note": "never dispatched: no log under the agent dir"}
+                "tree": None, "at": None,
+                "note": "never dispatched: no log under the agent dir"}
     txt = read(path)
     if txt is None:
         return {"repo": repo, "log": os.path.basename(path), "result": None, "turns": None,
-                "cost_usd": None, "rc": None, "report": None, "pr": None, "at": None,
-                "note": "log present but unreadable"}
+                "cost_usd": None, "rc": None, "report": None, "pr": None,
+                "tree": None, "at": None, "note": "log present but unreadable"}
     row = {"repo": repo, "log": os.path.basename(path), "result": None, "turns": None,
-           "cost_usd": None, "rc": None, "report": None, "pr": None, "note": None}
+           "cost_usd": None, "rc": None, "report": None, "pr": None,
+           "tree": None, "note": None}
     stamp = os.path.basename(path).rsplit(".", 2)[-2]
     row["at"] = f"{stamp[:4]}-{stamp[4:6]}-{stamp[6:11]}:{stamp[11:13]}:{stamp[13:16]}"
     for line in txt.splitlines():
@@ -243,6 +250,12 @@ def pass_row(repo):
             row["rc"] = int(m.group(2))
         if NOREPORT.match(line):
             row["report"] = "missing"
+        if SYNTHREPORT.match(line):
+            row["report"] = "synthesized"
+        m = HARNESSFACTS.match(line)
+        if m:
+            row["tree"] = m.group(1)
+            row["note"] = line.strip()
     if row["report"] is None and "=== REPORT.md (" in txt:
         row["report"] = "present"
     # The PR the pass opened, read off the report it wrote. NOT off the PR
@@ -308,6 +321,12 @@ def grade(d):
             warn.append(f"{p['repo']}: last pass ended `{p['result']}`")
         elif p["report"] == "missing":
             warn.append(f"{p['repo']}: last pass wrote no REPORT.md -- the only real failure of a pass")
+        elif p["report"] == "synthesized" and (p["rc"] not in (0, None) or p["tree"] == "dirty"):
+            # A signed harness report with rc 0 and a clean tree is an orderly
+            # pass that landed nothing, which the brief calls a success. Only
+            # the other shapes are findings.
+            warn.append(f"{p['repo']}: the agent wrote no REPORT.md and the harness's own reads "
+                        f"`{p['note'] or 'rc/tree unknown'}`")
 
     if bad:
         return "DOWN", bad + warn
