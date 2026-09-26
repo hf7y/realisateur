@@ -50,7 +50,9 @@
   <b>Passes</b> are the one-shot <code>--rm</code> containers the nightly dispatcher spawns, one
   per repo; a pass is graded on <b>what it left</b> &mdash; a REPORT.md and, usually, a PR &mdash;
   never on its exit code alone, because a pass that reads the queue and honestly writes
-  &ldquo;nothing finishable from here&rdquo; also exits 0.
+  &ldquo;nothing finishable from here&rdquo; also exits 0. When the agent writes no report at
+  all, <code>run-agent.sh</code> writes one and signs it; that pass reads <i>landed nothing</i>,
+  and is a finding only if the container exited non-zero or left a dirty tree.
   The PR column is read off the report the pass wrote, never off the PR's author: the
   container pushes with the estate's own token, so every PR it opens is authored
   <code>hf7y</code>.
@@ -104,8 +106,12 @@ const passesHTML=d=>{
   const rows=(n.passes||[]).map(p=>{
     const disp=(run.dispatched||{})[p.repo];
     const skipped=(run.skipped||[]).includes(p.repo);
+    // "synthesized" is run-agent.sh's own report, written because the agent
+    // wrote none. It is not a PR and not a crash: the pass landed nothing.
     const pr=p.pr?`<a href="${H(p.pr)}">#${H(p.pr.split("/").pop())}</a>`:
-      (p.report==="present"?'<span class="mut">no PR</span>':'<span class="bad">no report</span>');
+      p.report==="present"?'<span class="mut">no PR</span>':
+      p.report==="synthesized"?`<span class="warn" title="${H(p.note||"")}">landed nothing</span>`:
+      '<span class="bad">no report</span>';
     return `<tr>
       <td><b>${H(p.repo)}</b></td>
       <td class="num">${disp?disp.queue:skipped?'<span class="mut">0</span>':dash(null)}</td>

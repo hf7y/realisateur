@@ -29,6 +29,9 @@ set -euo pipefail
 repo="${1:?usage: run-agent.sh <repo> [max_turns]}"
 turns="${2:-150}"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+# The same instant as an ISO-8601 Z string, because the PR list below is
+# partitioned on it and `gh --jq` compares createdAt as text.
+started_iso="${stamp:0:4}-${stamp:4:2}-${stamp:6:2}T${stamp:9:2}:${stamp:11:2}:${stamp:13:2}Z"
 log="/srv/agent/${repo}.${stamp}.log"
 
 # ONE level, not two. The previous version mounted /srv/agent/work/<repo> at
@@ -59,12 +62,34 @@ Then:
 2. Branch. Make the change. Run whatever test covers it and show its real
    output. Commit.
 3. Push the branch and open a PR with \`gh pr create\`. Never push to main.
+   End the body with both blocks below, verbatim markers -- they are what lets a
+   checker grade the claim afterwards instead of only reading it. Write
+   \`- none\` in either one when it is empty, and note that DELIVERS entries are
+   \`path:X\` with no space:
+
+       <!-- DEFERRED -->
+       - none
+       <!-- /DEFERRED -->
+
+       <!-- DELIVERS -->
+       - path:<file> -- what takes effect outside the repo when this lands
+       <!-- /DELIVERS -->
 4. Write REPORT.md in the repo root before you finish, WHATEVER happened: the
    issue number, the branch, the test command and its actual output, the PR
    URL, and anything you could not do. Leave it untracked, do not commit it.
    If you achieved nothing, say so plainly and say why -- "nothing finishable
    from here, because X" is a SUCCESSFUL run of this mechanism. A silent or
    empty report is the only real failure.
+
+If \`git push\` is refused, the branch is the only copy of the work: say so in
+REPORT.md with the exact error and LEAVE IT ALONE. \`git branch -D\` after a
+failed push destroys the pass -- the container is \`--rm\`, so nothing survives
+it. That is what crt did on 2026-09-26 with a verified fix in hand.
+
+You are running non-interactively. Nothing will notify you, nothing will wake
+you, and there is no one to ask: a backgrounded command, a \`ScheduleWakeup\`,
+or an \`until ! pgrep -f ...\` loop (which matches itself) just burns the rest
+of the pass. Run every command in the foreground.
 
 State the command behind every claim you make about what the code does.
 BRIEF
@@ -129,23 +154,61 @@ echo "=== $(date -u +%FT%TZ) container exited (rc=${rc}) ==="
 if [ ! -d "$checkout" ]; then
   echo "=== NO CHECKOUT at ${checkout} -- the clone never landed ==="
 else
-  echo "=== REPORT.md (${checkout}/REPORT.md) ==="
-  if [ -f "${checkout}/REPORT.md" ]; then
-    cat "${checkout}/REPORT.md"
+  g() { git -c safe.directory="$checkout" -C "$checkout" "$@"; }
+  branch="$(g branch --show-current)"
+  tree=clean; [ -n "$(g status --porcelain)" ] && tree=dirty
+  turns_used="$(sed -n 's/^=== result: .*turns=\([0-9]*\).*/\1/p' "$log" | tail -1)"
+
+  # THE AUTHOR IS NOT `claude-agent`. The `git config user.name` above sets
+  # that as the COMMITTER, while the PR is authored `hf7y` -- the token's
+  # identity -- so the old
+  # `select(.author.login|test("claude|agent";"i"))` matched nobody, and every
+  # green night's log claimed no PR under a header saying it listed them.
+  # Recency is the pass's own artifact and survives the token changing identity
+  # again; `gh --jq` takes no --arg, so the cutoff is stitched into the program.
+  prs="$(GH_TOKEN="$(sudo -n cat /etc/selfdev/gh-token)" \
+    gh pr list --repo "hf7y-estate/${repo}" --limit 30 \
+      --json number,createdAt,headRefName,title \
+      --jq '.[] | "\(.createdAt)\t\(.number)\t\(.headRefName)\t\(.title)"' 2>/dev/null)" || prs=""
+  # This pass's PRs carry the full URL; older ones are listed by number only.
+  # estate-status-collect.py reads the pass's PR off the first URL in the log,
+  # so a PR from a previous night printed as a URL would be read as tonight's.
+  mine="$(printf '%s\n' "$prs" | awk -F'\t' -v s="$started_iso" -v r="$repo" \
+    '$1!="" && $1>=s { printf "  https://github.com/hf7y-estate/%s/pull/%s  %s  %s\n", r, $2, $3, $4 }')"
+  prior="$(printf '%s\n' "$prs" | awk -F'\t' -v s="$started_iso" \
+    '$1!="" && $1<s { printf "  #%s  %s  %s  %s\n", $2, $1, $3, $4 }')"
+
+  # A pass that landed nothing and said nothing is indistinguishable from one
+  # that crashed (#1329) -- crt, two nights running. The harness cannot say WHY
+  # the agent stopped, only what it left, so it writes that down and signs it,
+  # and the collector grades a signed report on its facts rather than on its
+  # absence.
+  report="${checkout}/REPORT.md"
+  if [ -f "$report" ]; then
+    echo "=== REPORT.md (${report}) ==="
   else
-    echo "NOT FOUND at that path. Anything else named REPORT.md under ${root}:"
-    find "$root" -name REPORT.md 2>/dev/null || echo "  (none anywhere)"
+    cat > "$report" <<EOF
+# REPORT.md -- WRITTEN BY run-agent.sh, the agent wrote none
+
+harness-report: rc=${rc} turns=${turns_used:-0} of ${turns} tree=${tree} branch=${branch:-none}
+
+The agent exited without writing a report, so this says only what the harness
+can see from outside the container. It is NOT a verdict on the pass: rc 0, a
+clean tree and turns well under the cap is an orderly exit that landed nothing,
+which the brief calls a successful run. rc non-zero or a dirty tree is not.
+EOF
+    echo "=== REPORT.md (${report}) -- WRITTEN BY run-agent.sh, the agent wrote none ==="
   fi
+  cat "$report"
+
   echo
+  echo "=== PRs opened by THIS pass (since ${started_iso}) ==="
+  printf '%s\n' "${mine:-  (none)}"
+  echo "=== already open on hf7y-estate/${repo} before it ==="
+  printf '%s\n' "${prior:-  (none)}"
   echo "=== branch and commits ==="
-  git -c safe.directory="$checkout" -C "$checkout" branch --show-current
-  git -c safe.directory="$checkout" -C "$checkout" log --oneline -5
+  printf '%s\n' "${branch:-(detached)}"
+  g log --oneline -5
   echo "=== uncommitted ==="
-  git -c safe.directory="$checkout" -C "$checkout" status --porcelain | head
-  echo "=== PRs opened by claude-agent on hf7y-estate/${repo} in the last hour ==="
-  GH_TOKEN="$(sudo -n cat /etc/selfdev/gh-token)" \
-    gh pr list --repo "hf7y-estate/${repo}" --limit 5 \
-      --json number,title,author,createdAt \
-      --jq '.[] | select(.author.login|test("claude|agent";"i")) | "#\(.number) \(.createdAt) \(.title)"' \
-    || echo "  (could not list)"
+  g status --porcelain | head
 fi

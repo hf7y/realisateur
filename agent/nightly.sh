@@ -42,12 +42,18 @@ grep -vE '^\s*(#|$)' "$list" | while read -r repo; do
 done
 
 echo "=== nightly done $(date -u +%FT%TZ) ==="
-echo "=== PRs from claude-agent in the last 12h ==="
+# NOT `select(.author.login|test("claude|agent"))`: run-agent.sh sets
+# claude-agent as the COMMITTER, while the PR is authored `hf7y`, the token's
+# identity -- so that filter matched nobody and this block printed an empty
+# list on every night that opened PRs. Recency is the pass's own artifact.
+since="$(date -u -d '12 hours ago' +%FT%TZ)"
+echo "=== PRs opened on the estate since ${since} ==="
 for repo in $(grep -vE '^\s*(#|$)' "$list"); do
-  # gh's --jq takes no --arg, so the repo name is stitched on afterwards.
+  # gh's --jq takes no --arg, so both the cutoff and the repo name are
+  # stitched in -- the cutoff into the program, the name onto each line.
   gh pr list --repo "hf7y-estate/$repo" --limit 10 \
-    --json number,title,author,createdAt \
-    --jq '.[] | select(.author.login|test("claude|agent";"i")) |
-       "#\(.number) \(.createdAt) \(.title)"' 2>/dev/null \
-    | sed "s|^|  $repo|" || true
+    --json number,title,createdAt \
+    --jq ".[] | select(.createdAt >= \"$since\") |
+       \"#\(.number) \(.createdAt) \(.title)\"" 2>/dev/null \
+    | sed "s|^|  $repo |" || true
 done
