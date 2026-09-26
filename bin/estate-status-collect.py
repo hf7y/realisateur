@@ -45,6 +45,9 @@ AGENT_SRC = os.environ.get(
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "agent"))
 WIRE = os.environ.get(
     "ESTATE_WIRE", os.path.join(os.path.dirname(os.path.abspath(__file__)), "wire-agent-dispatch.sh"))
+TOKCHECK = os.environ.get(
+    "ESTATE_TOKCHECK",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "dispatch-token-check.sh"))
 
 
 def sh_rc(*cmd):
@@ -302,6 +305,28 @@ def dispatch_source():
     return out or None
 
 
+def dispatch_token():
+    """What the credential the nightly pushes with can still do.
+
+    The credential itself is never read here and never printed anywhere: the
+    script answers on the host and hands back a shape, a login and two words.
+    An agent cannot ask this question at all -- the harness refuses any command
+    that materialises a credential -- which is exactly why it lives on a cron
+    row instead of in somebody's terminal."""
+    if not os.access(TOKCHECK, os.X_OK):
+        return None
+    try:
+        p = subprocess.run([TOKCHECK, "--state"], capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    out = {}
+    for line in p.stdout.splitlines():
+        k, _, v = line.partition("\t")
+        if k and v:
+            out[k] = v
+    return out or None
+
+
 # --- verdict -----------------------------------------------------------------
 def grade(d):
     """DOWN is "something the estate needs is not running". DEGRADED is
@@ -348,6 +373,22 @@ def grade(d):
         for repo, v in n["last_run"]["dispatched"].items():
             if v["outcome"] and v["outcome"] != "finished":
                 warn.append(f"{repo}: pass {v['outcome']}")
+    tok = n["dispatch_token"]
+    if tok is None:
+        warn.append("the dispatch credential was not asked about -- whether tonight can push is UNKNOWN")
+    elif tok.get("reachable") == "no":
+        # Nothing the nightly does lands. That is not "degraded", it is a night
+        # of containers that cost money and push nothing.
+        bad.append(f"the credential the nightly pushes with is not accepted: {tok.get('why', 'no reason given')}")
+    elif tok.get("reachable") != "yes":
+        warn.append(f"could not ask what the dispatch credential can do: {tok.get('why', 'no reason given')}")
+    elif tok.get("workflows") == "no":
+        warn.append("the dispatch credential cannot push `.github/workflows/` -- a pass that edits "
+                    "one commits, fails to push, and has nothing to show for it")
+    elif tok.get("workflows") == "unknown":
+        warn.append(f"whether the dispatch credential may push `.github/workflows/` is UNKNOWN: "
+                    f"{tok.get('why', 'no reason given')}")
+
     src = n["dispatch_source"]
     if src is None:
         warn.append("not run from a checkout, so whether /srv/agent matches `main` is UNKNOWN")
@@ -358,8 +399,8 @@ def grade(d):
         # DRIFTED is the loud one: bytes that were never this path's content, so
         # somebody edited the host and `--apply` will refuse them. BEHIND is the
         # ordinary morning-after state and links cleanly; a plain COPY agrees
-        # today and nothing will ever refresh it. All three are findings,
-        # because none of them survives the next merge.
+        # today and nothing will ever refresh it. Each is a finding: no state
+        # but `linked` survives the next merge.
         drifted = [f for f, v in src.items() if v in ("drifted", "not-in-clone")]
         behind = [f for f, v in src.items() if v == "behind"]
         stale = [f for f, v in src.items() if v in ("copy", "absent")]
@@ -424,6 +465,7 @@ def main():
             "armed": armed, "cron_line": cron_line,
             "repos": repos, "last_run": run, "passes": passes,
             "dispatch_source": dispatch_source(),
+            "dispatch_token": dispatch_token(),
             "max_age_h": NIGHTLY_MAX_H,
         },
     }

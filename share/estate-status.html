@@ -58,6 +58,10 @@
   <code>bin/wire-agent-dispatch.sh</code> is what makes one. <i>Behind</i> is a real earlier
   version of the same file and links cleanly; bytes that were <i>never on main</i> mean somebody
   edited the host, and that is refused rather than overwritten.
+  <b>Push credential</b> is what the nightly's containers push with, asked on dexter by the
+  cron row that publishes this page. The credential never leaves the host and its scope list is
+  never published; only whether the API accepts it, and whether it may push
+  <code>.github/workflows/</code>, which is the one cap a pass cannot see from inside itself.
   The PR column is read off the report the pass wrote, never off the PR's author: the
   container pushes with the estate's own token, so every PR it opens is authored
   <code>hf7y</code>.
@@ -120,6 +124,18 @@ const dispatchCell=src=>{
   return '<span class="ok">linked to the clone</span>';
 };
 
+// What the nightly pushes with, asked on dexter by a cron row and answered
+// without the credential ever leaving the host. The scope list is deliberately
+// NOT published -- this page is public.
+const tokenCell=t=>{
+  if(!t) return '<span class="blind">not asked</span>';
+  if(t.reachable==="no")  return '<span class="bad">not accepted</span>';
+  if(t.reachable!=="yes") return '<span class="blind">could not ask</span>';
+  if(t.workflows==="no")  return '<span class="warn">no workflow push</span>';
+  if(t.workflows!=="yes") return `<span class="blind">${H(t.kind||"unknown")}, scope unknown</span>`;
+  return '<span class="ok">accepted</span>';
+};
+
 const passesHTML=d=>{
   const n=d.nightly, run=n.last_run;
   if(!run) return `<p class="bad">No nightly log on the host &mdash; the dispatcher has never run here.</p>`;
@@ -170,6 +186,7 @@ fetch("status.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{
       <div class="fact"><b>passes that left a PR</b>${withPR} / ${passes.length}</div>
       <div class="fact"><b>last night cost</b>$${cost.toFixed(2)}</div>
       <div class="fact"><b>dispatcher source</b>${dispatchCell(d.nightly.dispatch_source)}</div>
+      <div class="fact"><b>push credential</b>${tokenCell(d.nightly.dispatch_token)}</div>
     </div>
     <h2>services <span>&mdash; one per <code>/srv/&lt;name&gt;/compose.yaml</code></span></h2>
     ${servicesHTML(d)}

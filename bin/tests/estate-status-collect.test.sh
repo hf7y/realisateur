@@ -42,9 +42,17 @@ UP='[{"Name":"/roster","Config":{"Image":"i","Labels":{"com.docker.compose.proje
 # a mirror of the fixture so the OTHER sections are not all graded on wiring.
 mkdir -p "$T/clone"
 for f in nightly.sh run-agent.sh repos Dockerfile; do : > "$T/clone/$f"; ln -sfn "$T/clone/$f" "$T/agent/$f"; done
+# The credential probe is stubbed whole: this suite must never read a real one,
+# and TOK_OUT is the seam every case below steers.
+cat > "$T/stub/tokcheck" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "${TOK_OUT:-$(printf 'kind\tclassic\nreachable\tyes\nlogin\thf7y\nworkflows\tyes')}"
+exit "${TOK_RC:-0}"
+STUB
+chmod +x "$T/stub/tokcheck"
 collect() {
   PATH="$T/stub:$PATH" ESTATE_SRV="$T/srv" ESTATE_AGENT_DIR="$T/agent" \
-    ESTATE_AGENT_SRC="${AGENT_SRC_OVERRIDE:-$T/clone}" \
+    ESTATE_AGENT_SRC="${AGENT_SRC_OVERRIDE:-$T/clone}" ESTATE_TOKCHECK="$T/stub/tokcheck" \
     PYTHONDONTWRITEBYTECODE=1 python3 "$COLLECTOR"
 }
 field() { python3 -c 'import json,sys;print(json.dumps(eval("d"+sys.argv[1],{"d":json.load(sys.stdin)})))' "$1"; }
@@ -181,6 +189,38 @@ has "...and that is a finding" "$out" "is UNKNOWN"
 # back to linked, so G grades the sweep and not the wiring
 rm -f "$T/agent"/nightly.sh "$T/agent"/run-agent.sh "$T/agent"/repos "$T/agent"/Dockerfile
 for f in nightly.sh run-agent.sh repos Dockerfile; do : > "$T/clone/$f"; ln -sfn "$T/clone/$f" "$T/agent/$f"; done
+
+section "I. the credential the nightly pushes with"
+out="$(DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
+eq "a live credential with workflow scope is not a finding" \
+   "$(printf '%s' "$out" | field '["verdict"]')" '"OK"'
+eq "...and only the derived answer is published, never a scope list" \
+   "$(printf '%s' "$out" | field '["nightly"]["dispatch_token"]["workflows"]')" '"yes"'
+
+out="$(TOK_OUT="$(printf 'kind\tclassic\nreachable\tyes\nlogin\thf7y\nworkflows\tno')" \
+      DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
+eq "no workflow scope is DEGRADED -- it is crt's lost pass" \
+   "$(printf '%s' "$out" | field '["verdict"]')" '"DEGRADED"'
+has "...and the finding says what it costs" "$out" "commits, fails to push"
+
+out="$(TOK_OUT="$(printf 'reachable\tno\nwhy\tthe API answered 401')" TOK_RC=5 \
+      DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
+eq "a DEAD credential is DOWN, not degraded -- nothing tonight lands" \
+   "$(printf '%s' "$out" | field '["verdict"]')" '"DOWN"'
+
+out="$(TOK_OUT="$(printf 'reachable\tunknown\nwhy\tthe API was not reached')" TOK_RC=6 \
+      DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
+eq "could-not-ask is DEGRADED, never OK" \
+   "$(printf '%s' "$out" | field '["verdict"]')" '"DEGRADED"'
+has "...and says it could not ask" "$out" "could not ask what the dispatch credential"
+
+out="$(ESTATE_TOKCHECK_MISSING=1 DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" \
+      PATH="$T/stub:$PATH" ESTATE_SRV="$T/srv" ESTATE_AGENT_DIR="$T/agent" \
+      ESTATE_AGENT_SRC="$T/clone" ESTATE_TOKCHECK="$T/no-such-probe" \
+      PYTHONDONTWRITEBYTECODE=1 python3 "$COLLECTOR")"
+eq "no probe at all publishes null, never a healthy guess" \
+   "$(printf '%s' "$out" | field '["nightly"]["dispatch_token"]')" "null"
+has "...and that is a finding" "$out" "whether tonight can push is UNKNOWN"
 
 section "G. a stale sweep is a finding, whatever the passes say"
 old="$(date -u -d '-3 days' +%Y-%m-%dT%H:%M:%SZ)"
