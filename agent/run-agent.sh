@@ -81,6 +81,16 @@ Then:
    from here, because X" is a SUCCESSFUL run of this mechanism. A silent or
    empty report is the only real failure.
 
+If \`git push\` is refused, the branch is the only copy of the work: say so in
+REPORT.md with the exact error and LEAVE IT ALONE. \`git branch -D\` after a
+failed push destroys the pass -- the container is \`--rm\`, so nothing survives
+it. That is what crt did on 2026-09-26 with a verified fix in hand.
+
+You are running non-interactively. Nothing will notify you, nothing will wake
+you, and there is no one to ask: a backgrounded command, a \`ScheduleWakeup\`,
+or an \`until ! pgrep -f ...\` loop (which matches itself) just burns the rest
+of the pass. Run every command in the foreground.
+
 State the command behind every claim you make about what the code does.
 BRIEF
 
