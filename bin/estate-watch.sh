@@ -35,8 +35,8 @@ if [ "${1:-}" = "--cadence" ]; then
   exit 0
 fi
 
-# ONE AT A TIME: a clone, a collect and a push outliving a 20-minute tick is
-# how monkey-watch stacked nine ssh sessions in 2026-08 (#629).
+# ONE AT A TIME: the work is a clone, a collect and a push, and a tick that
+# outlives its interval must not be joined by a second copy of itself (#629).
 # shellcheck source=lib/cron-lock.sh
 . "$HERE/bin/lib/cron-lock.sh"
 cron_lock estate-watch
