@@ -36,6 +36,13 @@ NIGHTLY_TAG = "realisateur:agent-nightly:RUNNER"
 NIGHTLY_MAX_H = 26          # the cron is 0 1 * * *; one missed night is a finding
 NO_AUTOSTART = ".no-autostart"   # provision/dexter/autostart/dexter-srv-autostart's own opt-out marker
 PULL_RE = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+/pull/\d+")
+# The four files the dispatcher IS. They are not a checkout (#1332): unless
+# each is a symlink into a clone that something pulls, a merged fix reaches the
+# 01:00 pass on no path -- and reads exactly like a fix.
+DISPATCH_FILES = ("nightly.sh", "run-agent.sh", "repos", "Dockerfile")
+AGENT_SRC = os.environ.get(
+    "ESTATE_AGENT_SRC",
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "agent"))
 
 
 def sh_rc(*cmd):
@@ -268,6 +275,30 @@ def pass_row(repo):
     return row
 
 
+def dispatch_source():
+    """Per file: is what dexter executes the file `main` holds, and will it
+    STAY so? `linked` is the only state that survives the next merge."""
+    if not os.path.isdir(AGENT_SRC):
+        return None                      # not run from a checkout: cannot say
+    out = {}
+    for f in DISPATCH_FILES:
+        host, src = os.path.join(AGENT, f), os.path.join(AGENT_SRC, f)
+        if not os.path.exists(src):
+            out[f] = "not-in-clone"
+        elif os.path.islink(host) and os.path.realpath(host) == os.path.realpath(src):
+            out[f] = "linked"
+        elif not os.path.exists(host):
+            out[f] = "absent"
+        else:
+            try:
+                same = open(host, "rb").read() == open(src, "rb").read()
+            except OSError:
+                out[f] = "unreadable"
+                continue
+            out[f] = "copy" if same else "drifted"
+    return out
+
+
 # --- verdict -----------------------------------------------------------------
 def grade(d):
     """DOWN is "something the estate needs is not running". DEGRADED is
@@ -314,6 +345,22 @@ def grade(d):
         for repo, v in n["last_run"]["dispatched"].items():
             if v["outcome"] and v["outcome"] != "finished":
                 warn.append(f"{repo}: pass {v['outcome']}")
+    src = n["dispatch_source"]
+    if src is None:
+        warn.append("not run from a checkout, so whether /srv/agent matches `main` is UNKNOWN")
+    else:
+        # DRIFT is the loud one: the host is running code no PR describes.
+        # A plain COPY is quieter and just as real -- it agrees today and
+        # nothing will ever refresh it.
+        drifted = [f for f, v in src.items() if v in ("drifted", "unreadable", "not-in-clone")]
+        stale = [f for f, v in src.items() if v in ("copy", "absent")]
+        if drifted:
+            warn.append(f"{AGENT}: {' '.join(drifted)} do NOT match the clone -- the nightly "
+                        f"runs code that is not on `main`. `bin/wire-agent-dispatch.sh --check`")
+        elif stale:
+            warn.append(f"{AGENT}: {' '.join(stale)} are plain copies, so a merged fix reaches "
+                        f"the nightly on no path. `bin/wire-agent-dispatch.sh --apply`")
+
     for p in n["passes"]:
         if p["log"] is None:
             warn.append(f"{p['repo']}: on the repo list and never dispatched")
@@ -364,6 +411,7 @@ def main():
         "nightly": {
             "armed": armed, "cron_line": cron_line,
             "repos": repos, "last_run": run, "passes": passes,
+            "dispatch_source": dispatch_source(),
             "max_age_h": NIGHTLY_MAX_H,
         },
     }

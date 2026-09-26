@@ -53,6 +53,9 @@
   &ldquo;nothing finishable from here&rdquo; also exits 0. When the agent writes no report at
   all, <code>run-agent.sh</code> writes one and signs it; that pass reads <i>landed nothing</i>,
   and is a finding only if the container exited non-zero or left a dirty tree.
+  <b>Dispatcher source</b> asks whether what dexter executes is what <code>main</code> holds,
+  and whether it will stay so: only a symlink into a pulled clone survives the next merge, and
+  <code>bin/wire-agent-dispatch.sh</code> is what makes one.
   The PR column is read off the report the pass wrote, never off the PR's author: the
   container pushes with the estate's own token, so every PR it opens is authored
   <code>hf7y</code>.
@@ -98,6 +101,19 @@ const servicesHTML=d=>{
   }).join("");
   return `<div class="wrap"><table><tr><th>service</th><th>state</th><th>up</th>
     <th>declared ports</th><th>restarts</th></tr>${rows}</table></div>`;
+};
+
+// The four files under /srv/agent ARE the dispatcher. Only `linked` survives
+// the next merge: a plain copy agrees today and nothing refreshes it, which is
+// a merged fix that reaches the host on no path. #1332.
+const dispatchCell=src=>{
+  if(!src) return '<span class="blind">not read</span>';
+  const n=Object.values(src);
+  const bad=n.filter(v=>v!=="linked"&&v!=="copy").length;
+  const copy=n.filter(v=>v==="copy").length;
+  if(bad)  return `<span class="bad">${bad} of ${n.length} do not match the clone</span>`;
+  if(copy) return `<span class="warn">${copy} of ${n.length} are unrefreshed copies</span>`;
+  return '<span class="ok">linked to the clone</span>';
 };
 
 const passesHTML=d=>{
@@ -149,6 +165,7 @@ fetch("status.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{
       <div class="fact"><b>last sweep</b>${H(ago(d.nightly.last_run&&d.nightly.last_run.started_at))}</div>
       <div class="fact"><b>passes that left a PR</b>${withPR} / ${passes.length}</div>
       <div class="fact"><b>last night cost</b>$${cost.toFixed(2)}</div>
+      <div class="fact"><b>dispatcher source</b>${dispatchCell(d.nightly.dispatch_source)}</div>
     </div>
     <h2>services <span>&mdash; one per <code>/srv/&lt;name&gt;/compose.yaml</code></span></h2>
     ${servicesHTML(d)}
