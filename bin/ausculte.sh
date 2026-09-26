@@ -210,7 +210,10 @@ if want routes; then
       else rok=$((rok+1)); fi
     done
     if [ -n "$rbad" ]; then
-      record routes DOWN "ssh alias reaching dexter's address without naming its host:$rbad -- 2223 dexter, 2224 monkey, 2225 vaporwave"
+      # The map is READ, not retyped -- the same argument the propagation probe
+      # already makes below. This line's own copy said "2224 monkey" for two
+      # days after monkey was deleted, which is what a retyped fact does.
+      record routes DOWN "ssh alias reaching dexter's address without naming its host:$rbad -- declared: $SSH_NETNS_PORTS"
     else
       record routes OK "$rok ssh alias(es) at dexter's address, each naming the port that selects its host"
     fi
