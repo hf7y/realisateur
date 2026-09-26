@@ -159,7 +159,19 @@ printf 'something-else\n' > "$T/clone/repos"
 out="$(DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
 eq "a copy that DIFFERS is drifted, which is the loud one" \
    "$(printf '%s' "$out" | field '["nightly"]["dispatch_source"]["repos"]')" '"drifted"'
-has "...and the finding says the host runs code that is not on main" "$out" "not on \`main\`"
+has "...and the finding says somebody edited the host" "$out" "never on \`main\`"
+
+# The morning-after state: the host holds a real earlier version of the path.
+# It must read as behind and link cleanly, or the verb refuses exactly when it
+# is needed. The fixture clone is not a git repo, so this drives the real one.
+prev="$(git -C "$REPO" log --format=%H -- agent/run-agent.sh | sed -n 2p)"
+if [ -n "$prev" ]; then
+  git -C "$REPO" show "$prev:agent/run-agent.sh" > "$T/agent/run-agent.sh"
+  out="$(AGENT_SRC_OVERRIDE="$REPO/agent" DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
+  eq "an earlier version of the path is behind, not drifted" \
+     "$(printf '%s' "$out" | field '["nightly"]["dispatch_source"]["run-agent.sh"]')" '"behind"'
+  has "...and the finding says the nightly runs an earlier one" "$out" "running an EARLIER"
+fi
 
 out="$(AGENT_SRC_OVERRIDE="$T/no-clone-here" DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
 eq "run from outside a checkout it says UNKNOWN, never OK" \
@@ -167,6 +179,7 @@ eq "run from outside a checkout it says UNKNOWN, never OK" \
 has "...and that is a finding" "$out" "is UNKNOWN"
 
 # back to linked, so G grades the sweep and not the wiring
+rm -f "$T/agent"/nightly.sh "$T/agent"/run-agent.sh "$T/agent"/repos "$T/agent"/Dockerfile
 for f in nightly.sh run-agent.sh repos Dockerfile; do : > "$T/clone/$f"; ln -sfn "$T/clone/$f" "$T/agent/$f"; done
 
 section "G. a stale sweep is a finding, whatever the passes say"

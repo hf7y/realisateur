@@ -43,23 +43,43 @@ before="$(ls "$T/srv/.pre-wire" | wc -l)"
 out="$(wire --apply)"; rc "--apply on a wired host is 0" 0 "$?"
 eq "...and takes no second backup" "$(ls "$T/srv/.pre-wire" | wc -l)" "$before"
 
-section "E. a host copy that DIFFERS is refused, never adopted"
+section "E. BEHIND is not DRIFT -- the normal state after a merge is linkable"
+# A real earlier version of this same path, taken out of the clone's history.
+# That is what /srv/agent holds the morning after any agent/ PR merges, and
+# refusing it would make this verb useless exactly when it is needed.
+fresh_copies
+prev="$(git -C "$REPO" log --format=%H -- agent/run-agent.sh | sed -n 2p)"
+if [ -n "$prev" ]; then
+  git -C "$REPO" show "$prev:agent/run-agent.sh" > "$T/srv/run-agent.sh"
+  out="$(wire --check)"
+  has "an earlier version of the path reads as behind, not drifted" "$out" "an EARLIER version of this same file"
+  eq  "...and --state says so in one word" \
+      "$(AGENT_DIR="$T/srv" bash "$WIRE" --state | awk -F'\t' '$1=="run-agent.sh"{print $2}')" "behind"
+  out="$(wire --apply)"; rc "...and --apply links it" 0 "$?"
+  eq  "...and the old bytes are kept" "$(ls "$T/srv/.pre-wire" | wc -l)" "4"
+else
+  ok "SKIPPED: agent/run-agent.sh has only one version in this clone"
+fi
+
+section "F. bytes that were NEVER this path's content are refused, never adopted"
 fresh_copies
 printf 'a-hand-edit-nobody-recorded\n' > "$T/srv/repos"
 out="$(wire --apply)"; rc "drift exits 5" 5 "$?"
-has "...and says which file" "$out" "repos: a plain copy that DIFFERS"
+has "...and says the host was edited" "$out" "NEVER this path's content"
+eq  "...and --state calls it drifted" \
+    "$(AGENT_DIR="$T/srv" bash "$WIRE" --state | awk -F'\t' '$1=="repos"{print $2}')" "drifted"
 has "...and hands over the diff command" "$out" "diff '$T/srv/repos'"
 eq "...and left the drifted file exactly as it was" "$(cat "$T/srv/repos")" "a-hand-edit-nobody-recorded"
 eq "...while still wiring the three that agreed" "$(find "$T/srv" -maxdepth 1 -type l | wc -l)" "3"
 
-section "F. a nightly holding the lock stops it -- run-agent.sh is in use"
+section "G. a nightly holding the lock stops it -- run-agent.sh is in use"
 fresh_copies
 : > "$T/srv/.nightly.lock"
 out="$(flock "$T/srv/.nightly.lock" -c "AGENT_DIR='$T/srv' bash '$WIRE' --apply 2>&1")"; rc "a held lock exits 1" 1 "$?"
 has "...and says a pass is dispatching" "$out" "it is dispatching right now"
 eq "...and nothing was touched" "$(find "$T/srv" -maxdepth 1 -type l | wc -l)" "0"
 
-section "G. a wrong host and a wrong checkout are usage errors, not silent passes"
+section "H. a wrong host and a wrong checkout are usage errors, not silent passes"
 out="$(AGENT_DIR="$T/no-such-dir" bash "$WIRE" --check 2>&1)"; rc "no /srv/agent exits 2" 2 "$?"
 has "...and says this host does not dispatch" "$out" "does not dispatch"
 

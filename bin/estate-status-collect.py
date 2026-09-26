@@ -43,6 +43,8 @@ DISPATCH_FILES = ("nightly.sh", "run-agent.sh", "repos", "Dockerfile")
 AGENT_SRC = os.environ.get(
     "ESTATE_AGENT_SRC",
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "agent"))
+WIRE = os.environ.get(
+    "ESTATE_WIRE", os.path.join(os.path.dirname(os.path.abspath(__file__)), "wire-agent-dispatch.sh"))
 
 
 def sh_rc(*cmd):
@@ -277,26 +279,27 @@ def pass_row(repo):
 
 def dispatch_source():
     """Per file: is what dexter executes the file `main` holds, and will it
-    STAY so? `linked` is the only state that survives the next merge."""
-    if not os.path.isdir(AGENT_SRC):
+    STAY so? `linked` is the only state that survives the next merge.
+
+    The classification is NOT repeated here. `wire-agent-dispatch.sh --state`
+    is the one home for it, and it is the same code path `--apply` acts on, so
+    the page cannot say `behind` about a file the verb would call `drifted`."""
+    if not os.path.isdir(AGENT_SRC) or not os.access(WIRE, os.X_OK):
         return None                      # not run from a checkout: cannot say
+    env = dict(os.environ, AGENT_DIR=AGENT, AGENT_SRC=AGENT_SRC)
+    try:
+        p = subprocess.run([WIRE, "--state"], capture_output=True, text=True,
+                           timeout=60, env=env)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if p.returncode != 0:
+        return None
     out = {}
-    for f in DISPATCH_FILES:
-        host, src = os.path.join(AGENT, f), os.path.join(AGENT_SRC, f)
-        if not os.path.exists(src):
-            out[f] = "not-in-clone"
-        elif os.path.islink(host) and os.path.realpath(host) == os.path.realpath(src):
-            out[f] = "linked"
-        elif not os.path.exists(host):
-            out[f] = "absent"
-        else:
-            try:
-                same = open(host, "rb").read() == open(src, "rb").read()
-            except OSError:
-                out[f] = "unreadable"
-                continue
-            out[f] = "copy" if same else "drifted"
-    return out
+    for line in p.stdout.splitlines():
+        f, _, state = line.partition("\t")
+        if f in DISPATCH_FILES and state:
+            out[f] = state
+    return out or None
 
 
 # --- verdict -----------------------------------------------------------------
@@ -352,12 +355,21 @@ def grade(d):
         # DRIFT is the loud one: the host is running code no PR describes.
         # A plain COPY is quieter and just as real -- it agrees today and
         # nothing will ever refresh it.
-        drifted = [f for f, v in src.items() if v in ("drifted", "unreadable", "not-in-clone")]
+        # DRIFTED is the loud one: bytes that were never this path's content, so
+        # somebody edited the host and `--apply` will refuse them. BEHIND is the
+        # ordinary morning-after state and links cleanly; a plain COPY agrees
+        # today and nothing will ever refresh it. All three are findings,
+        # because none of them survives the next merge.
+        drifted = [f for f, v in src.items() if v in ("drifted", "not-in-clone")]
+        behind = [f for f, v in src.items() if v == "behind"]
         stale = [f for f, v in src.items() if v in ("copy", "absent")]
         if drifted:
-            warn.append(f"{AGENT}: {' '.join(drifted)} do NOT match the clone -- the nightly "
-                        f"runs code that is not on `main`. `bin/wire-agent-dispatch.sh --check`")
-        elif stale:
+            warn.append(f"{AGENT}: {' '.join(drifted)} hold bytes that were never on `main` -- "
+                        f"somebody edited the host. `bin/wire-agent-dispatch.sh --check`")
+        if behind:
+            warn.append(f"{AGENT}: the nightly is running an EARLIER {' '.join(behind)} than "
+                        f"`main` holds. `bin/wire-agent-dispatch.sh --apply`")
+        elif stale and not drifted:
             warn.append(f"{AGENT}: {' '.join(stale)} are plain copies, so a merged fix reaches "
                         f"the nightly on no path. `bin/wire-agent-dispatch.sh --apply`")
 

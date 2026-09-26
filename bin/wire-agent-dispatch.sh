@@ -2,9 +2,9 @@
 # wire-agent-dispatch.sh -- point /srv/agent's four files at this clone, so a
 # merged PR reaches the 01:00 nightly instead of a copy nothing refreshes.
 # TRAPS (the rest of this header is in the vault):
-# `/srv/agent` is not a git repository (#1332). The four files were placed by
-# hand on 2026-09-24 and #1314 versioned them afterwards, so `main` and the
-# host agreed by coincidence, not by any path. The clone this runs from is
+# `/srv/agent` is not a git repository (#1332). Its files were placed by hand
+# and versioned afterwards, so `main` and the host agree by coincidence rather
+# than by any path, and stop agreeing on the next merge. The clone this runs from is
 # already pulled every 20 minutes by the `realisateur:estate-watch:WATCH` cron
 # row, so a symlink is the whole propagation mechanism -- no second pull, no
 # copy step, no deploy tree.
@@ -14,9 +14,12 @@
 # `dirname "${BASH_SOURCE[0]}"`, which is the SYMLINK's directory, so the logs,
 # `.nightly.lock` and `work/` stay in /srv/agent where they belong.
 #
-# REFUSES on drift rather than adopting: a host copy that differs from the
-# clone is someone's hand fix or a half-finished deploy, and overwriting it
-# silently is how the estate loses work. It names the diff and stops.
+# BEHIND IS NOT DRIFT, and conflating them makes this verb useless the first
+# time it is needed: the host copy differing from `main` is the NORMAL state
+# after a merge. `git hash-object` the host's bytes and ask whether that blob
+# was ever this path's content -- if it was, the host is simply behind and the
+# clone is authoritative. If it never was, somebody edited the host, and THAT
+# is refused with the diff named rather than overwritten.
 set -uo pipefail
 
 CLI_NAME="wire-agent-dispatch"
@@ -25,20 +28,53 @@ usage() { echo "usage: $0 [--check|--apply]" >&2; }
 MODE=--check
 while [ $# -gt 0 ]; do
   case "$1" in
-    --check|--apply) MODE="$1" ;;
-    *)               usage; exit 2 ;;
+    --check|--apply|--state) MODE="$1" ;;
+    *)                       usage; exit 2 ;;
   esac
   shift
 done
 
-SRC="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../agent"
+SRC="${AGENT_SRC:-$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../agent}"
 DST="${AGENT_DIR:-/srv/agent}"
 FILES=(nightly.sh run-agent.sh repos Dockerfile)
+
+# --state prints `<file><TAB><state>`, one line per file, and changes nothing.
+# It exists so estate-status-collect.py publishes THIS classification instead
+# of writing a second copy of the rule in python.
+state_of() {  # <file> -> linked|copy|behind|drifted|absent|not-in-clone
+  local f="$1" host="$DST/$1" src="$SRC/$1"
+  [ -f "$src" ] || { echo not-in-clone; return; }
+  if [ -L "$host" ] && [ "$(readlink -f "$host")" = "$(readlink -f "$src")" ]; then
+    echo linked; return
+  fi
+  [ -e "$host" ] || { echo absent; return; }
+  cmp -s "$host" "$src" && { echo copy; return; }
+  was_this_path "$host" "$f" && echo behind || echo drifted
+}
+
+# Were the host's exact bytes ever the content of agent/<f> in this clone? A
+# path's history is a handful of commits, so this is cheap. No git, or a src
+# that is not in a work tree: FAIL CLOSED to drifted, which refuses.
+was_this_path() {
+  local h c srcdir; srcdir="$(dirname "$(readlink -f "$SRC")")"
+  command -v git >/dev/null || return 1
+  h="$(git -C "$srcdir" hash-object "$1" 2>/dev/null)" || return 1
+  [ -n "$h" ] || return 1
+  for c in $(git -C "$srcdir" log --format=%H -- "agent/$2" 2>/dev/null); do
+    [ "$(git -C "$srcdir" rev-parse "$c:agent/$2" 2>/dev/null)" = "$h" ] && return 0
+  done
+  return 1
+}
 
 PASS=0; GAPS=0; BAD=0
 ok()  { printf '  OK      %s\n' "$*"; PASS=$((PASS+1)); }
 gap() { printf '  LINK    %s\n' "$*"; GAPS=$((GAPS+1)); }
 bad() { printf '  BAD     %s\n' "$*"; BAD=$((BAD+1)); }
+
+if [ "$MODE" = --state ]; then
+  for f in "${FILES[@]}"; do printf '%s\t%s\n' "$f" "$(state_of "$f")"; done
+  exit 0
+fi
 
 echo "== $CLI_NAME ($MODE) -- $DST -> $SRC =="
 
@@ -55,20 +91,14 @@ fi
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 for f in "${FILES[@]}"; do
   want="$(readlink -f "$SRC/$f")"
-  [ -f "$want" ] || { bad "$f: not in the clone at $SRC/$f"; continue; }
-
-  if [ -L "$DST/$f" ] && [ "$(readlink -f "$DST/$f")" = "$want" ]; then
-    ok "$f -> the clone"
-    continue
-  fi
-  if [ ! -e "$DST/$f" ]; then
-    gap "$f: absent on the host"
-  elif cmp -s "$DST/$f" "$want"; then
-    gap "$f: a plain copy, identical today and refreshed by nothing"
-  else
-    bad "$f: a plain copy that DIFFERS from the clone -- diff '$DST/$f' '$want'"
-    continue
-  fi
+  case "$(state_of "$f")" in
+    linked)       ok  "$f -> the clone"; continue ;;
+    not-in-clone) bad "$f: not in the clone at $SRC/$f"; continue ;;
+    drifted)      bad "$f: bytes that were NEVER this path's content -- somebody edited the host. diff '$DST/$f' '$want'"; continue ;;
+    absent)       gap "$f: absent on the host" ;;
+    copy)         gap "$f: a plain copy, identical today and refreshed by nothing" ;;
+    behind)       gap "$f: an EARLIER version of this same file -- the host is behind \`main\`" ;;
+  esac
 
   [ "$MODE" = --apply ] || continue
   if [ -e "$DST/$f" ]; then

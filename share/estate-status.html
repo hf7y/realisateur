@@ -55,7 +55,9 @@
   and is a finding only if the container exited non-zero or left a dirty tree.
   <b>Dispatcher source</b> asks whether what dexter executes is what <code>main</code> holds,
   and whether it will stay so: only a symlink into a pulled clone survives the next merge, and
-  <code>bin/wire-agent-dispatch.sh</code> is what makes one.
+  <code>bin/wire-agent-dispatch.sh</code> is what makes one. <i>Behind</i> is a real earlier
+  version of the same file and links cleanly; bytes that were <i>never on main</i> mean somebody
+  edited the host, and that is refused rather than overwritten.
   The PR column is read off the report the pass wrote, never off the PR's author: the
   container pushes with the estate's own token, so every PR it opens is authored
   <code>hf7y</code>.
@@ -109,10 +111,12 @@ const servicesHTML=d=>{
 const dispatchCell=src=>{
   if(!src) return '<span class="blind">not read</span>';
   const n=Object.values(src);
-  const bad=n.filter(v=>v!=="linked"&&v!=="copy").length;
-  const copy=n.filter(v=>v==="copy").length;
-  if(bad)  return `<span class="bad">${bad} of ${n.length} do not match the clone</span>`;
-  if(copy) return `<span class="warn">${copy} of ${n.length} are unrefreshed copies</span>`;
+  const bad=n.filter(v=>v==="drifted"||v==="not-in-clone").length;
+  const behind=n.filter(v=>v==="behind").length;
+  const copy=n.filter(v=>v==="copy"||v==="absent").length;
+  if(bad)    return `<span class="bad">${bad} of ${n.length} were never on main</span>`;
+  if(behind) return `<span class="warn">running an earlier ${behind} of ${n.length}</span>`;
+  if(copy)   return `<span class="warn">${copy} of ${n.length} are unrefreshed copies</span>`;
   return '<span class="ok">linked to the clone</span>';
 };
 
