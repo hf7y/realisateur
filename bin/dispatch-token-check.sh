@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # dispatch-token-check.sh -- what the nightly's credential can still do, asked
 # on the host that holds it and answered WITHOUT ever showing it.
+# RUNNER: bin/estate-status-collect.py -- every published tick, from the
+# `realisateur:estate-watch:WATCH` cron row on dexter
+# GUARD-TEST: bin/tests/dispatch-token-check.test.sh -- hermetic behind
+#   DISPATCH_TOKEN_FILE and DISPATCH_GH; it never reads a real credential
+# GATE: none -- it grades a HOST's credential, never this tree, and it is read
+#   off hf7y.com/estate where an unread probe is DEGRADED rather than OK
 #
 # WHY THIS IS A MECHANISM AND NOT A COMMAND SOMEBODY RUNS. An agent cannot ask
 # this question at all: any shell line that materialises the credential is
