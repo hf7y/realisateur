@@ -195,6 +195,7 @@ PROP_LEAK_BOUND=7
 PROP_LOCAL_SCRIPTS="
 estate-watch.sh
 estate-status-collect.py
+wire-agent-dispatch.sh
 landing-drift.sh
 vault-spool-drain.sh
 stale-paths.sh
@@ -217,6 +218,9 @@ selfdev-home-check.sh
 # carry.sh and reprise.sh are LOCAL: they write to a BRANCH of this repo, not a
 # host, so per-account copies would be many writers racing one force-with-lease.
 # reprise also reads bin/lib/handoffs.tsv, THIS repo's ledger, empty elsewhere.
+# wire-agent-dispatch.sh is LOCAL for the same reason estate-watch.sh is, and
+# more strongly: it exists to point /srv/agent AT this clone, so shipping it to
+# a host would be a copy of the thing whose whole argument is not to copy.
 # registry-standup.sh, branch-protection-provision.sh: LOCAL. FLEET subjects.
 # publish-release-verdict.sh is LOCAL because it runs in the release pipeline.
 

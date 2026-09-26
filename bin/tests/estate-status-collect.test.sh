@@ -38,8 +38,13 @@ UP='[{"Name":"/roster","Config":{"Image":"i","Labels":{"com.docker.compose.proje
      "HostConfig":{"PortBindings":{"8646/tcp":[{"HostPort":"8646"}]}},
      "NetworkSettings":{"Ports":{"8646/tcp":[{"HostPort":"8646"}]}}}]'
 
+# ESTATE_AGENT_SRC is the clone half of the dispatch-source probe. Default it to
+# a mirror of the fixture so the OTHER sections are not all graded on wiring.
+mkdir -p "$T/clone"
+for f in nightly.sh run-agent.sh repos Dockerfile; do : > "$T/clone/$f"; ln -sfn "$T/clone/$f" "$T/agent/$f"; done
 collect() {
   PATH="$T/stub:$PATH" ESTATE_SRV="$T/srv" ESTATE_AGENT_DIR="$T/agent" \
+    ESTATE_AGENT_SRC="${AGENT_SRC_OVERRIDE:-$T/clone}" \
     PYTHONDONTWRITEBYTECODE=1 python3 "$COLLECTOR"
 }
 field() { python3 -c 'import json,sys;print(json.dumps(eval("d"+sys.argv[1],{"d":json.load(sys.stdin)})))' "$1"; }
@@ -135,6 +140,34 @@ out="$(DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
 eq "a repo on the list with no log at all reads as never dispatched" \
    "$(printf '%s' "$out" | field '["nightly"]["passes"][0]["log"]')" "null"
 has "...and says so" "$out" "never dispatched"
+
+section "H. the dispatcher's own source: only a link survives the next merge"
+out="$(DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
+eq "four symlinks into the clone read as linked" \
+   "$(printf '%s' "$out" | field '["nightly"]["dispatch_source"]["run-agent.sh"]')" '"linked"'
+hasnt "...and that is not a finding" "$out" "wire-agent-dispatch"
+
+rm -f "$T/agent/repos"; printf 'roster\n' > "$T/agent/repos"; printf 'roster\n' > "$T/clone/repos"
+out="$(DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
+eq "a plain copy that AGREES is still not linked" \
+   "$(printf '%s' "$out" | field '["nightly"]["dispatch_source"]["repos"]')" '"copy"'
+eq "...and an unrefreshed copy is DEGRADED, not OK" \
+   "$(printf '%s' "$out" | field '["verdict"]')" '"DEGRADED"'
+has "...and the finding hands over the command that fixes it" "$out" "wire-agent-dispatch.sh --apply"
+
+printf 'something-else\n' > "$T/clone/repos"
+out="$(DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
+eq "a copy that DIFFERS is drifted, which is the loud one" \
+   "$(printf '%s' "$out" | field '["nightly"]["dispatch_source"]["repos"]')" '"drifted"'
+has "...and the finding says the host runs code that is not on main" "$out" "not on \`main\`"
+
+out="$(AGENT_SRC_OVERRIDE="$T/no-clone-here" DOCKER_IDS="a" DOCKER_JSON="$UP" CRONTAB_OUT="$ARMED" collect)"
+eq "run from outside a checkout it says UNKNOWN, never OK" \
+   "$(printf '%s' "$out" | field '["nightly"]["dispatch_source"]')" "null"
+has "...and that is a finding" "$out" "is UNKNOWN"
+
+# back to linked, so G grades the sweep and not the wiring
+for f in nightly.sh run-agent.sh repos Dockerfile; do : > "$T/clone/$f"; ln -sfn "$T/clone/$f" "$T/agent/$f"; done
 
 section "G. a stale sweep is a finding, whatever the passes say"
 old="$(date -u -d '-3 days' +%Y-%m-%dT%H:%M:%SZ)"
